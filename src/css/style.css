@@ -93,17 +93,13 @@ body {
 }
 
 .team-name .name-text {
-  display: block;
-  width: 100%;
-  text-align: center;
-
+  display: inline-block;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-
+  font-size: 36px;
   font-weight: 700;
 
-  font-size: clamp(16px, 8cqw, 36px);
+  transform-origin: center center;
+  transition: transform 0.15s ease;
 }
 
 .team-name:hover {
@@ -113,15 +109,12 @@ body {
 .team-name-input {
   width: 100%;
   text-align: center;
-
-  font-size: clamp(16px, 8cqw, 36px);
+  font-size: 36px;
   font-weight: 700;
-
   background: transparent;
   border: 2px solid currentColor;
   border-radius: 10px;
   padding: 4px 8px;
-
   color: inherit;
   outline: none;
 }
@@ -315,7 +308,7 @@ body {
 
 #undoBtn.holding::after {
   animation: holdFill 0.5s linear forwards;
-	background: rgba(0, 255, 100, 1); 
+	background: rgb(255, 255, 255); 
   
 }
 

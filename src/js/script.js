@@ -289,6 +289,14 @@ confirmResetBtn.addEventListener("click", () => {
   };
 
   history = [];
+
+  ["A", "B"].forEach(team => {
+      localStorage.removeItem(`teamName${team}`);
+    const labelEl = document.querySelector(`.team-name[data-team="${team}"] .name-text`);
+    labelEl.textContent = `Team ${team}`;
+    fitTextToContainer(labelEl); // re-fit default name
+  });
+
   updateUI();
   resetModal.classList.add("hidden");
 });
@@ -375,6 +383,8 @@ function save() {
 
   labelEl.textContent = name;
   input.replaceWith(labelEl);
+
+  fitTextToContainer(labelEl);
 }
 
   function cancel() {
@@ -387,6 +397,31 @@ function save() {
     if (e.key === "Escape") cancel();
   });
 }
+
+function fitTextToContainer(textEl) {
+  const container = textEl.parentElement;
+
+  // Reset scaling
+  textEl.style.transform = "scale(1)";
+
+  const containerWidth = container.clientWidth;
+  const textWidth = textEl.scrollWidth;
+
+  if (textWidth > containerWidth) {
+    const scale = containerWidth / textWidth;
+    textEl.style.transform = `scale(${scale})`;
+  }
+}
+
+window.addEventListener("resize", () => {
+  document.querySelectorAll(".team-name .name-text").forEach(el => {
+    fitTextToContainer(el);
+  });
+});
+
+document.querySelectorAll(".team-name .name-text").forEach(el => {
+  fitTextToContainer(el);
+});
 
 // =====================================================
 // INIT
