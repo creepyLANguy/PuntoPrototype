@@ -201,14 +201,6 @@ body {
    CONTROLS
 ======================================================= */
 
-/* =======================================================
-   CONTROLS LAYOUT
-======================================================= */
-
-/* =======================================================
-   REFEREE MODE
-======================================================= */
-
 .referee-controls {
   position: fixed;
   inset: 0;
@@ -253,37 +245,36 @@ body {
   left: 50%;
   transform: translateX(-50%);
   display: flex;
-  gap: 120px;
+  gap: 40px;
   pointer-events: auto;
   z-index: 10; /* <-- raise above ref zones */
 }
 
 .floating-btn {
-  padding: 14px 20px; /* slightly bigger */
+  padding: 10px 20px; /* slightly bigger */
   min-width: 80px;
   border-radius: 20px;
   border-style: solid;
-  border-color: #aaaaaa;
+  border-width: 2px;
   background: rgba(0,0,0,0.75);
-  color: white;
+  color: rgba(255, 255, 255, 1);
   font-weight: 600;
   font-size: 20px;
   backdrop-filter: blur(6px);
   transition: transform 0.1s ease;
+  opacity: 0.5;
 }
 
 .floating-btn:active {
-  transform: scale(1.5);
+  transform: scale(1.75);
 }
 
 .floating-btn.holding::after {
   content: "";
   position: absolute;
   inset: 0;
-  background: rgba(255, 0, 0, 0.25); /* overlay color */
   transform: scaleX(0);
   transform-origin: left;
-  animation: holdFill 0.8s linear forwards;
 }
 
 @keyframes holdFill {
@@ -298,7 +289,14 @@ body {
 }
 
 #undoBtn.holding::after {
-	background: rgba(255, 255, 255, 0.25); 
+  animation: holdFill 0.5s linear forwards;
+	background: rgba(0, 255, 100, 1); 
+  
+}
+
+#resetBtn.holding::after {
+  animation: holdFill 1s linear forwards;
+  background: rgba(255, 0, 0, 0.25);
 }
 
 /* =======================================================
@@ -346,24 +344,6 @@ body {
 
 .cooldown.active {
   opacity: 1;
-}
-
-/* =======================================================
-   QR READER
-======================================================= */
-
-#reader {
-  width: 320px;
-  margin: 20px auto;
-}
-
-#reader video {
-  filter: grayscale(100%);
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  aspect-ratio: 1 / 1;
-  transform-origin: center;
 }
 
 /* =======================================================
