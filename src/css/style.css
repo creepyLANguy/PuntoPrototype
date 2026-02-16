@@ -58,6 +58,8 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
+
+  container-type: inline-size;
 }
 
 /* Team Variants */
@@ -101,7 +103,7 @@ body {
 
   font-weight: 700;
 
-  font-size: clamp(16px, 3vw, 36px);
+  font-size: clamp(16px, 8cqw, 36px);
 }
 
 .team-name:hover {
@@ -112,7 +114,7 @@ body {
   width: 100%;
   text-align: center;
 
-  font-size: clamp(16px, 3vw, 36px);
+  font-size: clamp(16px, 8cqw, 36px);
   font-weight: 700;
 
   background: transparent;
