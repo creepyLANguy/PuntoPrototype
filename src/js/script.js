@@ -345,34 +345,58 @@ resetModal.addEventListener("click", (e) => {
   }
 });
 
-// Undo hold logic
-let undoPressTimer = null;
-const UNDO_HOLD_MS = 800;
+// Generic hold handler for buttons
+function addHoldButtonLogic(button, onConfirm, holdMs = 800) {
+  let pressTimer = null;
 
-function startUndoPress() {
-  undoBtn.classList.add("holding");
-  undoPressTimer = setTimeout(() => {
-    undoLastPoint();
-    undoBtn.classList.remove("holding");
-  }, UNDO_HOLD_MS);
+  function startPress() {
+    button.classList.add("holding");
+    pressTimer = setTimeout(() => {
+      onConfirm();
+      button.classList.remove("holding");
+    }, holdMs);
+  }
+
+  function cancelPress() {
+    clearTimeout(pressTimer);
+    button.classList.remove("holding");
+  }
+
+  button.addEventListener("pointerdown", startPress);
+  button.addEventListener("pointerup", cancelPress);
+  button.addEventListener("pointerleave", cancelPress);
+  button.addEventListener("pointercancel", cancelPress);
 }
 
-function cancelUndoPress() {
-  clearTimeout(undoPressTimer);
-  undoBtn.classList.remove("holding");
-}
+// ---------------------------------------------------
+// Apply to Undo and Reset
+// ---------------------------------------------------
 
-undoBtn.addEventListener("pointerdown", startUndoPress);
-undoBtn.addEventListener("pointerup", cancelUndoPress);
-undoBtn.addEventListener("pointerleave", cancelUndoPress);
-undoBtn.addEventListener("pointercancel", cancelUndoPress);
+addHoldButtonLogic(undoBtn, undoLastPoint, 800);
+addHoldButtonLogic(resetBtn, () => {
+  // Show modal and immediately confirm reset for hold UX
+  resetModal.classList.remove("hidden");
+}, 800);
+
+function confirmReset() {
+  score = {
+    A: { points: 0, games: 0, sets: 0 },
+    B: { points: 0, games: 0, sets: 0 },
+    lastPointTeam: null,
+    lastGameTeam: null,
+    lastSetTeam: null
+  };
+  history = [];
+  updateUI();
+  resetModal.classList.add("hidden");
+}
 
 // =====================================================
 // TEAM NAME EDITING
 // =====================================================
 
-document.querySelectorAll(".team-name").forEach((el) => {
-  const team = el.dataset.team;
+document.querySelectorAll(".team-name .name-text").forEach((el) => {
+  const team = el.closest(".team-name").dataset.team;
   const saved = localStorage.getItem(`teamName${team}`);
   if (saved) el.textContent = saved;
 
@@ -413,6 +437,5 @@ function startEditing(labelEl, team) {
 startQrScanner();
 updateUI();
 
-document.getElementById("resetBtn").addEventListener("click", resetMatch);
 document.getElementById("addPointA").addEventListener("click", () => addPoint("A"));
 document.getElementById("addPointB").addEventListener("click", () => addPoint("B"));
