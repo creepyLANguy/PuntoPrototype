@@ -1,0 +1,77 @@
+<link rel="stylesheet" href="css/style.css">
+
+<html>
+<body>
+	<div id="resetModal" class="reset-modal hidden">
+	  <div class="reset-box">
+		<p>Reset the entire match?</p>
+		<div class="reset-actions">
+		  <button id="confirmReset">Yes</button>
+		  <button id="cancelReset">Cancel</button>
+		</div>
+	  </div>
+	</div>
+
+	<div class="app">
+	  <div class="scoreboard">
+		<div class="team team-a" id="teamA">
+		  <h2 class="team-name" data-team="A">Team A</h2>
+
+		  <div class="meta">
+			<div class="row">
+			  <span>Sets</span>
+			  <span id="setsA"></span>
+			</div>
+			<div class="row">
+			  <span>Games</span>
+			  <span id="gamesA"></span>
+			</div>
+		  </div>
+
+		  <div class="indicator-dot"></div>
+		  <div class="points-wrapper">
+			<div class="points" id="pointsA">0</div>
+		  </div>
+		</div>
+		
+		<div class="team team-b" id="teamB">
+		  <h2 class="team-name" data-team="B">Team B</h2>
+
+		  <div class="meta">
+			<div class="row">
+			  <span>Sets</span>
+			  <span id="setsB"></span>
+			</div>
+			<div class="row">
+			  <span>Games</span>
+			  <span id="gamesB"></span>
+			</div>
+		  </div>
+
+		  <div class="indicator-dot"></div>
+		  <div class="points-wrapper">
+			<div class="points" id="pointsB">0</div>
+		  </div>
+		</div>
+	  </div>
+
+	  <div class="cooldown" id="cooldown"></div>
+
+	  <div id="reader"></div>
+
+	  <div class="controls-wrapper">
+		<div class="set-controls" id="controls">
+		  <button class="action-button" onclick="resetMatch()">Reset</button>
+		  <p>
+		  <button class="action-button" id="undoBtn">Undo</button>
+		  <p>
+		  <button onclick="addPoint('A')" class="action-button">+A </button>
+		  <button onclick="addPoint('B')" class="action-button">+B </button>
+		</div>
+	  </div>
+	</div>
+
+<script src="https://unpkg.com/html5-qrcode"></script>
+<script src="js/script.js"></script>
+</body>
+</html>
