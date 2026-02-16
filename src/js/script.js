@@ -166,11 +166,19 @@ function renderSets(team) {
   let maxSets = Math.max(teamSets, oppSets, 3);
   el.innerHTML = "";
 
+  // Get team color
+  const teamColor = team === "A" ? getComputedStyle(document.documentElement).getPropertyValue('--teamAcolour') 
+                                 : getComputedStyle(document.documentElement).getPropertyValue('--teamBcolour');
+
   for (let i = 0; i < maxSets; i++) {
     const dot = document.createElement("span");
     dot.className = "set-dot";
 
-    if (i < teamSets) dot.classList.add("filled");
+    if (i < teamSets) {
+      dot.classList.add("filled");
+      dot.style.backgroundColor = teamColor; // set team color
+    }
+
     if (i === teamSets - 1 && score.lastSetTeam === team) {
       dot.classList.add("recent");
     }
