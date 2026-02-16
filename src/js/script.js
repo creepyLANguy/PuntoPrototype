@@ -91,7 +91,20 @@ function addPoint(team) {
 }
 
 function undoLastPoint() {
+  if (score.lastPointTeam) {
+    animateUndo(score.lastPointTeam);
+
+    const pointsEl = document.getElementById(
+      score.lastPointTeam === "A" ? "pointsA" : "pointsB"
+    );
+
+    pointsEl.classList.remove("undo-flash");
+    void pointsEl.offsetWidth;
+    pointsEl.classList.add("undo-flash");
+  }
+
   if (history.length === 0) return;
+
   score = history.pop();
   updateUI();
 }
@@ -154,6 +167,14 @@ function animate(team) {
   el.classList.remove("score-animate");
   void el.offsetWidth;
   el.classList.add("score-animate");
+}
+
+function animateUndo(team) {
+  const el = document.getElementById(team === "A" ? "teamA" : "teamB");
+
+  el.classList.remove("undo-animate");
+  void el.offsetWidth; // force reflow
+  el.classList.add("undo-animate");
 }
 
 function renderSets(team) {
@@ -315,17 +336,21 @@ resetModal.addEventListener("click", (e) => {
 function addHoldButtonLogic(button, onConfirm, holdMs = 800) {
   let pressTimer = null;
 
-  function startPress() {
-    button.classList.add("holding");
+  function startPress(e) {
+  button.classList.add("holding");
+  button.classList.add("pressed");
+
     pressTimer = setTimeout(() => {
       onConfirm();
       button.classList.remove("holding");
+      button.classList.remove("pressed");
     }, holdMs);
   }
 
   function cancelPress() {
     clearTimeout(pressTimer);
     button.classList.remove("holding");
+    button.classList.remove("pressed");
   }
 
   button.addEventListener("pointerdown", startPress);

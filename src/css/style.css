@@ -279,11 +279,10 @@ body {
   font-weight: 600;
   font-size: 20px;
   backdrop-filter: blur(6px);
-  transition: transform 0.1s ease;
   opacity: 0.5;
 }
 
-.floating-btn:active {
+.floating-btn.pressed {
   transform: scale(1.75);
 }
 
@@ -298,6 +297,14 @@ body {
 @keyframes holdFill {
   from { transform: scaleX(0); }
   to { transform: scaleX(1); }
+}
+
+#undoBtn {
+    transition: transform var(--hold-duration, 0.5s) linear;
+}
+
+#resetBtn {
+    transition: transform var(--hold-duration, 1s) linear;
 }
 
 #resetBtn,
@@ -441,4 +448,19 @@ body {
   .floating-btn {
     padding: 10px 16px;
   }
+}
+
+/* ================= UNDO ANIMATION ================= */
+
+.points.undo-flash {
+  animation: undo-flash 0.4s ease;
+}
+
+@keyframes undo-flash {
+  0% { opacity: 1; }
+  25% { opacity: 0.25; }
+  50% { opacity: 0.75; }
+  75% { opacity: 0.5; }
+  100% { opacity: 1; }
+  
 }
