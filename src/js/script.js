@@ -142,10 +142,10 @@ function updateUI() {
   pointsA.textContent = pointLabel(score.A.points);
   pointsB.textContent = pointLabel(score.B.points);
 
-  document.querySelector('#teamA .indicator-dot').style.opacity =
+  document.querySelector('#teamA .indicator').style.opacity =
     score.lastPointTeam === 'A' ? 1 : 0;
 
-  document.querySelector('#teamB .indicator-dot').style.opacity =
+  document.querySelector('#teamB .indicator').style.opacity =
     score.lastPointTeam === 'B' ? 1 : 0;
 }
 
@@ -369,12 +369,13 @@ function startEditing(labelEl, team) {
   input.focus();
   input.select();
 
-  function save() {
-    const name = input.value.trim() || `Team ${team}`;
-    localStorage.setItem(`teamName${team}`, name);
-    labelEl.textContent = name;
-    input.replaceWith(labelEl);
-  }
+function save() {
+  const name = input.value.trim() || `Team ${team}`;
+  localStorage.setItem(`teamName${team}`, name);
+
+  labelEl.textContent = name;
+  input.replaceWith(labelEl);
+}
 
   function cancel() {
     input.replaceWith(labelEl);
