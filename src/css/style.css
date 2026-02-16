@@ -297,6 +297,10 @@ body {
   overflow: hidden;
 }
 
+#undoBtn.holding::after {
+	background: rgba(255, 255, 255, 0.25); 
+}
+
 /* =======================================================
    SCORE ANIMATION
 ======================================================= */
@@ -369,7 +373,7 @@ body {
 .reset-modal {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.7);
+  background: rgba(0, 0, 0, 0.75);
 
   display: flex;
   align-items: center;
@@ -383,11 +387,11 @@ body {
 }
 
 .reset-box {
-  background: #111;
+  background: #600000;
   padding: 24px;
   border-radius: 14px;
   text-align: center;
-  min-width: 240px;
+  min-width: 400px;
 }
 
 .reset-actions {
