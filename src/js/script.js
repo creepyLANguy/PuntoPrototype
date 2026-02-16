@@ -4,7 +4,8 @@
 
 const POINTS = [0, 15, 30, 40];
 const COOLDOWN_MS = 3000;
-const QR_SCALE = 0.75;
+const UNDO_HOLDBUTTONDURATION_MS = 550;
+const RESET_HOLDBUTTONDURATION_MS = 1050;
 
 // =====================================================
 // DOM REFERENCES
@@ -17,7 +18,6 @@ const setsB = document.getElementById("setsB");
 const gamesA = document.getElementById("gamesA");
 const gamesB = document.getElementById("gamesB");
 
-const reader = document.getElementById("reader");
 const cooldownEl = document.getElementById("cooldown");
 const controlsEl = document.getElementById("controls");
 
@@ -142,10 +142,10 @@ function updateUI() {
   pointsA.textContent = pointLabel(score.A.points);
   pointsB.textContent = pointLabel(score.B.points);
 
-  document.querySelector('#teamA .indicator-dot').style.opacity =
+  document.querySelector('#teamA .indicator').style.opacity =
     score.lastPointTeam === 'A' ? 1 : 0;
 
-  document.querySelector('#teamB .indicator-dot').style.opacity =
+  document.querySelector('#teamB .indicator').style.opacity =
     score.lastPointTeam === 'B' ? 1 : 0;
 }
 
@@ -166,9 +166,9 @@ function renderSets(team) {
   let maxSets = Math.max(teamSets, oppSets, 3);
   el.innerHTML = "";
 
-  // Get team color
-  const teamColor = team === "A" ? getComputedStyle(document.documentElement).getPropertyValue('--teamAcolour') 
-                                 : getComputedStyle(document.documentElement).getPropertyValue('--teamBcolour');
+  const teamColor = team === "A" ? 
+  getComputedStyle(document.documentElement).getPropertyValue('--teamAcolour') : 
+  getComputedStyle(document.documentElement).getPropertyValue('--teamBcolour');
 
   for (let i = 0; i < maxSets; i++) {
     const dot = document.createElement("span");
@@ -206,50 +206,27 @@ function renderGames(team) {
 }
 
 // =====================================================
-// QR HANDLING
+// NFC HANDLING
 // =====================================================
 
-const qr = new Html5Qrcode("reader", {
-  formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE]
-});
-
-function getQrBoxSize(videoWidth, videoHeight) {
-  const dim = Math.min(videoWidth * QR_SCALE, videoHeight * QR_SCALE);
-  return { width: dim, height: dim };
-}
-
-function startQrScanner() {
-  qr.start(
-    { facingMode: "user" },
-    {
-      fps: 10,
-      qrbox: (w, h) => getQrBoxSize(w, h)
-    },
-    (decodedText) => handleQR(decodedText)
-  )
-  .then(() => fixVideoOrientation())
-  .catch(err => console.warn("QR start failed:", err));
-}
-
-function handleQR(code) {
+function handleNfc(code) {
   if (scanLocked) return;
 
   scanLocked = true;
 
   if (code === "A") addPoint("A");
   if (code === "B") addPoint("B");
-  if (code === "RESET") resetMatch();
 
   startCooldown();
 
   setTimeout(() => {
     scanLocked = false;
-    qr.resume();
+    //nfc.resume();
   }, COOLDOWN_MS);
 }
 
 function startCooldown() {
-  qr.pause();
+  //nfc.pause();
   reader.style.visibility = "hidden";
   setControlsVisible(false);
 
@@ -263,39 +240,12 @@ function startCooldown() {
     if (cooldownRemaining <= 0) {
       clearInterval(cooldownTimer);
       cooldownEl.classList.remove("active");
-      reader.style.visibility = "visible";
       setControlsVisible(true);
     } else {
       cooldownEl.textContent = `Next scan in ${cooldownRemaining}s`;
     }
   }, 1000);
 }
-
-// =====================================================
-// VIDEO ORIENTATION
-// =====================================================
-
-function fixVideoOrientation() {
-  const video = document.querySelector("#reader video");
-  if (!video) return;
-
-  let angle = screen.orientation?.angle ?? window.orientation ?? 0;
-  angle = (angle + 360) % 360;
-
-  let rotation = 0;
-  switch(angle) {
-    case 90: rotation = -90; break;
-    case 180: rotation = 180; break;
-    case 270: rotation = 90; break;
-  }
-
-  video.style.transform = `rotate(${rotation}deg) scaleX(-1)`;
-  video.style.transformOrigin = "center";
-}
-
-window.addEventListener("orientationchange", () => {
-  setTimeout(fixVideoOrientation, 300);
-});
 
 // =====================================================
 // WAKE LOCK
@@ -339,6 +289,14 @@ confirmResetBtn.addEventListener("click", () => {
   };
 
   history = [];
+
+  ["A", "B"].forEach(team => {
+      localStorage.removeItem(`teamName${team}`);
+    const labelEl = document.querySelector(`.team-name[data-team="${team}"] .name-text`);
+    labelEl.textContent = `Team ${team}`;
+    fitTextToContainer(labelEl); // re-fit default name
+  });
+
   updateUI();
   resetModal.classList.add("hidden");
 });
@@ -380,11 +338,10 @@ function addHoldButtonLogic(button, onConfirm, holdMs = 800) {
 // Apply to Undo and Reset
 // ---------------------------------------------------
 
-addHoldButtonLogic(undoBtn, undoLastPoint, 800);
+addHoldButtonLogic(undoBtn, undoLastPoint, UNDO_HOLDBUTTONDURATION_MS);
 addHoldButtonLogic(resetBtn, () => {
-  // Show modal and immediately confirm reset for hold UX
   resetModal.classList.remove("hidden");
-}, 800);
+}, RESET_HOLDBUTTONDURATION_MS);
 
 function confirmReset() {
   score = {
@@ -420,12 +377,15 @@ function startEditing(labelEl, team) {
   input.focus();
   input.select();
 
-  function save() {
-    const name = input.value.trim() || `Team ${team}`;
-    localStorage.setItem(`teamName${team}`, name);
-    labelEl.textContent = name;
-    input.replaceWith(labelEl);
-  }
+function save() {
+  const name = input.value.trim() || `Team ${team}`;
+  localStorage.setItem(`teamName${team}`, name);
+
+  labelEl.textContent = name;
+  input.replaceWith(labelEl);
+
+  fitTextToContainer(labelEl);
+}
 
   function cancel() {
     input.replaceWith(labelEl);
@@ -438,11 +398,35 @@ function startEditing(labelEl, team) {
   });
 }
 
+function fitTextToContainer(textEl) {
+  const container = textEl.parentElement;
+
+  // Reset scaling
+  textEl.style.transform = "scale(1)";
+
+  const containerWidth = container.clientWidth;
+  const textWidth = textEl.scrollWidth;
+
+  if (textWidth > containerWidth) {
+    const scale = containerWidth / textWidth;
+    textEl.style.transform = `scale(${scale})`;
+  }
+}
+
+window.addEventListener("resize", () => {
+  document.querySelectorAll(".team-name .name-text").forEach(el => {
+    fitTextToContainer(el);
+  });
+});
+
+document.querySelectorAll(".team-name .name-text").forEach(el => {
+  fitTextToContainer(el);
+});
+
 // =====================================================
 // INIT
 // =====================================================
 
-startQrScanner();
 updateUI();
 
 document.getElementById("addPointA").addEventListener("click", () => addPoint("A"));

@@ -40,6 +40,7 @@ body {
   gap: 20px;
   padding: 20px;
   flex-wrap: wrap;
+  position: relative;
 }
 
 /* =======================================================
@@ -49,7 +50,7 @@ body {
 .team {
   width: 45%;
   min-width: 320px;
-  padding: 30px 30px 0;
+  padding: 0px 30px 0;
   border-radius: 22px;
   position: relative;
   overflow: hidden;
@@ -57,6 +58,8 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
+
+  container-type: inline-size;
 }
 
 /* Team Variants */
@@ -75,29 +78,43 @@ body {
 ======================================================= */
 
 .team-name {
-  font-size: 36px;
-  cursor: pointer;
-  user-select: none;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 100%;
   padding: 6px 14px;
   border-radius: 10px;
-  transition: background 0.2s ease, opacity 0.2s ease;
-  position: relative;
-  z-index: 10; /* ensures clickable above ref zone */
+
+  overflow: hidden;
+
+  z-index: 10;
+}
+
+.team-name .name-text {
+  display: inline-block;
+  white-space: nowrap;
+  font-size: 36px;
+  font-weight: 700;
+
+  transform-origin: center center;
+  transition: transform 0.15s ease;
 }
 
 .team-name:hover {
-  background: rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.25);
 }
 
 .team-name-input {
-  font-size: 36px;
-  font-weight: 600;
+  width: 100%;
   text-align: center;
+  font-size: 36px;
+  font-weight: 700;
   background: transparent;
   border: 2px solid currentColor;
   border-radius: 10px;
   padding: 4px 8px;
-  width: 100%;
   color: inherit;
   outline: none;
 }
@@ -184,33 +201,26 @@ body {
 }
 
 /* Indicator Triangle */
-.indicator-dot {
+.indicator {
   position: absolute;
-  top: 30%;
-  left: 50%;
-  transform: translateX(-50%);
-  border-left: 22px solid transparent;
-  border-right: 22px solid transparent;
-  border-bottom: 34px solid var(--white);
+  bottom:3%;
+  right:3%;
+  height: 24px;
+  width: 24px;
+  border-radius: 50%;
+  border: 4px solid var(--white);
   opacity: 0;
   transition: opacity 0.2s ease;
   pointer-events: none;
+  background-color: transparent;
 }
 
 /* =======================================================
    CONTROLS
 ======================================================= */
 
-/* =======================================================
-   CONTROLS LAYOUT
-======================================================= */
-
-/* =======================================================
-   REFEREE MODE
-======================================================= */
-
 .referee-controls {
-  position: fixed;
+  position: absolute;
   inset: 0;
   z-index: 5;
   pointer-events: none;
@@ -248,42 +258,41 @@ body {
 /* ================= FLOATING BUTTONS ================= */
 
 .floating-controls {
-  position: absolute;
+  position: fixed;
   bottom: 20px;
   left: 50%;
   transform: translateX(-50%);
   display: flex;
-  gap: 120px;
+  gap: 40px;
   pointer-events: auto;
-  z-index: 10; /* <-- raise above ref zones */
+  z-index: 20;
 }
 
 .floating-btn {
-  padding: 14px 20px; /* slightly bigger */
+  padding: 10px 20px; /* slightly bigger */
   min-width: 80px;
   border-radius: 20px;
   border-style: solid;
-  border-color: #aaaaaa;
+  border-width: 2px;
   background: rgba(0,0,0,0.75);
-  color: white;
+  color: rgba(255, 255, 255, 1);
   font-weight: 600;
   font-size: 20px;
   backdrop-filter: blur(6px);
   transition: transform 0.1s ease;
+  opacity: 0.5;
 }
 
 .floating-btn:active {
-  transform: scale(1.5);
+  transform: scale(1.75);
 }
 
 .floating-btn.holding::after {
   content: "";
   position: absolute;
   inset: 0;
-  background: rgba(255, 0, 0, 0.25); /* overlay color */
   transform: scaleX(0);
   transform-origin: left;
-  animation: holdFill 0.8s linear forwards;
 }
 
 @keyframes holdFill {
@@ -298,7 +307,14 @@ body {
 }
 
 #undoBtn.holding::after {
-	background: rgba(255, 255, 255, 0.25); 
+  animation: holdFill 0.5s linear forwards;
+	background: rgb(255, 255, 255); 
+  
+}
+
+#resetBtn.holding::after {
+  animation: holdFill 1s linear forwards;
+  background: rgba(255, 0, 0, 0.25);
 }
 
 /* =======================================================
@@ -346,24 +362,6 @@ body {
 
 .cooldown.active {
   opacity: 1;
-}
-
-/* =======================================================
-   QR READER
-======================================================= */
-
-#reader {
-  width: 320px;
-  margin: 20px auto;
-}
-
-#reader video {
-  filter: grayscale(100%);
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  aspect-ratio: 1 / 1;
-  transform-origin: center;
 }
 
 /* =======================================================
