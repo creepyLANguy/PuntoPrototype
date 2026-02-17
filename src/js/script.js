@@ -1,3 +1,16 @@
+
+document.addEventListener("DOMContentLoaded", () => {
+
+  // MENU TOGGLE
+  const menuPage = document.getElementById("menuPage");
+  const scoreboardPage = document.getElementById("scoreboardPage");
+  document.querySelectorAll(".menu-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      menuPage.style.display = "none";
+      scoreboardPage.style.display = "block";
+    });
+  });
+
 // =====================================================
 // CONFIG
 // =====================================================
@@ -456,3 +469,6 @@ updateUI();
 
 document.getElementById("addPointA").addEventListener("click", () => addPoint("A"));
 document.getElementById("addPointB").addEventListener("click", () => addPoint("B"));
+
+
+});

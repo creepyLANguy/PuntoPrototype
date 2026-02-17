@@ -4,22 +4,110 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Point Pulse - Live Scoreboard</title>
-
   <link rel="stylesheet" href="css/style.css" />
-  <link rel="stylesheet" href="css/menu.css" />
+  <script src="js/script.js" defer></script>
 </head>
-
 <body>
-  <main class="menu-page">
+
+  <!-- ================= MENU ================= -->
+  <main id="menuPage" class="menu-page">
     <h1 class="app-title">Welcome to Point Pulse</h1>
     <div class="app-subtitle">Your Live Scoreboard</div>
 
     <div class="menu-buttons">
-      <a href="scoreboard.html" class="menu-btn" id="create">Create</a>
-      <a href="scoreboard.html" class="menu-btn" id="join">Join</a>
-      <a href="scoreboard.html" class="menu-btn" id="spectate">Spectate</a>
+      <button class="menu-btn" data-action="start">Create</button>
+      <button class="menu-btn" data-action="start">Join</button>
+      <button class="menu-btn" data-action="start">Spectate</button>
     </div>
   </main>
+
+  <!-- ================= SCOREBOARD (HIDDEN INITIALLY) ================= -->
+  <div id="scoreboardPage" style="display:none;">
+    
+
+  <!-- ================= RESET MODAL ================= -->
+  <div id="resetModal" class="reset-modal hidden">
+    <div class="reset-box">
+      <p>Reset the entire match?</p>
+      <div class="reset-actions">
+        <button id="confirmReset" type="button">Yes</button>
+        <button id="cancelReset" type="button">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= APP ================= -->
+  <main class="app">
+
+    <!-- ===== SCOREBOARD ===== -->
+    <section class="scoreboard">
+
+      <!-- TEAM A -->
+      <div class="team team-a" id="teamA">
+        <h2 class="team-name" data-team="A">
+          <span class="name-text">Team A</span>
+        </h2>
+
+        <div class="meta">
+          <div class="row">
+            <span>Sets</span>
+            <span id="setsA"></span>
+          </div>
+          <div class="row">
+            <span>Games</span>
+            <span id="gamesA"></span>
+          </div>
+        </div>
+
+        <div class="indicator"></div>
+
+        <div class="points-wrapper">
+          <div class="points" id="pointsA">0</div>
+        </div>
+      </div>
+
+      <!-- TEAM B -->
+      <div class="team team-b" id="teamB">
+        <h2 class="team-name" data-team="B">
+          <span class="name-text">Team B</span>
+        </h2>
+
+        <div class="meta">
+          <div class="row">
+            <span>Sets</span>
+            <span id="setsB"></span>
+          </div>
+          <div class="row">
+            <span>Games</span>
+            <span id="gamesB"></span>
+          </div>
+        </div>
+
+        <div class="indicator"></div>
+
+        <div class="points-wrapper">
+          <div class="points" id="pointsB">0</div>
+        </div>
+      </div>
+
+      <!-- REFEREE MODE TAP ZONES -->
+      <div class="referee-controls">
+        <button id="addPointA" class="ref-zone zone-a" aria-label="Add point Team A"></button>
+        <button id="addPointB" class="ref-zone zone-b" aria-label="Add point Team B"></button>
+      </div>
+    </section>
+
+    <!-- ===== COOLDOWN ===== -->
+    <div class="cooldown" id="cooldown"></div>
+    
+    <div class="floating-controls">
+      <button id="undoBtn" class="floating-btn">Undo</button>
+      <button id="resetBtn" class="floating-btn">Reset</button>
+    </div>
+  </main>
+
+
+  </div>
 
 </body>
 </html>
