@@ -147,10 +147,6 @@ function winSet(team) {
   score.B.games = 0;
 }
 
-function resetMatch() {
-  resetModal.classList.remove("hidden");
-}
-
 // =====================================================
 // UI
 // =====================================================
@@ -381,19 +377,6 @@ addHoldButtonLogic(resetBtn, () => {
   resetModal.classList.remove("hidden");
 }, RESET_HOLDBUTTONDURATION_MS);
 
-function confirmReset() {
-  score = {
-    A: { points: 0, games: 0, sets: 0 },
-    B: { points: 0, games: 0, sets: 0 },
-    lastPointTeam: null,
-    lastGameTeam: null,
-    lastSetTeam: null
-  };
-  history = [];
-  updateUI();
-  resetModal.classList.add("hidden");
-}
-
 // =====================================================
 // TEAM NAME EDITING
 // =====================================================
@@ -469,6 +452,5 @@ updateUI();
 
 document.getElementById("addPointA").addEventListener("click", () => addPoint("A"));
 document.getElementById("addPointB").addEventListener("click", () => addPoint("B"));
-
 
 });
