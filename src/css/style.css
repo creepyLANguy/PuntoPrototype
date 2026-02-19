@@ -236,7 +236,7 @@ body {
   display: flex;
   flex-direction: row-reverse;
   align-items: center;
-  gap: 8px;
+  gap: 24px;
   color: var(--white);
 }
 
@@ -246,7 +246,18 @@ body {
   height: 30px;
   border-radius: 50%;
   background: var(--white);
-  opacity: 0.1;
+}
+
+.game-dot {
+  border-style: solid;
+  border-width: 5px;
+  background-color: rgba(0, 0, 0, 0);
+  opacity: 0.25;
+}
+
+/* Hide empty set dots initially */
+.set-dot {
+  opacity: 0;
 }
 
 .set-dot.filled,
@@ -255,10 +266,7 @@ body {
   background: currentColor;
 }
 
-/* Hide empty set dots initially */
-.set-dot {
-  opacity: 0;
-}
+
 
 /* =======================================================
    POINTS DISPLAY
@@ -378,6 +386,7 @@ body {
   to { transform: scaleX(1); }
 }
 
+#backBtn,
 #undoBtn {
     transition: transform var(--hold-duration, 0.5s) linear;
 }
@@ -385,17 +394,17 @@ body {
 #resetBtn {
     transition: transform var(--hold-duration, 1s) linear;
 }
-
+#backBtn,
 #resetBtn,
 #undoBtn {
   position: relative;
   overflow: hidden;
 }
 
+#backBtn.holding::after,
 #undoBtn.holding::after {
   animation: holdFill 0.5s linear forwards;
 	background: rgb(255, 255, 255); 
-  
 }
 
 #resetBtn.holding::after {

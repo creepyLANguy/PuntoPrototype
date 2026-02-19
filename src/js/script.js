@@ -17,8 +17,25 @@ document.addEventListener("DOMContentLoaded", () => {
 
 const POINTS = [0, 15, 30, 40];
 const COOLDOWN_MS = 3000;
+const BACK_HOLDBUTTONDURATION_MS = 550;
 const UNDO_HOLDBUTTONDURATION_MS = 550;
 const RESET_HOLDBUTTONDURATION_MS = 1050;
+
+// =====================================================
+// NFC IDs and Action Mapping
+// =====================================================
+
+const TEAM_A_ID = "A";
+const TEAM_B_ID = "B";
+const RESET_ID = "RESET";
+const UNDO_ID = "UNDO";
+
+const actionMap = {
+  [TEAM_A_ID]: () => addPoint(TEAM_A_ID),
+  [TEAM_B_ID]: () => addPoint(TEAM_B_ID),
+  [RESET_ID]: () => resetModal.classList.remove("hidden"),
+  [UNDO_ID]: () => undoLastPoint(),
+};
 
 // =====================================================
 // DOM REFERENCES
@@ -38,6 +55,7 @@ const resetModal = document.getElementById("resetModal");
 const confirmResetBtn = document.getElementById("confirmReset");
 const cancelResetBtn = document.getElementById("cancelReset");
 const undoBtn = document.getElementById("undoBtn");
+const backBtn = document.getElementById("backBtn");
 
 // =====================================================
 // STATE
@@ -68,7 +86,7 @@ function saveState() {
 
 function addPoint(team) {
   saveState();
-  const opp = team === "A" ? "B" : "A";
+  const opp = team === TEAM_A_ID ? TEAM_B_ID : TEAM_A_ID;
   score.lastPointTeam = team;
 
   // Deuce logic
@@ -242,16 +260,17 @@ function renderGames(team) {
 function handleNfc(code) {
   if (scanLocked) return;
 
+  const action = actionMap[code];
+  if (!action) return;
+
   scanLocked = true;
 
-  if (code === "A") addPoint("A");
-  if (code === "B") addPoint("B");
-
+  action();
   startCooldown();
 
   setTimeout(() => {
     scanLocked = false;
-    //nfc.resume();
+    // nfc.resume();
   }, COOLDOWN_MS);
 }
 
@@ -369,10 +388,14 @@ function addHoldButtonLogic(button, onConfirm, holdMs = 800) {
 }
 
 // ---------------------------------------------------
-// Apply to Undo and Reset
+// Apply hold logic to buttons with appropriate durations and actions
 // ---------------------------------------------------
-
 addHoldButtonLogic(undoBtn, undoLastPoint, UNDO_HOLDBUTTONDURATION_MS);
+
+addHoldButtonLogic(backBtn, () => {
+  window.location.href = "index.html";
+}, BACK_HOLDBUTTONDURATION_MS);
+
 addHoldButtonLogic(resetBtn, () => {
   resetModal.classList.remove("hidden");
 }, RESET_HOLDBUTTONDURATION_MS);
@@ -383,8 +406,10 @@ addHoldButtonLogic(resetBtn, () => {
 
 document.querySelectorAll(".team-name .name-text").forEach((el) => {
   const team = el.closest(".team-name").dataset.team;
-  const saved = localStorage.getItem(`teamName${team}`);
-  if (saved) el.textContent = saved;
+  //AL.
+  //TODO - integrate with firestore instead of localStorage for persistence across devices
+  //const saved = localStorage.getItem(`teamName${team}`);
+  //if (saved) el.textContent = saved;
 
   el.addEventListener("click", () => startEditing(el, team));
 });
