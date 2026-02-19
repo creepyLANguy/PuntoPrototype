@@ -44,6 +44,7 @@
 
       <!-- TEAM A -->
       <div class="team team-a" id="teamA">
+        <button id="addPointA" class="ref-zone"></button>
         <h2 class="team-name" data-team="A">
           <span class="name-text">Team A</span>
         </h2>
@@ -66,8 +67,14 @@
         </div>
       </div>
 
+      <!-- SWAP BUTTON -->
+      <div class="swap-container">
+        <button id="swapBtn" class="swap-btn">⇄</button>
+      </div>
+
       <!-- TEAM B -->
       <div class="team team-b" id="teamB">
+        <button id="addPointB" class="ref-zone"></button>
         <h2 class="team-name" data-team="B">
           <span class="name-text">Team B</span>
         </h2>
@@ -89,13 +96,6 @@
           <div class="points" id="pointsB">0</div>
         </div>
       </div>
-
-      <!-- REFEREE MODE TAP ZONES -->
-      <div class="referee-controls">
-        <button id="addPointA" class="ref-zone zone-a" aria-label="Add point Team A"></button>
-        <button id="addPointB" class="ref-zone zone-b" aria-label="Add point Team B"></button>
-      </div>
-    </section>
 
     <!-- ===== COOLDOWN ===== -->
     <div class="cooldown" id="cooldown"></div>

@@ -52,7 +52,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     undoBtn: $("undoBtn"),
     backBtn: $("backBtn"),
-    resetBtn: $("resetBtn")
+    resetBtn: $("resetBtn"),
+    swapBtn: $("swapBtn")
   };
 
   // =====================================================
@@ -366,6 +367,10 @@ document.addEventListener("DOMContentLoaded", () => {
   elements.resetModal.addEventListener("click", (e) => {
     if (e.target === elements.resetModal)
       elements.resetModal.classList.add("hidden");
+  });
+
+  swapBtn.addEventListener("click", () => {
+    document.querySelector(".scoreboard").classList.toggle("swapped");
   });
 
   // =====================================================
