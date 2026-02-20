@@ -118,11 +118,14 @@ body {
   justify-content: center;
   align-items: stretch;
   gap: 1%;
-  padding: 1%;
+  padding-right: 1%;
+  padding-top: 1%;
+  padding-bottom: 1%;
   position: relative;
 
-  max-width: 100vw;      /* don't exceed viewport width */
-  margin: 0 auto;        /* center horizontally */
+  max-width: 100vw;
+  margin: 0 auto;
+  overflow: hidden;
 }
 
 /* =======================================================
@@ -421,7 +424,7 @@ body {
 
 @keyframes team-pop {
   0% { transform: scale(1); }
-  35% { transform: scale(1.08); }
+  35% { transform: scale(1.05); }
   100% { transform: scale(1); }
 }
 
