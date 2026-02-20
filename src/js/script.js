@@ -18,6 +18,11 @@ document.addEventListener("DOMContentLoaded", () => {
     UNDO: "UNDO"
   };
 
+  const POINT_SND = "pointSound";
+  const UNDO_SND = "undoSound";
+  const SWOOSH_SND = "swooshSound";
+  const START_SND = "startSound";
+  
   // =====================================================
   // DOM REFERENCES
   // =====================================================
@@ -64,6 +69,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   document.querySelectorAll(".menu-btn").forEach(btn => {
     btn.addEventListener("click", () => {
+      playSound(START_SND);
       elements.menuPage.style.display = "none";
       elements.scoreboardPage.style.display = "block";
     });
@@ -101,6 +107,16 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   // =====================================================
+  // SOUND LOGIC
+  // =====================================================
+
+  function playSound(id) {
+    const sound = document.getElementById(id);
+    const clone = sound.cloneNode(true);
+    clone.play().catch(() => {});
+  }
+
+  // =====================================================
   // SCORE LOGIC
   // =====================================================
 
@@ -114,7 +130,9 @@ document.addEventListener("DOMContentLoaded", () => {
     return team === TEAM_A ? TEAM_B : TEAM_A;
   }
 
-  function addPoint(team) {
+  function addPoint(team) {    
+    playSound(POINT_SND);
+    
     saveState();
     const opp = opponent(team);
 
@@ -153,12 +171,14 @@ document.addEventListener("DOMContentLoaded", () => {
   function undoLastPoint() {
 
     if (score.lastPointTeam) {
+      playSound(UNDO_SND);
+
       animateUndo(score.lastPointTeam);
 
       const pointsEl = elements.points[score.lastPointTeam];
       pointsEl.classList.remove("undo-flash");
       void pointsEl.offsetWidth;
-      pointsEl.classList.add("undo-flash");
+      pointsEl.classList.add("undo-flash");      
     }
 
     if (history.length === 0) return;
@@ -346,6 +366,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   elements.confirmResetBtn.addEventListener("click", () => {
+    playSound(START_SND);
     score = defaultScore();
     history = [];
 
@@ -371,7 +392,8 @@ document.addEventListener("DOMContentLoaded", () => {
       elements.resetModal.classList.add("hidden");
   });
 
-  swapBtn.addEventListener("click", () => {
+  elements.swapBtn.addEventListener("click", () => {
+    playSound(SWOOSH_SND);
     document.querySelector(".scoreboard").classList.toggle("swapped");
   });
 
