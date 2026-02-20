@@ -28,6 +28,8 @@ document.addEventListener("DOMContentLoaded", () => {
     menuPage: $("menuPage"),
     scoreboardPage: $("scoreboardPage"),
 
+    scoreboard: document.querySelector(".scoreboard"),
+
     points: {
       A: $("pointsA"),
       B: $("pointsB")
@@ -53,7 +55,7 @@ document.addEventListener("DOMContentLoaded", () => {
     undoBtn: $("undoBtn"),
     backBtn: $("backBtn"),
     resetBtn: $("resetBtn"),
-    swapBtn: $("swapBtn")
+    swapBtn: $("swapBtn"),
   };
 
   // =====================================================
