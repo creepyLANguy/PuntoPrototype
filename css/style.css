@@ -572,3 +572,66 @@ body {
 .scoreboard.swapped .team-a { order: 3; }
 .scoreboard.swapped .team-b { order: 1; }
 
+/* ================= CREATE PAGE ================= */
+
+.create-page {
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #000;
+  color: white;
+}
+
+.create-card {
+  position: relative;
+  width: 400px;
+  padding: 40px;
+  background: rgba(255,255,255,0.05);
+  border: 2px solid white;
+  border-radius: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.close-btn {
+  position: absolute;
+  top: 15px;
+  right: 20px;
+  background: none;
+  border: none;
+  font-size: 22px;
+  color: white;
+  cursor: pointer;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form-group input {
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid white;
+  background: black;
+  color: white;
+}
+
+.error {
+  font-size: 14px;
+  color: red;
+  min-height: 18px;
+}
+
+.primary-btn {
+  padding: 12px;
+  border-radius: 10px;
+  border: 2px solid white;
+  background: white;
+  color: black;
+  font-weight: bold;
+  cursor: pointer;
+}

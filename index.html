@@ -21,6 +21,92 @@
     </div>
   </main>
 
+  <!-- ================= CREATE COURT PAGE ================= -->
+  <div id="createPage" style="display:none;" class="create-page">
+
+    <div class="create-card">
+
+      <button id="closeCreateBtn" class="close-btn">✕</button>
+
+      <h2>Create Court</h2>
+
+      <!-- Admin Password -->
+      <div class="form-group">
+        <label>Admin Password</label>
+        <input type="password" id="adminPassword" />
+        <div class="error" id="adminError"></div>
+      </div>
+
+      <!-- Court Name -->
+      <div class="form-group">
+        <label>Court Name</label>
+        <input type="text" id="courtName" />
+        <div class="error" id="courtNameError"></div>
+      </div>
+
+      <!-- Court Password -->
+      <div class="form-group">
+        <label>Court Password</label>
+        <input type="password" id="courtPassword" />
+        <div class="error" id="courtPasswordError"></div>
+      </div>
+
+      <button id="createCourtBtn" class="primary-btn">Create Court</button>
+
+    </div>
+  </div>
+
+  <!-- ================= PLAY COURT PAGE ================= -->
+  <div id="playPage" style="display:none;" class="create-page">
+
+    <div class="create-card">
+
+      <button id="closePlayBtn" class="close-btn">✕</button>
+
+      <h2>Play Court</h2>
+
+      <!-- Court Name -->
+      <div class="form-group">
+        <label>Court Name</label>
+        <input type="text" id="playCourtName" />
+        <div class="error" id="playCourtNameError"></div>
+      </div>
+
+      <!-- Court Password -->
+      <div class="form-group">
+        <label>Court Password</label>
+        <input type="password" id="playCourtPassword" />
+        <div class="error" id="playCourtPasswordError"></div>
+      </div>
+
+      <button id="enterCourtBtn" class="primary-btn">Enter Court</button>
+
+    </div>
+  </div>
+  
+  <!-- ================= SPECTATE PAGE ================= -->
+  <div id="spectatePage" style="display:none;" class="create-page">
+
+    <div class="create-card">
+
+      <button id="closeSpectateBtn" class="close-btn">✕</button>
+
+      <h2>Spectate Court</h2>
+
+      <!-- Court Name -->
+      <div class="form-group">
+        <label>Court Name</label>
+        <input type="text" id="spectateCourtName" />
+        <div class="error" id="spectateCourtNameError"></div>
+      </div>
+
+      <button id="spectateCourtBtn" class="primary-btn">
+        Watch Court
+      </button>
+
+    </div>
+  </div>
+  
   <!-- ================= SCOREBOARD (HIDDEN INITIALLY) ================= -->
   <div id="scoreboardPage" style="display:none;">
     
