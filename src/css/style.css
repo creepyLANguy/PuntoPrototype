@@ -292,7 +292,6 @@ body {
   color: inherit;
 }
 
-/* Indicator Triangle */
 .indicator {
   position: absolute;
   bottom:3%;
@@ -361,6 +360,9 @@ body {
   font-size: 20px;
   backdrop-filter: blur(6px);
   opacity: 0.5;
+  position: relative;
+  overflow: hidden;
+  transition: transform var(--hold-duration, 0.5s) linear;
 }
 
 .floating-btn.pressed {
@@ -373,6 +375,8 @@ body {
   inset: 0;
   transform: scaleX(0);
   transform-origin: left;
+  animation: holdFill 0.5s linear forwards;
+	background: rgb(255, 255, 255); 
 }
 
 @keyframes holdFill {
@@ -380,25 +384,8 @@ body {
   to { transform: scaleX(1); }
 }
 
-#backBtn,
-#undoBtn {
-    transition: transform var(--hold-duration, 0.5s) linear;
-}
-
 #resetBtn {
     transition: transform var(--hold-duration, 1s) linear;
-}
-#backBtn,
-#resetBtn,
-#undoBtn {
-  position: relative;
-  overflow: hidden;
-}
-
-#backBtn.holding::after,
-#undoBtn.holding::after {
-  animation: holdFill 0.5s linear forwards;
-	background: rgb(255, 255, 255); 
 }
 
 #resetBtn.holding::after {

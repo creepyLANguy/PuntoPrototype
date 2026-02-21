@@ -1,5 +1,7 @@
 document.addEventListener("DOMContentLoaded", () => {
 
+  window.addEventListener("load", preloadSounds);
+
   // =====================================================
   // CONFIG
   // =====================================================
@@ -9,6 +11,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const BACK_HOLD_MS = 550;
   const UNDO_HOLD_MS = 550;
   const RESET_HOLD_MS = 1050;
+  const MUTE_HOLD_MS = 550;
 
   const TEAM_A = "A";
   const TEAM_B = "B";
@@ -18,11 +21,42 @@ document.addEventListener("DOMContentLoaded", () => {
     UNDO: "UNDO"
   };
 
-  const POINT_SND = "pointSound";
-  const UNDO_SND = "undoSound";
-  const SWOOSH_SND = "swooshSound";
-  const START_SND = "startSound";
+  const SOUND_IDS = {
+    POINT: "pointSound",
+    UNDO: "undoSound",
+    SWOOSH: "swooshSound",
+    START: "startSound"
+  };
   
+  const sounds = {};
+
+  function preloadSounds() {
+    Object.values(SOUND_IDS).forEach(id => {
+      const audio = document.getElementById(id);
+      audio.load(); // forces preload
+      sounds[id] = audio;
+    });
+  }
+
+  let audioUnlocked = false;
+
+  function ensureAudioUnlocked() {
+    if (audioUnlocked) return;
+
+    Object.values(sounds).forEach(audio => {
+      try {
+        audio.muted = true;
+        audio.play().then(() => {
+          audio.pause();
+          audio.currentTime = 0;
+          audio.muted = false;
+        });
+      } catch (e) {}
+    });
+
+    audioUnlocked = true;
+  }
+
   // =====================================================
   // DOM REFERENCES
   // =====================================================
@@ -61,6 +95,7 @@ document.addEventListener("DOMContentLoaded", () => {
     backBtn: $("backBtn"),
     resetBtn: $("resetBtn"),
     swapBtn: $("swapBtn"),
+    muteBtn: $("muteBtn")
   };
 
   // =====================================================
@@ -69,7 +104,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   document.querySelectorAll(".menu-btn").forEach(btn => {
     btn.addEventListener("click", () => {
-      playSound(START_SND);
+      playSound(SOUND_IDS.START, true);
       elements.menuPage.style.display = "none";
       elements.scoreboardPage.style.display = "block";
     });
@@ -95,6 +130,8 @@ document.addEventListener("DOMContentLoaded", () => {
   let cooldownRemaining = 0;
   let wakeLock = null;
 
+  let muted = false;
+
   // =====================================================
   // ACTION MAP
   // =====================================================
@@ -110,12 +147,18 @@ document.addEventListener("DOMContentLoaded", () => {
   // SOUND LOGIC
   // =====================================================
 
-  function playSound(id) {
-    const sound = document.getElementById(id);
-    const clone = sound.cloneNode(true);
-    clone.play().catch(() => {});
-  }
+  function playSound(id, forceEvenIfMuted = false) {
+    if (muted && !forceEvenIfMuted) return;
 
+    ensureAudioUnlocked();   // 🔥 unlock before playing
+
+    const sound = sounds[id];
+    if (!sound) return;
+
+    sound.currentTime = 0;
+    sound.play().catch(() => {});
+  }
+  
   // =====================================================
   // SCORE LOGIC
   // =====================================================
@@ -130,8 +173,8 @@ document.addEventListener("DOMContentLoaded", () => {
     return team === TEAM_A ? TEAM_B : TEAM_A;
   }
 
-  function addPoint(team) {    
-    playSound(POINT_SND);
+  function addPoint(team) {        
+      playSound(SOUND_IDS.POINT);
     
     saveState();
     const opp = opponent(team);
@@ -171,7 +214,7 @@ document.addEventListener("DOMContentLoaded", () => {
   function undoLastPoint() {
 
     if (score.lastPointTeam) {
-      playSound(UNDO_SND);
+      playSound(SOUND_IDS.UNDO);
 
       animateUndo(score.lastPointTeam);
 
@@ -366,7 +409,8 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   elements.confirmResetBtn.addEventListener("click", () => {
-    playSound(START_SND);
+    playSound(SOUND_IDS.START);
+
     score = defaultScore();
     history = [];
 
@@ -393,7 +437,8 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   elements.swapBtn.addEventListener("click", () => {
-    playSound(SWOOSH_SND);
+    playSound(SOUND_IDS.SWOSH);
+
     document.querySelector(".scoreboard").classList.toggle("swapped");
   });
 
@@ -433,6 +478,11 @@ document.addEventListener("DOMContentLoaded", () => {
   addHoldButtonLogic(elements.resetBtn, () => {
     elements.resetModal.classList.remove("hidden");
   }, RESET_HOLD_MS);
+
+  addHoldButtonLogic(elements.muteBtn, () => {
+    muted = !muted;
+    elements.muteBtn.textContent = muted ? "🔇" : "🔊";
+  }, MUTE_HOLD_MS);
 
   // =====================================================
   // TEAM NAME EDITING
