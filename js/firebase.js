@@ -11,7 +11,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const firebaseConfig = {
-  apiKey: "",
+  apiKey: "AIzaSyA6sA_c3yNUZvvo_dZanhydLn7jXl-55hU",
   authDomain: "punto-8888.firebaseapp.com",
   projectId: "punto-8888",
   storageBucket: "punto-8888.firebasestorage.app",
