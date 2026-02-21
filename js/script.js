@@ -274,7 +274,7 @@ document.addEventListener("DOMContentLoaded", () => {
     showCourtTitle(courtName);
 
     await initAudio();
-    playSound(SOUND_IDS.START, true);
+    playSound(SOUND_IDS.START);
 
     elements.adminError.value = "";
     elements.courtNameError.value = "";
@@ -334,7 +334,7 @@ document.addEventListener("DOMContentLoaded", () => {
     showCourtTitle(court.name);
 
     await initAudio();
-    playSound(SOUND_IDS.START, true);
+    playSound(SOUND_IDS.START);
 
     elements.playCourtPassword.value = "";
   });
@@ -378,7 +378,7 @@ document.addEventListener("DOMContentLoaded", () => {
     enableSpectateMode();
 
     await initAudio();
-    playSound(SOUND_IDS.START, true);
+    playSound(SOUND_IDS.START);
   });
 
   function enableSpectateMode() {
@@ -793,12 +793,14 @@ document.addEventListener("DOMContentLoaded", () => {
     // Clear the password input for next time
     elements.resetCourtPassword.value = "";
     elements.resetModal.classList.add("hidden");
+
+    playSound(SOUND_IDS.START);
   });
 
   addHoldButtonLogic(elements.resetBtn, openResetModal, RESET_HOLD_MS);
 
   function openResetModal() {
-    playSound(SOUND_IDS.WARNING, true);
+    playSound(SOUND_IDS.WARNING);
     elements.resetCourtPassword.value = "";
     elements.resetPasswordError.textContent = "";
     elements.resetModal.classList.remove("hidden");
