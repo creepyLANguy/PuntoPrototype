@@ -55,7 +55,6 @@ let history = [];
 let scanLocked = false;
 let cooldownTimer = null;
 let cooldownRemaining = 0;
-let wakeLock = null;
 
 let muted = false;
 
@@ -729,27 +728,6 @@ function startCooldown() {
     }
   }, 1000);
 }
-
-// =====================================================
-// WAKE LOCK
-// =====================================================
-
-async function requestWakeLock() {
-  try {
-    wakeLock = await navigator.wakeLock.request("screen");
-  } catch (err) {
-    console.warn("Wake Lock failed:", err);
-  }
-}
-
-if ("wakeLock" in navigator) requestWakeLock();
-
-document.addEventListener("visibilitychange", () => {
-  if (document.visibilityState === "visible" &&
-      "wakeLock" in navigator) {
-    requestWakeLock();
-  }
-});
 
 // =====================================================
 // CONTROLS
