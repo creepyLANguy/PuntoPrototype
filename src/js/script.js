@@ -9,6 +9,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const BACK_HOLD_MS = 550;
   const UNDO_HOLD_MS = 550;
   const RESET_HOLD_MS = 1050;
+  const MUTE_HOLD_MS = 550;
 
   const TEAM_A = "A";
   const TEAM_B = "B";
@@ -16,6 +17,13 @@ document.addEventListener("DOMContentLoaded", () => {
   const IDS = {
     RESET: "RESET",
     UNDO: "UNDO"
+  };
+
+  const SOUND_IDS = {
+    POINT: "pointSound",
+    UNDO: "undoSound",
+    SWOOSH: "swooshSound",
+    START: "startSound"
   };
 
   // =====================================================
@@ -27,6 +35,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const elements = {
     menuPage: $("menuPage"),
     scoreboardPage: $("scoreboardPage"),
+
+    scoreboard: document.querySelector(".scoreboard"),
 
     points: {
       A: $("pointsA"),
@@ -53,7 +63,8 @@ document.addEventListener("DOMContentLoaded", () => {
     undoBtn: $("undoBtn"),
     backBtn: $("backBtn"),
     resetBtn: $("resetBtn"),
-    swapBtn: $("swapBtn")
+    swapBtn: $("swapBtn"),
+    muteBtn: $("muteBtn")
   };
 
   // =====================================================
@@ -61,9 +72,11 @@ document.addEventListener("DOMContentLoaded", () => {
   // =====================================================
 
   document.querySelectorAll(".menu-btn").forEach(btn => {
-    btn.addEventListener("click", () => {
+    btn.addEventListener("click", async () => {
+       await initAudio();   // preload first
+       playSound(SOUND_IDS.START, true);
       elements.menuPage.style.display = "none";
-      elements.scoreboardPage.style.display = "block";
+      elements.scoreboardPage.style.display = "block";      
     });
   });
 
@@ -87,6 +100,8 @@ document.addEventListener("DOMContentLoaded", () => {
   let cooldownRemaining = 0;
   let wakeLock = null;
 
+  let muted = false;
+
   // =====================================================
   // ACTION MAP
   // =====================================================
@@ -98,6 +113,54 @@ document.addEventListener("DOMContentLoaded", () => {
     [IDS.UNDO]: () => undoLastPoint()
   };
 
+  // =====================================================
+  // SOUND LOGIC
+  // =====================================================
+
+  let audioContext = null;
+  let audioBuffers = {};
+  let audioReady = false;
+
+  async function initAudio() {
+    if (audioReady) return;
+
+    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+    await Promise.all([
+      loadSound("pointSound", "media/sfx/point.mp3"),
+      loadSound("undoSound",  "media/sfx/undo.mp3"),
+      loadSound("swooshSound","media/sfx/swoosh.mp3"),
+      loadSound("startSound","media/sfx/start.mp3")
+    ]);
+
+    audioReady = true;
+  }
+
+  function loadSound(id, url) {
+    return fetch(url)
+      .then(r => r.arrayBuffer())
+      .then(buffer => audioContext.decodeAudioData(buffer))
+      .then(decoded => {
+        audioBuffers[id] = decoded;
+      });
+  }
+
+  async function playSound(id, force = false) {
+    if (muted && !force) return;
+
+    if (!audioReady) {
+      await initAudio();  // 🔥 guaranteed inside user gesture
+    }
+
+    const buffer = audioBuffers[id];
+    if (!buffer) return;
+
+    const source = audioContext.createBufferSource();
+    source.buffer = buffer;
+    source.connect(audioContext.destination);
+    source.start();
+  }
+  
   // =====================================================
   // SCORE LOGIC
   // =====================================================
@@ -112,7 +175,9 @@ document.addEventListener("DOMContentLoaded", () => {
     return team === TEAM_A ? TEAM_B : TEAM_A;
   }
 
-  function addPoint(team) {
+  function addPoint(team) {        
+      playSound(SOUND_IDS.POINT);
+    
     saveState();
     const opp = opponent(team);
 
@@ -151,12 +216,14 @@ document.addEventListener("DOMContentLoaded", () => {
   function undoLastPoint() {
 
     if (score.lastPointTeam) {
+      playSound(SOUND_IDS.UNDO);
+
       animateUndo(score.lastPointTeam);
 
       const pointsEl = elements.points[score.lastPointTeam];
       pointsEl.classList.remove("undo-flash");
       void pointsEl.offsetWidth;
-      pointsEl.classList.add("undo-flash");
+      pointsEl.classList.add("undo-flash");      
     }
 
     if (history.length === 0) return;
@@ -344,6 +411,8 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   elements.confirmResetBtn.addEventListener("click", () => {
+    playSound(SOUND_IDS.START);
+
     score = defaultScore();
     history = [];
 
@@ -369,7 +438,9 @@ document.addEventListener("DOMContentLoaded", () => {
       elements.resetModal.classList.add("hidden");
   });
 
-  swapBtn.addEventListener("click", () => {
+  elements.swapBtn.addEventListener("click", () => {
+    playSound(SOUND_IDS.SWOOSH);
+
     document.querySelector(".scoreboard").classList.toggle("swapped");
   });
 
@@ -409,6 +480,11 @@ document.addEventListener("DOMContentLoaded", () => {
   addHoldButtonLogic(elements.resetBtn, () => {
     elements.resetModal.classList.remove("hidden");
   }, RESET_HOLD_MS);
+
+  addHoldButtonLogic(elements.muteBtn, () => {
+    muted = !muted;
+    elements.muteBtn.textContent = muted ? "🔇" : "🔊";
+  }, MUTE_HOLD_MS);
 
   // =====================================================
   // TEAM NAME EDITING

@@ -118,11 +118,13 @@ body {
   justify-content: center;
   align-items: stretch;
   gap: 1%;
-  padding: 1%;
+  padding-right: 1%;
+  padding-top: 1%;
+  padding-bottom: 1%;
   position: relative;
-
-  max-width: 100vw;      /* don't exceed viewport width */
-  margin: 0 auto;        /* center horizontally */
+  max-width: 100vw;
+  margin: 0 auto;
+  overflow: hidden;
 }
 
 /* =======================================================
@@ -132,7 +134,8 @@ body {
 .team {
   flex: 1;
   min-width: 320px;
-  padding: 0; /* remove left/right padding */
+  padding-left: 1%;
+  padding-right: 1%;
   border-radius: 22px;
   position: relative;
   overflow: hidden;
@@ -142,6 +145,7 @@ body {
   align-items: center;
 
   container-type: inline-size;
+  
 }
 
 /* Team Variants */
@@ -239,7 +243,7 @@ body {
   display: flex;
   flex-direction: row-reverse;
   align-items: center;
-  gap: 24px;
+  gap: 18px;
   color: var(--white);
 }
 
@@ -288,7 +292,6 @@ body {
   color: inherit;
 }
 
-/* Indicator Triangle */
 .indicator {
   position: absolute;
   bottom:3%;
@@ -357,6 +360,9 @@ body {
   font-size: 20px;
   backdrop-filter: blur(6px);
   opacity: 0.5;
+  position: relative;
+  overflow: hidden;
+  transition: transform var(--hold-duration, 0.5s) linear;
 }
 
 .floating-btn.pressed {
@@ -369,6 +375,8 @@ body {
   inset: 0;
   transform: scaleX(0);
   transform-origin: left;
+  animation: holdFill 0.5s linear forwards;
+	background: rgb(255, 255, 255); 
 }
 
 @keyframes holdFill {
@@ -376,25 +384,8 @@ body {
   to { transform: scaleX(1); }
 }
 
-#backBtn,
-#undoBtn {
-    transition: transform var(--hold-duration, 0.5s) linear;
-}
-
 #resetBtn {
     transition: transform var(--hold-duration, 1s) linear;
-}
-#backBtn,
-#resetBtn,
-#undoBtn {
-  position: relative;
-  overflow: hidden;
-}
-
-#backBtn.holding::after,
-#undoBtn.holding::after {
-  animation: holdFill 0.5s linear forwards;
-	background: rgb(255, 255, 255); 
 }
 
 #resetBtn.holding::after {
@@ -421,7 +412,7 @@ body {
 
 @keyframes team-pop {
   0% { transform: scale(1); }
-  35% { transform: scale(1.08); }
+  35% { transform: scale(1.035); }
   100% { transform: scale(1); }
 }
 
@@ -580,3 +571,4 @@ body {
 
 .scoreboard.swapped .team-a { order: 3; }
 .scoreboard.swapped .team-b { order: 1; }
+
