@@ -230,9 +230,10 @@ elements.createCourtBtn.addEventListener("click", async () => {
   elements.courtNameError.textContent = "";
   elements.courtPasswordError.textContent = "";
 
-  //AL.
-  //TODO - make this pull from firebase and use hashed passwords for security.
-  if (adminPass !== "123123") {
+  const adminref = doc(db, "admin", "goodies");
+  const snap = await getDoc(adminref);
+
+   if (snap.data().skeletonKey !== adminPass) {
     elements.adminError.textContent = "Invalid admin password.";
     return;
   }
@@ -280,6 +281,7 @@ elements.createCourtBtn.addEventListener("click", async () => {
   elements.courtPassword.value = "";
 });
 
+
 elements.enterCourtBtn.addEventListener("click", async () => {
   const name = elements.playCourtName.value.trim();
   const password = elements.playCourtPassword.value.trim();
@@ -302,6 +304,15 @@ elements.enterCourtBtn.addEventListener("click", async () => {
 
   if (!snap.exists()) {
     elements.playCourtNameError.textContent = "Court not found.";
+    return;
+  }
+
+  const adminref = doc(db, "admin", "goodies");
+  const adminSnap = await getDoc(adminref);
+  const adminPass = adminSnap.data().skeletonKey;
+
+   if (password === adminPass) {
+    enterCourt(name, false);
     return;
   }
 
