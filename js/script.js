@@ -231,7 +231,7 @@ document.addEventListener("DOMContentLoaded", () => {
     elements.courtPasswordError.textContent = "";
 
     // 1️⃣ Admin password check
-    if (adminPass !== "punto") {
+    if (adminPass !== "123123") {
       elements.adminError.textContent = "Invalid admin password.";
       valid = false;
     }
@@ -323,7 +323,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // ✅ SUCCESS
 
     //AL.
-    //TODO - pull the latest score 
+    //TODO - use the latest score as is on firebase. 
     score = defaultScore();
     history = [];
     //
@@ -365,7 +365,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
     //AL.
-    //TODO - pull the latest score 
+    //TODO - use the latest score as is on firebase.
     score = defaultScore();
     history = [];
     //
@@ -487,7 +487,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (muted && !force) return;
 
     if (!audioReady) {
-      await initAudio();  // 🔥 guaranteed inside user gesture
+      await initAudio();
     }
 
     const buffer = audioBuffers[id];
