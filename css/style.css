@@ -3,7 +3,8 @@
   --teamBcolour: #00ffff;
   --bg: #000;
   --white: #ffffff;
-  --spectating: rgb(255, 255, 255);
+  /* --spectating: rgb(0, 255, 100); */
+  --spectating: rgb(255, 0, 0);
 }
 
 body {
@@ -204,6 +205,15 @@ body {
   outline: none;
 }
 
+body.spectating-mode .team-name {
+  pointer-events: none;
+  cursor: default;
+}
+
+body.spectating-mode .team-name:hover {
+  background: none;
+}
+
 /* =======================================================
    META (SETS & GAMES)
 ======================================================= */
@@ -390,6 +400,13 @@ body {
 #resetBtn.holding::after {
   animation: holdFill 1s linear forwards;
   background: rgba(255, 0, 0, 0.25);
+}
+
+#backBtn {
+  position: fixed;
+  top: 20px;
+  left: 30px;
+  padding: 10px 18px;
 }
 
 /* =======================================================
@@ -642,21 +659,38 @@ body {
   top: 20px;
   padding: 10px 18px;
   border-radius: 14px;
-  border: 2px solid var(--spectating);;
+  border: 2px solid var(--spectating);
   color: var(--spectating);
   font-weight: 700;
   letter-spacing: 1px;
-  font-size: 14x;
+  font-size: 14px;
   z-index: 10000;
   pointer-events: none;
-  opacity: 0.4;
-  scale: 0.7;
+
+  animation: spectatorGlow 5s ease-in-out infinite;
+}
+
+@keyframes spectatorGlow {
+  0% {
+    opacity: 0.3;
+    box-shadow: 0 0 4px var(--spectating);
+  }
+
+  50% {
+    opacity: 1;
+    box-shadow: 0 0 16px var(--spectating);
+  }
+
+  100% {
+    opacity: 0.3;
+    box-shadow: 0 0 4px var(--spectating);
+  }
 }
 
 .spectator-badge.left {
-  left: 20px;
+  left: 30px;
 }
 
 .spectator-badge.right {
-  right: 20px;
+  right: 30px;
 }

@@ -37,7 +37,6 @@ const SOUND_IDS = {
   WARNING: "warningSound"
 };
 
-
 // =====================================================
 // STATE
 // =====================================================
@@ -61,6 +60,9 @@ let wakeLock = null;
 let muted = false;
 
 let currentCourt = null;
+let currentCourtPassword = null;
+
+let isSpectating = false;
 
 // =====================================================
 // DOM REFERENCES
@@ -371,30 +373,42 @@ async function enterCourt(courtName, spectate) {
 }
 
 function enableSpectateMode() {
+  isSpectating = true;
+  document.body.classList.add("spectating-mode");
+
   $("addPointA").style.pointerEvents = "none";
   $("addPointB").style.pointerEvents = "none";
 
   elements.undoBtn.style.display = "none";
   elements.resetBtn.style.display = "none";
   elements.swapBtn.style.display = "none";
-
+  elements.muteBtn.style.display = "none";
+  
   showSpectatorBadges();
 }
 
 function disableSpectateMode() {
+  isSpectating = false;
+
+  document.body.classList.remove("spectating-mode");
+
   $("addPointA").style.pointerEvents = "auto";
   $("addPointB").style.pointerEvents = "auto";
 
   elements.undoBtn.style.display = "inline-block";
   elements.resetBtn.style.display = "inline-block";
   elements.swapBtn.style.display = "inline-block";
+  elements.muteBtn.style.display = "inline-block";
 
   removeSpectatorBadges();
 }
 
 function showSpectatorBadges() {
 
-  const positions = ["left", "right"];
+  const positions = [
+    //"left", 
+    "right"
+  ];
 
   positions.forEach(pos => {
 
@@ -404,7 +418,7 @@ function showSpectatorBadges() {
       badge = document.createElement("div");
       badge.id = `spectatorBadge-${pos}`;
       badge.className = "spectator-badge";
-      badge.textContent = "SPECTATING";
+      badge.textContent = "🔴 LIVE";
 
       badge.classList.add(pos);
 
@@ -741,7 +755,7 @@ function setControlsVisible(visible) {
   elements.controls.style.pointerEvents = visible ? "auto" : "none";
 }
 
-elements.confirmResetBtn.addEventListener("click", () => {
+elements.confirmResetBtn.addEventListener("click", async () => {
   const newPassword = elements.resetCourtPassword.value.trim();
   elements.resetPasswordError.textContent = "";
 
@@ -751,27 +765,17 @@ elements.confirmResetBtn.addEventListener("click", () => {
     return;
   }
 
-  const currentCourtName = elements.scoreboardPage.querySelector("#courtTitle")?.textContent;
+  const courtRef = doc(db, "courts", currentCourt);
 
-  const courts = JSON.parse(localStorage.getItem("courts") || "[]");
-
-  const court = courts.find(c => c.name === currentCourtName);
-
-  if (!court) {
-    elements.resetPasswordError.textContent = "Court not found.";
-    return;
-  }
-
-  // Check that new password is different from existing password
-  if (newPassword === court.password) {
+  if (newPassword === currentCourtPassword) {
     elements.resetPasswordError.textContent = "New password must be different from the current one.";
     return;
   }
 
-  court.password = newPassword;
-  localStorage.setItem("courts", JSON.stringify(courts));
+  await updateDoc(courtRef, {
+    password: newPassword
+  });
 
-  // ✅ Reset the scoreboard
   score = defaultScore();
   history = [];
 
@@ -914,7 +918,12 @@ function fitTextToContainer(textEl) {
 
 document.querySelectorAll(".team-name .name-text").forEach(el => {
   const team = el.closest(".team-name").dataset.team;
-  el.addEventListener("click", () => startEditing(el, team));
+
+  el.addEventListener("click", () => {
+    if (isSpectating) return;
+    startEditing(el, team);
+  });
+
   fitTextToContainer(el);
 });
 
@@ -947,6 +956,8 @@ function listenToCourt(courtName) {
     if (!snap.exists()) return;
 
     const data = snap.data();
+
+    currentCourtPassword = data.password;
 
     score = data.score;
     history = data.history || [];
