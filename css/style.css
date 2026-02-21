@@ -1,6 +1,15 @@
+:root {
+  --teamAcolour: #ffff00;
+  --teamBcolour: #00ffff;
+  --bg: #000;
+  --white: #ffffff;
+  --spectating: rgb(255, 255, 255);
+}
+
 body {
   margin: 0;
 }
+
 
 .menu-page {
   height: 100vh;
@@ -59,6 +68,7 @@ body {
   color: white;
   transition: all 0.2s ease;
   background-color: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(20px);
 }
 
 .menu-btn:hover {
@@ -76,17 +86,6 @@ body {
 /* added pauses to each edge of the image */
 
 /* ================= SCOREBOARD STYLES ================= */
-
-/* =======================================================
-   ROOT VARIABLES
-======================================================= */
-
-:root {
-  --teamAcolour: #ffff00;
-  --teamBcolour: #00ffff;
-  --bg: #000;
-  --white: #ffffff;
-}
 
 /* =======================================================
    GLOBAL RESET
@@ -634,4 +633,30 @@ body {
   color: black;
   font-weight: bold;
   cursor: pointer;
+}
+
+/* ================= SPECTATOR BADGES ================= */
+
+.spectator-badge {
+  position: fixed;
+  top: 20px;
+  padding: 10px 18px;
+  border-radius: 14px;
+  border: 2px solid var(--spectating);;
+  color: var(--spectating);
+  font-weight: 700;
+  letter-spacing: 1px;
+  font-size: 14x;
+  z-index: 10000;
+  pointer-events: none;
+  opacity: 0.5;
+  scale: 0.7;
+}
+
+.spectator-badge.left {
+  left: 20px;
+}
+
+.spectator-badge.right {
+  right: 20px;
 }

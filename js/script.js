@@ -347,23 +347,20 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   function enableSpectateMode() {
-
     isSpectating = true;
 
-    // Disable tap zones
     $("addPointA").style.pointerEvents = "none";
     $("addPointB").style.pointerEvents = "none";
 
-    // Disable control buttons
     elements.undoBtn.style.display = "none";
     elements.resetBtn.style.display = "none";
     elements.swapBtn.style.display = "none";
 
-    // Optional: show spectator badge
-    showSpectatorBadge();
+    showSpectatorBadges();
   }
 
   function disableSpectateMode() {
+
     isSpectating = false;
 
     $("addPointA").style.pointerEvents = "auto";
@@ -373,28 +370,38 @@ document.addEventListener("DOMContentLoaded", () => {
     elements.resetBtn.style.display = "inline-block";
     elements.swapBtn.style.display = "inline-block";
 
-    removeSpectatorBadge();
-  }
-  
-  function showSpectatorBadge() {
-
-    let badge = document.getElementById("spectatorBadge");
-
-    if (!badge) {
-      badge = document.createElement("div");
-      badge.id = "spectatorBadge";
-      badge.textContent = "SPECTATING";
-      badge.style.textAlign = "center";
-      badge.style.color = "red";
-      badge.style.fontWeight = "bold";
-      badge.style.marginBottom = "10px";
-      elements.scoreboardPage.prepend(badge);
-    }
+    removeSpectatorBadges();
   }
 
-  function removeSpectatorBadge() {
-    const badge = document.getElementById("spectatorBadge");
-    if (badge) badge.remove();
+  function showSpectatorBadges() {
+
+    const positions = ["left", "right"];
+
+    positions.forEach(pos => {
+
+      let badge = document.getElementById(`spectatorBadge-${pos}`);
+
+      if (!badge) {
+        badge = document.createElement("div");
+        badge.id = `spectatorBadge-${pos}`;
+        badge.className = "spectator-badge";
+        badge.textContent = "SPECTATING";
+
+        badge.classList.add(pos);
+
+        document.body.appendChild(badge);
+      }
+
+    });
+  }
+
+  function removeSpectatorBadges() {
+
+    ["left", "right"].forEach(pos => {
+      const badge = document.getElementById(`spectatorBadge-${pos}`);
+      if (badge) badge.remove();
+    });
+
   }
 
   // =====================================================
