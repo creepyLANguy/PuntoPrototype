@@ -189,6 +189,7 @@ elements.createPage.addEventListener("click", (e) => {
   if (e.target === elements.createPage) {
     elements.createPage.style.display = "none";
     elements.menuPage.style.display = "flex";
+    
   }
 });
 
@@ -253,9 +254,13 @@ elements.createCourtBtn.addEventListener("click", async () => {
     }
   }
 
-  // 3️⃣ Court password length
   if (courtPass.length < 4) {
     elements.courtPasswordError.textContent = "Minimum 4 characters.";
+    return;
+  }
+
+  if (courtPass === courtName) {
+    elements.courtPasswordError.textContent = "Password must be different from court name.";
     return;
   }
 
@@ -269,11 +274,11 @@ elements.createCourtBtn.addEventListener("click", async () => {
     teamNames: { A: "Team A", B: "Team B" }
   });
 
-  elements.adminError.textContent = "";
-  elements.courtNameError.textContent = "";
-  elements.courtPasswordError.textContent = "";
-
   enterCourt(courtName, false);
+  
+  elements.adminPassword.value = "";
+  elements.courtName.value = "";
+  elements.courtPassword.value = "";
 });
 
 elements.enterCourtBtn.addEventListener("click", async () => {
@@ -306,9 +311,9 @@ elements.enterCourtBtn.addEventListener("click", async () => {
     return;
   }
 
-  elements.playCourtPassword.value = "";
-
   enterCourt(name, false);
+
+  elements.playCourtPassword.value = "";
 });
 
 
@@ -762,6 +767,11 @@ elements.confirmResetBtn.addEventListener("click", async () => {
 
   if (newPassword.length < 4) {
     elements.resetPasswordError.textContent = "Password must be at least 4 characters.";
+    return;
+  }
+
+  if (newPassword === currentCourt) {
+    elements.resetPasswordError.textContent = "Password must be different from court name.";
     return;
   }
 
