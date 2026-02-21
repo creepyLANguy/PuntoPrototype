@@ -23,7 +23,8 @@ document.addEventListener("DOMContentLoaded", () => {
     POINT: "pointSound",
     UNDO: "undoSound",
     SWOOSH: "swooshSound",
-    START: "startSound"
+    START: "startSound",
+    WARNING: "warningSound"
   };
 
   
@@ -125,6 +126,10 @@ document.addEventListener("DOMContentLoaded", () => {
   elements.spectateCourtNameError = $("spectateCourtNameError");
   elements.spectateCourtBtn = $("spectateCourtBtn");
 
+  //RESET COURT ELEMENTS
+  elements.resetCourtPassword = $("resetCourtPassword");
+  elements.resetPasswordError = $("resetPasswordError");
+
   // =====================================================
   // MENU TOGGLE
   // =====================================================
@@ -168,6 +173,28 @@ document.addEventListener("DOMContentLoaded", () => {
     elements.menuPage.style.display = "flex";
   });
 
+  elements.createPage.addEventListener("click", (e) => {
+    if (e.target === elements.createPage) {
+      elements.createPage.style.display = "none";
+      elements.menuPage.style.display = "flex";
+    }
+  });
+
+  elements.playPage.addEventListener("click", (e) => {
+    if (e.target === elements.playPage) {
+      elements.playPage.style.display = "none";
+      elements.menuPage.style.display = "flex";
+    }
+  });
+
+  elements.spectatePage.addEventListener("click", (e) => {
+    if (e.target === elements.spectatePage) {
+      elements.spectatePage.style.display = "none";
+      elements.menuPage.style.display = "flex";
+    }
+  });
+
+
   function getCourts() {
     return JSON.parse(localStorage.getItem("courts") || "[]");
   }
@@ -184,7 +211,7 @@ document.addEventListener("DOMContentLoaded", () => {
       existing.id = "courtTitle";
       existing.style.textAlign = "center";
       existing.style.fontSize = "32px";
-      existing.style.margin = "20px";
+      existing.style.margin = "10px";
       elements.scoreboardPage.prepend(existing);
     }
 
@@ -249,6 +276,12 @@ document.addEventListener("DOMContentLoaded", () => {
     await initAudio();
     playSound(SOUND_IDS.START, true);
 
+    elements.adminError.value = "";
+    elements.courtNameError.value = "";
+    elements.courtPasswordError.value = "";
+    elements.adminPassword.value = "";
+    elements.courtName.value = "";
+    elements.courtPassword.value = "";
   });
 
   elements.enterCourtBtn.addEventListener("click", async () => {
@@ -302,6 +335,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     await initAudio();
     playSound(SOUND_IDS.START, true);
+
+    elements.playCourtPassword.value = "";
   });
 
 
@@ -432,7 +467,8 @@ document.addEventListener("DOMContentLoaded", () => {
       loadSound("pointSound", "media/sfx/point.mp3"),
       loadSound("undoSound",  "media/sfx/undo.mp3"),
       loadSound("swooshSound","media/sfx/swoosh.mp3"),
-      loadSound("startSound","media/sfx/start.mp3")
+      loadSound("startSound","media/sfx/start.mp3"),
+      loadSound("warningSound","media/sfx/warning.mp3"),
     ]);
 
     audioReady = true;
@@ -713,23 +749,61 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   elements.confirmResetBtn.addEventListener("click", () => {
-    playSound(SOUND_IDS.START);
+    const newPassword = elements.resetCourtPassword.value.trim();
+    elements.resetPasswordError.textContent = "";
 
+
+    if (newPassword.length < 4) {
+      elements.resetPasswordError.textContent = "Password must be at least 4 characters.";
+      return;
+    }
+
+    const currentCourtName = elements.scoreboardPage.querySelector("#courtTitle")?.textContent;
+
+    const courts = JSON.parse(localStorage.getItem("courts") || "[]");
+
+    const court = courts.find(c => c.name === currentCourtName);
+
+    if (!court) {
+      elements.resetPasswordError.textContent = "Court not found.";
+      return;
+    }
+
+    // Check that new password is different from existing password
+    if (newPassword === court.password) {
+      elements.resetPasswordError.textContent = "New password must be different from the current one.";
+      return;
+    }
+
+    court.password = newPassword;
+    localStorage.setItem("courts", JSON.stringify(courts));
+
+    // ✅ Reset the scoreboard
     score = defaultScore();
     history = [];
 
-    ["A", "B"].forEach(team => {
-      localStorage.removeItem(`teamName${team}`);
-      const labelEl = document.querySelector(
-        `.team-name[data-team="${team}"] .name-text`
-      );
+    ["A","B"].forEach(team => {
+      const labelEl = document.querySelector(`.team-name[data-team="${team}"] .name-text`);
       labelEl.textContent = `Team ${team}`;
       fitTextToContainer(labelEl);
     });
 
     updateUI();
+
+    // Clear the password input for next time
+    elements.resetCourtPassword.value = "";
     elements.resetModal.classList.add("hidden");
   });
+
+  addHoldButtonLogic(elements.resetBtn, openResetModal, RESET_HOLD_MS);
+
+  function openResetModal() {
+    playSound(SOUND_IDS.WARNING, true);
+    elements.resetCourtPassword.value = "";
+    elements.resetPasswordError.textContent = "";
+    elements.resetModal.classList.remove("hidden");
+    elements.resetCourtPassword.focus();
+  }
 
   elements.cancelResetBtn.addEventListener("click", () =>
     elements.resetModal.classList.add("hidden")

@@ -101,7 +101,7 @@
       </div>
 
       <button id="spectateCourtBtn" class="primary-btn">
-        Watch Court
+        Go
       </button>
 
     </div>
@@ -115,8 +115,15 @@
   <div id="resetModal" class="reset-modal hidden">
     <div class="reset-box">
       <p>Reset the entire match?</p>
+      <!-- New court password -->
+      <div class="form-group">
+        <label>New Court Password (min 4 chars)</label>
+        <input type="password" id="resetCourtPassword" />
+        <div class="error" id="resetPasswordError"></div>
+      </div>
+
       <div class="reset-actions">
-        <button id="confirmReset" type="button">Yes</button>
+        <button id="confirmReset" type="button">Reset</button>
         <button id="cancelReset" type="button">Cancel</button>
       </div>
     </div>
