@@ -1,7 +1,5 @@
 document.addEventListener("DOMContentLoaded", () => {
 
-  window.addEventListener("load", preloadSounds);
-
   // =====================================================
   // CONFIG
   // =====================================================
@@ -27,35 +25,6 @@ document.addEventListener("DOMContentLoaded", () => {
     SWOOSH: "swooshSound",
     START: "startSound"
   };
-  
-  const sounds = {};
-
-  function preloadSounds() {
-    Object.values(SOUND_IDS).forEach(id => {
-      const audio = document.getElementById(id);
-      audio.load(); // forces preload
-      sounds[id] = audio;
-    });
-  }
-
-  let audioUnlocked = false;
-
-  function ensureAudioUnlocked() {
-    if (audioUnlocked) return;
-
-    Object.values(sounds).forEach(audio => {
-      try {
-        audio.muted = true;
-        audio.play().then(() => {
-          audio.pause();
-          audio.currentTime = 0;
-          audio.muted = false;
-        });
-      } catch (e) {}
-    });
-
-    audioUnlocked = true;
-  }
 
   // =====================================================
   // DOM REFERENCES
@@ -103,10 +72,11 @@ document.addEventListener("DOMContentLoaded", () => {
   // =====================================================
 
   document.querySelectorAll(".menu-btn").forEach(btn => {
-    btn.addEventListener("click", () => {
-      playSound(SOUND_IDS.START, true);
+    btn.addEventListener("click", async () => {
+       await initAudio();   // preload first
+       playSound(SOUND_IDS.START, true);
       elements.menuPage.style.display = "none";
-      elements.scoreboardPage.style.display = "block";
+      elements.scoreboardPage.style.display = "block";      
     });
   });
 
@@ -147,16 +117,48 @@ document.addEventListener("DOMContentLoaded", () => {
   // SOUND LOGIC
   // =====================================================
 
-  function playSound(id, forceEvenIfMuted = false) {
-    if (muted && !forceEvenIfMuted) return;
+  let audioContext = null;
+  let audioBuffers = {};
+  let audioReady = false;
 
-    ensureAudioUnlocked();   // 🔥 unlock before playing
+  async function initAudio() {
+    if (audioReady) return;
 
-    const sound = sounds[id];
-    if (!sound) return;
+    audioContext = new (window.AudioContext || window.webkitAudioContext)();
 
-    sound.currentTime = 0;
-    sound.play().catch(() => {});
+    await Promise.all([
+      loadSound("pointSound", "media/sfx/point.mp3"),
+      loadSound("undoSound",  "media/sfx/undo.mp3"),
+      loadSound("swooshSound","media/sfx/swoosh.mp3"),
+      loadSound("startSound","media/sfx/start.mp3")
+    ]);
+
+    audioReady = true;
+  }
+
+  function loadSound(id, url) {
+    return fetch(url)
+      .then(r => r.arrayBuffer())
+      .then(buffer => audioContext.decodeAudioData(buffer))
+      .then(decoded => {
+        audioBuffers[id] = decoded;
+      });
+  }
+
+  async function playSound(id, force = false) {
+    if (muted && !force) return;
+
+    if (!audioReady) {
+      await initAudio();  // 🔥 guaranteed inside user gesture
+    }
+
+    const buffer = audioBuffers[id];
+    if (!buffer) return;
+
+    const source = audioContext.createBufferSource();
+    source.buffer = buffer;
+    source.connect(audioContext.destination);
+    source.start();
   }
   
   // =====================================================
@@ -437,7 +439,7 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   elements.swapBtn.addEventListener("click", () => {
-    playSound(SOUND_IDS.SWOSH);
+    playSound(SOUND_IDS.SWOOSH);
 
     document.querySelector(".scoreboard").classList.toggle("swapped");
   });
