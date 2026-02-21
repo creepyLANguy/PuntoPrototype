@@ -1,937 +1,966 @@
+import {
+  db,
+  doc,
+  setDoc,
+  getDoc,
+  updateDoc,
+  onSnapshot,
+  serverTimestamp
+} from "./firebase.js";
+
 document.addEventListener("DOMContentLoaded", () => {
 
-  // =====================================================
-  // CONFIG
-  // =====================================================
+// =====================================================
+// CONFIG
+// =====================================================
 
-  const POINTS = [0, 15, 30, 40];
-  const COOLDOWN_MS = 3000;
-  const BACK_HOLD_MS = 550;
-  const UNDO_HOLD_MS = 550;
-  const RESET_HOLD_MS = 1050;
-  const MUTE_HOLD_MS = 550;
+const POINTS = [0, 15, 30, 40];
+const COOLDOWN_MS = 3000;
+const BACK_HOLD_MS = 550;
+const UNDO_HOLD_MS = 550;
+const RESET_HOLD_MS = 1050;
+const MUTE_HOLD_MS = 550;
 
-  const TEAM_A = "A";
-  const TEAM_B = "B";
+const TEAM_A = "A";
+const TEAM_B = "B";
 
-  const IDS = {
-    RESET: "RESET",
-    UNDO: "UNDO"
-  };
+const IDS = {
+  RESET: "RESET",
+  UNDO: "UNDO"
+};
 
-  const SOUND_IDS = {
-    POINT: "pointSound",
-    UNDO: "undoSound",
-    SWOOSH: "swooshSound",
-    START: "startSound",
-    WARNING: "warningSound"
-  };
+const SOUND_IDS = {
+  POINT: "pointSound",
+  UNDO: "undoSound",
+  SWOOSH: "swooshSound",
+  START: "startSound",
+  WARNING: "warningSound"
+};
 
-  
-  // =====================================================
-  // STATE
-  // =====================================================
 
-  const defaultScore = () => ({
-    A: { points: 0, games: 0, sets: 0 },
-    B: { points: 0, games: 0, sets: 0 },
-    lastPointTeam: null,
-    lastGameTeam: null,
-    lastSetTeam: null
+// =====================================================
+// STATE
+// =====================================================
+
+const defaultScore = () => ({
+  A: { points: 0, games: 0, sets: 0 },
+  B: { points: 0, games: 0, sets: 0 },
+  lastPointTeam: null,
+  lastGameTeam: null,
+  lastSetTeam: null
+});
+
+let score = defaultScore();
+let history = [];
+
+let scanLocked = false;
+let cooldownTimer = null;
+let cooldownRemaining = 0;
+let wakeLock = null;
+
+let muted = false;
+
+let currentCourt = null;
+
+// =====================================================
+// DOM REFERENCES
+// =====================================================
+
+const $ = (id) => document.getElementById(id);
+
+const elements = {
+  menuPage: $("menuPage"),
+  scoreboardPage: $("scoreboardPage"),
+
+  scoreboard: document.querySelector(".scoreboard"),
+
+  points: {
+    A: $("pointsA"),
+    B: $("pointsB")
+  },
+
+  sets: {
+    A: $("setsA"),
+    B: $("setsB")
+  },
+
+  games: {
+    A: $("gamesA"),
+    B: $("gamesB")
+  },
+
+  cooldown: $("cooldown"),
+  controls: $("controls"),
+  resetModal: $("resetModal"),
+
+  confirmResetBtn: $("confirmReset"),
+  cancelResetBtn: $("cancelReset"),
+
+  undoBtn: $("undoBtn"),
+  backBtn: $("backBtn"),
+  resetBtn: $("resetBtn"),
+  swapBtn: $("swapBtn"),
+  muteBtn: $("muteBtn")
+};
+
+//CREATE COURT ELEMENTS
+elements.createPage = $("createPage");
+elements.closeCreateBtn = $("closeCreateBtn");
+elements.createCourtBtn = $("createCourtBtn");
+
+elements.adminPassword = $("adminPassword");
+elements.courtName = $("courtName");
+elements.courtPassword = $("courtPassword");
+
+elements.adminError = $("adminError");
+elements.courtNameError = $("courtNameError");
+elements.courtPasswordError = $("courtPasswordError");
+
+//PLAY COURT ELEMENTS
+elements.playPage = $("playPage");
+elements.closePlayBtn = $("closePlayBtn");
+
+elements.playCourtName = $("playCourtName");
+elements.playCourtPassword = $("playCourtPassword");
+
+elements.playCourtNameError = $("playCourtNameError");
+elements.playCourtPasswordError = $("playCourtPasswordError");
+
+elements.enterCourtBtn = $("enterCourtBtn");
+
+//SPECTATE COURT ELEMENTS
+elements.spectatePage = $("spectatePage");
+elements.closeSpectateBtn = $("closeSpectateBtn");
+
+elements.spectateCourtName = $("spectateCourtName");
+elements.spectateCourtNameError = $("spectateCourtNameError");
+elements.spectateCourtBtn = $("spectateCourtBtn");
+
+//RESET COURT ELEMENTS
+elements.resetCourtPassword = $("resetCourtPassword");
+elements.resetPasswordError = $("resetPasswordError");
+
+// =====================================================
+// MENU TOGGLE
+// =====================================================
+
+document.querySelectorAll(".menu-btn").forEach(btn => {
+  btn.addEventListener("click", async () => {
+    const action = btn.textContent.trim();
+
+    if (action === "Create") {
+      elements.menuPage.style.display = "none";
+      elements.createPage.style.display = "flex";
+      return;
+    }
+
+    if (action === "Play") {
+      elements.menuPage.style.display = "none";
+      elements.playPage.style.display = "flex";
+      return;
+    }
+
+    if (action === "Spectate") {
+      elements.menuPage.style.display = "none";
+      elements.spectatePage.style.display = "flex";
+      return;
+    }      
   });
+});
 
-  let score = defaultScore();
-  let history = [];
+elements.closeCreateBtn.addEventListener("click", () => {
+  elements.createPage.style.display = "none";
+  elements.menuPage.style.display = "flex";
+});
 
-  let scanLocked = false;
-  let cooldownTimer = null;
-  let cooldownRemaining = 0;
-  let wakeLock = null;
+elements.closePlayBtn.addEventListener("click", () => {
+  elements.playPage.style.display = "none";
+  elements.menuPage.style.display = "flex";
+});
 
-  let muted = false;
+elements.closeSpectateBtn.addEventListener("click", () => {
+  elements.spectatePage.style.display = "none";
+  elements.menuPage.style.display = "flex";
+});
 
-  let isSpectating = false;
-
-  // =====================================================
-  // DOM REFERENCES
-  // =====================================================
-
-  const $ = (id) => document.getElementById(id);
-
-  const elements = {
-    menuPage: $("menuPage"),
-    scoreboardPage: $("scoreboardPage"),
-
-    scoreboard: document.querySelector(".scoreboard"),
-
-    points: {
-      A: $("pointsA"),
-      B: $("pointsB")
-    },
-
-    sets: {
-      A: $("setsA"),
-      B: $("setsB")
-    },
-
-    games: {
-      A: $("gamesA"),
-      B: $("gamesB")
-    },
-
-    cooldown: $("cooldown"),
-    controls: $("controls"),
-    resetModal: $("resetModal"),
-
-    confirmResetBtn: $("confirmReset"),
-    cancelResetBtn: $("cancelReset"),
-
-    undoBtn: $("undoBtn"),
-    backBtn: $("backBtn"),
-    resetBtn: $("resetBtn"),
-    swapBtn: $("swapBtn"),
-    muteBtn: $("muteBtn")
-  };
-
-  //CREATE COURT ELEMENTS
-  elements.createPage = $("createPage");
-  elements.closeCreateBtn = $("closeCreateBtn");
-  elements.createCourtBtn = $("createCourtBtn");
-
-  elements.adminPassword = $("adminPassword");
-  elements.courtName = $("courtName");
-  elements.courtPassword = $("courtPassword");
-
-  elements.adminError = $("adminError");
-  elements.courtNameError = $("courtNameError");
-  elements.courtPasswordError = $("courtPasswordError");
-
-  //PLAY COURT ELEMENTS
-  elements.playPage = $("playPage");
-  elements.closePlayBtn = $("closePlayBtn");
-
-  elements.playCourtName = $("playCourtName");
-  elements.playCourtPassword = $("playCourtPassword");
-
-  elements.playCourtNameError = $("playCourtNameError");
-  elements.playCourtPasswordError = $("playCourtPasswordError");
-
-  elements.enterCourtBtn = $("enterCourtBtn");
-
-  //SPECTATE COURT ELEMENTS
-  elements.spectatePage = $("spectatePage");
-  elements.closeSpectateBtn = $("closeSpectateBtn");
-
-  elements.spectateCourtName = $("spectateCourtName");
-  elements.spectateCourtNameError = $("spectateCourtNameError");
-  elements.spectateCourtBtn = $("spectateCourtBtn");
-
-  //RESET COURT ELEMENTS
-  elements.resetCourtPassword = $("resetCourtPassword");
-  elements.resetPasswordError = $("resetPasswordError");
-
-  // =====================================================
-  // MENU TOGGLE
-  // =====================================================
-
-  document.querySelectorAll(".menu-btn").forEach(btn => {
-    btn.addEventListener("click", async () => {
-      const action = btn.textContent.trim();
-
-      if (action === "Create") {
-        elements.menuPage.style.display = "none";
-        elements.createPage.style.display = "flex";
-        return;
-      }
-
-      if (action === "Play") {
-        elements.menuPage.style.display = "none";
-        elements.playPage.style.display = "flex";
-        return;
-      }
-
-      if (action === "Spectate") {
-        elements.menuPage.style.display = "none";
-        elements.spectatePage.style.display = "flex";
-        return;
-      }      
-    });
-  });
-  
-  elements.closeCreateBtn.addEventListener("click", () => {
+elements.createPage.addEventListener("click", (e) => {
+  if (e.target === elements.createPage) {
     elements.createPage.style.display = "none";
     elements.menuPage.style.display = "flex";
-  });
+  }
+});
 
-  elements.closePlayBtn.addEventListener("click", () => {
+elements.playPage.addEventListener("click", (e) => {
+  if (e.target === elements.playPage) {
     elements.playPage.style.display = "none";
     elements.menuPage.style.display = "flex";
-  });
+  }
+});
 
-  elements.closeSpectateBtn.addEventListener("click", () => {
+elements.spectatePage.addEventListener("click", (e) => {
+  if (e.target === elements.spectatePage) {
     elements.spectatePage.style.display = "none";
     elements.menuPage.style.display = "flex";
-  });
+  }
+});
 
-  elements.createPage.addEventListener("click", (e) => {
-    if (e.target === elements.createPage) {
-      elements.createPage.style.display = "none";
-      elements.menuPage.style.display = "flex";
-    }
-  });
+function showCourtTitle(name) {
+  let existing = document.getElementById("courtTitle");
 
-  elements.playPage.addEventListener("click", (e) => {
-    if (e.target === elements.playPage) {
-      elements.playPage.style.display = "none";
-      elements.menuPage.style.display = "flex";
-    }
-  });
-
-  elements.spectatePage.addEventListener("click", (e) => {
-    if (e.target === elements.spectatePage) {
-      elements.spectatePage.style.display = "none";
-      elements.menuPage.style.display = "flex";
-    }
-  });
-
-
-  function getCourts() {
-    return JSON.parse(localStorage.getItem("courts") || "[]");
+  if (!existing) {
+    existing = document.createElement("div");
+    existing.id = "courtTitle";
+    existing.style.textAlign = "center";
+    existing.style.fontSize = "32px";
+    existing.style.margin = "10px";
+    elements.scoreboardPage.prepend(existing);
   }
 
-  function saveCourts(courts) {
-    localStorage.setItem("courts", JSON.stringify(courts));
+  existing.textContent = name;
+}
+
+elements.createCourtBtn.addEventListener("click", async () => {
+  const adminPass = elements.adminPassword.value.trim();
+  const courtName = elements.courtName.value.trim();
+  const courtPass = elements.courtPassword.value.trim();
+
+  elements.adminError.textContent = "";
+  elements.courtNameError.textContent = "";
+  elements.courtPasswordError.textContent = "";
+
+  //AL.
+  //TODO - make this pull from firebase and use hashed passwords for security.
+  if (adminPass !== "123123") {
+    elements.adminError.textContent = "Invalid admin password.";
+    return;
   }
 
-  function showCourtTitle(name) {
-    let existing = document.getElementById("courtTitle");
+  let courtRef = null;
 
-    if (!existing) {
-      existing = document.createElement("div");
-      existing.id = "courtTitle";
-      existing.style.textAlign = "center";
-      existing.style.fontSize = "32px";
-      existing.style.margin = "10px";
-      elements.scoreboardPage.prepend(existing);
-    }
+  if (!courtName) {
+    elements.courtNameError.textContent = "Court name required.";
+    return;
+  } 
+  else {
+    courtRef = doc(db, "courts", courtName);
+    const existing = await getDoc(courtRef);
 
-    existing.textContent = name;
-  }
-
-  elements.createCourtBtn.addEventListener("click", async () => {
-    const adminPass = elements.adminPassword.value.trim();
-    const courtName = elements.courtName.value.trim();
-    const courtPass = elements.courtPassword.value.trim();
-
-    let valid = true;
-
-    // Clear errors
-    elements.adminError.textContent = "";
-    elements.courtNameError.textContent = "";
-    elements.courtPasswordError.textContent = "";
-
-    // 1️⃣ Admin password check
-    if (adminPass !== "123123") {
-      elements.adminError.textContent = "Invalid admin password.";
-      valid = false;
-    }
-
-    // 2️⃣ Court name required
-    if (!courtName) {
-      elements.courtNameError.textContent = "Court name required.";
-      valid = false;
-    } else {
-      const courts = getCourts();
-      const exists = courts.some(c => c.name.toLowerCase() === courtName.toLowerCase());
-
-      if (exists) {
-        elements.courtNameError.textContent = "Court name already exists.";
-        valid = false;
-      }
-    }
-
-    // 3️⃣ Court password length
-    if (courtPass.length < 4) {
-      elements.courtPasswordError.textContent = "Minimum 4 characters.";
-      valid = false;
-    }
-
-    if (!valid) return;
-
-    // Save court
-    const courts = getCourts();
-    courts.push({ name: courtName, password: courtPass });
-    saveCourts(courts);
-
-    // Reset score
-    score = defaultScore();
-    history = [];
-
-    // Show scoreboard
-    elements.createPage.style.display = "none";
-    elements.scoreboardPage.style.display = "block";
-
-    showCourtTitle(courtName);
-
-    await initAudio();
-    playSound(SOUND_IDS.START);
-
-    elements.adminError.value = "";
-    elements.courtNameError.value = "";
-    elements.courtPasswordError.value = "";
-    elements.adminPassword.value = "";
-    elements.courtName.value = "";
-    elements.courtPassword.value = "";
-  });
-
-  elements.enterCourtBtn.addEventListener("click", async () => {
-    const name = elements.playCourtName.value.trim();
-    const password = elements.playCourtPassword.value.trim();
-
-    let valid = true;
-
-    elements.playCourtNameError.textContent = "";
-    elements.playCourtPasswordError.textContent = "";
-
-    if (!name) {
-      elements.playCourtNameError.textContent = "Court name required.";
-      valid = false;
-    }
-
-    if (!password) {
-      elements.playCourtPasswordError.textContent = "Password required.";
-      valid = false;
-    }
-
-    if (!valid) return;
-
-    const courts = getCourts();
-    const court = courts.find(
-      c => c.name.toLowerCase() === name.toLowerCase()
-    );
-
-    if (!court) {
-      elements.playCourtNameError.textContent = "Court not found.";
+    if (existing.exists()) {
+      elements.courtNameError.textContent = "Court already exists.";
       return;
     }
-
-    if (court.password !== password) {
-      elements.playCourtPasswordError.textContent = "Incorrect password.";
-      return;
-    }
-
-    // ✅ SUCCESS
-
-    //AL.
-    //TODO - use the latest score as is on firebase. 
-    score = defaultScore();
-    history = [];
-    //
-
-    elements.playPage.style.display = "none";
-    elements.scoreboardPage.style.display = "block";
-
-    showCourtTitle(court.name);
-
-    await initAudio();
-    playSound(SOUND_IDS.START);
-
-    elements.playCourtPassword.value = "";
-  });
-
-
-  elements.spectateCourtBtn.addEventListener("click", async () => {
-
-    const name = elements.spectateCourtName.value.trim();
-
-    elements.spectateCourtNameError.textContent = "";
-
-    if (!name) {
-      elements.spectateCourtNameError.textContent = "Court name required.";
-      return;
-    }
-
-    const courts = getCourts();
-    const court = courts.find(
-      c => c.name.toLowerCase() === name.toLowerCase()
-    );
-
-    if (!court) {
-      elements.spectateCourtNameError.textContent = "Court not found.";
-      return;
-    }
-
-    // ✅ SUCCESS
-
-
-    //AL.
-    //TODO - use the latest score as is on firebase.
-    score = defaultScore();
-    history = [];
-    //
-
-    elements.spectatePage.style.display = "none";
-    elements.scoreboardPage.style.display = "block";
-
-    showCourtTitle(court.name);
-
-    enableSpectateMode();
-
-    await initAudio();
-    playSound(SOUND_IDS.START);
-  });
-
-  function enableSpectateMode() {
-    isSpectating = true;
-
-    $("addPointA").style.pointerEvents = "none";
-    $("addPointB").style.pointerEvents = "none";
-
-    elements.undoBtn.style.display = "none";
-    elements.resetBtn.style.display = "none";
-    elements.swapBtn.style.display = "none";
-
-    showSpectatorBadges();
   }
 
-  function disableSpectateMode() {
-
-    isSpectating = false;
-
-    $("addPointA").style.pointerEvents = "auto";
-    $("addPointB").style.pointerEvents = "auto";
-
-    elements.undoBtn.style.display = "inline-block";
-    elements.resetBtn.style.display = "inline-block";
-    elements.swapBtn.style.display = "inline-block";
-
-    removeSpectatorBadges();
+  // 3️⃣ Court password length
+  if (courtPass.length < 4) {
+    elements.courtPasswordError.textContent = "Minimum 4 characters.";
+    return;
   }
 
-  function showSpectatorBadges() {
+  courtRef = doc(db, "courts", courtName);
+  await setDoc(courtRef, {
+    name: courtName,
+    password: courtPass,
+    createdAt: serverTimestamp(),
+    score: defaultScore(),
+    history: [],
+    teamNames: { A: "Team A", B: "Team B" }
+  });
 
-    const positions = ["left", "right"];
+  elements.adminError.textContent = "";
+  elements.courtNameError.textContent = "";
+  elements.courtPasswordError.textContent = "";
 
-    positions.forEach(pos => {
+  enterCourt(courtName, false);
+});
 
-      let badge = document.getElementById(`spectatorBadge-${pos}`);
+elements.enterCourtBtn.addEventListener("click", async () => {
+  const name = elements.playCourtName.value.trim();
+  const password = elements.playCourtPassword.value.trim();
 
-      if (!badge) {
-        badge = document.createElement("div");
-        badge.id = `spectatorBadge-${pos}`;
-        badge.className = "spectator-badge";
-        badge.textContent = "SPECTATING";
+  elements.playCourtNameError.textContent = "";
+  elements.playCourtPasswordError.textContent = "";
 
-        badge.classList.add(pos);
+  if (!name) {
+    elements.playCourtNameError.textContent = "Court name required.";
+    return;
+  }
 
-        document.body.appendChild(badge);
-      }
+  if (!password) {
+    elements.playCourtPasswordError.textContent = "Password required.";
+    return;
+  }
 
+  const courtRef = doc(db, "courts", name);
+  const snap = await getDoc(courtRef);
+
+  if (!snap.exists()) {
+    elements.playCourtNameError.textContent = "Court not found.";
+    return;
+  }
+
+  if (snap.data().password !== password) {
+    elements.playCourtPasswordError.textContent = "Incorrect password.";
+    return;
+  }
+
+  elements.playCourtPassword.value = "";
+
+  enterCourt(name, false);
+});
+
+
+elements.spectateCourtBtn.addEventListener("click", async () => {
+
+  const name = elements.spectateCourtName.value.trim();
+
+  elements.spectateCourtNameError.textContent = "";
+
+  if (!name) {
+    elements.spectateCourtNameError.textContent = "Court name required.";
+    return;
+  }
+
+  const courtRef = doc(db, "courts", name);
+  const snap = await getDoc(courtRef);
+
+  if (!snap.exists()) {
+    elements.spectateCourtNameError.textContent = "Court not found.";
+    return;
+  }
+
+  enterCourt(name, true);
+});
+
+async function enterCourt(courtName, spectate) {
+  const courtRef = doc(db, "courts", courtName);
+  const snap = await getDoc(courtRef);
+
+  currentCourt = courtName;
+
+  //AL.
+  //TODO - handle case where court is deleted after user enters name but before they click enter. Currently this would cause an error.
+  if (!snap.exists()) {
+    alert("Court not found");
+    return;
+  }
+
+  await initAudio();
+  playSound(SOUND_IDS.START);
+
+  const data = snap.data();
+
+  score = data.score;
+  history = data.history || [];
+
+  // ✅ Hide ALL entry pages
+  elements.menuPage.style.display = "none";
+  elements.createPage.style.display = "none";
+  elements.playPage.style.display = "none";
+  elements.spectatePage.style.display = "none";
+
+  // ✅ Show scoreboard
+  elements.scoreboardPage.style.display = "block";
+
+  showCourtTitle(courtName);
+
+  if (spectate) enableSpectateMode();
+  else disableSpectateMode();
+
+  listenToCourt(courtName);
+}
+
+function enableSpectateMode() {
+  $("addPointA").style.pointerEvents = "none";
+  $("addPointB").style.pointerEvents = "none";
+
+  elements.undoBtn.style.display = "none";
+  elements.resetBtn.style.display = "none";
+  elements.swapBtn.style.display = "none";
+
+  showSpectatorBadges();
+}
+
+function disableSpectateMode() {
+  $("addPointA").style.pointerEvents = "auto";
+  $("addPointB").style.pointerEvents = "auto";
+
+  elements.undoBtn.style.display = "inline-block";
+  elements.resetBtn.style.display = "inline-block";
+  elements.swapBtn.style.display = "inline-block";
+
+  removeSpectatorBadges();
+}
+
+function showSpectatorBadges() {
+
+  const positions = ["left", "right"];
+
+  positions.forEach(pos => {
+
+    let badge = document.getElementById(`spectatorBadge-${pos}`);
+
+    if (!badge) {
+      badge = document.createElement("div");
+      badge.id = `spectatorBadge-${pos}`;
+      badge.className = "spectator-badge";
+      badge.textContent = "SPECTATING";
+
+      badge.classList.add(pos);
+
+      document.body.appendChild(badge);
+    }
+
+  });
+}
+
+function removeSpectatorBadges() {
+
+  ["left", "right"].forEach(pos => {
+    const badge = document.getElementById(`spectatorBadge-${pos}`);
+    if (badge) badge.remove();
+  });
+
+}
+
+// =====================================================
+// ACTION MAP
+// =====================================================
+
+const actionMap = {
+  [TEAM_A]: () => addPoint(TEAM_A),
+  [TEAM_B]: () => addPoint(TEAM_B),
+  [IDS.RESET]: () => elements.resetModal.classList.remove("hidden"),
+  [IDS.UNDO]: () => undoLastPoint()
+};
+
+// =====================================================
+// SOUND LOGIC
+// =====================================================
+
+let audioContext = null;
+let audioBuffers = {};
+let audioReady = false;
+
+async function initAudio() {
+  if (audioReady) return;
+
+  audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+  await Promise.all([
+    loadSound("pointSound", "media/sfx/point.mp3"),
+    loadSound("undoSound",  "media/sfx/undo.mp3"),
+    loadSound("swooshSound","media/sfx/swoosh.mp3"),
+    loadSound("startSound","media/sfx/start.mp3"),
+    loadSound("warningSound","media/sfx/warning.mp3"),
+  ]);
+
+  audioReady = true;
+}
+
+function loadSound(id, url) {
+  return fetch(url)
+    .then(r => r.arrayBuffer())
+    .then(buffer => audioContext.decodeAudioData(buffer))
+    .then(decoded => {
+      audioBuffers[id] = decoded;
     });
+}
+
+async function playSound(id, force = false) {
+  if (muted && !force) return;
+
+  if (!audioReady) {
+    await initAudio();
   }
 
-  function removeSpectatorBadges() {
+  const buffer = audioBuffers[id];
+  if (!buffer) return;
 
-    ["left", "right"].forEach(pos => {
-      const badge = document.getElementById(`spectatorBadge-${pos}`);
-      if (badge) badge.remove();
-    });
+  const source = audioContext.createBufferSource();
+  source.buffer = buffer;
+  source.connect(audioContext.destination);
+  source.start();
+}
 
-  }
+// =====================================================
+// SCORE LOGIC
+// =====================================================
 
-  // =====================================================
-  // ACTION MAP
-  // =====================================================
+async function persistCourt() {
+  if (!currentCourt) return;
 
-  const actionMap = {
-    [TEAM_A]: () => addPoint(TEAM_A),
-    [TEAM_B]: () => addPoint(TEAM_B),
-    [IDS.RESET]: () => elements.resetModal.classList.remove("hidden"),
-    [IDS.UNDO]: () => undoLastPoint()
-  };
+  const courtRef = doc(db, "courts", currentCourt);
 
-  // =====================================================
-  // SOUND LOGIC
-  // =====================================================
+  await updateDoc(courtRef, {
+    score: score,
+    history: history
+  });
+}
 
-  let audioContext = null;
-  let audioBuffers = {};
-  let audioReady = false;
+function opponent(team) {
+  return team === TEAM_A ? TEAM_B : TEAM_A;
+}
 
-  async function initAudio() {
-    if (audioReady) return;
+const cloneScore = () => JSON.parse(JSON.stringify(score));
 
-    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+function addPoint(team) {        
+  playSound(SOUND_IDS.POINT);
 
-    await Promise.all([
-      loadSound("pointSound", "media/sfx/point.mp3"),
-      loadSound("undoSound",  "media/sfx/undo.mp3"),
-      loadSound("swooshSound","media/sfx/swoosh.mp3"),
-      loadSound("startSound","media/sfx/start.mp3"),
-      loadSound("warningSound","media/sfx/warning.mp3"),
-    ]);
+  history.push(cloneScore());
 
-    audioReady = true;
-  }
-
-  function loadSound(id, url) {
-    return fetch(url)
-      .then(r => r.arrayBuffer())
-      .then(buffer => audioContext.decodeAudioData(buffer))
-      .then(decoded => {
-        audioBuffers[id] = decoded;
-      });
-  }
-
-  async function playSound(id, force = false) {
-    if (muted && !force) return;
-
-    if (!audioReady) {
-      await initAudio();
-    }
-
-    const buffer = audioBuffers[id];
-    if (!buffer) return;
-
-    const source = audioContext.createBufferSource();
-    source.buffer = buffer;
-    source.connect(audioContext.destination);
-    source.start();
-  }
+  score.lastPointTeam = team;
   
-  // =====================================================
-  // SCORE LOGIC
-  // =====================================================
+  const opp = opponent(team);
 
-  const cloneScore = () => JSON.parse(JSON.stringify(score));
+  // Deuce logic
+  if (score.A.points >= 3 && score.B.points >= 3) {
 
-  function saveState() {
-    history.push(cloneScore());
-  }
-
-  function opponent(team) {
-    return team === TEAM_A ? TEAM_B : TEAM_A;
-  }
-
-  function addPoint(team) {        
-      playSound(SOUND_IDS.POINT);
-    
-    saveState();
-    const opp = opponent(team);
-
-    score.lastPointTeam = team;
-
-    // Deuce logic
-    if (score.A.points >= 3 && score.B.points >= 3) {
-
-      if (score[opp].points === 4) {
-        score[opp].points = 3;
-        return afterPoint(team);
-      }
-
-      if (score[team].points === 4) {
-        return winGame(team);
-      }
-
-      score[team].points = 4;
+    if (score[opp].points === 4) {
+      score[opp].points = 3;
       return afterPoint(team);
     }
 
-    score[team].points++;
-
-    if (score[team].points >= 4) {
+    if (score[team].points === 4) {
       return winGame(team);
     }
 
-    afterPoint(team);
+    score[team].points = 4;
+    return afterPoint(team);
   }
 
-  function afterPoint(team) {
-    animate(team);
-    updateUI();
+  score[team].points++;
+
+  if (score[team].points >= 4) {
+    return winGame(team);
   }
 
-  function undoLastPoint() {
+  afterPoint(team);
+}
 
-    if (score.lastPointTeam) {
-      playSound(SOUND_IDS.UNDO);
+function afterPoint(team) {
+  animate(team);
+  updateUI();
+  persistCourt();
+}
 
-      animateUndo(score.lastPointTeam);
+function undoLastPoint() {
+  if (!score.lastPointTeam || history.length === 0) return;
 
-      const pointsEl = elements.points[score.lastPointTeam];
-      pointsEl.classList.remove("undo-flash");
-      void pointsEl.offsetWidth;
-      pointsEl.classList.add("undo-flash");      
-    }
+  let animationTarget = score.lastPointTeam;
 
-    if (history.length === 0) return;
+  score = history.pop();
 
-    score = history.pop();
-    updateUI();
+  persistCourt();
+
+  animateUndo(animationTarget);
+
+  playSound(SOUND_IDS.UNDO);
+
+  const pointsEl = elements.points[animationTarget];
+  pointsEl.classList.remove("undo-flash");
+  void pointsEl.offsetWidth;
+  pointsEl.classList.add("undo-flash");      
+}
+
+function winGame(team) {
+  const opp = opponent(team);
+
+  score[team].games++;
+  score.lastGameTeam = team;
+
+  score.A.points = 0;
+  score.B.points = 0;
+
+  if (
+    score[team].games >= 6 &&
+    score[team].games - score[opp].games >= 2
+  ) {
+    winSet(team);
   }
 
-  function winGame(team) {
-    const opp = opponent(team);
+  afterPoint(team);
+}
 
-    score[team].games++;
-    score.lastGameTeam = team;
+function winSet(team) {
+  score[team].sets++;
+  score.lastSetTeam = team;
 
-    score.A.points = 0;
-    score.B.points = 0;
+  score.A.games = 0;
+  score.B.games = 0;
+}
 
-    if (
-      score[team].games >= 6 &&
-      score[team].games - score[opp].games >= 2
-    ) {
-      winSet(team);
-    }
+// =====================================================
+// UI
+// =====================================================
 
-    afterPoint(team);
-  }
+const pointLabel = (p) => p === 4 ? "Ad" : POINTS[p];
 
-  function winSet(team) {
-    score[team].sets++;
-    score.lastSetTeam = team;
+function updateUI() {
+  [TEAM_A, TEAM_B].forEach(team => {
+    renderSets(team);
+    renderGames(team);
+    elements.points[team].textContent = pointLabel(score[team].points);
 
-    score.A.games = 0;
-    score.B.games = 0;
-  }
-
-  // =====================================================
-  // UI
-  // =====================================================
-
-  const pointLabel = (p) => p === 4 ? "Ad" : POINTS[p];
-
-  function updateUI() {
-    [TEAM_A, TEAM_B].forEach(team => {
-      renderSets(team);
-      renderGames(team);
-      elements.points[team].textContent = pointLabel(score[team].points);
-
-      document.querySelector(`#team${team} .indicator`).style.opacity =
-        score.lastPointTeam === team ? 1 : 0;
-    });
-  }
-
-  function animate(team) {
-    const el = $(`team${team}`);
-    el.classList.remove("score-animate");
-    void el.offsetWidth;
-    el.classList.add("score-animate");
-  }
-
-  function animateUndo(team) {
-    const el = $(`team${team}`);
-    el.classList.remove("undo-animate");
-    void el.offsetWidth;
-    el.classList.add("undo-animate");
-  }
-
-  function renderSets(team) {
-    const el = elements.sets[team];
-    const opp = opponent(team);
-
-    const teamSets = score[team].sets;
-    const oppSets = score[opp].sets;
-    const maxSets = Math.max(teamSets, oppSets, 3);
-
-    el.innerHTML = "";
-
-    const teamColor = getComputedStyle(document.documentElement)
-      .getPropertyValue(team === TEAM_A ? '--teamAcolour' : '--teamBcolour');
-
-    for (let i = 0; i < maxSets; i++) {
-      const dot = document.createElement("span");
-      dot.className = "set-dot";
-
-      if (i < teamSets) {
-        dot.classList.add("filled");
-        dot.style.backgroundColor = teamColor;
-      }
-
-      if (i === teamSets - 1 && score.lastSetTeam === team) {
-        dot.classList.add("recent");
-      }
-
-      el.appendChild(dot);
-    }
-  }
-
-  function renderGames(team) {
-    const el = elements.games[team];
-    const opp = opponent(team);
-
-    const teamGames = score[team].games;
-    const oppGames = score[opp].games;
-    const maxGames = Math.max(teamGames, oppGames, 6);
-
-    el.innerHTML = "";
-
-    for (let i = 0; i < maxGames; i++) {
-      const dot = document.createElement("span");
-      dot.className = "game-dot";
-      if (i < teamGames) dot.classList.add("filled");
-      el.appendChild(dot);
-    }
-  }
-
-  // =====================================================
-  // NFC HANDLING
-  // =====================================================
-
-  function handleNfc(code) {
-    if (scanLocked) return;
-
-    const action = actionMap[code];
-    if (!action) return;
-
-    scanLocked = true;
-
-    action();
-    startCooldown();
-
-    setTimeout(() => {
-      scanLocked = false;
-    }, COOLDOWN_MS);
-  }
-
-  function startCooldown() {
-    reader.style.visibility = "hidden";
-    setControlsVisible(false);
-
-    cooldownRemaining = COOLDOWN_MS / 1000;
-    elements.cooldown.textContent = `Next scan in ${cooldownRemaining}s`;
-    elements.cooldown.classList.add("active");
-
-    cooldownTimer = setInterval(() => {
-      cooldownRemaining--;
-
-      if (cooldownRemaining <= 0) {
-        clearInterval(cooldownTimer);
-        elements.cooldown.classList.remove("active");
-        setControlsVisible(true);
-      } else {
-        elements.cooldown.textContent =
-          `Next scan in ${cooldownRemaining}s`;
-      }
-    }, 1000);
-  }
-
-  // =====================================================
-  // WAKE LOCK
-  // =====================================================
-
-  async function requestWakeLock() {
-    try {
-      wakeLock = await navigator.wakeLock.request("screen");
-    } catch (err) {
-      console.warn("Wake Lock failed:", err);
-    }
-  }
-
-  if ("wakeLock" in navigator) requestWakeLock();
-
-  document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "visible" &&
-        "wakeLock" in navigator) {
-      requestWakeLock();
-    }
+    document.querySelector(`#team${team} .indicator`).style.opacity =
+      score.lastPointTeam === team ? 1 : 0;
   });
+}
 
-  // =====================================================
-  // CONTROLS
-  // =====================================================
+function animate(team) {
+  const el = $(`team${team}`);
+  el.classList.remove("score-animate");
+  void el.offsetWidth;
+  el.classList.add("score-animate");
+}
 
-  function setControlsVisible(visible) {
-    elements.controls.style.visibility = visible ? "visible" : "hidden";
-    elements.controls.style.pointerEvents = visible ? "auto" : "none";
+function animateUndo(team) {
+  const el = $(`team${team}`);
+  el.classList.remove("undo-animate");
+  void el.offsetWidth;
+  el.classList.add("undo-animate");
+}
+
+function renderSets(team) {
+  const el = elements.sets[team];
+  const opp = opponent(team);
+
+  const teamSets = score[team].sets;
+  const oppSets = score[opp].sets;
+  const maxSets = Math.max(teamSets, oppSets, 3);
+
+  el.innerHTML = "";
+
+  const teamColor = getComputedStyle(document.documentElement)
+    .getPropertyValue(team === TEAM_A ? '--teamAcolour' : '--teamBcolour');
+
+  for (let i = 0; i < maxSets; i++) {
+    const dot = document.createElement("span");
+    dot.className = "set-dot";
+
+    if (i < teamSets) {
+      dot.classList.add("filled");
+      dot.style.backgroundColor = teamColor;
+    }
+
+    if (i === teamSets - 1 && score.lastSetTeam === team) {
+      dot.classList.add("recent");
+    }
+
+    el.appendChild(dot);
+  }
+}
+
+function renderGames(team) {
+  const el = elements.games[team];
+  const opp = opponent(team);
+
+  const teamGames = score[team].games;
+  const oppGames = score[opp].games;
+  const maxGames = Math.max(teamGames, oppGames, 6);
+
+  el.innerHTML = "";
+
+  for (let i = 0; i < maxGames; i++) {
+    const dot = document.createElement("span");
+    dot.className = "game-dot";
+    if (i < teamGames) dot.classList.add("filled");
+    el.appendChild(dot);
+  }
+}
+
+// =====================================================
+// NFC HANDLING
+// =====================================================
+
+function handleNfc(code) {
+  if (scanLocked) return;
+
+  const action = actionMap[code];
+  if (!action) return;
+
+  scanLocked = true;
+
+  action();
+  startCooldown();
+
+  setTimeout(() => {
+    scanLocked = false;
+  }, COOLDOWN_MS);
+}
+
+function startCooldown() {
+  reader.style.visibility = "hidden";
+  setControlsVisible(false);
+
+  cooldownRemaining = COOLDOWN_MS / 1000;
+  elements.cooldown.textContent = `Next scan in ${cooldownRemaining}s`;
+  elements.cooldown.classList.add("active");
+
+  cooldownTimer = setInterval(() => {
+    cooldownRemaining--;
+
+    if (cooldownRemaining <= 0) {
+      clearInterval(cooldownTimer);
+      elements.cooldown.classList.remove("active");
+      setControlsVisible(true);
+    } else {
+      elements.cooldown.textContent =
+        `Next scan in ${cooldownRemaining}s`;
+    }
+  }, 1000);
+}
+
+// =====================================================
+// WAKE LOCK
+// =====================================================
+
+async function requestWakeLock() {
+  try {
+    wakeLock = await navigator.wakeLock.request("screen");
+  } catch (err) {
+    console.warn("Wake Lock failed:", err);
+  }
+}
+
+if ("wakeLock" in navigator) requestWakeLock();
+
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible" &&
+      "wakeLock" in navigator) {
+    requestWakeLock();
+  }
+});
+
+// =====================================================
+// CONTROLS
+// =====================================================
+
+function setControlsVisible(visible) {
+  elements.controls.style.visibility = visible ? "visible" : "hidden";
+  elements.controls.style.pointerEvents = visible ? "auto" : "none";
+}
+
+elements.confirmResetBtn.addEventListener("click", () => {
+  const newPassword = elements.resetCourtPassword.value.trim();
+  elements.resetPasswordError.textContent = "";
+
+
+  if (newPassword.length < 4) {
+    elements.resetPasswordError.textContent = "Password must be at least 4 characters.";
+    return;
   }
 
-  elements.confirmResetBtn.addEventListener("click", () => {
-    const newPassword = elements.resetCourtPassword.value.trim();
-    elements.resetPasswordError.textContent = "";
+  const currentCourtName = elements.scoreboardPage.querySelector("#courtTitle")?.textContent;
 
+  const courts = JSON.parse(localStorage.getItem("courts") || "[]");
 
-    if (newPassword.length < 4) {
-      elements.resetPasswordError.textContent = "Password must be at least 4 characters.";
-      return;
-    }
+  const court = courts.find(c => c.name === currentCourtName);
 
-    const currentCourtName = elements.scoreboardPage.querySelector("#courtTitle")?.textContent;
-
-    const courts = JSON.parse(localStorage.getItem("courts") || "[]");
-
-    const court = courts.find(c => c.name === currentCourtName);
-
-    if (!court) {
-      elements.resetPasswordError.textContent = "Court not found.";
-      return;
-    }
-
-    // Check that new password is different from existing password
-    if (newPassword === court.password) {
-      elements.resetPasswordError.textContent = "New password must be different from the current one.";
-      return;
-    }
-
-    court.password = newPassword;
-    localStorage.setItem("courts", JSON.stringify(courts));
-
-    // ✅ Reset the scoreboard
-    score = defaultScore();
-    history = [];
-
-    ["A","B"].forEach(team => {
-      const labelEl = document.querySelector(`.team-name[data-team="${team}"] .name-text`);
-      labelEl.textContent = `Team ${team}`;
-      fitTextToContainer(labelEl);
-    });
-
-    updateUI();
-
-    // Clear the password input for next time
-    elements.resetCourtPassword.value = "";
-    elements.resetModal.classList.add("hidden");
-
-    playSound(SOUND_IDS.START);
-  });
-
-  addHoldButtonLogic(elements.resetBtn, openResetModal, RESET_HOLD_MS);
-
-  function openResetModal() {
-    playSound(SOUND_IDS.WARNING);
-    elements.resetCourtPassword.value = "";
-    elements.resetPasswordError.textContent = "";
-    elements.resetModal.classList.remove("hidden");
-    elements.resetCourtPassword.focus();
+  if (!court) {
+    elements.resetPasswordError.textContent = "Court not found.";
+    return;
   }
 
-  elements.cancelResetBtn.addEventListener("click", () =>
-    elements.resetModal.classList.add("hidden")
-  );
-
-  elements.resetModal.addEventListener("click", (e) => {
-    if (e.target === elements.resetModal)
-      elements.resetModal.classList.add("hidden");
-  });
-
-  elements.swapBtn.addEventListener("click", () => {
-    playSound(SOUND_IDS.SWOOSH);
-
-    document.querySelector(".scoreboard").classList.toggle("swapped");
-  });
-
-  // =====================================================
-  // HOLD BUTTON LOGIC
-  // =====================================================
-
-  function addHoldButtonLogic(button, onConfirm, holdMs = 800) {
-    let pressTimer = null;
-
-    const startPress = () => {
-      button.classList.add("holding", "pressed");
-
-      pressTimer = setTimeout(() => {
-        onConfirm();
-        button.classList.remove("holding", "pressed");
-      }, holdMs);
-    };
-
-    const cancelPress = () => {
-      clearTimeout(pressTimer);
-      button.classList.remove("holding", "pressed");
-    };
-
-    button.addEventListener("pointerdown", startPress);
-    button.addEventListener("pointerup", cancelPress);
-    button.addEventListener("pointerleave", cancelPress);
-    button.addEventListener("pointercancel", cancelPress);
+  // Check that new password is different from existing password
+  if (newPassword === court.password) {
+    elements.resetPasswordError.textContent = "New password must be different from the current one.";
+    return;
   }
 
-  addHoldButtonLogic(elements.undoBtn, undoLastPoint, UNDO_HOLD_MS);
+  court.password = newPassword;
+  localStorage.setItem("courts", JSON.stringify(courts));
 
-  addHoldButtonLogic(elements.backBtn, () => {
-    disableSpectateMode();
-    elements.scoreboardPage.style.display = "none";
-    elements.menuPage.style.display = "flex";
-  }, BACK_HOLD_MS);
+  // ✅ Reset the scoreboard
+  score = defaultScore();
+  history = [];
 
-  addHoldButtonLogic(elements.resetBtn, () => {
-    elements.resetModal.classList.remove("hidden");
-  }, RESET_HOLD_MS);
-
-  addHoldButtonLogic(elements.muteBtn, () => {
-    muted = !muted;
-    elements.muteBtn.textContent = muted ? "🔇" : "🔊";
-  }, MUTE_HOLD_MS);
-
-  // =====================================================
-  // TEAM NAME EDITING
-  // =====================================================
-
-  function startEditing(labelEl, team) {
-    const input = document.createElement("input");
-    input.className = "team-name-input";
-    input.value = labelEl.textContent;
-
-    labelEl.replaceWith(input);
-    input.focus();
-    input.select();
-
-    function save() {
-      const name = input.value.trim() || `Team ${team}`;
-      localStorage.setItem(`teamName${team}`, name);
-
-      labelEl.textContent = name;
-      input.replaceWith(labelEl);
-
-      fitTextToContainer(labelEl);
-    }
-
-    function cancel() {
-      input.replaceWith(labelEl);
-    }
-
-    input.addEventListener("blur", save);
-    input.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") save();
-      if (e.key === "Escape") cancel();
-    });
-  }
-
-  function fitTextToContainer(textEl) {
-    const container = textEl.parentElement;
-
-    textEl.style.transform = "scale(1)";
-
-    const containerWidth = container.clientWidth;
-    const textWidth = textEl.scrollWidth;
-
-    if (textWidth > containerWidth) {
-      const scale = containerWidth / textWidth;
-      textEl.style.transform = `scale(${scale})`;
-    }
-  }
-
-  document.querySelectorAll(".team-name .name-text").forEach(el => {
-    const team = el.closest(".team-name").dataset.team;
-    el.addEventListener("click", () => startEditing(el, team));
-    fitTextToContainer(el);
+  ["A","B"].forEach(team => {
+    const labelEl = document.querySelector(`.team-name[data-team="${team}"] .name-text`);
+    labelEl.textContent = `Team ${team}`;
+    fitTextToContainer(labelEl);
   });
-
-  window.addEventListener("resize", () => {
-    document.querySelectorAll(".team-name .name-text")
-      .forEach(fitTextToContainer);
-  });
-
-  // =====================================================
-  // INIT
-  // =====================================================
 
   updateUI();
 
-  $("addPointA").addEventListener("click", () => addPoint(TEAM_A));
-  $("addPointB").addEventListener("click", () => addPoint(TEAM_B));
+  // Clear the password input for next time
+  elements.resetCourtPassword.value = "";
+  elements.resetModal.classList.add("hidden");
+
+  playSound(SOUND_IDS.START);
+  
+  persistCourt();
+});
+
+addHoldButtonLogic(elements.resetBtn, openResetModal, RESET_HOLD_MS);
+
+function openResetModal() {
+  playSound(SOUND_IDS.WARNING);
+  elements.resetCourtPassword.value = "";
+  elements.resetPasswordError.textContent = "";
+  elements.resetModal.classList.remove("hidden");
+  elements.resetCourtPassword.focus();
+}
+
+elements.cancelResetBtn.addEventListener("click", () =>
+  elements.resetModal.classList.add("hidden")
+);
+
+elements.resetModal.addEventListener("click", (e) => {
+  if (e.target === elements.resetModal)
+    elements.resetModal.classList.add("hidden");
+});
+
+elements.swapBtn.addEventListener("click", () => {
+  playSound(SOUND_IDS.SWOOSH);
+
+  document.querySelector(".scoreboard").classList.toggle("swapped");
+});
+
+// =====================================================
+// HOLD BUTTON LOGIC
+// =====================================================
+
+function addHoldButtonLogic(button, onConfirm, holdMs = 800) {
+  let pressTimer = null;
+
+  const startPress = () => {
+    button.classList.add("holding", "pressed");
+
+    pressTimer = setTimeout(() => {
+      onConfirm();
+      button.classList.remove("holding", "pressed");
+    }, holdMs);
+  };
+
+  const cancelPress = () => {
+    clearTimeout(pressTimer);
+    button.classList.remove("holding", "pressed");
+  };
+
+  button.addEventListener("pointerdown", startPress);
+  button.addEventListener("pointerup", cancelPress);
+  button.addEventListener("pointerleave", cancelPress);
+  button.addEventListener("pointercancel", cancelPress);
+}
+
+addHoldButtonLogic(elements.undoBtn, undoLastPoint, UNDO_HOLD_MS);
+
+addHoldButtonLogic(elements.backBtn, () => {
+  disableSpectateMode();
+  elements.scoreboardPage.style.display = "none";
+  elements.menuPage.style.display = "flex";
+}, BACK_HOLD_MS);
+
+addHoldButtonLogic(elements.resetBtn, () => {
+  elements.resetModal.classList.remove("hidden");
+}, RESET_HOLD_MS);
+
+addHoldButtonLogic(elements.muteBtn, () => {
+  muted = !muted;
+  elements.muteBtn.textContent = muted ? "🔇" : "🔊";
+}, MUTE_HOLD_MS);
+
+// =====================================================
+// TEAM NAME EDITING
+// =====================================================
+
+function startEditing(labelEl, team) {
+  const input = document.createElement("input");
+  input.className = "team-name-input";
+  input.value = labelEl.textContent;
+
+  labelEl.replaceWith(input);
+  input.focus();
+  input.select();
+
+  async function save() {
+    const name = input.value.trim() || `Team ${team}`;
+    
+    await updateDoc(doc(db, "courts", currentCourt), {
+      [`teamNames.${team}`]: name
+    });
+
+    labelEl.textContent = name;
+    input.replaceWith(labelEl);
+
+    fitTextToContainer(labelEl);
+  }
+
+  function cancel() {
+    input.replaceWith(labelEl);
+  }
+
+  input.addEventListener("blur", save);
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") save();
+    if (e.key === "Escape") cancel();
+  });
+}
+
+function fitTextToContainer(textEl) {
+  const container = textEl.parentElement;
+
+  textEl.style.transform = "scale(1)";
+
+  const containerWidth = container.clientWidth;
+  const textWidth = textEl.scrollWidth;
+
+  if (textWidth > containerWidth) {
+    const scale = containerWidth / textWidth;
+    textEl.style.transform = `scale(${scale})`;
+  }
+}
+
+document.querySelectorAll(".team-name .name-text").forEach(el => {
+  const team = el.closest(".team-name").dataset.team;
+  el.addEventListener("click", () => startEditing(el, team));
+  fitTextToContainer(el);
+});
+
+window.addEventListener("resize", () => {
+  document.querySelectorAll(".team-name .name-text")
+    .forEach(fitTextToContainer);
+});
+
+// =====================================================
+// INIT
+// =====================================================
+
+updateUI();
+
+$("addPointA").addEventListener("click", () => addPoint(TEAM_A));
+$("addPointB").addEventListener("click", () => addPoint(TEAM_B));
+
+// =====================================================
+// FIREBASE SYNC
+// =====================================================
+let unsubscribe = null;
+
+function listenToCourt(courtName) {
+
+  if (unsubscribe) unsubscribe();
+
+  const courtRef = doc(db, "courts", courtName);
+
+  unsubscribe = onSnapshot(courtRef, (snap) => {
+    if (!snap.exists()) return;
+
+    const data = snap.data();
+
+    score = data.score;
+    history = data.history || [];
+
+    document.querySelector(
+      `.team-name[data-team="A"] .name-text`
+    ).textContent = data.teamNames.A;
+
+    document.querySelector(
+      `.team-name[data-team="B"] .name-text`
+    ).textContent = data.teamNames.B;
+
+    updateUI();
+  });
+}
 
 });
