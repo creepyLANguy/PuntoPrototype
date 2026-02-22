@@ -76,6 +76,7 @@ body {
   flex-direction: column;
   gap: 30px;
   width: clamp(200px, 20%, 300px);
+  padding-bottom: 10%;
 }
 
 .menu-btn {
