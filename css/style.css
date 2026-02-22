@@ -19,7 +19,7 @@ body {
   align-items: center;
   gap: 40px;
   color: white;
-  background: url("../media/bk.jpg") no-repeat;
+  background: url("../media/img/bk.jpg") no-repeat;
   background-size: cover;
   background-position: 50% 50%;
   animation: backgroundScroll 60s ease-in-out 1s infinite;
