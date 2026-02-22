@@ -458,25 +458,6 @@ body.spectating-mode .team-name:hover {
 }
 
 /* =======================================================
-   COOLDOWN
-======================================================= */
-
-.cooldown {
-  display: flex;
-  justify-content: center;
-  text-align: center;
-  font-size: 22px;
-  font-weight: bold;
-  margin: 20px auto;
-  opacity: 0;
-  transition: opacity 0.2s ease;
-}
-
-.cooldown.active {
-  opacity: 1;
-}
-
-/* =======================================================
    RESET MODAL
 ======================================================= */
 

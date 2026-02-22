@@ -791,33 +791,10 @@ function handleNfc(code) {
   scanLocked = true;
 
   action();
-  startCooldown();
 
   setTimeout(() => {
     scanLocked = false;
   }, COOLDOWN_MS);
-}
-
-function startCooldown() {
-  reader.style.visibility = "hidden";
-  setControlsVisible(false);
-
-  cooldownRemaining = COOLDOWN_MS / 1000;
-  elements.cooldown.textContent = `Next scan in ${cooldownRemaining}s`;
-  elements.cooldown.classList.add("active");
-
-  cooldownTimer = setInterval(() => {
-    cooldownRemaining--;
-
-    if (cooldownRemaining <= 0) {
-      clearInterval(cooldownTimer);
-      elements.cooldown.classList.remove("active");
-      setControlsVisible(true);
-    } else {
-      elements.cooldown.textContent =
-        `Next scan in ${cooldownRemaining}s`;
-    }
-  }, 1000);
 }
 
 // =====================================================
