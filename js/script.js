@@ -23,11 +23,7 @@ const MUTE_HOLD_MS = 550;
 
 const TEAM_A = "A";
 const TEAM_B = "B";
-
-const IDS = {
-  RESET: "RESET",
-  UNDO: "UNDO"
-};
+const UNDO = "U";
 
 const SOUND_IDS = {
   POINT: "pointSound",
@@ -52,10 +48,6 @@ const defaultScore = () => ({
 let score = defaultScore();
 let history = [];
 
-let scanLocked = false;
-let cooldownTimer = null;
-let cooldownRemaining = 0;
-
 let muted = false;
 
 let currentCourt = null;
@@ -64,6 +56,14 @@ let currentCourtPassword = null;
 let isSpectating = false;
 
 let isAdmin = false;
+
+// =====================================================
+// NFC STATE
+// =====================================================
+
+let nfcReader = null;
+let nfcCooldown = false;
+let lastNfcScanTime = 0;
 
 // =====================================================
 // DOM REFERENCES
@@ -443,6 +443,8 @@ async function enterCourt(courtName, spectate) {
   }
 
   await initAudio();
+  await initNfc();
+  
   playSound(SOUND_IDS.START);
 
   const data = snap.data();
@@ -539,8 +541,7 @@ function removeSpectatorBadges() {
 const actionMap = {
   [TEAM_A]: () => addPoint(TEAM_A),
   [TEAM_B]: () => addPoint(TEAM_B),
-  [IDS.RESET]: () => elements.resetModal.classList.remove("hidden"),
-  [IDS.UNDO]: () => undoLastPoint()
+  [UNDO]: () => undoLastPoint()
 };
 
 // =====================================================
@@ -779,32 +780,93 @@ function renderGames(team) {
 }
 
 // =====================================================
+// NFC INITIALISATION
+// =====================================================
+
+async function initNfc() {
+  if (isSpectating) {
+    console.warn("NFC not initialized in Spectate mode.");
+    return;
+  }
+
+  if (!("NDEFReader" in window)) {
+    //AL.
+    //TODO - remove the alert and replace with a UI element that indicates NFC is unavailable, and disable any NFC-related features.
+    alert("NFC Supported?\n" + ("NDEFReader" in window));
+    //
+    console.warn("Web NFC not supported on this device.");
+    return;
+  }
+
+  try {
+    nfcReader = new NDEFReader();
+    await nfcReader.scan();
+
+    console.log("NFC scanning started.");
+
+    nfcReader.onreading = (event) => {
+      if (!elements.scoreboardPage || 
+          elements.scoreboardPage.style.display === "none") {
+        return;
+      }
+
+      if (!canProcessNfc()) return;
+
+      const decoder = new TextDecoder();
+
+      for (const record of event.message.records) {
+        if (record.recordType === "text") {
+          const text = decoder.decode(record.data).trim();
+          console.log("NFC scanned:", text);
+          handleNfc(text);
+        }
+      }
+    };
+
+  } catch (error) {
+    console.error("NFC scan failed:", error);
+  }
+}
+
+// =====================================================
 // NFC HANDLING
 // =====================================================
 
 function handleNfc(code) {
-  if (scanLocked) return;
 
-  const action = actionMap[code];
-  if (!action) return;
+  if (!code) return;
 
-  scanLocked = true;
+  const action = actionMap[code.toUpperCase()];
+  if (!action) {
+    console.warn("Unknown NFC code:", code);
+    return;
+  }
 
   action();
+}
+
+function canProcessNfc() {
+  const now = Date.now();
+
+  if (nfcCooldown) return false;
+
+  if (now - lastNfcScanTime < COOLDOWN_MS) {
+    return false;
+  }
+
+  lastNfcScanTime = now;
+  nfcCooldown = true;
 
   setTimeout(() => {
-    scanLocked = false;
+    nfcCooldown = false;
   }, COOLDOWN_MS);
+
+  return true;
 }
 
 // =====================================================
 // CONTROLS
 // =====================================================
-
-function setControlsVisible(visible) {
-  elements.controls.style.visibility = visible ? "visible" : "hidden";
-  elements.controls.style.pointerEvents = visible ? "auto" : "none";
-}
 
 elements.confirmResetBtn.addEventListener("click", async () => {
   const newPassword = elements.resetCourtPassword.value.trim();
