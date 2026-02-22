@@ -63,6 +63,8 @@ let currentCourtPassword = null;
 
 let isSpectating = false;
 
+let isAdmin = false;
+
 // =====================================================
 // DOM REFERENCES
 // =====================================================
@@ -144,6 +146,12 @@ elements.resetPasswordError = $("resetPasswordError");
 // =====================================================
 // MENU TOGGLE
 // =====================================================
+
+async function getAdminPassword() {
+  const adminref = doc(db, "admin", "goodies");
+  const adminSnap = await getDoc(adminref);
+  return adminSnap.data().skeletonKey;
+}
 
 document.querySelectorAll(".menu-btn").forEach(btn => {
   btn.addEventListener("click", async () => {
@@ -230,10 +238,8 @@ elements.createCourtBtn.addEventListener("click", async () => {
   elements.courtNameError.textContent = "";
   elements.courtPasswordError.textContent = "";
 
-  const adminref = doc(db, "admin", "goodies");
-  const snap = await getDoc(adminref);
-
-   if (snap.data().skeletonKey !== adminPass) {
+  var skeletonKey = await getAdminPassword();
+  if (adminPass !== skeletonKey) {
     elements.adminError.textContent = "Invalid admin password.";
     return;
   }
@@ -274,6 +280,8 @@ elements.createCourtBtn.addEventListener("click", async () => {
     teamNames: { A: "Team A", B: "Team B" }
   });
 
+  currentCourtPassword = courtPass;
+  isAdmin = true;
   enterCourt(courtName, false);
   
   elements.adminPassword.value = "";
@@ -307,11 +315,9 @@ elements.enterCourtBtn.addEventListener("click", async () => {
     return;
   }
 
-  const adminref = doc(db, "admin", "goodies");
-  const adminSnap = await getDoc(adminref);
-  const adminPass = adminSnap.data().skeletonKey;
-
-   if (password === adminPass) {
+  var adminPassword = await getAdminPassword();
+  if (password === adminPassword) {
+    isAdmin = true;
     enterCourt(name, false);
     return;
   }
@@ -321,6 +327,7 @@ elements.enterCourtBtn.addEventListener("click", async () => {
     return;
   }
 
+  currentCourtPassword = password;
   enterCourt(name, false);
 
   elements.playCourtPassword.value = "";
@@ -770,6 +777,8 @@ elements.confirmResetBtn.addEventListener("click", async () => {
     elements.resetPasswordError.textContent = "New password must be different from the current one.";
     return;
   }
+  
+  currentCourtPassword = newPassword;
 
   await updateDoc(courtRef, {
     password: newPassword
@@ -791,7 +800,7 @@ elements.confirmResetBtn.addEventListener("click", async () => {
   elements.resetModal.classList.add("hidden");
 
   playSound(SOUND_IDS.START);
-  
+
   persistCourt();
 });
 
@@ -954,20 +963,29 @@ function listenToCourt(courtName) {
   unsubscribe = onSnapshot(courtRef, (snap) => {
     if (!snap.exists()) return;
 
-    const data = snap.data();
+    const courtData = snap.data();
 
-    currentCourtPassword = data.password;
+    if (
+      currentCourtPassword !== courtData.password && 
+      !isAdmin && 
+      !isSpectating
+    ) {
+      alert("Court password has been changed. You are now in spectate mode.");
+      enableSpectateMode();
+    }
 
-    score = data.score;
-    history = data.history || [];
+    currentCourtPassword = courtData.password;
+
+    score = courtData.score;
+    history = courtData.history || [];
 
     document.querySelector(
       `.team-name[data-team="A"] .name-text`
-    ).textContent = data.teamNames.A;
+    ).textContent = courtData.teamNames.A;
 
     document.querySelector(
       `.team-name[data-team="B"] .name-text`
-    ).textContent = data.teamNames.B;
+    ).textContent = courtData.teamNames.B;
 
     updateUI();
   });
