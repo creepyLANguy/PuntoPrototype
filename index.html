@@ -5,13 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Point Pulse - Live Scoreboard</title>
   <link rel="stylesheet" href="css/style.css" />
-  <script src="js/script.js" defer></script>
-</head>
+  <script type="module" src="js/script.js"></script></head>
 <body>
 
   <!-- ================= MENU ================= -->
   <main id="menuPage" class="menu-page">
-    <h1 class="app-title">Welcome to Point Pulse</h1>
+    <img src="../media/img/logo.png" alt="Point Pulse Logo" class="logo" />
+    <h2 class="app-welcome">Welcome to</h2>
+    <h2 class="app-title">Point Pulse</h2>
     <div class="app-subtitle">Your Live Scoreboard</div>
 
     <div class="menu-buttons">
@@ -192,9 +193,11 @@
     <!-- ===== COOLDOWN ===== -->
     <div class="cooldown" id="cooldown"></div>
     
+    <!-- BACK BUTTON -->
+    <button id="backBtn" class="floating-btn">Back</button>
+
     <!-- FLOATING BUTTONS -->
     <div class="floating-controls">
-      <button id="backBtn" class="floating-btn">Back</button>
       <button id="undoBtn" class="floating-btn">Undo</button>
       <button id="resetBtn" class="floating-btn">Reset</button>
       <button id="muteBtn" class="floating-btn">🔊</button>

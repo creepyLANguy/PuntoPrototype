@@ -3,23 +3,31 @@
   --teamBcolour: #00ffff;
   --bg: #000;
   --white: #ffffff;
-  --spectating: rgb(255, 255, 255);
+  /* --spectating: rgb(0, 255, 100); */
+  --spectating: rgb(255, 0, 0);
 }
 
 body {
   margin: 0;
 }
 
+.logo {
+  max-width: 80%;
+  height: 30%;
+  margin-bottom: -30px;
+}
+
 
 .menu-page {
-  height: 100vh;
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-start;
   align-items: center;
-  gap: 40px;
+  padding-top: 60px;
+  gap: 20px;
   color: white;
-  background: url("../media/bk.jpg") no-repeat;
+  background: url("../media/img/bk.jpg") no-repeat;
   background-size: cover;
   background-position: 50% 50%;
   animation: backgroundScroll 60s ease-in-out 1s infinite;
@@ -40,22 +48,34 @@ body {
   z-index: 1;
 }
 
+.app-welcome {
+  font-size: 40px;
+  font-weight: 800;
+  max-width: 80%;
+  align-content: center;
+  margin-bottom: -80px;
+}
+
 .app-title {
   font-size: 64px;
   font-weight: 800;
+  max-width: 80%;
+  align-content: center;
 }
 
 .app-subtitle {
-  margin-top: -80px;
+  margin-top: -40px;
   font-size: 40px;
   font-weight: 700;
+  margin-bottom: 20px;
 }
 
 .menu-buttons {
+  margin-top: 80px;
   display: flex;
   flex-direction: column;
-  gap: 20px;
-  text-align: center;
+  gap: 30px;
+  width: clamp(200px, 20%, 300px);
 }
 
 .menu-btn {
@@ -202,6 +222,15 @@ body {
   padding: 4px 8px;
   color: inherit;
   outline: none;
+}
+
+body.spectating-mode .team-name {
+  pointer-events: none;
+  cursor: default;
+}
+
+body.spectating-mode .team-name:hover {
+  background: none;
 }
 
 /* =======================================================
@@ -392,6 +421,13 @@ body {
   background: rgba(255, 0, 0, 0.25);
 }
 
+#backBtn {
+  position: fixed;
+  top: 20px;
+  left: 30px;
+  padding: 10px 18px;
+}
+
 /* =======================================================
    SCORE ANIMATION
 ======================================================= */
@@ -480,43 +516,6 @@ body {
   border: none;
   font-weight: bold;
   cursor: pointer;
-}
-
-/* =======================================================
-   MOBILE OPTIMIZATION
-======================================================= */
-
-@media (max-width: 900px) {
-
-  .scoreboard {
-    flex-direction: column;
-    align-items: center;
-  }
-
-  .team {
-    width: 95%;
-    max-width: 400px;
-  }
-
-  .row {
-    font-size: 28px;
-  }
-
-  .row span:last-child {
-    font-size: 40px;
-  }
-
-  .points {
-    font-size: clamp(100px, 20vw, 160px);
-  }
-
-  .floating-controls {
-    bottom: 14px;
-  }
-
-  .floating-btn {
-    padding: 10px 16px;
-  }
 }
 
 /* ================= UNDO ANIMATION ================= */
@@ -642,21 +641,38 @@ body {
   top: 20px;
   padding: 10px 18px;
   border-radius: 14px;
-  border: 2px solid var(--spectating);;
+  border: 2px solid var(--spectating);
   color: var(--spectating);
   font-weight: 700;
   letter-spacing: 1px;
-  font-size: 14x;
+  font-size: 14px;
   z-index: 10000;
   pointer-events: none;
-  opacity: 0.4;
-  scale: 0.7;
+
+  animation: spectatorGlow 5s ease-in-out infinite;
+}
+
+@keyframes spectatorGlow {
+  0% {
+    opacity: 0.3;
+    box-shadow: 0 0 4px var(--spectating);
+  }
+
+  50% {
+    opacity: 1;
+    box-shadow: 0 0 16px var(--spectating);
+  }
+
+  100% {
+    opacity: 0.3;
+    box-shadow: 0 0 4px var(--spectating);
+  }
 }
 
 .spectator-badge.left {
-  left: 20px;
+  left: 30px;
 }
 
 .spectator-badge.right {
-  right: 20px;
+  right: 30px;
 }
