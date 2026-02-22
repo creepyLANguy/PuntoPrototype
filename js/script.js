@@ -144,6 +144,79 @@ elements.resetCourtPassword = $("resetCourtPassword");
 elements.resetPasswordError = $("resetPasswordError");
 
 // =====================================================
+// ENTER KEY SUBMIT LISTENERS
+// =====================================================
+
+function submitOnEnter(inputEl, buttonEl) {
+  inputEl.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      buttonEl.click();
+    }
+  });
+}
+
+// CREATE PAGE
+submitOnEnter(elements.adminPassword, elements.createCourtBtn);
+submitOnEnter(elements.courtName, elements.createCourtBtn);
+submitOnEnter(elements.courtPassword, elements.createCourtBtn);
+
+// PLAY PAGE
+submitOnEnter(elements.playCourtName, elements.enterCourtBtn);
+submitOnEnter(elements.playCourtPassword, elements.enterCourtBtn);
+
+// SPECTATE PAGE
+submitOnEnter(elements.spectateCourtName, elements.spectateCourtBtn);
+
+// RESET MODAL
+submitOnEnter(elements.resetCourtPassword, elements.confirmResetBtn);
+
+// =====================================================
+// ESC KEY HANDLING (DISMISS MODALS / PAGES)
+// =====================================================
+
+document.addEventListener("keydown", (e) => {
+  if (e.key !== "Escape") return;
+
+  const isVisible = (el) =>
+    window.getComputedStyle(el).display !== "none";
+
+  // 1️⃣ Reset modal (highest priority)
+  if (isVisible(elements.resetModal)) {
+    elements.resetModal.classList.add("hidden");
+    return;
+  }
+
+  // 2️⃣ Create page
+  if (isVisible(elements.createPage)) {
+    elements.createPage.style.display = "none";
+    elements.menuPage.style.display = "flex";
+    return;
+  }
+
+  // 3️⃣ Play page
+  if (isVisible(elements.playPage)) {
+    elements.playPage.style.display = "none";
+    elements.menuPage.style.display = "flex";
+    return;
+  }
+
+  // 4️⃣ Spectate page
+  if (isVisible(elements.spectatePage)) {
+    elements.spectatePage.style.display = "none";
+    elements.menuPage.style.display = "flex";
+    return;
+  }
+
+  // 5️⃣ Scoreboard
+  if (isVisible(elements.scoreboardPage)) {
+    disableSpectateMode();
+    elements.scoreboardPage.style.display = "none";
+    elements.menuPage.style.display = "flex";
+  }
+});
+
+// =====================================================
 // MENU TOGGLE
 // =====================================================
 
