@@ -11,13 +11,21 @@ body {
   margin: 0;
 }
 
+.logo {
+  max-width: 80%;
+  height: 30%;
+  margin-bottom: -30px;
+}
+
+
 .menu-page {
-  height: 100vh;
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-start;
   align-items: center;
-  gap: 40px;
+  padding-top: 60px;
+  gap: 20px;
   color: white;
   background: url("../media/img/bk.jpg") no-repeat;
   background-size: cover;
@@ -40,22 +48,34 @@ body {
   z-index: 1;
 }
 
+.app-welcome {
+  font-size: 40px;
+  font-weight: 800;
+  max-width: 80%;
+  align-content: center;
+  margin-bottom: -80px;
+}
+
 .app-title {
   font-size: 64px;
   font-weight: 800;
+  max-width: 80%;
+  align-content: center;
 }
 
 .app-subtitle {
-  margin-top: -80px;
+  margin-top: -40px;
   font-size: 40px;
   font-weight: 700;
+  margin-bottom: 20px;
 }
 
 .menu-buttons {
+  margin-top: 80px;
   display: flex;
   flex-direction: column;
-  gap: 20px;
-  text-align: center;
+  gap: 30px;
+  width: clamp(200px, 20%, 300px);
 }
 
 .menu-btn {
@@ -496,43 +516,6 @@ body.spectating-mode .team-name:hover {
   border: none;
   font-weight: bold;
   cursor: pointer;
-}
-
-/* =======================================================
-   MOBILE OPTIMIZATION
-======================================================= */
-
-@media (max-width: 900px) {
-
-  .scoreboard {
-    flex-direction: column;
-    align-items: center;
-  }
-
-  .team {
-    width: 95%;
-    max-width: 400px;
-  }
-
-  .row {
-    font-size: 28px;
-  }
-
-  .row span:last-child {
-    font-size: 40px;
-  }
-
-  .points {
-    font-size: clamp(100px, 20vw, 160px);
-  }
-
-  .floating-controls {
-    bottom: 14px;
-  }
-
-  .floating-btn {
-    padding: 10px 16px;
-  }
 }
 
 /* ================= UNDO ANIMATION ================= */
