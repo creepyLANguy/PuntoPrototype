@@ -57,7 +57,6 @@ let isSpectating = false;
 
 let isAdmin = false;
 
-let wakeLock = null;
 // =====================================================
 // NFC STATE
 // =====================================================
@@ -143,27 +142,6 @@ elements.spectateCourtBtn = $("spectateCourtBtn");
 //RESET COURT ELEMENTS
 elements.resetCourtPassword = $("resetCourtPassword");
 elements.resetPasswordError = $("resetPasswordError");
-
-// =====================================================
-// WAKE LOCK
-// =====================================================
-
-async function requestWakeLock() {
-  try {
-    wakeLock = await navigator.wakeLock.request("screen");
-  } catch (err) {
-    console.warn("Wake Lock failed:", err);
-  }
-}
-
-if ("wakeLock" in navigator) requestWakeLock();
-
-document.addEventListener("visibilitychange", () => {
-  if (document.visibilityState === "visible" &&
-      "wakeLock" in navigator) {
-    requestWakeLock();
-  }
-});
 
 // =====================================================
 // ENTER KEY SUBMIT LISTENERS
