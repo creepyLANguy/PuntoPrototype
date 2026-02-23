@@ -107,10 +107,19 @@
 
     </div>
   </div>
-  
+
   <!-- ================= SCOREBOARD (HIDDEN INITIALLY) ================= -->
   <div id="scoreboardPage" style="display:none;">
 
+  <!-- ================= NFC ALERT MODAL ================= -->
+  <div id="nfcAlertModal" class="nfc-alert-modal hidden">
+    <div class="nfc-alert-box">
+      <h2 id="nfcAlertTitle"></h2>
+      <p id="nfcAlertMessage"></p>
+      <button id="nfcAlertBtn" class="nfc-alert-btn">OK</button>
+    </div>
+  </div>
+    
   <!-- ================= RESET MODAL ================= -->
   <div id="resetModal" class="reset-modal hidden">
     <div class="reset-box">
@@ -134,6 +143,10 @@
 
     <!-- ===== SCOREBOARD ===== -->
     <section class="scoreboard">
+
+      <div id="nfcCooldownBanner" class="nfc-cooldown hidden">
+        Scan locked — <span id="nfcCountdown">3</span>s
+      </div>
 
       <!-- TEAM A -->
       <div class="team team-a" id="teamA">

@@ -23,11 +23,8 @@ const MUTE_HOLD_MS = 550;
 
 const TEAM_A = "A";
 const TEAM_B = "B";
-
-const IDS = {
-  RESET: "RESET",
-  UNDO: "UNDO"
-};
+const NFC_UNDO = "U";
+const NFC_RESET = "R";
 
 const SOUND_IDS = {
   POINT: "pointSound",
@@ -35,6 +32,17 @@ const SOUND_IDS = {
   SWOOSH: "swooshSound",
   START: "startSound",
   WARNING: "warningSound"
+};
+
+// =====================================================
+// ACTION MAP
+// =====================================================
+
+const actionMap = {
+  [TEAM_A]: () => addPoint(TEAM_A),
+  [TEAM_B]: () => addPoint(TEAM_B),
+  [NFC_UNDO]: () => performShallowReset(),//AL.
+  [NFC_RESET]: () => performShallowReset()
 };
 
 // =====================================================
@@ -52,10 +60,6 @@ const defaultScore = () => ({
 let score = defaultScore();
 let history = [];
 
-let scanLocked = false;
-let cooldownTimer = null;
-let cooldownRemaining = 0;
-
 let muted = false;
 
 let currentCourt = null;
@@ -64,6 +68,14 @@ let currentCourtPassword = null;
 let isSpectating = false;
 
 let isAdmin = false;
+
+// =====================================================
+// NFC STATE
+// =====================================================
+
+let nfcReader = null;
+let nfcCooldown = false;
+let lastNfcScanTime = 0;
 
 // =====================================================
 // DOM REFERENCES
@@ -142,6 +154,10 @@ elements.spectateCourtBtn = $("spectateCourtBtn");
 //RESET COURT ELEMENTS
 elements.resetCourtPassword = $("resetCourtPassword");
 elements.resetPasswordError = $("resetPasswordError");
+
+//NFC ELEMENTS
+elements.nfcCooldownBanner = $("nfcCooldownBanner");
+elements.nfcCountdown = $("nfcCountdown");
 
 // =====================================================
 // ENTER KEY SUBMIT LISTENERS
@@ -406,7 +422,6 @@ elements.enterCourtBtn.addEventListener("click", async () => {
   elements.playCourtPassword.value = "";
 });
 
-
 elements.spectateCourtBtn.addEventListener("click", async () => {
 
   const name = elements.spectateCourtName.value.trim();
@@ -436,13 +451,16 @@ async function enterCourt(courtName, spectate) {
   currentCourt = courtName;
 
   //AL.
-  //TODO - handle case where court is deleted after user enters name but before they click enter. Currently this would cause an error.
+  //TODO - remove the alert and handle case where court is deleted after user enters name but before they click enter. Currently this would cause an error.
   if (!snap.exists()) {
     alert("Court not found");
     return;
   }
+  //
 
   await initAudio();
+  await initNfc();
+  
   playSound(SOUND_IDS.START);
 
   const data = snap.data();
@@ -465,6 +483,8 @@ async function enterCourt(courtName, spectate) {
   else disableSpectateMode();
 
   listenToCourt(courtName);
+
+  requestWakeLock();
 }
 
 function enableSpectateMode() {
@@ -533,17 +553,6 @@ function removeSpectatorBadges() {
 }
 
 // =====================================================
-// ACTION MAP
-// =====================================================
-
-const actionMap = {
-  [TEAM_A]: () => addPoint(TEAM_A),
-  [TEAM_B]: () => addPoint(TEAM_B),
-  [IDS.RESET]: () => elements.resetModal.classList.remove("hidden"),
-  [IDS.UNDO]: () => undoLastPoint()
-};
-
-// =====================================================
 // SOUND LOGIC
 // =====================================================
 
@@ -601,9 +610,12 @@ async function persistCourt() {
 
   const courtRef = doc(db, "courts", currentCourt);
 
+  let teamNames = { A: getTeamName(TEAM_A), B: getTeamName(TEAM_B) };
+
   await updateDoc(courtRef, {
     score: score,
-    history: history
+    history: history,
+    teamNames: teamNames
   });
 }
 
@@ -779,31 +791,134 @@ function renderGames(team) {
 }
 
 // =====================================================
+// NFC INITIALISATION
+// =====================================================
+
+async function initNfc() {
+  if (isSpectating) {
+    console.warn("NFC not initialized in Spectate mode.");
+    return;
+  }
+
+  // Check NFC support
+  if (!("NDEFReader" in window)) {
+    showNfcAlert("NFC Not Supported", "This device doesn't support NFC.\nYou won't be able to scan tags.");
+    return;
+  }
+
+  try {
+    nfcReader = new NDEFReader();
+    await nfcReader.scan();
+
+    console.log("NFC scanning started.");
+
+    nfcReader.onreading = (event) => {
+      if (!elements.scoreboardPage || 
+          elements.scoreboardPage.style.display === "none") {
+        return;
+      }
+
+      if (!canProcessNfc()) return;
+
+      const decoder = new TextDecoder();
+
+      for (const record of event.message.records) {
+        if (record.recordType === "text") {
+          const text = decoder.decode(record.data).trim();
+          console.log("NFC scanned:", text);
+          handleNfc(text);
+        }
+      }
+    };
+
+    nfcReader.onerror = () => {
+      showNfcAlert("NFC Disabled", "NFC is disabled on your device.\nEnable it in settings to use tag scanning.");
+    };
+
+  } catch (error) {
+    if (error.name === "NotAllowedError") {
+      showNfcAlert("NFC Permission Denied", "You denied NFC permission.\nEnable it in your browser settings.");
+    } else if (error.name === "NotSupportedError") {
+      showNfcAlert("NFC Not Available", "NFC is not available on this device or browser.");
+    } else {
+      showNfcAlert("NFC Error", "Failed to initialize NFC scanning.");
+    }
+    console.error("NFC scan failed:", error);
+  }
+}
+
+function showNfcAlert(title, message) {
+  const modal = $("nfcAlertModal");
+  $("nfcAlertTitle").textContent = title;
+  $("nfcAlertMessage").textContent = message;
+
+  modal.classList.remove("hidden");
+
+  const closeAlert = () => modal.classList.add("hidden");
+  
+  $("nfcAlertBtn").onclick = closeAlert;
+  modal.onclick = (e) => {
+    if (e.target === modal) closeAlert();
+  };
+}
+
+// =====================================================
 // NFC HANDLING
 // =====================================================
 
 function handleNfc(code) {
-  if (scanLocked) return;
 
-  const action = actionMap[code];
-  if (!action) return;
+  if (!code) return;
 
-  scanLocked = true;
+  const action = actionMap[code.toUpperCase()];
+  if (!action) {
+    console.warn("Unknown NFC code:", code);
+    return;
+  }
 
   action();
+}
+
+function canProcessNfc() {
+  const now = Date.now();
+
+  if (nfcCooldown) return false;
+
+  if (now - lastNfcScanTime < COOLDOWN_MS) {
+    return false;
+  }
+
+  startNfcCooldownUI();
+
+  lastNfcScanTime = now;
+  nfcCooldown = true;
 
   setTimeout(() => {
-    scanLocked = false;
+    nfcCooldown = false;
   }, COOLDOWN_MS);
+
+  return true;
 }
 
 // =====================================================
 // CONTROLS
 // =====================================================
 
-function setControlsVisible(visible) {
-  elements.controls.style.visibility = visible ? "visible" : "hidden";
-  elements.controls.style.pointerEvents = visible ? "auto" : "none";
+function performShallowReset() {
+  score = defaultScore();
+  history = [];
+
+    [TEAM_A, TEAM_B].forEach(team => {
+    const labelEl = document.querySelector(`.team-name[data-team="${team}"] .name-text`);
+    labelEl.textContent = `Team ${team}`;
+    fitTextToContainer(labelEl);
+  });
+
+  updateUI();
+
+  playSound(SOUND_IDS.START);
+
+  persistCourt();
 }
 
 elements.confirmResetBtn.addEventListener("click", async () => {
@@ -837,7 +952,7 @@ elements.confirmResetBtn.addEventListener("click", async () => {
   score = defaultScore();
   history = [];
 
-  ["A","B"].forEach(team => {
+  [TEAM_A, TEAM_B].forEach(team => {
     const labelEl = document.querySelector(`.team-name[data-team="${team}"] .name-text`);
     labelEl.textContent = `Team ${team}`;
     fitTextToContainer(labelEl);
@@ -910,6 +1025,7 @@ addHoldButtonLogic(elements.undoBtn, undoLastPoint, UNDO_HOLD_MS);
 
 addHoldButtonLogic(elements.backBtn, () => {
   disableSpectateMode();
+  releaseWakeLock();
   elements.scoreboardPage.style.display = "none";
   elements.menuPage.style.display = "flex";
 }, BACK_HOLD_MS);
@@ -990,6 +1106,11 @@ window.addEventListener("resize", () => {
     .forEach(fitTextToContainer);
 });
 
+function getTeamName(team) {
+  const labelEl = document.querySelector(`.team-name[data-team="${team}"] .name-text`);
+  return labelEl ? labelEl.textContent : `Team ${team}`;
+}
+
 // =====================================================
 // INIT
 // =====================================================
@@ -1020,6 +1141,8 @@ function listenToCourt(courtName) {
       !isAdmin && 
       !isSpectating
     ) {
+      //AL.
+      //TODO - remove the alert and replace with a UI element that indicates the user has been moved to spectate mode due to password change.
       alert("Court password has been changed. You are now in spectate mode.");
       enableSpectateMode();
     }
@@ -1041,4 +1164,53 @@ function listenToCourt(courtName) {
   });
 }
 
+function startNfcCooldownUI() {
+  let remaining = COOLDOWN_MS / 1000;
+
+  elements.nfcCooldownBanner.classList.remove("hidden");
+  elements.nfcCountdown.textContent = remaining;
+
+  const interval = setInterval(() => {
+    remaining--;
+    elements.nfcCountdown.textContent = remaining;
+
+    if (remaining <= 0) {
+      clearInterval(interval);
+      elements.nfcCooldownBanner.classList.add("hidden");
+    }
+  }, 1000);
+}
+
 });
+
+// =====================================================
+// WAKE LOCK STATE
+// =====================================================
+
+let wakeLock = null;
+
+async function requestWakeLock() {
+  try {
+    wakeLock = await navigator.wakeLock.request("screen");
+    console.log("Wake lock acquired - device will stay awake.");
+    
+    // Re-acquire lock if user interacts with device
+    wakeLock.addEventListener("release", () => {
+      console.warn("Wake lock released.");
+    });
+  } catch (error) {
+    console.warn("Wake lock not supported or denied:", error);
+  }
+}
+
+async function releaseWakeLock() {
+  if (wakeLock) {
+    try {
+      await wakeLock.release();
+      wakeLock = null;
+      console.log("Wake lock released.");
+    } catch (error) {
+      console.error("Error releasing wake lock:", error);
+    }
+  }
+}
