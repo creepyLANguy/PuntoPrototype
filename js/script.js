@@ -23,7 +23,8 @@ const MUTE_HOLD_MS = 550;
 
 const TEAM_A = "A";
 const TEAM_B = "B";
-const UNDO = "U";
+const NFC_UNDO = "U";
+const NFC_RESET = "R";
 
 const SOUND_IDS = {
   POINT: "pointSound",
@@ -436,7 +437,7 @@ async function enterCourt(courtName, spectate) {
   currentCourt = courtName;
 
   //AL.
-  //TODO - handle case where court is deleted after user enters name but before they click enter. Currently this would cause an error.
+  //TODO - remove the alert and handle case where court is deleted after user enters name but before they click enter. Currently this would cause an error.
   if (!snap.exists()) {
     alert("Court not found");
     return;
@@ -541,7 +542,9 @@ function removeSpectatorBadges() {
 const actionMap = {
   [TEAM_A]: () => addPoint(TEAM_A),
   [TEAM_B]: () => addPoint(TEAM_B),
-  [UNDO]: () => undoLastPoint()
+  [NFC_UNDO]: () => undoLastPoint(),
+  //AL.
+  [NFC_RESET]: () => performShallowReset()
 };
 
 // =====================================================
@@ -792,7 +795,7 @@ async function initNfc() {
   if (!("NDEFReader" in window)) {
     //AL.
     //TODO - remove the alert and replace with a UI element that indicates NFC is unavailable, and disable any NFC-related features.
-    alert("NFC Supported?\n" + ("NDEFReader" in window));
+    //alert("NFC Supported?\n" + ("NDEFReader" in window));
     //
     console.warn("Web NFC not supported on this device.");
     return;
@@ -867,6 +870,23 @@ function canProcessNfc() {
 // =====================================================
 // CONTROLS
 // =====================================================
+
+function performShallowReset() {
+  score = defaultScore();
+  history = [];
+
+    ["A","B"].forEach(team => {
+    const labelEl = document.querySelector(`.team-name[data-team="${team}"] .name-text`);
+    labelEl.textContent = `Team ${team}`;
+    fitTextToContainer(labelEl);
+  });
+
+  updateUI();
+
+  playSound(SOUND_IDS.START);
+
+  persistCourt();
+}
 
 elements.confirmResetBtn.addEventListener("click", async () => {
   const newPassword = elements.resetCourtPassword.value.trim();
@@ -1082,6 +1102,8 @@ function listenToCourt(courtName) {
       !isAdmin && 
       !isSpectating
     ) {
+      //AL.
+      //TODO - remove the alert and replace with a UI element that indicates the user has been moved to spectate mode due to password change.
       alert("Court password has been changed. You are now in spectate mode.");
       enableSpectateMode();
     }
