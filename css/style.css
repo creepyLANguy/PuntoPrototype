@@ -677,3 +677,60 @@ body.spectating-mode .team-name:hover {
 .hidden {
   display: none;
 }
+
+/* ================= NFC ALERT MODAL ================= */
+
+.nfc-alert-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+}
+
+.nfc-alert-modal.hidden {
+  display: none;
+}
+
+.nfc-alert-box {
+  background: #222;
+  padding: 30px;
+  border-radius: 14px;
+  text-align: center;
+  border: 2px solid #ff6b6b;
+  max-width: 400px;
+}
+
+.nfc-alert-box h2 {
+  color: #ff6b6b;
+  margin: 0 0 12px 0;
+  font-size: 24px;
+}
+
+.nfc-alert-box p {
+  color: #fff;
+  margin: 0 0 20px 0;
+  font-size: 16px;
+}
+
+.nfc-alert-btn {
+  padding: 10px 24px;
+  border-radius: 8px;
+  border: 2px solid #fff;
+  background: #fff;
+  color: #000;
+  font-weight: bold;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.nfc-alert-btn:hover {
+  background: #f0f0f0;
+}
+
+#nfcAlertMessage {
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}

@@ -483,6 +483,8 @@ async function enterCourt(courtName, spectate) {
   else disableSpectateMode();
 
   listenToCourt(courtName);
+
+  requestWakeLock();
 }
 
 function enableSpectateMode() {
@@ -798,12 +800,9 @@ async function initNfc() {
     return;
   }
 
+  // Check NFC support
   if (!("NDEFReader" in window)) {
-    //AL.
-    //TODO - remove the alert and replace with a UI element that indicates NFC is unavailable, and disable any NFC-related features.
-    //alert("NFC Supported?\n" + ("NDEFReader" in window));
-    //
-    console.warn("Web NFC not supported on this device.");
+    showNfcAlert("NFC Not Supported", "This device doesn't support NFC.\nYou won't be able to scan tags.");
     return;
   }
 
@@ -832,9 +831,35 @@ async function initNfc() {
       }
     };
 
+    nfcReader.onerror = () => {
+      showNfcAlert("NFC Disabled", "NFC is disabled on your device.\nEnable it in settings to use tag scanning.");
+    };
+
   } catch (error) {
+    if (error.name === "NotAllowedError") {
+      showNfcAlert("NFC Permission Denied", "You denied NFC permission.\nEnable it in your browser settings.");
+    } else if (error.name === "NotSupportedError") {
+      showNfcAlert("NFC Not Available", "NFC is not available on this device or browser.");
+    } else {
+      showNfcAlert("NFC Error", "Failed to initialize NFC scanning.");
+    }
     console.error("NFC scan failed:", error);
   }
+}
+
+function showNfcAlert(title, message) {
+  const modal = $("nfcAlertModal");
+  $("nfcAlertTitle").textContent = title;
+  $("nfcAlertMessage").textContent = message;
+
+  modal.classList.remove("hidden");
+
+  const closeAlert = () => modal.classList.add("hidden");
+  
+  $("nfcAlertBtn").onclick = closeAlert;
+  modal.onclick = (e) => {
+    if (e.target === modal) closeAlert();
+  };
 }
 
 // =====================================================
@@ -1000,6 +1025,7 @@ addHoldButtonLogic(elements.undoBtn, undoLastPoint, UNDO_HOLD_MS);
 
 addHoldButtonLogic(elements.backBtn, () => {
   disableSpectateMode();
+  releaseWakeLock();
   elements.scoreboardPage.style.display = "none";
   elements.menuPage.style.display = "flex";
 }, BACK_HOLD_MS);
@@ -1156,3 +1182,35 @@ function startNfcCooldownUI() {
 }
 
 });
+
+// =====================================================
+// WAKE LOCK STATE
+// =====================================================
+
+let wakeLock = null;
+
+async function requestWakeLock() {
+  try {
+    wakeLock = await navigator.wakeLock.request("screen");
+    console.log("Wake lock acquired - device will stay awake.");
+    
+    // Re-acquire lock if user interacts with device
+    wakeLock.addEventListener("release", () => {
+      console.warn("Wake lock released.");
+    });
+  } catch (error) {
+    console.warn("Wake lock not supported or denied:", error);
+  }
+}
+
+async function releaseWakeLock() {
+  if (wakeLock) {
+    try {
+      await wakeLock.release();
+      wakeLock = null;
+      console.log("Wake lock released.");
+    } catch (error) {
+      console.error("Error releasing wake lock:", error);
+    }
+  }
+}
