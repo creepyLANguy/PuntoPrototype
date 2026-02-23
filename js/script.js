@@ -5,7 +5,9 @@ import {
   getDoc,
   updateDoc,
   onSnapshot,
-  serverTimestamp
+  serverTimestamp,
+  collection,
+  getDocs
 } from "./firebase.js";
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -135,11 +137,13 @@ elements.courtPasswordError = $("courtPasswordError");
 elements.playPage = $("playPage");
 elements.closePlayBtn = $("closePlayBtn");
 
-elements.playCourtName = $("playCourtName");
+elements.playCourtSearch = $("playCourtSearch");
+elements.playCourtList = $("playCourtList");
+elements.playPasswordSection = $("playPasswordSection");
 elements.playCourtPassword = $("playCourtPassword");
-
 elements.playCourtNameError = $("playCourtNameError");
 elements.playCourtPasswordError = $("playCourtPasswordError");
+elements.playBackBtn = $("playBackBtn");
 
 elements.enterCourtBtn = $("enterCourtBtn");
 
@@ -147,9 +151,14 @@ elements.enterCourtBtn = $("enterCourtBtn");
 elements.spectatePage = $("spectatePage");
 elements.closeSpectateBtn = $("closeSpectateBtn");
 
-elements.spectateCourtName = $("spectateCourtName");
+elements.spectateCourtSearch = $("spectateCourtSearch");
+elements.spectateCourtList = $("spectateCourtList");
 elements.spectateCourtNameError = $("spectateCourtNameError");
-elements.spectateCourtBtn = $("spectateCourtBtn");
+
+let allCourts = [];
+let filteredCourts = [];
+let selectedPlayCourt = null;
+let selectedSpectateCourt = null;
 
 //RESET COURT ELEMENTS
 elements.resetCourtPassword = $("resetCourtPassword");
@@ -178,11 +187,7 @@ submitOnEnter(elements.courtName, elements.createCourtBtn);
 submitOnEnter(elements.courtPassword, elements.createCourtBtn);
 
 // PLAY PAGE
-submitOnEnter(elements.playCourtName, elements.enterCourtBtn);
 submitOnEnter(elements.playCourtPassword, elements.enterCourtBtn);
-
-// SPECTATE PAGE
-submitOnEnter(elements.spectateCourtName, elements.spectateCourtBtn);
 
 // RESET MODAL
 submitOnEnter(elements.resetCourtPassword, elements.confirmResetBtn);
@@ -242,6 +247,101 @@ async function getAdminPassword() {
   return adminSnap.data().skeletonKey;
 }
 
+// =====================================================
+// COURT LOADING & FILTERING
+// =====================================================
+
+async function loadAllCourts() {
+  try {
+    const courtsCollection = collection(db, "courts");
+    const snapshot = await getDocs(courtsCollection);
+    allCourts = [];
+    snapshot.forEach(doc => {
+      allCourts.push({
+        name: doc.id,
+        password: doc.data().password,
+        createdAt: doc.data().createdAt
+      });
+    });
+    allCourts.sort((a, b) => a.name.localeCompare(b.name));
+    filteredCourts = [...allCourts];
+  } catch (error) {
+    console.error("Error loading courts:", error);
+    allCourts = [];
+    filteredCourts = [];
+  }
+}
+
+function filterCourts(searchTerm, courts) {
+  const term = searchTerm.toLowerCase().trim();
+  if (!term) return courts;
+  return courts.filter(court => 
+    court.name.toLowerCase().includes(term)
+  );
+}
+
+function displayPlayCourtList(courts) {
+  const listContainer = elements.playCourtList;
+  listContainer.innerHTML = "";
+
+  if (courts.length === 0) {
+    listContainer.innerHTML = '<div class="no-courts">No courts found</div>';
+    return;
+  }
+
+  courts.forEach(court => {
+    const item = document.createElement("div");
+    item.className = "court-item";
+    item.dataset.courtName = court.name;
+    
+    item.innerHTML = `
+      <div class="court-item-name">${court.name}</div>
+    `;
+
+    item.addEventListener("click", () => {
+      selectedPlayCourt = court.name;
+      elements.playCourtList.querySelectorAll(".court-item").forEach(el => {
+        el.classList.remove("active");
+      });
+      item.classList.add("active");
+      elements.playPasswordSection.style.display = "block";
+      elements.playCourtPassword.focus();
+      elements.playCourtNameError.textContent = "";
+      elements.playCourtPasswordError.textContent = "";
+    });
+
+    listContainer.appendChild(item);
+  });
+}
+
+function displaySpectateCourtList(courts) {
+  const listContainer = elements.spectateCourtList;
+  listContainer.innerHTML = "";
+
+  if (courts.length === 0) {
+    listContainer.innerHTML = '<div class="no-courts">No courts found</div>';
+    return;
+  }
+
+  courts.forEach(court => {
+    const item = document.createElement("div");
+    item.className = "court-item";
+    item.dataset.courtName = court.name;
+    
+    item.innerHTML = `
+      <div class="court-item-name">${court.name}</div>
+      <div class="court-item-info">Click to spectate</div>
+    `;
+
+    item.addEventListener("click", async () => {
+      selectedSpectateCourt = court.name;
+      await enterCourt(court.name, true);
+    });
+
+    listContainer.appendChild(item);
+  });
+}
+
 document.querySelectorAll(".menu-btn").forEach(btn => {
   btn.addEventListener("click", async () => {
     const action = btn.textContent.trim();
@@ -255,12 +355,29 @@ document.querySelectorAll(".menu-btn").forEach(btn => {
     if (action === "Play") {
       elements.menuPage.style.display = "none";
       elements.playPage.style.display = "flex";
+      elements.playPasswordSection.style.display = "none";
+      selectedPlayCourt = null;
+      elements.playCourtSearch.value = "";
+      elements.playCourtPassword.value = "";
+      elements.playCourtNameError.textContent = "";
+      elements.playCourtPasswordError.textContent = "";
+      
+      await loadAllCourts();
+      displayPlayCourtList(allCourts);
+      elements.playCourtSearch.focus();
       return;
     }
 
     if (action === "Spectate") {
       elements.menuPage.style.display = "none";
       elements.spectatePage.style.display = "flex";
+      selectedSpectateCourt = null;
+      elements.spectateCourtSearch.value = "";
+      elements.spectateCourtNameError.textContent = "";
+      
+      await loadAllCourts();
+      displaySpectateCourtList(allCourts);
+      elements.spectateCourtSearch.focus();
       return;
     }      
   });
@@ -279,6 +396,19 @@ elements.closePlayBtn.addEventListener("click", () => {
 elements.closeSpectateBtn.addEventListener("click", () => {
   elements.spectatePage.style.display = "none";
   elements.menuPage.style.display = "flex";
+});
+
+// Court search handlers
+elements.playCourtSearch.addEventListener("input", (e) => {
+  const searchTerm = e.target.value;
+  filteredCourts = filterCourts(searchTerm, allCourts);
+  displayPlayCourtList(filteredCourts);
+});
+
+elements.spectateCourtSearch.addEventListener("input", (e) => {
+  const searchTerm = e.target.value;
+  filteredCourts = filterCourts(searchTerm, allCourts);
+  displaySpectateCourtList(filteredCourts);
 });
 
 elements.createPage.addEventListener("click", (e) => {
@@ -380,14 +510,14 @@ elements.createCourtBtn.addEventListener("click", async () => {
 
 
 elements.enterCourtBtn.addEventListener("click", async () => {
-  const name = elements.playCourtName.value.trim();
+  const name = selectedPlayCourt;
   const password = elements.playCourtPassword.value.trim();
 
   elements.playCourtNameError.textContent = "";
   elements.playCourtPasswordError.textContent = "";
 
   if (!name) {
-    elements.playCourtNameError.textContent = "Court name required.";
+    elements.playCourtNameError.textContent = "Court not selected.";
     return;
   }
 
@@ -420,28 +550,6 @@ elements.enterCourtBtn.addEventListener("click", async () => {
   enterCourt(name, false);
 
   elements.playCourtPassword.value = "";
-});
-
-elements.spectateCourtBtn.addEventListener("click", async () => {
-
-  const name = elements.spectateCourtName.value.trim();
-
-  elements.spectateCourtNameError.textContent = "";
-
-  if (!name) {
-    elements.spectateCourtNameError.textContent = "Court name required.";
-    return;
-  }
-
-  const courtRef = doc(db, "courts", name);
-  const snap = await getDoc(courtRef);
-
-  if (!snap.exists()) {
-    elements.spectateCourtNameError.textContent = "Court not found.";
-    return;
-  }
-
-  enterCourt(name, true);
 });
 
 async function enterCourt(courtName, spectate) {

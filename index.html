@@ -66,21 +66,29 @@
 
       <h2>Play Court</h2>
 
-      <!-- Court Name -->
+      <!-- Search Bar -->
       <div class="form-group">
-        <label>Court Name</label>
-        <input type="text" id="playCourtName" />
-        <div class="error" id="playCourtNameError"></div>
+        <label>Search Courts</label>
+        <input type="text" id="playCourtSearch" placeholder="Enter court name..." />
       </div>
 
-      <!-- Court Password -->
-      <div class="form-group">
-        <label>Court Password</label>
-        <input type="password" id="playCourtPassword" />
-        <div class="error" id="playCourtPasswordError"></div>
+      <!-- Court List -->
+      <div id="playCourtList" class="court-list">
+        <div class="loading">Loading courts...</div>
       </div>
 
-      <button id="enterCourtBtn" class="primary-btn">Enter Court</button>
+      <!-- Password Section (Hidden by default) -->
+      <div id="playPasswordSection" style="display:none;">
+        <div class="form-group">
+          <label>Court Password</label>
+          <input type="password" id="playCourtPassword" />
+          <div class="error" id="playCourtPasswordError"></div>
+        </div>
+
+        <button id="enterCourtBtn" class="primary-btn">Enter Court</button>
+      </div>
+
+      <div class="error" id="playCourtNameError"></div>
 
     </div>
   </div>
@@ -94,16 +102,18 @@
 
       <h2>Spectate Court</h2>
 
-      <!-- Court Name -->
+      <!-- Search Bar -->
       <div class="form-group">
-        <label>Court Name</label>
-        <input type="text" id="spectateCourtName" />
-        <div class="error" id="spectateCourtNameError"></div>
+        <label>Search Courts</label>
+        <input type="text" id="spectateCourtSearch" placeholder="Enter court name..." />
       </div>
 
-      <button id="spectateCourtBtn" class="primary-btn">
-        Go
-      </button>
+      <!-- Court List -->
+      <div id="spectateCourtList" class="court-list">
+        <div class="loading">Loading courts...</div>
+      </div>
+
+      <div class="error" id="spectateCourtNameError"></div>
 
     </div>
   </div>
