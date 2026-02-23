@@ -155,6 +155,10 @@ elements.spectateCourtBtn = $("spectateCourtBtn");
 elements.resetCourtPassword = $("resetCourtPassword");
 elements.resetPasswordError = $("resetPasswordError");
 
+//NFC ELEMENTS
+elements.nfcCooldownBanner = $("nfcCooldownBanner");
+elements.nfcCountdown = $("nfcCountdown");
+
 // =====================================================
 // ENTER KEY SUBMIT LISTENERS
 // =====================================================
@@ -452,6 +456,7 @@ async function enterCourt(courtName, spectate) {
     alert("Court not found");
     return;
   }
+  //
 
   await initAudio();
   await initNfc();
@@ -858,6 +863,8 @@ function canProcessNfc() {
     return false;
   }
 
+  startNfcCooldownUI();
+
   lastNfcScanTime = now;
   nfcCooldown = true;
 
@@ -1129,6 +1136,23 @@ function listenToCourt(courtName) {
 
     updateUI();
   });
+}
+
+function startNfcCooldownUI() {
+  let remaining = COOLDOWN_MS / 1000;
+
+  elements.nfcCooldownBanner.classList.remove("hidden");
+  elements.nfcCountdown.textContent = remaining;
+
+  const interval = setInterval(() => {
+    remaining--;
+    elements.nfcCountdown.textContent = remaining;
+
+    if (remaining <= 0) {
+      clearInterval(interval);
+      elements.nfcCooldownBanner.classList.add("hidden");
+    }
+  }, 1000);
 }
 
 });
