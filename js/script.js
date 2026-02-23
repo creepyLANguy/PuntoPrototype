@@ -567,8 +567,6 @@ async function enterCourt(courtName, spectate) {
   //
 
   await initAudio();
-  await initNfc();
-  
   playSound(SOUND_IDS.START);
 
   const data = snap.data();
@@ -593,6 +591,8 @@ async function enterCourt(courtName, spectate) {
   listenToCourt(courtName);
 
   requestWakeLock();
+
+  await initNfc();
 }
 
 function enableSpectateMode() {
