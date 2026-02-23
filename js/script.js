@@ -45,7 +45,6 @@ const actionMap = {
   [NFC_RESET]: () => performShallowReset()
 };
 
-
 // =====================================================
 // STATE
 // =====================================================
@@ -419,7 +418,6 @@ elements.enterCourtBtn.addEventListener("click", async () => {
   elements.playCourtPassword.value = "";
 });
 
-
 elements.spectateCourtBtn.addEventListener("click", async () => {
 
   const name = elements.spectateCourtName.value.trim();
@@ -605,9 +603,12 @@ async function persistCourt() {
 
   const courtRef = doc(db, "courts", currentCourt);
 
+  let teamNames = { A: getTeamName(TEAM_A), B: getTeamName(TEAM_B) };
+
   await updateDoc(courtRef, {
     score: score,
-    history: history
+    history: history,
+    teamNames: teamNames
   });
 }
 
@@ -875,7 +876,7 @@ function performShallowReset() {
   score = defaultScore();
   history = [];
 
-    ["A","B"].forEach(team => {
+    [TEAM_A, TEAM_B].forEach(team => {
     const labelEl = document.querySelector(`.team-name[data-team="${team}"] .name-text`);
     labelEl.textContent = `Team ${team}`;
     fitTextToContainer(labelEl);
@@ -919,7 +920,7 @@ elements.confirmResetBtn.addEventListener("click", async () => {
   score = defaultScore();
   history = [];
 
-  ["A","B"].forEach(team => {
+  [TEAM_A, TEAM_B].forEach(team => {
     const labelEl = document.querySelector(`.team-name[data-team="${team}"] .name-text`);
     labelEl.textContent = `Team ${team}`;
     fitTextToContainer(labelEl);
@@ -1071,6 +1072,11 @@ window.addEventListener("resize", () => {
   document.querySelectorAll(".team-name .name-text")
     .forEach(fitTextToContainer);
 });
+
+function getTeamName(team) {
+  const labelEl = document.querySelector(`.team-name[data-team="${team}"] .name-text`);
+  return labelEl ? labelEl.textContent : `Team ${team}`;
+}
 
 // =====================================================
 // INIT
