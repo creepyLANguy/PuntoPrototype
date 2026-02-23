@@ -574,13 +574,11 @@ async function enterCourt(courtName, spectate) {
   score = data.score;
   history = data.history || [];
 
-  // ✅ Hide ALL entry pages
   elements.menuPage.style.display = "none";
   elements.createPage.style.display = "none";
   elements.playPage.style.display = "none";
   elements.spectatePage.style.display = "none";
 
-  // ✅ Show scoreboard
   elements.scoreboardPage.style.display = "block";
 
   showCourtTitle(courtName);
@@ -1231,6 +1229,7 @@ $("addPointB").addEventListener("click", () => addPoint(TEAM_B));
 // =====================================================
 // FIREBASE SYNC
 // =====================================================
+
 let unsubscribe = null;
 
 function listenToCourt(courtName) {
