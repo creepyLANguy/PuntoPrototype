@@ -35,6 +35,18 @@ const SOUND_IDS = {
 };
 
 // =====================================================
+// ACTION MAP
+// =====================================================
+
+const actionMap = {
+  [TEAM_A]: () => addPoint(TEAM_A),
+  [TEAM_B]: () => addPoint(TEAM_B),
+  [NFC_UNDO]: () => performShallowReset(),//AL.
+  [NFC_RESET]: () => performShallowReset()
+};
+
+
+// =====================================================
 // STATE
 // =====================================================
 
@@ -534,18 +546,6 @@ function removeSpectatorBadges() {
   });
 
 }
-
-// =====================================================
-// ACTION MAP
-// =====================================================
-
-const actionMap = {
-  [TEAM_A]: () => addPoint(TEAM_A),
-  [TEAM_B]: () => addPoint(TEAM_B),
-  [NFC_UNDO]: () => undoLastPoint(),
-  //AL.
-  [NFC_RESET]: () => performShallowReset()
-};
 
 // =====================================================
 // SOUND LOGIC
