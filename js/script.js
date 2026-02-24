@@ -80,6 +80,44 @@ let nfcCooldown = false;
 let lastNfcScanTime = 0;
 
 // =====================================================
+// THEME STATE
+// =====================================================
+
+let isLightMode = localStorage.getItem("theme") === "light";
+
+// =====================================================
+// THEME FUNCTIONS
+// =====================================================
+
+function initializeTheme() {
+  if (isLightMode) {
+    document.body.classList.add("light-mode");
+    updateThemeButtonIcons();
+  }
+}
+
+function toggleTheme() {
+  isLightMode = !isLightMode;
+  document.body.classList.toggle("light-mode");
+  localStorage.setItem("theme", isLightMode ? "light" : "dark");
+  updateThemeButtonIcons();
+}
+
+function updateThemeButtonIcons() {
+  const menuBtn = $("themeToggleMenuBtn");
+  const scoreboardBtn = $("themeToggleScorebboardBtn");
+  const createBtn = $("themeToggleCreateBtn");
+  const playBtn = $("themeTogglePlayBtn");
+  const spectateBtn = $("themeToggleSpectateBtn");
+  
+  if (menuBtn) menuBtn.textContent = isLightMode ? "☀️" : "🌙";
+  if (scoreboardBtn) scoreboardBtn.textContent = isLightMode ? "☀️" : "🌙";
+  if (createBtn) createBtn.textContent = isLightMode ? "☀️" : "🌙";
+  if (playBtn) playBtn.textContent = isLightMode ? "☀️" : "🌙";
+  if (spectateBtn) spectateBtn.textContent = isLightMode ? "☀️" : "🌙";
+}
+
+// =====================================================
 // DOM REFERENCES
 // =====================================================
 
@@ -117,7 +155,13 @@ const elements = {
   backBtn: $("backBtn"),
   resetBtn: $("resetBtn"),
   swapBtn: $("swapBtn"),
-  muteBtn: $("muteBtn")
+  muteBtn: $("muteBtn"),
+  
+  themeToggleMenuBtn: $("themeToggleMenuBtn"),
+  themeToggleScorebboardBtn: $("themeToggleScorebboardBtn"),
+  themeToggleCreateBtn: $("themeToggleCreateBtn"),
+  themeTogglePlayBtn: $("themeTogglePlayBtn"),
+  themeToggleSpectateBtn: $("themeToggleSpectateBtn")
 };
 
 //CREATE COURT ELEMENTS
@@ -167,6 +211,12 @@ elements.resetPasswordError = $("resetPasswordError");
 //NFC ELEMENTS
 elements.nfcCooldownBanner = $("nfcCooldownBanner");
 elements.nfcCountdown = $("nfcCountdown");
+
+// =====================================================
+// INITIALIZE THEME
+// =====================================================
+
+initializeTheme();
 
 // =====================================================
 // ENTER KEY SUBMIT LISTENERS
@@ -396,6 +446,27 @@ elements.closeSpectateBtn.addEventListener("click", () => {
   elements.spectatePage.style.display = "none";
   elements.menuPage.style.display = "flex";
 });
+
+// Theme toggle listeners
+if (elements.themeToggleMenuBtn) {
+  elements.themeToggleMenuBtn.addEventListener("click", toggleTheme);
+}
+
+if (elements.themeToggleScorebboardBtn) {
+  elements.themeToggleScorebboardBtn.addEventListener("click", toggleTheme);
+}
+
+if (elements.themeToggleCreateBtn) {
+  elements.themeToggleCreateBtn.addEventListener("click", toggleTheme);
+}
+
+if (elements.themeTogglePlayBtn) {
+  elements.themeTogglePlayBtn.addEventListener("click", toggleTheme);
+}
+
+if (elements.themeToggleSpectateBtn) {
+  elements.themeToggleSpectateBtn.addEventListener("click", toggleTheme);
+}
 
 // Court search handlers
 elements.playCourtSearch.addEventListener("input", (e) => {
