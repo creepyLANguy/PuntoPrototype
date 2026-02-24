@@ -369,12 +369,24 @@ body.light-mode .set-dot {
 .set-dot.filled,
 .game-dot.filled {
   opacity: 1;
+  border: none;
+}
+
+.set-dot.filled {
   background: black;
+}
+
+.game-dot.filled {
+  background: white;
 }
 
 body.light-mode .set-dot.filled {
   background: black;
   opacity: 1;
+}
+
+body.light-mode .game-dot.filled {
+  background: black;
 }
 
 /* =======================================================
