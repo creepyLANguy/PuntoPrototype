@@ -953,7 +953,7 @@ body.light-mode .court-item-info {
   font-size: 14px;
   z-index: 10000;
   pointer-events: none;
-
+  background-color: #0000;
   animation: spectatorGlow 5s ease-in-out infinite;
 }
 
@@ -979,7 +979,7 @@ body.light-mode .court-item-info {
 }
 
 .spectator-badge.right {
-  right: 100px;
+  right: 30px;
 }
 
 /* ================= NFC UI ================= */
