@@ -464,7 +464,7 @@ body.light-mode .set-dot.filled {
   font-weight: 600;
   font-size: 20px;
   backdrop-filter: blur(6px);
-  opacity: 1;
+  opacity: 0.6;
   position: relative;
   overflow: hidden;
   transition: transform var(--hold-duration, 0.5s) linear;
