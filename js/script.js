@@ -330,7 +330,6 @@ function displaySpectateCourtList(courts) {
     
     item.innerHTML = `
       <div class="court-item-name">${court.name}</div>
-      <div class="court-item-info">Click to spectate</div>
     `;
 
     item.addEventListener("click", async () => {
@@ -558,10 +557,14 @@ async function enterCourt(courtName, spectate) {
 
   currentCourt = courtName;
 
-  //AL.
-  //TODO - remove the alert and handle case where court is deleted after user enters name but before they click enter. Currently this would cause an error.
   if (!snap.exists()) {
-    alert("Court not found");
+      const errorEl = spectate ? elements.spectateCourtNameError : elements.playCourtNameError;
+      errorEl.textContent = "Court not found.";
+      const listContainer = spectate ? elements.spectateCourtList : elements.playCourtList;
+      const selectedItem = listContainer.querySelector(`[data-court-name="${courtName}"]`);
+    if (selectedItem) {
+      selectedItem.remove();
+    }
     return;
   }
   //
