@@ -105,8 +105,10 @@ function toggleTheme() {
 
 function updateThemeButtonIcons() {
   const themeBtn = $("themeToggleBtn");
+  const scoreboardBtn = $("themeToggleScorebboardBtn");
   
   if (themeBtn) themeBtn.textContent = isLightMode ? "☀️" : "🌙";
+  if (scoreboardBtn) scoreboardBtn.textContent = isLightMode ? "☀️" : "🌙";
 }
 
 // =====================================================
@@ -149,7 +151,8 @@ const elements = {
   swapBtn: $("swapBtn"),
   muteBtn: $("muteBtn"),
   
-  themeToggleBtn: $("themeToggleBtn")
+  themeToggleBtn: $("themeToggleBtn"),
+  themeToggleScorebboardBtn: $("themeToggleScorebboardBtn")
 };
 
 //CREATE COURT ELEMENTS
@@ -270,6 +273,10 @@ document.addEventListener("keydown", (e) => {
   // 5️⃣ Scoreboard
   if (isVisible(elements.scoreboardPage)) {
     disableSpectateMode();
+    // Show top-right theme toggle when leaving court view
+    if (elements.themeToggleBtn) {
+      elements.themeToggleBtn.style.display = "";
+    }
     elements.scoreboardPage.style.display = "none";
     elements.menuPage.style.display = "flex";
   }
@@ -438,6 +445,10 @@ elements.closeSpectateBtn.addEventListener("click", () => {
 // Theme toggle listener
 if (elements.themeToggleBtn) {
   elements.themeToggleBtn.addEventListener("click", toggleTheme);
+}
+
+if (elements.themeToggleScorebboardBtn) {
+  elements.themeToggleScorebboardBtn.addEventListener("click", toggleTheme);
 }
 
 // Court search handlers
@@ -627,6 +638,11 @@ async function enterCourt(courtName, spectate) {
   elements.createPage.style.display = "none";
   elements.playPage.style.display = "none";
   elements.spectatePage.style.display = "none";
+
+  // Hide top-right theme toggle in court view
+  if (elements.themeToggleBtn) {
+    elements.themeToggleBtn.style.display = "none";
+  }
 
   elements.scoreboardPage.style.display = "block";
 
@@ -907,16 +923,13 @@ function renderSets(team) {
 
   el.innerHTML = "";
 
-  const teamColor = getComputedStyle(document.documentElement)
-    .getPropertyValue(team === TEAM_A ? '--teamAcolour' : '--teamBcolour');
-
   for (let i = 0; i < maxSets; i++) {
     const dot = document.createElement("span");
     dot.className = "set-dot";
+    dot.setAttribute("data-team", team);
 
     if (i < teamSets) {
       dot.classList.add("filled");
-      dot.style.backgroundColor = teamColor;
     }
 
     if (i === teamSets - 1 && score.lastSetTeam === team) {
@@ -1181,6 +1194,10 @@ addHoldButtonLogic(elements.undoBtn, undoLastPoint, UNDO_HOLD_MS);
 addHoldButtonLogic(elements.backBtn, () => {
   disableSpectateMode();
   releaseWakeLock();
+  // Show top-right theme toggle when leaving court view
+  if (elements.themeToggleBtn) {
+    elements.themeToggleBtn.style.display = "";
+  }
   elements.scoreboardPage.style.display = "none";
   elements.menuPage.style.display = "flex";
 }, BACK_HOLD_MS);
@@ -1189,10 +1206,10 @@ addHoldButtonLogic(elements.resetBtn, () => {
   elements.resetModal.classList.remove("hidden");
 }, RESET_HOLD_MS);
 
-addHoldButtonLogic(elements.muteBtn, () => {
+elements.muteBtn.addEventListener("click", () => {
   muted = !muted;
   elements.muteBtn.textContent = muted ? "🔇" : "🔊";
-}, MUTE_HOLD_MS);
+});
 
 // =====================================================
 // TEAM NAME EDITING

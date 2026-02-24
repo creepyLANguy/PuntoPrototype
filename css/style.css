@@ -11,7 +11,7 @@
 }
 
 body.light-mode {
-  --bg: #ffffff;
+  --bg: #f5f5f5;
   --white: #000000;
   --text-color: #000000;
   --input-bg: #ffffff;
@@ -372,17 +372,16 @@ body.light-mode .set-dot {
   border: none;
 }
 
-.set-dot.filled {
-  background: black;
+.set-dot.filled[data-team="A"] {
+  background: var(--teamAcolour) !important;
+}
+
+.set-dot.filled[data-team="B"] {
+  background: var(--teamBcolour) !important;
 }
 
 .game-dot.filled {
   background: white;
-}
-
-body.light-mode .set-dot.filled {
-  background: black;
-  opacity: 1;
 }
 
 body.light-mode .game-dot.filled {
@@ -1128,4 +1127,10 @@ body.light-mode .theme-toggle-btn {
 body.light-mode .theme-toggle-btn:hover {
   background: rgba(255, 255, 255, 0.2);
   opacity: 1;
+}
+
+/* Hide theme toggle during court view */
+#scoreboardPage ~ #themeToggleBtn,
+body.scoreboard-active #themeToggleBtn {
+  display: none;
 }
