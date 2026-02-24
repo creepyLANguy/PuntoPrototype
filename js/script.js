@@ -567,7 +567,10 @@ async function enterCourt(courtName, spectate) {
     }
     return;
   }
-  //
+
+  if (muted) {
+    elements.muteBtn.textContent = "🔇";
+  }
 
   await initAudio();
   playSound(SOUND_IDS.START);
