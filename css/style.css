@@ -346,7 +346,7 @@ body.light-mode #gamesB {
   border-style: solid;
   border-width: 5px;
   background-color: rgba(0, 0, 0, 0);
-  border-color: #e0e0e0;
+  border-color: #e0e0e044;
   opacity: 1;
 }
 
@@ -357,27 +357,35 @@ body.light-mode .game-dot {
 
 /* Hide empty set dots initially */
 .set-dot {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 3px solid #e0e0e0;
+  background: transparent;
   opacity: 0;
-  background: #e0e0e0;
 }
 
 body.light-mode .set-dot {
   background: #e0e0e0;
   opacity: 0;
+  border: none;
 }
 
-.set-dot.filled,
 .game-dot.filled {
   opacity: 1;
   border: none;
 }
 
 .set-dot.filled[data-team="A"] {
-  background: var(--teamAcolour) !important;
+  background: var(--teamAcolour);
+  border-color: var(--teamAcolour);
+  opacity: 1;
 }
 
 .set-dot.filled[data-team="B"] {
-  background: var(--teamBcolour) !important;
+  background: var(--teamBcolour);
+  border-color: var(--teamBcolour);
+  opacity: 1;
 }
 
 .game-dot.filled {
@@ -482,6 +490,18 @@ body.light-mode .game-dot.filled {
   user-select: none;
   -webkit-user-select: none;
   touch-action: manipulation;
+}
+
+.floating-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  opacity: 1;
+}
+
+body.light-mode .floating-btn:hover {
+  color: black;
+  border: 2px solid black;
+  opacity: 1;
 }
 
 .floating-btn.pressed {
