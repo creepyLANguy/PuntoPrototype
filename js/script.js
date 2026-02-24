@@ -104,17 +104,9 @@ function toggleTheme() {
 }
 
 function updateThemeButtonIcons() {
-  const menuBtn = $("themeToggleMenuBtn");
-  const scoreboardBtn = $("themeToggleScorebboardBtn");
-  const createBtn = $("themeToggleCreateBtn");
-  const playBtn = $("themeTogglePlayBtn");
-  const spectateBtn = $("themeToggleSpectateBtn");
+  const themeBtn = $("themeToggleBtn");
   
-  if (menuBtn) menuBtn.textContent = isLightMode ? "☀️" : "🌙";
-  if (scoreboardBtn) scoreboardBtn.textContent = isLightMode ? "☀️" : "🌙";
-  if (createBtn) createBtn.textContent = isLightMode ? "☀️" : "🌙";
-  if (playBtn) playBtn.textContent = isLightMode ? "☀️" : "🌙";
-  if (spectateBtn) spectateBtn.textContent = isLightMode ? "☀️" : "🌙";
+  if (themeBtn) themeBtn.textContent = isLightMode ? "☀️" : "🌙";
 }
 
 // =====================================================
@@ -157,11 +149,7 @@ const elements = {
   swapBtn: $("swapBtn"),
   muteBtn: $("muteBtn"),
   
-  themeToggleMenuBtn: $("themeToggleMenuBtn"),
-  themeToggleScorebboardBtn: $("themeToggleScorebboardBtn"),
-  themeToggleCreateBtn: $("themeToggleCreateBtn"),
-  themeTogglePlayBtn: $("themeTogglePlayBtn"),
-  themeToggleSpectateBtn: $("themeToggleSpectateBtn")
+  themeToggleBtn: $("themeToggleBtn")
 };
 
 //CREATE COURT ELEMENTS
@@ -447,25 +435,9 @@ elements.closeSpectateBtn.addEventListener("click", () => {
   elements.menuPage.style.display = "flex";
 });
 
-// Theme toggle listeners
-if (elements.themeToggleMenuBtn) {
-  elements.themeToggleMenuBtn.addEventListener("click", toggleTheme);
-}
-
-if (elements.themeToggleScorebboardBtn) {
-  elements.themeToggleScorebboardBtn.addEventListener("click", toggleTheme);
-}
-
-if (elements.themeToggleCreateBtn) {
-  elements.themeToggleCreateBtn.addEventListener("click", toggleTheme);
-}
-
-if (elements.themeTogglePlayBtn) {
-  elements.themeTogglePlayBtn.addEventListener("click", toggleTheme);
-}
-
-if (elements.themeToggleSpectateBtn) {
-  elements.themeToggleSpectateBtn.addEventListener("click", toggleTheme);
+// Theme toggle listener
+if (elements.themeToggleBtn) {
+  elements.themeToggleBtn.addEventListener("click", toggleTheme);
 }
 
 // Court search handlers

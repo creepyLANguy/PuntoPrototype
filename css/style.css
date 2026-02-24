@@ -846,6 +846,10 @@ body.light-mode .court-list {
   font-size: 14px;
 }
 
+body.light-mode .loading {
+  color: #666;
+}
+
 .no-courts {
   padding: 20px;
   text-align: center;
@@ -1076,7 +1080,7 @@ body.light-mode .nfc-alert-btn {
   width: 50px;
   height: 50px;
   border-radius: 50%;
-  border: 2px solid white;
+  border: 2px solid #aaa;
   background: transparent;
   color: var(--text-color);
   font-size: 24px;
@@ -1090,11 +1094,13 @@ body.light-mode .nfc-alert-btn {
   backdrop-filter: blur(6px);
   user-select: none;
   -webkit-user-select: none;
+  opacity: 0.8;
 }
 
 .theme-toggle-btn:hover {
   background: rgba(255, 255, 255, 0.2);
   transform: scale(1.1);
+  opacity: 1;
 }
 
 .theme-toggle-btn:active {
@@ -1102,50 +1108,12 @@ body.light-mode .nfc-alert-btn {
 }
 
 body.light-mode .theme-toggle-btn {
-  border-color: #cccccc;
   color: black;
   background: transparent;
+  opacity: 0.8;
 }
 
 body.light-mode .theme-toggle-btn:hover {
   background: rgba(255, 255, 255, 0.2);
-}
-
-.theme-toggle-scoreboard {
-  position: fixed;
-  top: 20px;
-  right: 30px;
-  width: 50px;
-  height: 50px;
-  border-radius: 50%;
-  border: 2px solid white;
-  background: transparent;
-  color: var(--text-color);
-  font-size: 24px;
-  font-weight: bold;
-  cursor: pointer;
-  z-index: 999;
-  transition: all 0.3s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  backdrop-filter: blur(6px);
-  user-select: none;
-  -webkit-user-select: none;
-  touch-action: manipulation;
-}
-
-.theme-toggle-scoreboard:hover {
-  background: rgba(255, 255, 255, 0.2);
-  transform: scale(1.1);
-}
-
-.theme-toggle-scoreboard:active {
-  transform: scale(0.95);
-}
-
-body.light-mode .theme-toggle-scoreboard {
-  border-color: #cccccc;
-  color: black;
-  background: transparent;
+  opacity: 1;
 }

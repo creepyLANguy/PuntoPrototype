@@ -8,9 +8,11 @@
   <script type="module" src="js/script.js"></script></head>
 <body>
 
+  <!-- ================= GLOBAL THEME TOGGLE ================= -->
+  <button id="themeToggleBtn" class="theme-toggle-btn" title="Toggle theme">🌙</button>
+
   <!-- ================= MENU ================= -->
   <main id="menuPage" class="menu-page">
-    <button id="themeToggleMenuBtn" class="theme-toggle-btn">🌙</button>
     
     <img src="../media/img/logo.png" alt="Point Pulse Logo" class="logo" />
     <h2 class="app-welcome">Welcome to</h2>
@@ -26,7 +28,6 @@
 
   <!-- ================= CREATE COURT PAGE ================= -->
   <div id="createPage" style="display:none;" class="create-page">
-    <button class="theme-toggle-btn" id="themeToggleCreateBtn">🌙</button>
 
     <div class="create-card">
 
@@ -62,7 +63,6 @@
 
   <!-- ================= PLAY COURT PAGE ================= -->
   <div id="playPage" style="display:none;" class="create-page">
-    <button class="theme-toggle-btn" id="themeTogglePlayBtn">🌙</button>
 
     <div class="create-card">
 
@@ -99,7 +99,6 @@
   
   <!-- ================= SPECTATE PAGE ================= -->
   <div id="spectatePage" style="display:none;" class="create-page">
-    <button class="theme-toggle-btn" id="themeToggleSpectateBtn">🌙</button>
 
     <div class="create-card">
 
@@ -125,9 +124,6 @@
 
   <!-- ================= SCOREBOARD (HIDDEN INITIALLY) ================= -->
   <div id="scoreboardPage" style="display:none;">
-
-  <!-- ================= THEME TOGGLE ================= -->
-  <button id="themeToggleScorebboardBtn" class="theme-toggle-scoreboard" title="Toggle theme">🌙</button>
 
   <!-- ================= NFC ALERT MODAL ================= -->
   <div id="nfcAlertModal" class="nfc-alert-modal hidden">
