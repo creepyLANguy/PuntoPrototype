@@ -194,6 +194,7 @@ elements.spectateCourtNameError = $("spectateCourtNameError");
 let allCourts = [];
 let filteredCourts = [];
 let selectedPlayCourt = null;
+let selectedSpectateCourt = null;
 
 //RESET COURT ELEMENTS
 elements.resetCourtPassword = $("resetCourtPassword");
