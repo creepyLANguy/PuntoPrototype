@@ -143,6 +143,7 @@ const elements = {
   resetModal: $("resetModal"),
 
   confirmResetBtn: $("confirmReset"),
+  shallowResetBtn: $("shallowReset"),
   cancelResetBtn: $("cancelReset"),
 
   undoBtn: $("undoBtn"),
@@ -1072,6 +1073,8 @@ function canProcessNfc() {
 // CONTROLS
 // =====================================================
 
+elements.shallowResetBtn.addEventListener("click", performShallowReset);
+
 function performShallowReset() {
   score = defaultScore();
   history = [];
@@ -1084,6 +1087,9 @@ function performShallowReset() {
 
   updateUI();
 
+  elements.resetCourtPassword.value = "";
+  elements.resetModal.classList.add("hidden");
+
   playSound(SOUND_IDS.START);
 
   persistCourt();
@@ -1092,7 +1098,6 @@ function performShallowReset() {
 elements.confirmResetBtn.addEventListener("click", async () => {
   const newPassword = elements.resetCourtPassword.value.trim();
   elements.resetPasswordError.textContent = "";
-
 
   if (newPassword.length < 4) {
     elements.resetPasswordError.textContent = "Password must be at least 4 characters.";
@@ -1128,7 +1133,6 @@ elements.confirmResetBtn.addEventListener("click", async () => {
 
   updateUI();
 
-  // Clear the password input for next time
   elements.resetCourtPassword.value = "";
   elements.resetModal.classList.add("hidden");
 
