@@ -80,6 +80,38 @@ let nfcCooldown = false;
 let lastNfcScanTime = 0;
 
 // =====================================================
+// THEME STATE
+// =====================================================
+
+let isLightMode = localStorage.getItem("theme") === "light";
+
+// =====================================================
+// THEME FUNCTIONS
+// =====================================================
+
+function initializeTheme() {
+  if (isLightMode) {
+    document.body.classList.add("light-mode");
+    updateThemeButtonIcons();
+  }
+}
+
+function toggleTheme() {
+  isLightMode = !isLightMode;
+  document.body.classList.toggle("light-mode");
+  localStorage.setItem("theme", isLightMode ? "light" : "dark");
+  updateThemeButtonIcons();
+}
+
+function updateThemeButtonIcons() {
+  const themeBtn = $("themeToggleBtn");
+  const scoreboardBtn = $("themeToggleScorebboardBtn");
+  
+  if (themeBtn) themeBtn.textContent = isLightMode ? "☀️" : "🌙";
+  if (scoreboardBtn) scoreboardBtn.textContent = isLightMode ? "☀️" : "🌙";
+}
+
+// =====================================================
 // DOM REFERENCES
 // =====================================================
 
@@ -111,13 +143,17 @@ const elements = {
   resetModal: $("resetModal"),
 
   confirmResetBtn: $("confirmReset"),
+  shallowResetBtn: $("shallowReset"),
   cancelResetBtn: $("cancelReset"),
 
   undoBtn: $("undoBtn"),
   backBtn: $("backBtn"),
   resetBtn: $("resetBtn"),
   swapBtn: $("swapBtn"),
-  muteBtn: $("muteBtn")
+  muteBtn: $("muteBtn"),
+  
+  themeToggleBtn: $("themeToggleBtn"),
+  themeToggleScorebboardBtn: $("themeToggleScorebboardBtn")
 };
 
 //CREATE COURT ELEMENTS
@@ -167,6 +203,12 @@ elements.resetPasswordError = $("resetPasswordError");
 //NFC ELEMENTS
 elements.nfcCooldownBanner = $("nfcCooldownBanner");
 elements.nfcCountdown = $("nfcCountdown");
+
+// =====================================================
+// INITIALIZE THEME
+// =====================================================
+
+initializeTheme();
 
 // =====================================================
 // ENTER KEY SUBMIT LISTENERS
@@ -232,6 +274,10 @@ document.addEventListener("keydown", (e) => {
   // 5️⃣ Scoreboard
   if (isVisible(elements.scoreboardPage)) {
     disableSpectateMode();
+    // Show top-right theme toggle when leaving court view
+    if (elements.themeToggleBtn) {
+      elements.themeToggleBtn.style.display = "";
+    }
     elements.scoreboardPage.style.display = "none";
     elements.menuPage.style.display = "flex";
   }
@@ -396,6 +442,15 @@ elements.closeSpectateBtn.addEventListener("click", () => {
   elements.spectatePage.style.display = "none";
   elements.menuPage.style.display = "flex";
 });
+
+// Theme toggle listener
+if (elements.themeToggleBtn) {
+  elements.themeToggleBtn.addEventListener("click", toggleTheme);
+}
+
+if (elements.themeToggleScorebboardBtn) {
+  elements.themeToggleScorebboardBtn.addEventListener("click", toggleTheme);
+}
 
 // Court search handlers
 elements.playCourtSearch.addEventListener("input", (e) => {
@@ -584,6 +639,11 @@ async function enterCourt(courtName, spectate) {
   elements.createPage.style.display = "none";
   elements.playPage.style.display = "none";
   elements.spectatePage.style.display = "none";
+
+  // Hide top-right theme toggle in court view
+  if (elements.themeToggleBtn) {
+    elements.themeToggleBtn.style.display = "none";
+  }
 
   elements.scoreboardPage.style.display = "block";
 
@@ -864,16 +924,13 @@ function renderSets(team) {
 
   el.innerHTML = "";
 
-  const teamColor = getComputedStyle(document.documentElement)
-    .getPropertyValue(team === TEAM_A ? '--teamAcolour' : '--teamBcolour');
-
   for (let i = 0; i < maxSets; i++) {
     const dot = document.createElement("span");
     dot.className = "set-dot";
+    dot.setAttribute("data-team", team);
 
     if (i < teamSets) {
       dot.classList.add("filled");
-      dot.style.backgroundColor = teamColor;
     }
 
     if (i === teamSets - 1 && score.lastSetTeam === team) {
@@ -1016,6 +1073,8 @@ function canProcessNfc() {
 // CONTROLS
 // =====================================================
 
+elements.shallowResetBtn.addEventListener("click", performShallowReset);
+
 function performShallowReset() {
   score = defaultScore();
   history = [];
@@ -1028,6 +1087,9 @@ function performShallowReset() {
 
   updateUI();
 
+  elements.resetCourtPassword.value = "";
+  elements.resetModal.classList.add("hidden");
+
   playSound(SOUND_IDS.START);
 
   persistCourt();
@@ -1036,7 +1098,6 @@ function performShallowReset() {
 elements.confirmResetBtn.addEventListener("click", async () => {
   const newPassword = elements.resetCourtPassword.value.trim();
   elements.resetPasswordError.textContent = "";
-
 
   if (newPassword.length < 4) {
     elements.resetPasswordError.textContent = "Password must be at least 4 characters.";
@@ -1072,7 +1133,6 @@ elements.confirmResetBtn.addEventListener("click", async () => {
 
   updateUI();
 
-  // Clear the password input for next time
   elements.resetCourtPassword.value = "";
   elements.resetModal.classList.add("hidden");
 
@@ -1138,6 +1198,10 @@ addHoldButtonLogic(elements.undoBtn, undoLastPoint, UNDO_HOLD_MS);
 addHoldButtonLogic(elements.backBtn, () => {
   disableSpectateMode();
   releaseWakeLock();
+  // Show top-right theme toggle when leaving court view
+  if (elements.themeToggleBtn) {
+    elements.themeToggleBtn.style.display = "";
+  }
   elements.scoreboardPage.style.display = "none";
   elements.menuPage.style.display = "flex";
 }, BACK_HOLD_MS);
@@ -1146,10 +1210,10 @@ addHoldButtonLogic(elements.resetBtn, () => {
   elements.resetModal.classList.remove("hidden");
 }, RESET_HOLD_MS);
 
-addHoldButtonLogic(elements.muteBtn, () => {
+elements.muteBtn.addEventListener("click", () => {
   muted = !muted;
   elements.muteBtn.textContent = muted ? "🔇" : "🔊";
-}, MUTE_HOLD_MS);
+});
 
 // =====================================================
 // TEAM NAME EDITING

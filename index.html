@@ -8,8 +8,12 @@
   <script type="module" src="js/script.js"></script></head>
 <body>
 
+  <!-- ================= GLOBAL THEME TOGGLE ================= -->
+  <button id="themeToggleBtn" class="theme-toggle-btn" title="Toggle theme">🌙</button>
+
   <!-- ================= MENU ================= -->
   <main id="menuPage" class="menu-page">
+    
     <img src="../media/img/logo.png" alt="Point Pulse Logo" class="logo" />
     <h2 class="app-welcome">Welcome to</h2>
     <h2 class="app-title">Point Pulse</h2>
@@ -142,7 +146,8 @@
       </div>
 
       <div class="reset-actions">
-        <button id="confirmReset" type="button">Reset</button>
+        <button id="confirmReset" type="button">Full Reset</button>
+        <button id="shallowReset" type="button">Keep Old Password</button>
         <button id="cancelReset" type="button">Cancel</button>
       </div>
     </div>
@@ -221,6 +226,7 @@
       <button id="undoBtn" class="floating-btn">Undo</button>
       <button id="resetBtn" class="floating-btn">Reset</button>
       <button id="muteBtn" class="floating-btn">🔊</button>
+      <button id="themeToggleScorebboardBtn" class="floating-btn" title="Toggle theme">🌙</button>
     </div><!-- FLOATING BUTTONS -->
   </main>
 

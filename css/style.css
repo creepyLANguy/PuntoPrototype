@@ -4,6 +4,21 @@
   --bg: #000;
   --white: #ffffff;
   --spectating: rgb(255, 0, 0);
+  --text-color: #ffffff;
+  --input-bg: #1a1a1a;
+  --input-border: #444;
+  --modal-bg: rgba(0, 0, 0, 0.9);
+}
+
+body.light-mode {
+  --bg: #f5f5f5;
+  --white: #000000;
+  --text-color: #000000;
+  --input-bg: #ffffff;
+  --input-border: #cccccc;
+  --modal-bg: rgba(255, 255, 255, 0.95);
+  --teamAcolour: #ad7535;
+  --teamBcolour: #0a91ac;
 }
 
 body {
@@ -34,12 +49,20 @@ body {
   overflow: hidden;
 }
 
+body.light-mode .menu-page {
+  color: black;
+}
+
 .menu-page::before {
   content: "";
   position: absolute;
   inset: 0;
   background: rgba(0, 0, 0, 0.6); /* dark overlay */
   z-index: 0;
+}
+
+body.light-mode .menu-page::before {
+  background: rgba(255, 255, 255, 0.3); /* light overlay */
 }
 
 .menu-page > * {
@@ -53,6 +76,11 @@ body {
   max-width: 80%;
   align-content: center;
   margin-bottom: -80px;
+  color: white;
+}
+
+body.light-mode .app-welcome {
+  color: white;
 }
 
 .app-title {
@@ -60,6 +88,11 @@ body {
   font-weight: 800;
   max-width: 80%;
   align-content: center;
+  color: white;
+}
+
+body.light-mode .app-title {
+  color: white;
 }
 
 .app-subtitle {
@@ -67,6 +100,11 @@ body {
   font-size: 40px;
   font-weight: 700;
   margin-bottom: 20px;
+  color: white;
+}
+
+body.light-mode .app-subtitle {
+  color: white;
 }
 
 .menu-buttons {
@@ -125,6 +163,7 @@ body {
   background: var(--bg);
   color: var(--white);
   font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 button {
@@ -175,7 +214,6 @@ button {
   align-items: center;
 
   container-type: inline-size;
-  
 }
 
 /* Team Variants */
@@ -286,30 +324,76 @@ body.spectating-mode .team-name:hover {
   color: var(--white);
 }
 
+body.light-mode #setsA,
+body.light-mode #gamesA {
+  color: var(--teamAcolour);
+}
+
+body.light-mode #setsB,
+body.light-mode #gamesB {
+  color: var(--teamBcolour);
+}
+
 .set-dot,
 .game-dot {
   width: 30px;
   height: 30px;
   border-radius: 50%;
-  background: var(--white);
+  background: #e0e0e0;
 }
 
 .game-dot {
   border-style: solid;
   border-width: 5px;
   background-color: rgba(0, 0, 0, 0);
-  opacity: 0.25;
+  border-color: #e0e0e044;
+  opacity: 1;
+}
+
+body.light-mode .game-dot {
+  border-color: #e0e0e0;
+  opacity: 1;
 }
 
 /* Hide empty set dots initially */
 .set-dot {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 3px solid #e0e0e0;
+  background: transparent;
   opacity: 0;
 }
 
-.set-dot.filled,
+body.light-mode .set-dot {
+  background: #e0e0e0;
+  opacity: 0;
+  border: none;
+}
+
 .game-dot.filled {
   opacity: 1;
-  background: currentColor;
+  border: none;
+}
+
+.set-dot.filled[data-team="A"] {
+  background: var(--teamAcolour);
+  border-color: var(--teamAcolour);
+  opacity: 1;
+}
+
+.set-dot.filled[data-team="B"] {
+  background: var(--teamBcolour);
+  border-color: var(--teamBcolour);
+  opacity: 1;
+}
+
+.game-dot.filled {
+  background: white;
+}
+
+body.light-mode .game-dot.filled {
+  background: black;
 }
 
 /* =======================================================
@@ -388,23 +472,36 @@ body.spectating-mode .team-name:hover {
 }
 
 .floating-btn {
-  padding: 10px 20px; /* slightly bigger */
+  padding: 10px 20px;
   min-width: 80px;
   border-radius: 20px;
   border-style: solid;
   border-width: 2px;
-  background: rgba(0,0,0,0.75);
-  color: rgba(255, 255, 255, 1);
+  border-color: #ccc;
+  background: transparent;
+  color: #ccc;
   font-weight: 600;
   font-size: 20px;
   backdrop-filter: blur(6px);
-  opacity: 0.5;
+  opacity: 0.6;
   position: relative;
   overflow: hidden;
   transition: transform var(--hold-duration, 0.5s) linear;
   user-select: none;
   -webkit-user-select: none;
   touch-action: manipulation;
+}
+
+.floating-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  opacity: 1;
+}
+
+body.light-mode .floating-btn:hover {
+  color: black;
+  border: 2px solid black;
+  opacity: 1;
 }
 
 .floating-btn.pressed {
@@ -419,6 +516,10 @@ body.spectating-mode .team-name:hover {
   transform-origin: left;
   animation: holdFill 0.5s linear forwards;
 	background: rgb(255, 255, 255); 
+}
+
+body.light-mode .floating-btn.holding::after {
+  background: #d3d3d3;
 }
 
 @keyframes holdFill {
@@ -486,6 +587,10 @@ body.spectating-mode .team-name:hover {
   z-index: 9999;
 }
 
+body.light-mode .reset-modal {
+  background: rgba(255, 255, 255, 0.75);
+}
+
 .reset-modal.hidden {
   display: none;
 }
@@ -496,6 +601,12 @@ body.spectating-mode .team-name:hover {
   border-radius: 14px;
   text-align: center;
   min-width: 400px;
+  color: white;
+}
+
+body.light-mode .reset-box {
+  background: #ffeb3b;
+  color: black;
 }
 
 .reset-actions {
@@ -514,6 +625,15 @@ body.spectating-mode .team-name:hover {
   user-select: none;
   -webkit-user-select: none;
   touch-action: manipulation;
+}
+
+body.light-mode .reset-actions button {
+  background: black;
+  color: white;
+}
+
+body.light-mode .reset-actions button:hover {
+  opacity: 0.8;
 }
 
 /* ================= UNDO ANIMATION ================= */
@@ -543,20 +663,30 @@ body.spectating-mode .team-name:hover {
 .swap-btn {
   padding: 14px 18px;
   border-radius: 50%;
-  border: 2px solid white;
-  background: rgba(0, 0, 0);
-  color: white;
+  border: 2px solid rgba(0, 0, 0, 0.0);
+  background: rgba(255, 255, 255, 0.15);
+  color: rgba(255, 255, 255, 0.25);
   font-size: 22px;
   cursor: pointer;
   transition: transform 0.2s ease, background 0.2s ease;
-  opacity: 0.3;
+  opacity: 1;
   user-select: none;
   -webkit-user-select: none;
   touch-action: manipulation;
 }
 
+body.light-mode .swap-btn {
+  background: rgba(0, 0, 0, 0.05);
+  color: rgba(0, 0, 0, 0.1);
+}
+
 .swap-btn:hover {
-  background: white;
+  background: rgba(255, 255, 255, 0.3);
+  color: white;
+}
+
+body.light-mode .swap-btn:hover {
+  background: rgba(0, 0, 0, 0.3);
   color: black;
 }
 
@@ -582,6 +712,11 @@ body.spectating-mode .team-name:hover {
   color: white;
 }
 
+body.light-mode .create-page {
+  background: #f5f5f5;
+  color: black;
+}
+
 .create-card {
   position: relative;
   width: 400px;
@@ -593,6 +728,11 @@ body.spectating-mode .team-name:hover {
   flex-direction: column;
   gap: 15px;
   transition: all 0.3s ease;
+}
+
+body.light-mode .create-card {
+  background: rgba(0, 0, 0, 0.05);
+  border: 2px solid black;
 }
 
 .close-btn {
@@ -607,6 +747,10 @@ body.spectating-mode .team-name:hover {
   user-select: none;
   -webkit-user-select: none;
   touch-action: manipulation;
+}
+
+body.light-mode .close-btn {
+  color: black;
 }
 
 .form-group {
@@ -624,12 +768,26 @@ body.spectating-mode .team-name:hover {
   font-size: 14px;
 }
 
+body.light-mode .form-group input {
+  border: 1px solid var(--input-border);
+  background: var(--input-bg);
+  color: black;
+}
+
+body.light-mode .form-group label {
+  color: black;
+}
+
 .error {
   font-size: 13px;
   color: rgb(255, 255, 0);
   min-height: 18px;
   margin-top: 4px;
   margin-bottom: 8px;
+}
+
+body.light-mode .error {
+  color: #c41e3a;
 }
 
 .primary-btn {
@@ -647,6 +805,12 @@ body.spectating-mode .team-name:hover {
   box-sizing: border-box;
   margin-top: 6px;
   font-size: 15px;
+}
+
+body.light-mode .primary-btn {
+  border: 2px solid black;
+  background: black;
+  color: white;
 }
 
 .secondary-btn {
@@ -679,6 +843,12 @@ body.spectating-mode .team-name:hover {
   scrollbar-width: thin;
 }
 
+body.light-mode .court-list {
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  background: rgba(255, 255, 255, 0.8);
+  scrollbar-color: #333 rgba(255, 255, 255, 0.8);
+}
+
 /* Scrollbar styling for Chrome, Safari, Edge */
 .court-list::-webkit-scrollbar {
   width: 10px;
@@ -707,6 +877,10 @@ body.spectating-mode .team-name:hover {
   font-size: 14px;
 }
 
+body.light-mode .loading {
+  color: #666;
+}
+
 .no-courts {
   padding: 20px;
   text-align: center;
@@ -724,12 +898,20 @@ body.spectating-mode .team-name:hover {
   touch-action: manipulation;
 }
 
+body.light-mode .court-item {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
 .court-item:last-child {
   border-bottom: none;
 }
 
 .court-item:hover {
   background: rgba(255, 255, 255, 0.1);
+}
+
+body.light-mode .court-item:hover {
+  background: rgba(0, 0, 0, 0.08);
 }
 
 .court-item.active {
@@ -743,9 +925,18 @@ body.spectating-mode .team-name:hover {
   box-shadow: 0 0 12px #ffff00;
 }
 
+body.light-mode .court-item.active {
+  border: 2px solid #ffff00;
+  box-shadow: 0 0 8px rgba(255, 255, 0, 0.5);
+}
+
 .court-item.active .court-item-name {
   color: #ffff00;
   font-weight: 700;
+}
+
+body.light-mode .court-item.active .court-item-name {
+  color: black;
 }
 
 .court-item-name {
@@ -754,9 +945,18 @@ body.spectating-mode .team-name:hover {
   margin-bottom: 4px;
 }
 
+body.light-mode .court-item-name {
+  color: #1a1a1a;
+  font-weight: 700;
+}
+
 .court-item-info {
   font-size: 12px;
   color: rgba(255, 255, 255, 0.6);
+}
+
+body.light-mode .court-item-info {
+  color: rgba(0, 0, 0, 0.6);
 }
 
 /* ================= SPECTATOR BADGES ================= */
@@ -773,7 +973,7 @@ body.spectating-mode .team-name:hover {
   font-size: 14px;
   z-index: 10000;
   pointer-events: none;
-
+  background-color: #0000;
   animation: spectatorGlow 5s ease-in-out infinite;
 }
 
@@ -834,6 +1034,10 @@ body.spectating-mode .team-name:hover {
   z-index: 10000;
 }
 
+body.light-mode .nfc-alert-modal {
+  background: rgba(255, 255, 255, 0.75);
+}
+
 .nfc-alert-modal.hidden {
   display: none;
 }
@@ -847,16 +1051,29 @@ body.spectating-mode .team-name:hover {
   max-width: 400px;
 }
 
+body.light-mode .nfc-alert-box {
+  background: #fff;
+  border: 2px solid #333;
+}
+
 .nfc-alert-box h2 {
   color: #ff6b6b;
   margin: 0 0 12px 0;
   font-size: 24px;
 }
 
+body.light-mode .nfc-alert-box h2 {
+  color: #333;
+}
+
 .nfc-alert-box p {
   color: #fff;
   margin: 0 0 20px 0;
   font-size: 16px;
+}
+
+body.light-mode .nfc-alert-box p {
+  color: black;
 }
 
 .nfc-alert-btn {
@@ -870,6 +1087,12 @@ body.spectating-mode .team-name:hover {
   font-size: 16px;
 }
 
+body.light-mode .nfc-alert-btn {
+  border: 2px solid black;
+  background: black;
+  color: white;
+}
+
 .nfc-alert-btn:hover {
   background: #f0f0f0;
 }
@@ -877,4 +1100,57 @@ body.spectating-mode .team-name:hover {
 #nfcAlertMessage {
   white-space: pre-wrap;
   word-wrap: break-word;
+}
+
+/* ================= THEME TOGGLE BUTTON ================= */
+
+.theme-toggle-btn {
+  position: fixed;
+  top: 20px;
+  right: 30px;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  border: 2px solid #aaa;
+  background: transparent;
+  color: var(--text-color);
+  font-size: 24px;
+  font-weight: bold;
+  cursor: pointer;
+  z-index: 1000;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(6px);
+  user-select: none;
+  -webkit-user-select: none;
+  opacity: 0.8;
+}
+
+.theme-toggle-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: scale(1.1);
+  opacity: 1;
+}
+
+.theme-toggle-btn:active {
+  transform: scale(0.95);
+}
+
+body.light-mode .theme-toggle-btn {
+  color: black;
+  background: transparent;
+  opacity: 0.8;
+}
+
+body.light-mode .theme-toggle-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  opacity: 1;
+}
+
+/* Hide theme toggle during court view */
+#scoreboardPage ~ #themeToggleBtn,
+body.scoreboard-active #themeToggleBtn {
+  display: none;
 }
