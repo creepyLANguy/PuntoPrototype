@@ -21,12 +21,12 @@ const COOLDOWN_MS = 3000;
 const BACK_HOLD_MS = 550;
 const UNDO_HOLD_MS = 550;
 const RESET_HOLD_MS = 1050;
-const MUTE_HOLD_MS = 550;
 
 const TEAM_A = "A";
 const TEAM_B = "B";
-const NFC_UNDO = "U";
-const NFC_RESET = "R";
+
+const REMOTE_UNDO = "U";
+const REMOTE_RESET = "R";
 
 const SOUND_IDS = {
   POINT: "pointSound",
@@ -43,8 +43,8 @@ const SOUND_IDS = {
 const actionMap = {
   [TEAM_A]: () => addPoint(TEAM_A),
   [TEAM_B]: () => addPoint(TEAM_B),
-  [NFC_UNDO]: () => performShallowReset(),//AL.
-  [NFC_RESET]: () => performShallowReset()
+  [REMOTE_UNDO]: () => undoLastPoint(),
+  [REMOTE_RESET]: () => performShallowReset()
 };
 
 // =====================================================
@@ -194,7 +194,6 @@ elements.spectateCourtNameError = $("spectateCourtNameError");
 let allCourts = [];
 let filteredCourts = [];
 let selectedPlayCourt = null;
-let selectedSpectateCourt = null;
 
 //RESET COURT ELEMENTS
 elements.resetCourtPassword = $("resetCourtPassword");
@@ -562,7 +561,6 @@ elements.createCourtBtn.addEventListener("click", async () => {
   elements.courtPassword.value = "";
 });
 
-
 elements.enterCourtBtn.addEventListener("click", async () => {
   const name = selectedPlayCourt;
   const password = elements.playCourtPassword.value.trim();
@@ -668,7 +666,6 @@ function enableSpectateMode() {
 
   elements.undoBtn.style.display = "none";
   elements.resetBtn.style.display = "none";
-  elements.swapBtn.style.display = "none";
   elements.muteBtn.style.display = "none";
   
   showSpectatorBadges();
@@ -684,7 +681,6 @@ function disableSpectateMode() {
 
   elements.undoBtn.style.display = "inline-block";
   elements.resetBtn.style.display = "inline-block";
-  elements.swapBtn.style.display = "inline-block";
   elements.muteBtn.style.display = "inline-block";
 
   removeSpectatorBadges();
@@ -959,6 +955,21 @@ function renderGames(team) {
   }
 }
 
+function showAlert(title, message) {
+  const modal = $("alertModal");
+  $("alertTitle").textContent = title;
+  $("alertMessage").textContent = message;
+
+  modal.classList.remove("hidden");
+
+  const closeAlert = () => modal.classList.add("hidden");
+  
+  $("alertBtn").onclick = closeAlert;
+  modal.onclick = (e) => {
+    if (e.target === modal) closeAlert();
+  };
+}
+
 // =====================================================
 // NFC INITIALISATION
 // =====================================================
@@ -971,7 +982,7 @@ async function initNfc() {
 
   // Check NFC support
   if (!("NDEFReader" in window)) {
-    showNfcAlert("NFC Not Supported", "This device doesn't support NFC.\nYou won't be able to scan tags.");
+    showAlert("NFC Not Supported", "This device doesn't support NFC.\nYou won't be able to scan tags.");
     return;
   }
 
@@ -1001,34 +1012,19 @@ async function initNfc() {
     };
 
     nfcReader.onerror = () => {
-      showNfcAlert("NFC Disabled", "NFC is disabled on your device.\nEnable it in settings to use tag scanning.");
+      showAlert("NFC Disabled", "NFC is disabled on your device.\nEnable it in settings to use tag scanning.");
     };
 
   } catch (error) {
     if (error.name === "NotAllowedError") {
-      showNfcAlert("NFC Permission Denied", "You denied NFC permission.\nEnable it in your browser settings.");
+      showAlert("NFC Permission Denied", "You denied NFC permission.\nEnable it in your browser settings.");
     } else if (error.name === "NotSupportedError") {
-      showNfcAlert("NFC Not Available", "NFC is not available on this device or browser.");
+      showAlert("NFC Not Available", "NFC is not available on this device or browser.");
     } else {
-      showNfcAlert("NFC Error", "Failed to initialize NFC scanning.");
+      showAlert("NFC Error", "Failed to initialize NFC scanning.");
     }
     console.error("NFC scan failed:", error);
   }
-}
-
-function showNfcAlert(title, message) {
-  const modal = $("nfcAlertModal");
-  $("nfcAlertTitle").textContent = title;
-  $("nfcAlertMessage").textContent = message;
-
-  modal.classList.remove("hidden");
-
-  const closeAlert = () => modal.classList.add("hidden");
-  
-  $("nfcAlertBtn").onclick = closeAlert;
-  modal.onclick = (e) => {
-    if (e.target === modal) closeAlert();
-  };
 }
 
 // =====================================================
@@ -1318,9 +1314,7 @@ function listenToCourt(courtName) {
       !isAdmin && 
       !isSpectating
     ) {
-      //AL.
-      //TODO - remove the alert and replace with a UI element that indicates the user has been moved to spectate mode due to password change.
-      alert("Court password has been changed. You are now in spectate mode.");
+      showAlert("Spectate Mode Activated", "The court password has changed.");
       enableSpectateMode();
     }
 

@@ -1022,9 +1022,9 @@ body.light-mode .court-item-info {
   display: none;
 }
 
-/* ================= NFC ALERT MODAL ================= */
+/* ================= ALERT MODAL ================= */
 
-.nfc-alert-modal {
+.alert-modal {
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.75);
@@ -1034,15 +1034,15 @@ body.light-mode .court-item-info {
   z-index: 10000;
 }
 
-body.light-mode .nfc-alert-modal {
+body.light-mode .alert-modal {
   background: rgba(255, 255, 255, 0.75);
 }
 
-.nfc-alert-modal.hidden {
+.alert-modal.hidden {
   display: none;
 }
 
-.nfc-alert-box {
+.alert-box {
   background: #222;
   padding: 30px;
   border-radius: 14px;
@@ -1051,32 +1051,32 @@ body.light-mode .nfc-alert-modal {
   max-width: 400px;
 }
 
-body.light-mode .nfc-alert-box {
+body.light-mode .alert-box {
   background: #fff;
   border: 2px solid #333;
 }
 
-.nfc-alert-box h2 {
+.alert-box h2 {
   color: #ff6b6b;
   margin: 0 0 12px 0;
   font-size: 24px;
 }
 
-body.light-mode .nfc-alert-box h2 {
+body.light-mode .alert-box h2 {
   color: #333;
 }
 
-.nfc-alert-box p {
+.alert-box p {
   color: #fff;
   margin: 0 0 20px 0;
   font-size: 16px;
 }
 
-body.light-mode .nfc-alert-box p {
+body.light-mode .alert-box p {
   color: black;
 }
 
-.nfc-alert-btn {
+.alert-btn {
   padding: 10px 24px;
   border-radius: 8px;
   border: 2px solid #fff;
@@ -1087,17 +1087,17 @@ body.light-mode .nfc-alert-box p {
   font-size: 16px;
 }
 
-body.light-mode .nfc-alert-btn {
+body.light-mode .alert-btn {
   border: 2px solid black;
   background: black;
   color: white;
 }
 
-.nfc-alert-btn:hover {
+.alert-btn:hover {
   background: #f0f0f0;
 }
 
-#nfcAlertMessage {
+#alertMessage {
   white-space: pre-wrap;
   word-wrap: break-word;
 }
