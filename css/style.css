@@ -1,3 +1,7 @@
+/* =======================================================
+   CSS CUSTOM PROPERTIES
+======================================================= */
+
 :root {
   --teamAcolour: #ffff00;
   --teamBcolour: #00ffff;
@@ -21,25 +25,55 @@ body.light-mode {
   --teamBcolour: #0a91ac;
 }
 
+/* =======================================================
+   GLOBAL RESET
+======================================================= */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
 body {
   margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  /* Overflow is controlled per-page via .scoreboard-active */
+  overflow: hidden;
 }
 
-.logo {
-  max-width: 80%;
-  height: 30%;
-  margin-bottom: -30px;
+body {
+  background: var(--bg);
+  color: var(--white);
+  font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
+button {
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  touch-action: manipulation;
+}
+
+/* =======================================================
+   MENU PAGE
+======================================================= */
 
 .menu-page {
-  min-height: 100vh;
+  width: 100%;
+  height: 100%;
+  min-height: 100svh;
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
   align-items: center;
-  padding-top: 60px;
-  gap: 20px;
+  padding-top: clamp(30px, 6vh, 60px);
+  gap: clamp(8px, 2vh, 20px);
   color: white;
   background: url("../media/img/bk.jpg") no-repeat;
   background-size: cover;
@@ -57,25 +91,33 @@ body.light-mode .menu-page {
   content: "";
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.6); /* dark overlay */
+  background: rgba(0, 0, 0, 0.6);
   z-index: 0;
 }
 
 body.light-mode .menu-page::before {
-  background: rgba(255, 255, 255, 0.3); /* light overlay */
+  background: rgba(255, 255, 255, 0.3);
 }
 
-.menu-page > * {
+.menu-page>* {
   position: relative;
   z-index: 1;
 }
 
+.logo {
+  max-width: 80%;
+  max-height: 25vh;
+  height: auto;
+  width: auto;
+  margin-bottom: clamp(-30px, -3vh, -10px);
+}
+
 .app-welcome {
-  font-size: 40px;
+  font-size: clamp(1.4rem, 5vw, 2.5rem);
   font-weight: 800;
   max-width: 80%;
   align-content: center;
-  margin-bottom: -80px;
+  margin-bottom: clamp(-60px, -6vh, -20px);
   color: white;
 }
 
@@ -84,7 +126,7 @@ body.light-mode .app-welcome {
 }
 
 .app-title {
-  font-size: 64px;
+  font-size: clamp(2rem, 8vw, 4rem);
   font-weight: 800;
   max-width: 80%;
   align-content: center;
@@ -96,10 +138,10 @@ body.light-mode .app-title {
 }
 
 .app-subtitle {
-  margin-top: -40px;
-  font-size: 40px;
+  margin-top: clamp(-30px, -3vh, -10px);
+  font-size: clamp(1.1rem, 4vw, 2.5rem);
   font-weight: 700;
-  margin-bottom: 20px;
+  margin-bottom: clamp(10px, 2vh, 20px);
   color: white;
 }
 
@@ -108,19 +150,19 @@ body.light-mode .app-subtitle {
 }
 
 .menu-buttons {
-  margin-top: 80px;
+  margin-top: clamp(30px, 6vh, 80px);
   display: flex;
   flex-direction: column;
-  gap: 30px;
-  width: clamp(200px, 20%, 300px);
-  padding-bottom: 10%;
+  gap: clamp(12px, 2.5vh, 30px);
+  width: clamp(160px, 35%, 300px);
+  padding-bottom: clamp(20px, 5vh, 60px);
 }
 
 .menu-btn {
   text-decoration: none;
-  padding: 20px 40px;
+  padding: clamp(10px, 2vh, 20px) clamp(20px, 4vw, 40px);
   border-radius: 20px;
-  font-size: 24px;
+  font-size: clamp(1rem, 3.5vw, 1.5rem);
   font-weight: 600;
   border: 2px solid white;
   color: white;
@@ -138,61 +180,65 @@ body.light-mode .app-subtitle {
 }
 
 @keyframes backgroundScroll {
-0% { background-position: 50% 50%; }
-33% { background-position: 1% 50%; }
-40% { background-position: 1% 50%; }
-66% { background-position: 99% 50%; }
-75% { background-position: 99% 50%; }
-100% { background-position: 50% 50%; }}
-/* added pauses to each edge of the image */
+  0% {
+    background-position: 50% 50%;
+  }
 
-/* ================= SCOREBOARD STYLES ================= */
+  33% {
+    background-position: 1% 50%;
+  }
+
+  40% {
+    background-position: 1% 50%;
+  }
+
+  66% {
+    background-position: 99% 50%;
+  }
+
+  75% {
+    background-position: 99% 50%;
+  }
+
+  100% {
+    background-position: 50% 50%;
+  }
+}
 
 /* =======================================================
-   GLOBAL RESET
+   SCOREBOARD PAGE WRAPPER
 ======================================================= */
 
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-}
-
-body {
-  margin: 0;
-  background: var(--bg);
-  color: var(--white);
-  font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-  transition: background-color 0.3s ease, color 0.3s ease;
-}
-
-button {
-  user-select: none;
-  -webkit-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
-  touch-action: manipulation;
+#scoreboardPage {
+  width: 100%;
+  height: 100svh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 /* =======================================================
-   LAYOUT
+   LAYOUT — APP & SCOREBOARD
 ======================================================= */
 
 .app {
-  padding-bottom: 40px;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .scoreboard {
+  flex: 1;
+  min-height: 0;
   display: flex;
+  flex-direction: row;
   justify-content: center;
   align-items: stretch;
-  gap: 1%;
-  padding-right: 1%;
-  padding-top: 1%;
-  padding-bottom: 1%;
+  gap: clamp(4px, 1vw, 12px);
+  padding: clamp(4px, 1vmin, 12px);
   position: relative;
-  max-width: 100vw;
-  margin: 0 auto;
   overflow: hidden;
 }
 
@@ -201,11 +247,13 @@ button {
 ======================================================= */
 
 .team {
-  flex: 1;
-  min-width: 320px;
-  padding-left: 1%;
-  padding-right: 1%;
-  border-radius: 22px;
+  flex: 1 1 0;
+  min-width: 0;
+  /* Try to maintain a square aspect ratio but never overflow the viewport */
+  aspect-ratio: 1 / 1;
+  max-height: 100%;
+  padding: clamp(4px, 1vmin, 12px);
+  border-radius: clamp(12px, 2vmin, 22px);
   position: relative;
   overflow: hidden;
 
@@ -218,12 +266,12 @@ button {
 
 /* Team Variants */
 .team-a {
-  border: 6px solid var(--teamAcolour);
+  border: clamp(3px, 0.6vmin, 6px) solid var(--teamAcolour);
   color: var(--teamAcolour);
 }
 
 .team-b {
-  border: 6px solid var(--teamBcolour);
+  border: clamp(3px, 0.6vmin, 6px) solid var(--teamBcolour);
   color: var(--teamBcolour);
 }
 
@@ -232,24 +280,26 @@ button {
 ======================================================= */
 
 .team-name {
-  height: 60px;
+  height: auto;
+  min-height: 0;
   display: flex;
   align-items: center;
   justify-content: center;
 
   width: 100%;
-  padding: 6px 14px;
+  padding: clamp(3px, 0.6vmin, 8px) clamp(8px, 1.5vmin, 16px);
   border-radius: 10px;
 
   overflow: hidden;
 
   z-index: 10;
+  position: relative;
 }
 
 .team-name .name-text {
   display: inline-block;
   white-space: nowrap;
-  font-size: 36px;
+  font-size: clamp(0.9rem, 3vmin, 2.2rem);
   font-weight: 700;
 
   transform-origin: center center;
@@ -257,13 +307,13 @@ button {
 }
 
 .team-name:hover {
-  background: rgba(255,255,255,0.25);
+  background: rgba(255, 255, 255, 0.25);
 }
 
 .team-name-input {
   width: 100%;
   text-align: center;
-  font-size: 36px;
+  font-size: clamp(0.9rem, 3vmin, 2.2rem);
   font-weight: 700;
   background: transparent;
   border: 2px solid currentColor;
@@ -288,14 +338,16 @@ body.spectating-mode .team-name:hover {
 
 .meta {
   width: 100%;
+  flex-shrink: 1;
+  min-height: 0;
 }
 
 .row {
-  padding: 0 20px;
+  padding: 0 clamp(6px, 1.5vmin, 20px);
   display: flex;
   justify-content: space-between;
   align-items: baseline;
-  font-size: 36px;
+  font-size: clamp(0.65rem, 2vmin, 1.5rem);
 }
 
 .row span:first-child {
@@ -305,7 +357,7 @@ body.spectating-mode .team-name:hover {
 
 .row span:last-child {
   font-weight: 700;
-  font-size: 50px;
+  font-size: clamp(0.8rem, 2.8vmin, 2rem);
   color: inherit;
 }
 
@@ -320,8 +372,10 @@ body.spectating-mode .team-name:hover {
   display: flex;
   flex-direction: row-reverse;
   align-items: center;
-  gap: 18px;
+  gap: clamp(4px, 1vmin, 14px);
   color: var(--white);
+  flex-wrap: wrap;
+  justify-content: flex-start;
 }
 
 body.light-mode #setsA,
@@ -336,15 +390,16 @@ body.light-mode #gamesB {
 
 .set-dot,
 .game-dot {
-  width: 30px;
-  height: 30px;
+  width: clamp(10px, 1.8vmin, 26px);
+  height: clamp(10px, 1.8vmin, 26px);
   border-radius: 50%;
   background: #e0e0e0;
+  flex-shrink: 0;
 }
 
 .game-dot {
   border-style: solid;
-  border-width: 5px;
+  border-width: clamp(2px, 0.4vmin, 5px);
   background-color: rgba(0, 0, 0, 0);
   border-color: #e0e0e044;
   opacity: 1;
@@ -357,10 +412,10 @@ body.light-mode .game-dot {
 
 /* Hide empty set dots initially */
 .set-dot {
-  width: 30px;
-  height: 30px;
+  width: clamp(10px, 1.8vmin, 26px);
+  height: clamp(10px, 1.8vmin, 26px);
   border-radius: 50%;
-  border: 3px solid #e0e0e0;
+  border: clamp(2px, 0.4vmin, 3px) solid #e0e0e0;
   background: transparent;
   opacity: 0;
 }
@@ -402,6 +457,7 @@ body.light-mode .game-dot.filled {
 
 .points-wrapper {
   flex: 1;
+  min-height: 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -409,20 +465,22 @@ body.light-mode .game-dot.filled {
 }
 
 .points {
-  font-size: clamp(120px, 12vw, 200px);
+  /* Always the largest element; scales with the minimum viewport dimension */
+  font-size: clamp(3.5rem, 14vmin, 14rem);
   font-weight: 800;
   text-align: center;
   color: inherit;
+  line-height: 1;
 }
 
 .indicator {
   position: absolute;
-  bottom:3%;
-  right:3%;
-  height: 24px;
-  width: 24px;
+  bottom: 4%;
+  right: 4%;
+  height: clamp(14px, 2.4vmin, 24px);
+  width: clamp(14px, 2.4vmin, 24px);
   border-radius: 50%;
-  border: 4px solid var(--white);
+  border: clamp(2px, 0.4vmin, 4px) solid var(--white);
   opacity: 0;
   transition: opacity 0.2s ease;
   pointer-events: none;
@@ -430,26 +488,23 @@ body.light-mode .game-dot.filled {
 }
 
 /* =======================================================
-   CONTROLS
+   CONTROLS — TEAM TAP ZONE
 ======================================================= */
 
-/* Team Tap Zone */
 .team .ref-zone {
   position: absolute;
-  inset: 0;              /* fills only its team card */
+  inset: 0;
   border: none;
   background: transparent;
   cursor: pointer;
   z-index: 1;
 }
 
-/* Keep name clickable above tap zone */
 .team-name {
   z-index: 10;
   position: relative;
 }
 
-/* Visual feedback */
 .team-a .ref-zone:active {
   background: rgba(255, 255, 0, 0.15);
 }
@@ -458,22 +513,13 @@ body.light-mode .game-dot.filled {
   background: rgba(0, 255, 255, 0.15);
 }
 
-/* ================= FLOATING BUTTONS ================= */
-
-.floating-controls {
-  position: fixed;
-  bottom: 20px;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  gap: 40px;
-  pointer-events: auto;
-  z-index: 20;
-}
+/* =======================================================
+   FLOATING BUTTONS — SHARED STYLES
+======================================================= */
 
 .floating-btn {
-  padding: 10px 20px;
-  min-width: 80px;
+  padding: clamp(6px, 1.2vmin, 12px) clamp(10px, 2.5vmin, 22px);
+  min-width: clamp(54px, 8vmin, 88px);
   border-radius: 20px;
   border-style: solid;
   border-width: 2px;
@@ -481,7 +527,7 @@ body.light-mode .game-dot.filled {
   background: transparent;
   color: #ccc;
   font-weight: 600;
-  font-size: 20px;
+  font-size: clamp(0.75rem, 2.2vmin, 1.25rem);
   backdrop-filter: blur(6px);
   opacity: 0.6;
   position: relative;
@@ -490,6 +536,7 @@ body.light-mode .game-dot.filled {
   user-select: none;
   -webkit-user-select: none;
   touch-action: manipulation;
+  white-space: nowrap;
 }
 
 .floating-btn:hover {
@@ -515,7 +562,7 @@ body.light-mode .floating-btn:hover {
   transform: scaleX(0);
   transform-origin: left;
   animation: holdFill 0.5s linear forwards;
-	background: rgb(255, 255, 255); 
+  background: rgb(255, 255, 255);
 }
 
 body.light-mode .floating-btn.holding::after {
@@ -523,12 +570,17 @@ body.light-mode .floating-btn.holding::after {
 }
 
 @keyframes holdFill {
-  from { transform: scaleX(0); }
-  to { transform: scaleX(1); }
+  from {
+    transform: scaleX(0);
+  }
+
+  to {
+    transform: scaleX(1);
+  }
 }
 
 #resetBtn {
-    transition: transform var(--hold-duration, 1s) linear;
+  transition: transform var(--hold-duration, 1s) linear;
 }
 
 #resetBtn.holding::after {
@@ -536,11 +588,72 @@ body.light-mode .floating-btn.holding::after {
   background: rgba(255, 0, 0, 0.25);
 }
 
+/* =======================================================
+   FLOATING CONTROLS CONTAINER — PORTRAIT (default)
+   Screen taller than wide → controls sit at bottom in a row
+======================================================= */
+
+.floating-controls {
+  position: fixed;
+  bottom: clamp(10px, 2.5vh, 24px);
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: row;
+  gap: clamp(8px, 2.5vw, 28px);
+  pointer-events: auto;
+  z-index: 20;
+}
+
+/* =======================================================
+   FLOATING CONTROLS CONTAINER — LANDSCAPE
+   Screen wider than tall → controls stack vertically on the right
+======================================================= */
+
+@media (orientation: landscape) {
+  .floating-controls {
+    bottom: auto;
+    left: auto;
+    right: clamp(10px, 2vw, 20px);
+    top: 50%;
+    transform: translateY(-50%);
+    flex-direction: column;
+    gap: clamp(6px, 2vh, 18px);
+  }
+}
+
+/* =======================================================
+   BACK BUTTON — always top-left
+======================================================= */
+
 #backBtn {
   position: fixed;
-  top: 20px;
-  left: 30px;
-  padding: 10px 18px;
+  top: clamp(10px, 2vh, 20px);
+  left: clamp(12px, 2vw, 30px);
+  padding: clamp(6px, 1.2vmin, 10px) clamp(10px, 2vmin, 18px);
+  z-index: 30;
+}
+
+/* =======================================================
+   COURT TITLE
+======================================================= */
+
+#courtTitle {
+  position: fixed;
+  top: clamp(10px, 2vh, 20px);
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: clamp(0.85rem, 3vw, 2rem);
+  font-weight: 700;
+  text-align: center;
+  white-space: nowrap;
+  color: var(--white);
+  z-index: 25;
+  pointer-events: none;
+  /* Prevent overlap with back button and badge */
+  max-width: calc(100vw - 220px);
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* =======================================================
@@ -561,14 +674,29 @@ body.light-mode .floating-btn.holding::after {
 }
 
 @keyframes team-pop {
-  0% { transform: scale(1); }
-  35% { transform: scale(1.035); }
-  100% { transform: scale(1); }
+  0% {
+    transform: scale(1);
+  }
+
+  35% {
+    transform: scale(1.035);
+  }
+
+  100% {
+    transform: scale(1);
+  }
 }
 
 @keyframes burst {
-  0% { transform: scale(0); opacity: 1; }
-  100% { transform: scale(1); opacity: 0; }
+  0% {
+    transform: scale(0);
+    opacity: 1;
+  }
+
+  100% {
+    transform: scale(1);
+    opacity: 0;
+  }
 }
 
 /* =======================================================
@@ -600,7 +728,7 @@ body.light-mode .reset-modal {
   padding: 24px;
   border-radius: 14px;
   text-align: center;
-  min-width: 400px;
+  width: clamp(280px, 90vw, 420px);
   color: white;
 }
 
@@ -613,10 +741,12 @@ body.light-mode .reset-box {
   margin-top: 16px;
   display: flex;
   gap: 12px;
+  flex-wrap: wrap;
 }
 
 .reset-actions button {
   flex: 1;
+  min-width: 80px;
   padding: 10px;
   border-radius: 8px;
   border: none;
@@ -636,37 +766,55 @@ body.light-mode .reset-actions button:hover {
   opacity: 0.8;
 }
 
-/* ================= UNDO ANIMATION ================= */
+/* =======================================================
+   UNDO ANIMATION
+======================================================= */
 
 .points.undo-flash {
   animation: undo-flash 0.4s ease;
 }
 
 @keyframes undo-flash {
-  0% { opacity: 1; }
-  25% { opacity: 0.25; }
-  50% { opacity: 0.75; }
-  75% { opacity: 0.5; }
-  100% { opacity: 1; }  
+  0% {
+    opacity: 1;
+  }
+
+  25% {
+    opacity: 0.25;
+  }
+
+  50% {
+    opacity: 0.75;
+  }
+
+  75% {
+    opacity: 0.5;
+  }
+
+  100% {
+    opacity: 1;
+  }
 }
 
-/* ================= SWAP BUTTON ================= */
+/* =======================================================
+   SWAP BUTTON
+======================================================= */
 
 .swap-container {
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 5;
+  flex-shrink: 0;
 }
 
-/* Swap Button */
 .swap-btn {
-  padding: 14px 18px;
+  padding: clamp(8px, 1.4vmin, 14px) clamp(10px, 1.8vmin, 18px);
   border-radius: 50%;
   border: 2px solid rgba(0, 0, 0, 0.0);
   background: rgba(255, 255, 255, 0.15);
   color: rgba(255, 255, 255, 0.25);
-  font-size: 22px;
+  font-size: clamp(14px, 2.5vmin, 22px);
   cursor: pointer;
   transition: transform 0.2s ease, background 0.2s ease;
   opacity: 1;
@@ -694,22 +842,38 @@ body.light-mode .swap-btn:hover {
   transform: rotate(180deg) scale(0.9);
 }
 
-.team-a { order: 1; }
-.team-b { order: 3; }
-.swap-container { order: 2; }
+.team-a {
+  order: 1;
+}
 
-.scoreboard.swapped .team-a { order: 3; }
-.scoreboard.swapped .team-b { order: 1; }
+.team-b {
+  order: 3;
+}
 
-/* ================= CREATE PAGE ================= */
+.swap-container {
+  order: 2;
+}
+
+.scoreboard.swapped .team-a {
+  order: 3;
+}
+
+.scoreboard.swapped .team-b {
+  order: 1;
+}
+
+/* =======================================================
+   CREATE / PLAY / SPECTATE PAGES
+======================================================= */
 
 .create-page {
-  height: 100vh;
+  height: 100svh;
   display: flex;
   justify-content: center;
   align-items: center;
   background: #000;
   color: white;
+  overflow: auto;
 }
 
 body.light-mode .create-page {
@@ -719,15 +883,17 @@ body.light-mode .create-page {
 
 .create-card {
   position: relative;
-  width: 400px;
+  width: clamp(280px, 90vw, 420px);
   padding: 25px 35px 20px 35px;
-  background: rgba(255,255,255,0.05);
+  background: rgba(255, 255, 255, 0.05);
   border: 2px solid white;
   border-radius: 20px;
   display: flex;
   flex-direction: column;
   gap: 15px;
   transition: all 0.3s ease;
+  max-height: 95svh;
+  overflow-y: auto;
 }
 
 body.light-mode .create-card {
@@ -830,10 +996,12 @@ body.light-mode .primary-btn {
   background: rgba(255, 255, 255, 0.1);
 }
 
-/* ================= COURT LIST ================= */
+/* =======================================================
+   COURT LIST
+======================================================= */
 
 .court-list {
-  max-height: 300px;
+  max-height: 250px;
   overflow-y: auto;
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 8px;
@@ -849,7 +1017,6 @@ body.light-mode .court-list {
   scrollbar-color: #333 rgba(255, 255, 255, 0.8);
 }
 
-/* Scrollbar styling for Chrome, Safari, Edge */
 .court-list::-webkit-scrollbar {
   width: 10px;
 }
@@ -959,18 +1126,20 @@ body.light-mode .court-item-info {
   color: rgba(0, 0, 0, 0.6);
 }
 
-/* ================= SPECTATOR BADGES ================= */
+/* =======================================================
+   SPECTATOR BADGES
+======================================================= */
 
 .spectator-badge {
   position: fixed;
-  top: 20px;
-  padding: 10px 18px;
+  top: clamp(10px, 2vh, 20px);
+  padding: clamp(6px, 1.2vmin, 10px) clamp(10px, 2vmin, 18px);
   border-radius: 14px;
   border: 2px solid var(--spectating);
   color: var(--spectating);
   font-weight: 700;
   letter-spacing: 1px;
-  font-size: 14px;
+  font-size: clamp(11px, 1.8vmin, 14px);
   z-index: 10000;
   pointer-events: none;
   background-color: #0000;
@@ -995,18 +1164,20 @@ body.light-mode .court-item-info {
 }
 
 .spectator-badge.left {
-  left: 30px;
+  left: clamp(12px, 2vw, 30px);
 }
 
 .spectator-badge.right {
-  right: 30px;
+  right: clamp(12px, 2vw, 30px);
 }
 
-/* ================= NFC UI ================= */
+/* =======================================================
+   NFC COOLDOWN BANNER
+======================================================= */
 
 .nfc-cooldown {
   position: fixed;
-  bottom: 100px;
+  bottom: clamp(70px, 14vh, 120px);
   left: 50%;
   transform: translateX(-50%);
   padding: 10px 18px;
@@ -1014,7 +1185,7 @@ body.light-mode .court-item-info {
   background: rgba(255, 0, 0, 0.85);
   color: white;
   font-weight: bold;
-  font-size: 18px;
+  font-size: clamp(14px, 2.5vmin, 18px);
   z-index: 9999;
 }
 
@@ -1022,7 +1193,9 @@ body.light-mode .court-item-info {
   display: none;
 }
 
-/* ================= ALERT MODAL ================= */
+/* =======================================================
+   ALERT MODAL
+======================================================= */
 
 .alert-modal {
   position: fixed;
@@ -1048,7 +1221,7 @@ body.light-mode .alert-modal {
   border-radius: 14px;
   text-align: center;
   border: 2px solid #ff6b6b;
-  max-width: 400px;
+  width: clamp(260px, 85vw, 400px);
 }
 
 body.light-mode .alert-box {
@@ -1059,7 +1232,7 @@ body.light-mode .alert-box {
 .alert-box h2 {
   color: #ff6b6b;
   margin: 0 0 12px 0;
-  font-size: 24px;
+  font-size: clamp(1.1rem, 3.5vmin, 1.5rem);
 }
 
 body.light-mode .alert-box h2 {
@@ -1069,7 +1242,7 @@ body.light-mode .alert-box h2 {
 .alert-box p {
   color: #fff;
   margin: 0 0 20px 0;
-  font-size: 16px;
+  font-size: clamp(0.85rem, 2.5vmin, 1rem);
 }
 
 body.light-mode .alert-box p {
@@ -1084,7 +1257,7 @@ body.light-mode .alert-box p {
   color: #000;
   font-weight: bold;
   cursor: pointer;
-  font-size: 16px;
+  font-size: clamp(0.85rem, 2.5vmin, 1rem);
 }
 
 body.light-mode .alert-btn {
@@ -1102,19 +1275,21 @@ body.light-mode .alert-btn {
   word-wrap: break-word;
 }
 
-/* ================= THEME TOGGLE BUTTON ================= */
+/* =======================================================
+   THEME TOGGLE BUTTON (Menu page / global)
+======================================================= */
 
 .theme-toggle-btn {
   position: fixed;
-  top: 20px;
-  right: 30px;
-  width: 50px;
-  height: 50px;
+  top: clamp(10px, 2vh, 20px);
+  right: clamp(12px, 2vw, 30px);
+  width: clamp(38px, 6vmin, 50px);
+  height: clamp(38px, 6vmin, 50px);
   border-radius: 50%;
   border: 2px solid #aaa;
   background: transparent;
   color: var(--text-color);
-  font-size: 24px;
+  font-size: clamp(16px, 3.5vmin, 24px);
   font-weight: bold;
   cursor: pointer;
   z-index: 1000;
@@ -1150,7 +1325,7 @@ body.light-mode .theme-toggle-btn:hover {
 }
 
 /* Hide theme toggle during court view */
-#scoreboardPage ~ #themeToggleBtn,
+#scoreboardPage~#themeToggleBtn,
 body.scoreboard-active #themeToggleBtn {
   display: none;
 }
