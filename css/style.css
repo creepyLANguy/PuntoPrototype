@@ -240,7 +240,7 @@ body.light-mode .app-subtitle {
   flex: 1;
   text-align: center;
   /* Larger and bolder for legibility */
-  font-size: clamp(1rem, 4vmin, 2rem);
+  font-size: clamp(1.1rem, 5vmin, 2.8rem);
   font-weight: 800;
   white-space: nowrap;
   overflow: hidden;
@@ -482,7 +482,7 @@ body.spectating-mode .team-name:hover {
   flex-direction: row-reverse;
   align-items: center;
   /* Dots gap scales with card width */
-  gap: clamp(4px, 1.5cqi, 20px);
+  gap: clamp(4px, 2cqi, 24px);
   color: var(--white);
   flex-wrap: wrap;
   justify-content: flex-start;
@@ -501,8 +501,8 @@ body.light-mode #gamesB {
 .set-dot,
 .game-dot {
   /* Dots scale with card width */
-  width: clamp(10px, 3.5cqi, 44px);
-  height: clamp(10px, 3.5cqi, 44px);
+  width: clamp(12px, 5.5cqi, 56px);
+  height: clamp(12px, 5.5cqi, 56px);
   border-radius: 50%;
   background: #e0e0e0;
   flex-shrink: 0;
