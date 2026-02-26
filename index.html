@@ -1,11 +1,14 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Point Pulse - Live Scoreboard</title>
   <link rel="stylesheet" href="css/style.css" />
-  <script type="module" src="js/script.js"></script></head>
+  <script type="module" src="js/script.js"></script>
+</head>
+
 <body>
 
   <!-- ================= GLOBAL THEME TOGGLE ================= -->
@@ -13,7 +16,7 @@
 
   <!-- ================= MENU ================= -->
   <main id="menuPage" class="menu-page">
-    
+
     <img src="../media/img/logo.png" alt="Point Pulse Logo" class="logo" />
     <h2 class="app-welcome">Welcome to</h2>
     <h2 class="app-title">Point Pulse</h2>
@@ -96,7 +99,7 @@
 
     </div>
   </div>
-  
+
   <!-- ================= SPECTATE PAGE ================= -->
   <div id="spectatePage" style="display:none;" class="create-page">
 
@@ -125,112 +128,123 @@
   <!-- ================= SCOREBOARD (HIDDEN INITIALLY) ================= -->
   <div id="scoreboardPage" style="display:none;">
 
-  <!-- ================= ALERT MODAL ================= -->
-  <div id="alertModal" class="alert-modal hidden">
-    <div class="alert-box">
-      <h2 id="alertTitle"></h2>
-      <p id="alertMessage"></p>
-      <button id="alertBtn" class="alert-btn">OK</button>
-    </div>
-  </div>
-    
-  <!-- ================= RESET MODAL ================= -->
-  <div id="resetModal" class="reset-modal hidden">
-    <div class="reset-box">
-      <p>Reset the entire match?</p>
-      <!-- New court password -->
-      <div class="form-group">
-        <label>New Court Password (min 4 chars)</label>
-        <input type="password" id="resetCourtPassword" />
-        <div class="error" id="resetPasswordError"></div>
-      </div>
-
-      <div class="reset-actions">
-        <button id="confirmReset" type="button">Full Reset</button>
-        <button id="shallowReset" type="button">Keep Old Password</button>
-        <button id="cancelReset" type="button">Cancel</button>
+    <!-- ================= ALERT MODAL ================= -->
+    <div id="alertModal" class="alert-modal hidden">
+      <div class="alert-box">
+        <h2 id="alertTitle"></h2>
+        <p id="alertMessage"></p>
+        <button id="alertBtn" class="alert-btn">OK</button>
       </div>
     </div>
-  </div>
 
-  <!-- ================= APP ================= -->
-  <main class="app">
+    <!-- ================= RESET MODAL ================= -->
+    <div id="resetModal" class="reset-modal hidden">
+      <div class="reset-box">
+        <p>Reset the entire match?</p>
+        <!-- New court password -->
+        <div class="form-group">
+          <label>New Court Password (min 4 chars)</label>
+          <input type="password" id="resetCourtPassword" />
+          <div class="error" id="resetPasswordError"></div>
+        </div>
 
-    <!-- ===== SCOREBOARD ===== -->
-    <section class="scoreboard">
-
-      <div id="nfcCooldownBanner" class="nfc-cooldown hidden">
-        Scan locked — <span id="nfcCountdown">3</span>s
+        <div class="reset-actions">
+          <button id="confirmReset" type="button">Full Reset</button>
+          <button id="shallowReset" type="button">Keep Old Password</button>
+          <button id="cancelReset" type="button">Cancel</button>
+        </div>
       </div>
+    </div>
 
-      <!-- TEAM A -->
-      <div class="team team-a" id="teamA">
-        <button id="addPointA" class="ref-zone"></button>
-        <h2 class="team-name" data-team="A">
-          <span class="name-text">Team A</span>
-        </h2>
+    <!-- ================= HEADER ROW ================= -->
+    <!-- Back button | Court name | Space for spectator badge -->
+    <header class="scoreboard-header">
+      <button id="backBtn" class="floating-btn">←</button>
+      <span id="courtTitle"></span>
+      <!-- Spectator badge is injected by JS on the right side of this row -->
+      <div class="header-right-slot"></div>
+    </header>
 
-        <div class="meta">
-          <div class="row">
-            <span>Sets</span>
-            <span id="setsA"></span>
+    <!-- ================= SCOREBOARD BODY ================= -->
+    <!-- Portrait: column (scoreboard on top, controls row at bottom)  -->
+    <!-- Landscape: row (scoreboard fills left, controls column on right) -->
+    <div class="scoreboard-body">
+
+      <!-- ===== SCOREBOARD ===== -->
+      <main class="app">
+        <section class="scoreboard">
+
+          <div id="nfcCooldownBanner" class="nfc-cooldown hidden">
+            Scan locked — <span id="nfcCountdown">3</span>s
           </div>
-          <div class="row">
-            <span>Games</span>
-            <span id="gamesA"></span>
-          </div>
-        </div>
 
-        <div class="indicator"></div>
+          <!-- TEAM A -->
+          <div class="team team-a" id="teamA">
+            <button id="addPointA" class="ref-zone"></button>
+            <h2 class="team-name" data-team="A">
+              <span class="name-text">Team A</span>
+            </h2>
 
-        <div class="points-wrapper">
-          <div class="points" id="pointsA">0</div>
-        </div>
-      </div><!-- TEAM A -->
+            <div class="meta">
+              <div class="row">
+                <span>Sets</span>
+                <span id="setsA"></span>
+              </div>
+              <div class="row">
+                <span>Games</span>
+                <span id="gamesA"></span>
+              </div>
+            </div>
 
-      <!-- SWAP BUTTON -->
-      <div class="swap-container">
-        <button id="swapBtn" class="swap-btn">⇄</button>
-      </div>
+            <div class="indicator"></div>
 
-      <!-- TEAM B -->
-      <div class="team team-b" id="teamB">
-        <button id="addPointB" class="ref-zone"></button>
-        <h2 class="team-name" data-team="B">
-          <span class="name-text">Team B</span>
-        </h2>
+            <div class="points-wrapper">
+              <div class="points" id="pointsA">0</div>
+            </div>
+          </div><!-- TEAM A -->
 
-        <div class="meta">
-          <div class="row">
-            <span>Sets</span>
-            <span id="setsB"></span>
-          </div>
-          <div class="row">
-            <span>Games</span>
-            <span id="gamesB"></span>
-          </div>
-        </div>
+          <!-- TEAM B -->
+          <div class="team team-b" id="teamB">
+            <button id="addPointB" class="ref-zone"></button>
+            <h2 class="team-name" data-team="B">
+              <span class="name-text">Team B</span>
+            </h2>
 
-        <div class="indicator"></div>
+            <div class="meta">
+              <div class="row">
+                <span>Sets</span>
+                <span id="setsB"></span>
+              </div>
+              <div class="row">
+                <span>Games</span>
+                <span id="gamesB"></span>
+              </div>
+            </div>
 
-        <div class="points-wrapper">
-          <div class="points" id="pointsB">0</div>
-        </div>
-      </div><!-- TEAM B -->
+            <div class="indicator"></div>
 
-    <!-- BACK BUTTON -->
-    <button id="backBtn" class="floating-btn">Back</button>
+            <div class="points-wrapper">
+              <div class="points" id="pointsB">0</div>
+            </div>
+          </div><!-- TEAM B -->
 
-    <!-- FLOATING BUTTONS -->
-    <div class="floating-controls">
-      <button id="undoBtn" class="floating-btn">Undo</button>
-      <button id="resetBtn" class="floating-btn">Reset</button>
-      <button id="muteBtn" class="floating-btn">🔊</button>
-      <button id="themeToggleScorebboardBtn" class="floating-btn" title="Toggle theme">🌙</button>
-    </div><!-- FLOATING BUTTONS -->
-  </main>
+        </section>
+      </main><!-- APP -->
 
-  </div> <!-- SCOREBOARD -->
+      <!-- FLOATING CONTROLS -->
+      <!-- Swap, Undo, Reset, Mute, Theme — live here, never in the scoreboard -->
+      <div class="floating-controls">
+        <button id="swapBtn" class="floating-btn" title="Swap sides">⇄</button>
+        <button id="undoBtn" class="floating-btn" title="Undo">↩</button>
+        <button id="resetBtn" class="floating-btn" title="Reset">↺</button>
+        <button id="muteBtn" class="floating-btn" title="Mute">🔊</button>
+        <button id="themeToggleScorebboardBtn" class="floating-btn" title="Toggle theme">🌙</button>
+      </div><!-- FLOATING CONTROLS -->
+
+    </div><!-- SCOREBOARD BODY -->
+
+  </div> <!-- SCOREBOARD PAGE -->
 
 </body>
+
 </html>

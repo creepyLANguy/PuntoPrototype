@@ -1,3 +1,7 @@
+/* =======================================================
+   CSS CUSTOM PROPERTIES
+======================================================= */
+
 :root {
   --teamAcolour: #ffff00;
   --teamBcolour: #00ffff;
@@ -21,32 +25,64 @@ body.light-mode {
   --teamBcolour: #0a91ac;
 }
 
+/* =======================================================
+   GLOBAL RESET
+======================================================= */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
 body {
   margin: 0;
+  padding: 0;
+  width: 100%;
+  /* Do NOT set overflow: hidden globally — it blocks menu page scroll.
+     Each page controls its own overflow. */
 }
 
-.logo {
-  max-width: 80%;
-  height: 30%;
-  margin-bottom: -30px;
+body {
+  background: var(--bg);
+  color: var(--white);
+  font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
+button {
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  touch-action: manipulation;
+}
+
+/* =======================================================
+   MENU PAGE
+======================================================= */
 
 .menu-page {
-  min-height: 100vh;
+  width: 100%;
+  /* Allow content to exceed one viewport so landscape mobile can scroll */
+  min-height: 100svh;
+  height: auto;
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
   align-items: center;
-  padding-top: 60px;
-  gap: 20px;
+  padding-top: clamp(30px, 6vh, 60px);
+  gap: clamp(8px, 2vh, 20px);
   color: white;
   background: url("../media/img/bk.jpg") no-repeat;
   background-size: cover;
   background-position: 50% 50%;
   animation: backgroundScroll 60s ease-in-out 1s infinite;
   position: relative;
-  overflow: hidden;
+  /* Allow vertical scroll; hide horizontal overflow only */
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 body.light-mode .menu-page {
@@ -57,25 +93,33 @@ body.light-mode .menu-page {
   content: "";
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.6); /* dark overlay */
+  background: rgba(0, 0, 0, 0.6);
   z-index: 0;
 }
 
 body.light-mode .menu-page::before {
-  background: rgba(255, 255, 255, 0.3); /* light overlay */
+  background: rgba(255, 255, 255, 0.3);
 }
 
-.menu-page > * {
+.menu-page>* {
   position: relative;
   z-index: 1;
 }
 
+.logo {
+  max-width: 80%;
+  max-height: 25vh;
+  height: auto;
+  width: auto;
+  margin-bottom: clamp(-30px, -3vh, -10px);
+}
+
 .app-welcome {
-  font-size: 40px;
+  font-size: clamp(1.4rem, 5vw, 2.5rem);
   font-weight: 800;
   max-width: 80%;
   align-content: center;
-  margin-bottom: -80px;
+  margin-bottom: clamp(-60px, -6vh, -20px);
   color: white;
 }
 
@@ -84,7 +128,7 @@ body.light-mode .app-welcome {
 }
 
 .app-title {
-  font-size: 64px;
+  font-size: clamp(2rem, 8vw, 4rem);
   font-weight: 800;
   max-width: 80%;
   align-content: center;
@@ -96,10 +140,10 @@ body.light-mode .app-title {
 }
 
 .app-subtitle {
-  margin-top: -40px;
-  font-size: 40px;
+  margin-top: clamp(-30px, -3vh, -10px);
+  font-size: clamp(1.1rem, 4vw, 2.5rem);
   font-weight: 700;
-  margin-bottom: 20px;
+  margin-bottom: clamp(10px, 2vh, 20px);
   color: white;
 }
 
@@ -108,19 +152,19 @@ body.light-mode .app-subtitle {
 }
 
 .menu-buttons {
-  margin-top: 80px;
+  margin-top: clamp(30px, 6vh, 80px);
   display: flex;
   flex-direction: column;
-  gap: 30px;
-  width: clamp(200px, 20%, 300px);
-  padding-bottom: 10%;
+  gap: clamp(12px, 2.5vh, 30px);
+  width: clamp(160px, 35%, 300px);
+  padding-bottom: clamp(20px, 5vh, 60px);
 }
 
 .menu-btn {
   text-decoration: none;
-  padding: 20px 40px;
+  padding: clamp(10px, 2vh, 20px) clamp(20px, 4vw, 40px);
   border-radius: 20px;
-  font-size: 24px;
+  font-size: clamp(1rem, 3.5vw, 1.5rem);
   font-weight: 600;
   border: 2px solid white;
   color: white;
@@ -138,62 +182,132 @@ body.light-mode .app-subtitle {
 }
 
 @keyframes backgroundScroll {
-0% { background-position: 50% 50%; }
-33% { background-position: 1% 50%; }
-40% { background-position: 1% 50%; }
-66% { background-position: 99% 50%; }
-75% { background-position: 99% 50%; }
-100% { background-position: 50% 50%; }}
-/* added pauses to each edge of the image */
+  0% {
+    background-position: 50% 50%;
+  }
 
-/* ================= SCOREBOARD STYLES ================= */
+  33% {
+    background-position: 1% 50%;
+  }
+
+  40% {
+    background-position: 1% 50%;
+  }
+
+  66% {
+    background-position: 99% 50%;
+  }
+
+  75% {
+    background-position: 99% 50%;
+  }
+
+  100% {
+    background-position: 50% 50%;
+  }
+}
 
 /* =======================================================
-   GLOBAL RESET
+   SCOREBOARD PAGE — TOP-LEVEL CONTAINER
+   Flex column: header | body (fills remaining space)
 ======================================================= */
 
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-}
-
-body {
-  margin: 0;
-  background: var(--bg);
-  color: var(--white);
-  font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-  transition: background-color 0.3s ease, color 0.3s ease;
-}
-
-button {
-  user-select: none;
-  -webkit-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
-  touch-action: manipulation;
+#scoreboardPage {
+  width: 100%;
+  height: 100svh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 /* =======================================================
-   LAYOUT
+   HEADER ROW
+   back button | court name | right slot (spectator badge)
+   This row is always visible and never overlapped by cards.
+======================================================= */
+
+.scoreboard-header {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: clamp(6px, 1.5vmin, 12px);
+  padding: clamp(6px, 1.2vmin, 12px) clamp(8px, 1.5vmin, 14px);
+  z-index: 30;
+}
+
+#courtTitle {
+  flex: 1;
+  text-align: center;
+  /* Larger and bolder for legibility */
+  font-size: clamp(1.1rem, 5vmin, 2.8rem);
+  font-weight: 800;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--white);
+  pointer-events: none;
+}
+
+/* Right side spacer matches back button size so title stays centred */
+.header-right-slot {
+  /* JS will inject the spectator badge here as a child */
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  min-width: clamp(40px, 7vmin, 60px);
+  /* same as btn size */
+}
+
+/* =======================================================
+   SCOREBOARD BODY
+   Portrait  → flex column: scoreboard on top, controls row at bottom
+   Landscape → flex row:    scoreboard on left, controls column on right
+   No fixed positioning — everything is in normal document flow.
+======================================================= */
+
+.scoreboard-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+
+  /* ---- Portrait (default) ---- */
+  flex-direction: column;
+}
+
+@media (orientation: landscape) {
+  .scoreboard-body {
+    flex-direction: row;
+  }
+}
+
+/* =======================================================
+   APP & SCOREBOARD  (fills remaining space in the body)
 ======================================================= */
 
 .app {
-  padding-bottom: 40px;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .scoreboard {
+  flex: 1;
+  min-height: 0;
   display: flex;
+  /* Portrait default: stack cards vertically to fill screen */
+  flex-direction: column;
   justify-content: center;
   align-items: stretch;
-  gap: 1%;
-  padding-right: 1%;
-  padding-top: 1%;
-  padding-bottom: 1%;
+  gap: clamp(4px, 1vmin, 10px);
+  /* Enough padding so card borders are never clipped */
+  padding: clamp(6px, 1.5vmin, 14px);
   position: relative;
-  max-width: 100vw;
-  margin: 0 auto;
-  overflow: hidden;
+  /* visible so borders are not cut; .app clips any animation overflow */
+  overflow: visible;
 }
 
 /* =======================================================
@@ -201,11 +315,13 @@ button {
 ======================================================= */
 
 .team {
-  flex: 1;
-  min-width: 320px;
-  padding-left: 1%;
-  padding-right: 1%;
-  border-radius: 22px;
+  /* Portrait default: fill full width, share height equally — NOT square */
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 0;
+  /* No aspect-ratio in portrait — maximise screen use */
+  padding: clamp(4px, 1vmin, 12px);
+  border-radius: clamp(12px, 2vmin, 22px);
   position: relative;
   overflow: hidden;
 
@@ -216,15 +332,55 @@ button {
   container-type: inline-size;
 }
 
-/* Team Variants */
 .team-a {
-  border: 6px solid var(--teamAcolour);
+  border: clamp(3px, 0.6vmin, 6px) solid var(--teamAcolour);
   color: var(--teamAcolour);
 }
 
 .team-b {
-  border: 6px solid var(--teamBcolour);
+  border: clamp(3px, 0.6vmin, 6px) solid var(--teamBcolour);
   color: var(--teamBcolour);
+}
+
+/* Swap order classes — still driven by JS */
+.team-a {
+  order: 1;
+}
+
+.team-b {
+  order: 2;
+}
+
+.scoreboard.swapped .team-a {
+  order: 2;
+}
+
+.scoreboard.swapped .team-b {
+  order: 1;
+}
+
+/* =======================================================
+   LANDSCAPE: restore side-by-side cards with square aspect ratio
+======================================================= */
+
+@media (orientation: landscape) {
+  .scoreboard {
+    flex-direction: row;
+    align-items: center;
+  }
+
+  .team {
+    /*
+     * Don't use flex:1 + aspect-ratio:1/1 together — they conflict.
+     * Instead: fixed height % of container, then aspect-ratio sets width.
+     * max-width:48% prevents overflow on very wide screens.
+     */
+    flex: 0 0 auto;
+    height: 95%;
+    aspect-ratio: 1 / 1;
+    max-width: 48%;
+    min-width: 0;
+  }
 }
 
 /* =======================================================
@@ -232,24 +388,26 @@ button {
 ======================================================= */
 
 .team-name {
-  height: 60px;
+  height: auto;
+  min-height: 0;
   display: flex;
   align-items: center;
   justify-content: center;
 
   width: 100%;
-  padding: 6px 14px;
+  padding: clamp(3px, 0.6vmin, 8px) clamp(8px, 1.5vmin, 16px);
   border-radius: 10px;
 
   overflow: hidden;
-
   z-index: 10;
+  position: relative;
 }
 
 .team-name .name-text {
   display: inline-block;
   white-space: nowrap;
-  font-size: 36px;
+  /* Use container query unit so text scales with the card size */
+  font-size: clamp(0.9rem, 8cqi, 4rem);
   font-weight: 700;
 
   transform-origin: center center;
@@ -257,13 +415,13 @@ button {
 }
 
 .team-name:hover {
-  background: rgba(255,255,255,0.25);
+  background: rgba(255, 255, 255, 0.25);
 }
 
 .team-name-input {
   width: 100%;
   text-align: center;
-  font-size: 36px;
+  font-size: clamp(0.9rem, 8cqi, 4rem);
   font-weight: 700;
   background: transparent;
   border: 2px solid currentColor;
@@ -288,14 +446,17 @@ body.spectating-mode .team-name:hover {
 
 .meta {
   width: 100%;
+  flex-shrink: 1;
+  min-height: 0;
 }
 
 .row {
-  padding: 0 20px;
+  padding: 0 clamp(6px, 1.5vmin, 20px);
   display: flex;
   justify-content: space-between;
   align-items: baseline;
-  font-size: 36px;
+  /* Scale with card width via container query */
+  font-size: clamp(0.6rem, 4cqi, 2.5rem);
 }
 
 .row span:first-child {
@@ -305,7 +466,7 @@ body.spectating-mode .team-name:hover {
 
 .row span:last-child {
   font-weight: 700;
-  font-size: 50px;
+  font-size: clamp(0.75rem, 6cqi, 3.5rem);
   color: inherit;
 }
 
@@ -320,8 +481,11 @@ body.spectating-mode .team-name:hover {
   display: flex;
   flex-direction: row-reverse;
   align-items: center;
-  gap: 18px;
+  /* Dots gap scales with card width */
+  gap: clamp(4px, 2cqi, 24px);
   color: var(--white);
+  flex-wrap: wrap;
+  justify-content: flex-start;
 }
 
 body.light-mode #setsA,
@@ -336,15 +500,17 @@ body.light-mode #gamesB {
 
 .set-dot,
 .game-dot {
-  width: 30px;
-  height: 30px;
+  /* Dots scale with card width */
+  width: clamp(12px, 5.5cqi, 56px);
+  height: clamp(12px, 5.5cqi, 56px);
   border-radius: 50%;
   background: #e0e0e0;
+  flex-shrink: 0;
 }
 
 .game-dot {
   border-style: solid;
-  border-width: 5px;
+  border-width: clamp(2px, 0.6cqi, 5px);
   background-color: rgba(0, 0, 0, 0);
   border-color: #e0e0e044;
   opacity: 1;
@@ -355,12 +521,8 @@ body.light-mode .game-dot {
   opacity: 1;
 }
 
-/* Hide empty set dots initially */
 .set-dot {
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  border: 3px solid #e0e0e0;
+  border: clamp(1px, 0.4cqi, 3px) solid #e0e0e0;
   background: transparent;
   opacity: 0;
 }
@@ -402,6 +564,7 @@ body.light-mode .game-dot.filled {
 
 .points-wrapper {
   flex: 1;
+  min-height: 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -409,20 +572,22 @@ body.light-mode .game-dot.filled {
 }
 
 .points {
-  font-size: clamp(120px, 12vw, 200px);
+  /* Score is always the biggest; scales with card width via container query */
+  font-size: clamp(3rem, 35cqi, 22rem);
   font-weight: 800;
   text-align: center;
   color: inherit;
+  line-height: 1;
 }
 
 .indicator {
   position: absolute;
-  bottom:3%;
-  right:3%;
-  height: 24px;
-  width: 24px;
+  bottom: 4%;
+  right: 4%;
+  height: clamp(14px, 2.4vmin, 24px);
+  width: clamp(14px, 2.4vmin, 24px);
   border-radius: 50%;
-  border: 4px solid var(--white);
+  border: clamp(2px, 0.4vmin, 4px) solid var(--white);
   opacity: 0;
   transition: opacity 0.2s ease;
   pointer-events: none;
@@ -430,26 +595,23 @@ body.light-mode .game-dot.filled {
 }
 
 /* =======================================================
-   CONTROLS
+   TEAM TAP ZONE
 ======================================================= */
 
-/* Team Tap Zone */
 .team .ref-zone {
   position: absolute;
-  inset: 0;              /* fills only its team card */
+  inset: 0;
   border: none;
   background: transparent;
   cursor: pointer;
   z-index: 1;
 }
 
-/* Keep name clickable above tap zone */
 .team-name {
   z-index: 10;
   position: relative;
 }
 
-/* Visual feedback */
 .team-a .ref-zone:active {
   background: rgba(255, 255, 0, 0.15);
 }
@@ -458,38 +620,40 @@ body.light-mode .game-dot.filled {
   background: rgba(0, 255, 255, 0.15);
 }
 
-/* ================= FLOATING BUTTONS ================= */
-
-.floating-controls {
-  position: fixed;
-  bottom: 20px;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  gap: 40px;
-  pointer-events: auto;
-  z-index: 20;
-}
+/* =======================================================
+   FLOATING BUTTONS — SHARED (all circular)
+======================================================= */
 
 .floating-btn {
-  padding: 10px 20px;
-  min-width: 80px;
-  border-radius: 20px;
-  border-style: solid;
-  border-width: 2px;
-  border-color: #ccc;
+  /* Perfect circle */
+  --btn-size: clamp(40px, 7vmin, 58px);
+  width: var(--btn-size);
+  height: var(--btn-size);
+  border-radius: 50%;
+  padding: 0;
+  flex-shrink: 0;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border: 2px solid #ccc;
   background: transparent;
   color: #ccc;
   font-weight: 600;
-  font-size: 20px;
+  font-size: clamp(1rem, 2.5vmin, 1.4rem);
+
   backdrop-filter: blur(6px);
   opacity: 0.6;
   position: relative;
   overflow: hidden;
-  transition: transform var(--hold-duration, 0.5s) linear;
+  transition: transform var(--hold-duration, 0.5s) linear,
+    opacity 0.2s ease,
+    background 0.2s ease;
   user-select: none;
   -webkit-user-select: none;
   touch-action: manipulation;
+  cursor: pointer;
 }
 
 .floating-btn:hover {
@@ -515,7 +679,7 @@ body.light-mode .floating-btn:hover {
   transform: scaleX(0);
   transform-origin: left;
   animation: holdFill 0.5s linear forwards;
-	background: rgb(255, 255, 255); 
+  background: rgb(255, 255, 255);
 }
 
 body.light-mode .floating-btn.holding::after {
@@ -523,12 +687,19 @@ body.light-mode .floating-btn.holding::after {
 }
 
 @keyframes holdFill {
-  from { transform: scaleX(0); }
-  to { transform: scaleX(1); }
+  from {
+    transform: scaleX(0);
+  }
+
+  to {
+    transform: scaleX(1);
+  }
 }
 
 #resetBtn {
-    transition: transform var(--hold-duration, 1s) linear;
+  transition: transform var(--hold-duration, 1s) linear,
+    opacity 0.2s ease,
+    background 0.2s ease;
 }
 
 #resetBtn.holding::after {
@@ -536,11 +707,32 @@ body.light-mode .floating-btn.holding::after {
   background: rgba(255, 0, 0, 0.25);
 }
 
-#backBtn {
-  position: fixed;
-  top: 20px;
-  left: 30px;
-  padding: 10px 18px;
+/* =======================================================
+   FLOATING CONTROLS CONTAINER
+   Portrait  → horizontal row at the bottom of .scoreboard-body
+   Landscape → vertical column on the right of .scoreboard-body
+   Both are in normal document flow — zero overlap guaranteed.
+======================================================= */
+
+/* --- Portrait (default) --- */
+.floating-controls {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(8px, 2.5vw, 22px);
+  padding: clamp(8px, 1.5vh, 16px) clamp(10px, 2vw, 20px);
+}
+
+/* --- Landscape --- */
+@media (orientation: landscape) {
+  .floating-controls {
+    flex-direction: column;
+    justify-content: center;
+    gap: clamp(6px, 2vh, 18px);
+    padding: clamp(8px, 1.5vw, 16px) clamp(8px, 1.5vw, 14px);
+  }
 }
 
 /* =======================================================
@@ -561,14 +753,29 @@ body.light-mode .floating-btn.holding::after {
 }
 
 @keyframes team-pop {
-  0% { transform: scale(1); }
-  35% { transform: scale(1.035); }
-  100% { transform: scale(1); }
+  0% {
+    transform: scale(1);
+  }
+
+  35% {
+    transform: scale(1.035);
+  }
+
+  100% {
+    transform: scale(1);
+  }
 }
 
 @keyframes burst {
-  0% { transform: scale(0); opacity: 1; }
-  100% { transform: scale(1); opacity: 0; }
+  0% {
+    transform: scale(0);
+    opacity: 1;
+  }
+
+  100% {
+    transform: scale(1);
+    opacity: 0;
+  }
 }
 
 /* =======================================================
@@ -579,11 +786,9 @@ body.light-mode .floating-btn.holding::after {
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.75);
-
   display: flex;
   align-items: center;
   justify-content: center;
-
   z-index: 9999;
 }
 
@@ -600,7 +805,7 @@ body.light-mode .reset-modal {
   padding: 24px;
   border-radius: 14px;
   text-align: center;
-  min-width: 400px;
+  width: clamp(280px, 90vw, 420px);
   color: white;
 }
 
@@ -613,10 +818,12 @@ body.light-mode .reset-box {
   margin-top: 16px;
   display: flex;
   gap: 12px;
+  flex-wrap: wrap;
 }
 
 .reset-actions button {
   flex: 1;
+  min-width: 80px;
   padding: 10px;
   border-radius: 8px;
   border: none;
@@ -636,80 +843,48 @@ body.light-mode .reset-actions button:hover {
   opacity: 0.8;
 }
 
-/* ================= UNDO ANIMATION ================= */
+/* =======================================================
+   UNDO ANIMATION
+======================================================= */
 
 .points.undo-flash {
   animation: undo-flash 0.4s ease;
 }
 
 @keyframes undo-flash {
-  0% { opacity: 1; }
-  25% { opacity: 0.25; }
-  50% { opacity: 0.75; }
-  75% { opacity: 0.5; }
-  100% { opacity: 1; }  
+  0% {
+    opacity: 1;
+  }
+
+  25% {
+    opacity: 0.25;
+  }
+
+  50% {
+    opacity: 0.75;
+  }
+
+  75% {
+    opacity: 0.5;
+  }
+
+  100% {
+    opacity: 1;
+  }
 }
 
-/* ================= SWAP BUTTON ================= */
-
-.swap-container {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 5;
-}
-
-/* Swap Button */
-.swap-btn {
-  padding: 14px 18px;
-  border-radius: 50%;
-  border: 2px solid rgba(0, 0, 0, 0.0);
-  background: rgba(255, 255, 255, 0.15);
-  color: rgba(255, 255, 255, 0.25);
-  font-size: 22px;
-  cursor: pointer;
-  transition: transform 0.2s ease, background 0.2s ease;
-  opacity: 1;
-  user-select: none;
-  -webkit-user-select: none;
-  touch-action: manipulation;
-}
-
-body.light-mode .swap-btn {
-  background: rgba(0, 0, 0, 0.05);
-  color: rgba(0, 0, 0, 0.1);
-}
-
-.swap-btn:hover {
-  background: rgba(255, 255, 255, 0.3);
-  color: white;
-}
-
-body.light-mode .swap-btn:hover {
-  background: rgba(0, 0, 0, 0.3);
-  color: black;
-}
-
-.swap-btn:active {
-  transform: rotate(180deg) scale(0.9);
-}
-
-.team-a { order: 1; }
-.team-b { order: 3; }
-.swap-container { order: 2; }
-
-.scoreboard.swapped .team-a { order: 3; }
-.scoreboard.swapped .team-b { order: 1; }
-
-/* ================= CREATE PAGE ================= */
+/* =======================================================
+   CREATE / PLAY / SPECTATE PAGES
+======================================================= */
 
 .create-page {
-  height: 100vh;
+  height: 100svh;
   display: flex;
   justify-content: center;
   align-items: center;
   background: #000;
   color: white;
+  overflow: auto;
 }
 
 body.light-mode .create-page {
@@ -719,15 +894,17 @@ body.light-mode .create-page {
 
 .create-card {
   position: relative;
-  width: 400px;
+  width: clamp(280px, 90vw, 420px);
   padding: 25px 35px 20px 35px;
-  background: rgba(255,255,255,0.05);
+  background: rgba(255, 255, 255, 0.05);
   border: 2px solid white;
   border-radius: 20px;
   display: flex;
   flex-direction: column;
   gap: 15px;
   transition: all 0.3s ease;
+  max-height: 95svh;
+  overflow-y: auto;
 }
 
 body.light-mode .create-card {
@@ -830,10 +1007,13 @@ body.light-mode .primary-btn {
   background: rgba(255, 255, 255, 0.1);
 }
 
-/* ================= COURT LIST ================= */
+/* =======================================================
+   COURT LIST
+======================================================= */
 
 .court-list {
-  max-height: 300px;
+  /* Scale with viewport height so it's usable on short landscape screens */
+  max-height: clamp(80px, 28vh, 300px);
   overflow-y: auto;
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 8px;
@@ -843,13 +1023,35 @@ body.light-mode .primary-btn {
   scrollbar-width: thin;
 }
 
+/*
+ * In short landscape (mobile landscape), give the list enough room.
+ * The create-card is scrollable, so reducing padding lets the list breathe.
+ */
+@media (orientation: landscape) and (max-height: 520px) {
+  .create-card {
+    padding: 14px 20px 12px 20px;
+    gap: 8px;
+  }
+
+  .court-list {
+    max-height: clamp(90px, 32vh, 220px);
+  }
+
+  .form-group {
+    gap: 3px;
+  }
+
+  .form-group input {
+    padding: 8px;
+  }
+}
+
 body.light-mode .court-list {
   border: 1px solid rgba(0, 0, 0, 0.2);
   background: rgba(255, 255, 255, 0.8);
   scrollbar-color: #333 rgba(255, 255, 255, 0.8);
 }
 
-/* Scrollbar styling for Chrome, Safari, Edge */
 .court-list::-webkit-scrollbar {
   width: 10px;
 }
@@ -959,18 +1161,22 @@ body.light-mode .court-item-info {
   color: rgba(0, 0, 0, 0.6);
 }
 
-/* ================= SPECTATOR BADGES ================= */
+/* =======================================================
+   SPECTATOR BADGE
+   Still fixed-positioned, sits at top-right.
+   The header row prevents scorecards from reaching that area.
+======================================================= */
 
 .spectator-badge {
   position: fixed;
-  top: 20px;
-  padding: 10px 18px;
+  top: clamp(6px, 1.2vmin, 12px);
+  padding: clamp(5px, 1vmin, 9px) clamp(8px, 1.5vmin, 16px);
   border-radius: 14px;
   border: 2px solid var(--spectating);
   color: var(--spectating);
   font-weight: 700;
   letter-spacing: 1px;
-  font-size: 14px;
+  font-size: clamp(11px, 1.8vmin, 14px);
   z-index: 10000;
   pointer-events: none;
   background-color: #0000;
@@ -995,18 +1201,20 @@ body.light-mode .court-item-info {
 }
 
 .spectator-badge.left {
-  left: 30px;
+  left: clamp(12px, 2vw, 30px);
 }
 
 .spectator-badge.right {
-  right: 30px;
+  right: clamp(12px, 2vw, 30px);
 }
 
-/* ================= NFC UI ================= */
+/* =======================================================
+   NFC COOLDOWN BANNER
+======================================================= */
 
 .nfc-cooldown {
   position: fixed;
-  bottom: 100px;
+  bottom: clamp(70px, 14vh, 120px);
   left: 50%;
   transform: translateX(-50%);
   padding: 10px 18px;
@@ -1014,7 +1222,7 @@ body.light-mode .court-item-info {
   background: rgba(255, 0, 0, 0.85);
   color: white;
   font-weight: bold;
-  font-size: 18px;
+  font-size: clamp(14px, 2.5vmin, 18px);
   z-index: 9999;
 }
 
@@ -1022,7 +1230,9 @@ body.light-mode .court-item-info {
   display: none;
 }
 
-/* ================= ALERT MODAL ================= */
+/* =======================================================
+   ALERT MODAL
+======================================================= */
 
 .alert-modal {
   position: fixed;
@@ -1048,7 +1258,7 @@ body.light-mode .alert-modal {
   border-radius: 14px;
   text-align: center;
   border: 2px solid #ff6b6b;
-  max-width: 400px;
+  width: clamp(260px, 85vw, 400px);
 }
 
 body.light-mode .alert-box {
@@ -1059,7 +1269,7 @@ body.light-mode .alert-box {
 .alert-box h2 {
   color: #ff6b6b;
   margin: 0 0 12px 0;
-  font-size: 24px;
+  font-size: clamp(1.1rem, 3.5vmin, 1.5rem);
 }
 
 body.light-mode .alert-box h2 {
@@ -1069,7 +1279,7 @@ body.light-mode .alert-box h2 {
 .alert-box p {
   color: #fff;
   margin: 0 0 20px 0;
-  font-size: 16px;
+  font-size: clamp(0.85rem, 2.5vmin, 1rem);
 }
 
 body.light-mode .alert-box p {
@@ -1084,7 +1294,7 @@ body.light-mode .alert-box p {
   color: #000;
   font-weight: bold;
   cursor: pointer;
-  font-size: 16px;
+  font-size: clamp(0.85rem, 2.5vmin, 1rem);
 }
 
 body.light-mode .alert-btn {
@@ -1102,19 +1312,21 @@ body.light-mode .alert-btn {
   word-wrap: break-word;
 }
 
-/* ================= THEME TOGGLE BUTTON ================= */
+/* =======================================================
+   THEME TOGGLE BUTTON (Menu page / global)
+======================================================= */
 
 .theme-toggle-btn {
   position: fixed;
-  top: 20px;
-  right: 30px;
-  width: 50px;
-  height: 50px;
+  top: clamp(10px, 2vh, 20px);
+  right: clamp(12px, 2vw, 30px);
+  width: clamp(38px, 6vmin, 50px);
+  height: clamp(38px, 6vmin, 50px);
   border-radius: 50%;
   border: 2px solid #aaa;
   background: transparent;
   color: var(--text-color);
-  font-size: 24px;
+  font-size: clamp(16px, 3.5vmin, 24px);
   font-weight: bold;
   cursor: pointer;
   z-index: 1000;
@@ -1149,8 +1361,7 @@ body.light-mode .theme-toggle-btn:hover {
   opacity: 1;
 }
 
-/* Hide theme toggle during court view */
-#scoreboardPage ~ #themeToggleBtn,
+/* Hide global theme toggle when on the scoreboard */
 body.scoreboard-active #themeToggleBtn {
   display: none;
 }
