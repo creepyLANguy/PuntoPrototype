@@ -760,6 +760,36 @@ body.light-mode .floating-btn.holding::after {
   }
 }
 
+.btn-separator {
+  background: rgba(255, 255, 255, 0.15);
+  flex-shrink: 0;
+}
+
+body.light-mode .btn-separator {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+/* Portrait spacing/sizing */
+.btn-separator {
+  width: 1px;
+  height: clamp(20px, 4vh, 30px);
+  margin: 0 clamp(2px, 0.5vw, 5px);
+}
+
+.btn-separator.type-sep {
+  background: rgba(255, 255, 255, 0.3);
+  /* Slightly more visible for group transition */
+}
+
+/* Landscape spacing/sizing */
+@media (orientation: landscape) {
+  .btn-separator {
+    width: clamp(20px, 4vw, 30px);
+    height: 1px;
+    margin: clamp(2px, 0.5vh, 5px) 0;
+  }
+}
+
 /* =======================================================
    SCORE ANIMATION
 ======================================================= */

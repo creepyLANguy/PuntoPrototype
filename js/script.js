@@ -159,7 +159,10 @@ document.addEventListener("DOMContentLoaded", () =>
     muteBtn: $("muteBtn"),
 
     themeToggleBtn: $("themeToggleBtn"),
-    themeToggleScorebboardBtn: $("themeToggleScorebboardBtn")
+    themeToggleScorebboardBtn: $("themeToggleScorebboardBtn"),
+
+    sep1: $("sep1"),
+    sep2: $("sep2")
   };
 
   //CREATE COURT ELEMENTS
@@ -730,6 +733,7 @@ document.addEventListener("DOMContentLoaded", () =>
     elements.undoBtn.style.display = "none";
     elements.resetBtn.style.display = "none";
     elements.muteBtn.style.display = "none";
+    if (elements.sep2) elements.sep2.style.display = "none";
 
     showSpectatorBadges();
   }
@@ -747,6 +751,7 @@ document.addEventListener("DOMContentLoaded", () =>
     elements.undoBtn.style.display = "";
     elements.resetBtn.style.display = "";
     elements.muteBtn.style.display = "";
+    if (elements.sep2) elements.sep2.style.display = "";
 
     removeSpectatorBadges();
   }

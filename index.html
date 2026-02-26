@@ -230,14 +230,21 @@
       </main><!-- APP -->
 
       <!-- FLOATING CONTROLS -->
-      <!-- Swap, Undo, Reset, Mute, Theme — live here, never in the scoreboard -->
       <div class="floating-controls">
+        <!-- LONG PRESS GROUP -->
         <button id="backBtn" class="floating-btn" title="Back">←</button>
-        <button id="swapBtn" class="floating-btn" title="Swap sides">⇄</button>
-        <button id="undoBtn" class="floating-btn" title="Undo">↩</button>
+
+        <div id="sep1" class="btn-separator type-sep"></div>
+
         <button id="resetBtn" class="floating-btn" title="Reset">↺</button>
+        <button id="undoBtn" class="floating-btn" title="Undo">↩</button>
+
+        <div id="sep2" class="btn-separator type-sep"></div>
+
+        <!-- CLICK GROUP -->
         <button id="muteBtn" class="floating-btn" title="Mute">🔊</button>
         <button id="themeToggleScorebboardBtn" class="floating-btn" title="Toggle theme">🌙</button>
+        <button id="swapBtn" class="floating-btn" title="Swap sides">⇄</button>
       </div><!-- FLOATING CONTROLS -->
 
     </div><!-- SCOREBOARD BODY -->
