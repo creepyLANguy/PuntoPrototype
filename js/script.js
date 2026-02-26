@@ -1,15 +1,15 @@
 import
-  {
-    db,
-    doc,
-    setDoc,
-    getDoc,
-    updateDoc,
-    onSnapshot,
-    serverTimestamp,
-    collection,
-    getDocs
-  } from "./firebase.js";
+{
+  db,
+  doc,
+  setDoc,
+  getDoc,
+  updateDoc,
+  onSnapshot,
+  serverTimestamp,
+  collection,
+  getDocs
+} from "./firebase.js";
 
 document.addEventListener("DOMContentLoaded", () =>
 {
@@ -539,17 +539,9 @@ document.addEventListener("DOMContentLoaded", () =>
 
   function showCourtTitle(name)
   {
-    let existing = document.getElementById("courtTitle");
-
-    if (!existing)
-    {
-      existing = document.createElement("div");
-      existing.id = "courtTitle";
-      // Positioning handled entirely by CSS #courtTitle rule
-      document.body.appendChild(existing);
-    }
-
-    existing.textContent = name;
+    // #courtTitle span is always present in HTML inside .scoreboard-header
+    const existing = document.getElementById("courtTitle");
+    if (existing) existing.textContent = name;
   }
 
   elements.createCourtBtn.addEventListener("click", async () =>
@@ -751,9 +743,10 @@ document.addEventListener("DOMContentLoaded", () =>
     $("addPointA").style.pointerEvents = "auto";
     $("addPointB").style.pointerEvents = "auto";
 
-    elements.undoBtn.style.display = "inline-block";
-    elements.resetBtn.style.display = "inline-block";
-    elements.muteBtn.style.display = "inline-block";
+    // Use "" to let CSS (flex) decide display, not "inline-block"
+    elements.undoBtn.style.display = "";
+    elements.resetBtn.style.display = "";
+    elements.muteBtn.style.display = "";
 
     removeSpectatorBadges();
   }
@@ -762,9 +755,12 @@ document.addEventListener("DOMContentLoaded", () =>
   {
 
     const positions = [
-      //"left", 
+      //"left",
       "right"
     ];
+
+    // Inject into the header-right-slot so the badge sits in the header row
+    const slot = document.querySelector(".header-right-slot") || document.body;
 
     positions.forEach(pos =>
     {
@@ -780,7 +776,7 @@ document.addEventListener("DOMContentLoaded", () =>
 
         badge.classList.add(pos);
 
-        document.body.appendChild(badge);
+        slot.appendChild(badge);
       }
 
     });
