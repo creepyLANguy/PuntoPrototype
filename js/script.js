@@ -704,7 +704,7 @@ document.addEventListener("DOMContentLoaded", () =>
       elements.themeToggleBtn.style.display = "none";
     }
 
-    elements.scoreboardPage.style.display = "block";
+    elements.scoreboardPage.style.display = "flex";
     document.body.classList.add("scoreboard-active");
 
     showCourtTitle(courtName);
