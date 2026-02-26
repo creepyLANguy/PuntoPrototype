@@ -11,7 +11,9 @@ jobs:
       
       - name: Create firebase-config.js
         run: |
-          echo "${{ secrets.FIREBASE_CONFIG_JS_CONTENT }}" > js/firebase-config.js
+          cat <<EOF > js/firebase-config.js
+          ${{ secrets.FIREBASE_CONFIG_JS_CONTENT }}
+          EOF
           
       - uses: FirebaseExtended/action-hosting-deploy@v0
         with:
