@@ -234,7 +234,7 @@ body.light-mode .app-subtitle {
   gap: clamp(6px, 1.2vmin, 12px);
   padding: clamp(6px, 1.2vmin, 12px) clamp(8px, 1.5vmin, 14px);
   z-index: 30;
-  background: rgba(0, 0, 0, 0.2);
+  background: rgba(0, 0, 0, 0.0);
 }
 
 @media (orientation: landscape) {
@@ -247,9 +247,9 @@ body.light-mode .app-subtitle {
   }
 }
 
+/* Court name in the sidebar/header. Grouped with badge. */
 #courtTitle {
-  flex: 1;
-  text-align: center;
+  text-align: left;
   font-size: clamp(1.1rem, 5vmin, 2.5rem);
   font-weight: 800;
   white-space: nowrap;
@@ -264,6 +264,7 @@ body.light-mode .app-subtitle {
     writing-mode: vertical-rl;
     transform: rotate(180deg);
     margin-top: 10px;
+    text-align: center;
   }
 }
 
@@ -596,8 +597,8 @@ body.light-mode .game-dot.filled {
 }
 
 .points {
-  /* Score is always the biggest; scales with card width via container query */
-  font-size: clamp(3rem, 35cqi, 22rem);
+  /* Score is always the biggest; fills blank space for distance reading */
+  font-size: clamp(3rem, 55cqi, 35rem);
   font-weight: 800;
   text-align: center;
   color: inherit;
@@ -1193,33 +1194,67 @@ body.light-mode .court-item-info {
 
 .spectator-badge {
   position: relative;
-  padding: clamp(5px, 1vmin, 9px) clamp(8px, 1.5vmin, 16px);
-  border-radius: 14px;
-  border: 2px solid var(--spectating);
+  display: flex;
+  align-items: center;
+  gap: 8px;
   color: var(--spectating);
   font-weight: 700;
-  letter-spacing: 1px;
-  font-size: clamp(11px, 1.8vmin, 14px);
+  letter-spacing: 2px;
+  font-size: clamp(12px, 2vmin, 16px);
   z-index: 10000;
   pointer-events: none;
-  background-color: #0000;
-  animation: spectatorGlow 5s ease-in-out infinite;
+  white-space: nowrap;
+  padding: 4px 8px;
 }
 
-@keyframes spectatorGlow {
+/* Hide the raw emoji from JS - we replace it with a CSS pulse dot */
+.spectator-badge {
+  color: transparent;
+  text-shadow: 0 0 0 var(--spectating);
+  /* Keeps 'LIVE' visible but emoji becomes invisible/shadowless */
+}
+
+.spectator-badge::before {
+  content: "";
+  width: 10px;
+  height: 10px;
+  background-color: var(--spectating);
+  border-radius: 50%;
+  flex-shrink: 0;
+  animation: pulseDot 2s ease-in-out infinite;
+  box-shadow: 0 0 8px var(--spectating);
+}
+
+@keyframes pulseDot {
   0% {
-    opacity: 0.3;
+    transform: scale(1);
+    opacity: 1;
     box-shadow: 0 0 4px var(--spectating);
   }
 
   50% {
-    opacity: 1;
+    transform: scale(1.3);
+    opacity: 0.7;
     box-shadow: 0 0 16px var(--spectating);
   }
 
   100% {
-    opacity: 0.3;
+    transform: scale(1);
+    opacity: 1;
     box-shadow: 0 0 4px var(--spectating);
+  }
+}
+
+@media (orientation: landscape) {
+  .sidebar-left {
+    gap: 25px;
+  }
+
+  .spectator-badge {
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+    flex-direction: column-reverse;
+    /* Put dot at the 'top' (relative to text direction) */
   }
 }
 
