@@ -40,8 +40,8 @@ body {
   margin: 0;
   padding: 0;
   width: 100%;
-  height: 100%;
-  overflow: hidden;
+  /* Do NOT set overflow: hidden globally — it blocks menu page scroll.
+     Each page controls its own overflow. */
 }
 
 body {
@@ -65,8 +65,9 @@ button {
 
 .menu-page {
   width: 100%;
-  height: 100%;
+  /* Allow content to exceed one viewport so landscape mobile can scroll */
   min-height: 100svh;
+  height: auto;
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
@@ -79,7 +80,9 @@ button {
   background-position: 50% 50%;
   animation: backgroundScroll 60s ease-in-out 1s infinite;
   position: relative;
-  overflow: hidden;
+  /* Allow vertical scroll; hide horizontal overflow only */
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 body.light-mode .menu-page {
@@ -294,13 +297,16 @@ body.light-mode .app-subtitle {
   flex: 1;
   min-height: 0;
   display: flex;
-  flex-direction: row;
+  /* Portrait default: stack cards vertically to fill screen */
+  flex-direction: column;
   justify-content: center;
   align-items: stretch;
   gap: clamp(4px, 1vmin, 10px);
-  padding: clamp(4px, 1vmin, 10px);
+  /* Enough padding so card borders are never clipped */
+  padding: clamp(6px, 1.5vmin, 14px);
   position: relative;
-  overflow: hidden;
+  /* visible so borders are not cut; .app clips any animation overflow */
+  overflow: visible;
 }
 
 /* =======================================================
@@ -308,10 +314,11 @@ body.light-mode .app-subtitle {
 ======================================================= */
 
 .team {
+  /* Portrait default: fill full width, share height equally — NOT square */
   flex: 1 1 0;
   min-width: 0;
-  aspect-ratio: 1 / 1;
-  max-height: 100%;
+  min-height: 0;
+  /* No aspect-ratio in portrait — maximise screen use */
   padding: clamp(4px, 1vmin, 12px);
   border-radius: clamp(12px, 2vmin, 22px);
   position: relative;
@@ -352,6 +359,24 @@ body.light-mode .app-subtitle {
 }
 
 /* =======================================================
+   LANDSCAPE: restore side-by-side cards with square aspect ratio
+======================================================= */
+
+@media (orientation: landscape) {
+  .scoreboard {
+    flex-direction: row;
+  }
+
+  .team {
+    /* In landscape, try to be square: width drives height via aspect-ratio */
+    flex: 1 1 0;
+    aspect-ratio: 1 / 1;
+    max-height: 100%;
+    min-width: 0;
+  }
+}
+
+/* =======================================================
    TEAM NAME
 ======================================================= */
 
@@ -374,7 +399,8 @@ body.light-mode .app-subtitle {
 .team-name .name-text {
   display: inline-block;
   white-space: nowrap;
-  font-size: clamp(0.9rem, 3vmin, 2.2rem);
+  /* Use container query unit so text scales with the card size */
+  font-size: clamp(0.9rem, 8cqi, 4rem);
   font-weight: 700;
 
   transform-origin: center center;
@@ -388,7 +414,7 @@ body.light-mode .app-subtitle {
 .team-name-input {
   width: 100%;
   text-align: center;
-  font-size: clamp(0.9rem, 3vmin, 2.2rem);
+  font-size: clamp(0.9rem, 8cqi, 4rem);
   font-weight: 700;
   background: transparent;
   border: 2px solid currentColor;
@@ -422,7 +448,8 @@ body.spectating-mode .team-name:hover {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
-  font-size: clamp(0.65rem, 2vmin, 1.5rem);
+  /* Scale with card width via container query */
+  font-size: clamp(0.6rem, 4cqi, 2.5rem);
 }
 
 .row span:first-child {
@@ -432,7 +459,7 @@ body.spectating-mode .team-name:hover {
 
 .row span:last-child {
   font-weight: 700;
-  font-size: clamp(0.8rem, 2.8vmin, 2rem);
+  font-size: clamp(0.75rem, 6cqi, 3.5rem);
   color: inherit;
 }
 
@@ -447,7 +474,8 @@ body.spectating-mode .team-name:hover {
   display: flex;
   flex-direction: row-reverse;
   align-items: center;
-  gap: clamp(4px, 1vmin, 14px);
+  /* Dots gap scales with card width */
+  gap: clamp(4px, 1.5cqi, 20px);
   color: var(--white);
   flex-wrap: wrap;
   justify-content: flex-start;
@@ -465,8 +493,9 @@ body.light-mode #gamesB {
 
 .set-dot,
 .game-dot {
-  width: clamp(10px, 1.8vmin, 26px);
-  height: clamp(10px, 1.8vmin, 26px);
+  /* Dots scale with card width */
+  width: clamp(10px, 3.5cqi, 44px);
+  height: clamp(10px, 3.5cqi, 44px);
   border-radius: 50%;
   background: #e0e0e0;
   flex-shrink: 0;
@@ -474,7 +503,7 @@ body.light-mode #gamesB {
 
 .game-dot {
   border-style: solid;
-  border-width: clamp(2px, 0.4vmin, 5px);
+  border-width: clamp(2px, 0.6cqi, 5px);
   background-color: rgba(0, 0, 0, 0);
   border-color: #e0e0e044;
   opacity: 1;
@@ -486,7 +515,7 @@ body.light-mode .game-dot {
 }
 
 .set-dot {
-  border: clamp(2px, 0.4vmin, 3px) solid #e0e0e0;
+  border: clamp(1px, 0.4cqi, 3px) solid #e0e0e0;
   background: transparent;
   opacity: 0;
 }
@@ -536,7 +565,8 @@ body.light-mode .game-dot.filled {
 }
 
 .points {
-  font-size: clamp(3.5rem, 14vmin, 14rem);
+  /* Score is always the biggest; scales with card width via container query */
+  font-size: clamp(3rem, 35cqi, 22rem);
   font-weight: 800;
   text-align: center;
   color: inherit;
@@ -975,7 +1005,8 @@ body.light-mode .primary-btn {
 ======================================================= */
 
 .court-list {
-  max-height: 250px;
+  /* Scale with viewport height so it's usable on short landscape screens */
+  max-height: clamp(80px, 28vh, 300px);
   overflow-y: auto;
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 8px;
@@ -983,6 +1014,13 @@ body.light-mode .primary-btn {
   margin-bottom: 8px;
   scrollbar-color: #ffffff rgba(0, 0, 0, 0.3);
   scrollbar-width: thin;
+}
+
+/* Tighter on very short landscape screens */
+@media (orientation: landscape) and (max-height: 500px) {
+  .court-list {
+    max-height: clamp(60px, 18vh, 160px);
+  }
 }
 
 body.light-mode .court-list {
