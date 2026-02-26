@@ -1200,12 +1200,19 @@ body.light-mode .court-item-info {
   color: var(--spectating);
   font-weight: 700;
   letter-spacing: 2px;
-  font-size: clamp(12px, 2vmin, 16px);
+  font-size: clamp(12px, 3vmin, 22px);
   z-index: 10000;
   pointer-events: none;
   white-space: nowrap;
   padding: 4px 8px;
   animation: spectatorGlow 6s ease-in-out infinite;
+
+  /* Smooth rendering properties */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  backface-visibility: hidden;
+  transform: translateZ(0);
+  /* Hardware acceleration */
 }
 
 @keyframes spectatorGlow {
