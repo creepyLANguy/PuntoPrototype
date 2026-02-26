@@ -243,7 +243,7 @@ body.light-mode .app-subtitle {
     width: clamp(50px, 8vmin, 85px);
     height: 100%;
     padding: clamp(10px, 2vmin, 20px) 0;
-    justify-content: flex-start;
+    justify-content: space-between;
   }
 }
 
@@ -1205,6 +1205,30 @@ body.light-mode .court-item-info {
   pointer-events: none;
   white-space: nowrap;
   padding: 4px 8px;
+  animation: spectatorGlow 6s ease-in-out infinite;
+}
+
+@keyframes spectatorGlow {
+  0% {
+    opacity: 0.2;
+    filter: drop-shadow(0 0 2px var(--spectating));
+  }
+
+  25% {
+    opacity: 1;
+    filter: drop-shadow(0 0 6px var(--spectating));
+  }
+
+  75% {
+    opacity: 1;
+    filter: drop-shadow(0 0 8px var(--spectating));
+  }
+
+
+  100% {
+    opacity: 0.2;
+    filter: drop-shadow(0 0 2px var(--spectating));
+  }
 }
 
 /* Hide the raw emoji from JS - we replace it with a CSS pulse dot */
