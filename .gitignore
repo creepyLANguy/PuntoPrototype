@@ -1,0 +1,14 @@
+# Firebase config
+js/firebase-config.js
+
+# VS Code
+.vscode/
+
+# Build artifacts
+dist/
+.firebase/
+firebase-debug.log
+firebug-*.log
+firestore-debug.log
+pubsub-debug.log
+ui-debug.log
