@@ -367,6 +367,7 @@ body.light-mode .app-subtitle {
   .scoreboard {
     flex-direction: row;
     align-items: center;
+    justify-content: space-evenly;
   }
 
   .team {
@@ -1168,8 +1169,7 @@ body.light-mode .court-item-info {
 ======================================================= */
 
 .spectator-badge {
-  position: fixed;
-  top: clamp(6px, 1.2vmin, 12px);
+  position: relative;
   padding: clamp(5px, 1vmin, 9px) clamp(8px, 1.5vmin, 16px);
   border-radius: 14px;
   border: 2px solid var(--spectating);
@@ -1200,12 +1200,13 @@ body.light-mode .court-item-info {
   }
 }
 
+/* .left and .right subclasses for spectator-badge are preserved for JS compatibility but empty as positioning is now handled by flex container */
 .spectator-badge.left {
-  left: clamp(12px, 2vw, 30px);
+  display: block;
 }
 
 .spectator-badge.right {
-  right: clamp(12px, 2vw, 30px);
+  display: block;
 }
 
 /* =======================================================
