@@ -10,10 +10,10 @@ jobs:
       - uses: actions/checkout@v4
       
       - name: Create firebase-config.js
+        env:
+          FIREBASE_CONFIG: ${{ secrets.FIREBASE_CONFIG_JS_CONTENT }}
         run: |
-          cat <<EOF > js/firebase-config.js
-          ${{ secrets.FIREBASE_CONFIG_JS_CONTENT }}
-          EOF
+          echo "$FIREBASE_CONFIG" > js/firebase-config.js
           
       - uses: FirebaseExtended/action-hosting-deploy@v0
         with:
