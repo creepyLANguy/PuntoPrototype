@@ -221,26 +221,36 @@ body.light-mode .app-subtitle {
 }
 
 /* =======================================================
-   HEADER ROW
-   back button | court name | right slot (spectator badge)
-   This row is always visible and never overlapped by cards.
+   SIDEBAR / HEADER (sidebar-left)
+   Portrait: column (top header)
+   Landscape: row (left sidebar)
 ======================================================= */
 
-.scoreboard-header {
+.sidebar-left {
   flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: clamp(6px, 1.5vmin, 12px);
+  gap: clamp(6px, 1.2vmin, 12px);
   padding: clamp(6px, 1.2vmin, 12px) clamp(8px, 1.5vmin, 14px);
   z-index: 30;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+@media (orientation: landscape) {
+  .sidebar-left {
+    flex-direction: column;
+    width: clamp(50px, 8vmin, 85px);
+    height: 100%;
+    padding: clamp(10px, 2vmin, 20px) 0;
+    justify-content: flex-start;
+  }
 }
 
 #courtTitle {
   flex: 1;
   text-align: center;
-  /* Larger and bolder for legibility */
-  font-size: clamp(1.1rem, 5vmin, 2.8rem);
+  font-size: clamp(1.1rem, 5vmin, 2.5rem);
   font-weight: 800;
   white-space: nowrap;
   overflow: hidden;
@@ -249,14 +259,29 @@ body.light-mode .app-subtitle {
   pointer-events: none;
 }
 
-/* Right side spacer matches back button size so title stays centred */
+@media (orientation: landscape) {
+  #courtTitle {
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+    margin-top: 10px;
+  }
+}
+
 .header-right-slot {
-  /* JS will inject the spectator badge here as a child */
   display: flex;
   align-items: center;
-  justify-content: flex-end;
-  min-width: clamp(40px, 7vmin, 60px);
-  /* same as btn size */
+  justify-content: center;
+}
+
+.header-right-slot:empty {
+  display: none;
+}
+
+@media (orientation: landscape) {
+  .header-right-slot {
+    min-width: 100%;
+    min-height: clamp(40px, 6vmin, 60px);
+  }
 }
 
 /* =======================================================
@@ -372,12 +397,10 @@ body.light-mode .app-subtitle {
 
   .team {
     /*
-     * Don't use flex:1 + aspect-ratio:1/1 together — they conflict.
-     * Instead: fixed height % of container, then aspect-ratio sets width.
-     * max-width:48% prevents overflow on very wide screens.
+     * Maximize vertical presence in landscape
      */
     flex: 0 0 auto;
-    height: 95%;
+    height: 98%;
     aspect-ratio: 1 / 1;
     max-width: 48%;
     min-width: 0;
@@ -730,7 +753,7 @@ body.light-mode .floating-btn.holding::after {
 @media (orientation: landscape) {
   .floating-controls {
     flex-direction: column;
-    justify-content: center;
+    justify-content: flex-start;
     gap: clamp(6px, 2vh, 18px);
     padding: clamp(8px, 1.5vw, 16px) clamp(8px, 1.5vw, 14px);
   }

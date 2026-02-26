@@ -156,19 +156,17 @@
       </div>
     </div>
 
-    <!-- ================= HEADER ROW ================= -->
-    <!-- Back button | Court name | Space for spectator badge -->
-    <header class="scoreboard-header">
-      <button id="backBtn" class="floating-btn">←</button>
-      <span id="courtTitle"></span>
-      <!-- Spectator badge is injected by JS on the right side of this row -->
-      <div class="header-right-slot"></div>
-    </header>
-
     <!-- ================= SCOREBOARD BODY ================= -->
-    <!-- Portrait: column (scoreboard on top, controls row at bottom)  -->
-    <!-- Landscape: row (scoreboard fills left, controls column on right) -->
+    <!-- Portrait: column (sidebar/header on top, scoreboard middle, controls bottom) -->
+    <!-- Landscape: row (sidebar left, scoreboard center, controls right) -->
     <div class="scoreboard-body">
+
+      <!-- SIDEBAR (Landscape) / HEADER (Portrait) -->
+      <aside class="sidebar-left">
+        <!-- Spectator badge is injected by JS here -->
+        <div class="header-right-slot"></div>
+        <span id="courtTitle"></span>
+      </aside>
 
       <!-- ===== SCOREBOARD ===== -->
       <main class="app">
@@ -234,6 +232,7 @@
       <!-- FLOATING CONTROLS -->
       <!-- Swap, Undo, Reset, Mute, Theme — live here, never in the scoreboard -->
       <div class="floating-controls">
+        <button id="backBtn" class="floating-btn" title="Back">←</button>
         <button id="swapBtn" class="floating-btn" title="Swap sides">⇄</button>
         <button id="undoBtn" class="floating-btn" title="Undo">↩</button>
         <button id="resetBtn" class="floating-btn" title="Reset">↺</button>
