@@ -1,6 +1,3 @@
-firebase.json
-.firebaserc
-
 # Firebase config
 js/firebase-config.js
 
