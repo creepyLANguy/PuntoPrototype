@@ -11,12 +11,31 @@ import
   getDocs
 } from "./firebase.js";
 
+import { getFunctions, httpsCallable } from "firebase/functions";
+const functions = getFunctions();
+
+export async function resetCourt(courtId, deepReset = false, newPassword = null)
+{
+  const resetFn = httpsCallable(functions, "resetCourt");
+
+  try
+  {
+    const result = await resetFn({ courtId, deepReset, newPassword });
+    alert("Court reset successful");
+  } catch (err)
+  {
+    alert("Reset failed: " + err.message);
+  }
+}
+
 document.addEventListener("DOMContentLoaded", () =>
 {
 
   // =====================================================
   // CONFIG
   // =====================================================
+
+  const DEVICE_ID = "genericTestDevice_0000";
 
   const POINTS = [0, 15, 30, 40];
   const COOLDOWN_MS = 3000;
@@ -62,7 +81,6 @@ document.addEventListener("DOMContentLoaded", () =>
   });
 
   let score = defaultScore();
-  let history = [];
 
   let muted = false;
 
@@ -601,7 +619,6 @@ document.addEventListener("DOMContentLoaded", () =>
       password: courtPass,
       createdAt: serverTimestamp(),
       score: defaultScore(),
-      history: [],
       teamNames: { A: "Team A", B: "Team B" }
     });
 
@@ -694,7 +711,6 @@ document.addEventListener("DOMContentLoaded", () =>
     const data = snap.data();
 
     score = data.score;
-    history = data.history || [];
 
     elements.menuPage.style.display = "none";
     elements.createPage.style.display = "none";
@@ -856,65 +872,9 @@ document.addEventListener("DOMContentLoaded", () =>
   // SCORE LOGIC
   // =====================================================
 
-  async function persistCourt()
-  {
-    if (!currentCourt) return;
-
-    const courtRef = doc(db, "courts", currentCourt);
-
-    let teamNames = { A: getTeamName(TEAM_A), B: getTeamName(TEAM_B) };
-
-    await updateDoc(courtRef, {
-      score: score,
-      history: history,
-      teamNames: teamNames
-    });
-  }
-
   function opponent(team)
   {
     return team === TEAM_A ? TEAM_B : TEAM_A;
-  }
-
-  const cloneScore = () => JSON.parse(JSON.stringify(score));
-
-  function addPoint(team)
-  {
-    playSound(SOUND_IDS.POINT);
-
-    history.push(cloneScore());
-
-    score.lastPointTeam = team;
-
-    const opp = opponent(team);
-
-    // Deuce logic
-    if (score.A.points >= 3 && score.B.points >= 3)
-    {
-
-      if (score[opp].points === 4)
-      {
-        score[opp].points = 3;
-        return afterPoint(team);
-      }
-
-      if (score[team].points === 4)
-      {
-        return winGame(team);
-      }
-
-      score[team].points = 4;
-      return afterPoint(team);
-    }
-
-    score[team].points++;
-
-    if (score[team].points >= 4)
-    {
-      return winGame(team);
-    }
-
-    afterPoint(team);
   }
 
   function afterPoint(team)
@@ -922,56 +882,6 @@ document.addEventListener("DOMContentLoaded", () =>
     animate(team);
     updateUI();
     persistCourt();
-  }
-
-  function undoLastPoint()
-  {
-    if (!score.lastPointTeam || history.length === 0) return;
-
-    let animationTarget = score.lastPointTeam;
-
-    score = history.pop();
-
-    persistCourt();
-
-    animateUndo(animationTarget);
-
-    playSound(SOUND_IDS.UNDO);
-
-    const pointsEl = elements.points[animationTarget];
-    pointsEl.classList.remove("undo-flash");
-    void pointsEl.offsetWidth;
-    pointsEl.classList.add("undo-flash");
-  }
-
-  function winGame(team)
-  {
-    const opp = opponent(team);
-
-    score[team].games++;
-    score.lastGameTeam = team;
-
-    score.A.points = 0;
-    score.B.points = 0;
-
-    if (
-      score[team].games >= 6 &&
-      score[team].games - score[opp].games >= 2
-    )
-    {
-      winSet(team);
-    }
-
-    afterPoint(team);
-  }
-
-  function winSet(team)
-  {
-    score[team].sets++;
-    score.lastSetTeam = team;
-
-    score.A.games = 0;
-    score.B.games = 0;
   }
 
   // =====================================================
@@ -1196,26 +1106,14 @@ document.addEventListener("DOMContentLoaded", () =>
 
   elements.shallowResetBtn.addEventListener("click", performShallowReset);
 
-  function performShallowReset()
+  async function performShallowReset()
   {
-    score = defaultScore();
-    history = [];
-
-    [TEAM_A, TEAM_B].forEach(team =>
-    {
-      const labelEl = document.querySelector(`.team-name[data-team="${team}"] .name-text`);
-      labelEl.textContent = `Team ${team}`;
-      fitTextToContainer(labelEl);
-    });
-
-    updateUI();
+    resetCourtWebApp(currentCourt, false);
 
     elements.resetCourtPassword.value = "";
     elements.resetModal.classList.add("hidden");
 
     playSound(SOUND_IDS.START);
-
-    persistCourt();
   }
 
   elements.confirmResetBtn.addEventListener("click", async () =>
@@ -1244,29 +1142,12 @@ document.addEventListener("DOMContentLoaded", () =>
     }
 
     currentCourtPassword = newPassword;
-
-    await updateDoc(courtRef, {
-      password: newPassword
-    });
-
-    score = defaultScore();
-    history = [];
-
-    [TEAM_A, TEAM_B].forEach(team =>
-    {
-      const labelEl = document.querySelector(`.team-name[data-team="${team}"] .name-text`);
-      labelEl.textContent = `Team ${team}`;
-      fitTextToContainer(labelEl);
-    });
-
-    updateUI();
+    resetCourtWebApp(currentCourt, true, newPassword);
 
     elements.resetCourtPassword.value = "";
     elements.resetModal.classList.add("hidden");
 
     playSound(SOUND_IDS.START);
-
-    persistCourt();
   });
 
   addHoldButtonLogic(elements.resetBtn, openResetModal, RESET_HOLD_MS);
@@ -1478,7 +1359,6 @@ document.addEventListener("DOMContentLoaded", () =>
       currentCourtPassword = courtData.password;
 
       score = courtData.score;
-      history = courtData.history || [];
 
       document.querySelector(
         `.team-name[data-team="A"] .name-text`
