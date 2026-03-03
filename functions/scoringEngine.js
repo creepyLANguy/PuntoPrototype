@@ -40,7 +40,8 @@ function applyEvent(score, event)
 }
 
 /**
- * Tennis-style point logic (no tiebreak yet)
+ * Classic Advantage-style point logic (Deuce)
+ * No tiebreaks implemented as requested.
  */
 function awardPoint(score, scoringTeam, otherTeam)
 {
@@ -49,62 +50,44 @@ function awardPoint(score, scoringTeam, otherTeam)
 
   score.lastPointTeam = scoringTeam;
 
+  // Increment points
   team.points++;
 
-  // Deuce logic
-  if (team.points >= 3 && opponent.points >= 3)
+  // Check for game win
+  // Normal win: 4 points and at least 2 points lead
+  // Deuce win: After 3-3, must win by 2 points (Ad -> Win)
+  if (team.points >= 4 && (team.points - opponent.points) >= 2)
   {
+    team.games++;
+    score.lastGameTeam = scoringTeam;
 
-    if (opponent.points === 4)
-    {
-      opponent.points = 3;
-      return;
-    }
-
-    if (team.points === 4)
-    {
-      this.winGame(team);
-      return;
-    }
-
-    team.points = 4;
-    return;
-  }
-
-  team.points++;
-
-  if (team.points >= 4)
-  {
-    this.winGame(team);
-    return;
-  }
-
-  this.winGame = function ()
-  {
-    const opp = opponent(team);
-
-    score[team].games++;
-    score.lastGameTeam = team;
-
+    // Reset points for the next game
     score.A.points = 0;
     score.B.points = 0;
 
-    if (
-      score[team].games >= 6 &&
-      score[team].games - score[opp].games >= 2
-    )
+    // Set logic: Win set by reaching 6 games with a 2-game lead
+    if (team.games >= 6 && (team.games - opponent.games) >= 2)
     {
-      this.winSet(team);
+      team.sets++;
+      score.lastSetTeam = scoringTeam;
+
+      // Reset games for the next set
+      score.A.games = 0;
+      score.B.games = 0;
     }
   }
-
-  this.winSet = function ()
+  // Advantage logic: If opponent had advantage (4 points while we had 3), 
+  // and we scored, they go back to 3 (Deuce)
+  else if (opponent.points >= 4 && opponent.points > team.points)
   {
-    score[team].sets++;
-    score.lastSetTeam = team;
-
-    score.A.games = 0;
-    score.B.games = 0;
+    // No change needed here, the point increase for 'team' naturally brings them closer.
+    // However, to keep point values readable (0,15,30,40,Ad), 
+    // we reset both to 3 (40) if it's 4-4 now.
+    if (team.points === opponent.points)
+    {
+      team.points = 3;
+      opponent.points = 3;
+    }
   }
 }
 
