@@ -44,7 +44,6 @@ function applyEvent(score, event)
  */
 function awardPoint(score, scoringTeam, otherTeam)
 {
-
   const team = score[scoringTeam];
   const opponent = score[otherTeam];
 
@@ -52,24 +51,60 @@ function awardPoint(score, scoringTeam, otherTeam)
 
   team.points++;
 
-  // Basic tennis progression: 0-1-2-3-4 (simplified)
-  if (team.points >= 4 && team.points - opponent.points >= 2)
+  // Deuce logic
+  if (team.points >= 3 && opponent.points >= 3)
   {
-    team.games++;
-    team.points = 0;
-    opponent.points = 0;
 
-    score.lastGameTeam = scoringTeam;
-
-    // Simple set logic (6 games win by 2)
-    if (team.games >= 6 && team.games - opponent.games >= 2)
+    if (opponent.points === 4)
     {
-      team.sets++;
-      team.games = 0;
-      opponent.games = 0;
-
-      score.lastSetTeam = scoringTeam;
+      opponent.points = 3;
+      return;
     }
+
+    if (team.points === 4)
+    {
+      this.winGame(team);
+      return;
+    }
+
+    team.points = 4;
+    return;
+  }
+
+  team.points++;
+
+  if (team.points >= 4)
+  {
+    this.winGame(team);
+    return;
+  }
+
+  this.winGame = function ()
+  {
+    const opp = opponent(team);
+
+    score[team].games++;
+    score.lastGameTeam = team;
+
+    score.A.points = 0;
+    score.B.points = 0;
+
+    if (
+      score[team].games >= 6 &&
+      score[team].games - score[opp].games >= 2
+    )
+    {
+      this.winSet(team);
+    }
+  }
+
+  this.winSet = function ()
+  {
+    score[team].sets++;
+    score.lastSetTeam = team;
+
+    score.A.games = 0;
+    score.B.games = 0;
   }
 }
 
