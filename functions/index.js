@@ -11,7 +11,10 @@ const db = admin.firestore();
  * 🔥 Recompute score whenever events change
  */
 exports.onEventWrite = onDocumentWritten(
-    "courts/{courtId}/events/{eventId}",
+    {
+        document: "courts/{courtId}/events/{eventId}",
+        region: "africa-south1"
+    },
     async (event) =>
     {
 
@@ -36,56 +39,60 @@ exports.onEventWrite = onDocumentWritten(
 /**
  * 🔄 Reset court (shallow or deep)
  */
-exports.resetCourt = onCall(async (request) =>
-{
-
-    const { courtId, deepReset, newPassword } = request.data;
-
-    if (!courtId)
+exports.resetCourt = onCall(
     {
-        throw new Error("Missing courtId");
-    }
-
-    const eventsSnap = await db
-        .collection(`courts/${courtId}/events`)
-        .get();
-
-    const archiveId = new Date().toISOString();
-
-    // 1️⃣ Archive events
-    const archiveBatch = db.batch();
-
-    eventsSnap.forEach(doc =>
+        region: "africa-south1"
+    },
+    async (request) =>
     {
-        const archiveRef = db.doc(
-            `courts/${courtId}/archive/${archiveId}/events/${doc.id}`
-        );
 
-        archiveBatch.set(archiveRef, {
-            ...doc.data(),
-            resetType: deepReset ? "deep" : "shallow",
-            resetAt: new Date().toISOString(),
-            resetBy: request.auth?.uid || "system"
+        const { courtId, deepReset, newPassword } = request.data;
+
+        if (!courtId)
+        {
+            throw new Error("Missing courtId");
+        }
+
+        const eventsSnap = await db
+            .collection(`courts/${courtId}/events`)
+            .get();
+
+        const archiveId = new Date().toISOString();
+
+        // 1️⃣ Archive events
+        const archiveBatch = db.batch();
+
+        eventsSnap.forEach(doc =>
+        {
+            const archiveRef = db.doc(
+                `courts/${courtId}/archive/${archiveId}/events/${doc.id}`
+            );
+
+            archiveBatch.set(archiveRef, {
+                ...doc.data(),
+                resetType: deepReset ? "deep" : "shallow",
+                resetAt: new Date().toISOString(),
+                resetBy: request.auth?.uid || "system"
+            });
         });
+
+        await archiveBatch.commit();
+
+        // 2️⃣ Delete live events
+        const deleteBatch = db.batch();
+        eventsSnap.forEach(doc => deleteBatch.delete(doc.ref));
+        await deleteBatch.commit();
+
+        // 3️⃣ Reset score
+        await db.doc(`courts/${courtId}/score`).set(defaultScore());
+
+        // 4️⃣ Deep reset password
+        if (deepReset && newPassword)
+        {
+            await db.doc(`courts/${courtId}`).update({
+                password: newPassword
+            });
+        }
+
+        return { success: true, archivedId: archiveId };
     });
-
-    await archiveBatch.commit();
-
-    // 2️⃣ Delete live events
-    const deleteBatch = db.batch();
-    eventsSnap.forEach(doc => deleteBatch.delete(doc.ref));
-    await deleteBatch.commit();
-
-    // 3️⃣ Reset score
-    await db.doc(`courts/${courtId}/score`).set(defaultScore());
-
-    // 4️⃣ Deep reset password
-    if (deepReset && newPassword)
-    {
-        await db.doc(`courts/${courtId}`).update({
-            password: newPassword
-        });
-    }
-
-    return { success: true, archivedId: archiveId };
-});
