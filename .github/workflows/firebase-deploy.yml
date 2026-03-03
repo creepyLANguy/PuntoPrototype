@@ -1,0 +1,40 @@
+name: Firebase Functions Deploy
+
+on:
+  push:
+    branches:
+      - '**'  # triggers on push to any branch
+      # or specify only main: ['main']
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Checkout the repo
+      - uses: actions/checkout@v3
+
+      # Step 2: Set up Node.js (match your Firebase Functions version)
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      # Step 3: Install Firebase CLI
+      - name: Install Firebase CLI
+        run: npm install -g firebase-tools
+
+      # Step 4: Authenticate Firebase
+      - name: Authenticate to Firebase
+        env:
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+        run: firebase login:ci --token "$FIREBASE_TOKEN"
+
+      # Step 5: Install dependencies
+      - name: Install dependencies
+        run: npm ci
+        working-directory: ./functions  # if your functions are in ./functions
+
+      # Step 6: Deploy functions
+      - name: Deploy Functions
+        run: firebase deploy --only functions
