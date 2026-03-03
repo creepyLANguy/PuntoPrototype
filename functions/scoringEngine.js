@@ -35,31 +35,32 @@ function awardPoint(score, scoringTeam, otherTeam)
 
   score.lastPointTeam = scoringTeam;
 
+  // Normal point increment
   team.points++;
 
-  if (team.points >= 4 && (team.points - opponent.points) >= 2)
+  // Deuce / Advantage logic
+  if (team.points >= 4 || opponent.points >= 4)
   {
-    team.games++;
-    score.lastGameTeam = scoringTeam;
-    score.A.points = 0;
-    score.B.points = 0;
+    const diff = team.points - opponent.points;
 
-    if (team.games >= 6 && (team.games - opponent.games) >= 2)
+    if (diff >= 2)
     {
-      team.sets++;
-      score.lastSetTeam = scoringTeam;
+      // Win the game
+      team.games++;
+      score.lastGameTeam = scoringTeam;
+      team.points = 0;
+      opponent.points = 0;
 
-      score.A.games = 0;
-      score.B.games = 0;
+      // Check for set win
+      if (team.games >= 6 && (team.games - opponent.games) >= 2)
+      {
+        team.sets++;
+        score.lastSetTeam = scoringTeam;
+        team.games = 0;
+        opponent.games = 0;
+      }
     }
-  }
-  else if (opponent.points >= 4 && opponent.points > team.points)
-  {
-    if (team.points === opponent.points)
-    {
-      team.points = 3;
-      opponent.points = 3;
-    }
+    // No need to explicitly handle deuce/advantage; diff < 2 keeps it at 40/Adv
   }
 }
 
