@@ -18,7 +18,7 @@ import
   httpsCallable
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-functions.js";
 
-const functions = getFunctions(app);
+const functions = getFunctions(app, "africa-south1");
 
 export async function resetCourt(courtId, deepReset = false, newPassword = null)
 {
@@ -723,7 +723,9 @@ document.addEventListener("DOMContentLoaded", () =>
 
     const data = snap.data();
 
-    score = data.score;
+    // AL.
+    // score = data.score; // REMOVED: Score is in a sub-collection, not the court doc.
+    // Score will lead from onSnapshot in listenToCourt below.
 
     elements.menuPage.style.display = "none";
     elements.createPage.style.display = "none";
