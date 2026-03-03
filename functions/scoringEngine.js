@@ -35,25 +35,9 @@ function awardPoint(score, scoringTeam, otherTeam)
 
   score.lastPointTeam = scoringTeam;
 
-  // If both are below 3 (less than 40), just increment normally
-  if (team.points < 3)
+  // Internal helper to win a game
+  function winGame()
   {
-    team.points++;
-    return;
-  }
-
-  // If both at 3 (deuce)
-  if (team.points === 3 && opponent.points === 3)
-  {
-    // Scoring team gets Advantage
-    team.points = 4; // 4 = Advantage
-    return;
-  }
-
-  // If scoring team has Advantage, they win the game
-  if (team.points === 4)
-  {
-    // Win game
     team.games++;
     score.lastGameTeam = scoringTeam;
     team.points = 0;
@@ -67,20 +51,41 @@ function awardPoint(score, scoringTeam, otherTeam)
       team.games = 0;
       opponent.games = 0;
     }
+  }
+
+  // Case 1: Normal points (less than 40)
+  if (team.points < 3)
+  {
+    team.points++;
     return;
   }
 
-  // If opponent has Advantage (4) and scoring team wins point, back to deuce
+  // Case 2: Both at 40 → deuce scenario
+  if (team.points === 3 && opponent.points === 3)
+  {
+    team.points = 4; // scoring team gets Advantage
+    return;
+  }
+
+  // Case 3: Scoring team has Advantage → wins game
+  if (team.points === 4)
+  {
+    winGame();
+    return;
+  }
+
+  // Case 4: Opponent has Advantage → back to deuce
   if (opponent.points === 4)
   {
     opponent.points = 3; // back to 40
     return;
   }
 
-  // If scoring team <3 and opponent <3, normal increment
-  if (team.points < 3)
+  // Case 5: Scoring team at 40, opponent less than 40 → wins game
+  if (team.points === 3 && opponent.points < 3)
   {
-    team.points++;
+    winGame();
+    return;
   }
 }
 
