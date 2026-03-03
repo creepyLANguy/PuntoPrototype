@@ -1,5 +1,3 @@
-// functions/scoringEngine.js
-
 const defaultScore = () => ({
   A: { points: 0, games: 0, sets: 0 },
   B: { points: 0, games: 0, sets: 0 },

@@ -1,18 +1,50 @@
-const { computeScoreFromEvents, defaultScore } = require("./scoringEngine");
-
-const functions = require("firebase-functions");
 const admin = require("firebase-admin");
-const { computeScoreFromEvents, defaultScore } = require("./scoringEngine");
+const { onDocumentWritten } = require("firebase-functions/v2/firestore");
+const { onCall } = require("firebase-functions/v2/https");
+
+const { defaultScore, computeScoreFromEvents } = require("./scoringEngine");
 
 admin.initializeApp();
 const db = admin.firestore();
 
-exports.resetCourt = functions.https.onCall(async (data, context) =>
+/**
+ * 🔥 Recompute score whenever events change
+ */
+exports.onEventWrite = onDocumentWritten(
+    "courts/{courtId}/events/{eventId}",
+    async (event) =>
+    {
+
+        const { courtId } = event.params;
+
+        const eventsSnap = await db
+            .collection(`courts/${courtId}/events`)
+            .orderBy("createdAt")
+            .get();
+
+        const events = eventsSnap.docs.map(doc => doc.data());
+
+        const newScore = computeScoreFromEvents(events);
+
+        await db.doc(`courts/${courtId}/score`).set({
+            ...newScore,
+            updatedAt: new Date().toISOString()
+        });
+    }
+);
+
+/**
+ * 🔄 Reset court (shallow or deep)
+ */
+exports.resetCourt = onCall(async (request) =>
 {
-    const { courtId, deepReset, newPassword } = data;
+
+    const { courtId, deepReset, newPassword } = request.data;
 
     if (!courtId)
-        throw new functions.https.HttpsError("invalid-argument", "Missing courtId");
+    {
+        throw new Error("Missing courtId");
+    }
 
     const eventsSnap = await db
         .collection(`courts/${courtId}/events`)
@@ -22,6 +54,7 @@ exports.resetCourt = functions.https.onCall(async (data, context) =>
 
     // 1️⃣ Archive events
     const archiveBatch = db.batch();
+
     eventsSnap.forEach(doc =>
     {
         const archiveRef = db.doc(
@@ -32,7 +65,7 @@ exports.resetCourt = functions.https.onCall(async (data, context) =>
             ...doc.data(),
             resetType: deepReset ? "deep" : "shallow",
             resetAt: new Date().toISOString(),
-            resetBy: context.auth?.uid || "system"
+            resetBy: request.auth?.uid || "system"
         });
     });
 
@@ -43,10 +76,10 @@ exports.resetCourt = functions.https.onCall(async (data, context) =>
     eventsSnap.forEach(doc => deleteBatch.delete(doc.ref));
     await deleteBatch.commit();
 
-    // 3️⃣ Reset score explicitly
+    // 3️⃣ Reset score
     await db.doc(`courts/${courtId}/score`).set(defaultScore());
 
-    // 4️⃣ Update password if deep reset
+    // 4️⃣ Deep reset password
     if (deepReset && newPassword)
     {
         await db.doc(`courts/${courtId}`).update({
