@@ -1,16 +1,22 @@
+// functions/index.js
+
 const admin = require("firebase-admin");
-const { onDocumentWritten } = require("firebase-functions/v2/firestore");
+const { onDocumentCreated } = require("firebase-functions/v2/firestore");
 const { onCall } = require("firebase-functions/v2/https");
 
-const { defaultScore, computeScoreFromEvents } = require("./scoringEngine");
+const {
+    defaultScore,
+    applyEvent
+} = require("./scoringEngine");
 
 admin.initializeApp();
 const db = admin.firestore();
 
 /**
- * 🔥 Recompute score whenever events change
+ * 🔥 Incremental, transaction-safe scoring
+ * Triggered whenever a new event is created
  */
-exports.onEventWrite = onDocumentWritten(
+exports.onEventCreate = onDocumentCreated(
     {
         document: "courts/{courtId}/events/{eventId}",
         region: "africa-south1"
@@ -19,19 +25,34 @@ exports.onEventWrite = onDocumentWritten(
     {
 
         const { courtId } = event.params;
+        const newEvent = event.data?.data();
 
-        const eventsSnap = await db
-            .collection(`courts/${courtId}/events`)
-            .orderBy("createdAt")
-            .get();
+        if (!newEvent) return;
 
-        const events = eventsSnap.docs.map(doc => doc.data());
+        // Prevent duplicate processing
+        if (newEvent.processed) return;
 
-        const newScore = computeScoreFromEvents(events);
+        const scoreRef = db.doc(`courts/${courtId}/score/current`);
+        const eventRef = event.data.ref;
 
-        await db.doc(`courts/${courtId}/score/current`).set({
-            ...newScore,
-            updatedAt: admin.firestore.FieldValue.serverTimestamp()
+        await db.runTransaction(async (tx) =>
+        {
+
+            const scoreSnap = await tx.get(scoreRef);
+
+            let currentScore = scoreSnap.exists
+                ? scoreSnap.data()
+                : defaultScore();
+
+            const updatedScore = applyEvent(currentScore, newEvent);
+
+            tx.set(scoreRef, {
+                ...updatedScore,
+                updatedAt: admin.firestore.FieldValue.serverTimestamp()
+            });
+
+            // Mark event as processed (idempotency)
+            tx.update(eventRef, { processed: true });
         });
     }
 );
@@ -53,9 +74,8 @@ exports.resetCourt = onCall(
             throw new Error("Missing courtId");
         }
 
-        const eventsSnap = await db
-            .collection(`courts/${courtId}/events`)
-            .get();
+        const eventsRef = db.collection(`courts/${courtId}/events`);
+        const eventsSnap = await eventsRef.get();
 
         const archiveId = new Date().toISOString();
 
@@ -84,7 +104,8 @@ exports.resetCourt = onCall(
         await deleteBatch.commit();
 
         // 3️⃣ Reset score
-        await db.doc(`courts/${courtId}/score/current`).set(defaultScore());
+        await db.doc(`courts/${courtId}/score/current`)
+            .set(defaultScore());
 
         // 4️⃣ Deep reset password
         if (deepReset && newPassword)
@@ -95,4 +116,5 @@ exports.resetCourt = onCall(
         }
 
         return { success: true, archivedId: archiveId };
-    });
+    }
+);

@@ -1,18 +1,24 @@
+import { app, db } from "./firebase.js";
+
 import
 {
-  db,
   doc,
   setDoc,
   getDoc,
-  updateDoc,
+  getDocs,
   onSnapshot,
-  serverTimestamp,
   collection,
-  getDocs
-} from "./firebase.js";
+  addDoc,
+  serverTimestamp
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-import { getFunctions, httpsCallable } from "firebase/functions";
-const functions = getFunctions();
+import
+{
+  getFunctions,
+  httpsCallable
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-functions.js";
+
+const functions = getFunctions(app);
 
 export async function resetCourt(courtId, deepReset = false, newPassword = null)
 {
@@ -34,8 +40,6 @@ document.addEventListener("DOMContentLoaded", () =>
   // =====================================================
   // CONFIG
   // =====================================================
-
-  const DEVICE_ID = "genericTestDevice_0000";
 
   const POINTS = [0, 15, 30, 40];
   const COOLDOWN_MS = 3000;
@@ -64,7 +68,9 @@ document.addEventListener("DOMContentLoaded", () =>
   const actionMap = {
     [TEAM_A]: () => addPoint(TEAM_A),
     [TEAM_B]: () => addPoint(TEAM_B),
-    [REMOTE_UNDO]: () => undoLastPoint(),
+    //AL.
+    //TODO - implement undo
+    // [REMOTE_UNDO]: () => undoLastPoint(),
     [REMOTE_RESET]: () => performShallowReset()
   };
 
@@ -1220,7 +1226,9 @@ document.addEventListener("DOMContentLoaded", () =>
     button.addEventListener("pointercancel", cancelPress);
   }
 
-  addHoldButtonLogic(elements.undoBtn, undoLastPoint, UNDO_HOLD_MS);
+  //AL.
+  //TODO - implement undo
+  // addHoldButtonLogic(elements.undoBtn, undoLastPoint, UNDO_HOLD_MS);
 
   addHoldButtonLogic(elements.backBtn, () =>
   {
@@ -1346,17 +1354,28 @@ document.addEventListener("DOMContentLoaded", () =>
 
   function listenToCourt(courtName)
   {
-
     if (unsubscribe) unsubscribe();
 
     const scoreRef = doc(db, "courts", courtName, "score", "current");
+    const courtRef = doc(db, "courts", courtName);
 
-    unsubscribe = onSnapshot(scoreRef, (snap) =>
+    // 🔥 Listen to score changes
+    const unsubscribeScore = onSnapshot(scoreRef, (snap) =>
+    {
+      if (!snap.exists()) return;
+
+      score = snap.data();
+      updateUI();
+    });
+
+    // 🔥 Listen to court metadata changes (password + teamNames)
+    const unsubscribeCourt = onSnapshot(courtRef, (snap) =>
     {
       if (!snap.exists()) return;
 
       const data = snap.data();
 
+      // 🚨 Password change detection
       if (
         currentCourtPassword !== data.password &&
         !isAdmin &&
@@ -1369,18 +1388,22 @@ document.addEventListener("DOMContentLoaded", () =>
 
       currentCourtPassword = data.password;
 
-      score = snap.data();
-
+      // Update team names
       document.querySelector(
         `.team-name[data-team="A"] .name-text`
-      ).textContent = data.teamNames.A;
+      ).textContent = data.teamNames?.A || "Team A";
 
       document.querySelector(
         `.team-name[data-team="B"] .name-text`
-      ).textContent = data.teamNames.B;
-
-      updateUI();
+      ).textContent = data.teamNames?.B || "Team B";
     });
+
+    // Combine both unsubscribes
+    unsubscribe = () =>
+    {
+      unsubscribeScore();
+      unsubscribeCourt();
+    };
   }
 
   function startNfcCooldownUI()

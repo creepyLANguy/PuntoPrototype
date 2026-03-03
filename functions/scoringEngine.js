@@ -1,93 +1,79 @@
-const admin = require("firebase-admin");
+// functions/scoringEngine.js
 
-const { onDocumentWritten } = require("firebase-functions/v2/firestore");
-const { onCall } = require("firebase-functions/v2/https");
+/**
+ * Default starting score
+ */
+function defaultScore()
+{
+  return {
+    A: { points: 0, games: 0, sets: 0 },
+    B: { points: 0, games: 0, sets: 0 },
+    lastPointTeam: null,
+    lastGameTeam: null,
+    lastSetTeam: null
+  };
+}
 
-const { defaultScore, computeScoreFromEvents } = require("./scoringEngine");
-
-admin.initializeApp();
-const db = admin.firestore();
-
-exports.onEventWrite = onDocumentCreated(
-  "courts/{courtId}/events/{eventId}",
-  async (event) =>
-  {
-    const newEvent = event.data.data();
-    if (newEvent.processed) return;
-
-    const { courtId } = event.params;
-    const scoreRef = db.doc(`courts/${courtId}/score/current`);
-
-    await db.runTransaction(async (tx) =>
-    {
-      const scoreSnap = await tx.get(scoreRef);
-
-      let currentScore = scoreSnap.exists
-        ? scoreSnap.data()
-        : defaultScore();
-
-      const updatedScore = applyEvent(currentScore, newEvent);
-
-      tx.set(scoreRef, {
-        ...updatedScore,
-        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-      });
-
-      tx.update(event.ref, { processed: true });
-    });
-  }
-);
-
-exports.resetCourt = onCall(async (request) =>
+/**
+ * Apply a single event to a score object
+ * Must remain pure and deterministic
+ */
+function applyEvent(score, event)
 {
 
-  const { courtId, deepReset, newPassword } = request.data;
+  // Clone safely (Node 18+ supports structuredClone)
+  const newScore = structuredClone(score);
 
-  if (!courtId)
+  if (!event.eventType) return newScore;
+
+  if (event.eventType === "POINT_TEAM_A")
   {
-    throw new Error("Missing courtId");
+    awardPoint(newScore, "A", "B");
   }
 
-  const eventsSnap = await db
-    .collection(`courts/${courtId}/events`)
-    .get();
-
-  const archiveId = new Date().toISOString();
-
-  // 1️⃣ Archive events
-  const archiveBatch = db.batch();
-
-  eventsSnap.forEach(doc =>
+  if (event.eventType === "POINT_TEAM_B")
   {
-    const archiveRef = db.doc(
-      `courts/${courtId}/archive/${archiveId}/events/${doc.id}`
-    );
-
-    archiveBatch.set(archiveRef, {
-      ...doc.data(),
-      resetType: deepReset ? "deep" : "shallow",
-      resetAt: new Date().toISOString(),
-      resetBy: request.auth?.uid || "system"
-    });
-  });
-
-  await archiveBatch.commit();
-
-  // 2️⃣ Delete events
-  const deleteBatch = db.batch();
-  eventsSnap.forEach(doc => deleteBatch.delete(doc.ref));
-  await deleteBatch.commit();
-
-  // 3️⃣ Reset score
-  await db.doc(`courts/${courtId}/score`).set(defaultScore());
-
-  // 4️⃣ Deep reset password
-  if (deepReset && newPassword)
-  {
-    await db.doc(`courts/${courtId}`).update({
-      password: newPassword
-    });
+    awardPoint(newScore, "B", "A");
   }
 
-  return { success: true, archivedId: archiveId };
-});
+  return newScore;
+}
+
+/**
+ * Tennis-style point logic (no tiebreak yet)
+ */
+function awardPoint(score, scoringTeam, otherTeam)
+{
+
+  const team = score[scoringTeam];
+  const opponent = score[otherTeam];
+
+  score.lastPointTeam = scoringTeam;
+
+  team.points++;
+
+  // Basic tennis progression: 0-1-2-3-4 (simplified)
+  if (team.points >= 4 && team.points - opponent.points >= 2)
+  {
+    team.games++;
+    team.points = 0;
+    opponent.points = 0;
+
+    score.lastGameTeam = scoringTeam;
+
+    // Simple set logic (6 games win by 2)
+    if (team.games >= 6 && team.games - opponent.games >= 2)
+    {
+      team.sets++;
+      team.games = 0;
+      opponent.games = 0;
+
+      score.lastSetTeam = scoringTeam;
+    }
+  }
+}
+
+module.exports = {
+  defaultScore,
+  applyEvent
+};
