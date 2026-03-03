@@ -1,9 +1,12 @@
 name: Firebase Functions Dev Deploy
 
+# Trigger on any branch push, but only if files inside functions/ change
 on:
   push:
     branches:
-      - '**'  # triggers on any branch push
+      - '**'
+    paths:
+      - 'functions/**'   # Only trigger workflow when something in /functions changes
 
 jobs:
   deploy:
