@@ -1,12 +1,9 @@
-name: Firebase Functions Deploy (Optimized)
+name: Firebase Functions Dev Deploy
 
-# Trigger on push to any branch, but only if files inside functions/ change
 on:
   push:
     branches:
-      - '**'
-    paths:
-      - 'functions/**'   # Only triggers if files inside functions/ change
+      - '**'  # triggers on any branch push
 
 jobs:
   deploy:
@@ -41,7 +38,7 @@ jobs:
         run: npm ci
         working-directory: ./functions
 
-      # 6️⃣ Deploy Firebase Functions
+      # 6️⃣ Deploy Functions
       - name: Deploy Firebase Functions
         env:
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
