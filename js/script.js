@@ -614,13 +614,20 @@ document.addEventListener("DOMContentLoaded", () =>
     }
 
     courtRef = doc(db, "courts", courtName);
+
+    // Create court metadata
     await setDoc(courtRef, {
       name: courtName,
       password: courtPass,
       createdAt: serverTimestamp(),
-      score: defaultScore(),
       teamNames: { A: "Team A", B: "Team B" }
     });
+
+    // Create initial score document
+    await setDoc(
+      doc(db, "courts", courtName, "score", "current"),
+      defaultScore()
+    );
 
     currentCourtPassword = courtPass;
     isAdmin = true;
@@ -872,16 +879,19 @@ document.addEventListener("DOMContentLoaded", () =>
   // SCORE LOGIC
   // =====================================================
 
-  function opponent(team)
+  async function addPoint(team)
   {
-    return team === TEAM_A ? TEAM_B : TEAM_A;
-  }
+    await addDoc(
+      collection(db, "courts", currentCourt, "events"),
+      {
+        eventType: team === TEAM_A
+          ? "POINT_TEAM_A"
+          : "POINT_TEAM_B",
+        createdAt: serverTimestamp()
+      }
+    );
 
-  function afterPoint(team)
-  {
     animate(team);
-    updateUI();
-    persistCourt();
   }
 
   // =====================================================
@@ -922,7 +932,7 @@ document.addEventListener("DOMContentLoaded", () =>
   function renderSets(team)
   {
     const el = elements.sets[team];
-    const opp = opponent(team);
+    const opp = team === TEAM_A ? TEAM_B : TEAM_A;
 
     const teamSets = score[team].sets;
     const oppSets = score[opp].sets;
@@ -953,7 +963,7 @@ document.addEventListener("DOMContentLoaded", () =>
   function renderGames(team)
   {
     const el = elements.games[team];
-    const opp = opponent(team);
+    const opp = team === TEAM_A ? TEAM_B : TEAM_A;
 
     const teamGames = score[team].games;
     const oppGames = score[opp].games;
@@ -1338,16 +1348,16 @@ document.addEventListener("DOMContentLoaded", () =>
 
     if (unsubscribe) unsubscribe();
 
-    const courtRef = doc(db, "courts", courtName);
+    const scoreRef = doc(db, "courts", courtName, "score", "current");
 
-    unsubscribe = onSnapshot(courtRef, (snap) =>
+    unsubscribe = onSnapshot(scoreRef, (snap) =>
     {
       if (!snap.exists()) return;
 
-      const courtData = snap.data();
+      const data = snap.data();
 
       if (
-        currentCourtPassword !== courtData.password &&
+        currentCourtPassword !== data.password &&
         !isAdmin &&
         !isSpectating
       )
@@ -1356,17 +1366,17 @@ document.addEventListener("DOMContentLoaded", () =>
         enableSpectateMode();
       }
 
-      currentCourtPassword = courtData.password;
+      currentCourtPassword = data.password;
 
-      score = courtData.score;
+      score = snap.data();
 
       document.querySelector(
         `.team-name[data-team="A"] .name-text`
-      ).textContent = courtData.teamNames.A;
+      ).textContent = data.teamNames.A;
 
       document.querySelector(
         `.team-name[data-team="B"] .name-text`
-      ).textContent = courtData.teamNames.B;
+      ).textContent = data.teamNames.B;
 
       updateUI();
     });

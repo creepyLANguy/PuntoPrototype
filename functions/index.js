@@ -29,9 +29,9 @@ exports.onEventWrite = onDocumentWritten(
 
         const newScore = computeScoreFromEvents(events);
 
-        await db.doc(`courts/${courtId}/score`).set({
+        await db.doc(`courts/${courtId}/score/current`).set({
             ...newScore,
-            updatedAt: new Date().toISOString()
+            updatedAt: admin.firestore.FieldValue.serverTimestamp()
         });
     }
 );
@@ -84,7 +84,7 @@ exports.resetCourt = onCall(
         await deleteBatch.commit();
 
         // 3️⃣ Reset score
-        await db.doc(`courts/${courtId}/score`).set(defaultScore());
+        await db.doc(`courts/${courtId}/score/current`).set(defaultScore());
 
         // 4️⃣ Deep reset password
         if (deepReset && newPassword)
