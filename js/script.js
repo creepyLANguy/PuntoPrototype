@@ -281,14 +281,12 @@ document.addEventListener("DOMContentLoaded", () =>
     const isVisible = (el) =>
       window.getComputedStyle(el).display !== "none";
 
-    // 1️⃣ Reset modal (highest priority)
     if (isVisible(elements.resetModal))
     {
       elements.resetModal.classList.add("hidden");
       return;
     }
 
-    // 2️⃣ Create page
     if (isVisible(elements.createPage))
     {
       elements.createPage.style.display = "none";
@@ -296,7 +294,6 @@ document.addEventListener("DOMContentLoaded", () =>
       return;
     }
 
-    // 3️⃣ Play page
     if (isVisible(elements.playPage))
     {
       elements.playPage.style.display = "none";
@@ -304,7 +301,6 @@ document.addEventListener("DOMContentLoaded", () =>
       return;
     }
 
-    // 4️⃣ Spectate page
     if (isVisible(elements.spectatePage))
     {
       elements.spectatePage.style.display = "none";
@@ -312,12 +308,10 @@ document.addEventListener("DOMContentLoaded", () =>
       return;
     }
 
-    // 5️⃣ Scoreboard
     if (isVisible(elements.scoreboardPage))
     {
       disableSpectateMode();
       document.body.classList.remove("scoreboard-active");
-      // Show top-right theme toggle when leaving court view
       if (elements.themeToggleBtn)
       {
         elements.themeToggleBtn.style.display = "";
@@ -510,7 +504,6 @@ document.addEventListener("DOMContentLoaded", () =>
     elements.menuPage.style.display = "flex";
   });
 
-  // Theme toggle listener
   if (elements.themeToggleBtn)
   {
     elements.themeToggleBtn.addEventListener("click", toggleTheme);
@@ -521,7 +514,6 @@ document.addEventListener("DOMContentLoaded", () =>
     elements.themeToggleScorebboardBtn.addEventListener("click", toggleTheme);
   }
 
-  // Court search handlers
   elements.playCourtSearch.addEventListener("input", (e) =>
   {
     const searchTerm = e.target.value;
@@ -566,7 +558,6 @@ document.addEventListener("DOMContentLoaded", () =>
 
   function showCourtTitle(name)
   {
-    // #courtTitle span is always present in HTML inside .scoreboard-header
     const existing = document.getElementById("courtTitle");
     if (existing) existing.textContent = name;
   }
@@ -723,10 +714,6 @@ document.addEventListener("DOMContentLoaded", () =>
 
     const data = snap.data();
 
-    // AL.
-    // score = data.score; // REMOVED: Score is in a sub-collection, not the court doc.
-    // Score will lead from onSnapshot in listenToCourt below.
-
     elements.menuPage.style.display = "none";
     elements.createPage.style.display = "none";
     elements.playPage.style.display = "none";
@@ -789,44 +776,24 @@ document.addEventListener("DOMContentLoaded", () =>
 
   function showSpectatorBadges()
   {
+    const slot = document.querySelector(".header-spectator-badge-slot") || document.body;
 
-    const positions = [
-      //"left",
-      "right"
-    ];
+    let badge = document.getElementById(`spectatorBadge`);
 
-    // Inject into the header-right-slot so the badge sits in the header row
-    const slot = document.querySelector(".header-right-slot") || document.body;
-
-    positions.forEach(pos =>
+    if (!badge)
     {
-
-      let badge = document.getElementById(`spectatorBadge-${pos}`);
-
-      if (!badge)
-      {
-        badge = document.createElement("div");
-        badge.id = `spectatorBadge-${pos}`;
-        badge.className = "spectator-badge";
-        badge.textContent = "🔴 LIVE";
-
-        badge.classList.add(pos);
-
-        slot.appendChild(badge);
-      }
-
-    });
+      badge = document.createElement("div");
+      badge.id = `spectatorBadge`;
+      badge.className = "spectator-badge";
+      badge.textContent = " LIVE";
+      slot.appendChild(badge);
+    }
   }
 
   function removeSpectatorBadges()
   {
-
-    ["left", "right"].forEach(pos =>
-    {
-      const badge = document.getElementById(`spectatorBadge-${pos}`);
-      if (badge) badge.remove();
-    });
-
+    const badge = document.getElementById(`spectatorBadge`);
+    if (badge) badge.remove();
   }
 
   // =====================================================
