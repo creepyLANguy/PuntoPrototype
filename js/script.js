@@ -887,7 +887,8 @@ document.addEventListener("DOMContentLoaded", () =>
         eventType: team === TEAM_A
           ? "POINT_TEAM_A"
           : "POINT_TEAM_B",
-        createdAt: serverTimestamp()
+        createdAt: serverTimestamp(),
+        processed: false
       }
     );
 

@@ -1,90 +1,93 @@
-const defaultScore = () => ({
-  A: { points: 0, games: 0, sets: 0 },
-  B: { points: 0, games: 0, sets: 0 },
-  lastPointTeam: null,
-  lastGameTeam: null,
-  lastSetTeam: null
+const admin = require("firebase-admin");
+
+const { onDocumentWritten } = require("firebase-functions/v2/firestore");
+const { onCall } = require("firebase-functions/v2/https");
+
+const { defaultScore, computeScoreFromEvents } = require("./scoringEngine");
+
+admin.initializeApp();
+const db = admin.firestore();
+
+exports.onEventWrite = onDocumentCreated(
+  "courts/{courtId}/events/{eventId}",
+  async (event) =>
+  {
+    const newEvent = event.data.data();
+    if (newEvent.processed) return;
+
+    const { courtId } = event.params;
+    const scoreRef = db.doc(`courts/${courtId}/score/current`);
+
+    await db.runTransaction(async (tx) =>
+    {
+      const scoreSnap = await tx.get(scoreRef);
+
+      let currentScore = scoreSnap.exists
+        ? scoreSnap.data()
+        : defaultScore();
+
+      const updatedScore = applyEvent(currentScore, newEvent);
+
+      tx.set(scoreRef, {
+        ...updatedScore,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+
+      tx.update(event.ref, { processed: true });
+    });
+  }
+);
+
+exports.resetCourt = onCall(async (request) =>
+{
+
+  const { courtId, deepReset, newPassword } = request.data;
+
+  if (!courtId)
+  {
+    throw new Error("Missing courtId");
+  }
+
+  const eventsSnap = await db
+    .collection(`courts/${courtId}/events`)
+    .get();
+
+  const archiveId = new Date().toISOString();
+
+  // 1️⃣ Archive events
+  const archiveBatch = db.batch();
+
+  eventsSnap.forEach(doc =>
+  {
+    const archiveRef = db.doc(
+      `courts/${courtId}/archive/${archiveId}/events/${doc.id}`
+    );
+
+    archiveBatch.set(archiveRef, {
+      ...doc.data(),
+      resetType: deepReset ? "deep" : "shallow",
+      resetAt: new Date().toISOString(),
+      resetBy: request.auth?.uid || "system"
+    });
+  });
+
+  await archiveBatch.commit();
+
+  // 2️⃣ Delete events
+  const deleteBatch = db.batch();
+  eventsSnap.forEach(doc => deleteBatch.delete(doc.ref));
+  await deleteBatch.commit();
+
+  // 3️⃣ Reset score
+  await db.doc(`courts/${courtId}/score`).set(defaultScore());
+
+  // 4️⃣ Deep reset password
+  if (deepReset && newPassword)
+  {
+    await db.doc(`courts/${courtId}`).update({
+      password: newPassword
+    });
+  }
+
+  return { success: true, archivedId: archiveId };
 });
-
-const opponent = (team) => (team === "A" ? "B" : "A");
-
-function addPoint(score, team)
-{
-  const s = JSON.parse(JSON.stringify(score));
-  s.lastPointTeam = team;
-  const opp = opponent(team);
-
-  if (s.A.points >= 3 && s.B.points >= 3)
-  {
-    if (s[opp].points === 4)
-    {
-      s[opp].points = 3;
-      return s;
-    }
-    if (s[team].points === 4)
-    {
-      return winGame(s, team);
-    }
-    s[team].points = 4;
-    return s;
-  }
-
-  s[team].points++;
-  if (s[team].points >= 4)
-  {
-    return winGame(s, team);
-  }
-
-  return s;
-}
-
-function winGame(score, team)
-{
-  const opp = opponent(team);
-  score[team].games++;
-  score.lastGameTeam = team;
-  score.A.points = 0;
-  score.B.points = 0;
-
-  if (score[team].games >= 6 && score[team].games - score[opp].games >= 2)
-  {
-    return winSet(score, team);
-  }
-
-  return score;
-}
-
-function winSet(score, team)
-{
-  score[team].sets++;
-  score.lastSetTeam = team;
-  score.A.games = 0;
-  score.B.games = 0;
-  return score;
-}
-
-function applyEvent(score, eventType)
-{
-  switch (eventType)
-  {
-    case "POINT_TEAM_A":
-      return addPoint(score, "A");
-    case "POINT_TEAM_B":
-      return addPoint(score, "B");
-    default:
-      return score;
-  }
-}
-
-function computeScoreFromEvents(events)
-{
-  return events.reduce(
-    (score, event) => applyEvent(score, event.eventType),
-    defaultScore()
-  );
-}
-
-module.exports = {
-  defaultScore,
-  computeScoreFromEvents
-};
