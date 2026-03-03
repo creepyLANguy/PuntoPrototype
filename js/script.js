@@ -899,6 +899,7 @@ document.addEventListener("DOMContentLoaded", () =>
     );
 
     animate(team);
+    playSound(SOUND_IDS.POINT);
   }
 
   // =====================================================
