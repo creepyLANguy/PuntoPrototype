@@ -1270,9 +1270,11 @@ body.light-mode .court-item-info {
 
 /* Hide the raw emoji from JS - we replace it with a CSS pulse dot */
 .spectator-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   color: transparent;
   text-shadow: 0 0 0 var(--spectating);
-  /* Keeps 'LIVE' visible but emoji becomes invisible/shadowless */
 }
 
 .spectator-badge::before {
@@ -1293,8 +1295,7 @@ body.light-mode .court-item-info {
   .spectator-badge {
     writing-mode: vertical-rl;
     transform: rotate(180deg);
-    flex-direction: column-reverse;
-    /* Put dot at the 'top' (relative to text direction) */
+    flex-direction: row;
   }
 }
 
