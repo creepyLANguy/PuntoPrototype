@@ -109,28 +109,48 @@ function undoLastPoint(score)
   const team = score[lastTeam];
   const opponent = lastTeam === "A" ? score.B : score.A;
 
-  // Undo advantage
+  // Undo Advantage → back to 40
   if (team.points === 4)
   {
     team.points = 3;
     return;
   }
 
-  // Undo deuce advantage recovery
-  if (opponent.points === 3 && team.points === 3)
+  // Undo opponent advantage → back to 40
+  if (opponent.points === 4)
   {
-    team.points = 3; // reset from advantage to 40
+    opponent.points = 3;
     return;
   }
 
   // Normal point deduction
-  if (team.points > 0) team.points--;
+  if (team.points > 0)
+  {
+    team.points--;
+    return;
+  }
 
-  // TODO: if needed, undo game/set increments
-  // For now, UNDO only affects last point within current game
+  // If points are 0 and a game was just won, undo the game
+  if (team.points === 0 && team.games > 0)
+  {
+    team.games--;
+    // Restore points to 40 for the last game of the team who won
+    team.points = 3;
+
+    // Check if a set was won and needs to be undone
+    if (team.sets > 0 && team.games === 0 && opponent.games === 0)
+    {
+      team.sets--;
+      // Restore games to last completed game count (assume 5–any score)
+      team.games = 5;
+      opponent.games = Math.max(0, opponent.games); // keep opponent games at 0
+    }
+
+    // Update lastGameTeam/lastSetTeam if needed
+    score.lastGameTeam = team.games === 0 ? null : lastTeam;
+    score.lastSetTeam = team.sets === 0 ? null : lastTeam;
+  }
+
+  // Reset lastPointTeam if undo removed the last point
+  score.lastPointTeam = null;
 }
-
-module.exports = {
-  defaultScore,
-  applyEvent
-};
