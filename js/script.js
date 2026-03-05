@@ -892,8 +892,7 @@ document.addEventListener("DOMContentLoaded", () =>
       }
 
       playSound(SOUND_IDS.UNDO);
-      animateUndo(team);
-
+      animateUndo(score.lastPointTeam);
     }
     catch (err)
     {
@@ -931,9 +930,9 @@ document.addEventListener("DOMContentLoaded", () =>
   function animateUndo(team)
   {
     const el = $(`team${team}`);
-    el.classList.remove("undo-animate");
+    el.classList.remove("undo-flash");
     void el.offsetWidth;
-    el.classList.add("undo-animate");
+    el.classList.add("undo-flash");
   }
 
   function renderSets(team)
