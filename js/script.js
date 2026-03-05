@@ -862,8 +862,7 @@ document.addEventListener("DOMContentLoaded", () =>
         eventType: team === TEAM_A
           ? "POINT_TEAM_A"
           : "POINT_TEAM_B",
-        createdAt: serverTimestamp(),
-        processed: false
+        createdAt: serverTimestamp()
       }
     );
 
@@ -881,8 +880,7 @@ document.addEventListener("DOMContentLoaded", () =>
         collection(db, "courts", currentCourt, "events"),
         {
           eventType: "UNDO_LAST_POINT",
-          createdAt: serverTimestamp(),
-          processed: false
+          createdAt: serverTimestamp()
         }
       );
 
@@ -1123,12 +1121,28 @@ document.addEventListener("DOMContentLoaded", () =>
 
   async function performShallowReset()
   {
-    resetCourtWebApp(currentCourt, false);
+    if (!currentCourt) return;
 
-    elements.resetCourtPassword.value = "";
-    elements.resetModal.classList.add("hidden");
+    try
+    {
+      await addDoc(collection(db, "courts", currentCourt, "events"), {
+        eventType: "RESET",
+        createdAt: serverTimestamp()
+      });
 
-    playSound(SOUND_IDS.START);
+      elements.resetCourtPassword.value = "";
+      elements.resetModal.classList.add("hidden");
+
+      playSound(SOUND_IDS.START);
+
+      // Optional: immediate UI reset
+      score = defaultScore();
+      updateUI();
+    } catch (err)
+    {
+      console.error("Reset failed:", err);
+      showAlert("Reset Failed", "Could not reset court.");
+    }
   }
 
   elements.confirmResetBtn.addEventListener("click", async () =>
