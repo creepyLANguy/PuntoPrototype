@@ -929,7 +929,8 @@ document.addEventListener("DOMContentLoaded", () =>
 
   function animateUndo(team)
   {
-    const el = $(`team${team}`);
+    const el = elements.points[team];
+    if (!el) return;
     el.classList.remove("undo-flash");
     void el.offsetWidth;
     el.classList.add("undo-flash");
