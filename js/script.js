@@ -28,7 +28,8 @@ export async function resetCourt(courtId, deepReset = false, newPassword = null)
   {
     const result = await resetFn({ courtId, deepReset, newPassword });
     alert("Court reset successful");
-  } catch (err)
+  }
+  catch (err)
   {
     alert("Reset failed: " + err.message);
   }
@@ -353,7 +354,8 @@ document.addEventListener("DOMContentLoaded", () =>
       });
       allCourts.sort((a, b) => a.name.localeCompare(b.name));
       filteredCourts = [...allCourts];
-    } catch (error)
+    }
+    catch (error)
     {
       console.error("Error loading courts:", error);
       allCourts = [];
@@ -890,8 +892,10 @@ document.addEventListener("DOMContentLoaded", () =>
       }
 
       playSound(SOUND_IDS.UNDO);
+      animateUndo(team);
 
-    } catch (err)
+    }
+    catch (err)
     {
       console.error("Undo failed:", err);
     }
@@ -1054,7 +1058,8 @@ document.addEventListener("DOMContentLoaded", () =>
         showAlert("NFC Disabled", "NFC is disabled on your device.\nEnable it in settings to use tag scanning.");
       };
 
-    } catch (error)
+    }
+    catch (error)
     {
       if (error.name === "NotAllowedError")
       {
@@ -1133,7 +1138,8 @@ document.addEventListener("DOMContentLoaded", () =>
       );
       elements.resetModal.classList.add("hidden");
       playSound(SOUND_IDS.START);
-    } catch (err)
+    }
+    catch (err)
     {
       console.error("Reset failed:", err);
       showAlert("Reset Failed", err.message || "Unknown error");
@@ -1174,12 +1180,16 @@ document.addEventListener("DOMContentLoaded", () =>
           createdAt: serverTimestamp()
         }
       );
-      await updateDoc(doc(db, "courts", currentCourt), {
-        password: newPassword
-      });
+      await setDoc(
+        doc(db, "courts", currentCourt),
+        {
+          password: newPassword
+        }
+      );
       elements.resetModal.classList.add("hidden");
       playSound(SOUND_IDS.START);
-    } catch (err)
+    }
+    catch (err)
     {
       console.error("Reset failed:", err);
       showAlert("Reset Failed", err.message || "Unknown error");
@@ -1250,8 +1260,6 @@ document.addEventListener("DOMContentLoaded", () =>
     button.addEventListener("pointercancel", cancelPress);
   }
 
-  //AL.
-  //TODO - implement undo
   addHoldButtonLogic(elements.undoBtn, undoLastPoint, UNDO_HOLD_MS);
 
   addHoldButtonLogic(elements.backBtn, () =>
@@ -1470,7 +1478,8 @@ async function requestWakeLock()
     {
       console.warn("Wake lock released.");
     });
-  } catch (error)
+  }
+  catch (error)
   {
     console.warn("Wake lock not supported or denied:", error);
   }
@@ -1485,7 +1494,8 @@ async function releaseWakeLock()
       await wakeLock.release();
       wakeLock = null;
       console.log("Wake lock released.");
-    } catch (error)
+    }
+    catch (error)
     {
       console.error("Error releasing wake lock:", error);
     }
