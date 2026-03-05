@@ -10,6 +10,12 @@ const {
 admin.initializeApp();
 const db = admin.firestore();
 
+/**
+ * Event processor
+ *
+ * Each event updates the score exactly once.
+ * Idempotency is guaranteed by tracking lastEventId in the score document.
+ */
 exports.onEventCreate = onDocumentCreated(
     {
         document: "courts/{courtId}/events/{eventId}",
@@ -17,45 +23,57 @@ exports.onEventCreate = onDocumentCreated(
     },
     async (event) =>
     {
-
-        const { courtId } = event.params;
+        const { courtId, eventId } = event.params;
         const newEvent = event.data?.data();
 
         if (!newEvent) return;
 
-        if (newEvent.processed) return;
-
         const scoreRef = db.doc(`courts/${courtId}/score/current`);
-        const eventRef = event.data.ref;
 
         await db.runTransaction(async (tx) =>
         {
-
             const scoreSnap = await tx.get(scoreRef);
 
-            let currentScore = scoreSnap.exists
+            let score = scoreSnap.exists
                 ? scoreSnap.data()
                 : defaultScore();
 
-            const updatedScore = applyEvent(currentScore, newEvent);
+            // Prevent double-processing
+            if (score.lastEventId === eventId)
+            {
+                return;
+            }
+
+            const updatedScore = applyEvent(score, newEvent);
 
             tx.set(scoreRef, {
                 ...updatedScore,
+                lastEventId: eventId,
                 updatedAt: admin.firestore.FieldValue.serverTimestamp()
             });
-
-            tx.update(eventRef, { processed: true });
         });
     }
 );
 
+
+/**
+ * Reset court
+ *
+ * Shallow reset:
+ *   - archive events
+ *   - clear events
+ *   - reset score
+ *
+ * Deep reset:
+ *   - same as shallow
+ *   - optionally update password
+ */
 exports.resetCourt = onCall(
     {
         region: "africa-south1"
     },
     async (request) =>
     {
-
         const { courtId, deepReset, newPassword } = request.data;
 
         if (!courtId)
@@ -78,20 +96,28 @@ exports.resetCourt = onCall(
 
             archiveBatch.set(archiveRef, {
                 ...doc.data(),
+                archivedAt: admin.firestore.FieldValue.serverTimestamp(),
                 resetType: deepReset ? "deep" : "shallow",
-                resetAt: new Date().toISOString(),
                 resetBy: request.auth?.uid || "system"
             });
         });
 
         await archiveBatch.commit();
 
+        // Delete events
         const deleteBatch = db.batch();
-        eventsSnap.forEach(doc => deleteBatch.delete(doc.ref));
-        await deleteBatch.commit();
-        await db.doc(`courts/${courtId}/score/current`)
-            .set(defaultScore());
 
+        eventsSnap.forEach(doc =>
+        {
+            deleteBatch.delete(doc.ref);
+        });
+
+        await deleteBatch.commit();
+
+        // Reset score
+        await db.doc(`courts/${courtId}/score/current`).set(defaultScore());
+
+        // Optional password reset
         if (deepReset && newPassword)
         {
             await db.doc(`courts/${courtId}`).update({
@@ -99,6 +125,57 @@ exports.resetCourt = onCall(
             });
         }
 
-        return { success: true, archivedId: archiveId };
+        return {
+            success: true,
+            archivedId: archiveId
+        };
+    }
+);
+
+
+/**
+ * Optional utility
+ *
+ * Rebuilds the score from all events.
+ * Useful if you ever change scoring rules.
+ */
+exports.rebuildScore = onCall(
+    {
+        region: "africa-south1"
+    },
+    async (request) =>
+    {
+
+        const { courtId } = request.data;
+
+        if (!courtId)
+        {
+            throw new Error("Missing courtId");
+        }
+
+        const eventsRef = db.collection(`courts/${courtId}/events`)
+            .orderBy("timestamp");
+
+        const eventsSnap = await eventsRef.get();
+
+        let score = defaultScore();
+        let lastEventId = null;
+
+        eventsSnap.forEach(doc =>
+        {
+            score = applyEvent(score, doc.data());
+            lastEventId = doc.id;
+        });
+
+        await db.doc(`courts/${courtId}/score/current`).set({
+            ...score,
+            lastEventId,
+            rebuiltAt: admin.firestore.FieldValue.serverTimestamp()
+        });
+
+        return {
+            success: true,
+            processedEvents: eventsSnap.size
+        };
     }
 );

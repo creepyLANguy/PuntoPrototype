@@ -50,7 +50,7 @@ document.addEventListener("DOMContentLoaded", () =>
   const TEAM_A = "A";
   const TEAM_B = "B";
 
-  const REMOTE_UNDO = "U";
+  const UNDO = "U";
   const REMOTE_RESET = "R";
 
   const SOUND_IDS = {
@@ -70,7 +70,7 @@ document.addEventListener("DOMContentLoaded", () =>
     [TEAM_B]: () => addPoint(TEAM_B),
     //AL.
     //TODO - implement undo
-    // [REMOTE_UNDO]: () => undoLastPoint(),
+    [UNDO]: () => undoLastPoint(),
     [REMOTE_RESET]: () => performShallowReset()
   };
 
@@ -871,6 +871,34 @@ document.addEventListener("DOMContentLoaded", () =>
     playSound(SOUND_IDS.POINT);
   }
 
+  async function undoLastPoint()
+  {
+    if (isSpectating) return;
+
+    try
+    {
+      await addDoc(
+        collection(db, "courts", currentCourt, "events"),
+        {
+          eventType: "UNDO_LAST_POINT",
+          createdAt: serverTimestamp(),
+          processed: false
+        }
+      );
+
+      if (score.lastPointTeam)
+      {
+        animateUndo(score.lastPointTeam);
+      }
+
+      playSound(SOUND_IDS.UNDO);
+
+    } catch (err)
+    {
+      console.error("Undo failed:", err);
+    }
+  }
+
   // =====================================================
   // UI
   // =====================================================
@@ -1198,7 +1226,7 @@ document.addEventListener("DOMContentLoaded", () =>
 
   //AL.
   //TODO - implement undo
-  // addHoldButtonLogic(elements.undoBtn, undoLastPoint, UNDO_HOLD_MS);
+  addHoldButtonLogic(elements.undoBtn, undoLastPoint, UNDO_HOLD_MS);
 
   addHoldButtonLogic(elements.backBtn, () =>
   {
