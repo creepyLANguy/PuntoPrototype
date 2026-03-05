@@ -31,7 +31,8 @@ function applyEvent(score, event)
       break;
 
     case "RESET":
-      return defaultScore();
+      // Do nothing: RESET handled in index.js
+      break;
 
     default:
       break;

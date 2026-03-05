@@ -1122,26 +1122,21 @@ document.addEventListener("DOMContentLoaded", () =>
   async function performShallowReset()
   {
     if (!currentCourt) return;
-
     try
     {
-      await addDoc(collection(db, "courts", currentCourt, "events"), {
-        eventType: "RESET",
-        createdAt: serverTimestamp()
-      });
-
-      elements.resetCourtPassword.value = "";
+      await addDoc(
+        collection(db, "courts", currentCourt, "events"),
+        {
+          eventType: "RESET",
+          createdAt: serverTimestamp()
+        }
+      );
       elements.resetModal.classList.add("hidden");
-
       playSound(SOUND_IDS.START);
-
-      // Optional: immediate UI reset
-      score = defaultScore();
-      updateUI();
     } catch (err)
     {
       console.error("Reset failed:", err);
-      showAlert("Reset Failed", "Could not reset court.");
+      showAlert("Reset Failed", err.message || "Unknown error");
     }
   }
 
@@ -1162,8 +1157,6 @@ document.addEventListener("DOMContentLoaded", () =>
       return;
     }
 
-    const courtRef = doc(db, "courts", currentCourt);
-
     if (newPassword === currentCourtPassword)
     {
       elements.resetPasswordError.textContent = "New password must be different from the current one.";
@@ -1171,7 +1164,26 @@ document.addEventListener("DOMContentLoaded", () =>
     }
 
     currentCourtPassword = newPassword;
-    resetCourtWebApp(currentCourt, true, newPassword);
+
+    try
+    {
+      await addDoc(
+        collection(db, "courts", currentCourt, "events"),
+        {
+          eventType: "RESET",
+          createdAt: serverTimestamp()
+        }
+      );
+      await updateDoc(doc(db, "courts", currentCourt), {
+        password: newPassword
+      });
+      elements.resetModal.classList.add("hidden");
+      playSound(SOUND_IDS.START);
+    } catch (err)
+    {
+      console.error("Reset failed:", err);
+      showAlert("Reset Failed", err.message || "Unknown error");
+    }
 
     elements.resetCourtPassword.value = "";
     elements.resetModal.classList.add("hidden");
