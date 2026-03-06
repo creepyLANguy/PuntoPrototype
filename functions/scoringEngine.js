@@ -30,10 +30,6 @@ function applyEvent(score, event)
       undoLastPoint(newScore);
       break;
 
-    case "RESET":
-      // Do nothing: RESET handled in index.js
-      break;
-
     default:
       break;
   }
