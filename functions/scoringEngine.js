@@ -20,6 +20,9 @@ function applyEvent(score, event)
 
   const newScore = structuredClone(score);
 
+  // Ensure history exists (for legacy score documents)
+  if (!newScore.history) newScore.history = [];
+
   // Before applying a point, save the current state (excluding history) to history
   const snapshot = structuredClone(newScore);
   delete snapshot.history;
