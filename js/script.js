@@ -63,6 +63,11 @@ document.addEventListener("DOMContentLoaded", () =>
     WARNING: "warningSound"
   };
 
+  const STATUS = {
+    OPEN: "open",
+    CLOSED: "closed"
+  };
+
   // =====================================================
   // ACTION MAP
   // =====================================================
@@ -336,7 +341,7 @@ document.addEventListener("DOMContentLoaded", () =>
   // COURT LOADING & FILTERING
   // =====================================================
 
-  async function loadAllCourts()
+  async function loadAllOpenCourts()
   {
     try
     {
@@ -345,12 +350,17 @@ document.addEventListener("DOMContentLoaded", () =>
       allCourts = [];
       snapshot.forEach(doc =>
       {
-        allCourts.push({
-          name: doc.id,
-          password: doc.data().password,
-          createdAt: doc.data().createdAt
-        });
+        let data = doc.data();
+        if (data.status === STATUS.OPEN)
+        {
+          allCourts.push({
+            name: doc.id,
+            password: data.password,
+            createdAt: data.createdAt
+          });
+        }
       });
+
       allCourts.sort((a, b) => a.name.localeCompare(b.name));
       filteredCourts = [...allCourts];
     }
@@ -465,7 +475,7 @@ document.addEventListener("DOMContentLoaded", () =>
         elements.playCourtNameError.textContent = "";
         elements.playCourtPasswordError.textContent = "";
 
-        await loadAllCourts();
+        await loadAllOpenCourts();
         displayPlayCourtList(allCourts);
         elements.playCourtSearch.focus();
         return;
@@ -479,7 +489,7 @@ document.addEventListener("DOMContentLoaded", () =>
         elements.spectateCourtSearch.value = "";
         elements.spectateCourtNameError.textContent = "";
 
-        await loadAllCourts();
+        await loadAllOpenCourts();
         displaySpectateCourtList(allCourts);
         elements.spectateCourtSearch.focus();
         return;
@@ -618,7 +628,8 @@ document.addEventListener("DOMContentLoaded", () =>
       name: courtName,
       password: courtPass,
       createdAt: serverTimestamp(),
-      teamNames: { A: "Team A", B: "Team B" }
+      teamNames: { A: "Team A", B: "Team B" },
+      status: STATUS.CLOSED,
     });
 
     // Create initial score document
@@ -719,8 +730,6 @@ document.addEventListener("DOMContentLoaded", () =>
     {
       console.warn("Audio initialization failed:", err);
     }
-
-    const data = snap.data();
 
     elements.menuPage.style.display = "none";
     elements.createPage.style.display = "none";
