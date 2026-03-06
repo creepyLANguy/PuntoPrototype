@@ -1461,10 +1461,144 @@ body.light-mode .theme-toggle-btn:hover {
   opacity: 1;
 }
 
-/* Hide global buttons when on the scoreboard */
-body.scoreboard-active #themeToggleBtn,
-body.scoreboard-active #adminLoginBtn {
-  display: none;
+/* =======================================================
+   TOAST NOTIFICATIONS
+======================================================= */
+
+.toast-container {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  z-index: 9999;
+}
+
+.toast {
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  color: var(--white);
+  padding: 12px 24px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(10px);
+  font-weight: 600;
+  font-size: 0.95rem;
+  animation: toastFadeIn 0.3s ease, toastFadeOut 0.3s ease 2.7s forwards;
+  min-width: 200px;
+  text-align: center;
+}
+
+.toast.success {
+  border-color: #2ecc71;
+  color: #2ecc71;
+}
+
+.toast.error {
+  border-color: #e74c3c;
+  color: #e74c3c;
+}
+
+@keyframes toastFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes toastFadeOut {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  to {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+}
+
+/* =======================================================
+   ADMIN DASHBOARD ENHANCEMENTS
+======================================================= */
+
+.admin-court-item {
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  padding: 15px;
+  border-radius: 12px;
+  display: grid;
+  grid-template-columns: 1.2fr 1fr 1fr 2fr 0.8fr 0.5fr;
+  gap: 15px;
+  align-items: center;
+  font-size: 0.9rem;
+}
+
+.score-summary-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  font-size: 0.8rem;
+}
+
+.score-summary-team {
+  background: rgba(255, 255, 255, 0.05);
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+
+.score-summary-team .pts {
+  font-weight: 800;
+  font-size: 1rem;
+  color: var(--white);
+}
+
+.score-summary-team .meta {
+  font-size: 0.7rem;
+  color: #888;
+  margin-left: 4px;
+}
+
+/* Status Select Styling */
+.select-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.select-wrapper select {
+  width: 100%;
+  appearance: none;
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  color: var(--white);
+  padding: 12px 16px;
+  border-radius: 10px;
+  font-size: 1rem;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.select-wrapper select:focus {
+  border-color: var(--white);
+}
+
+.select-wrapper::after {
+  content: "▼";
+  position: absolute;
+  right: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.8rem;
+  pointer-events: none;
+  color: #888;
 }
 
 /* =======================================================
@@ -1482,7 +1616,7 @@ body.scoreboard-active #adminLoginBtn {
   display: flex;
   flex-direction: column;
   color: var(--text-color);
-  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
   overflow: hidden;
 }
 
@@ -1533,7 +1667,7 @@ body.scoreboard-active #adminLoginBtn {
 .item-score-json {
   font-family: monospace;
   font-size: 0.75rem;
-  background: rgba(0,0,0,0.2);
+  background: rgba(0, 0, 0, 0.2);
   padding: 5px;
   border-radius: 4px;
   max-height: 50px;
@@ -1549,8 +1683,15 @@ body.scoreboard-active #adminLoginBtn {
   text-align: center;
 }
 
-.status-open { background: #2ecc71; color: white; }
-.status-closed { background: #e74c3c; color: white; }
+.status-open {
+  background: #2ecc71;
+  color: white;
+}
+
+.status-closed {
+  background: #e74c3c;
+  color: white;
+}
 
 .edit-btn {
   background: transparent;

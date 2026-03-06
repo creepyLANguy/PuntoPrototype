@@ -29,12 +29,29 @@ export async function resetCourt(courtId, deepReset = false, newPassword = null)
   try
   {
     const result = await resetFn({ courtId, deepReset, newPassword });
-    alert("Court reset successful");
+    showToast("Court reset successful", "success");
   }
   catch (err)
   {
-    alert("Reset failed: " + err.message);
+    showToast("Reset failed: " + err.message, "error");
   }
+}
+
+function showToast(message, type = "success")
+{
+  const container = document.getElementById("toastContainer");
+  if (!container) return;
+
+  const toast = document.createElement("div");
+  toast.className = `toast ${type}`;
+  toast.textContent = message;
+
+  container.appendChild(toast);
+
+  setTimeout(() =>
+  {
+    toast.remove();
+  }, 3000);
 }
 
 document.addEventListener("DOMContentLoaded", () =>
@@ -225,10 +242,10 @@ document.addEventListener("DOMContentLoaded", () =>
   // EDIT COURT ELEMENTS
   elements.editCourtPage = $("editCourtPage");
   elements.editCourtNameTitle = $("editCourtNameTitle");
+  elements.editCourtName = $("editCourtName");
   elements.editTeamAName = $("editTeamAName");
   elements.editTeamBName = $("editTeamBName");
   elements.editCourtPassword = $("editCourtPassword");
-  elements.editCourtScore = $("editCourtScore");
   elements.editCourtStatus = $("editCourtStatus");
   elements.saveEditBtn = $("saveEditBtn");
   elements.deleteCourtBtn = $("deleteCourtBtn");
@@ -376,6 +393,7 @@ document.addEventListener("DOMContentLoaded", () =>
     {
       elements.editCourtPage.style.display = "none";
       elements.adminDashboardPage.style.display = "flex";
+      displayAdminCourtList();
       return;
     }
   });
@@ -517,13 +535,9 @@ document.addEventListener("DOMContentLoaded", () =>
       const courtPromises = snapshot.docs.map(async (courtDoc) =>
       {
         const data = courtDoc.data();
-        const scoreSnap = await getDoc(doc(db, "courts", courtDoc.id, "score", "current"));
-        const scoreData = scoreSnap.exists() ? scoreSnap.data() : {};
-
         return {
           id: courtDoc.id,
-          ...data,
-          score: scoreData
+          ...data
         };
       });
 
@@ -541,6 +555,7 @@ document.addEventListener("DOMContentLoaded", () =>
       {
         const item = document.createElement("div");
         item.className = "admin-court-item";
+        item.style.gridTemplateColumns = "1.5fr 1fr 1fr 1fr 0.5fr";
 
         item.innerHTML = `
           <div>
@@ -549,15 +564,11 @@ document.addEventListener("DOMContentLoaded", () =>
           </div>
           <div>
             <div class="item-label">Teams</div>
-            ${court.teamNames?.A || "N/A"} vs ${court.teamNames?.B || "N/A"}
+            ${court.teamNames?.A || "A"} vs ${court.teamNames?.B || "B"}
           </div>
           <div>
             <div class="item-label">Password</div>
             <code>${court.password}</code>
-          </div>
-          <div>
-            <div class="item-label">Score (JSON)</div>
-            <div class="item-score-json">${JSON.stringify(court.score)}</div>
           </div>
           <div>
             <div class="item-label">Status</div>
@@ -589,10 +600,10 @@ document.addEventListener("DOMContentLoaded", () =>
   {
     courtToEdit = court;
     elements.editCourtNameTitle.textContent = court.id;
+    elements.editCourtName.value = court.id;
     elements.editTeamAName.value = court.teamNames?.A || "";
     elements.editTeamBName.value = court.teamNames?.B || "";
     elements.editCourtPassword.value = court.password || "";
-    elements.editCourtScore.value = JSON.stringify(court.score, null, 2);
     elements.editCourtStatus.value = court.status || STATUS.CLOSED;
 
     elements.adminDashboardPage.style.display = "none";
@@ -605,30 +616,76 @@ document.addEventListener("DOMContentLoaded", () =>
 
     try
     {
-      const courtRef = doc(db, "courts", courtToEdit.id);
-      const scoreRef = doc(db, "courts", courtToEdit.id, "score", "current");
+      const oldId = courtToEdit.id;
+      const newId = elements.editCourtName.value.trim();
 
-      const newScore = JSON.parse(elements.editCourtScore.value);
+      if (!newId) throw new Error("Court name cannot be empty");
 
-      await updateDoc(courtRef, {
-        teamNames: {
-          A: elements.editTeamAName.value.trim(),
-          B: elements.editTeamBName.value.trim()
-        },
-        password: elements.editCourtPassword.value.trim(),
-        status: elements.editCourtStatus.value
-      });
+      if (newId !== oldId)
+      {
+        // Handle renaming: create new, delete old
+        const oldRef = doc(db, "courts", oldId);
+        const newRef = doc(db, "courts", newId);
+        const existing = await getDoc(newRef);
+        if (existing.exists()) throw new Error("A court with this name already exists");
 
-      await setDoc(scoreRef, newScore);
+        // Fetch current score since we don't store it in the modal anymore
+        const scoreSnap = await getDoc(doc(db, "courts", oldId, "score", "current"));
+        const currentScoreData = scoreSnap.exists() ? scoreSnap.data() : defaultScore();
 
-      alert("Court updated successfully!");
+        // Copy metadata
+        await setDoc(newRef, {
+          name: newId,
+          password: elements.editCourtPassword.value.trim(),
+          createdAt: courtToEdit.createdAt || serverTimestamp(),
+          teamNames: {
+            A: elements.editTeamAName.value.trim(),
+            B: elements.editTeamBName.value.trim()
+          },
+          status: elements.editCourtStatus.value
+        });
+
+        // Copy score
+        await setDoc(doc(db, "courts", newId, "score", "current"), currentScoreData);
+
+        // Leave a redirect on the old document for propagation
+        await updateDoc(oldRef, { redirect: newId });
+
+        // Delete old document after a short delay to allow clients to redirect
+        setTimeout(async () =>
+        {
+          try
+          {
+            await deleteDoc(oldRef);
+          } catch (e)
+          {
+            console.warn("Clean up of old court doc failed:", e);
+          }
+        }, 10000);
+      }
+      else
+      {
+        // Simple update
+        const courtRef = doc(db, "courts", oldId);
+
+        await updateDoc(courtRef, {
+          teamNames: {
+            A: elements.editTeamAName.value.trim(),
+            B: elements.editTeamBName.value.trim()
+          },
+          password: elements.editCourtPassword.value.trim(),
+          status: elements.editCourtStatus.value
+        });
+      }
+
+      showToast("Court updated successfully!", "success");
       elements.editCourtPage.style.display = "none";
       elements.adminDashboardPage.style.display = "flex";
       displayAdminCourtList();
     }
     catch (err)
     {
-      alert("Failed to update: " + err.message);
+      showToast("Failed to update: " + err.message, "error");
     }
   });
 
@@ -640,14 +697,14 @@ document.addEventListener("DOMContentLoaded", () =>
     try
     {
       await deleteDoc(doc(db, "courts", courtToEdit.id));
-      alert("Court deleted.");
+      showToast("Court deleted.", "success");
       elements.editCourtPage.style.display = "none";
       elements.adminDashboardPage.style.display = "flex";
       displayAdminCourtList();
     }
     catch (err)
     {
-      alert("Delete failed: " + err.message);
+      showToast("Delete failed: " + err.message, "error");
     }
   });
 
@@ -655,6 +712,7 @@ document.addEventListener("DOMContentLoaded", () =>
   {
     elements.editCourtPage.style.display = "none";
     elements.adminDashboardPage.style.display = "flex";
+    displayAdminCourtList();
   });
 
   elements.adminLoginBtn.addEventListener("click", () =>
@@ -743,6 +801,19 @@ document.addEventListener("DOMContentLoaded", () =>
       }
     });
   });
+
+  function updateAdminButtonVisibility()
+  {
+    const isMenuVisible = window.getComputedStyle(elements.menuPage).display !== "none";
+    if (elements.adminLoginBtn)
+    {
+      elements.adminLoginBtn.style.display = isMenuVisible ? "flex" : "none";
+    }
+  }
+
+  // Watch for page changes to toggle admin button
+  const observer = new MutationObserver(() => updateAdminButtonVisibility());
+  observer.observe(document.body, { attributes: true, childList: true, subtree: true });
 
   elements.closeCreateBtn.addEventListener("click", () =>
   {
@@ -877,7 +948,7 @@ document.addEventListener("DOMContentLoaded", () =>
       defaultScore()
     );
 
-    alert(`Court "${courtName}" created successfully.`);
+    showToast(`Court "${courtName}" created successfully.`, "success");
 
     elements.createPage.style.display = "none";
     if (isAdmin)
@@ -962,6 +1033,8 @@ document.addEventListener("DOMContentLoaded", () =>
     }
 
     currentCourt = courtName;
+    const data = snap.data();
+    currentCourtPassword = data.password;
 
     if (muted)
     {
@@ -1253,36 +1326,7 @@ document.addEventListener("DOMContentLoaded", () =>
     }
   }
 
-  function showAlert(title, message)
-  {
-    const modal = $("alertModal");
-    $("alertTitle").textContent = title;
-    $("alertMessage").textContent = message;
 
-    const closeAlert = () =>
-    {
-      modal.classList.add("hidden");
-      window.removeEventListener("keydown", onEnter);
-    };
-
-    const onEnter = (e) =>
-    {
-      if (e.key === "Enter")
-      {
-        e.preventDefault();
-        closeAlert();
-      }
-    };
-
-    modal.classList.remove("hidden");
-    window.addEventListener("keydown", onEnter);
-
-    $("alertBtn").onclick = closeAlert;
-    modal.onclick = (e) =>
-    {
-      if (e.target === modal) closeAlert();
-    };
-  }
 
   // =====================================================
   // NFC INITIALISATION
@@ -1299,7 +1343,7 @@ document.addEventListener("DOMContentLoaded", () =>
     // Check NFC support
     if (!("NDEFReader" in window))
     {
-      showAlert("NFC Not Supported", "This device doesn't support NFC.\nYou won't be able to scan tags.");
+      showToast("NFC is not supported on this device.", "error");
       return;
     }
 
@@ -1343,13 +1387,13 @@ document.addEventListener("DOMContentLoaded", () =>
     {
       if (error.name === "NotAllowedError")
       {
-        showAlert("NFC Permission Denied", "You denied NFC permission.\nEnable it in your browser settings.");
+        showToast("NFC permission denied.", "error");
       } else if (error.name === "NotSupportedError")
       {
-        showAlert("NFC Not Available", "NFC is not available on this device or browser.");
+        showToast("NFC not available on this device.", "error");
       } else
       {
-        showAlert("NFC Error", "Failed to initialize NFC scanning.");
+        showToast("NFC Error: Failed to initialize scanning.", "error");
       }
       console.error("NFC scan failed:", error);
     }
@@ -1442,7 +1486,7 @@ document.addEventListener("DOMContentLoaded", () =>
     catch (err)
     {
       console.error("Reset failed:", err);
-      showAlert("Reset Failed", err.message || "Unknown error");
+      showToast("Reset Failed: " + (err.message || "Unknown error"), "error");
     }
   }
 
@@ -1491,7 +1535,7 @@ document.addEventListener("DOMContentLoaded", () =>
     catch (err)
     {
       console.error("Reset failed:", err);
-      showAlert("Reset Failed", err.message || "Unknown error");
+      showToast("Reset Failed: " + (err.message || "Unknown error"), "error");
     }
 
     elements.resetCourtPassword.value = "";
@@ -1706,7 +1750,6 @@ document.addEventListener("DOMContentLoaded", () =>
     // 🔥 Listen to score changes
     const unsubscribeScore = onSnapshot(scoreRef, (snap) =>
     {
-      console.log(`Score snapshot received for ${courtName}. Exists: ${snap.exists()}`);
       if (!snap.exists()) return;
 
       score = snap.data();
@@ -1716,11 +1759,58 @@ document.addEventListener("DOMContentLoaded", () =>
     // 🔥 Listen to court metadata changes (password + teamNames)
     const unsubscribeCourt = onSnapshot(courtRef, (snap) =>
     {
-      console.log("Court snapshot fired", snap.data());
+      if (!snap.exists())
+      {
+        // If we are already on a new court (redirected), ignore
+        if (currentCourt !== courtName) return;
 
-      if (!snap.exists()) return;
+        showToast("This court no longer exists.", "error");
+        // Return to menu
+        disableSpectateMode();
+        releaseWakeLock();
+        document.body.classList.remove("scoreboard-active");
+        if (elements.themeToggleBtn) elements.themeToggleBtn.style.display = "";
+        elements.scoreboardPage.style.display = "none";
+        elements.menuPage.style.display = "flex";
+        if (unsubscribeScore) unsubscribeScore();
+        if (unsubscribeCourt) unsubscribeCourt();
+        unsubscribe = null;
+        return;
+      }
 
       const data = snap.data();
+
+      // 🚨 Redirect handling (Rename propagation)
+      if (data.redirect && data.redirect !== currentCourt)
+      {
+        showToast(`Court has been renamed to "${data.redirect}". Redirecting...`, "success");
+        const wasSpectating = isSpectating;
+        // Clean up current listener
+        if (unsubscribeScore) unsubscribeScore();
+        if (unsubscribeCourt) unsubscribeCourt();
+        unsubscribe = null;
+        // Enter new court
+        enterCourt(data.redirect, wasSpectating);
+        return;
+      }
+
+      // 🚨 Court Closure detection
+      if (data.status === STATUS.CLOSED && !isAdmin)
+      {
+        showToast("The court has been closed by admin.", "error");
+
+        // Return to menu
+        disableSpectateMode();
+        releaseWakeLock();
+        document.body.classList.remove("scoreboard-active");
+        if (elements.themeToggleBtn) elements.themeToggleBtn.style.display = "";
+        elements.scoreboardPage.style.display = "none";
+        elements.menuPage.style.display = "flex";
+        if (unsubscribeScore) unsubscribeScore();
+        if (unsubscribeCourt) unsubscribeCourt();
+        unsubscribe = null;
+        return;
+      }
 
       // 🚨 Password change detection
       if (
@@ -1729,16 +1819,20 @@ document.addEventListener("DOMContentLoaded", () =>
         !isSpectating
       )
       {
-        showAlert("Spectate Mode Activated", "The court password has changed.");
+        showToast("Security notice: Court password changed. You are now a spectator.", "error");
         enableSpectateMode();
       }
 
+      // Ensure local state tracks newest password
       currentCourtPassword = data.password;
+
+      // Update UI title (Rename propagation for the display name)
+      showCourtTitle(data.name || snap.id);
 
       const teamNames = data.teamNames || { A: "Team A", B: "Team B" };
 
-      const nameA = document.querySelector(`.team-name[data-team="A"] .name-text`);
-      const nameB = document.querySelector(`.team-name[data-team="B"] .name-text`);
+      const nameA = $("teamA").querySelector(".name-text");
+      const nameB = $("teamB").querySelector(".name-text");
 
       if (nameA)
       {

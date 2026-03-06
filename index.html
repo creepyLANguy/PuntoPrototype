@@ -13,7 +13,8 @@
 
   <!-- ================= GLOBAL THEME TOGGLE ================= -->
   <button id="themeToggleBtn" class="theme-toggle-btn" title="Toggle theme">🌙</button>
-  <button id="adminLoginBtn" class="theme-toggle-btn" style="right: clamp(60px, 12vw, 100px);" title="Admin Panel">🔒</button>
+  <button id="adminLoginBtn" class="theme-toggle-btn" style="right: clamp(60px, 12vw, 100px);"
+    title="Admin Panel">🔒</button>
 
   <!-- ================= MENU ================= -->
   <main id="menuPage" class="menu-page">
@@ -82,6 +83,10 @@
       <button id="closeEditBtn" class="close-btn">✕</button>
       <h2>Edit Court: <span id="editCourtNameTitle"></span></h2>
       <div class="form-group">
+        <label>Court Name</label>
+        <input type="text" id="editCourtName" />
+      </div>
+      <div class="form-group">
         <label>Team A Name</label>
         <input type="text" id="editTeamAName" />
       </div>
@@ -94,20 +99,22 @@
         <input type="text" id="editCourtPassword" />
       </div>
       <div class="form-group">
-        <label>Score (JSON)</label>
-        <textarea id="editCourtScore" rows="5"></textarea>
-      </div>
-      <div class="form-group">
         <label>Status</label>
-        <select id="editCourtStatus">
-          <option value="open">Open</option>
-          <option value="closed">Closed</option>
-        </select>
+        <div class="select-wrapper">
+          <select id="editCourtStatus">
+            <option value="open">Open</option>
+            <option value="closed">Closed</option>
+          </select>
+        </div>
       </div>
       <button id="saveEditBtn" class="primary-btn">Save Changes</button>
-      <button id="deleteCourtBtn" class="danger-btn" style="margin-top: 10px; background: #ff4444;">Delete Court</button>
+      <button id="deleteCourtBtn" class="danger-btn" style="margin-top: 10px; background: #ff4444;">Delete
+        Court</button>
     </div>
   </div>
+
+  <!-- ================= TOAST NOTIFICATIONS ================= -->
+  <div id="toastContainer" class="toast-container"></div>
 
   <!-- ================= PLAY COURT PAGE ================= -->
   <div id="playPage" style="display:none;" class="create-page">
