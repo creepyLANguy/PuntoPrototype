@@ -688,6 +688,7 @@ document.addEventListener("DOMContentLoaded", () =>
 
   async function enterCourt(courtName, spectate)
   {
+    console.log(`Entering court: ${courtName}, spectate: ${spectate}`);
     const courtRef = doc(db, "courts", courtName);
     const snap = await getDoc(courtRef);
 
@@ -711,8 +712,15 @@ document.addEventListener("DOMContentLoaded", () =>
       elements.muteBtn.textContent = "🔇";
     }
 
-    await initAudio();
-    playSound(SOUND_IDS.START);
+    try
+    {
+      await initAudio();
+      playSound(SOUND_IDS.START);
+    }
+    catch (err)
+    {
+      console.warn("Audio initialization failed:", err);
+    }
 
     const data = snap.data();
 
@@ -1386,6 +1394,7 @@ document.addEventListener("DOMContentLoaded", () =>
 
   function listenToCourt(courtName)
   {
+    console.log(`Setting up real-time sync for court: ${courtName}`);
     if (unsubscribe) unsubscribe();
 
     const scoreRef = doc(db, "courts", courtName, "score", "current");
@@ -1394,6 +1403,7 @@ document.addEventListener("DOMContentLoaded", () =>
     // 🔥 Listen to score changes
     const unsubscribeScore = onSnapshot(scoreRef, (snap) =>
     {
+      console.log(`Score snapshot received for ${courtName}. Exists: ${snap.exists()}`);
       if (!snap.exists()) return;
 
       score = snap.data();

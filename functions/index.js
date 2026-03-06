@@ -87,7 +87,7 @@ exports.resetCourt = onCall(
     { region: "africa-south1" },
     async (request) =>
     {
-        const { courtId } = request.data;
+        const { courtId, deepReset, newPassword } = request.data;
         if (!courtId) throw new Error("Missing courtId");
 
         const eventsRef = db.collection(`courts/${courtId}/events`);

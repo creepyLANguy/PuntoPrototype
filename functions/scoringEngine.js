@@ -150,3 +150,8 @@ function undoLastPoint(score)
   // Reset lastPointTeam if undo removed the last point
   score.lastPointTeam = null;
 }
+
+module.exports = {
+  defaultScore,
+  applyEvent
+};
