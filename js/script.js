@@ -443,7 +443,6 @@ document.addEventListener("DOMContentLoaded", () =>
 
       item.addEventListener("click", async () =>
       {
-        selectedSpectateCourt = court.name;
         await enterCourt(court.name, true);
       });
 
@@ -485,7 +484,6 @@ document.addEventListener("DOMContentLoaded", () =>
       {
         elements.menuPage.style.display = "none";
         elements.spectatePage.style.display = "flex";
-        selectedSpectateCourt = null;
         elements.spectateCourtSearch.value = "";
         elements.spectateCourtNameError.textContent = "";
 
