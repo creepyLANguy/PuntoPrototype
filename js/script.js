@@ -998,9 +998,23 @@ document.addEventListener("DOMContentLoaded", () =>
     $("alertTitle").textContent = title;
     $("alertMessage").textContent = message;
 
-    modal.classList.remove("hidden");
+    const closeAlert = () =>
+    {
+      modal.classList.add("hidden");
+      window.removeEventListener("keydown", onEnter);
+    };
 
-    const closeAlert = () => modal.classList.add("hidden");
+    const onEnter = (e) =>
+    {
+      if (e.key === "Enter")
+      {
+        e.preventDefault();
+        closeAlert();
+      }
+    };
+
+    modal.classList.remove("hidden");
+    window.addEventListener("keydown", onEnter);
 
     $("alertBtn").onclick = closeAlert;
     modal.onclick = (e) =>
@@ -1123,6 +1137,26 @@ document.addEventListener("DOMContentLoaded", () =>
     return true;
   }
 
+  function startNfcCooldownUI()
+  {
+    let remaining = COOLDOWN_MS / 1000;
+
+    elements.nfcCooldownBanner.classList.remove("hidden");
+    elements.nfcCountdown.textContent = remaining;
+
+    const interval = setInterval(() =>
+    {
+      remaining--;
+      elements.nfcCountdown.textContent = remaining;
+
+      if (remaining <= 0)
+      {
+        clearInterval(interval);
+        elements.nfcCooldownBanner.classList.add("hidden");
+      }
+    }, 1000);
+  }
+
   // =====================================================
   // CONTROLS
   // =====================================================
@@ -1187,9 +1221,8 @@ document.addEventListener("DOMContentLoaded", () =>
       );
       await setDoc(
         doc(db, "courts", currentCourt),
-        {
-          password: newPassword
-        }
+        { password: newPassword },
+        { merge: true }
       );
       elements.resetModal.classList.add("hidden");
       playSound(SOUND_IDS.START);
@@ -1368,10 +1401,10 @@ document.addEventListener("DOMContentLoaded", () =>
       .forEach(fitTextToContainer);
   });
 
-  function getTeamName(team)
+  function updateTeamNames(teamNames)
   {
-    const labelEl = document.querySelector(`.team-name[data-team="${team}"] .name-text`);
-    return labelEl ? labelEl.textContent : `Team ${team}`;
+    document.querySelector("#teamA .team-name").textContent = teamNames.A;
+    document.querySelector("#teamB .team-name").textContent = teamNames.B;
   }
 
   // =====================================================
@@ -1410,6 +1443,8 @@ document.addEventListener("DOMContentLoaded", () =>
     // 🔥 Listen to court metadata changes (password + teamNames)
     const unsubscribeCourt = onSnapshot(courtRef, (snap) =>
     {
+      console.log("Court snapshot fired", snap.data());
+
       if (!snap.exists()) return;
 
       const data = snap.data();
@@ -1427,14 +1462,15 @@ document.addEventListener("DOMContentLoaded", () =>
 
       currentCourtPassword = data.password;
 
-      // Update team names
+      const teamNames = data.teamNames || { A: "Team A", B: "Team B" };
+
       document.querySelector(
         `.team-name[data-team="A"] .name-text`
-      ).textContent = data.teamNames?.A || "Team A";
+      ).textContent = teamNames.A;
 
       document.querySelector(
         `.team-name[data-team="B"] .name-text`
-      ).textContent = data.teamNames?.B || "Team B";
+      ).textContent = teamNames.B;
     });
 
     // Combine both unsubscribes
@@ -1444,27 +1480,6 @@ document.addEventListener("DOMContentLoaded", () =>
       unsubscribeCourt();
     };
   }
-
-  function startNfcCooldownUI()
-  {
-    let remaining = COOLDOWN_MS / 1000;
-
-    elements.nfcCooldownBanner.classList.remove("hidden");
-    elements.nfcCountdown.textContent = remaining;
-
-    const interval = setInterval(() =>
-    {
-      remaining--;
-      elements.nfcCountdown.textContent = remaining;
-
-      if (remaining <= 0)
-      {
-        clearInterval(interval);
-        elements.nfcCooldownBanner.classList.add("hidden");
-      }
-    }, 1000);
-  }
-
 });
 
 // =====================================================
