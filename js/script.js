@@ -69,8 +69,6 @@ document.addEventListener("DOMContentLoaded", () =>
   const actionMap = {
     [TEAM_A]: () => addPoint(TEAM_A),
     [TEAM_B]: () => addPoint(TEAM_B),
-    //AL.
-    //TODO - implement undo
     [UNDO]: () => undoLastPoint(),
     [REMOTE_RESET]: () => performShallowReset()
   };
@@ -691,9 +689,6 @@ document.addEventListener("DOMContentLoaded", () =>
     console.log(`Entering court: ${courtName}, spectate: ${spectate}`);
     const courtRef = doc(db, "courts", courtName);
     const snap = await getDoc(courtRef);
-
-    currentCourt = courtName;
-
     if (!snap.exists())
     {
       const errorEl = spectate ? elements.spectateCourtNameError : elements.playCourtNameError;
@@ -706,6 +701,8 @@ document.addEventListener("DOMContentLoaded", () =>
       }
       return;
     }
+
+    currentCourt = courtName;
 
     if (muted)
     {
