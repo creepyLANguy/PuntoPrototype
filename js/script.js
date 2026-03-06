@@ -6,6 +6,7 @@ import
   setDoc,
   getDoc,
   getDocs,
+  updateDoc,
   onSnapshot,
   collection,
   addDoc,
@@ -1339,13 +1340,25 @@ document.addEventListener("DOMContentLoaded", () =>
     input.focus();
     input.select();
 
+    let isSaving = false;
+
     async function save()
     {
+      if (isSaving) return;
+      isSaving = true;
+
       const name = input.value.trim() || `Team ${team}`;
 
-      await updateDoc(doc(db, "courts", currentCourt), {
-        [`teamNames.${team}`]: name
-      });
+      try
+      {
+        await updateDoc(doc(db, "courts", currentCourt), {
+          [`teamNames.${team}`]: name
+        });
+      }
+      catch (error)
+      {
+        console.error("Error updating team name:", error);
+      }
 
       labelEl.textContent = name;
       input.replaceWith(labelEl);
@@ -1355,13 +1368,18 @@ document.addEventListener("DOMContentLoaded", () =>
 
     function cancel()
     {
+      if (isSaving) return;
       input.replaceWith(labelEl);
     }
 
     input.addEventListener("blur", save);
     input.addEventListener("keydown", (e) =>
     {
-      if (e.key === "Enter") save();
+      if (e.key === "Enter")
+      {
+        e.preventDefault();
+        input.blur(); // Triggers blur event, which calls save()
+      }
       if (e.key === "Escape") cancel();
     });
   }
@@ -1401,11 +1419,6 @@ document.addEventListener("DOMContentLoaded", () =>
       .forEach(fitTextToContainer);
   });
 
-  function updateTeamNames(teamNames)
-  {
-    document.querySelector("#teamA .team-name").textContent = teamNames.A;
-    document.querySelector("#teamB .team-name").textContent = teamNames.B;
-  }
 
   // =====================================================
   // INIT
@@ -1464,13 +1477,19 @@ document.addEventListener("DOMContentLoaded", () =>
 
       const teamNames = data.teamNames || { A: "Team A", B: "Team B" };
 
-      document.querySelector(
-        `.team-name[data-team="A"] .name-text`
-      ).textContent = teamNames.A;
+      const nameA = document.querySelector(`.team-name[data-team="A"] .name-text`);
+      const nameB = document.querySelector(`.team-name[data-team="B"] .name-text`);
 
-      document.querySelector(
-        `.team-name[data-team="B"] .name-text`
-      ).textContent = teamNames.B;
+      if (nameA)
+      {
+        nameA.textContent = teamNames.A;
+        fitTextToContainer(nameA);
+      }
+      if (nameB)
+      {
+        nameB.textContent = teamNames.B;
+        fitTextToContainer(nameB);
+      }
     });
 
     // Combine both unsubscribes
