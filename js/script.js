@@ -7,6 +7,7 @@ import
   getDoc,
   getDocs,
   updateDoc,
+  deleteDoc,
   onSnapshot,
   collection,
   addDoc,
@@ -207,6 +208,32 @@ document.addEventListener("DOMContentLoaded", () =>
   elements.courtNameError = $("courtNameError");
   elements.courtPasswordError = $("courtPasswordError");
 
+  // ADMIN AUTH ELEMENTS
+  elements.adminLoginBtn = $("adminLoginBtn");
+  elements.adminAuthPage = $("adminAuthPage");
+  elements.adminAuthPassword = $("adminAuthPassword");
+  elements.submitAdminAuthBtn = $("submitAdminAuthBtn");
+  elements.adminAuthError = $("adminAuthError");
+  elements.closeAdminAuthBtn = $("closeAdminAuthBtn");
+
+  // ADMIN DASHBOARD ELEMENTS
+  elements.adminDashboardPage = $("adminDashboardPage");
+  elements.adminCourtList = $("adminCourtList");
+  elements.closeAdminDashboardBtn = $("closeAdminDashboardBtn");
+  elements.showCreateCourtModalBtn = $("showCreateCourtModalBtn");
+
+  // EDIT COURT ELEMENTS
+  elements.editCourtPage = $("editCourtPage");
+  elements.editCourtNameTitle = $("editCourtNameTitle");
+  elements.editTeamAName = $("editTeamAName");
+  elements.editTeamBName = $("editTeamBName");
+  elements.editCourtPassword = $("editCourtPassword");
+  elements.editCourtScore = $("editCourtScore");
+  elements.editCourtStatus = $("editCourtStatus");
+  elements.saveEditBtn = $("saveEditBtn");
+  elements.deleteCourtBtn = $("deleteCourtBtn");
+  elements.closeEditBtn = $("closeEditBtn");
+
   //PLAY COURT ELEMENTS
   elements.playPage = $("playPage");
   elements.closePlayBtn = $("closePlayBtn");
@@ -232,7 +259,6 @@ document.addEventListener("DOMContentLoaded", () =>
   let allCourts = [];
   let filteredCourts = [];
   let selectedPlayCourt = null;
-  let selectedSpectateCourt = null;
 
   //RESET COURT ELEMENTS
   elements.resetCourtPassword = $("resetCourtPassword");
@@ -265,9 +291,11 @@ document.addEventListener("DOMContentLoaded", () =>
   }
 
   // CREATE PAGE
-  submitOnEnter(elements.adminPassword, elements.createCourtBtn);
   submitOnEnter(elements.courtName, elements.createCourtBtn);
   submitOnEnter(elements.courtPassword, elements.createCourtBtn);
+
+  // ADMIN AUTH PAGE
+  submitOnEnter(elements.adminAuthPassword, elements.submitAdminAuthBtn);
 
   // PLAY PAGE
   submitOnEnter(elements.playCourtPassword, elements.enterCourtBtn);
@@ -321,8 +349,34 @@ document.addEventListener("DOMContentLoaded", () =>
       {
         elements.themeToggleBtn.style.display = "";
       }
+      if (elements.adminLoginBtn)
+      {
+        elements.adminLoginBtn.style.display = "";
+      }
       elements.scoreboardPage.style.display = "none";
       elements.menuPage.style.display = "flex";
+      return;
+    }
+
+    if (isVisible(elements.adminAuthPage))
+    {
+      elements.adminAuthPage.style.display = "none";
+      elements.menuPage.style.display = "flex";
+      return;
+    }
+
+    if (isVisible(elements.adminDashboardPage))
+    {
+      elements.adminDashboardPage.style.display = "none";
+      elements.menuPage.style.display = "flex";
+      return;
+    }
+
+    if (isVisible(elements.editCourtPage))
+    {
+      elements.editCourtPage.style.display = "none";
+      elements.adminDashboardPage.style.display = "flex";
+      return;
     }
   });
 
@@ -450,18 +504,213 @@ document.addEventListener("DOMContentLoaded", () =>
     });
   }
 
+  async function displayAdminCourtList()
+  {
+    elements.adminCourtList.innerHTML = '<div class="loading">Loading all courts...</div>';
+
+    try
+    {
+      const courtsCollection = collection(db, "courts");
+      const snapshot = await getDocs(courtsCollection);
+      elements.adminCourtList.innerHTML = "";
+
+      const courtPromises = snapshot.docs.map(async (courtDoc) =>
+      {
+        const data = courtDoc.data();
+        const scoreSnap = await getDoc(doc(db, "courts", courtDoc.id, "score", "current"));
+        const scoreData = scoreSnap.exists() ? scoreSnap.data() : {};
+
+        return {
+          id: courtDoc.id,
+          ...data,
+          score: scoreData
+        };
+      });
+
+      const courts = await Promise.all(courtPromises);
+
+      courts.sort((a, b) => a.id.localeCompare(b.id));
+
+      if (courts.length === 0)
+      {
+        elements.adminCourtList.innerHTML = '<div class="no-courts">No courts found.</div>';
+        return;
+      }
+
+      courts.forEach(court =>
+      {
+        const item = document.createElement("div");
+        item.className = "admin-court-item";
+
+        item.innerHTML = `
+          <div>
+            <div class="item-label">Court</div>
+            <strong>${court.id}</strong>
+          </div>
+          <div>
+            <div class="item-label">Teams</div>
+            ${court.teamNames?.A || "N/A"} vs ${court.teamNames?.B || "N/A"}
+          </div>
+          <div>
+            <div class="item-label">Password</div>
+            <code>${court.password}</code>
+          </div>
+          <div>
+            <div class="item-label">Score (JSON)</div>
+            <div class="item-score-json">${JSON.stringify(court.score)}</div>
+          </div>
+          <div>
+            <div class="item-label">Status</div>
+            <span class="status-badge status-${court.status}">${court.status.toUpperCase()}</span>
+          </div>
+          <div>
+            <button class="edit-btn" data-id="${court.id}">Edit</button>
+          </div>
+        `;
+
+        item.querySelector(".edit-btn").addEventListener("click", () =>
+        {
+          openEditModal(court);
+        });
+
+        elements.adminCourtList.appendChild(item);
+      });
+    }
+    catch (error)
+    {
+      console.error("Error loading admin courts:", error);
+      elements.adminCourtList.innerHTML = '<div class="error">Error loading courts.</div>';
+    }
+  }
+
+  let courtToEdit = null;
+
+  function openEditModal(court)
+  {
+    courtToEdit = court;
+    elements.editCourtNameTitle.textContent = court.id;
+    elements.editTeamAName.value = court.teamNames?.A || "";
+    elements.editTeamBName.value = court.teamNames?.B || "";
+    elements.editCourtPassword.value = court.password || "";
+    elements.editCourtScore.value = JSON.stringify(court.score, null, 2);
+    elements.editCourtStatus.value = court.status || STATUS.CLOSED;
+
+    elements.adminDashboardPage.style.display = "none";
+    elements.editCourtPage.style.display = "flex";
+  }
+
+  elements.saveEditBtn.addEventListener("click", async () =>
+  {
+    if (!courtToEdit) return;
+
+    try
+    {
+      const courtRef = doc(db, "courts", courtToEdit.id);
+      const scoreRef = doc(db, "courts", courtToEdit.id, "score", "current");
+
+      const newScore = JSON.parse(elements.editCourtScore.value);
+
+      await updateDoc(courtRef, {
+        teamNames: {
+          A: elements.editTeamAName.value.trim(),
+          B: elements.editTeamBName.value.trim()
+        },
+        password: elements.editCourtPassword.value.trim(),
+        status: elements.editCourtStatus.value
+      });
+
+      await setDoc(scoreRef, newScore);
+
+      alert("Court updated successfully!");
+      elements.editCourtPage.style.display = "none";
+      elements.adminDashboardPage.style.display = "flex";
+      displayAdminCourtList();
+    }
+    catch (err)
+    {
+      alert("Failed to update: " + err.message);
+    }
+  });
+
+  elements.deleteCourtBtn.addEventListener("click", async () =>
+  {
+    if (!courtToEdit) return;
+    if (!confirm(`Are you sure you want to delete court "${courtToEdit.id}"? This cannot be undone.`)) return;
+
+    try
+    {
+      await deleteDoc(doc(db, "courts", courtToEdit.id));
+      alert("Court deleted.");
+      elements.editCourtPage.style.display = "none";
+      elements.adminDashboardPage.style.display = "flex";
+      displayAdminCourtList();
+    }
+    catch (err)
+    {
+      alert("Delete failed: " + err.message);
+    }
+  });
+
+  elements.closeEditBtn.addEventListener("click", () =>
+  {
+    elements.editCourtPage.style.display = "none";
+    elements.adminDashboardPage.style.display = "flex";
+  });
+
+  elements.adminLoginBtn.addEventListener("click", () =>
+  {
+    elements.menuPage.style.display = "none";
+    elements.adminAuthPage.style.display = "flex";
+    elements.adminAuthPassword.value = "";
+    elements.adminAuthError.textContent = "";
+    elements.adminAuthPassword.focus();
+  });
+
+  elements.closeAdminAuthBtn.addEventListener("click", () =>
+  {
+    elements.adminAuthPage.style.display = "none";
+    elements.menuPage.style.display = "flex";
+  });
+
+  elements.submitAdminAuthBtn.addEventListener("click", async () =>
+  {
+    const pass = elements.adminAuthPassword.value.trim();
+    const skeleton = await getAdminPassword();
+
+    if (pass === skeleton)
+    {
+      isAdmin = true;
+      elements.adminAuthPage.style.display = "none";
+      elements.adminDashboardPage.style.display = "flex";
+      displayAdminCourtList();
+    }
+    else
+    {
+      elements.adminAuthError.textContent = "Incorrect admin password.";
+    }
+  });
+
+  elements.closeAdminDashboardBtn.addEventListener("click", () =>
+  {
+    elements.adminDashboardPage.style.display = "none";
+    elements.menuPage.style.display = "flex";
+  });
+
+  elements.showCreateCourtModalBtn.addEventListener("click", () =>
+  {
+    elements.adminDashboardPage.style.display = "none";
+    elements.createPage.style.display = "flex";
+    elements.courtName.value = "";
+    elements.courtPassword.value = "";
+    elements.courtNameError.textContent = "";
+    elements.courtPasswordError.textContent = "";
+  });
+
   document.querySelectorAll(".menu-btn").forEach(btn =>
   {
     btn.addEventListener("click", async () =>
     {
       const action = btn.textContent.trim();
-
-      if (action === "Create")
-      {
-        elements.menuPage.style.display = "none";
-        elements.createPage.style.display = "flex";
-        return;
-      }
 
       if (action === "Play")
       {
@@ -498,7 +747,8 @@ document.addEventListener("DOMContentLoaded", () =>
   elements.closeCreateBtn.addEventListener("click", () =>
   {
     elements.createPage.style.display = "none";
-    elements.menuPage.style.display = "flex";
+    if (isAdmin) elements.adminDashboardPage.style.display = "flex";
+    else elements.menuPage.style.display = "flex";
   });
 
   elements.closePlayBtn.addEventListener("click", () =>
@@ -573,20 +823,11 @@ document.addEventListener("DOMContentLoaded", () =>
 
   elements.createCourtBtn.addEventListener("click", async () =>
   {
-    const adminPass = elements.adminPassword.value.trim();
     const courtName = elements.courtName.value.trim();
     const courtPass = elements.courtPassword.value.trim();
 
-    elements.adminError.textContent = "";
     elements.courtNameError.textContent = "";
     elements.courtPasswordError.textContent = "";
-
-    var skeletonKey = await getAdminPassword();
-    if (adminPass !== skeletonKey)
-    {
-      elements.adminError.textContent = "Invalid admin password.";
-      return;
-    }
 
     let courtRef = null;
 
@@ -636,11 +877,19 @@ document.addEventListener("DOMContentLoaded", () =>
       defaultScore()
     );
 
-    currentCourtPassword = courtPass;
-    isAdmin = true;
-    enterCourt(courtName, false);
+    alert(`Court "${courtName}" created successfully.`);
 
-    elements.adminPassword.value = "";
+    elements.createPage.style.display = "none";
+    if (isAdmin)
+    {
+      elements.adminDashboardPage.style.display = "flex";
+      displayAdminCourtList();
+    }
+    else
+    {
+      elements.menuPage.style.display = "flex";
+    }
+
     elements.courtName.value = "";
     elements.courtPassword.value = "";
   });
@@ -734,10 +983,14 @@ document.addEventListener("DOMContentLoaded", () =>
     elements.playPage.style.display = "none";
     elements.spectatePage.style.display = "none";
 
-    // Hide top-right theme toggle in court view
+    // Hide top-right buttons in court view
     if (elements.themeToggleBtn)
     {
       elements.themeToggleBtn.style.display = "none";
+    }
+    if (elements.adminLoginBtn)
+    {
+      elements.adminLoginBtn.style.display = "none";
     }
 
     elements.scoreboardPage.style.display = "flex";
