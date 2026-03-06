@@ -11,10 +11,11 @@
 
 <body>
 
-  <!-- ================= GLOBAL THEME TOGGLE ================= -->
-  <button id="themeToggleBtn" class="theme-toggle-btn" title="Toggle theme">🌙</button>
-  <button id="adminLoginBtn" class="theme-toggle-btn" style="right: clamp(60px, 12vw, 100px);"
-    title="Admin Panel">🔒</button>
+  <!-- ================= GLOBAL BUTTON STACK ================= -->
+  <div class="global-controls">
+    <button id="themeToggleBtn" class="theme-toggle-btn" title="Toggle theme">🌙</button>
+    <button id="adminLoginBtn" class="theme-toggle-btn" title="Admin Panel">🔒</button>
+  </div>
 
   <!-- ================= MENU ================= -->
   <main id="menuPage" class="menu-page">
@@ -81,7 +82,7 @@
   <div id="editCourtPage" style="display:none;" class="create-page">
     <div class="create-card edit-card">
       <button id="closeEditBtn" class="close-btn">✕</button>
-      <h2>Edit Court: <span id="editCourtNameTitle"></span></h2>
+      <h2>Editing Court:<br /><span id="editCourtNameTitle"></span></h2>
       <div class="form-group">
         <label>Court Name</label>
         <input type="text" id="editCourtName" />

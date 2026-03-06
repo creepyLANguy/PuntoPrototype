@@ -426,7 +426,8 @@ document.addEventListener("DOMContentLoaded", () =>
         if (data.status === STATUS.OPEN)
         {
           allCourts.push({
-            name: doc.id,
+            id: doc.id,
+            name: data.name || doc.id,
             password: data.password,
             createdAt: data.createdAt
           });
@@ -449,7 +450,8 @@ document.addEventListener("DOMContentLoaded", () =>
     const term = searchTerm.toLowerCase().trim();
     if (!term) return courts;
     return courts.filter(court =>
-      court.name.toLowerCase().includes(term)
+      court.name.toLowerCase().includes(term) ||
+      court.id.toLowerCase().includes(term)
     );
   }
 
@@ -476,7 +478,7 @@ document.addEventListener("DOMContentLoaded", () =>
 
       item.addEventListener("click", () =>
       {
-        selectedPlayCourt = court.name;
+        selectedPlayCourt = court.id;
         elements.playCourtList.querySelectorAll(".court-item").forEach(el =>
         {
           el.classList.remove("active");
@@ -515,7 +517,7 @@ document.addEventListener("DOMContentLoaded", () =>
 
       item.addEventListener("click", async () =>
       {
-        await enterCourt(court.name, true);
+        await enterCourt(court.id, true);
       });
 
       listContainer.appendChild(item);
@@ -559,8 +561,9 @@ document.addEventListener("DOMContentLoaded", () =>
 
         item.innerHTML = `
           <div>
-            <div class="item-label">Court</div>
-            <strong>${court.id}</strong>
+            <div class="item-label">Court Name</div>
+            <strong>${court.name || "N/A"}</strong>
+            <div style="font-size: 0.9rem; color: #888;">ID: ${court.id}</div>
           </div>
           <div>
             <div class="item-label">Teams</div>
@@ -599,8 +602,8 @@ document.addEventListener("DOMContentLoaded", () =>
   function openEditModal(court)
   {
     courtToEdit = court;
-    elements.editCourtNameTitle.textContent = court.id;
-    elements.editCourtName.value = court.id;
+    elements.editCourtNameTitle.textContent = court.name || court.id;
+    elements.editCourtName.value = court.name || "";
     elements.editTeamAName.value = court.teamNames?.A || "";
     elements.editTeamBName.value = court.teamNames?.B || "";
     elements.editCourtPassword.value = court.password || "";
@@ -616,67 +619,22 @@ document.addEventListener("DOMContentLoaded", () =>
 
     try
     {
-      const oldId = courtToEdit.id;
-      const newId = elements.editCourtName.value.trim();
+      const courtId = courtToEdit.id;
+      const newName = elements.editCourtName.value.trim();
 
-      if (!newId) throw new Error("Court name cannot be empty");
+      if (!newName) throw new Error("Court name cannot be empty");
 
-      if (newId !== oldId)
-      {
-        // Handle renaming: create new, delete old
-        const oldRef = doc(db, "courts", oldId);
-        const newRef = doc(db, "courts", newId);
-        const existing = await getDoc(newRef);
-        if (existing.exists()) throw new Error("A court with this name already exists");
+      const courtRef = doc(db, "courts", courtId);
 
-        // Fetch current score since we don't store it in the modal anymore
-        const scoreSnap = await getDoc(doc(db, "courts", oldId, "score", "current"));
-        const currentScoreData = scoreSnap.exists() ? scoreSnap.data() : defaultScore();
-
-        // Copy metadata
-        await setDoc(newRef, {
-          name: newId,
-          password: elements.editCourtPassword.value.trim(),
-          createdAt: courtToEdit.createdAt || serverTimestamp(),
-          teamNames: {
-            A: elements.editTeamAName.value.trim(),
-            B: elements.editTeamBName.value.trim()
-          },
-          status: elements.editCourtStatus.value
-        });
-
-        // Copy score
-        await setDoc(doc(db, "courts", newId, "score", "current"), currentScoreData);
-
-        // Leave a redirect on the old document for propagation
-        await updateDoc(oldRef, { redirect: newId });
-
-        // Delete old document after a short delay to allow clients to redirect
-        setTimeout(async () =>
-        {
-          try
-          {
-            await deleteDoc(oldRef);
-          } catch (e)
-          {
-            console.warn("Clean up of old court doc failed:", e);
-          }
-        }, 10000);
-      }
-      else
-      {
-        // Simple update
-        const courtRef = doc(db, "courts", oldId);
-
-        await updateDoc(courtRef, {
-          teamNames: {
-            A: elements.editTeamAName.value.trim(),
-            B: elements.editTeamBName.value.trim()
-          },
-          password: elements.editCourtPassword.value.trim(),
-          status: elements.editCourtStatus.value
-        });
-      }
+      await updateDoc(courtRef, {
+        name: newName,
+        teamNames: {
+          A: elements.editTeamAName.value.trim(),
+          B: elements.editTeamBName.value.trim()
+        },
+        password: elements.editCourtPassword.value.trim(),
+        status: elements.editCourtStatus.value
+      });
 
       showToast("Court updated successfully!", "success");
       elements.editCourtPage.style.display = "none";
@@ -900,38 +858,18 @@ document.addEventListener("DOMContentLoaded", () =>
     elements.courtNameError.textContent = "";
     elements.courtPasswordError.textContent = "";
 
-    let courtRef = null;
-
     if (!courtName)
     {
       elements.courtNameError.textContent = "Court name required.";
       return;
     }
-    else
-    {
-      courtRef = doc(db, "courts", courtName);
-      const existing = await getDoc(courtRef);
 
-      if (existing.exists())
-      {
-        elements.courtNameError.textContent = "Court already exists.";
-        return;
-      }
-    }
+    // Generate specific alphanumeric courtId: NameSlug + Random(1-9999999999)
+    const nameSlug = courtName.replace(/[^a-z0-9]/gi, '').toLowerCase();
+    const randomNum = Math.floor(Math.random() * 9999999999) + 1;
+    const courtId = nameSlug + randomNum;
 
-    if (courtPass.length < 4)
-    {
-      elements.courtPasswordError.textContent = "Minimum 4 characters.";
-      return;
-    }
-
-    if (courtPass === courtName)
-    {
-      elements.courtPasswordError.textContent = "Password must be different from court name.";
-      return;
-    }
-
-    courtRef = doc(db, "courts", courtName);
+    const courtRef = doc(db, "courts", courtId);
 
     // Create court metadata
     await setDoc(courtRef, {
@@ -944,7 +882,7 @@ document.addEventListener("DOMContentLoaded", () =>
 
     // Create initial score document
     await setDoc(
-      doc(db, "courts", courtName, "score", "current"),
+      doc(db, "courts", courtId, "score", "current"),
       defaultScore()
     );
 

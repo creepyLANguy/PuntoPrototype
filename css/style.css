@@ -1417,7 +1417,6 @@ body.light-mode .alert-btn {
 ======================================================= */
 
 .theme-toggle-btn {
-  position: fixed;
   top: clamp(10px, 2vh, 20px);
   right: clamp(12px, 2vw, 30px);
   width: clamp(38px, 6vmin, 50px);
@@ -1732,4 +1731,14 @@ body.light-mode .theme-toggle-btn:hover {
 
 .danger-btn:hover {
   opacity: 0.8;
+}
+
+.global-controls {
+  position: fixed;
+  top: clamp(10px, 2vh, 20px);
+  right: clamp(10px, 2vw, 20px);
+  display: flex;
+  flex-direction: column;
+  gap: clamp(8px, 1.5vh, 14px);
+  z-index: 1000;
 }
