@@ -7,6 +7,7 @@ import
   getDoc,
   getDocs,
   updateDoc,
+  deleteDoc,
   onSnapshot,
   collection,
   addDoc,
@@ -28,12 +29,29 @@ export async function resetCourt(courtId, deepReset = false, newPassword = null)
   try
   {
     const result = await resetFn({ courtId, deepReset, newPassword });
-    alert("Court reset successful");
+    showToast("Court reset successful", "success");
   }
   catch (err)
   {
-    alert("Reset failed: " + err.message);
+    showToast("Reset failed: " + err.message, "error");
   }
+}
+
+function showToast(message, type = "success")
+{
+  const container = document.getElementById("toastContainer");
+  if (!container) return;
+
+  const toast = document.createElement("div");
+  toast.className = `toast ${type}`;
+  toast.textContent = message;
+
+  container.appendChild(toast);
+
+  setTimeout(() =>
+  {
+    toast.remove();
+  }, 3000);
 }
 
 document.addEventListener("DOMContentLoaded", () =>
@@ -207,6 +225,32 @@ document.addEventListener("DOMContentLoaded", () =>
   elements.courtNameError = $("courtNameError");
   elements.courtPasswordError = $("courtPasswordError");
 
+  // ADMIN AUTH ELEMENTS
+  elements.adminLoginBtn = $("adminLoginBtn");
+  elements.adminAuthPage = $("adminAuthPage");
+  elements.adminAuthPassword = $("adminAuthPassword");
+  elements.submitAdminAuthBtn = $("submitAdminAuthBtn");
+  elements.adminAuthError = $("adminAuthError");
+  elements.closeAdminAuthBtn = $("closeAdminAuthBtn");
+
+  // ADMIN DASHBOARD ELEMENTS
+  elements.adminDashboardPage = $("adminDashboardPage");
+  elements.adminCourtList = $("adminCourtList");
+  elements.closeAdminDashboardBtn = $("closeAdminDashboardBtn");
+  elements.showCreateCourtModalBtn = $("showCreateCourtModalBtn");
+
+  // EDIT COURT ELEMENTS
+  elements.editCourtPage = $("editCourtPage");
+  elements.editCourtNameTitle = $("editCourtNameTitle");
+  elements.editCourtName = $("editCourtName");
+  elements.editTeamAName = $("editTeamAName");
+  elements.editTeamBName = $("editTeamBName");
+  elements.editCourtPassword = $("editCourtPassword");
+  elements.editCourtStatus = $("editCourtStatus");
+  elements.saveEditBtn = $("saveEditBtn");
+  elements.deleteCourtBtn = $("deleteCourtBtn");
+  elements.closeEditBtn = $("closeEditBtn");
+
   //PLAY COURT ELEMENTS
   elements.playPage = $("playPage");
   elements.closePlayBtn = $("closePlayBtn");
@@ -232,7 +276,6 @@ document.addEventListener("DOMContentLoaded", () =>
   let allCourts = [];
   let filteredCourts = [];
   let selectedPlayCourt = null;
-  let selectedSpectateCourt = null;
 
   //RESET COURT ELEMENTS
   elements.resetCourtPassword = $("resetCourtPassword");
@@ -265,9 +308,11 @@ document.addEventListener("DOMContentLoaded", () =>
   }
 
   // CREATE PAGE
-  submitOnEnter(elements.adminPassword, elements.createCourtBtn);
   submitOnEnter(elements.courtName, elements.createCourtBtn);
   submitOnEnter(elements.courtPassword, elements.createCourtBtn);
+
+  // ADMIN AUTH PAGE
+  submitOnEnter(elements.adminAuthPassword, elements.submitAdminAuthBtn);
 
   // PLAY PAGE
   submitOnEnter(elements.playCourtPassword, elements.enterCourtBtn);
@@ -321,8 +366,35 @@ document.addEventListener("DOMContentLoaded", () =>
       {
         elements.themeToggleBtn.style.display = "";
       }
+      if (elements.adminLoginBtn)
+      {
+        elements.adminLoginBtn.style.display = "";
+      }
       elements.scoreboardPage.style.display = "none";
       elements.menuPage.style.display = "flex";
+      return;
+    }
+
+    if (isVisible(elements.adminAuthPage))
+    {
+      elements.adminAuthPage.style.display = "none";
+      elements.menuPage.style.display = "flex";
+      return;
+    }
+
+    if (isVisible(elements.adminDashboardPage))
+    {
+      elements.adminDashboardPage.style.display = "none";
+      elements.menuPage.style.display = "flex";
+      return;
+    }
+
+    if (isVisible(elements.editCourtPage))
+    {
+      elements.editCourtPage.style.display = "none";
+      elements.adminDashboardPage.style.display = "flex";
+      displayAdminCourtList();
+      return;
     }
   });
 
@@ -354,7 +426,8 @@ document.addEventListener("DOMContentLoaded", () =>
         if (data.status === STATUS.OPEN)
         {
           allCourts.push({
-            name: doc.id,
+            id: doc.id,
+            name: data.name || doc.id,
             password: data.password,
             createdAt: data.createdAt
           });
@@ -377,7 +450,8 @@ document.addEventListener("DOMContentLoaded", () =>
     const term = searchTerm.toLowerCase().trim();
     if (!term) return courts;
     return courts.filter(court =>
-      court.name.toLowerCase().includes(term)
+      court.name.toLowerCase().includes(term) ||
+      court.id.toLowerCase().includes(term)
     );
   }
 
@@ -404,7 +478,7 @@ document.addEventListener("DOMContentLoaded", () =>
 
       item.addEventListener("click", () =>
       {
-        selectedPlayCourt = court.name;
+        selectedPlayCourt = court.id;
         elements.playCourtList.querySelectorAll(".court-item").forEach(el =>
         {
           el.classList.remove("active");
@@ -443,25 +517,216 @@ document.addEventListener("DOMContentLoaded", () =>
 
       item.addEventListener("click", async () =>
       {
-        await enterCourt(court.name, true);
+        await enterCourt(court.id, true);
       });
 
       listContainer.appendChild(item);
     });
   }
 
+  async function displayAdminCourtList()
+  {
+    elements.adminCourtList.innerHTML = '<div class="loading">Loading all courts...</div>';
+
+    try
+    {
+      const courtsCollection = collection(db, "courts");
+      const snapshot = await getDocs(courtsCollection);
+      elements.adminCourtList.innerHTML = "";
+
+      const courtPromises = snapshot.docs.map(async (courtDoc) =>
+      {
+        const data = courtDoc.data();
+        return {
+          id: courtDoc.id,
+          ...data
+        };
+      });
+
+      const courts = await Promise.all(courtPromises);
+
+      courts.sort((a, b) => a.id.localeCompare(b.id));
+
+      if (courts.length === 0)
+      {
+        elements.adminCourtList.innerHTML = '<div class="no-courts">No courts found.</div>';
+        return;
+      }
+
+      courts.forEach(court =>
+      {
+        const item = document.createElement("div");
+        item.className = "admin-court-item";
+        item.style.gridTemplateColumns = "1.5fr 1fr 1fr 1fr 0.5fr";
+
+        item.innerHTML = `
+          <div>
+            <div class="item-label">Court Name</div>
+            <strong>${court.name || "N/A"}</strong>
+            <div style="font-size: 0.9rem; color: #888;">ID: ${court.id}</div>
+          </div>
+          <div>
+            <div class="item-label">Teams</div>
+            ${court.teamNames?.A || "A"} vs ${court.teamNames?.B || "B"}
+          </div>
+          <div>
+            <div class="item-label">Password</div>
+            <code>${court.password}</code>
+          </div>
+          <div>
+            <div class="item-label">Status</div>
+            <span class="status-badge status-${court.status}">${court.status.toUpperCase()}</span>
+          </div>
+          <div>
+            <button class="edit-btn" data-id="${court.id}">Edit</button>
+          </div>
+        `;
+
+        item.querySelector(".edit-btn").addEventListener("click", () =>
+        {
+          openEditModal(court);
+        });
+
+        elements.adminCourtList.appendChild(item);
+      });
+    }
+    catch (error)
+    {
+      console.error("Error loading admin courts:", error);
+      elements.adminCourtList.innerHTML = '<div class="error">Error loading courts.</div>';
+    }
+  }
+
+  let courtToEdit = null;
+
+  function openEditModal(court)
+  {
+    courtToEdit = court;
+    elements.editCourtNameTitle.textContent = court.name || court.id;
+    elements.editCourtName.value = court.name || "";
+    elements.editTeamAName.value = court.teamNames?.A || "";
+    elements.editTeamBName.value = court.teamNames?.B || "";
+    elements.editCourtPassword.value = court.password || "";
+    elements.editCourtStatus.value = court.status || STATUS.CLOSED;
+
+    elements.adminDashboardPage.style.display = "none";
+    elements.editCourtPage.style.display = "flex";
+  }
+
+  elements.saveEditBtn.addEventListener("click", async () =>
+  {
+    if (!courtToEdit) return;
+
+    try
+    {
+      const courtId = courtToEdit.id;
+      const newName = elements.editCourtName.value.trim();
+
+      if (!newName) throw new Error("Court name cannot be empty");
+
+      const courtRef = doc(db, "courts", courtId);
+
+      await updateDoc(courtRef, {
+        name: newName,
+        teamNames: {
+          A: elements.editTeamAName.value.trim(),
+          B: elements.editTeamBName.value.trim()
+        },
+        password: elements.editCourtPassword.value.trim(),
+        status: elements.editCourtStatus.value
+      });
+
+      showToast("Court updated successfully!", "success");
+      elements.editCourtPage.style.display = "none";
+      elements.adminDashboardPage.style.display = "flex";
+      displayAdminCourtList();
+    }
+    catch (err)
+    {
+      showToast("Failed to update: " + err.message, "error");
+    }
+  });
+
+  elements.deleteCourtBtn.addEventListener("click", async () =>
+  {
+    if (!courtToEdit) return;
+    if (!confirm(`Are you sure you want to delete court "${courtToEdit.id}"? This cannot be undone.`)) return;
+
+    try
+    {
+      await deleteDoc(doc(db, "courts", courtToEdit.id));
+      showToast("Court deleted.", "success");
+      elements.editCourtPage.style.display = "none";
+      elements.adminDashboardPage.style.display = "flex";
+      displayAdminCourtList();
+    }
+    catch (err)
+    {
+      showToast("Delete failed: " + err.message, "error");
+    }
+  });
+
+  elements.closeEditBtn.addEventListener("click", () =>
+  {
+    elements.editCourtPage.style.display = "none";
+    elements.adminDashboardPage.style.display = "flex";
+    displayAdminCourtList();
+  });
+
+  elements.adminLoginBtn.addEventListener("click", () =>
+  {
+    elements.menuPage.style.display = "none";
+    elements.adminAuthPage.style.display = "flex";
+    elements.adminAuthPassword.value = "";
+    elements.adminAuthError.textContent = "";
+    elements.adminAuthPassword.focus();
+  });
+
+  elements.closeAdminAuthBtn.addEventListener("click", () =>
+  {
+    elements.adminAuthPage.style.display = "none";
+    elements.menuPage.style.display = "flex";
+  });
+
+  elements.submitAdminAuthBtn.addEventListener("click", async () =>
+  {
+    const pass = elements.adminAuthPassword.value.trim();
+    const skeleton = await getAdminPassword();
+
+    if (pass === skeleton)
+    {
+      isAdmin = true;
+      elements.adminAuthPage.style.display = "none";
+      elements.adminDashboardPage.style.display = "flex";
+      displayAdminCourtList();
+    }
+    else
+    {
+      elements.adminAuthError.textContent = "Incorrect admin password.";
+    }
+  });
+
+  elements.closeAdminDashboardBtn.addEventListener("click", () =>
+  {
+    elements.adminDashboardPage.style.display = "none";
+    elements.menuPage.style.display = "flex";
+  });
+
+  elements.showCreateCourtModalBtn.addEventListener("click", () =>
+  {
+    elements.adminDashboardPage.style.display = "none";
+    elements.createPage.style.display = "flex";
+    elements.courtName.value = "";
+    elements.courtPassword.value = "";
+    elements.courtNameError.textContent = "";
+    elements.courtPasswordError.textContent = "";
+  });
+
   document.querySelectorAll(".menu-btn").forEach(btn =>
   {
     btn.addEventListener("click", async () =>
     {
       const action = btn.textContent.trim();
-
-      if (action === "Create")
-      {
-        elements.menuPage.style.display = "none";
-        elements.createPage.style.display = "flex";
-        return;
-      }
 
       if (action === "Play")
       {
@@ -495,10 +760,24 @@ document.addEventListener("DOMContentLoaded", () =>
     });
   });
 
+  function updateAdminButtonVisibility()
+  {
+    const isMenuVisible = window.getComputedStyle(elements.menuPage).display !== "none";
+    if (elements.adminLoginBtn)
+    {
+      elements.adminLoginBtn.style.display = isMenuVisible ? "flex" : "none";
+    }
+  }
+
+  // Watch for page changes to toggle admin button
+  const observer = new MutationObserver(() => updateAdminButtonVisibility());
+  observer.observe(document.body, { attributes: true, childList: true, subtree: true });
+
   elements.closeCreateBtn.addEventListener("click", () =>
   {
     elements.createPage.style.display = "none";
-    elements.menuPage.style.display = "flex";
+    if (isAdmin) elements.adminDashboardPage.style.display = "flex";
+    else elements.menuPage.style.display = "flex";
   });
 
   elements.closePlayBtn.addEventListener("click", () =>
@@ -573,53 +852,24 @@ document.addEventListener("DOMContentLoaded", () =>
 
   elements.createCourtBtn.addEventListener("click", async () =>
   {
-    const adminPass = elements.adminPassword.value.trim();
     const courtName = elements.courtName.value.trim();
     const courtPass = elements.courtPassword.value.trim();
 
-    elements.adminError.textContent = "";
     elements.courtNameError.textContent = "";
     elements.courtPasswordError.textContent = "";
-
-    var skeletonKey = await getAdminPassword();
-    if (adminPass !== skeletonKey)
-    {
-      elements.adminError.textContent = "Invalid admin password.";
-      return;
-    }
-
-    let courtRef = null;
 
     if (!courtName)
     {
       elements.courtNameError.textContent = "Court name required.";
       return;
     }
-    else
-    {
-      courtRef = doc(db, "courts", courtName);
-      const existing = await getDoc(courtRef);
 
-      if (existing.exists())
-      {
-        elements.courtNameError.textContent = "Court already exists.";
-        return;
-      }
-    }
+    // Generate specific alphanumeric courtId: NameSlug + Random(1-9999999999)
+    const nameSlug = courtName.replace(/[^a-z0-9]/gi, '').toLowerCase();
+    const randomNum = Math.floor(Math.random() * 9999999999) + 1;
+    const courtId = nameSlug + randomNum;
 
-    if (courtPass.length < 4)
-    {
-      elements.courtPasswordError.textContent = "Minimum 4 characters.";
-      return;
-    }
-
-    if (courtPass === courtName)
-    {
-      elements.courtPasswordError.textContent = "Password must be different from court name.";
-      return;
-    }
-
-    courtRef = doc(db, "courts", courtName);
+    const courtRef = doc(db, "courts", courtId);
 
     // Create court metadata
     await setDoc(courtRef, {
@@ -632,15 +882,23 @@ document.addEventListener("DOMContentLoaded", () =>
 
     // Create initial score document
     await setDoc(
-      doc(db, "courts", courtName, "score", "current"),
+      doc(db, "courts", courtId, "score", "current"),
       defaultScore()
     );
 
-    currentCourtPassword = courtPass;
-    isAdmin = true;
-    enterCourt(courtName, false);
+    showToast(`Court "${courtName}" created successfully.`, "success");
 
-    elements.adminPassword.value = "";
+    elements.createPage.style.display = "none";
+    if (isAdmin)
+    {
+      elements.adminDashboardPage.style.display = "flex";
+      displayAdminCourtList();
+    }
+    else
+    {
+      elements.menuPage.style.display = "flex";
+    }
+
     elements.courtName.value = "";
     elements.courtPassword.value = "";
   });
@@ -713,6 +971,8 @@ document.addEventListener("DOMContentLoaded", () =>
     }
 
     currentCourt = courtName;
+    const data = snap.data();
+    currentCourtPassword = data.password;
 
     if (muted)
     {
@@ -734,10 +994,14 @@ document.addEventListener("DOMContentLoaded", () =>
     elements.playPage.style.display = "none";
     elements.spectatePage.style.display = "none";
 
-    // Hide top-right theme toggle in court view
+    // Hide top-right buttons in court view
     if (elements.themeToggleBtn)
     {
       elements.themeToggleBtn.style.display = "none";
+    }
+    if (elements.adminLoginBtn)
+    {
+      elements.adminLoginBtn.style.display = "none";
     }
 
     elements.scoreboardPage.style.display = "flex";
@@ -1000,36 +1264,7 @@ document.addEventListener("DOMContentLoaded", () =>
     }
   }
 
-  function showAlert(title, message)
-  {
-    const modal = $("alertModal");
-    $("alertTitle").textContent = title;
-    $("alertMessage").textContent = message;
 
-    const closeAlert = () =>
-    {
-      modal.classList.add("hidden");
-      window.removeEventListener("keydown", onEnter);
-    };
-
-    const onEnter = (e) =>
-    {
-      if (e.key === "Enter")
-      {
-        e.preventDefault();
-        closeAlert();
-      }
-    };
-
-    modal.classList.remove("hidden");
-    window.addEventListener("keydown", onEnter);
-
-    $("alertBtn").onclick = closeAlert;
-    modal.onclick = (e) =>
-    {
-      if (e.target === modal) closeAlert();
-    };
-  }
 
   // =====================================================
   // NFC INITIALISATION
@@ -1046,7 +1281,7 @@ document.addEventListener("DOMContentLoaded", () =>
     // Check NFC support
     if (!("NDEFReader" in window))
     {
-      showAlert("NFC Not Supported", "This device doesn't support NFC.\nYou won't be able to scan tags.");
+      showToast("NFC is not supported on this device.", "error");
       return;
     }
 
@@ -1090,13 +1325,13 @@ document.addEventListener("DOMContentLoaded", () =>
     {
       if (error.name === "NotAllowedError")
       {
-        showAlert("NFC Permission Denied", "You denied NFC permission.\nEnable it in your browser settings.");
+        showToast("NFC permission denied.", "error");
       } else if (error.name === "NotSupportedError")
       {
-        showAlert("NFC Not Available", "NFC is not available on this device or browser.");
+        showToast("NFC not available on this device.", "error");
       } else
       {
-        showAlert("NFC Error", "Failed to initialize NFC scanning.");
+        showToast("NFC Error: Failed to initialize scanning.", "error");
       }
       console.error("NFC scan failed:", error);
     }
@@ -1189,7 +1424,7 @@ document.addEventListener("DOMContentLoaded", () =>
     catch (err)
     {
       console.error("Reset failed:", err);
-      showAlert("Reset Failed", err.message || "Unknown error");
+      showToast("Reset Failed: " + (err.message || "Unknown error"), "error");
     }
   }
 
@@ -1238,7 +1473,7 @@ document.addEventListener("DOMContentLoaded", () =>
     catch (err)
     {
       console.error("Reset failed:", err);
-      showAlert("Reset Failed", err.message || "Unknown error");
+      showToast("Reset Failed: " + (err.message || "Unknown error"), "error");
     }
 
     elements.resetCourtPassword.value = "";
@@ -1453,7 +1688,6 @@ document.addEventListener("DOMContentLoaded", () =>
     // 🔥 Listen to score changes
     const unsubscribeScore = onSnapshot(scoreRef, (snap) =>
     {
-      console.log(`Score snapshot received for ${courtName}. Exists: ${snap.exists()}`);
       if (!snap.exists()) return;
 
       score = snap.data();
@@ -1463,11 +1697,58 @@ document.addEventListener("DOMContentLoaded", () =>
     // 🔥 Listen to court metadata changes (password + teamNames)
     const unsubscribeCourt = onSnapshot(courtRef, (snap) =>
     {
-      console.log("Court snapshot fired", snap.data());
+      if (!snap.exists())
+      {
+        // If we are already on a new court (redirected), ignore
+        if (currentCourt !== courtName) return;
 
-      if (!snap.exists()) return;
+        showToast("This court no longer exists.", "error");
+        // Return to menu
+        disableSpectateMode();
+        releaseWakeLock();
+        document.body.classList.remove("scoreboard-active");
+        if (elements.themeToggleBtn) elements.themeToggleBtn.style.display = "";
+        elements.scoreboardPage.style.display = "none";
+        elements.menuPage.style.display = "flex";
+        if (unsubscribeScore) unsubscribeScore();
+        if (unsubscribeCourt) unsubscribeCourt();
+        unsubscribe = null;
+        return;
+      }
 
       const data = snap.data();
+
+      // 🚨 Redirect handling (Rename propagation)
+      if (data.redirect && data.redirect !== currentCourt)
+      {
+        showToast(`Court has been renamed to "${data.redirect}". Redirecting...`, "success");
+        const wasSpectating = isSpectating;
+        // Clean up current listener
+        if (unsubscribeScore) unsubscribeScore();
+        if (unsubscribeCourt) unsubscribeCourt();
+        unsubscribe = null;
+        // Enter new court
+        enterCourt(data.redirect, wasSpectating);
+        return;
+      }
+
+      // 🚨 Court Closure detection
+      if (data.status === STATUS.CLOSED && !isAdmin)
+      {
+        showToast("The court has been closed by admin.", "error");
+
+        // Return to menu
+        disableSpectateMode();
+        releaseWakeLock();
+        document.body.classList.remove("scoreboard-active");
+        if (elements.themeToggleBtn) elements.themeToggleBtn.style.display = "";
+        elements.scoreboardPage.style.display = "none";
+        elements.menuPage.style.display = "flex";
+        if (unsubscribeScore) unsubscribeScore();
+        if (unsubscribeCourt) unsubscribeCourt();
+        unsubscribe = null;
+        return;
+      }
 
       // 🚨 Password change detection
       if (
@@ -1476,16 +1757,20 @@ document.addEventListener("DOMContentLoaded", () =>
         !isSpectating
       )
       {
-        showAlert("Spectate Mode Activated", "The court password has changed.");
+        showToast("Security notice: Court password changed. You are now a spectator.", "error");
         enableSpectateMode();
       }
 
+      // Ensure local state tracks newest password
       currentCourtPassword = data.password;
+
+      // Update UI title (Rename propagation for the display name)
+      showCourtTitle(data.name || snap.id);
 
       const teamNames = data.teamNames || { A: "Team A", B: "Team B" };
 
-      const nameA = document.querySelector(`.team-name[data-team="A"] .name-text`);
-      const nameB = document.querySelector(`.team-name[data-team="B"] .name-text`);
+      const nameA = $("teamA").querySelector(".name-text");
+      const nameB = $("teamB").querySelector(".name-text");
 
       if (nameA)
       {

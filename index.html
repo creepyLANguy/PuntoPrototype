@@ -11,8 +11,11 @@
 
 <body>
 
-  <!-- ================= GLOBAL THEME TOGGLE ================= -->
-  <button id="themeToggleBtn" class="theme-toggle-btn" title="Toggle theme">🌙</button>
+  <!-- ================= GLOBAL BUTTON STACK ================= -->
+  <div class="global-controls">
+    <button id="themeToggleBtn" class="theme-toggle-btn" title="Toggle theme">🌙</button>
+    <button id="adminLoginBtn" class="theme-toggle-btn" title="Admin Panel">🔒</button>
+  </div>
 
   <!-- ================= MENU ================= -->
   <main id="menuPage" class="menu-page">
@@ -23,46 +26,96 @@
     <div class="app-subtitle">Your Live Scoreboard</div>
 
     <div class="menu-buttons">
-      <button class="menu-btn" data-action="start">Create</button>
       <button class="menu-btn" data-action="start">Play</button>
       <button class="menu-btn" data-action="start">Spectate</button>
     </div>
   </main>
 
-  <!-- ================= CREATE COURT PAGE ================= -->
-  <div id="createPage" style="display:none;" class="create-page">
-
+  <!-- ================= ADMIN AUTH PAGE ================= -->
+  <div id="adminAuthPage" style="display:none;" class="create-page">
     <div class="create-card">
-
-      <button id="closeCreateBtn" class="close-btn">✕</button>
-
-      <h2>Create Court</h2>
-
-      <!-- Admin Password -->
+      <button id="closeAdminAuthBtn" class="close-btn">✕</button>
+      <h2>Admin Login</h2>
       <div class="form-group">
-        <label>Admin Password</label>
-        <input type="password" id="adminPassword" />
-        <div class="error" id="adminError"></div>
+        <label>Enter Admin Password</label>
+        <input type="password" id="adminAuthPassword" />
+        <div class="error" id="adminAuthError"></div>
       </div>
+      <button id="submitAdminAuthBtn" class="primary-btn">Login</button>
+    </div>
+  </div>
 
-      <!-- Court Name -->
+  <!-- ================= ADMIN DASHBOARD PAGE ================= -->
+  <div id="adminDashboardPage" style="display:none;" class="create-page">
+    <div class="admin-dashboard-container">
+      <div class="admin-dashboard-header">
+        <button id="closeAdminDashboardBtn" class="close-btn">✕</button>
+        <h2>Admin Dashboard</h2>
+        <button id="showCreateCourtModalBtn" class="primary-btn">Create New Court</button>
+      </div>
+      <div id="adminCourtList" class="admin-court-list">
+        <!-- Court rows will be injected here -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= CREATE COURT MODAL ================= -->
+  <div id="createPage" style="display:none;" class="create-page">
+    <div class="create-card">
+      <button id="closeCreateBtn" class="close-btn">✕</button>
+      <h2>Create Court</h2>
       <div class="form-group">
         <label>Court Name</label>
         <input type="text" id="courtName" />
         <div class="error" id="courtNameError"></div>
       </div>
-
-      <!-- Court Password -->
       <div class="form-group">
         <label>Court Password</label>
         <input type="password" id="courtPassword" />
         <div class="error" id="courtPasswordError"></div>
       </div>
-
       <button id="createCourtBtn" class="primary-btn">Create Court</button>
-
     </div>
   </div>
+
+  <!-- ================= EDIT COURT MODAL ================= -->
+  <div id="editCourtPage" style="display:none;" class="create-page">
+    <div class="create-card edit-card">
+      <button id="closeEditBtn" class="close-btn">✕</button>
+      <h2>Editing Court:<br /><span id="editCourtNameTitle"></span></h2>
+      <div class="form-group">
+        <label>Court Name</label>
+        <input type="text" id="editCourtName" />
+      </div>
+      <div class="form-group">
+        <label>Team A Name</label>
+        <input type="text" id="editTeamAName" />
+      </div>
+      <div class="form-group">
+        <label>Team B Name</label>
+        <input type="text" id="editTeamBName" />
+      </div>
+      <div class="form-group">
+        <label>Court Password</label>
+        <input type="text" id="editCourtPassword" />
+      </div>
+      <div class="form-group">
+        <label>Status</label>
+        <div class="select-wrapper">
+          <select id="editCourtStatus">
+            <option value="open">Open</option>
+            <option value="closed">Closed</option>
+          </select>
+        </div>
+      </div>
+      <button id="saveEditBtn" class="primary-btn">Save Changes</button>
+      <button id="deleteCourtBtn" class="danger-btn" style="margin-top: 10px; background: #ff4444;">Delete
+        Court</button>
+    </div>
+  </div>
+
+  <!-- ================= TOAST NOTIFICATIONS ================= -->
+  <div id="toastContainer" class="toast-container"></div>
 
   <!-- ================= PLAY COURT PAGE ================= -->
   <div id="playPage" style="display:none;" class="create-page">
