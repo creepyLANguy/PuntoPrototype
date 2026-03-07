@@ -67,6 +67,8 @@ document.addEventListener("DOMContentLoaded", () =>
   const UNDO_HOLD_MS = 550;
   const RESET_HOLD_MS = 1050;
 
+  const COURTID_UPPER_LIMIT = 999999999;
+
   const TEAM_A = "A";
   const TEAM_B = "B";
 
@@ -224,6 +226,7 @@ document.addEventListener("DOMContentLoaded", () =>
   elements.adminError = $("adminError");
   elements.courtNameError = $("courtNameError");
   elements.courtPasswordError = $("courtPasswordError");
+  elements.courtStatus = $("courtStatus");
 
   // ADMIN AUTH ELEMENTS
   elements.adminLoginBtn = $("adminLoginBtn");
@@ -867,9 +870,25 @@ document.addEventListener("DOMContentLoaded", () =>
       return;
     }
 
-    // Generate specific alphanumeric courtId: NameSlug + Random(1-9999999999)
+    if (!courtPass)
+    {
+      elements.courtPasswordError.textContent = "Court password required.";
+      return;
+    }
+    else if (courtPass.length < 4)
+    {
+      elements.courtPasswordError.textContent = "Password must be at least 4 characters.";
+      return;
+    }
+    else if (courtPass === courtName)
+    {
+      elements.courtPasswordError.textContent = "Password must be different from court name.";
+      return;
+    }
+
+    // Generate specific alphanumeric courtId: NameSlug + Random(1-COURTID_UPPER_LIMIT)
     const nameSlug = courtName.replace(/[^a-z0-9]/gi, '').toLowerCase();
-    const randomNum = Math.floor(Math.random() * 9999999999) + 1;
+    const randomNum = Math.floor(Math.random() * COURTID_UPPER_LIMIT) + 1;
     const courtId = nameSlug + randomNum;
 
     const courtRef = doc(db, "courts", courtId);
@@ -880,7 +899,7 @@ document.addEventListener("DOMContentLoaded", () =>
       password: courtPass,
       createdAt: serverTimestamp(),
       teamNames: { A: "Team A", B: "Team B" },
-      status: STATUS.CLOSED,
+      status: elements.courtStatus.value
     });
 
     // Create initial score document
@@ -1441,14 +1460,12 @@ document.addEventListener("DOMContentLoaded", () =>
       elements.resetPasswordError.textContent = "Password must be at least 4 characters.";
       return;
     }
-
-    if (newPassword === currentCourt)
+    else if (newPassword === currentCourt)
     {
       elements.resetPasswordError.textContent = "Password must be different from court name.";
       return;
     }
-
-    if (newPassword === currentCourtPassword)
+    else if (newPassword === currentCourtPassword)
     {
       elements.resetPasswordError.textContent = "New password must be different from the current one.";
       return;
