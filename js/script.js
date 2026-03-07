@@ -828,7 +828,6 @@ document.addEventListener("DOMContentLoaded", () =>
     {
       elements.createPage.style.display = "none";
       elements.menuPage.style.display = "flex";
-
     }
   });
 
