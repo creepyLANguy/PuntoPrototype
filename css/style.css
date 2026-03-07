@@ -65,24 +65,36 @@ button {
 
 .menu-page {
   width: 100%;
-  /* Allow content to exceed one viewport so landscape mobile can scroll */
   min-height: 100svh;
   height: auto;
   display: flex;
   flex-direction: column;
-  justify-content: flex-start;
+  justify-content: center;
+  /* Center content vertically if space allowed */
   align-items: center;
-  padding-top: clamp(30px, 6vh, 60px);
-  gap: clamp(8px, 2vh, 20px);
+  padding: 40px 20px;
+  gap: 15px;
   color: white;
   background: url("../media/img/bk.jpg") no-repeat;
   background-size: cover;
   background-position: 50% 50%;
   animation: backgroundScroll 60s ease-in-out 1s infinite;
   position: relative;
-  /* Allow vertical scroll; hide horizontal overflow only */
   overflow-x: hidden;
   overflow-y: auto;
+  text-align: center;
+}
+
+.logo {
+  width: clamp(160px, 30vw, 400px);
+  height: auto;
+  margin-bottom: clamp(10px, 2vh, 20px);
+  filter: drop-shadow(0 8px 15px rgba(0, 0, 0, 0.4));
+  transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.logo:hover {
+  transform: scale(1.08) rotate(-2deg);
 }
 
 body.light-mode .menu-page {
@@ -98,7 +110,7 @@ body.light-mode .menu-page {
 }
 
 body.light-mode .menu-page::before {
-  background: rgba(255, 255, 255, 0.3)
+  background: rgba(255, 235, 137, 0.1);
 }
 
 .menu-page>* {
@@ -108,38 +120,61 @@ body.light-mode .menu-page::before {
 
 
 .app-welcome {
-  font-size: clamp(1.4rem, 5vw, 2.5rem);
-  font-weight: 800;
-  max-width: 80%;
-  align-content: center;
-  margin-bottom: clamp(-60px, -6vh, -20px);
+  font-size: clamp(1.2rem, 4vw, 2rem);
+  font-weight: 500;
+  max-width: 90%;
+  margin-bottom: -10px;
   color: white;
+  letter-spacing: 1px;
 }
 
-
 .app-title {
-  font-size: clamp(2rem, 8vw, 4rem);
-  font-weight: 800;
-  max-width: 80%;
-  align-content: center;
+  font-size: clamp(2.5rem, 10vw, 5rem);
+  font-weight: 900;
+  max-width: 95%;
   color: white;
+  margin: 0;
+  text-transform: uppercase;
+  background: linear-gradient(180deg, #fff 0%, #eeeeee 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.5));
+}
+
+body.light-mode .app-title {
+  background: linear-gradient(180deg, #ffffff 0%, #dddddd 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: white;
 }
 
 .app-subtitle {
-  margin-top: clamp(-30px, -3vh, -10px);
-  font-size: clamp(1.1rem, 4vw, 2.5rem);
-  font-weight: 700;
-  margin-bottom: clamp(10px, 2vh, 20px);
-  color: white;
+  font-size: clamp(1rem, 3.5vw, 1.8rem);
+  font-weight: 400;
+  margin-top: 5px;
+  color: rgba(255, 255, 255, 0.9);
+  letter-spacing: 0.5px;
 }
 
 .menu-buttons {
-  margin-top: clamp(30px, 6vh, 80px);
+  margin-top: clamp(40px, 8vh, 100px);
   display: flex;
-  flex-direction: column;
-  gap: clamp(12px, 2.5vh, 30px);
-  width: clamp(160px, 35%, 300px);
-  padding-bottom: clamp(20px, 5vh, 60px);
+  flex-direction: row;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: clamp(15px, 3vw, 30px);
+  width: 100%;
+  max-width: 800px;
+  padding-bottom: 40px;
+}
+
+@media (max-width: 600px) {
+  .menu-buttons {
+    flex-direction: column;
+    align-items: center;
+    width: clamp(160px, 80%, 300px);
+  }
 }
 
 .menu-btn {
@@ -162,12 +197,14 @@ body.light-mode .menu-page::before {
   background: white;
   color: black;
   border-color: white;
+  transform: translateY(-5px);
+  box-shadow: 0 10px 25px rgba(255, 255, 255, 0.2);
 }
 
 body.light-mode .menu-btn {
-  border-color: rgba(0, 0, 0, 0.8);
-  color: #000;
-  background-color: rgba(255, 255, 255, 0.5);
+  border-color: rgba(0, 0, 0, 0.5);
+  color: rgba(0, 0, 0, 0.9);
+  background-color: rgb(255, 255, 255);
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
 }
 
@@ -242,7 +279,7 @@ body.light-mode .menu-btn:hover {
     height: 100%;
     padding: clamp(10px, 2vmin, 20px) 0;
     justify-content: space-between;
-  }  
+  }
 }
 
 /* Court name in the sidebar/header. Grouped with badge. */
@@ -1461,27 +1498,32 @@ body.light-mode .alert-btn {
    THEME TOGGLE BUTTON (Menu page / global)
 ======================================================= */
 
-.theme-toggle-btn {
-  top: clamp(10px, 2vh, 20px);
-  right: clamp(12px, 2vw, 30px);
-  width: clamp(38px, 6vmin, 50px);
-  height: clamp(38px, 6vmin, 50px);
-  border-radius: 50%;
-  border: 2px solid #aaa;
-  background: transparent;
-  color: var(--text-color);
-  font-size: clamp(16px, 3.5vmin, 24px);
-  font-weight: bold;
-  cursor: pointer;
+.global-controls {
+  position: absolute;
+  top: clamp(10px, 2vh, 24px);
+  right: clamp(10px, 3vw, 30px);
+  display: flex;
+  gap: 12px;
   z-index: 1000;
-  transition: all 0.3s ease;
+}
+
+.theme-toggle-btn {
+  width: clamp(40px, 8vmin, 55px);
+  height: clamp(40px, 8vmin, 55px);
+  border-radius: 50%;
+  border: 1.5px solid rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  font-size: clamp(18px, 4vmin, 26px);
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
   align-items: center;
   justify-content: center;
-  backdrop-filter: blur(6px);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   user-select: none;
-  -webkit-user-select: none;
-  opacity: 0.8;
+  opacity: 0.9;
 }
 
 .theme-toggle-btn:hover {
@@ -1496,12 +1538,14 @@ body.light-mode .alert-btn {
 
 body.light-mode .theme-toggle-btn {
   color: black;
-  background: transparent;
-  opacity: 0.8;
+  border-color: rgba(0, 0, 0, 0.2);
+  background: rgba(0, 0, 0, 0.05);
+  opacity: 0.9;
 }
 
 body.light-mode .theme-toggle-btn:hover {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(0, 0, 0, 0.1);
+  transform: scale(1.1);
   opacity: 1;
 }
 
@@ -2086,19 +2130,20 @@ body.light-mode .close-btn {
 ======================================================= */
 
 body.light-mode .app-welcome,
-body.light-mode .app-title,
 body.light-mode .app-subtitle {
   text-shadow:
-    0 2px 4px rgba(0,0,0,1.0),
-    0 4px 12px rgba(0,0,0,0.25);
+    0 2px 4px rgba(0, 0, 0, 1.0),
+    0 4px 12px rgba(0, 0, 0, 0.25);
+}
+
+body.light-mode .app-title {
+  text-shadow:
+    0 2px 4px rgba(0, 0, 0, 0.5),
+    0 4px 12px rgba(0, 0, 0, 0.25);
 }
 
 /* Logo shadow (works best for images or SVG logos) */
 body.light-mode .menu-page img,
 body.light-mode .menu-page .logo {
   filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.4)) drop-shadow(0 8px 18px rgba(0, 0, 0, 0.25));
-}
-
-body.light-mode .menu-page::before {
-  background: rgba(150, 150, 250, 0.5);
 }
