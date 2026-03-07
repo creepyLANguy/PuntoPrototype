@@ -28,7 +28,7 @@ export async function resetCourt(courtId, deepReset = false, newPassword = null)
 
   try
   {
-    const result = await resetFn({ courtId, deepReset, newPassword });
+    await resetFn({ courtId, deepReset, newPassword });
     showToast("Court reset successful", "success");
   }
   catch (err)
@@ -66,6 +66,7 @@ document.addEventListener("DOMContentLoaded", () =>
   const BACK_HOLD_MS = 550;
   const UNDO_HOLD_MS = 550;
   const RESET_HOLD_MS = 1050;
+  const LONG_PRESS_VIBRATION_MS = 200;
 
   const COURTID_UPPER_LIMIT = 999999999;
 
@@ -544,7 +545,7 @@ document.addEventListener("DOMContentLoaded", () =>
     {
       const courtsCollection = collection(db, "courts");
       const snapshot = await getDocs(courtsCollection);
-      
+
       const courtPromises = snapshot.docs.map(async (courtDoc) =>
       {
         const data = courtDoc.data();
@@ -1577,6 +1578,7 @@ document.addEventListener("DOMContentLoaded", () =>
 
       pressTimer = setTimeout(() =>
       {
+        navigator.vibrate(LONG_PRESS_VIBRATION_MS);
         onConfirm();
         button.classList.remove("holding", "pressed");
       }, holdMs);
