@@ -949,7 +949,7 @@ body.light-mode .create-page {
 
 .create-card {
   position: relative;
-  width: clamp(280px, 90vw, 420px);
+  width: clamp(280px, 85vw, 420px);
   padding: 25px 35px 20px 35px;
   background: rgba(255, 255, 255, 0.05);
   border: 2px solid white;
@@ -1079,8 +1079,8 @@ body.light-mode .primary-btn {
 }
 
 /*
- * In short landscape (mobile landscape), give the list enough room.
- * The create-card is scrollable, so reducing padding lets the list breathe.
+ * In landscape (mobile landscape), give the list enough room.
+ * Use a side-by-side layout for Play/Spectate screens to maximize space.
  */
 @media (orientation: landscape) and (max-height: 520px) {
   .create-card {
@@ -1088,8 +1088,52 @@ body.light-mode .primary-btn {
     gap: 8px;
   }
 
-  .court-list {
-    max-height: clamp(90px, 32vh, 220px);
+  #playPage .create-card,
+  #spectatePage .create-card {
+    width: clamp(500px, 85vw, 850px);
+    max-height: 96svh;
+    display: grid;
+    grid-template-columns: 1fr 1.2fr;
+    grid-template-rows: auto auto 1fr auto;
+    gap: 8px 24px;
+    padding: 20px 30px;
+    align-items: start;
+    overflow-y: auto;
+  }
+
+  #playPage .create-card h2,
+  #spectatePage .create-card h2 {
+    grid-column: 1 / -1;
+    margin: 0 0 5px 0;
+  }
+
+  /* Left column elements */
+  #playPage .create-card .form-group:first-of-type,
+  #spectatePage .create-card .form-group:first-of-type {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  #playPage #playPasswordSection {
+    grid-column: 1;
+    grid-row: 3;
+  }
+
+  #playPage .error,
+  #spectatePage .error {
+    grid-column: 1;
+    grid-row: 4;
+    margin: 0;
+  }
+
+  /* Right column elements (Court List) */
+  #playPage .court-list,
+  #spectatePage .court-list {
+    grid-column: 2;
+    grid-row: 2 / span 3;
+    max-height: clamp(140px, 60vh, 400px);
+    height: 100%;
+    margin-bottom: 0;
   }
 
   .form-group {
@@ -1608,7 +1652,7 @@ body.light-mode .theme-toggle-btn:hover {
   background: var(--modal-bg);
   backdrop-filter: blur(20px);
   border-radius: 20px;
-  width: 95%;
+  width: 85%;
   max-width: 1000px;
   max-height: 90vh;
   padding: 20px;

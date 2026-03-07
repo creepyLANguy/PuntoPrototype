@@ -479,6 +479,7 @@ document.addEventListener("DOMContentLoaded", () =>
       item.addEventListener("click", () =>
       {
         selectedPlayCourt = court.id;
+        elements.playCourtSearch.value = court.name;
         elements.playCourtList.querySelectorAll(".court-item").forEach(el =>
         {
           el.classList.remove("active");
@@ -703,6 +704,8 @@ document.addEventListener("DOMContentLoaded", () =>
     else
     {
       elements.adminAuthError.textContent = "Incorrect admin password.";
+      elements.adminAuthPassword.value = "";
+      elements.adminAuthPassword.focus();
     }
   });
 
