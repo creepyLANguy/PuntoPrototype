@@ -242,7 +242,7 @@ body.light-mode .menu-btn:hover {
     height: 100%;
     padding: clamp(10px, 2vmin, 20px) 0;
     justify-content: space-between;
-  }
+  }  
 }
 
 /* Court name in the sidebar/header. Grouped with badge. */
@@ -2079,4 +2079,26 @@ body.light-mode .close-btn {
     height: 34px;
     font-size: 1rem;
   }
+}
+
+/* =======================================================
+   MENU PAGE — LIGHT MODE TEXT READABILITY
+======================================================= */
+
+body.light-mode .app-welcome,
+body.light-mode .app-title,
+body.light-mode .app-subtitle {
+  text-shadow:
+    0 2px 4px rgba(0,0,0,1.0),
+    0 4px 12px rgba(0,0,0,0.25);
+}
+
+/* Logo shadow (works best for images or SVG logos) */
+body.light-mode .menu-page img,
+body.light-mode .menu-page .logo {
+  filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.4)) drop-shadow(0 8px 18px rgba(0, 0, 0, 0.25));
+}
+
+body.light-mode .menu-page::before {
+  background: rgba(150, 150, 250, 0.5);
 }
