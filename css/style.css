@@ -98,7 +98,7 @@ body.light-mode .menu-page {
 }
 
 body.light-mode .menu-page::before {
-  background: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.3)
 }
 
 .menu-page>* {
@@ -106,13 +106,6 @@ body.light-mode .menu-page::before {
   z-index: 1;
 }
 
-.logo {
-  max-width: 80%;
-  max-height: 25vh;
-  height: auto;
-  width: auto;
-  margin-bottom: clamp(-30px, -3vh, -10px);
-}
 
 .app-welcome {
   font-size: clamp(1.4rem, 5vw, 2.5rem);
@@ -123,9 +116,6 @@ body.light-mode .menu-page::before {
   color: white;
 }
 
-body.light-mode .app-welcome {
-  color: white;
-}
 
 .app-title {
   font-size: clamp(2rem, 8vw, 4rem);
@@ -135,19 +125,11 @@ body.light-mode .app-welcome {
   color: white;
 }
 
-body.light-mode .app-title {
-  color: white;
-}
-
 .app-subtitle {
   margin-top: clamp(-30px, -3vh, -10px);
   font-size: clamp(1.1rem, 4vw, 2.5rem);
   font-weight: 700;
   margin-bottom: clamp(10px, 2vh, 20px);
-  color: white;
-}
-
-body.light-mode .app-subtitle {
   color: white;
 }
 
@@ -179,6 +161,22 @@ body.light-mode .app-subtitle {
 .menu-btn:hover {
   background: white;
   color: black;
+  border-color: white;
+}
+
+body.light-mode .menu-btn {
+  border-color: rgba(0, 0, 0, 0.8);
+  color: #000;
+  background-color: rgba(255, 255, 255, 0.5);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+}
+
+body.light-mode .menu-btn:hover {
+  background: #000;
+  color: #fff;
+  border-color: #000;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
 }
 
 @keyframes backgroundScroll {
@@ -1868,8 +1866,13 @@ body.light-mode .theme-toggle-btn:hover {
     margin-bottom: 0;
   }
 
-  .admin-court-item .aci-name strong  { font-size: 0.82rem; }
-  .admin-court-item .aci-name .aci-id { font-size: 0.6rem; }
+  .admin-court-item .aci-name strong {
+    font-size: 0.82rem;
+  }
+
+  .admin-court-item .aci-name .aci-id {
+    font-size: 0.6rem;
+  }
 
   /* Each field div becomes a simple block */
   .admin-court-item .aci-field {
@@ -1963,8 +1966,15 @@ body.light-mode .theme-toggle-btn:hover {
   white-space: nowrap;
 }
 
-.status-open   { background: #2ecc71; color: #fff; }
-.status-closed { background: #e74c3c; color: #fff; }
+.status-open {
+  background: #2ecc71;
+  color: #fff;
+}
+
+.status-closed {
+  background: #e74c3c;
+  color: #fff;
+}
 
 /* Edit / danger buttons */
 .edit-btn {
@@ -2008,7 +2018,9 @@ body.light-mode .theme-toggle-btn:hover {
   touch-action: manipulation;
 }
 
-.danger-btn:hover { opacity: 0.8; }
+.danger-btn:hover {
+  opacity: 0.8;
+}
 
 /* Global floating controls (theme toggle / admin lock) */
 .global-controls {
@@ -2020,6 +2032,7 @@ body.light-mode .theme-toggle-btn:hover {
   gap: clamp(8px, 1.5vh, 14px);
   z-index: 1000;
 }
+
 /* --- REUSABLE CLOSE BUTTON (Flex-compatible) --- */
 .close-btn {
   background: rgba(255, 255, 255, 0.05);
@@ -2051,16 +2064,16 @@ body.light-mode .close-btn {
   .admin-dashboard-header {
     gap: 10px;
   }
-  
+
   .admin-dashboard-header h2 {
     font-size: 0.9rem;
   }
-  
+
   .admin-dashboard-header .primary-btn {
     padding: 6px 12px;
     font-size: 0.75rem;
   }
-  
+
   .close-btn {
     width: 34px;
     height: 34px;
