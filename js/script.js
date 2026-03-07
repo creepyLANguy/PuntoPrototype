@@ -561,7 +561,6 @@ document.addEventListener("DOMContentLoaded", () =>
       {
         const item = document.createElement("div");
         item.className = "admin-court-item";
-        item.style.gridTemplateColumns = "1.5fr 1fr 1fr 1fr 0.5fr";
 
         item.innerHTML = `
           <div>
