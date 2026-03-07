@@ -158,6 +158,7 @@ body.light-mode .app-title {
 }
 
 .menu-buttons {
+  align-items: stretch;
   margin-top: clamp(40px, 8vh, 100px);
   display: flex;
   flex-direction: row;
@@ -172,12 +173,20 @@ body.light-mode .app-title {
 @media (max-width: 600px) {
   .menu-buttons {
     flex-direction: column;
-    align-items: center;
+    align-items: stretch;
     width: clamp(160px, 80%, 300px);
+  }
+
+  .menu-btn {
+    width: 100%;
   }
 }
 
 .menu-btn {
+  flex: 1 1 0;
+  /* ADD THIS */
+  max-width: 260px;
+  /* optional so they don't get huge on wide screens */
   text-decoration: none;
   padding: clamp(10px, 2vh, 20px) clamp(20px, 4vw, 40px);
   border-radius: 20px;
