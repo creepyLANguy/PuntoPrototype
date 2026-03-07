@@ -53,6 +53,18 @@
         <h2>Admin Dashboard</h2>
         <button id="showCreateCourtModalBtn" class="primary-btn">Create New Court</button>
       </div>
+      <div class="admin-dashboard-controls">
+        <div class="search-wrapper">
+          <input type="text" id="adminCourtSearch" placeholder="Search by name or ID..." />
+        </div>
+        <div class="filter-wrapper">
+          <select id="adminStatusFilter">
+            <option value="all">All Status</option>
+            <option value="open">Open</option>
+            <option value="closed">Closed</option>
+          </select>
+        </div>
+      </div>
       <div id="adminCourtList" class="admin-court-list">
         <!-- Court rows will be injected here -->
       </div>

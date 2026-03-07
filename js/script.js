@@ -241,6 +241,8 @@ document.addEventListener("DOMContentLoaded", () =>
   elements.adminCourtList = $("adminCourtList");
   elements.closeAdminDashboardBtn = $("closeAdminDashboardBtn");
   elements.showCreateCourtModalBtn = $("showCreateCourtModalBtn");
+  elements.adminCourtSearch = $("adminCourtSearch");
+  elements.adminStatusFilter = $("adminStatusFilter");
 
   // EDIT COURT ELEMENTS
   elements.editCourtPage = $("editCourtPage");
@@ -279,6 +281,8 @@ document.addEventListener("DOMContentLoaded", () =>
   let allCourts = [];
   let filteredCourts = [];
   let selectedPlayCourt = null;
+
+  let allAdminCourts = [];
 
   //RESET COURT ELEMENTS
   elements.resetCourtPassword = $("resetCourtPassword");
@@ -322,6 +326,10 @@ document.addEventListener("DOMContentLoaded", () =>
 
   // RESET MODAL
   submitOnEnter(elements.resetCourtPassword, elements.confirmResetBtn);
+
+  // ADMIN DASHBOARD SEARCH & FILTER
+  elements.adminCourtSearch.addEventListener("input", filterAndDisplayAdminCourts);
+  elements.adminStatusFilter.addEventListener("change", filterAndDisplayAdminCourts);
 
   // =====================================================
   // ESC KEY HANDLING (DISMISS MODALS / PAGES)
@@ -536,8 +544,7 @@ document.addEventListener("DOMContentLoaded", () =>
     {
       const courtsCollection = collection(db, "courts");
       const snapshot = await getDocs(courtsCollection);
-      elements.adminCourtList.innerHTML = "";
-
+      
       const courtPromises = snapshot.docs.map(async (courtDoc) =>
       {
         const data = courtDoc.data();
@@ -547,57 +554,85 @@ document.addEventListener("DOMContentLoaded", () =>
         };
       });
 
-      const courts = await Promise.all(courtPromises);
+      allAdminCourts = await Promise.all(courtPromises);
+      allAdminCourts.sort((a, b) => a.id.localeCompare(b.id));
 
-      courts.sort((a, b) => a.id.localeCompare(b.id));
-
-      if (courts.length === 0)
-      {
-        elements.adminCourtList.innerHTML = '<div class="no-courts">No courts found.</div>';
-        return;
-      }
-
-      courts.forEach(court =>
-      {
-        const item = document.createElement("div");
-        item.className = "admin-court-item";
-
-        item.innerHTML = `
-          <div>
-            <div class="item-label">Court Name</div>
-            <strong>${court.name || "N/A"}</strong>
-            <div style="font-size: 0.9rem; color: #888;">ID: ${court.id}</div>
-          </div>
-          <div>
-            <div class="item-label">Teams</div>
-            ${court.teamNames?.A || "A"} vs ${court.teamNames?.B || "B"}
-          </div>
-          <div>
-            <div class="item-label">Password</div>
-            <code>${court.password}</code>
-          </div>
-          <div>
-            <div class="item-label">Status</div>
-            <span class="status-badge status-${court.status}">${court.status.toUpperCase()}</span>
-          </div>
-          <div>
-            <button class="edit-btn" data-id="${court.id}">Edit</button>
-          </div>
-        `;
-
-        item.querySelector(".edit-btn").addEventListener("click", () =>
-        {
-          openEditModal(court);
-        });
-
-        elements.adminCourtList.appendChild(item);
-      });
+      filterAndDisplayAdminCourts();
     }
     catch (error)
     {
       console.error("Error loading admin courts:", error);
       elements.adminCourtList.innerHTML = '<div class="error">Error loading courts.</div>';
     }
+  }
+
+  function filterAndDisplayAdminCourts()
+  {
+    const searchTerm = elements.adminCourtSearch.value.toLowerCase().trim();
+    const statusFilter = elements.adminStatusFilter.value;
+
+    const filtered = allAdminCourts.filter(court =>
+    {
+      const matchesSearch =
+        (court.name || "").toLowerCase().includes(searchTerm) ||
+        court.id.toLowerCase().includes(searchTerm);
+
+      const matchesStatus = statusFilter === "all" || court.status === statusFilter;
+
+      return matchesSearch && matchesStatus;
+    });
+
+    renderAdminCourtList(filtered);
+  }
+
+  function renderAdminCourtList(courts)
+  {
+    elements.adminCourtList.innerHTML = "";
+
+    if (courts.length === 0)
+    {
+      elements.adminCourtList.innerHTML = '<div class="no-courts">No matching courts found.</div>';
+      return;
+    }
+
+    courts.forEach(court =>
+    {
+      const item = document.createElement("div");
+      item.className = "admin-court-item";
+
+      item.innerHTML = `
+          <div class="aci-name">
+            <strong>${court.name || "N/A"}</strong>
+            <div class="aci-id">ID: ${court.id}</div>
+          </div>
+          <div class="aci-field teams-cell">
+            <div class="aci-label">Teams</div>
+            <div class="aci-value">
+              ${court.teamNames?.A || "A"} vs ${court.teamNames?.B || "B"}
+            </div>
+          </div>
+          <div class="aci-field password-cell">
+            <div class="aci-label">Password</div>
+            <div class="aci-value"><code>${court.password || "No Password"}</code></div>
+          </div>
+          <div class="aci-field status-cell">
+            <div class="aci-label">Status</div>
+            <div class="aci-value">
+              <span class="status-badge status-${court.status}">${court.status?.toUpperCase() || "UNKNOWN"}</span>
+            </div>
+          </div>
+          <div class="aci-actions">
+            <button class="edit-btn" data-id="${court.id}">Edit</button>
+          </div>
+        `;
+
+      item.querySelector(".edit-btn").addEventListener("click", () =>
+      {
+        openEditModal(court);
+      });
+
+      elements.adminCourtList.appendChild(item);
+    });
   }
 
   let courtToEdit = null;

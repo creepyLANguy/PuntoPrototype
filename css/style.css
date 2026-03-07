@@ -967,7 +967,9 @@ body.light-mode .create-card {
   border: 2px solid black;
 }
 
-.close-btn {
+.create-card .close-btn,
+.edit-card .close-btn,
+.prompt-card .close-btn {
   position: absolute;
   top: 15px;
   right: 20px;
@@ -979,6 +981,7 @@ body.light-mode .create-card {
   user-select: none;
   -webkit-user-select: none;
   touch-action: manipulation;
+  z-index: 10;
 }
 
 body.light-mode .close-btn {
@@ -1572,17 +1575,6 @@ body.light-mode .theme-toggle-btn:hover {
    ADMIN DASHBOARD ENHANCEMENTS
 ======================================================= */
 
-.admin-court-item {
-  background: var(--input-bg);
-  border: 1px solid var(--input-border);
-  padding: 15px;
-  border-radius: 12px;
-  display: grid;
-  grid-template-columns: 1.2fr 1fr 1fr 2fr 0.8fr 0.5fr;
-  gap: 15px;
-  align-items: center;
-  font-size: 0.9rem;
-}
 
 .score-summary-grid {
   display: grid;
@@ -1654,9 +1646,9 @@ body.light-mode .theme-toggle-btn:hover {
   backdrop-filter: blur(20px);
   border-radius: 20px;
   width: 95%;
-  max-width: 1100px;
-  max-height: 90vh;
-  padding: clamp(15px, 3vw, 25px);
+  max-width: 1200px;
+  max-height: 95svh;
+  padding: 20px;
   display: flex;
   flex-direction: column;
   color: var(--text-color);
@@ -1666,131 +1658,315 @@ body.light-mode .theme-toggle-btn:hover {
 
 @media (min-width: 769px) {
   .admin-dashboard-container {
-    width: 85%;
+    width: 88%;
+    max-height: 90svh;
   }
 }
 
+@media (orientation: landscape) and (max-height: 520px) {
+  .admin-dashboard-container {
+    padding: 9px 14px;
+  }
+}
+
+/* Header: title + create button */
 .admin-dashboard-header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
-  padding-bottom: 15px;
-  border-bottom: 1px solid var(--input-border);
+  justify-content: space-between;
   gap: 15px;
-  flex-wrap: wrap;
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--input-border);
 }
 
-@media (max-width: 500px) {
+.admin-dashboard-header h2 {
+  flex: 1;
+  text-align: center;
+  margin: 0;
+  font-size: clamp(1rem, 2.5vw, 1.4rem);
+}
+
+.admin-dashboard-header .primary-btn {
+  flex-shrink: 0;
+  width: auto;
+  padding: 8px 16px;
+  font-size: 0.85rem;
+  margin: 0;
+}
+
+@media (orientation: landscape) and (max-height: 520px) {
   .admin-dashboard-header {
-    flex-direction: column;
-    align-items: stretch;
-    text-align: center;
-    padding-top: 30px; /* Space for close btn */
-  }
-
-  .admin-dashboard-header h2 {
-    margin: 0;
-    font-size: 1.4rem;
+    margin-bottom: 6px;
+    padding-bottom: 6px;
   }
 }
 
+/* Search + filter row */
+.admin-dashboard-controls {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 12px;
+  flex-wrap: nowrap;
+}
+
+.admin-dashboard-controls .search-wrapper {
+  flex: 3;
+  min-width: 0;
+}
+
+.admin-dashboard-controls .search-wrapper input {
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  color: var(--white);
+  font-size: 0.88rem;
+  font-family: inherit;
+  outline: none;
+}
+
+.admin-dashboard-controls .filter-wrapper {
+  flex: 1;
+  min-width: 105px;
+  position: relative;
+}
+
+.admin-dashboard-controls .filter-wrapper select {
+  width: 100%;
+  padding: 8px 28px 8px 12px;
+  border-radius: 8px;
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  color: var(--white);
+  font-size: 0.88rem;
+  font-family: inherit;
+  appearance: none;
+  cursor: pointer;
+  outline: none;
+}
+
+.admin-dashboard-controls .filter-wrapper::after {
+  content: "▼";
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.58rem;
+  color: #888;
+  pointer-events: none;
+}
+
+@media (orientation: landscape) and (max-height: 520px) {
+  .admin-dashboard-controls {
+    margin-bottom: 7px;
+  }
+}
+
+/* Scrollable court list */
 .admin-court-list {
   overflow-y: auto;
   flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 7px;
+  padding-right: 3px;
+  scrollbar-width: thin;
 }
 
+/* ================================================================
+   COURT CARD — Mobile Portrait (default)
+   2-col grid: fixed label col (80px) | stretchy value col.
+   The court-name block is always full-width at the top.
+================================================================ */
 .admin-court-item {
   background: var(--input-bg);
   border: 1px solid var(--input-border);
-  padding: 15px;
-  border-radius: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  font-size: 1rem;
+  border-radius: 10px;
+  padding: 11px 13px;
+  flex-shrink: 0;
+  display: grid;
+  grid-template-columns: 80px 1fr;
+  gap: 5px 8px;
+  align-items: center;
+  font-size: 0.88rem;
 }
 
+/* Full-width name header row */
+.admin-court-item .aci-name {
+  grid-column: 1 / -1;
+  padding-bottom: 7px;
+  margin-bottom: 3px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.admin-court-item .aci-name strong {
+  display: block;
+  font-size: 0.95rem;
+  margin-bottom: 2px;
+}
+
+.admin-court-item .aci-name .aci-id {
+  font-size: 0.7rem;
+  color: #888;
+  word-break: break-all;
+}
+
+/* Label cells (left col) */
+.admin-court-item .aci-label {
+  font-size: 0.58rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #999;
+  white-space: nowrap;
+}
+
+/* Value cells (right col) */
+.admin-court-item .aci-value {
+  font-size: 0.88rem;
+  word-break: break-word;
+}
+
+/* Edit button — spans both cols */
+.admin-court-item .aci-actions {
+  grid-column: 1 / -1;
+  margin-top: 5px;
+}
+
+.admin-court-item .aci-actions .edit-btn {
+  width: 100%;
+  padding: 7px;
+  font-size: 0.83rem;
+}
+
+/* ================================================================
+   COURT CARD — Landscape mobile (short viewport)
+   Collapses to a compact horizontal row.
+================================================================ */
+@media (orientation: landscape) and (max-height: 520px) {
+  .admin-court-list {
+    gap: 5px;
+  }
+
+  .admin-court-item {
+    display: grid;
+    grid-template-columns: 1.5fr 1fr 0.85fr 0.85fr auto;
+    grid-template-rows: auto;
+    gap: 0 10px;
+    padding: 7px 11px;
+    align-items: center;
+    font-size: 0.82rem;
+  }
+
+  .admin-court-item .aci-name {
+    grid-column: span 1;
+    border-bottom: none;
+    padding-bottom: 0;
+    margin-bottom: 0;
+  }
+
+  .admin-court-item .aci-name strong  { font-size: 0.82rem; }
+  .admin-court-item .aci-name .aci-id { font-size: 0.6rem; }
+
+  /* Each field div becomes a simple block */
+  .admin-court-item .aci-field {
+    display: block;
+  }
+
+  .admin-court-item .aci-label {
+    display: block;
+    font-size: 0.5rem;
+    margin-bottom: 2px;
+  }
+
+  .admin-court-item .aci-value {
+    font-size: 0.8rem;
+  }
+
+  .admin-court-item .aci-actions {
+    grid-column: span 1;
+    margin-top: 0;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+  }
+
+  .admin-court-item .aci-actions .edit-btn {
+    width: auto;
+    padding: 4px 10px;
+    font-size: 0.76rem;
+  }
+}
+
+/* ================================================================
+   COURT CARD — Desktop (>= 769px)
+   Full horizontal 5-column row.
+================================================================ */
 @media (min-width: 769px) {
   .admin-court-item {
     display: grid;
-    grid-template-columns: 1.5fr 1fr 1fr 1fr 0.5fr;
-    gap: 15px;
+    grid-template-columns: 1.8fr 1.2fr 0.9fr 1fr auto;
+    grid-template-rows: auto;
+    gap: 0 16px;
+    padding: 12px 16px;
     align-items: center;
-    font-size: 0.9rem;
-  }
-}
-
-@media (max-width: 768px) {
-  .admin-court-item {
-    padding: 12px;
-    font-size: 0.9rem;
-  }
-  
-  .admin-court-item > div {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 10px;
-    text-align: right;
-  }
-  
-  .admin-court-item > div:first-child {
-    flex-direction: column;
-    align-items: flex-start;
-    text-align: left;
-    border-bottom: 1px solid rgba(255,255,255,0.05);
-    padding-bottom: 8px;
-    margin-bottom: 4px;
+    font-size: 0.88rem;
   }
 
-  .admin-court-item .item-label {
+  .admin-court-item .aci-name {
+    grid-column: span 1;
+    border-bottom: none;
+    padding-bottom: 0;
     margin-bottom: 0;
-    min-width: 80px;
-    text-align: left;
+  }
+
+  .admin-court-item .aci-field {
+    display: block;
+  }
+
+  .admin-court-item .aci-label {
+    display: block;
+    font-size: 0.58rem;
+    margin-bottom: 3px;
+  }
+
+  .admin-court-item .aci-value {
+    font-size: 0.88rem;
+  }
+
+  .admin-court-item .aci-actions {
+    grid-column: span 1;
+    margin-top: 0;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+  }
+
+  .admin-court-item .aci-actions .edit-btn {
+    width: auto;
+    padding: 6px 14px;
+    font-size: 0.85rem;
   }
 }
 
-.admin-court-item .item-label {
-  font-weight: bold;
-  font-size: 0.7rem;
-  text-transform: uppercase;
-  color: #888;
-  margin-bottom: 4px;
-}
-
-.item-score-json {
-  font-family: monospace;
-  font-size: 0.75rem;
-  background: rgba(0, 0, 0, 0.2);
-  padding: 5px;
-  border-radius: 4px;
-  max-height: 50px;
-  overflow-y: auto;
-  white-space: pre-wrap;
-}
-
+/* Status badges */
 .status-badge {
-  padding: 4px 8px;
-  border-radius: 12px;
-  font-size: 0.75rem;
-  font-weight: bold;
-  text-align: center;
+  display: inline-block;
+  padding: 3px 9px;
+  border-radius: 20px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  white-space: nowrap;
 }
 
-.status-open {
-  background: #2ecc71;
-  color: white;
-}
+.status-open   { background: #2ecc71; color: #fff; }
+.status-closed { background: #e74c3c; color: #fff; }
 
-.status-closed {
-  background: #e74c3c;
-  color: white;
-}
-
+/* Edit / danger buttons */
 .edit-btn {
   background: transparent;
   border: 1px solid var(--white);
@@ -1798,7 +1974,10 @@ body.light-mode .theme-toggle-btn:hover {
   padding: 6px 12px;
   border-radius: 6px;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: background 0.2s, color 0.2s;
+  white-space: nowrap;
+  touch-action: manipulation;
+  font-family: inherit;
 }
 
 .edit-btn:hover {
@@ -1826,12 +2005,12 @@ body.light-mode .theme-toggle-btn:hover {
   cursor: pointer;
   color: white;
   transition: opacity 0.2s;
+  touch-action: manipulation;
 }
 
-.danger-btn:hover {
-  opacity: 0.8;
-}
+.danger-btn:hover { opacity: 0.8; }
 
+/* Global floating controls (theme toggle / admin lock) */
 .global-controls {
   position: fixed;
   top: clamp(10px, 2vh, 20px);
@@ -1840,4 +2019,51 @@ body.light-mode .theme-toggle-btn:hover {
   flex-direction: column;
   gap: clamp(8px, 1.5vh, 14px);
   z-index: 1000;
+}
+/* --- REUSABLE CLOSE BUTTON (Flex-compatible) --- */
+.close-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--input-border);
+  color: var(--white);
+  font-size: 1.2rem;
+  width: 38px;
+  height: 38px;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.close-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: var(--white);
+}
+
+body.light-mode .close-btn {
+  color: black;
+  border-color: #ccc;
+}
+
+@media (max-width: 480px) {
+  .admin-dashboard-header {
+    gap: 10px;
+  }
+  
+  .admin-dashboard-header h2 {
+    font-size: 0.9rem;
+  }
+  
+  .admin-dashboard-header .primary-btn {
+    padding: 6px 12px;
+    font-size: 0.75rem;
+  }
+  
+  .close-btn {
+    width: 34px;
+    height: 34px;
+    font-size: 1rem;
+  }
 }
