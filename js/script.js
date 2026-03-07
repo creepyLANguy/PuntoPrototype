@@ -1578,7 +1578,14 @@ document.addEventListener("DOMContentLoaded", () =>
 
       pressTimer = setTimeout(() =>
       {
-        navigator.vibrate(LONG_PRESS_VIBRATION_MS);
+        try 
+        {
+          window.navigator.vibrate(LONG_PRESS_VIBRATION_MS);
+        } catch (error) 
+        {
+          console.log("Failed to call vibration function on long press trigger.")
+        }
+
         onConfirm();
         button.classList.remove("holding", "pressed");
       }, holdMs);
