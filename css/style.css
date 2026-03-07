@@ -2147,3 +2147,47 @@ body.light-mode .menu-page img,
 body.light-mode .menu-page .logo {
   filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.4)) drop-shadow(0 8px 18px rgba(0, 0, 0, 0.25));
 }
+
+/* =======================================================
+   MENU PAGE — LANDSCAPE COMPACT LAYOUT
+   Shows more elements without affecting portrait/desktop
+======================================================= */
+
+@media (orientation: landscape) and (max-height: 520px) {
+
+  .menu-page {
+    padding: 18px 20px;
+    gap: 8px;
+    justify-content: flex-start;
+  }
+
+  .logo {
+    width: clamp(120px, 18vw, 220px);
+    margin-bottom: 0px;
+  }
+
+  .app-welcome {
+    font-size: clamp(1rem, 2.8vw, 1.4rem);
+    margin-bottom: -6px;
+  }
+
+  .app-title {
+    font-size: clamp(2rem, 6vw, 3.2rem);
+  }
+
+  .app-subtitle {
+    font-size: clamp(0.9rem, 2.2vw, 1.2rem);
+  }
+
+  .menu-buttons {
+    margin-top: 18px;
+    gap: 12px;
+    padding-bottom: 10px;
+  }
+
+  .menu-btn {
+    padding: 8px 18px;
+    font-size: clamp(0.9rem, 2vw, 1.2rem);
+  }
+
+}
