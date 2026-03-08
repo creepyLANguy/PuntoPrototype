@@ -295,6 +295,30 @@ document.addEventListener("DOMContentLoaded", () =>
   elements.nfcCooldownBanner = $("nfcCooldownBanner");
   elements.nfcCountdown = $("nfcCountdown");
 
+  //Admin portal things
+  elements.adminTabs = document.querySelectorAll('.tab-btn');
+  elements.courtsTab = $("courtsTab");
+  elements.devicesTab = $("devicesTab");
+  elements.adminDeviceList = $("adminDeviceList");
+  elements.adminDeviceSearch = $("adminDeviceSearch");
+
+  // Add/Edit Device Modal Elements
+  elements.addDevicePage = $("addDevicePage");
+  elements.showAddDeviceModalBtn = $("showAddDeviceModalBtn");
+  elements.closeAddDeviceBtn = $("closeAddDeviceBtn");
+  elements.saveNewDeviceBtn = $("saveNewDeviceBtn");
+  elements.newDeviceId = $("newDeviceId");
+  elements.newDeviceCourtId = $("newDeviceCourtId");
+
+  elements.editDevicePage = $("editDevicePage");
+  elements.editDeviceIdTitle = $("editDeviceIdTitle");
+  elements.editDeviceCourtId = $("editDeviceCourtId");
+  elements.saveEditDeviceBtn = $("saveEditDeviceBtn");
+  elements.deleteDeviceBtn = $("deleteDeviceBtn");
+  elements.closeEditDeviceBtn = $("closeEditDeviceBtn");
+
+  let allDevices = [];
+
   // =====================================================
   // INITIALIZE THEME
   // =====================================================
@@ -1874,6 +1898,146 @@ document.addEventListener("DOMContentLoaded", () =>
       unsubscribeCourt();
     };
   }
+
+  // Tab Switching Logic
+  elements.adminTabs.forEach(btn =>
+  {
+    btn.addEventListener('click', () =>
+    {
+      elements.adminTabs.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+
+      const tab = btn.dataset.tab;
+      if (tab === 'courts')
+      {
+        elements.courtsTab.style.display = 'block';
+        elements.devicesTab.style.display = 'none';
+        displayAdminCourtList();
+      } else
+      {
+        elements.courtsTab.style.display = 'none';
+        elements.devicesTab.style.display = 'block';
+        loadDevices();
+      }
+    });
+  });
+
+  // Device Management Functions
+  async function loadDevices()
+  {
+    elements.adminDeviceList.innerHTML = '<div class="loading">Loading devices...</div>';
+    try
+    {
+      const snapshot = await getDocs(collection(db, "devices"));
+      allDevices = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      renderDeviceList(allDevices);
+    } catch (error)
+    {
+      showToast("Error loading devices", "error");
+    }
+  }
+
+  function renderDeviceList(devices)
+  {
+    elements.adminDeviceList.innerHTML = "";
+    if (devices.length === 0)
+    {
+      elements.adminDeviceList.innerHTML = '<div class="no-courts">No devices registered.</div>';
+      return;
+    }
+
+    devices.forEach(device =>
+    {
+      const item = document.createElement("div");
+      item.className = "admin-court-item"; // Reuse court item styling
+      item.innerHTML = `
+      <div class="aci-name">
+        <strong>Device: ${device.id}</strong>
+        <div class="aci-id">Mapped Court: ${device.courtId || 'None'}</div>
+      </div>
+      <div class="aci-actions">
+        <button class="edit-btn" data-id="${device.id}">Edit Mapping</button>
+      </div>
+    `;
+      item.querySelector('.edit-btn').addEventListener('click', () => openEditDeviceModal(device));
+      elements.adminDeviceList.appendChild(item);
+    });
+  }
+
+  // Add Device Logic
+  elements.showAddDeviceModalBtn.addEventListener('click', () =>
+  {
+    elements.addDevicePage.style.display = 'flex';
+  });
+
+  elements.saveNewDeviceBtn.addEventListener('click', async () =>
+  {
+    const deviceId = elements.newDeviceId.value.trim();
+    const courtId = elements.newDeviceCourtId.value.trim();
+
+    if (!deviceId) return showToast("Device ID is required", "error");
+
+    try
+    {
+      await setDoc(doc(db, "devices", deviceId), { courtId: courtId });
+      showToast("Device added successfully", "success");
+      elements.addDevicePage.style.display = 'none';
+      elements.newDeviceId.value = "";
+      elements.newDeviceCourtId.value = "";
+      loadDevices();
+    } catch (error)
+    {
+      showToast("Failed to add device", "error");
+    }
+  });
+
+  // Edit/Delete Device Logic
+  function openEditDeviceModal(device)
+  {
+    elements.editDeviceIdTitle.textContent = device.id;
+    elements.editDeviceCourtId.value = device.courtId || "";
+    elements.editDevicePage.style.display = 'flex';
+
+    elements.saveEditDeviceBtn.onclick = async () =>
+    {
+      try
+      {
+        await updateDoc(doc(db, "devices", device.id), {
+          courtId: elements.editDeviceCourtId.value.trim()
+        });
+        showToast("Mapping updated", "success");
+        elements.editDevicePage.style.display = 'none';
+        loadDevices();
+      } catch (e) { showToast("Update failed", "error"); }
+    };
+
+    elements.deleteDeviceBtn.onclick = async () =>
+    {
+      if (!confirm("Delete this device registration?")) return;
+      try
+      {
+        await deleteDoc(doc(db, "devices", device.id));
+        showToast("Device deleted", "success");
+        elements.editDevicePage.style.display = 'none';
+        loadDevices();
+      } catch (e) { showToast("Delete failed", "error"); }
+    };
+  }
+
+  // Close buttons
+  elements.closeAddDeviceBtn.onclick = () => elements.addDevicePage.style.display = 'none';
+  elements.closeEditDeviceBtn.onclick = () => elements.editDevicePage.style.display = 'none';
+
+  // Search logic for devices
+  elements.adminDeviceSearch.addEventListener('input', (e) =>
+  {
+    const term = e.target.value.toLowerCase();
+    const filtered = allDevices.filter(d =>
+      d.id.toLowerCase().includes(term) ||
+      (d.courtId && d.courtId.toLowerCase().includes(term))
+    );
+    renderDeviceList(filtered);
+  });
 });
 
 // =====================================================

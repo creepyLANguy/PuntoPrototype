@@ -51,22 +51,72 @@
       <div class="admin-dashboard-header">
         <button id="closeAdminDashboardBtn" class="close-btn">✕</button>
         <h2>Admin Dashboard</h2>
-        <button id="showCreateCourtModalBtn" class="primary-btn">Create New Court</button>
-      </div>
-      <div class="admin-dashboard-controls">
-        <div class="search-wrapper">
-          <input type="text" id="adminCourtSearch" placeholder="Search by name or ID..." />
-        </div>
-        <div class="filter-wrapper">
-          <select id="adminStatusFilter">
-            <option value="all">All</option>
-            <option value="open">Open</option>
-            <option value="closed">Closed</option>
-          </select>
+        <div class="header-actions">
+          <button id="showCreateCourtModalBtn" class="primary-btn">Create Court</button>
+          <button id="showAddDeviceModalBtn" class="primary-btn">Add Device</button>
         </div>
       </div>
-      <div id="adminCourtList" class="admin-court-list">
-        <!-- Court rows will be injected here -->
+
+      <div class="admin-tabs">
+        <button class="tab-btn active" data-tab="courts">Courts</button>
+        <button class="tab-btn" data-tab="devices">Devices</button>
+      </div>
+
+      <div id="courtsTab" class="tab-content">
+        <div class="admin-dashboard-controls">
+          <div class="search-wrapper">
+            <input type="text" id="adminCourtSearch" placeholder="Search courts..." />
+          </div>
+          <div class="filter-wrapper">
+            <select id="adminStatusFilter">
+              <option value="all">All Statuses</option>
+              <option value="open">Open</option>
+              <option value="closed">Closed</option>
+            </select>
+          </div>
+        </div>
+        <div id="adminCourtList" class="admin-court-list"></div>
+      </div>
+
+      <div id="devicesTab" class="tab-content" style="display:none;">
+        <div class="admin-dashboard-controls">
+          <div class="search-wrapper">
+            <input type="text" id="adminDeviceSearch" placeholder="Search device ID or court ID..." />
+          </div>
+        </div>
+        <div id="adminDeviceList" class="admin-court-list">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="addDevicePage" style="display:none;" class="create-page">
+    <div class="create-card">
+      <button id="closeAddDeviceBtn" class="close-btn">✕</button>
+      <h2>Add Device</h2>
+      <div class="form-group">
+        <label>Device ID (Preconfigured)</label>
+        <input type="text" id="newDeviceId" placeholder="e.g. SN12345" />
+      </div>
+      <div class="form-group">
+        <label>Associated Court ID</label>
+        <input type="text" id="newDeviceCourtId" placeholder="e.g. court-123" />
+      </div>
+      <button id="saveNewDeviceBtn" class="primary-btn">Add Device</button>
+    </div>
+  </div>
+
+  <div id="editDevicePage" style="display:none;" class="create-page">
+    <div class="create-card">
+      <button id="closeEditDeviceBtn" class="close-btn">✕</button>
+      <h2>Edit Device: <br /><span id="editDeviceIdTitle"></span></h2>
+      <div class="form-group">
+        <label>Mapped Court ID</label>
+        <input type="text" id="editDeviceCourtId" />
+      </div>
+      <div class="header-actions" style="margin-top: 20px; gap: 10px;">
+        <button id="saveEditDeviceBtn" class="primary-btn">Save Mapping</button>
+        <button id="deleteDeviceBtn" class="alert-btn" style="background: #ff4444;">Delete Device</button>
       </div>
     </div>
   </div>
