@@ -2375,3 +2375,142 @@ body.light-mode .tab-btn.active {
   flex-direction: column;
   gap: 15px;
 }
+
+/* --- Portrait / Mobile Adjustments --- */
+@media (max-width: 600px) {
+  .admin-dashboard-header {
+    flex-direction: column;
+    /* Stack the title and buttons */
+    align-items: flex-start;
+    position: relative;
+    padding-bottom: 15px;
+    gap: 15px;
+  }
+
+  .admin-dashboard-header h2 {
+    font-size: 1.5rem;
+    margin-bottom: 5px;
+  }
+
+  /* Moves the X button to the top right so it doesn't get pushed down */
+  #closeAdminDashboardBtn {
+    position: absolute;
+    right: 0;
+    top: 0;
+  }
+
+  .header-actions {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    /* Puts buttons side-by-side, equal width */
+    gap: 10px;
+  }
+
+  .header-actions .primary-btn {
+    padding: 12px 5px;
+    /* Taller touch targets for fingers */
+    font-size: 0.9rem;
+    width: 100%;
+    margin: 0;
+  }
+}
+
+.admin-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  width: 100%;
+}
+
+.tab-btn {
+  text-align: center;
+}
+
+/* Ensure the dashboard container takes up available space but doesn't exceed screen */
+.admin-dashboard-container {
+  max-height: 90vh;
+  /* Prevents it from going off-screen */
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  /* We want the lists to scroll, not the whole card */
+}
+
+/* Make the list containers scrollable */
+.admin-court-list {
+  flex: 1;
+  overflow-y: auto;
+  /* This enables scrolling */
+  padding-right: 5px;
+  /* Space for scrollbar */
+  min-height: 300px;
+  /* Ensures there is an area to scroll even if empty */
+  -webkit-overflow-scrolling: touch;
+  /* Smooth scrolling on iOS */
+}
+
+/* Custom scrollbar for a cleaner look */
+.admin-court-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.admin-court-list::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
+}
+
+body.light-mode .admin-court-list::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+/* Tabs Light Mode */
+body.light-mode .tab-btn {
+  background: rgba(0, 0, 0, 0.05);
+  border-color: rgba(0, 0, 0, 0.1);
+  color: #333;
+}
+
+body.light-mode .tab-btn.active {
+  background: #000;
+  color: #fff;
+}
+
+/* Device/Court Items Light Mode */
+body.light-mode .admin-court-item {
+  background: #ffffff;
+  border: 1px solid #dddddd;
+  color: #333;
+}
+
+body.light-mode .aci-name strong {
+  color: #000;
+}
+
+body.light-mode .aci-id {
+  color: #666;
+}
+
+/* Search Inputs Light Mode */
+body.light-mode #adminDeviceSearch,
+body.light-mode #adminCourtSearch {
+  background: #fff;
+  color: #000;
+  border: 1px solid #ccc;
+}
+
+@media (max-width: 600px) {
+  .header-actions {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .admin-dashboard-header {
+    padding: 10px;
+  }
+
+  /* Ensure the container doesn't get too tall on small phones */
+  .admin-dashboard-container {
+    width: 95%;
+    max-height: 95vh;
+  }
+}
