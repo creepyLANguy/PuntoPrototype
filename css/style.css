@@ -1833,8 +1833,6 @@ body.light-mode .theme-toggle-btn:hover {
 
 /* ================================================================
    COURT CARD — Mobile Portrait (default)
-   2-col grid: fixed label col (80px) | stretchy value col.
-   The court-name block is always full-width at the top.
 ================================================================ */
 .admin-court-item {
   background: var(--input-bg);
@@ -1843,7 +1841,7 @@ body.light-mode .theme-toggle-btn:hover {
   padding: 11px 13px;
   flex-shrink: 0;
   display: grid;
-  grid-template-columns: 80px 1fr;
+  grid-template-columns: 30% 40% 30%;
   gap: 5px 8px;
   align-items: center;
   font-size: 0.88rem;
@@ -1893,7 +1891,6 @@ body.light-mode .theme-toggle-btn:hover {
 
 .admin-court-item .aci-actions .edit-btn {
   width: 100%;
-  padding: 7px;
   font-size: 0.83rem;
 }
 
