@@ -75,7 +75,7 @@ button {
   padding: 40px 20px;
   gap: 15px;
   color: white;
-  background: url("../media/img/bk.jpg") no-repeat;
+  background: url("../media/img/bk_dark.jpg") no-repeat;
   background-size: cover;
   background-position: 50% 50%;
   animation: backgroundScroll 60s ease-in-out 1s infinite;
@@ -85,16 +85,23 @@ button {
   text-align: center;
 }
 
+body.light-mode .menu-page {
+  background: url("../media/img/bk_light.jpg") no-repeat;
+  background-size: cover;
+  background-position: 50% 50%;
+  animation: backgroundScroll 60s ease-in-out 1s infinite;
+}
+
 .logo {
   width: clamp(160px, 30vw, 400px);
   height: auto;
   margin-bottom: clamp(10px, 2vh, 20px);
-  filter: drop-shadow(0 8px 15px rgba(0, 0, 0, 0.4));
-  transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-}
 
-.logo:hover {
-  transform: scale(1.08) rotate(-2deg);
+  filter: drop-shadow(0 8px 15px rgba(0, 0, 0, 0.4));
+
+  animation: logoFloat 6s ease-in-out infinite;
+
+  transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
 body.light-mode .menu-page {
@@ -117,7 +124,6 @@ body.light-mode .menu-page::before {
   position: relative;
   z-index: 1;
 }
-
 
 .app-welcome {
   font-size: clamp(1.2rem, 4vw, 2rem);
@@ -2149,10 +2155,17 @@ body.light-mode .app-title {
     0 4px 12px rgba(0, 0, 0, 0.25);
 }
 
-/* Logo shadow (works best for images or SVG logos) */
 body.light-mode .menu-page img,
 body.light-mode .menu-page .logo {
-  filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.4)) drop-shadow(0 8px 18px rgba(0, 0, 0, 0.25));
+  filter:
+    drop-shadow(0 0 2px rgba(0, 0, 0, 0.9))
+    /* tight edge stroke */
+    drop-shadow(0 0 6px rgba(0, 0, 0, 0.8))
+    /* thicker outline */
+    drop-shadow(0 6px 14px rgba(0, 0, 0, 0.8))
+    /* main shadow */
+    drop-shadow(0 16px 36px rgba(0, 0, 0, 0.6));
+  /* deep ambient shadow */
 }
 
 /* =======================================================
@@ -2197,4 +2210,129 @@ body.light-mode .menu-page .logo {
     font-size: clamp(0.9rem, 2vw, 1.2rem);
   }
 
+}
+
+@keyframes logoFloat {
+  0% {
+    transform: translateY(0px);
+  }
+
+  50% {
+    transform: translateY(-8px);
+  }
+
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+.menu-btn {
+  position: relative;
+  overflow: hidden;
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, 0.2),
+    inset 0 -1px 2px rgba(0, 0, 0, 0.4);
+}
+
+.menu-btn::before {
+  content: "";
+  position: absolute;
+  top: -200%;
+  left: -80%;
+  width: 60%;
+  height: 500%;
+
+  background: linear-gradient(120deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.05) 40%,
+      transparent 100%);
+
+  transform: rotate(25deg);
+  pointer-events: none;
+
+  animation: glassSweep 8s ease-in-out infinite;
+}
+
+body.light-mode .menu-btn::before {
+  content: "";
+  position: absolute;
+  top: -200%;
+  left: -80%;
+  width: 60%;
+  height: 500%;
+
+  background: linear-gradient(120deg,
+      transparent 0%,
+      rgba(255, 255, 0, 0.06) 46%,
+      rgba(0, 200, 255, 0.05) 54%,
+      transparent 100%);
+
+  transform: rotate(25deg);
+  pointer-events: none;
+
+  animation: glassSweep 8s ease-in-out infinite;
+}
+
+.menu-btn::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+@keyframes glassSweep {
+
+  /* idle */
+  0% {
+    left: -80%;
+    opacity: 0;
+  }
+
+  60% {
+    left: -80%;
+    opacity: 0;
+  }
+
+  /* reflection passes */
+  65% {
+    opacity: 1;
+  }
+
+  80% {
+    left: 140%;
+    opacity: 1;
+  }
+
+  /* fade away */
+  85% {
+    opacity: 0;
+  }
+
+  /* reset */
+  100% {
+    left: 140%;
+    opacity: 0;
+  }
+
+}
+
+body.light-mode .menu-btn:nth-child(1)::before,
+.menu-btn:nth-child(1)::before {
+  animation-delay: 0s;
+}
+
+body.light-mode .menu-btn:nth-child(1)::before,
+.menu-btn:nth-child(2)::before {
+  animation-delay: 1.5s;
+}
+
+body.light-mode .menu-btn:nth-child(1)::before,
+.menu-btn:nth-child(3)::before {
+  animation-delay: 3s;
+}
+
+body.light-mode .menu-btn:nth-child(1)::before,
+.menu-btn:nth-child(4)::before {
+  animation-delay: 4.5s;
 }
