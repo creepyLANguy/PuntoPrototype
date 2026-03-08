@@ -2393,14 +2393,15 @@ body.light-mode .tab-btn.active {
 
   .admin-dashboard-header h2 {
     font-size: 1.5rem;
-    margin-bottom: 5px;
+    align-self: center;
   }
 
   /* Moves the X button to the top right so it doesn't get pushed down */
   #closeAdminDashboardBtn {
     position: absolute;
-    right: 0;
-    top: 0;
+    align-self: center;
+    top: -15%;
+    scale: 90%;
   }
 
   .header-actions {
