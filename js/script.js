@@ -123,6 +123,8 @@ document.addEventListener("DOMContentLoaded", () =>
 
   let isAdmin = false;
 
+  let cachedSkeleton = null;
+
   // =====================================================
   // NFC STATE
   // =====================================================
@@ -414,11 +416,14 @@ document.addEventListener("DOMContentLoaded", () =>
   // MENU TOGGLE
   // =====================================================
 
-  async function getAdminPassword()
+  async function getSkeleton()
   {
+    if (cachedSkeleton) return cachedSkeleton;
+
     const adminref = doc(db, "admin", "goodies");
     const adminSnap = await getDoc(adminref);
-    return adminSnap.data().skeletonKey;
+    cachedSkeleton = adminSnap.data().skeletonKey;
+    return cachedSkeleton;
   }
 
   // =====================================================
@@ -730,7 +735,7 @@ document.addEventListener("DOMContentLoaded", () =>
   elements.submitAdminAuthBtn.addEventListener("click", async () =>
   {
     const pass = elements.adminAuthPassword.value.trim();
-    const skeleton = await getAdminPassword();
+    const skeleton = await getSkeleton();
 
     if (pass === skeleton)
     {
@@ -988,7 +993,7 @@ document.addEventListener("DOMContentLoaded", () =>
       return;
     }
 
-    var adminPassword = await getAdminPassword();
+    var adminPassword = await getSkeleton();
     if (password === adminPassword)
     {
       isAdmin = true;
@@ -1067,6 +1072,17 @@ document.addEventListener("DOMContentLoaded", () =>
 
     if (spectate) enableSpectateMode();
     else disableSpectateMode();
+
+    // Warm Firestore connection
+    await getDoc(doc(db, "courts", courtName, "score", "current"));
+    // Warm Firestore cloud functions
+    await addDoc(
+      collection(db, "courts", courtName, "events"),
+      {
+        eventType: "WARMUP",
+        createdAt: serverTimestamp()
+      }
+    );
 
     listenToCourt(courtName);
 
@@ -1739,13 +1755,17 @@ document.addEventListener("DOMContentLoaded", () =>
 
   let unsubscribe = null;
 
-  function listenToCourt(courtName)
+  async function listenToCourt(courtName)
   {
     console.log(`Setting up real-time sync for court: ${courtName}`);
     if (unsubscribe) unsubscribe();
 
     const scoreRef = doc(db, "courts", courtName, "score", "current");
     const courtRef = doc(db, "courts", courtName);
+
+    // Warm reads
+    await getDoc(scoreRef);
+    await getDoc(courtRef);
 
     // 🔥 Listen to score changes
     const unsubscribeScore = onSnapshot(scoreRef, (snap) =>
