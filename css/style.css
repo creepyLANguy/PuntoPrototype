@@ -2399,7 +2399,6 @@ body.light-mode .tab-btn.active {
   /* Moves the X button to the top right so it doesn't get pushed down */
   #closeAdminDashboardBtn {
     position: absolute;
-    align-self: center;
     top: -15%;
     scale: 90%;
   }
@@ -2413,8 +2412,7 @@ body.light-mode .tab-btn.active {
   }
 
   .header-actions .primary-btn {
-    padding: 12px 5px;
-    /* Taller touch targets for fingers */
+    padding: 5px 0px;
     font-size: 0.9rem;
     width: 100%;
     margin: 0;
@@ -2507,10 +2505,6 @@ body.light-mode #adminCourtSearch {
   .header-actions {
     flex-wrap: wrap;
     justify-content: flex-end;
-  }
-
-  .admin-dashboard-header {
-    padding: 10px;
   }
 
   /* Ensure the container doesn't get too tall on small phones */
