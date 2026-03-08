@@ -1841,7 +1841,7 @@ body.light-mode .theme-toggle-btn:hover {
   padding: 11px 13px;
   flex-shrink: 0;
   display: grid;
-  grid-template-columns: 30% 40% 30%;
+  grid-template-columns: 40% 35% 20%;
   gap: 5px 8px;
   align-items: center;
   font-size: 0.88rem;
@@ -1883,15 +1883,15 @@ body.light-mode .theme-toggle-btn:hover {
   word-break: break-word;
 }
 
-/* Edit button — spans both cols */
-.admin-court-item .aci-actions {
-  grid-column: 1 / -1;
-  margin-top: 5px;
-}
-
+/* Edit button */
 .admin-court-item .aci-actions .edit-btn {
   width: 100%;
+  margin-top: 5px;
   font-size: 0.83rem;
+}
+
+.admin-court-item .teams-cell {
+  display: none;
 }
 
 /* ================================================================

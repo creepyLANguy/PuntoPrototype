@@ -622,13 +622,14 @@ document.addEventListener("DOMContentLoaded", () =>
             <div class="aci-value"><code>${court.password || "No Password"}</code></div>
           </div>
           <div class="aci-field status-cell">
-            <div class="aci-label">Status</div>
             <div class="aci-value">
               <span class="status-badge status-${court.status}">${court.status?.toUpperCase() || "UNKNOWN"}</span>
             </div>
           </div>
-          <div class="aci-actions">
-            <button class="edit-btn" data-id="${court.id}">Edit</button>
+          <div class="aci-field status-cell">
+            <div class="aci-actions">
+              <button class="edit-btn" data-id="${court.id}">Edit</button>
+            </div>
           </div>
         `;
 
