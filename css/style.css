@@ -2396,7 +2396,6 @@ body.light-mode .tab-btn.active {
     align-self: center;
   }
 
-  /* Moves the X button to the top right so it doesn't get pushed down */
   #closeAdminDashboardBtn {
     position: absolute;
     top: -15%;
