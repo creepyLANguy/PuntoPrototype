@@ -1836,6 +1836,7 @@ body.light-mode .theme-toggle-btn:hover {
 /* ================================================================
    COURT CARD — Mobile Portrait (default)
 ================================================================ */
+
 .admin-court-item {
   background: var(--input-bg);
   border: 1px solid var(--input-border);
@@ -1869,7 +1870,6 @@ body.light-mode .theme-toggle-btn:hover {
   word-break: break-all;
 }
 
-/* Label cells (left col) */
 .admin-court-item .aci-label {
   font-size: 0.58rem;
   font-weight: 700;
@@ -1879,13 +1879,11 @@ body.light-mode .theme-toggle-btn:hover {
   white-space: nowrap;
 }
 
-/* Value cells (right col) */
 .admin-court-item .aci-value {
   font-size: 0.88rem;
   word-break: break-word;
 }
 
-/* Edit button */
 .admin-court-item .aci-actions .edit-btn {
   width: 100%;
   margin-top: 5px;

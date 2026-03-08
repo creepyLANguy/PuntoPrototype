@@ -375,13 +375,6 @@ document.addEventListener("DOMContentLoaded", () =>
       return;
     }
 
-    if (isVisible(elements.createPage))
-    {
-      elements.createPage.style.display = "none";
-      elements.menuPage.style.display = "flex";
-      return;
-    }
-
     if (isVisible(elements.playPage))
     {
       elements.playPage.style.display = "none";
@@ -427,11 +420,33 @@ document.addEventListener("DOMContentLoaded", () =>
       return;
     }
 
+    if (isVisible(elements.createPage))
+    {
+      elements.createPage.style.display = "none";
+      elements.adminDashboardPage.style.display = "flex";
+      return;
+    }
+
+    if (isVisible(elements.addDevicePage))
+    {
+      elements.addDevicePage.style.display = "none";
+      elements.adminDashboardPage.style.display = "flex";
+      return;
+    }
+
     if (isVisible(elements.editCourtPage))
     {
       elements.editCourtPage.style.display = "none";
       elements.adminDashboardPage.style.display = "flex";
       displayAdminCourtList();
+      return;
+    }
+
+    if (isVisible(elements.editDevicePage))
+    {
+      elements.editDevicePage.style.display = "none";
+      elements.adminDashboardPage.style.display = "flex";
+      loadDevices();
       return;
     }
   });
@@ -885,15 +900,6 @@ document.addEventListener("DOMContentLoaded", () =>
     const searchTerm = e.target.value;
     filteredCourts = filterCourts(searchTerm, allCourts);
     displaySpectateCourtList(filteredCourts);
-  });
-
-  elements.createPage.addEventListener("click", (e) =>
-  {
-    if (e.target === elements.createPage)
-    {
-      elements.createPage.style.display = "none";
-      elements.menuPage.style.display = "flex";
-    }
   });
 
   elements.playPage.addEventListener("click", (e) =>
@@ -1910,13 +1916,13 @@ document.addEventListener("DOMContentLoaded", () =>
       const tab = btn.dataset.tab;
       if (tab === 'courts')
       {
-        courtsTab.classList.add("active");
-        devicesTab.classList.remove("active");
+        elements.courtsTab.classList.add("active");   // Added 'elements.'
+        elements.devicesTab.classList.remove("active"); // Added 'elements.'
         displayAdminCourtList();
       } else
       {
-        devicesTab.classList.add("active");
-        courtsTab.classList.remove("active");
+        elements.devicesTab.classList.add("active");  // Added 'elements.'
+        elements.courtsTab.classList.remove("active"); // Added 'elements.'
         loadDevices();
       }
     });
@@ -1949,13 +1955,24 @@ document.addEventListener("DOMContentLoaded", () =>
     devices.forEach(device =>
     {
       const item = document.createElement("div");
-      item.className = "admin-court-item"; // Reuse court item styling
+      item.className = "admin-court-item";
       item.innerHTML = `
-      <div class="aci-name">
-        <strong>Device: ${device.id}</strong>
-        <div class="aci-id">Mapped Court: ${device.courtId || 'None'}</div>
+      <div class="aci-field teams-cell">
+        <div class="aci-label">deviceId:</div>
+        <div class="aci-value">
+          ${device.id}
+        </div>
+      </div>
+      <div class="aci-field teams-cell">
+        <div class="aci-label">Mapped to courtId:</div>
+        <div class="aci-value">
+          ${device.courtId || '???'}
+        </div>
       </div>
       <div class="aci-actions">
+        <button class="edit-btn" data-id="${device.id}">Edit Mapping</button>
+      </div>
+            <div class="aci-actions">
         <button class="edit-btn" data-id="${device.id}">Edit Mapping</button>
       </div>
     `;
@@ -1986,6 +2003,7 @@ document.addEventListener("DOMContentLoaded", () =>
       elements.newDeviceId.value = "";
       elements.newDeviceCourtId.value = "";
       loadDevices();
+      elements.adminDashboardPage.style.display = "flex";
     } catch (error)
     {
       showToast("Failed to add device", "error");
@@ -1995,6 +2013,8 @@ document.addEventListener("DOMContentLoaded", () =>
   // Edit/Delete Device Logic
   function openEditDeviceModal(device)
   {
+    elements.adminDashboardPage.style.display = "none";
+
     elements.editDeviceIdTitle.textContent = device.id;
     elements.editDeviceCourtId.value = device.courtId || "";
     elements.editDevicePage.style.display = 'flex';
@@ -2009,6 +2029,7 @@ document.addEventListener("DOMContentLoaded", () =>
         showToast("Mapping updated", "success");
         elements.editDevicePage.style.display = 'none';
         loadDevices();
+        elements.adminDashboardPage.style.display = "flex";
       } catch (e) { showToast("Update failed", "error"); }
     };
 
@@ -2021,6 +2042,7 @@ document.addEventListener("DOMContentLoaded", () =>
         showToast("Device deleted", "success");
         elements.editDevicePage.style.display = 'none';
         loadDevices();
+        elements.adminDashboardPage.style.display = "flex";
       } catch (e) { showToast("Delete failed", "error"); }
     };
   }
