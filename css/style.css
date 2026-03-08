@@ -1700,6 +1700,7 @@ body.light-mode .theme-toggle-btn:hover {
   background: var(--modal-bg);
   backdrop-filter: blur(20px);
   border-radius: 20px;
+  height: 100%;
   width: 95%;
   max-width: 1200px;
   max-height: 95svh;
@@ -1709,6 +1710,7 @@ body.light-mode .theme-toggle-btn:hover {
   color: var(--text-color);
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
   overflow: hidden;
+  min-height: 0;
 }
 
 @media (min-width: 769px) {
@@ -2374,6 +2376,8 @@ body.light-mode .tab-btn.active {
   display: flex;
   flex-direction: column;
   gap: 15px;
+  flex: 1;
+  min-height: 0;
 }
 
 /* --- Portrait / Mobile Adjustments --- */
@@ -2443,7 +2447,7 @@ body.light-mode .tab-btn.active {
   /* This enables scrolling */
   padding-right: 5px;
   /* Space for scrollbar */
-  min-height: 300px;
+  min-height: 0;
   /* Ensures there is an area to scroll even if empty */
   -webkit-overflow-scrolling: touch;
   /* Smooth scrolling on iOS */
@@ -2513,4 +2517,12 @@ body.light-mode #adminCourtSearch {
     width: 95%;
     max-height: 95vh;
   }
+}
+
+.tab-content {
+  display: none;
+}
+
+.tab-content.active {
+  display: flex;
 }

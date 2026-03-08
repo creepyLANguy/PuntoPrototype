@@ -1910,13 +1910,13 @@ document.addEventListener("DOMContentLoaded", () =>
       const tab = btn.dataset.tab;
       if (tab === 'courts')
       {
-        elements.courtsTab.style.display = 'block';
-        elements.devicesTab.style.display = 'none';
+        courtsTab.classList.add("active");
+        devicesTab.classList.remove("active");
         displayAdminCourtList();
       } else
       {
-        elements.courtsTab.style.display = 'none';
-        elements.devicesTab.style.display = 'block';
+        devicesTab.classList.add("active");
+        courtsTab.classList.remove("active");
         loadDevices();
       }
     });
@@ -1967,6 +1967,7 @@ document.addEventListener("DOMContentLoaded", () =>
   // Add Device Logic
   elements.showAddDeviceModalBtn.addEventListener('click', () =>
   {
+    elements.adminDashboardPage.style.display = "none";
     elements.addDevicePage.style.display = 'flex';
   });
 
@@ -2025,8 +2026,19 @@ document.addEventListener("DOMContentLoaded", () =>
   }
 
   // Close buttons
-  elements.closeAddDeviceBtn.onclick = () => elements.addDevicePage.style.display = 'none';
-  elements.closeEditDeviceBtn.onclick = () => elements.editDevicePage.style.display = 'none';
+  elements.closeAddDeviceBtn.onclick = () =>
+  {
+    elements.addDevicePage.style.display = 'none';
+    if (isAdmin) elements.adminDashboardPage.style.display = "flex";
+    else elements.menuPage.style.display = "flex";
+  }
+
+  elements.closeEditDeviceBtn.onclick = () =>
+  {
+    elements.editDevicePage.style.display = 'none';
+    if (isAdmin) elements.adminDashboardPage.style.display = "flex";
+    else elements.menuPage.style.display = "flex";
+  }
 
   // Search logic for devices
   elements.adminDeviceSearch.addEventListener('input', (e) =>
