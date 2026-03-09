@@ -1895,8 +1895,14 @@ body.light-mode .theme-toggle-btn:hover {
   font-size: 0.83rem;
 }
 
-.admin-court-item .teams-cell {
-  display: none;
+.admin-court-item .aci-field {
+  display: block;
+}
+
+@media (orientation: portrait) {
+  #courtsTab .teams-cell {
+    display: none;
+  }
 }
 
 /* ================================================================
@@ -2011,6 +2017,10 @@ body.light-mode .theme-toggle-btn:hover {
     width: auto;
     padding: 6px 14px;
     font-size: 0.85rem;
+  }
+
+  #courtsTab .teams-cell {
+    display: block;
   }
 }
 

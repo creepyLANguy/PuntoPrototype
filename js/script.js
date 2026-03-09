@@ -1984,13 +1984,13 @@ document.addEventListener("DOMContentLoaded", () =>
         </div>
       </div>
       <div class="aci-field teams-cell">
-        <div class="aci-label">Mapped to courtId:</div>
+        <div class="aci-label">Mapped to:</div>
         <div class="aci-value">
           ${device.courtId || '???'}
         </div>
       </div>
       <div class="aci-actions">
-        <button class="edit-btn" data-id="${device.id}">Edit Mapping</button>
+        <button class="edit-btn" data-id="${device.id}">Edit</button>
       </div>
       
     `;
