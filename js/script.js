@@ -37,23 +37,6 @@ export async function resetCourt(courtId, deepReset = false, newPassword = null)
   }
 }
 
-function showToast(message, type = "success")
-{
-  const container = document.getElementById("toastContainer");
-  if (!container) return;
-
-  const toast = document.createElement("div");
-  toast.className = `toast ${type}`;
-  toast.textContent = message;
-
-  container.appendChild(toast);
-
-  setTimeout(() =>
-  {
-    toast.remove();
-  }, 3000);
-}
-
 document.addEventListener("DOMContentLoaded", () =>
 {
 
@@ -67,6 +50,8 @@ document.addEventListener("DOMContentLoaded", () =>
   const UNDO_HOLD_MS = 550;
   const RESET_HOLD_MS = 1050;
   const LONG_PRESS_VIBRATION_MS = 200;
+
+  const TOAST_DURATION_MS = 3000;
 
   const COURTID_UPPER_LIMIT = 999999999;
 
@@ -86,7 +71,8 @@ document.addEventListener("DOMContentLoaded", () =>
 
   const STATUS = {
     OPEN: "open",
-    CLOSED: "closed"
+    CLOSED: "closed",
+    PRIVATE: "private"
   };
 
   // =====================================================
@@ -469,7 +455,7 @@ document.addEventListener("DOMContentLoaded", () =>
   // COURT LOADING & FILTERING
   // =====================================================
 
-  async function loadAllOpenCourts()
+  async function loadAllActiveCourts(includePrivateCourts = true)
   {
     try
     {
@@ -479,13 +465,14 @@ document.addEventListener("DOMContentLoaded", () =>
       snapshot.forEach(doc =>
       {
         let data = doc.data();
-        if (data.status === STATUS.OPEN)
+        if (data.status === STATUS.OPEN || (includePrivateCourts && data.status === STATUS.PRIVATE))
         {
           allCourts.push({
             id: doc.id,
             name: data.name || doc.id,
             password: data.password,
-            createdAt: data.createdAt
+            createdAt: data.createdAt,
+            status: data.status
           });
         }
       });
@@ -825,7 +812,7 @@ document.addEventListener("DOMContentLoaded", () =>
         elements.playCourtNameError.textContent = "";
         elements.playCourtPasswordError.textContent = "";
 
-        await loadAllOpenCourts();
+        await loadAllActiveCourts();
         displayPlayCourtList(allCourts);
         elements.playCourtSearch.focus();
         return;
@@ -838,7 +825,7 @@ document.addEventListener("DOMContentLoaded", () =>
         elements.spectateCourtSearch.value = "";
         elements.spectateCourtNameError.textContent = "";
 
-        await loadAllOpenCourts();
+        await loadAllActiveCourts(false);
         displaySpectateCourtList(allCourts);
         elements.spectateCourtSearch.focus();
         return;
@@ -1367,7 +1354,22 @@ document.addEventListener("DOMContentLoaded", () =>
     }
   }
 
+  function showToast(message, type = "success")
+  {
+    const container = document.getElementById("toastContainer");
+    if (!container) return;
 
+    const toast = document.createElement("div");
+    toast.className = `toast ${type}`;
+    toast.textContent = message;
+
+    container.appendChild(toast);
+
+    setTimeout(() =>
+    {
+      toast.remove();
+    }, TOAST_DURATION_MS);
+  }
 
   // =====================================================
   // NFC INITIALISATION
@@ -1845,6 +1847,24 @@ document.addEventListener("DOMContentLoaded", () =>
         return;
       }
 
+      //Court made private
+      if (data.status === STATUS.PRIVATE && !isAdmin)
+      {
+        showToast("This court has been made private by admin.", "info");
+
+        // Return to menu
+        disableSpectateMode();
+        releaseWakeLock();
+        document.body.classList.remove("scoreboard-active");
+        if (elements.themeToggleBtn) elements.themeToggleBtn.style.display = "";
+        elements.scoreboardPage.style.display = "none";
+        elements.menuPage.style.display = "flex";
+        if (unsubscribeScore) unsubscribeScore();
+        if (unsubscribeCourt) unsubscribeCourt();
+        unsubscribe = null;
+        return;
+      }
+
       // 🚨 Court Closure detection
       if (data.status === STATUS.CLOSED && !isAdmin)
       {
@@ -1964,17 +1984,15 @@ document.addEventListener("DOMContentLoaded", () =>
         </div>
       </div>
       <div class="aci-field teams-cell">
-        <div class="aci-label">Mapped to courtId:</div>
+        <div class="aci-label">Mapped to:</div>
         <div class="aci-value">
           ${device.courtId || '???'}
         </div>
       </div>
       <div class="aci-actions">
-        <button class="edit-btn" data-id="${device.id}">Edit Mapping</button>
+        <button class="edit-btn" data-id="${device.id}">Edit</button>
       </div>
-            <div class="aci-actions">
-        <button class="edit-btn" data-id="${device.id}">Edit Mapping</button>
-      </div>
+      
     `;
       item.querySelector('.edit-btn').addEventListener('click', () => openEditDeviceModal(device));
       elements.adminDeviceList.appendChild(item);

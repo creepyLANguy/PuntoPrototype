@@ -72,6 +72,7 @@
               <option value="all">All</option>
               <option value="open">Open</option>
               <option value="closed">Closed</option>
+              <option value="private">Private</option>
             </select>
           </div>
         </div>
@@ -99,7 +100,7 @@
         <input type="text" id="newDeviceId" placeholder="e.g. SN12345" />
       </div>
       <div class="form-group">
-        <label>Associated Court ID</label>
+        <label>Mapped to Court ID</label>
         <input type="text" id="newDeviceCourtId" placeholder="e.g. court-123" />
       </div>
       <button id="saveNewDeviceBtn" class="primary-btn">Add Device</button>
@@ -109,7 +110,7 @@
   <div id="editDevicePage" style="display:none;" class="create-page">
     <div class="create-card">
       <button id="closeEditDeviceBtn" class="close-btn">✕</button>
-      <h2>Edit Device: <br /><span id="editDeviceIdTitle"></span></h2>
+      <h2><span id="editDeviceIdTitle"></span></h2>
       <div class="form-group">
         <label>Mapped Court ID</label>
         <input type="text" id="editDeviceCourtId" />
@@ -141,6 +142,7 @@
           <select id="courtStatus">
             <option value="closed">Closed</option>
             <option value="open">Open</option>
+            <option value="private">Private</option>
           </select>
         </div>
       </div>
@@ -176,6 +178,7 @@
           <select id="editCourtStatus">
             <option value="open">Open</option>
             <option value="closed">Closed</option>
+            <option value="private">Private</option>
           </select>
         </div>
       </div>
