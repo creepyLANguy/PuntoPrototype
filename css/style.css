@@ -98,7 +98,7 @@ body.light-mode .menu-page {
 
   filter: drop-shadow(0 8px 15px rgba(0, 0, 0, 0.4));
 
-  animation: logoFloat 6s ease-in-out infinite;
+  animation: logoanimation 6s ease-in-out infinite;
 
   transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 
@@ -2230,16 +2230,30 @@ body.light-mode .menu-page .logo {
 
 }
 
-@keyframes logoFloat {
-  0% {
+@keyframes logoanimation {
+  100% {
     transform: translateY(0px);
   }
 
+  0% {
+    filter: drop-shadow(0 8px 15px rgba(0, 0, 0, 0.4));
+    transform: translateY(0px);
+  }
+
+  25% {
+    filter: drop-shadow(0 8px 15px rgba(56, 219, 255, 0.575));
+  }
+
   50% {
-    transform: translateY(-8px);
+    transform: translateY(-12px);
+  }
+
+  75% {
+    filter: drop-shadow(0 8px 15px rgba(255, 229, 115, 0.7));
   }
 
   100% {
+    filter: drop-shadow(0 8px 15px rgba(0, 0, 0, 0.4));
     transform: translateY(0px);
   }
 }
@@ -2434,6 +2448,10 @@ body.light-mode .tab-btn.active {
     font-size: 0.9rem;
     width: 100%;
     margin: 0;
+  }
+
+  .app-welcome {
+    margin-bottom: 5%;
   }
 }
 
