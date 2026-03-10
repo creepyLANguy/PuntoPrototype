@@ -95,13 +95,14 @@ body.light-mode .menu-page {
 .logo {
   width: clamp(160px, 30vw, 400px);
   height: auto;
-  margin-bottom: clamp(10px, 2vh, 20px);
 
   filter: drop-shadow(0 8px 15px rgba(0, 0, 0, 0.4));
 
   animation: logoFloat 6s ease-in-out infinite;
 
   transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+
+  margin-top: 2%;
 }
 
 body.light-mode .menu-page {
