@@ -96,8 +96,6 @@ body.light-mode .menu-page {
   width: clamp(160px, 30vw, 300px);
   height: auto;
 
-  filter: drop-shadow(0 8px 15px rgba(0, 0, 0, 0.4));
-
   animation: logoanimation 6s ease-in-out infinite;
 
   transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
@@ -2163,19 +2161,6 @@ body.light-mode .app-title {
     0 4px 12px rgba(0, 0, 0, 0.25);
 }
 
-body.light-mode .menu-page img,
-body.light-mode .menu-page .logo {
-  filter:
-    /* drop-shadow(0 0 2px rgba(0, 0, 0, 0.9)) */
-    /* tight edge stroke */
-    drop-shadow(0 0 6px rgba(0, 0, 0, 0.8))
-    /* thicker outline */
-    drop-shadow(0 6px 14px rgba(0, 0, 0, 0.8))
-    /* main shadow */
-    /* drop-shadow(0 16px 36px rgba(0, 0, 0, 0.6)); */
-    /* deep ambient shadow */
-}
-
 /* =======================================================
    MENU PAGE — LANDSCAPE COMPACT LAYOUT
    Shows more elements without affecting portrait/desktop
@@ -2339,17 +2324,17 @@ body.light-mode .menu-btn:nth-child(1)::before,
   animation-delay: 0s;
 }
 
-body.light-mode .menu-btn:nth-child(1)::before,
+body.light-mode .menu-btn:nth-child(2)::before,
 .menu-btn:nth-child(2)::before {
   animation-delay: 1.5s;
 }
 
-body.light-mode .menu-btn:nth-child(1)::before,
+body.light-mode .menu-btn:nth-child(3)::before,
 .menu-btn:nth-child(3)::before {
   animation-delay: 3s;
 }
 
-body.light-mode .menu-btn:nth-child(1)::before,
+body.light-mode .menu-btn:nth-child(4)::before,
 .menu-btn:nth-child(4)::before {
   animation-delay: 4.5s;
 }
