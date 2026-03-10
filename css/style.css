@@ -125,28 +125,41 @@ body.light-mode .menu-page::before {
 }
 
 .app-title {
+  font-family: "Arial";
+  text-transform: uppercase;
   font-size: clamp(2.5rem, 10vw, 5rem);
   font-weight: 900;
   max-width: 95%;
   color: white;
   margin: 0;
-  text-transform: uppercase;
-  background: linear-gradient(180deg, #fff 0%, #eeeeee 100%);
+  background: white;
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
-  filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.5));
+  animation: apptitleanimation 8s infinite;
+}
+
+@keyframes apptitleanimation {
+  0% {
+    filter: drop-shadow(0 0 10px rgba(0, 0, 0, 0.4));
+  }
+
+  75% {
+    filter: drop-shadow(0 0 10px rgba(255, 229, 115, 0.7));
+  }
+
+  100% {
+    filter: drop-shadow(0 0 15px rgba(0, 0, 0, 0.4));
+  }
 }
 
 body.light-mode .app-title {
-  background: linear-gradient(180deg, #ffffff 0%, #dddddd 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
   -webkit-text-fill-color: white;
+  animation: apptitleanimation 8s infinite;
 }
 
 .app-subtitle {
-  font-size: clamp(1rem, 3.5vw, 1.8rem);
+  font-size: clamp(1.5rem, 5vw, 2.5rem);
   font-weight: 400;
   margin-top: 5px;
   color: rgba(255, 255, 255, 0.9);
@@ -2151,7 +2164,7 @@ body.light-mode .close-btn {
 
 body.light-mode .app-subtitle {
   text-shadow:
-    0 2px 4px rgba(0, 0, 0, 1.0),
+    0 2px 4px rgba(0, 0, 0, 0.5),
     0 4px 12px rgba(0, 0, 0, 0.25);
 }
 
@@ -2201,17 +2214,9 @@ body.light-mode .app-title {
 }
 
 @keyframes logoanimation {
-  100% {
-    transform: translateY(0px);
-  }
-
   0% {
-    filter: drop-shadow(0 8px 15px rgba(0, 0, 0, 0.4));
+    filter: drop-shadow(0 0px 15px rgba(0, 0, 0, 0.4));
     transform: translateY(0px);
-  }
-
-  25% {
-    filter: drop-shadow(0 8px 15px rgba(56, 219, 255, 0.575));
   }
 
   50% {
@@ -2219,11 +2224,11 @@ body.light-mode .app-title {
   }
 
   75% {
-    filter: drop-shadow(0 8px 15px rgba(255, 229, 115, 0.7));
+    filter: drop-shadow(0 0 40px rgba(252, 226, 114, 0.45));
   }
 
   100% {
-    filter: drop-shadow(0 8px 15px rgba(0, 0, 0, 0.4));
+    filter: drop-shadow(0 0px 15px rgba(0, 0, 0, 0.4));
     transform: translateY(0px);
   }
 }

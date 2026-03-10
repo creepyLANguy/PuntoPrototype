@@ -907,6 +907,15 @@ document.addEventListener("DOMContentLoaded", () =>
     }
   });
 
+  elements.adminAuthPage.addEventListener("click", (e) =>
+  {
+    if (e.target === elements.adminAuthPage)
+    {
+      elements.adminAuthPage.style.display = "none";
+      elements.menuPage.style.display = "flex";
+    }
+  });
+
   function showCourtTitle(name)
   {
     const existing = document.getElementById("courtTitle");
