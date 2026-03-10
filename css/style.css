@@ -75,7 +75,7 @@ button {
   padding: 40px 20px;
   gap: 15px;
   color: white;
-  background: url("../media/img/bk_dark.jpg") no-repeat;
+  background: url("../media/img/bk_dark.webp") no-repeat;
   background-size: cover;
   background-position: 50% 50%;
   animation: backgroundScroll 60s ease-in-out 1s infinite;
@@ -86,14 +86,14 @@ button {
 }
 
 body.light-mode .menu-page {
-  background: url("../media/img/bk_light.jpg") no-repeat;
+  background: url("../media/img/bk_light.webp") no-repeat;
   background-size: cover;
   background-position: 50% 50%;
   animation: backgroundScroll 60s ease-in-out 1s infinite;
 }
 
 .logo {
-  width: clamp(160px, 30vw, 400px);
+  width: clamp(160px, 30vw, 300px);
   height: auto;
 
   filter: drop-shadow(0 8px 15px rgba(0, 0, 0, 0.4));
@@ -124,15 +124,6 @@ body.light-mode .menu-page::before {
 .menu-page>* {
   position: relative;
   z-index: 1;
-}
-
-.app-welcome {
-  font-size: clamp(1.2rem, 4vw, 2rem);
-  font-weight: 500;
-  max-width: 90%;
-  margin-bottom: -10px;
-  color: white;
-  letter-spacing: 1px;
 }
 
 .app-title {
@@ -2160,7 +2151,6 @@ body.light-mode .close-btn {
    MENU PAGE — LIGHT MODE TEXT READABILITY
 ======================================================= */
 
-body.light-mode .app-welcome,
 body.light-mode .app-subtitle {
   text-shadow:
     0 2px 4px rgba(0, 0, 0, 1.0),
@@ -2204,13 +2194,8 @@ body.light-mode .menu-page .logo {
     margin-bottom: 0px;
   }
 
-  .app-welcome {
-    font-size: clamp(1rem, 2.8vw, 1.4rem);
-    margin-bottom: -6px;
-  }
-
   .app-title {
-    font-size: clamp(2rem, 6vw, 3.2rem);
+    font-size: clamp(2rem, 4vw, 3.2rem);
   }
 
   .app-subtitle {
@@ -2282,7 +2267,7 @@ body.light-mode .menu-page .logo {
   transform: rotate(25deg);
   pointer-events: none;
 
-  animation: glassSweep 8s ease-in-out infinite;
+  animation: glassSweep 4s ease-in-out infinite;
 }
 
 body.light-mode .menu-btn::before {
@@ -2302,7 +2287,7 @@ body.light-mode .menu-btn::before {
   transform: rotate(25deg);
   pointer-events: none;
 
-  animation: glassSweep 8s ease-in-out infinite;
+  animation: glassSweep 4s ease-in-out infinite;
 }
 
 .menu-btn::after {
@@ -2448,10 +2433,6 @@ body.light-mode .tab-btn.active {
     font-size: 0.9rem;
     width: 100%;
     margin: 0;
-  }
-
-  .app-welcome {
-    margin-bottom: 5%;
   }
 }
 
