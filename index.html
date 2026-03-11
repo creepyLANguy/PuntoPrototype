@@ -18,6 +18,41 @@
     <button id="adminLoginBtn" class="theme-toggle-btn" title="Admin Panel">🔒</button>
   </div>
 
+  <!-- ================= GLOBAL MODALS ================= -->
+  <div id="alertModal" class="alert-modal hidden">
+    <div class="alert-box">
+      <h2 id="alertTitle"></h2>
+      <p id="alertMessage"></p>
+      <button id="alertBtn" class="alert-btn">OK</button>
+    </div>
+  </div>
+
+  <div id="resetModal" class="reset-modal hidden">
+    <div class="reset-box">
+      <p>Reset the entire match?</p>
+      <div class="form-group">
+        <label>New Court Password (min 4 chars)</label>
+        <input type="password" id="resetCourtPassword" />
+        <div class="error" id="resetPasswordError"></div>
+      </div>
+      <div class="reset-actions">
+        <button id="confirmReset" type="button">Full Reset</button>
+        <button id="shallowReset" type="button">Keep Old Password</button>
+        <button id="cancelReset" type="button">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="confirmModal" class="reset-modal hidden">
+    <div class="reset-box">
+      <p id="confirmMessage"></p>
+      <div class="reset-actions">
+        <button id="confirmOkBtn" type="button">OK</button>
+        <button id="confirmCancelBtn" type="button">Cancel</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ================= MENU ================= -->
   <main id="menuPage" class="menu-page">
 
@@ -254,45 +289,6 @@
 
   <!-- ================= SCOREBOARD (HIDDEN INITIALLY) ================= -->
   <div id="scoreboardPage" style="display:none;">
-
-    <!-- ================= ALERT MODAL ================= -->
-    <div id="alertModal" class="alert-modal hidden">
-      <div class="alert-box">
-        <h2 id="alertTitle"></h2>
-        <p id="alertMessage"></p>
-        <button id="alertBtn" class="alert-btn">OK</button>
-      </div>
-    </div>
-
-    <!-- ================= RESET MODAL ================= -->
-    <div id="resetModal" class="reset-modal hidden">
-      <div class="reset-box">
-        <p>Reset the entire match?</p>
-        <!-- New court password -->
-        <div class="form-group">
-          <label>New Court Password (min 4 chars)</label>
-          <input type="password" id="resetCourtPassword" />
-          <div class="error" id="resetPasswordError"></div>
-        </div>
-
-        <div class="reset-actions">
-          <button id="confirmReset" type="button">Full Reset</button>
-          <button id="shallowReset" type="button">Keep Old Password</button>
-          <button id="cancelReset" type="button">Cancel</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- ================= CONFIRM MODAL ================= -->
-    <div id="confirmModal" class="reset-modal hidden">
-      <div class="reset-box">
-        <p id="confirmMessage"></p>
-        <div class="reset-actions">
-          <button id="confirmOkBtn" type="button">OK</button>
-          <button id="confirmCancelBtn" type="button">Cancel</button>
-        </div>
-      </div>
-    </div>
 
     <!-- ================= SCOREBOARD BODY ================= -->
     <div class="scoreboard-body">
