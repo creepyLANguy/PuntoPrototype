@@ -201,7 +201,12 @@ document.addEventListener("DOMContentLoaded", () =>
     themeToggleScorebboardBtn: $("themeToggleScorebboardBtn"),
 
     sep1: $("sep1"),
-    sep2: $("sep2")
+    sep2: $("sep2"),
+
+    confirmModal: $("confirmModal"),
+    confirmMessage: $("confirmMessage"),
+    confirmOkBtn: $("confirmOkBtn"),
+    confirmCancelBtn: $("confirmCancelBtn")
   };
 
   //CREATE COURT ELEMENTS
@@ -723,7 +728,7 @@ document.addEventListener("DOMContentLoaded", () =>
   elements.deleteCourtBtn.addEventListener("click", async () =>
   {
     if (!courtToEdit) return;
-    if (!confirm(`Are you sure you want to delete court "${courtToEdit.id}"? This cannot be undone.`)) return;
+    if (!(await showConfirm(`Are you sure you want to delete court "${courtToEdit.id}"?\nThis cannot be undone.`))) return;
 
     try
     {
@@ -1617,6 +1622,36 @@ document.addEventListener("DOMContentLoaded", () =>
       elements.resetModal.classList.add("hidden");
   });
 
+  // =====================================================
+  // GENERIC CONFIRM MODAL
+  // =====================================================
+
+  function showConfirm(message)
+  {
+    return new Promise((resolve) =>
+    {
+      elements.confirmMessage.innerHTML = message.replace(/\n/g, "<br>");
+      elements.confirmModal.classList.remove("hidden");
+
+      const cleanup = (result) =>
+      {
+        elements.confirmOkBtn.onclick = null;
+        elements.confirmCancelBtn.onclick = null;
+        elements.confirmModal.classList.add("hidden");
+        resolve(result);
+      };
+
+      elements.confirmOkBtn.onclick = () => cleanup(true);
+      elements.confirmCancelBtn.onclick = () => cleanup(false);
+
+      // Support dismissing by clicking outside
+      elements.confirmModal.onclick = (e) =>
+      {
+        if (e.target === elements.confirmModal) cleanup(false);
+      };
+    });
+  }
+
   elements.swapBtn.addEventListener("click", () =>
   {
     playSound(SOUND_IDS.SWOOSH);
@@ -1628,17 +1663,17 @@ document.addEventListener("DOMContentLoaded", () =>
   // HOLD BUTTON LOGIC
   // =====================================================
 
-  elements.undoBtn.addEventListener("click", () =>
+  elements.undoBtn.addEventListener("click", async () =>
   {
-    if (confirm("Undo the last point?"))
+    if (await showConfirm("Undo the last point?"))
     {
       undoLastPoint();
     }
   });
 
-  elements.backBtn.addEventListener("click", () =>
+  elements.backBtn.addEventListener("click", async () =>
   {
-    if (confirm("Exit to the main menu?"))
+    if (await showConfirm("Exit to the main menu?"))
     {
       disableSpectateMode();
       releaseWakeLock();
@@ -2034,7 +2069,7 @@ document.addEventListener("DOMContentLoaded", () =>
 
     elements.deleteDeviceBtn.onclick = async () =>
     {
-      if (!confirm("Delete this device registration?")) return;
+      if (!(await showConfirm("Delete this device registration?"))) return;
       try
       {
         await deleteDoc(doc(db, "devices", device.id));
