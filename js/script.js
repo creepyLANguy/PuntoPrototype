@@ -1434,7 +1434,7 @@ document.addEventListener("DOMContentLoaded", () =>
 
       nfcReader.onerror = () =>
       {
-        showAlert("NFC Disabled", "NFC is disabled on your device.\nEnable it in settings to use tag scanning.");
+        showToast("NFC Disabled", "NFC is disabled on your device.\nEnable it in settings to use tag scanning.", "error");
       };
 
     }
