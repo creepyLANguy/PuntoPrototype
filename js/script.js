@@ -367,6 +367,12 @@ document.addEventListener("DOMContentLoaded", () =>
       return;
     }
 
+    if (isVisible(elements.confirmModal))
+    {
+      elements.confirmCancelBtn.click();
+      return;
+    }
+
     if (isVisible(elements.playPage))
     {
       elements.playPage.style.display = "none";
