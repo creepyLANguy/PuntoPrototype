@@ -104,6 +104,7 @@ document.addEventListener("DOMContentLoaded", () =>
 
   let currentCourt = null;
   let currentCourtPassword = null;
+  let currentCourtStatus = null;
 
   let isSpectating = false;
 
@@ -401,6 +402,7 @@ document.addEventListener("DOMContentLoaded", () =>
 
     if (isVisible(elements.adminDashboardPage))
     {
+      isAdmin = false;
       elements.adminDashboardPage.style.display = "none";
       elements.menuPage.style.display = "flex";
       return;
@@ -781,6 +783,7 @@ document.addEventListener("DOMContentLoaded", () =>
 
   elements.closeAdminDashboardBtn.addEventListener("click", () =>
   {
+    isAdmin = false;
     elements.adminDashboardPage.style.display = "none";
     elements.menuPage.style.display = "flex";
   });
@@ -1023,7 +1026,6 @@ document.addEventListener("DOMContentLoaded", () =>
     var adminPassword = await getSkeleton();
     if (password === adminPassword)
     {
-      isAdmin = true;
       enterCourt(name, false);
       return;
     }
@@ -1061,6 +1063,7 @@ document.addEventListener("DOMContentLoaded", () =>
     currentCourt = courtName;
     const data = snap.data();
     currentCourtPassword = data.password;
+    currentCourtStatus = data.status;
 
     if (muted)
     {
@@ -1857,7 +1860,7 @@ document.addEventListener("DOMContentLoaded", () =>
       }
 
       //Court made private
-      if (data.status === STATUS.PRIVATE && !isAdmin)
+      if (data.status === STATUS.PRIVATE && currentCourtStatus !== STATUS.PRIVATE)
       {
         showToast("This court has been made private by admin.", "info");
 
@@ -1895,7 +1898,6 @@ document.addEventListener("DOMContentLoaded", () =>
       // 🚨 Password change detection
       if (
         currentCourtPassword !== data.password &&
-        !isAdmin &&
         !isSpectating
       )
       {
