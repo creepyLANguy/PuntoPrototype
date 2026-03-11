@@ -75,19 +75,33 @@ button {
   padding: 40px 20px;
   gap: 15px;
   color: white;
-  background: url("../media/img/bk_dark.webp") no-repeat;
-  background-size: cover;
-  background-position: 50% 50%;
   position: relative;
-  overflow-x: hidden;
-  overflow-y: auto;
+  overflow: hidden;
   text-align: center;
 }
 
-body.light-mode .menu-page {
-  background: url("../media/img/bk_light.webp") no-repeat;
+.menu-page::after {
+  content: "";
+  position: absolute;
+  inset: -10%;
+  z-index: -1;
+  background: url("../media/img/bk_dark.webp") no-repeat center;
   background-size: cover;
-  background-position: 50% 50%;
+  animation: bgZoom 10s infinite alternate ease-in-out;
+  pointer-events: none;
+}
+
+body.light-mode .menu-page::after {
+  background-image: url("../media/img/bk_light.webp");
+}
+
+@keyframes bgZoom {
+  from {
+    transform: scale(1);
+  }
+  to {
+    transform: scale(1.2);
+  }
 }
 
 .logo {
@@ -192,6 +206,7 @@ body.light-mode .app-title {
   user-select: none;
   -webkit-user-select: none;
   touch-action: manipulation;
+  cursor: pointer;
 }
 
 .menu-btn:hover {
@@ -667,23 +682,19 @@ body.light-mode .game-dot.filled {
   border-radius: 50%;
   padding: 0;
   flex-shrink: 0;
-
   display: flex;
   align-items: center;
   justify-content: center;
-
   border: 2px solid #ccc;
   background: transparent;
   color: #ccc;
   font-weight: 600;
   font-size: clamp(1rem, 2.5vmin, 1.4rem);
-
   backdrop-filter: blur(6px);
   opacity: 0.6;
   position: relative;
   overflow: hidden;
-  transition: transform var(--hold-duration, 0.5s) linear,
-    opacity 0.2s ease,
+  transition: opacity 0.2s ease,
     background 0.2s ease;
   user-select: none;
   -webkit-user-select: none;
@@ -703,43 +714,9 @@ body.light-mode .floating-btn:hover {
   opacity: 1;
 }
 
-.floating-btn.pressed {
-  transform: scale(1.75);
-}
-
-.floating-btn.holding::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  transform: scaleX(0);
-  transform-origin: left;
-  animation: holdFill 0.5s linear forwards;
-  background: rgb(255, 255, 255);
-}
-
-body.light-mode .floating-btn.holding::after {
-  background: #d3d3d3;
-}
-
-@keyframes holdFill {
-  from {
-    transform: scaleX(0);
-  }
-
-  to {
-    transform: scaleX(1);
-  }
-}
-
 #resetBtn {
-  transition: transform var(--hold-duration, 1s) linear,
-    opacity 0.2s ease,
+  transition: opacity 0.2s ease,
     background 0.2s ease;
-}
-
-#resetBtn.holding::after {
-  animation: holdFill 1s linear forwards;
-  background: rgba(255, 0, 0, 0.25);
 }
 
 /* =======================================================

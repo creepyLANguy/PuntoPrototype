@@ -1597,7 +1597,6 @@ document.addEventListener("DOMContentLoaded", () =>
     playSound(SOUND_IDS.START);
   });
 
-  addHoldButtonLogic(elements.resetBtn, openResetModal, RESET_HOLD_MS);
 
   function openResetModal()
   {
@@ -1629,61 +1628,32 @@ document.addEventListener("DOMContentLoaded", () =>
   // HOLD BUTTON LOGIC
   // =====================================================
 
-  function addHoldButtonLogic(button, onConfirm, holdMs = 800)
+  elements.undoBtn.addEventListener("click", () =>
   {
-    let pressTimer = null;
-
-    const startPress = () =>
+    if (confirm("Undo the last point?"))
     {
-      button.classList.add("holding", "pressed");
-
-      pressTimer = setTimeout(() =>
-      {
-        try 
-        {
-          window.navigator.vibrate(LONG_PRESS_VIBRATION_MS);
-        } catch (error) 
-        {
-          console.log("Failed to call vibration function on long press trigger.")
-        }
-
-        onConfirm();
-        button.classList.remove("holding", "pressed");
-      }, holdMs);
-    };
-
-    const cancelPress = () =>
-    {
-      clearTimeout(pressTimer);
-      button.classList.remove("holding", "pressed");
-    };
-
-    button.addEventListener("pointerdown", startPress);
-    button.addEventListener("pointerup", cancelPress);
-    button.addEventListener("pointerleave", cancelPress);
-    button.addEventListener("pointercancel", cancelPress);
-  }
-
-  addHoldButtonLogic(elements.undoBtn, undoLastPoint, UNDO_HOLD_MS);
-
-  addHoldButtonLogic(elements.backBtn, () =>
-  {
-    disableSpectateMode();
-    releaseWakeLock();
-    document.body.classList.remove("scoreboard-active");
-    // Show top-right theme toggle when leaving court view
-    if (elements.themeToggleBtn)
-    {
-      elements.themeToggleBtn.style.display = "";
+      undoLastPoint();
     }
-    elements.scoreboardPage.style.display = "none";
-    elements.menuPage.style.display = "flex";
-  }, BACK_HOLD_MS);
+  });
 
-  addHoldButtonLogic(elements.resetBtn, () =>
+  elements.backBtn.addEventListener("click", () =>
   {
-    elements.resetModal.classList.remove("hidden");
-  }, RESET_HOLD_MS);
+    if (confirm("Exit to the main menu?"))
+    {
+      disableSpectateMode();
+      releaseWakeLock();
+      document.body.classList.remove("scoreboard-active");
+      // Show top-right theme toggle when leaving court view
+      if (elements.themeToggleBtn)
+      {
+        elements.themeToggleBtn.style.display = "";
+      }
+      elements.scoreboardPage.style.display = "none";
+      elements.menuPage.style.display = "flex";
+    }
+  });
+
+  elements.resetBtn.addEventListener("click", openResetModal);
 
   elements.muteBtn.addEventListener("click", () =>
   {
