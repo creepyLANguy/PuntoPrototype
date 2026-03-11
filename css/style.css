@@ -78,7 +78,6 @@ button {
   background: url("../media/img/bk_dark.webp") no-repeat;
   background-size: cover;
   background-position: 50% 50%;
-  animation: backgroundScroll 60s ease-in-out 1s infinite;
   position: relative;
   overflow-x: hidden;
   overflow-y: auto;
@@ -89,7 +88,6 @@ body.light-mode .menu-page {
   background: url("../media/img/bk_light.webp") no-repeat;
   background-size: cover;
   background-position: 50% 50%;
-  animation: backgroundScroll 60s ease-in-out 1s infinite;
 }
 
 .logo {
@@ -139,20 +137,6 @@ body.light-mode .menu-page::before {
   animation: apptitleanimation 8s infinite;
 }
 
-@keyframes apptitleanimation {
-  0% {
-    filter: drop-shadow(0 0 10px rgba(0, 0, 0, 0.4));
-  }
-
-  75% {
-    filter: drop-shadow(0 0 10px rgba(255, 229, 115, 0.7));
-  }
-
-  100% {
-    filter: drop-shadow(0 0 15px rgba(0, 0, 0, 0.4));
-  }
-}
-
 body.light-mode .app-title {
   -webkit-text-fill-color: white;
   animation: apptitleanimation 8s infinite;
@@ -164,6 +148,7 @@ body.light-mode .app-title {
   margin-top: 5px;
   color: rgba(255, 255, 255, 0.9);
   letter-spacing: 0.5px;
+  animation: subtitleanimation 8s infinite;
 }
 
 .menu-buttons {
@@ -230,32 +215,6 @@ body.light-mode .menu-btn:hover {
   border-color: #000;
   transform: translateY(-2px);
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
-}
-
-@keyframes backgroundScroll {
-  0% {
-    background-position: 50% 50%;
-  }
-
-  33% {
-    background-position: 1% 50%;
-  }
-
-  40% {
-    background-position: 1% 50%;
-  }
-
-  66% {
-    background-position: 99% 50%;
-  }
-
-  75% {
-    background-position: 99% 50%;
-  }
-
-  100% {
-    background-position: 50% 50%;
-  }
 }
 
 /* =======================================================
@@ -2213,26 +2172,6 @@ body.light-mode .app-title {
 
 }
 
-@keyframes logoanimation {
-  0% {
-    filter: drop-shadow(0 0px 15px rgba(0, 0, 0, 0.4));
-    transform: translateY(0px);
-  }
-
-  50% {
-    transform: translateY(-12px);
-  }
-
-  75% {
-    filter: drop-shadow(0 0 40px rgba(252, 226, 114, 0.45));
-  }
-
-  100% {
-    filter: drop-shadow(0 0px 15px rgba(0, 0, 0, 0.4));
-    transform: translateY(0px);
-  }
-}
-
 .menu-btn {
   position: relative;
   overflow: hidden;
@@ -2527,4 +2466,49 @@ body.light-mode #adminCourtSearch {
 
 .tab-content.active {
   display: flex;
+}
+
+@keyframes apptitleanimation {
+  0% {
+    filter: drop-shadow(0 0 10px rgba(0, 0, 0, 0.4));
+  }
+
+  75% {
+    filter: drop-shadow(0 0 15px rgba(255, 255, 255, 0.7));
+  }
+
+  100% {
+    filter: drop-shadow(0 0 15px rgba(0, 0, 0, 0.4));
+  }
+}
+
+@keyframes subtitleanimation {
+  0% {
+    filter: drop-shadow(0 0 10px rgba(0, 0, 0, 0.4));
+  }
+
+  75% {
+    filter: drop-shadow(0 0 15px rgba(255, 255, 255, 0.7));
+  }
+
+  100% {
+    filter: drop-shadow(0 0 10px rgba(0, 0, 0, 0.4));
+  }
+}
+
+@keyframes logoanimation {
+  0% {
+    filter: drop-shadow(0 0px 15px rgba(0, 0, 0, 0.4));
+    transform: translateY(0px);
+  }
+
+  50% {
+    filter: drop-shadow(0 0 30px rgba(255, 255, 255, 0.5));
+    transform: translateY(-12px);
+  }
+
+  100% {
+    filter: drop-shadow(0 0px 15px rgba(0, 0, 0, 0.4));
+    transform: translateY(0px);
+  }
 }
