@@ -110,8 +110,6 @@ document.addEventListener("DOMContentLoaded", () =>
 
   let isAdmin = false;
 
-  let cachedSkeleton = null;
-
   // =====================================================
   // NFC STATE
   // =====================================================
@@ -456,12 +454,9 @@ document.addEventListener("DOMContentLoaded", () =>
 
   async function getSkeleton()
   {
-    if (cachedSkeleton) return cachedSkeleton;
-
     const adminref = doc(db, "admin", "goodies");
     const adminSnap = await getDoc(adminref);
-    cachedSkeleton = adminSnap.data().skeletonKey;
-    return cachedSkeleton;
+    return adminSnap.data().skeletonKey;
   }
 
   // =====================================================
