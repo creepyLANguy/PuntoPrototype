@@ -1299,7 +1299,7 @@ document.addEventListener("DOMContentLoaded", () =>
       await addDoc(
         collection(db, "courts", currentCourtId, "events"),
         {
-          eventType: "UNDO_LAST_POINT",
+          eventType: EVENT_TYPES.UNDO,
           createdAt: serverTimestamp()
         }
       );
