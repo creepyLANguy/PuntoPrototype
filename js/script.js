@@ -29,11 +29,11 @@ export async function resetCourt(courtId, deepReset = false, newPassword = null)
   try
   {
     await resetFn({ courtId, deepReset, newPassword });
-    showToast("Court reset successful", "success");
+    showToast("Court reset successful", TOAST_TYPES.SUCCESS);
   }
   catch (err)
   {
-    showToast("Reset failed: " + err.message, "error");
+    showToast("Reset failed: " + err.message, TOAST_TYPES.ERROR);
   }
 }
 
@@ -55,11 +55,13 @@ document.addEventListener("DOMContentLoaded", () =>
 
   const COURTID_UPPER_LIMIT = 999999999;
 
-  const TEAM_A = "A";
-  const TEAM_B = "B";
-
-  const UNDO = "U";
-  const REMOTE_RESET = "R";
+  const EVENT_TYPES = {
+    POINT_TEAM_A: "POINT_TEAM_A",
+    POINT_TEAM_B: "POINT_TEAM_B",
+    UNDO: "UNDO",
+    RESET: "RESET",
+    REGISTER: "REGISTER"
+  };
 
   const SOUND_IDS = {
     POINT: "pointSound",
@@ -75,15 +77,22 @@ document.addEventListener("DOMContentLoaded", () =>
     PRIVATE: "private"
   };
 
+  const TOAST_TYPES = {
+    SUCCESS: "success",
+    ERROR: "error",
+    INFO: "info"
+  };
+
   // =====================================================
   // ACTION MAP
   // =====================================================
 
   const actionMap = {
-    [TEAM_A]: () => addPoint(TEAM_A),
-    [TEAM_B]: () => addPoint(TEAM_B),
-    [UNDO]: () => undoLastPoint(),
-    [REMOTE_RESET]: () => performShallowReset()
+    [EVENT_TYPES.POINT_TEAM_A]: () => addPoint(EVENT_TYPES.POINT_TEAM_A),
+    [EVENT_TYPES.POINT_TEAM_B]: () => addPoint(EVENT_TYPES.POINT_TEAM_B),
+    [EVENT_TYPES.UNDO]: () => undoLastPoint(),
+    [EVENT_TYPES.RESET]: () => performShallowReset(),
+    [EVENT_TYPES.REGISTER]: () => registerDeviceToCurrentCourt()
   };
 
   // =====================================================
@@ -102,7 +111,7 @@ document.addEventListener("DOMContentLoaded", () =>
 
   let muted = false;
 
-  let currentCourt = null;
+  let currentCourtId = null;
   let currentCourtPassword = null;
   let currentCourtStatus = null;
 
@@ -715,14 +724,14 @@ document.addEventListener("DOMContentLoaded", () =>
         status: elements.editCourtStatus.value
       });
 
-      showToast("Court updated successfully!", "success");
+      showToast("Court updated successfully!", TOAST_TYPES.SUCCESS);
       elements.editCourtPage.style.display = "none";
       elements.adminDashboardPage.style.display = "flex";
       displayAdminCourtList();
     }
     catch (err)
     {
-      showToast("Failed to update: " + err.message, "error");
+      showToast("Failed to update: " + err.message, TOAST_TYPES.ERROR);
     }
   });
 
@@ -734,14 +743,14 @@ document.addEventListener("DOMContentLoaded", () =>
     try
     {
       await deleteDoc(doc(db, "courts", courtToEdit.id));
-      showToast("Court deleted.", "success");
+      showToast("Court deleted.", TOAST_TYPES.SUCCESS);
       elements.editCourtPage.style.display = "none";
       elements.adminDashboardPage.style.display = "flex";
       displayAdminCourtList();
     }
     catch (err)
     {
-      showToast("Delete failed: " + err.message, "error");
+      showToast("Delete failed: " + err.message, TOAST_TYPES.ERROR);
     }
   });
 
@@ -983,7 +992,7 @@ document.addEventListener("DOMContentLoaded", () =>
       defaultScore()
     );
 
-    showToast(`Court "${courtName}" created successfully.`, "success");
+    showToast(`Court "${courtName}" created successfully.`, TOAST_TYPES.SUCCESS);
 
     elements.createPage.style.display = "none";
     if (isAdmin)
@@ -1002,13 +1011,13 @@ document.addEventListener("DOMContentLoaded", () =>
 
   elements.enterCourtBtn.addEventListener("click", async () =>
   {
-    const name = selectedPlayCourt;
+    const courtId = selectedPlayCourt;
     const password = elements.playCourtPassword.value.trim();
 
     elements.playCourtNameError.textContent = "";
     elements.playCourtPasswordError.textContent = "";
 
-    if (!name)
+    if (!courtId)
     {
       elements.playCourtNameError.textContent = "Court not selected.";
       return;
@@ -1020,7 +1029,7 @@ document.addEventListener("DOMContentLoaded", () =>
       return;
     }
 
-    const courtRef = doc(db, "courts", name);
+    const courtRef = doc(db, "courts", courtId);
     const snap = await getDoc(courtRef);
 
     if (!snap.exists())
@@ -1032,7 +1041,7 @@ document.addEventListener("DOMContentLoaded", () =>
     var adminPassword = await getSkeleton();
     if (password === adminPassword)
     {
-      enterCourt(name, false);
+      enterCourt(courtId, false);
       return;
     }
 
@@ -1043,22 +1052,22 @@ document.addEventListener("DOMContentLoaded", () =>
     }
 
     currentCourtPassword = password;
-    enterCourt(name, false);
+    enterCourt(courtId, false);
 
     elements.playCourtPassword.value = "";
   });
 
-  async function enterCourt(courtName, spectate)
+  async function enterCourt(courtId, spectate)
   {
-    console.log(`Entering court: ${courtName}, spectate: ${spectate}`);
-    const courtRef = doc(db, "courts", courtName);
+    console.log(`Entering court: ${courtId}, spectate: ${spectate}`);
+    const courtRef = doc(db, "courts", courtId);
     const snap = await getDoc(courtRef);
     if (!snap.exists())
     {
       const errorEl = spectate ? elements.spectateCourtNameError : elements.playCourtNameError;
       errorEl.textContent = "Court not found.";
       const listContainer = spectate ? elements.spectateCourtList : elements.playCourtList;
-      const selectedItem = listContainer.querySelector(`[data-court-name="${courtName}"]`);
+      const selectedItem = listContainer.querySelector(`[data-court-name="${courtId}"]`);
       if (selectedItem)
       {
         selectedItem.remove();
@@ -1066,7 +1075,7 @@ document.addEventListener("DOMContentLoaded", () =>
       return;
     }
 
-    currentCourt = courtName;
+    currentCourtId = courtId;
     const data = snap.data();
     currentCourtPassword = data.password;
     currentCourtStatus = data.status;
@@ -1104,23 +1113,23 @@ document.addEventListener("DOMContentLoaded", () =>
     elements.scoreboardPage.style.display = "flex";
     document.body.classList.add("scoreboard-active");
 
-    showCourtTitle(courtName);
+    showCourtTitle(courtId);
 
     if (spectate) enableSpectateMode();
     else disableSpectateMode();
 
     // Warm Firestore connection
-    await getDoc(doc(db, "courts", courtName, "score", "current"));
+    await getDoc(doc(db, "courts", courtId, "score", "current"));
     // Warm Firestore cloud functions
     await addDoc(
-      collection(db, "courts", courtName, "events"),
+      collection(db, "courts", courtId, "events"),
       {
         eventType: "WARMUP",
         createdAt: serverTimestamp()
       }
     );
 
-    listenToCourt(courtName);
+    listenToCourt(courtId);
 
     requestWakeLock();
 
@@ -1183,6 +1192,32 @@ document.addEventListener("DOMContentLoaded", () =>
     if (badge) badge.remove();
   }
 
+  async function registerDeviceToCurrentCourt(deviceId)
+  {
+    if (!currentCourtId)
+    {
+      showToast("Cannot register device - no court selected.", TOAST_TYPES.ERROR);
+      return;
+    }
+
+    if (!deviceId)
+    {
+      if (!lastScannedDevice)
+      {
+        showToast("Device not scanned.", TOAST_TYPES.ERROR);
+        return;
+      }
+
+      deviceId = lastScannedDevice;
+    }
+
+    await updateDoc(doc(db, "devices", deviceId), {
+      courtId: currentCourtId
+    });
+
+    showToast(`Device ${deviceId} registered to court ${currentCourtId}`, TOAST_TYPES.SUCCESS);
+  }
+
   // =====================================================
   // SOUND LOGIC
   // =====================================================
@@ -1241,19 +1276,17 @@ document.addEventListener("DOMContentLoaded", () =>
   // SCORE LOGIC
   // =====================================================
 
-  async function addPoint(team)
+  async function addPoint(addpointevent)
   {
     await addDoc(
-      collection(db, "courts", currentCourt, "events"),
+      collection(db, "courts", currentCourtId, "events"),
       {
-        eventType: team === TEAM_A
-          ? "POINT_TEAM_A"
-          : "POINT_TEAM_B",
+        eventType: addpointevent,
         createdAt: serverTimestamp()
       }
     );
 
-    animate(team);
+    animate(addpointevent === EVENT_TYPES.POINT_TEAM_A ? "A" : "B");
     playSound(SOUND_IDS.POINT);
   }
 
@@ -1264,7 +1297,7 @@ document.addEventListener("DOMContentLoaded", () =>
     try
     {
       await addDoc(
-        collection(db, "courts", currentCourt, "events"),
+        collection(db, "courts", currentCourtId, "events"),
         {
           eventType: "UNDO_LAST_POINT",
           createdAt: serverTimestamp()
@@ -1293,7 +1326,7 @@ document.addEventListener("DOMContentLoaded", () =>
 
   function updateUI()
   {
-    [TEAM_A, TEAM_B].forEach(team =>
+    ["A", "B"].forEach(team =>
     {
       renderSets(team);
       renderGames(team);
@@ -1324,7 +1357,7 @@ document.addEventListener("DOMContentLoaded", () =>
   function renderSets(team)
   {
     const el = elements.sets[team];
-    const opp = team === TEAM_A ? TEAM_B : TEAM_A;
+    const opp = team === "A" ? "B" : "A";
 
     const teamSets = score[team].sets;
     const oppSets = score[opp].sets;
@@ -1355,7 +1388,7 @@ document.addEventListener("DOMContentLoaded", () =>
   function renderGames(team)
   {
     const el = elements.games[team];
-    const opp = team === TEAM_A ? TEAM_B : TEAM_A;
+    const opp = team === "A" ? "B" : "A";
 
     const teamGames = score[team].games;
     const oppGames = score[opp].games;
@@ -1372,13 +1405,13 @@ document.addEventListener("DOMContentLoaded", () =>
     }
   }
 
-  function showToast(message, type = "success")
+  function showToast(message, toastType = TOAST_TYPES.SUCCESS)
   {
     const container = document.getElementById("toastContainer");
     if (!container) return;
 
     const toast = document.createElement("div");
-    toast.className = `toast ${type}`;
+    toast.className = `toast ${toastType}`;
     toast.textContent = message;
 
     container.appendChild(toast);
@@ -1404,7 +1437,7 @@ document.addEventListener("DOMContentLoaded", () =>
     // Check NFC support
     if (!("NDEFReader" in window))
     {
-      showToast("NFC is not supported on this device.", "error");
+      showToast("NFC is not supported on this device.", TOAST_TYPES.ERROR);
       return;
     }
 
@@ -1440,7 +1473,7 @@ document.addEventListener("DOMContentLoaded", () =>
 
       nfcReader.onerror = () =>
       {
-        showToast("NFC Disabled", "NFC is disabled on your device.\nEnable it in settings to use tag scanning.", "error");
+        showToast("NFC Disabled", "NFC is disabled on your device.\nEnable it in settings to use tag scanning.", TOAST_TYPES.ERROR);
       };
 
     }
@@ -1448,13 +1481,13 @@ document.addEventListener("DOMContentLoaded", () =>
     {
       if (error.name === "NotAllowedError")
       {
-        showToast("NFC permission denied.", "error");
+        showToast("NFC permission denied.", TOAST_TYPES.ERROR);
       } else if (error.name === "NotSupportedError")
       {
-        showToast("NFC not available on this device.", "error");
+        showToast("NFC not available on this device.", TOAST_TYPES.ERROR);
       } else
       {
-        showToast("NFC Error: Failed to initialize scanning.", "error");
+        showToast("NFC Error: Failed to initialize scanning.", TOAST_TYPES.ERROR);
       }
       console.error("NFC scan failed:", error);
     }
@@ -1464,19 +1497,35 @@ document.addEventListener("DOMContentLoaded", () =>
   // NFC HANDLING
   // =====================================================
 
-  function handleNfc(code)
+  function handleNfc(text)
   {
+    //AL.
+    //TODO - remove toast. 
+    showToast("NFC scanned: " + text);
+    //
 
-    if (!code) return;
+    if (!text) return;
 
-    const action = actionMap[code.toUpperCase()];
-    if (!action)
+    const uppercaseText = text.toUpperCase();
+
+    const json = JSON.parse(uppercaseText);
+    const eventType = json.eventType;
+
+    if (!eventType)
     {
-      console.warn("Unknown NFC code:", code);
+      showToast("NFC event type missing.", TOAST_TYPES.ERROR);
+      console.warn("NFC eventType missing: ", text);
       return;
     }
 
-    action();
+    if (!actionMap[eventType])
+    {
+      showToast("NFC event type unknown.", TOAST_TYPES.ERROR);
+      console.warn("NFC event type unknown: ", text);
+      return;
+    }
+
+    actionMap[eventType]();
   }
 
   function canProcessNfc()
@@ -1531,13 +1580,13 @@ document.addEventListener("DOMContentLoaded", () =>
 
   async function performShallowReset()
   {
-    if (!currentCourt) return;
+    if (!currentCourtId) return;
     try
     {
       await addDoc(
-        collection(db, "courts", currentCourt, "events"),
+        collection(db, "courts", currentCourtId, "events"),
         {
-          eventType: "RESET",
+          eventType: EVENT_TYPES.RESET,
           createdAt: serverTimestamp()
         }
       );
@@ -1547,7 +1596,7 @@ document.addEventListener("DOMContentLoaded", () =>
     catch (err)
     {
       console.error("Reset failed:", err);
-      showToast("Reset Failed: " + (err.message || "Unknown error"), "error");
+      showToast("Reset Failed: " + (err.message || "Unknown error"), TOAST_TYPES.ERROR);
     }
   }
 
@@ -1561,7 +1610,7 @@ document.addEventListener("DOMContentLoaded", () =>
       elements.resetPasswordError.textContent = "Password must be at least 4 characters.";
       return;
     }
-    else if (newPassword === currentCourt)
+    else if (newPassword === currentCourtId)
     {
       elements.resetPasswordError.textContent = "Password must be different from court name.";
       return;
@@ -1577,24 +1626,27 @@ document.addEventListener("DOMContentLoaded", () =>
     try
     {
       await addDoc(
-        collection(db, "courts", currentCourt, "events"),
+        collection(db, "courts", currentCourtId, "events"),
         {
-          eventType: "RESET",
+          eventType: EVENT_TYPES.RESET,
           createdAt: serverTimestamp()
         }
       );
+
       await setDoc(
-        doc(db, "courts", currentCourt),
+        doc(db, "courts", currentCourtId),
         { password: newPassword },
         { merge: true }
       );
+
       elements.resetModal.classList.add("hidden");
+
       playSound(SOUND_IDS.START);
     }
     catch (err)
     {
       console.error("Reset failed:", err);
-      showToast("Reset Failed: " + (err.message || "Unknown error"), "error");
+      showToast("Reset Failed: " + (err.message || "Unknown error"), TOAST_TYPES.ERROR);
     }
 
     elements.resetCourtPassword.value = "";
@@ -1722,7 +1774,7 @@ document.addEventListener("DOMContentLoaded", () =>
 
       try
       {
-        await updateDoc(doc(db, "courts", currentCourt), {
+        await updateDoc(doc(db, "courts", currentCourtId), {
           [`teamNames.${team}`]: name
         });
       }
@@ -1797,8 +1849,8 @@ document.addEventListener("DOMContentLoaded", () =>
 
   updateUI();
 
-  $("addPointA").addEventListener("click", () => addPoint(TEAM_A));
-  $("addPointB").addEventListener("click", () => addPoint(TEAM_B));
+  $("addPointA").addEventListener("click", () => addPoint(EVENT_TYPES.POINT_TEAM_A));
+  $("addPointB").addEventListener("click", () => addPoint(EVENT_TYPES.POINT_TEAM_B));
 
   // =====================================================
   // FIREBASE SYNC
@@ -1806,13 +1858,13 @@ document.addEventListener("DOMContentLoaded", () =>
 
   let unsubscribe = null;
 
-  async function listenToCourt(courtName)
+  async function listenToCourt(courtId)
   {
-    console.log(`Setting up real-time sync for court: ${courtName}`);
+    console.log(`Setting up real-time sync for court: ${courtId}`);
     if (unsubscribe) unsubscribe();
 
-    const scoreRef = doc(db, "courts", courtName, "score", "current");
-    const courtRef = doc(db, "courts", courtName);
+    const scoreRef = doc(db, "courts", courtId, "score", "current");
+    const courtRef = doc(db, "courts", courtId);
 
     // Warm reads
     await getDoc(scoreRef);
@@ -1833,9 +1885,9 @@ document.addEventListener("DOMContentLoaded", () =>
       if (!snap.exists())
       {
         // If we are already on a new court (redirected), ignore
-        if (currentCourt !== courtName) return;
+        if (currentCourtId !== courtId) return;
 
-        showToast("This court no longer exists.", "error");
+        showToast("This court no longer exists.", TOAST_TYPES.ERROR);
         // Return to menu
         disableSpectateMode();
         releaseWakeLock();
@@ -1852,9 +1904,9 @@ document.addEventListener("DOMContentLoaded", () =>
       const data = snap.data();
 
       // 🚨 Redirect handling (Rename propagation)
-      if (data.redirect && data.redirect !== currentCourt)
+      if (data.redirect && data.redirect !== currentCourtId)
       {
-        showToast(`Court has been renamed to "${data.redirect}". Redirecting...`, "success");
+        showToast(`Court has been renamed to "${data.redirect}". Redirecting...`, TOAST_TYPES.INFO);
         const wasSpectating = isSpectating;
         // Clean up current listener
         if (unsubscribeScore) unsubscribeScore();
@@ -1868,7 +1920,7 @@ document.addEventListener("DOMContentLoaded", () =>
       //Court made private
       if (data.status === STATUS.PRIVATE && currentCourtStatus !== STATUS.PRIVATE)
       {
-        showToast("This court has been made private by admin.", "info");
+        showToast("This court has been made private by admin.", TOAST_TYPES.INFO);
 
         // Return to menu
         disableSpectateMode();
@@ -1886,7 +1938,7 @@ document.addEventListener("DOMContentLoaded", () =>
       // 🚨 Court Closure detection
       if (data.status === STATUS.CLOSED && !isAdmin)
       {
-        showToast("The court has been closed by admin.", "error");
+        showToast("The court has been closed by admin.", TOAST_TYPES.ERROR);
 
         // Return to menu
         disableSpectateMode();
@@ -1907,7 +1959,7 @@ document.addEventListener("DOMContentLoaded", () =>
         !isSpectating
       )
       {
-        showToast("Security notice: Court password changed. You are now a spectator.", "error");
+        showToast("Security notice: Court password changed. You are now a spectator.", TOAST_TYPES.ERROR);
         enableSpectateMode();
       }
 
@@ -1976,7 +2028,7 @@ document.addEventListener("DOMContentLoaded", () =>
       renderDeviceList(allDevices);
     } catch (error)
     {
-      showToast("Error loading devices", "error");
+      showToast("Error loading devices", TOAST_TYPES.ERROR);
     }
   }
 
@@ -2028,12 +2080,12 @@ document.addEventListener("DOMContentLoaded", () =>
     const deviceId = elements.newDeviceId.value.trim();
     const courtId = elements.newDeviceCourtId.value.trim();
 
-    if (!deviceId) return showToast("Device ID is required", "error");
+    if (!deviceId) return showToast("Device ID is required", TOAST_TYPES.ERROR);
 
     try
     {
       await setDoc(doc(db, "devices", deviceId), { courtId: courtId });
-      showToast("Device added successfully", "success");
+      showToast("Device added successfully", TOAST_TYPES.SUCCESS);
       elements.addDevicePage.style.display = 'none';
       elements.newDeviceId.value = "";
       elements.newDeviceCourtId.value = "";
@@ -2041,7 +2093,7 @@ document.addEventListener("DOMContentLoaded", () =>
       elements.adminDashboardPage.style.display = "flex";
     } catch (error)
     {
-      showToast("Failed to add device", "error");
+      showToast("Failed to add device", TOAST_TYPES.ERROR);
     }
   });
 
@@ -2061,11 +2113,11 @@ document.addEventListener("DOMContentLoaded", () =>
         await updateDoc(doc(db, "devices", device.id), {
           courtId: elements.editDeviceCourtId.value.trim()
         });
-        showToast("Mapping updated", "success");
+        showToast("Mapping updated", TOAST_TYPES.SUCCESS);
         elements.editDevicePage.style.display = 'none';
         loadDevices();
         elements.adminDashboardPage.style.display = "flex";
-      } catch (e) { showToast("Update failed", "error"); }
+      } catch (e) { showToast("Update failed", TOAST_TYPES.ERROR); }
     };
 
     elements.deleteDeviceBtn.onclick = async () =>
@@ -2074,11 +2126,11 @@ document.addEventListener("DOMContentLoaded", () =>
       try
       {
         await deleteDoc(doc(db, "devices", device.id));
-        showToast("Device deleted", "success");
+        showToast("Device deleted", TOAST_TYPES.SUCCESS);
         elements.editDevicePage.style.display = 'none';
         loadDevices();
         elements.adminDashboardPage.style.display = "flex";
-      } catch (e) { showToast("Delete failed", "error"); }
+      } catch (e) { showToast("Delete failed", TOAST_TYPES.ERROR); }
     };
   }
 

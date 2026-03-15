@@ -26,7 +26,8 @@ exports.onEventCreate = onDocumentCreated(
 
         const scoreRef = db.doc(`courts/${courtId}/score/current`);
 
-        try {
+        try
+        {
             await db.runTransaction(async (tx) =>
             {
                 const scoreSnap = await tx.get(scoreRef);
@@ -78,7 +79,7 @@ exports.onEventCreate = onDocumentCreated(
 
                 // Normal point/undo event
                 const updatedScore = applyEvent(score, newEvent);
-                
+
                 console.log(`Updating score for ${courtId}. New points: A:${updatedScore.A.points}, B:${updatedScore.B.points}`);
 
                 tx.set(scoreRef, {
@@ -87,7 +88,8 @@ exports.onEventCreate = onDocumentCreated(
                     updatedAt: admin.firestore.FieldValue.serverTimestamp()
                 });
             });
-        } catch (err) {
+        } catch (err)
+        {
             console.error(`Transaction failed for event ${eventId}:`, err);
         }
     }
