@@ -7,408 +7,412 @@
   <title>Padel Push - Live Scoreboard</title>
   <link rel="stylesheet" href="css/style.css" />
   <script type="module" src="js/script.js"></script>
-  <link rel="icon" type="image/x-icon" href="media/img/favicon.ico">
+  <link rel="icon" type="image/svg+xml" href="media/img/favicon.svg">
 </head>
 
 <body>
+  <div id="content-container">
 
-  <!-- ================= GLOBAL BUTTON STACK ================= -->
-  <div class="global-controls">
-    <button id="themeToggleBtn" class="theme-toggle-btn" title="Toggle theme">🌙</button>
-    <button id="adminLoginBtn" class="theme-toggle-btn" title="Admin Panel">🔒</button>
-  </div>
-
-  <!-- ================= GLOBAL MODALS ================= -->
-  <div id="alertModal" class="alert-modal hidden">
-    <div class="alert-box">
-      <h2 id="alertTitle"></h2>
-      <p id="alertMessage"></p>
-      <button id="alertBtn" class="alert-btn">OK</button>
+    <!-- ================= GLOBAL BUTTON STACK ================= -->
+    <div class="global-controls">
+      <button id="themeToggleBtn" class="theme-toggle-btn" title="Toggle theme">🌙</button>
+      <button id="adminLoginBtn" class="theme-toggle-btn" title="Admin Panel">🔒</button>
     </div>
-  </div>
 
-  <div id="resetModal" class="reset-modal hidden">
-    <div class="reset-box">
-      <p>Reset the entire match?</p>
-      <div class="form-group">
-        <label>New Court Password (min 4 chars)</label>
-        <input type="password" id="resetCourtPassword" />
-        <div class="error" id="resetPasswordError"></div>
-      </div>
-      <div class="reset-actions">
-        <button id="confirmReset" type="button">Full Reset</button>
-        <button id="shallowReset" type="button">Keep Old Password</button>
-        <button id="cancelReset" type="button">Cancel</button>
+    <!-- ================= GLOBAL MODALS ================= -->
+    <div id="alertModal" class="alert-modal hidden">
+      <div class="alert-box">
+        <h2 id="alertTitle"></h2>
+        <p id="alertMessage"></p>
+        <button id="alertBtn" class="alert-btn">OK</button>
       </div>
     </div>
-  </div>
 
-  <div id="confirmModal" class="reset-modal hidden">
-    <div class="reset-box">
-      <p id="confirmMessage"></p>
-      <div class="reset-actions">
-        <button id="confirmOkBtn" type="button">OK</button>
-        <button id="confirmCancelBtn" type="button">Cancel</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ================= MENU ================= -->
-  <main id="menuPage" class="menu-page">
-
-    <img src="media/img/logo.webp" alt="Padel Push Logo" class="logo" />
-    <h2 class="app-title">Padel Push</h2>
-    <div class="app-subtitle">Your Live Scoreboard</div>
-
-    <div class="menu-buttons">
-      <button class="menu-btn" data-action="start">Play</button>
-      <button class="menu-btn" data-action="start">Spectate</button>
-    </div>
-  </main>
-
-  <!-- ================= ADMIN AUTH PAGE ================= -->
-  <div id="adminAuthPage" style="display:none;" class="create-page">
-    <div class="create-card">
-      <button id="closeAdminAuthBtn" class="close-btn">✕</button>
-      <h2>Admin Login</h2>
-      <div class="form-group">
-        <label>Enter Admin Password</label>
-        <input type="password" id="adminAuthPassword" />
-        <div class="error" id="adminAuthError"></div>
-      </div>
-      <button id="submitAdminAuthBtn" class="primary-btn">Login</button>
-    </div>
-  </div>
-
-  <!-- ================= ADMIN DASHBOARD PAGE ================= -->
-  <div id="adminDashboardPage" style="display:none;" class="create-page">
-    <div class="admin-dashboard-container">
-      <div class="admin-dashboard-header">
-        <button id="closeAdminDashboardBtn" class="close-btn">✕</button>
-        <h2>Admin Dashboard</h2>
-        <div class="header-actions">
-          <button id="showCreateCourtModalBtn" class="primary-btn">Create Court</button>
-          <button id="showAddDeviceModalBtn" class="primary-btn">Add Device</button>
+    <div id="resetModal" class="reset-modal hidden">
+      <div class="reset-box">
+        <p>Reset the entire match?</p>
+        <div class="form-group">
+          <label>New Court Password (min 4 chars)</label>
+          <input type="password" id="resetCourtPassword" />
+          <div class="error" id="resetPasswordError"></div>
+        </div>
+        <div class="reset-actions">
+          <button id="confirmReset" type="button">Full Reset</button>
+          <button id="shallowReset" type="button">Keep Old Password</button>
+          <button id="cancelReset" type="button">Cancel</button>
         </div>
       </div>
+    </div>
 
-      <div class="admin-tabs">
-        <button class="tab-btn active" data-tab="courts">Courts</button>
-        <button class="tab-btn" data-tab="devices">Devices</button>
+    <div id="confirmModal" class="reset-modal hidden">
+      <div class="reset-box">
+        <p id="confirmMessage"></p>
+        <div class="reset-actions">
+          <button id="confirmOkBtn" type="button">OK</button>
+          <button id="confirmCancelBtn" type="button">Cancel</button>
+        </div>
       </div>
+    </div>
 
-      <div id="courtsTab" class="tab-content active">
-        <div class="admin-dashboard-controls">
-          <div class="search-wrapper">
-            <input type="text" id="adminCourtSearch" placeholder="Search courts..." />
+    <!-- ================= MENU ================= -->
+    <main id="menuPage" class="menu-page">
+
+      <img src="media/img/logo.svg" alt="Padel Push Logo" class="logo" />
+      <h2 class="app-title">Padel Push</h2>
+      <div class="app-subtitle">Your Live Scoreboard</div>
+
+      <div class="menu-buttons">
+        <button class="menu-btn" data-action="start">Play</button>
+        <button class="menu-btn" data-action="start">Spectate</button>
+      </div>
+    </main>
+
+    <!-- ================= ADMIN AUTH PAGE ================= -->
+    <div id="adminAuthPage" style="display:none;" class="create-page">
+      <div class="create-card">
+        <button id="closeAdminAuthBtn" class="close-btn">✕</button>
+        <h2>Admin Login</h2>
+        <div class="form-group">
+          <label>Enter Admin Password</label>
+          <input type="password" id="adminAuthPassword" />
+          <div class="error" id="adminAuthError"></div>
+        </div>
+        <button id="submitAdminAuthBtn" class="primary-btn">Login</button>
+      </div>
+    </div>
+
+    <!-- ================= ADMIN DASHBOARD PAGE ================= -->
+    <div id="adminDashboardPage" style="display:none;" class="create-page">
+      <div class="admin-dashboard-container">
+        <div class="admin-dashboard-header">
+          <button id="closeAdminDashboardBtn" class="close-btn">✕</button>
+          <h2>Admin Dashboard</h2>
+          <div class="header-actions">
+            <button id="showCreateCourtModalBtn" class="primary-btn">Create Court</button>
+            <button id="showAddDeviceModalBtn" class="primary-btn">Add Device</button>
           </div>
-          <div class="filter-wrapper">
-            <select id="adminStatusFilter">
-              <option value="all">All</option>
+        </div>
+
+        <div class="admin-tabs">
+          <button class="tab-btn active" data-tab="courts">Courts</button>
+          <button class="tab-btn" data-tab="devices">Devices</button>
+        </div>
+
+        <div id="courtsTab" class="tab-content active">
+          <div class="admin-dashboard-controls">
+            <div class="search-wrapper">
+              <input type="text" id="adminCourtSearch" placeholder="Search courts..." />
+            </div>
+            <div class="filter-wrapper">
+              <select id="adminStatusFilter">
+                <option value="all">All</option>
+                <option value="open">Open</option>
+                <option value="closed">Closed</option>
+                <option value="private">Private</option>
+              </select>
+            </div>
+          </div>
+          <div id="adminCourtList" class="admin-court-list"></div>
+        </div>
+
+        <div id="devicesTab" class="tab-content">
+          <div class="admin-dashboard-controls">
+            <div class="search-wrapper">
+              <input type="text" id="adminDeviceSearch" placeholder="Search device ID or court ID..." />
+            </div>
+          </div>
+          <div id="adminDeviceList" class="admin-court-list">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="addDevicePage" style="display:none;" class="create-page">
+      <div class="create-card">
+        <button id="closeAddDeviceBtn" class="close-btn">✕</button>
+        <h2>Add Device</h2>
+        <div class="form-group">
+          <label>Device ID (Preconfigured)</label>
+          <input type="text" id="newDeviceId" placeholder="e.g. SN12345" />
+        </div>
+        <div class="form-group">
+          <label>Mapped to Court ID</label>
+          <div class="court-id-combo" id="newCourtIdCombo">
+            <div class="select-wrapper">
+              <select id="newDeviceCourtIdSelect">
+                <option value="">— Select a court —</option>
+              </select>
+            </div>
+            <div class="combo-manual-row">
+              <a href="#" class="combo-toggle-link" id="newDeviceManualToggle">Enter ID manually instead</a>
+            </div>
+            <input type="text" id="newDeviceCourtIdManual" placeholder="e.g. court-123" class="combo-manual-input"
+              style="display:none;" />
+            <div class="combo-manual-row" id="newDeviceDropdownToggleRow" style="display:none;">
+              <a href="#" class="combo-toggle-link" id="newDeviceDropdownToggle">← Choose from list</a>
+            </div>
+          </div>
+        </div>
+        <button id="saveNewDeviceBtn" class="primary-btn">Add Device</button>
+      </div>
+    </div>
+
+    <div id="editDevicePage" style="display:none;" class="create-page">
+      <div class="create-card">
+        <button id="closeEditDeviceBtn" class="close-btn">✕</button>
+        <h2><span id="editDeviceIdTitle"></span></h2>
+        <div class="form-group">
+          <label>Mapped Court ID</label>
+          <div class="court-id-combo" id="editCourtIdCombo">
+            <div class="select-wrapper">
+              <select id="editDeviceCourtIdSelect">
+                <option value="">— Select a court —</option>
+              </select>
+            </div>
+            <div class="combo-manual-row">
+              <a href="#" class="combo-toggle-link" id="editDeviceManualToggle">Enter ID manually instead</a>
+            </div>
+            <input type="text" id="editDeviceCourtIdManual" placeholder="e.g. court-123" class="combo-manual-input"
+              style="display:none;" />
+            <div class="combo-manual-row" id="editDeviceDropdownToggleRow" style="display:none;">
+              <a href="#" class="combo-toggle-link" id="editDeviceDropdownToggle">← Choose from list</a>
+            </div>
+          </div>
+        </div>
+        <button id="saveEditDeviceBtn" class="primary-btn">Save Mapping</button>
+        <button id="deleteDeviceBtn" class="danger-btn" style="margin-top: 10px; background: #ff4444;">Delete
+          Device</button>
+      </div>
+    </div>
+
+    <!-- ================= CREATE COURT MODAL ================= -->
+    <div id="createPage" style="display:none;" class="create-page">
+      <div class="create-card">
+        <button id="closeCreateBtn" class="close-btn">✕</button>
+        <h2>Create Court</h2>
+        <div class="form-group">
+          <label>Court Name</label>
+          <input type="text" id="courtName" />
+          <div class="error" id="courtNameError"></div>
+        </div>
+        <div class="form-group">
+          <label>Court Password</label>
+          <input type="password" id="courtPassword" />
+          <div class="error" id="courtPasswordError"></div>
+        </div>
+        <div class="form-group">
+          <label>Status</label>
+          <div class="select-wrapper">
+            <select id="courtStatus">
+              <option value="closed">Closed</option>
+              <option value="open">Open</option>
+              <option value="private">Private</option>
+            </select>
+          </div>
+        </div>
+        <p>
+          <button id="createCourtBtn" class="primary-btn">Create Court</button>
+      </div>
+    </div>
+
+    <!-- ================= EDIT COURT MODAL ================= -->
+    <div id="editCourtPage" style="display:none;" class="create-page">
+      <div class="create-card edit-card">
+        <button id="closeEditBtn" class="close-btn">✕</button>
+        <h2>Editing Court:<br /><span id="editCourtNameTitle"></span></h2>
+        <div class="form-group">
+          <label>Court Name</label>
+          <input type="text" id="editCourtName" />
+        </div>
+        <div class="form-group">
+          <label>Team A Name</label>
+          <input type="text" id="editTeamAName" />
+        </div>
+        <div class="form-group">
+          <label>Team B Name</label>
+          <input type="text" id="editTeamBName" />
+        </div>
+        <div class="form-group">
+          <label>Court Password</label>
+          <input type="text" id="editCourtPassword" />
+        </div>
+        <div class="form-group">
+          <label>Status</label>
+          <div class="select-wrapper">
+            <select id="editCourtStatus">
               <option value="open">Open</option>
               <option value="closed">Closed</option>
               <option value="private">Private</option>
             </select>
           </div>
         </div>
-        <div id="adminCourtList" class="admin-court-list"></div>
-      </div>
-
-      <div id="devicesTab" class="tab-content">
-        <div class="admin-dashboard-controls">
-          <div class="search-wrapper">
-            <input type="text" id="adminDeviceSearch" placeholder="Search device ID or court ID..." />
-          </div>
-        </div>
-        <div id="adminDeviceList" class="admin-court-list">
-        </div>
+        <button id="saveEditBtn" class="primary-btn">Save Changes</button>
+        <button id="deleteCourtBtn" class="danger-btn" style="margin-top: 10px; background: #ff4444;">Delete
+          Court</button>
       </div>
     </div>
-  </div>
 
-  <div id="addDevicePage" style="display:none;" class="create-page">
-    <div class="create-card">
-      <button id="closeAddDeviceBtn" class="close-btn">✕</button>
-      <h2>Add Device</h2>
-      <div class="form-group">
-        <label>Device ID (Preconfigured)</label>
-        <input type="text" id="newDeviceId" placeholder="e.g. SN12345" />
-      </div>
-      <div class="form-group">
-        <label>Mapped to Court ID</label>
-        <div class="court-id-combo" id="newCourtIdCombo">
-          <div class="select-wrapper">
-            <select id="newDeviceCourtIdSelect">
-              <option value="">— Select a court —</option>
-            </select>
-          </div>
-          <div class="combo-manual-row">
-            <a href="#" class="combo-toggle-link" id="newDeviceManualToggle">Enter ID manually instead</a>
-          </div>
-          <input type="text" id="newDeviceCourtIdManual" placeholder="e.g. court-123" class="combo-manual-input" style="display:none;" />
-          <div class="combo-manual-row" id="newDeviceDropdownToggleRow" style="display:none;">
-            <a href="#" class="combo-toggle-link" id="newDeviceDropdownToggle">← Choose from list</a>
-          </div>
-        </div>
-      </div>
-      <button id="saveNewDeviceBtn" class="primary-btn">Add Device</button>
-    </div>
-  </div>
+    <!-- ================= TOAST NOTIFICATIONS ================= -->
+    <div id="toastContainer" class="toast-container"></div>
 
-  <div id="editDevicePage" style="display:none;" class="create-page">
-    <div class="create-card">
-      <button id="closeEditDeviceBtn" class="close-btn">✕</button>
-      <h2><span id="editDeviceIdTitle"></span></h2>
-      <div class="form-group">
-        <label>Mapped Court ID</label>
-        <div class="court-id-combo" id="editCourtIdCombo">
-          <div class="select-wrapper">
-            <select id="editDeviceCourtIdSelect">
-              <option value="">— Select a court —</option>
-            </select>
-          </div>
-          <div class="combo-manual-row">
-            <a href="#" class="combo-toggle-link" id="editDeviceManualToggle">Enter ID manually instead</a>
-          </div>
-          <input type="text" id="editDeviceCourtIdManual" placeholder="e.g. court-123" class="combo-manual-input" style="display:none;" />
-          <div class="combo-manual-row" id="editDeviceDropdownToggleRow" style="display:none;">
-            <a href="#" class="combo-toggle-link" id="editDeviceDropdownToggle">← Choose from list</a>
-          </div>
-        </div>
-      </div>
-      <button id="saveEditDeviceBtn" class="primary-btn">Save Mapping</button>
-      <button id="deleteDeviceBtn" class="danger-btn" style="margin-top: 10px; background: #ff4444;">Delete
-        Device</button>
-    </div>
-  </div>
+    <!-- ================= PLAY COURT PAGE ================= -->
+    <div id="playPage" style="display:none;" class="create-page">
 
-  <!-- ================= CREATE COURT MODAL ================= -->
-  <div id="createPage" style="display:none;" class="create-page">
-    <div class="create-card">
-      <button id="closeCreateBtn" class="close-btn">✕</button>
-      <h2>Create Court</h2>
-      <div class="form-group">
-        <label>Court Name</label>
-        <input type="text" id="courtName" />
-        <div class="error" id="courtNameError"></div>
-      </div>
-      <div class="form-group">
-        <label>Court Password</label>
-        <input type="password" id="courtPassword" />
-        <div class="error" id="courtPasswordError"></div>
-      </div>
-      <div class="form-group">
-        <label>Status</label>
-        <div class="select-wrapper">
-          <select id="courtStatus">
-            <option value="closed">Closed</option>
-            <option value="open">Open</option>
-            <option value="private">Private</option>
-          </select>
-        </div>
-      </div>
-      <p>
-        <button id="createCourtBtn" class="primary-btn">Create Court</button>
-    </div>
-  </div>
+      <div class="create-card">
 
-  <!-- ================= EDIT COURT MODAL ================= -->
-  <div id="editCourtPage" style="display:none;" class="create-page">
-    <div class="create-card edit-card">
-      <button id="closeEditBtn" class="close-btn">✕</button>
-      <h2>Editing Court:<br /><span id="editCourtNameTitle"></span></h2>
-      <div class="form-group">
-        <label>Court Name</label>
-        <input type="text" id="editCourtName" />
-      </div>
-      <div class="form-group">
-        <label>Team A Name</label>
-        <input type="text" id="editTeamAName" />
-      </div>
-      <div class="form-group">
-        <label>Team B Name</label>
-        <input type="text" id="editTeamBName" />
-      </div>
-      <div class="form-group">
-        <label>Court Password</label>
-        <input type="text" id="editCourtPassword" />
-      </div>
-      <div class="form-group">
-        <label>Status</label>
-        <div class="select-wrapper">
-          <select id="editCourtStatus">
-            <option value="open">Open</option>
-            <option value="closed">Closed</option>
-            <option value="private">Private</option>
-          </select>
-        </div>
-      </div>
-      <button id="saveEditBtn" class="primary-btn">Save Changes</button>
-      <button id="deleteCourtBtn" class="danger-btn" style="margin-top: 10px; background: #ff4444;">Delete
-        Court</button>
-    </div>
-  </div>
+        <button id="closePlayBtn" class="close-btn">✕</button>
 
-  <!-- ================= TOAST NOTIFICATIONS ================= -->
-  <div id="toastContainer" class="toast-container"></div>
+        <h2>Play Court</h2>
 
-  <!-- ================= PLAY COURT PAGE ================= -->
-  <div id="playPage" style="display:none;" class="create-page">
-
-    <div class="create-card">
-
-      <button id="closePlayBtn" class="close-btn">✕</button>
-
-      <h2>Play Court</h2>
-
-      <!-- Search Bar -->
-      <div class="form-group">
-        <label>Search Courts</label>
-        <input type="text" id="playCourtSearch" placeholder="Enter court name..." />
-      </div>
-
-      <!-- Court List -->
-      <div id="playCourtList" class="court-list">
-        <div class="loading">Loading courts...</div>
-      </div>
-
-      <!-- Password Section (Hidden by default) -->
-      <div id="playPasswordSection" style="display:none;">
+        <!-- Search Bar -->
         <div class="form-group">
-          <label>Court Password</label>
-          <input type="password" id="playCourtPassword" />
-          <div class="error" id="playCourtPasswordError"></div>
+          <label>Search Courts</label>
+          <input type="text" id="playCourtSearch" placeholder="Enter court name..." />
         </div>
 
-        <button id="enterCourtBtn" class="primary-btn">Enter Court</button>
-      </div>
+        <!-- Court List -->
+        <div id="playCourtList" class="court-list">
+          <div class="loading">Loading courts...</div>
+        </div>
 
-      <div class="error" id="playCourtNameError"></div>
-
-    </div>
-  </div>
-
-  <!-- ================= SPECTATE PAGE ================= -->
-  <div id="spectatePage" style="display:none;" class="create-page">
-
-    <div class="create-card">
-
-      <button id="closeSpectateBtn" class="close-btn">✕</button>
-
-      <h2>Spectate Court</h2>
-
-      <!-- Search Bar -->
-      <div class="form-group">
-        <label>Search Courts</label>
-        <input type="text" id="spectateCourtSearch" placeholder="Enter court name..." />
-      </div>
-
-      <!-- Court List -->
-      <div id="spectateCourtList" class="court-list">
-        <div class="loading">Loading courts...</div>
-      </div>
-
-      <div class="error" id="spectateCourtNameError"></div>
-
-    </div>
-  </div>
-
-  <!-- ================= SCOREBOARD (HIDDEN INITIALLY) ================= -->
-  <div id="scoreboardPage" style="display:none;">
-
-    <!-- ================= SCOREBOARD BODY ================= -->
-    <div class="scoreboard-body">
-
-      <!-- SIDEBAR (Landscape) / HEADER (Portrait) -->
-      <aside class="sidebar-left">
-        <span id="courtTitle"></span>
-        <!-- Spectator badge is injected by JS here -->
-        <div class="header-spectator-badge-slot"></div>
-      </aside>
-
-      <!-- ===== SCOREBOARD ===== -->
-      <main class="app">
-        <section class="scoreboard">
-
-          <div id="nfcCooldownBanner" class="nfc-cooldown hidden">
-            Scan locked — <span id="nfcCountdown">3</span>s
+        <!-- Password Section (Hidden by default) -->
+        <div id="playPasswordSection" style="display:none;">
+          <div class="form-group">
+            <label>Court Password</label>
+            <input type="password" id="playCourtPassword" />
+            <div class="error" id="playCourtPasswordError"></div>
           </div>
 
-          <!-- TEAM A -->
-          <div class="team team-a" id="teamA">
-            <button id="addPointA" class="ref-zone"></button>
-            <h2 class="team-name" data-team="A">
-              <span class="name-text">Team A</span>
-            </h2>
+          <button id="enterCourtBtn" class="primary-btn">Enter Court</button>
+        </div>
 
-            <div class="meta">
-              <div class="row">
-                <span>Sets</span>
-                <span id="setsA"></span>
-              </div>
-              <div class="row">
-                <span>Games</span>
-                <span id="gamesA"></span>
-              </div>
+        <div class="error" id="playCourtNameError"></div>
+
+      </div>
+    </div>
+
+    <!-- ================= SPECTATE PAGE ================= -->
+    <div id="spectatePage" style="display:none;" class="create-page">
+
+      <div class="create-card">
+
+        <button id="closeSpectateBtn" class="close-btn">✕</button>
+
+        <h2>Spectate Court</h2>
+
+        <!-- Search Bar -->
+        <div class="form-group">
+          <label>Search Courts</label>
+          <input type="text" id="spectateCourtSearch" placeholder="Enter court name..." />
+        </div>
+
+        <!-- Court List -->
+        <div id="spectateCourtList" class="court-list">
+          <div class="loading">Loading courts...</div>
+        </div>
+
+        <div class="error" id="spectateCourtNameError"></div>
+
+      </div>
+    </div>
+
+    <!-- ================= SCOREBOARD (HIDDEN INITIALLY) ================= -->
+    <div id="scoreboardPage" style="display:none;">
+
+      <!-- ================= SCOREBOARD BODY ================= -->
+      <div class="scoreboard-body">
+
+        <!-- SIDEBAR (Landscape) / HEADER (Portrait) -->
+        <aside class="sidebar-left">
+          <span id="courtTitle"></span>
+          <!-- Spectator badge is injected by JS here -->
+          <div class="header-spectator-badge-slot"></div>
+        </aside>
+
+        <!-- ===== SCOREBOARD ===== -->
+        <main class="app">
+          <section class="scoreboard">
+
+            <div id="nfcCooldownBanner" class="nfc-cooldown hidden">
+              Scan locked — <span id="nfcCountdown">3</span>s
             </div>
 
-            <div class="indicator"></div>
+            <!-- TEAM A -->
+            <div class="team team-a" id="teamA">
+              <button id="addPointA" class="ref-zone"></button>
+              <h2 class="team-name" data-team="A">
+                <span class="name-text">Team A</span>
+              </h2>
 
-            <div class="points-wrapper">
-              <div class="points" id="pointsA">0</div>
-            </div>
-          </div><!-- TEAM A -->
-
-          <!-- TEAM B -->
-          <div class="team team-b" id="teamB">
-            <button id="addPointB" class="ref-zone"></button>
-            <h2 class="team-name" data-team="B">
-              <span class="name-text">Team B</span>
-            </h2>
-
-            <div class="meta">
-              <div class="row">
-                <span>Sets</span>
-                <span id="setsB"></span>
+              <div class="meta">
+                <div class="row">
+                  <span>Sets</span>
+                  <span id="setsA"></span>
+                </div>
+                <div class="row">
+                  <span>Games</span>
+                  <span id="gamesA"></span>
+                </div>
               </div>
-              <div class="row">
-                <span>Games</span>
-                <span id="gamesB"></span>
+
+              <div class="indicator"></div>
+
+              <div class="points-wrapper">
+                <div class="points" id="pointsA">0</div>
               </div>
-            </div>
+            </div><!-- TEAM A -->
 
-            <div class="indicator"></div>
+            <!-- TEAM B -->
+            <div class="team team-b" id="teamB">
+              <button id="addPointB" class="ref-zone"></button>
+              <h2 class="team-name" data-team="B">
+                <span class="name-text">Team B</span>
+              </h2>
 
-            <div class="points-wrapper">
-              <div class="points" id="pointsB">0</div>
-            </div>
-          </div><!-- TEAM B -->
+              <div class="meta">
+                <div class="row">
+                  <span>Sets</span>
+                  <span id="setsB"></span>
+                </div>
+                <div class="row">
+                  <span>Games</span>
+                  <span id="gamesB"></span>
+                </div>
+              </div>
 
-        </section>
-      </main><!-- APP -->
+              <div class="indicator"></div>
 
-      <!-- FLOATING CONTROLS -->
-      <div class="floating-controls">
-        <!-- LONG PRESS GROUP -->
-        <button id="backBtn" class="floating-btn" title="Back">✕</button>
+              <div class="points-wrapper">
+                <div class="points" id="pointsB">0</div>
+              </div>
+            </div><!-- TEAM B -->
 
-        <div id="sep1" class="btn-separator type-sep"></div>
+          </section>
+        </main><!-- APP -->
 
-        <button id="resetBtn" class="floating-btn" title="Reset">!</button>
-        <button id="undoBtn" class="floating-btn" title="Undo">↩</button>
+        <!-- FLOATING CONTROLS -->
+        <div class="floating-controls">
+          <!-- LONG PRESS GROUP -->
+          <button id="backBtn" class="floating-btn" title="Back">✕</button>
 
-        <div id="sep2" class="btn-separator type-sep"></div>
+          <div id="sep1" class="btn-separator type-sep"></div>
 
-        <!-- CLICK GROUP -->
-        <button id="muteBtn" class="floating-btn" title="Mute">🔊</button>
-        <button id="themeToggleScorebboardBtn" class="floating-btn" title="Toggle theme">🌙</button>
-        <button id="swapBtn" class="floating-btn" title="Swap sides">⇄</button>
-      </div><!-- FLOATING CONTROLS -->
+          <button id="resetBtn" class="floating-btn" title="Reset">!</button>
+          <button id="undoBtn" class="floating-btn" title="Undo">↩</button>
 
-    </div><!-- SCOREBOARD BODY -->
+          <div id="sep2" class="btn-separator type-sep"></div>
 
-  </div> <!-- SCOREBOARD PAGE -->
+          <!-- CLICK GROUP -->
+          <button id="muteBtn" class="floating-btn" title="Mute">🔊</button>
+          <button id="themeToggleScorebboardBtn" class="floating-btn" title="Toggle theme">🌙</button>
+          <button id="swapBtn" class="floating-btn" title="Swap sides">⇄</button>
+        </div><!-- FLOATING CONTROLS -->
 
+      </div><!-- SCOREBOARD BODY -->
+
+    </div> <!-- SCOREBOARD PAGE -->
+
+  </div> <!-- CONTENT CONTAINER -->
 </body>
 
 </html>

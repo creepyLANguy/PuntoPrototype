@@ -4,7 +4,7 @@ name: Firebase Functions Dev Deploy
 on:
   push:
     branches:
-      - '**'
+      - main
     paths:
       - 'functions/**'   # Only trigger workflow when something in /functions changes
 
