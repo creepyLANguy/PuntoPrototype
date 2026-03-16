@@ -1139,6 +1139,9 @@ document.addEventListener("DOMContentLoaded", () =>
   function enableSpectateMode()
   {
     isSpectating = true;
+
+    nfcReader = null;
+
     document.body.classList.add("spectating-mode");
 
     $("addPointA").style.pointerEvents = "none";
@@ -1430,7 +1433,6 @@ document.addEventListener("DOMContentLoaded", () =>
   {
     if (isSpectating)
     {
-      console.warn("NFC not initialized in Spectate mode.");
       return;
     }
 
@@ -1730,6 +1732,8 @@ document.addEventListener("DOMContentLoaded", () =>
     {
       disableSpectateMode();
       releaseWakeLock();
+      nfcReader = null;
+
       document.body.classList.remove("scoreboard-active");
       // Show top-right theme toggle when leaving court view
       if (elements.themeToggleBtn)
