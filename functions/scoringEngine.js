@@ -13,7 +13,7 @@ function defaultScore()
 
 function applyEvent(score, event)
 {
-  if (event.eventType === "UNDO_LAST_POINT")
+  if (event.eventType === "UNDO")
   {
     return undo(score);
   }
