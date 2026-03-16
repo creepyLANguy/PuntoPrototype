@@ -1195,6 +1195,7 @@ document.addEventListener("DOMContentLoaded", () =>
     if (badge) badge.remove();
   }
 
+  //AL.
   async function registerDeviceToCurrentCourt(deviceId)
   {
     if (!currentCourtId)
@@ -1527,6 +1528,10 @@ document.addEventListener("DOMContentLoaded", () =>
       return;
     }
 
+    //AL.
+    //TODO - remove toast.
+    showToast("NFC event type: " + eventType);
+    //
     actionMap[eventType]();
   }
 
