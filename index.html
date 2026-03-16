@@ -136,7 +136,20 @@
       </div>
       <div class="form-group">
         <label>Mapped to Court ID</label>
-        <input type="text" id="newDeviceCourtId" placeholder="e.g. court-123" />
+        <div class="court-id-combo" id="newCourtIdCombo">
+          <div class="select-wrapper">
+            <select id="newDeviceCourtIdSelect">
+              <option value="">— Select a court —</option>
+            </select>
+          </div>
+          <div class="combo-manual-row">
+            <a href="#" class="combo-toggle-link" id="newDeviceManualToggle">Enter ID manually instead</a>
+          </div>
+          <input type="text" id="newDeviceCourtIdManual" placeholder="e.g. court-123" class="combo-manual-input" style="display:none;" />
+          <div class="combo-manual-row" id="newDeviceDropdownToggleRow" style="display:none;">
+            <a href="#" class="combo-toggle-link" id="newDeviceDropdownToggle">← Choose from list</a>
+          </div>
+        </div>
       </div>
       <button id="saveNewDeviceBtn" class="primary-btn">Add Device</button>
     </div>
@@ -148,7 +161,20 @@
       <h2><span id="editDeviceIdTitle"></span></h2>
       <div class="form-group">
         <label>Mapped Court ID</label>
-        <input type="text" id="editDeviceCourtId" />
+        <div class="court-id-combo" id="editCourtIdCombo">
+          <div class="select-wrapper">
+            <select id="editDeviceCourtIdSelect">
+              <option value="">— Select a court —</option>
+            </select>
+          </div>
+          <div class="combo-manual-row">
+            <a href="#" class="combo-toggle-link" id="editDeviceManualToggle">Enter ID manually instead</a>
+          </div>
+          <input type="text" id="editDeviceCourtIdManual" placeholder="e.g. court-123" class="combo-manual-input" style="display:none;" />
+          <div class="combo-manual-row" id="editDeviceDropdownToggleRow" style="display:none;">
+            <a href="#" class="combo-toggle-link" id="editDeviceDropdownToggle">← Choose from list</a>
+          </div>
+        </div>
       </div>
       <button id="saveEditDeviceBtn" class="primary-btn">Save Mapping</button>
       <button id="deleteDeviceBtn" class="danger-btn" style="margin-top: 10px; background: #ff4444;">Delete
