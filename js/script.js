@@ -309,11 +309,21 @@ document.addEventListener("DOMContentLoaded", () =>
   elements.closeAddDeviceBtn = $("closeAddDeviceBtn");
   elements.saveNewDeviceBtn = $("saveNewDeviceBtn");
   elements.newDeviceId = $("newDeviceId");
-  elements.newDeviceCourtId = $("newDeviceCourtId");
+  // Combo elements — Add Device
+  elements.newDeviceCourtIdSelect = $("newDeviceCourtIdSelect");
+  elements.newDeviceCourtIdManual = $("newDeviceCourtIdManual");
+  elements.newDeviceManualToggle = $("newDeviceManualToggle");
+  elements.newDeviceDropdownToggle = $("newDeviceDropdownToggle");
+  elements.newDeviceDropdownToggleRow = $("newDeviceDropdownToggleRow");
 
   elements.editDevicePage = $("editDevicePage");
   elements.editDeviceIdTitle = $("editDeviceIdTitle");
-  elements.editDeviceCourtId = $("editDeviceCourtId");
+  // Combo elements — Edit Device
+  elements.editDeviceCourtIdSelect = $("editDeviceCourtIdSelect");
+  elements.editDeviceCourtIdManual = $("editDeviceCourtIdManual");
+  elements.editDeviceManualToggle = $("editDeviceManualToggle");
+  elements.editDeviceDropdownToggle = $("editDeviceDropdownToggle");
+  elements.editDeviceDropdownToggleRow = $("editDeviceDropdownToggleRow");
   elements.saveEditDeviceBtn = $("saveEditDeviceBtn");
   elements.deleteDeviceBtn = $("deleteDeviceBtn");
   elements.closeEditDeviceBtn = $("closeEditDeviceBtn");
@@ -2015,6 +2025,119 @@ document.addEventListener("DOMContentLoaded", () =>
     });
   });
 
+  // =====================================================
+  // COURT DROPDOWN HELPERS (for device combo widgets)
+  // =====================================================
+
+  /**
+   * Fetches all courts from Firestore and populates a <select> element.
+   * Keeps the first placeholder option intact.
+   */
+  async function populateCourtDropdown(selectEl)
+  {
+    // Clear existing options except the first placeholder
+    while (selectEl.options.length > 1) selectEl.remove(1);
+
+    try
+    {
+      const snapshot = await getDocs(collection(db, "courts"));
+      const courts = [];
+      snapshot.forEach(d => courts.push({ id: d.id, name: (d.data().name || d.id) }));
+      courts.sort((a, b) => a.name.localeCompare(b.name));
+
+      courts.forEach(court =>
+      {
+        const opt = document.createElement("option");
+        opt.value = court.id;
+        opt.textContent = `${court.name} (${court.id})`;
+        selectEl.appendChild(opt);
+      });
+    }
+    catch (err)
+    {
+      console.error("Failed to load courts for dropdown:", err);
+    }
+  }
+
+  /**
+   * Switch a combo widget into manual-text mode.
+   */
+  function switchComboToManual(selectWrapper, manualInput, manualToggleRow, dropdownToggleRow)
+  {
+    selectWrapper.style.display = "none";
+    manualToggleRow.style.display = "none";
+    manualInput.style.display = "";
+    dropdownToggleRow.style.display = "";
+    manualInput.focus();
+  }
+
+  /**
+   * Switch a combo widget back to dropdown mode.
+   */
+  function switchComboToDropdown(selectWrapper, manualInput, manualToggleRow, dropdownToggleRow)
+  {
+    manualInput.style.display = "none";
+    dropdownToggleRow.style.display = "none";
+    selectWrapper.style.display = "";
+    manualToggleRow.style.display = "";
+  }
+
+  /**
+   * Read the currently active value from a combo widget.
+   * Returns the selected court id (from dropdown) OR the typed manual value.
+   */
+  function getCourtIdFromCombo(selectEl, manualInputEl)
+  {
+    const isManual = manualInputEl.style.display !== "none";
+    return isManual ? manualInputEl.value.trim() : selectEl.value.trim();
+  }
+
+  // Wire up combo toggle links — Add Device form
+  elements.newDeviceManualToggle.addEventListener("click", (e) =>
+  {
+    e.preventDefault();
+    switchComboToManual(
+      elements.newDeviceManualToggle.closest(".court-id-combo").querySelector(".select-wrapper"),
+      elements.newDeviceCourtIdManual,
+      elements.newDeviceManualToggle.parentElement,
+      elements.newDeviceDropdownToggleRow
+    );
+  });
+
+  elements.newDeviceDropdownToggle.addEventListener("click", (e) =>
+  {
+    e.preventDefault();
+    switchComboToDropdown(
+      elements.newDeviceDropdownToggle.closest(".court-id-combo").querySelector(".select-wrapper"),
+      elements.newDeviceCourtIdManual,
+      elements.newDeviceManualToggle.parentElement,
+      elements.newDeviceDropdownToggleRow
+    );
+  });
+
+  // Wire up combo toggle links — Edit Device form
+  elements.editDeviceManualToggle.addEventListener("click", (e) =>
+  {
+    e.preventDefault();
+    switchComboToManual(
+      elements.editDeviceManualToggle.closest(".court-id-combo").querySelector(".select-wrapper"),
+      elements.editDeviceCourtIdManual,
+      elements.editDeviceManualToggle.parentElement,
+      elements.editDeviceDropdownToggleRow
+    );
+  });
+
+  elements.editDeviceDropdownToggle.addEventListener("click", (e) =>
+  {
+    e.preventDefault();
+    switchComboToDropdown(
+      elements.editDeviceDropdownToggle.closest(".court-id-combo").querySelector(".select-wrapper"),
+      elements.editDeviceCourtIdManual,
+      elements.editDeviceManualToggle.parentElement,
+      elements.editDeviceDropdownToggleRow
+    );
+  });
+
   // Device Management Functions
   async function loadDevices()
   {
@@ -2067,16 +2190,29 @@ document.addEventListener("DOMContentLoaded", () =>
   }
 
   // Add Device Logic
-  elements.showAddDeviceModalBtn.addEventListener('click', () =>
+  elements.showAddDeviceModalBtn.addEventListener('click', async () =>
   {
     elements.adminDashboardPage.style.display = "none";
     elements.addDevicePage.style.display = 'flex';
+
+    // Reset combo to dropdown mode and refresh court list
+    const addSelectWrapper = elements.newDeviceCourtIdSelect.closest(".select-wrapper");
+    switchComboToDropdown(
+      addSelectWrapper,
+      elements.newDeviceCourtIdManual,
+      elements.newDeviceManualToggle.parentElement,
+      elements.newDeviceDropdownToggleRow
+    );
+    elements.newDeviceId.value = "";
+    elements.newDeviceCourtIdManual.value = "";
+    elements.newDeviceCourtIdSelect.value = "";
+    await populateCourtDropdown(elements.newDeviceCourtIdSelect);
   });
 
   elements.saveNewDeviceBtn.addEventListener('click', async () =>
   {
     const deviceId = elements.newDeviceId.value.trim();
-    const courtId = elements.newDeviceCourtId.value.trim();
+    const courtId = getCourtIdFromCombo(elements.newDeviceCourtIdSelect, elements.newDeviceCourtIdManual);
 
     if (!deviceId) return showToast("Device ID is required", TOAST_TYPES.ERROR);
 
@@ -2086,7 +2222,8 @@ document.addEventListener("DOMContentLoaded", () =>
       showToast("Device added successfully", TOAST_TYPES.SUCCESS);
       elements.addDevicePage.style.display = 'none';
       elements.newDeviceId.value = "";
-      elements.newDeviceCourtId.value = "";
+      elements.newDeviceCourtIdManual.value = "";
+      elements.newDeviceCourtIdSelect.value = "";
       loadDevices();
       elements.adminDashboardPage.style.display = "flex";
     } catch (error)
@@ -2096,21 +2233,52 @@ document.addEventListener("DOMContentLoaded", () =>
   });
 
   // Edit/Delete Device Logic
-  function openEditDeviceModal(device)
+  async function openEditDeviceModal(device)
   {
     elements.adminDashboardPage.style.display = "none";
-
     elements.editDeviceIdTitle.textContent = device.id;
-    elements.editDeviceCourtId.value = device.courtId || "";
     elements.editDevicePage.style.display = 'flex';
+
+    // Populate dropdown with all courts
+    await populateCourtDropdown(elements.editDeviceCourtIdSelect);
+
+    const currentCourtId = device.courtId || "";
+    const editSelectWrapper = elements.editDeviceCourtIdSelect.closest(".select-wrapper");
+
+    // Check if the current courtId exists in the dropdown
+    const matchingOption = [...elements.editDeviceCourtIdSelect.options].find(o => o.value === currentCourtId);
+
+    if (matchingOption)
+    {
+      // Pre-select the matching court in the dropdown
+      elements.editDeviceCourtIdSelect.value = currentCourtId;
+      elements.editDeviceCourtIdManual.value = "";
+      switchComboToDropdown(
+        editSelectWrapper,
+        elements.editDeviceCourtIdManual,
+        elements.editDeviceManualToggle.parentElement,
+        elements.editDeviceDropdownToggleRow
+      );
+    }
+    else
+    {
+      // Fall back to manual mode with the raw value pre-filled
+      elements.editDeviceCourtIdManual.value = currentCourtId;
+      elements.editDeviceCourtIdSelect.value = "";
+      switchComboToManual(
+        editSelectWrapper,
+        elements.editDeviceCourtIdManual,
+        elements.editDeviceManualToggle.parentElement,
+        elements.editDeviceDropdownToggleRow
+      );
+    }
 
     elements.saveEditDeviceBtn.onclick = async () =>
     {
       try
       {
-        await updateDoc(doc(db, "devices", device.id), {
-          courtId: elements.editDeviceCourtId.value.trim()
-        });
+        const courtId = getCourtIdFromCombo(elements.editDeviceCourtIdSelect, elements.editDeviceCourtIdManual);
+        await updateDoc(doc(db, "devices", device.id), { courtId });
         showToast("Mapping updated", TOAST_TYPES.SUCCESS);
         elements.editDevicePage.style.display = 'none';
         loadDevices();
