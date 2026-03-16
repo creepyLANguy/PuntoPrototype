@@ -119,6 +119,8 @@ document.addEventListener("DOMContentLoaded", () =>
 
   let isAdmin = false;
 
+  let lastScannedDeviceId = null;
+
   // =====================================================
   // NFC STATE
   // =====================================================
@@ -1193,35 +1195,25 @@ document.addEventListener("DOMContentLoaded", () =>
     if (badge) badge.remove();
   }
 
-  async function registerDeviceToCurrentCourt(deviceId)
+  async function registerDeviceToCurrentCourt()
   {
-    //AL.
-    //TODO - remove toast.
-    showToast("Registering device to court " + currentCourtId);
-    //
-
     if (!currentCourtId)
     {
       showToast("Cannot register device - no court selected.", TOAST_TYPES.ERROR);
       return;
     }
 
-    if (!deviceId)
+    if (!lastScannedDeviceId)
     {
-      if (!lastScannedDevice)
-      {
-        showToast("Device not scanned.", TOAST_TYPES.ERROR);
-        return;
-      }
-
-      deviceId = lastScannedDevice;
+      showToast("Cannot register device - no deviceId specified.", TOAST_TYPES.ERROR);
+      return;
     }
 
-    await updateDoc(doc(db, "devices", deviceId), {
+    await updateDoc(doc(db, "devices", lastScannedDeviceId), {
       courtId: currentCourtId
     });
 
-    showToast(`Device ${deviceId} registered to court ${currentCourtId}`, TOAST_TYPES.SUCCESS);
+    showToast(`Device ${lastScannedDeviceId} registered to this court.`, TOAST_TYPES.SUCCESS);
   }
 
   // =====================================================
@@ -1508,13 +1500,13 @@ document.addEventListener("DOMContentLoaded", () =>
     if (!text) return;
 
     const json = JSON.parse(text);
-    const eventType = json.eventType;
 
-    //AL.
-    //TODO - remove toasts. 
-    //showToast("NFC scanned: " + text);
-    showToast("NFC event type: " + eventType);
-    //
+    if (json.deviceId)
+    {
+      lastScannedDeviceId = json.deviceId;
+    }
+
+    const eventType = json.eventType;
 
     if (!eventType)
     {
