@@ -1193,9 +1193,13 @@ document.addEventListener("DOMContentLoaded", () =>
     if (badge) badge.remove();
   }
 
-  //AL.
   async function registerDeviceToCurrentCourt(deviceId)
   {
+    //AL.
+    //TODO - remove toast.
+    showToast("Registering device to court " + currentCourtId);
+    //
+
     if (!currentCourtId)
     {
       showToast("Cannot register device - no court selected.", TOAST_TYPES.ERROR);
@@ -1501,17 +1505,16 @@ document.addEventListener("DOMContentLoaded", () =>
 
   function handleNfc(text)
   {
-    //AL.
-    //TODO - remove toast. 
-    showToast("NFC scanned: " + text);
-    //
-
     if (!text) return;
 
-    const uppercaseText = text.toUpperCase();
-
-    const json = JSON.parse(uppercaseText);
+    const json = JSON.parse(text);
     const eventType = json.eventType;
+
+    //AL.
+    //TODO - remove toasts. 
+    //showToast("NFC scanned: " + text);
+    showToast("NFC event type: " + eventType);
+    //
 
     if (!eventType)
     {
@@ -1527,10 +1530,6 @@ document.addEventListener("DOMContentLoaded", () =>
       return;
     }
 
-    //AL.
-    //TODO - remove toast.
-    showToast("NFC event type: " + eventType);
-    //
     actionMap[eventType]();
   }
 
