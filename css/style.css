@@ -86,8 +86,8 @@ button {
   inset: -10%;
   z-index: -1;
   background: url("../media/img/bk_dark.webp") no-repeat center;
-  background-size: cover;
-  animation: bgZoom 10s infinite alternate ease-in-out;
+  background-size: auto;
+  animation: bgPan 60s infinite alternate linear;
   pointer-events: none;
 }
 
@@ -99,8 +99,20 @@ body.light-mode .menu-page::after {
   from {
     transform: scale(1);
   }
+
   to {
     transform: scale(1.2);
+  }
+}
+
+@keyframes bgPan {
+  0% {
+    background-position: 0% 50%;
+  }
+
+  100% {
+    background-position: 100% 50%;
+    /* End position: right edge, vertically centered */
   }
 }
 
