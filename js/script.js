@@ -1072,6 +1072,18 @@ document.addEventListener("DOMContentLoaded", () =>
   async function enterCourt(courtId, spectate)
   {
     console.log(`Entering court: ${courtId}, spectate: ${spectate}`);
+
+    // Warm Firestore connection
+    await getDoc(doc(db, "courts", courtId, "score", "current"));
+    // Warm Firestore cloud functions
+    await addDoc(
+      collection(db, "courts", courtId, "events"),
+      {
+        eventType: "WARMUP",
+        createdAt: serverTimestamp()
+      }
+    );
+
     const courtRef = doc(db, "courts", courtId);
     const snap = await getDoc(courtRef);
     if (!snap.exists())
@@ -1125,27 +1137,35 @@ document.addEventListener("DOMContentLoaded", () =>
     elements.scoreboardPage.style.display = "flex";
     document.body.classList.add("scoreboard-active");
 
-    showCourtTitle(courtId);
+    BlankOutScoreboard();
 
     if (spectate) enableSpectateMode();
     else disableSpectateMode();
-
-    // Warm Firestore connection
-    await getDoc(doc(db, "courts", courtId, "score", "current"));
-    // Warm Firestore cloud functions
-    await addDoc(
-      collection(db, "courts", courtId, "events"),
-      {
-        eventType: "WARMUP",
-        createdAt: serverTimestamp()
-      }
-    );
 
     listenToCourt(courtId);
 
     requestWakeLock();
 
     await initNfc();
+  }
+
+  function BlankOutScoreboard()
+  {
+    showCourtTitle(".");
+    const nameA = $("teamA").querySelector(".name-text");
+    const nameB = $("teamB").querySelector(".name-text");
+    if (nameA)
+    {
+      nameA.textContent = ".";
+      fitTextToContainer(nameA);
+    }
+    if (nameB)
+    {
+      nameB.textContent = ".";
+      fitTextToContainer(nameB);
+    }
+    score = defaultScore();
+    updateUI();
   }
 
   function enableSpectateMode()
