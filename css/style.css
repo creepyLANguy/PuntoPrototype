@@ -160,12 +160,12 @@ body.light-mode .menu-page::before {
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
-  animation: apptitleanimation 8s infinite;
+  animation: apptitleanimation 6s infinite;
 }
 
 body.light-mode .app-title {
   -webkit-text-fill-color: white;
-  animation: apptitleanimation 8s infinite;
+  animation: apptitleanimation 6s infinite;
 }
 
 .app-subtitle {
@@ -174,7 +174,7 @@ body.light-mode .app-title {
   margin-top: 5px;
   color: rgba(255, 255, 255, 0.9);
   letter-spacing: 0.5px;
-  animation: subtitleanimation 8s infinite;
+  animation: subtitleanimation 6s infinite;
 }
 
 .menu-buttons {
@@ -2533,7 +2533,7 @@ body.light-mode #adminCourtSearch {
 
 @keyframes logoanimation {
   0% {
-    filter: drop-shadow(0 0px 15px rgba(0, 0, 0, 0.4));
+    filter: drop-shadow(0 0px 15px rgba(0, 0, 0, 0.75));
     transform: translateY(0px);
   }
 
@@ -2543,7 +2543,7 @@ body.light-mode #adminCourtSearch {
   }
 
   100% {
-    filter: drop-shadow(0 0px 15px rgba(0, 0, 0, 0.4));
+    filter: drop-shadow(0 0px 15px rgba(0, 0, 0, 0.75));
     transform: translateY(0px);
   }
 }
