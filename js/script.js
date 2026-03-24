@@ -470,6 +470,124 @@ document.addEventListener("DOMContentLoaded", () =>
   });
 
   // =====================================================
+  // HOTKEYS
+  // =====================================================
+
+  document.addEventListener("keydown", (e) =>
+  {
+    // Never fire hotkeys when typing in an input, textarea, or select
+    const tag = document.activeElement?.tagName?.toLowerCase();
+    if (tag === "input" || tag === "textarea" || tag === "select") return;
+
+    // Also skip if any modifier key is held (Ctrl, Alt, Meta)
+    if (e.ctrlKey || e.altKey || e.metaKey) return;
+
+    const isVisible = (el) => el && window.getComputedStyle(el).display !== "none";
+
+    const onMenu = isVisible(elements.menuPage);
+    const onScoreboard = isVisible(elements.scoreboardPage);
+
+    const key = e.key;
+
+    // ── T : Toggle theme (works everywhere) ──────────────────────────
+    if (key === "t" || key === "T")
+    {
+      toggleTheme();
+      return;
+    }
+
+    // ── ` : Open admin portal (works from menu) ───────────────────────
+    if (key === "`")
+    {
+      if (onMenu)
+      {
+        e.preventDefault();
+        elements.adminLoginBtn.click();
+      }
+      return;
+    }
+
+    // ── Menu-page hotkeys ─────────────────────────────────────────────
+    if (onMenu)
+    {
+      // P : Open play menu
+      if (key === "p" || key === "P")
+      {
+        e.preventDefault();
+        const playBtn = document.querySelector(".menu-btn[data-action='start']");
+        if (playBtn) playBtn.click();
+        return;
+      }
+
+      // S : Open spectate menu
+      if (key === "s" || key === "S")
+      {
+        e.preventDefault();
+        const btns = document.querySelectorAll(".menu-btn[data-action='start']");
+        if (btns.length >= 2) btns[1].click(); // second button is Spectate
+        return;
+      }
+    }
+
+    // ── Scoreboard-page hotkeys ───────────────────────────────────────
+    if (onScoreboard)
+    {
+      // Q : Exit the court
+      if (key === "q" || key === "Q")
+      {
+        elements.backBtn.click();
+        return;
+      }
+
+      // R : Reset court
+      if (key === "r" || key === "R")
+      {
+        if (!isSpectating)
+        {
+          e.preventDefault();
+          elements.resetBtn.click();
+        }
+        return;
+      }
+
+      // U : Undo
+      if (key === "u" || key === "U")
+      {
+        if (!isSpectating) elements.undoBtn.click();
+        return;
+      }
+
+      // M : Mute / unmute
+      if (key === "m" || key === "M")
+      {
+        if (!isSpectating) elements.muteBtn.click();
+        return;
+      }
+
+      // S : Switch / swap sides
+      if (key === "s" || key === "S")
+      {
+        elements.swapBtn.click();
+        return;
+      }
+
+      // A / 1 : Add point for Team A
+      if ((key === "a" || key === "A" || key === "1") && !isSpectating)
+      {
+        addPoint(EVENT_TYPES.POINT_TEAM_A);
+        return;
+      }
+
+      // B / 2 : Add point for Team B
+      if ((key === "b" || key === "B" || key === "2") && !isSpectating)
+      {
+        addPoint(EVENT_TYPES.POINT_TEAM_B);
+        return;
+      }
+    }
+  });
+
+  // =====================================================
   // MENU TOGGLE
   // =====================================================
 
