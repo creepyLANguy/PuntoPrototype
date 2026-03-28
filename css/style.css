@@ -14,19 +14,23 @@
   --modal-bg: rgba(0, 0, 0, 0.9);
   --waveBg: #000000;
   --waveColour: #2b60bc;
+  --logoShadow: rgba(0, 0, 0, 0.75);
+  --logoHighlight: rgba(255, 255, 255, 0.5);
 }
 
 body.light-mode {
+  --teamAcolour: #ad7535;
+  --teamBcolour: #0a91ac;
   --bg: #ffffff;
   --white: #000000;
   --text-color: #000000;
   --input-bg: #ffffff;
   --input-border: #cccccc;
   --modal-bg: rgba(255, 255, 255, 0.95);
-  --teamAcolour: #ad7535;
-  --teamBcolour: #0a91ac;
   --waveBg: #ffffee;
   --waveColour: #c0fff6;
+  --logoShadow: rgba(0, 0, 0, 0.5);
+  --logoHighlight: rgba(0, 0, 0, 0.15);
 }
 
 /* =======================================================
@@ -117,7 +121,7 @@ button {
   width: clamp(160px, 30vw, 300px);
   height: auto;
 
-  animation: logoanimation_dark 6s ease-in-out infinite;
+  animation: logoanimation 6s ease-in-out infinite;
 
   transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 
@@ -125,7 +129,7 @@ button {
 }
 
 body.light-mode .logo {
-  animation: logoanimation_light 6s ease-in-out infinite;
+  animation: logoanimation 6s ease-in-out infinite;
 }
 
 body.light-mode .menu-page {
@@ -166,7 +170,7 @@ body.light-mode::before {
 
 body.light-mode .app-title {
   -webkit-text-fill-color: white;
-  animation: apptitleanimation 6s infinite;
+  animation: apptitleanimation_light 6s infinite;
 }
 
 .app-subtitle {
@@ -176,6 +180,10 @@ body.light-mode .app-title {
   color: rgba(255, 255, 255, 0.9);
   letter-spacing: 0.5px;
   animation: subtitleanimation 6s infinite;
+}
+
+body.light-mode .app-subtitle {
+  animation: subtitleanimation_light 6s infinite;
 }
 
 .menu-buttons {
@@ -2518,6 +2526,20 @@ body.light-mode #adminCourtSearch {
   }
 }
 
+@keyframes apptitleanimation_light {
+  0% {
+    filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.8));
+  }
+
+  75% {
+    filter: drop-shadow(0 0 15px rgba(0, 0, 0, 0.3));
+  }
+
+  100% {
+    filter: drop-shadow(0 0 15px rgba(255, 255, 255, 0.8));
+  }
+}
+
 @keyframes subtitleanimation {
   0% {
     filter: drop-shadow(0 0 10px rgba(0, 0, 0, 0.4));
@@ -2532,36 +2554,50 @@ body.light-mode #adminCourtSearch {
   }
 }
 
-@keyframes logoanimation_dark {
+@keyframes subtitleanimation_light {
   0% {
-    filter: drop-shadow(0 0px 15px rgba(0, 0, 0, 0.75));
+    filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.7));
+  }
+
+  75% {
+    filter: drop-shadow(0 0 15px rgba(0, 0, 0, 0.4));
+  }
+
+  100% {
+    filter: drop-shadow(0 0 15px rgba(255, 255, 255, 0.7));
+  }
+}
+
+@keyframes logoanimation {
+  0% {
+    filter: drop-shadow(0 0px 15px var(--logoShadow));
     transform: translateY(0px);
   }
 
   50% {
-    filter: drop-shadow(0 0 30px rgba(255, 255, 255, 0.5));
+    filter: drop-shadow(0 0 30px var(--logoHighlight));
     transform: translateY(-12px);
   }
 
   100% {
-    filter: drop-shadow(0 0px 15px rgba(0, 0, 0, 0.75));
+    filter: drop-shadow(0 0px 15px var(--logoShadow));
     transform: translateY(0px);
   }
 }
 
-@keyframes logoanimation_light {
+@keyframes logoanimation {
   0% {
-    filter: drop-shadow(0 0px 15px rgba(0, 0, 0, 0.75));
+    filter: drop-shadow(0 0px 15px var(--logoShadow));
     transform: translateY(0px);
   }
 
   50% {
-    filter: drop-shadow(0 0 30px rgba(0, 0, 0, 0.15));
+    filter: drop-shadow(0 0 30px var(--logoHighlight));
     transform: translateY(-12px);
   }
 
   100% {
-    filter: drop-shadow(0 0px 15px rgba(0, 0, 0, 0.75));
+    filter: drop-shadow(0 0px 15px var(--logoShadow));
     transform: translateY(0px);
   }
 }
