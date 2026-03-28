@@ -117,11 +117,15 @@ button {
   width: clamp(160px, 30vw, 300px);
   height: auto;
 
-  animation: logoanimation 6s ease-in-out infinite;
+  animation: logoanimation_dark 6s ease-in-out infinite;
 
   transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 
   margin-top: 2%;
+}
+
+body.light-mode .logo {
+  animation: logoanimation_light 6s ease-in-out infinite;
 }
 
 body.light-mode .menu-page {
@@ -2528,7 +2532,7 @@ body.light-mode #adminCourtSearch {
   }
 }
 
-@keyframes logoanimation {
+@keyframes logoanimation_dark {
   0% {
     filter: drop-shadow(0 0px 15px rgba(0, 0, 0, 0.75));
     transform: translateY(0px);
@@ -2536,6 +2540,23 @@ body.light-mode #adminCourtSearch {
 
   50% {
     filter: drop-shadow(0 0 30px rgba(255, 255, 255, 0.5));
+    transform: translateY(-12px);
+  }
+
+  100% {
+    filter: drop-shadow(0 0px 15px rgba(0, 0, 0, 0.75));
+    transform: translateY(0px);
+  }
+}
+
+@keyframes logoanimation_light {
+  0% {
+    filter: drop-shadow(0 0px 15px rgba(0, 0, 0, 0.75));
+    transform: translateY(0px);
+  }
+
+  50% {
+    filter: drop-shadow(0 0 30px rgba(0, 0, 0, 0.15));
     transform: translateY(-12px);
   }
 
