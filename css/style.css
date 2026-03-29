@@ -754,8 +754,8 @@ body.light-mode .floating-btn:hover {
   flex-direction: row;
   align-items: center;
   justify-content: center;
-  gap: clamp(8px, 2.5vw, 22px);
-  padding: clamp(8px, 1.5vh, 16px) clamp(10px, 2vw, 20px);
+  gap: clamp(6px, 2vw, 18px);
+  padding: clamp(8px, 1.5vh, 16px) clamp(8px, 2vw, 16px);
 }
 
 /* --- Landscape --- */
@@ -2649,6 +2649,10 @@ body {
   height: 100%;
   z-index: -1;
   overflow: hidden;
+}
+
+.wave-container.waves-hidden {
+  display: none;
 }
 
 .wave {

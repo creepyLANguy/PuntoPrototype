@@ -134,6 +134,7 @@ document.addEventListener("DOMContentLoaded", () =>
   // =====================================================
 
   let isLightMode = localStorage.getItem("theme") === "light";
+  let isWavesEnabled = localStorage.getItem("waves") !== "false";
 
   // =====================================================
   // THEME FUNCTIONS
@@ -163,6 +164,44 @@ document.addEventListener("DOMContentLoaded", () =>
 
     if (themeBtn) themeBtn.textContent = isLightMode ? "☀️" : "🌙";
     if (scoreboardBtn) scoreboardBtn.textContent = isLightMode ? "☀️" : "🌙";
+  }
+
+  // =====================================================
+  // WAVE FUNCTIONS
+  // =====================================================
+
+  function initializeWaves()
+  {
+    updateWavesVisibility();
+  }
+
+  function toggleWaves()
+  {
+    isWavesEnabled = !isWavesEnabled;
+    localStorage.setItem("waves", isWavesEnabled);
+
+    updateWavesVisibility();
+
+    showToast(isWavesEnabled ? "Waves enabled" : "Waves disabled", TOAST_TYPES.INFO);
+  }
+
+  function updateWavesVisibility()
+  {
+    const waveContainer = document.querySelector(".wave-container");
+    if (!waveContainer) return;
+
+    // The toggle only affects the Scoreboard and Spectate (court list) views.
+    // On the homepage and other pre-game screens, waves should always be visible.
+    const onScoreboard = elements.scoreboardPage && window.getComputedStyle(elements.scoreboardPage).display !== "none";
+    const onSpectate = elements.spectatePage && window.getComputedStyle(elements.spectatePage).display !== "none";
+
+    const shouldHide = (onScoreboard || onSpectate) && !isWavesEnabled;
+    const holdsHiddenClass = waveContainer.classList.contains("waves-hidden");
+
+    if (shouldHide !== holdsHiddenClass)
+    {
+      waveContainer.classList.toggle("waves-hidden", shouldHide);
+    }
   }
 
   // =====================================================
@@ -208,6 +247,8 @@ document.addEventListener("DOMContentLoaded", () =>
 
     themeToggleBtn: $("themeToggleBtn"),
     themeToggleScorebboardBtn: $("themeToggleScorebboardBtn"),
+    waveToggleScoreboardBtn: $("waveToggleScoreboardBtn"),
+    waveToggleSpectateBtn: $("waveToggleSpectateBtn"),
 
     sep1: $("sep1"),
     sep2: $("sep2"),
@@ -335,6 +376,7 @@ document.addEventListener("DOMContentLoaded", () =>
   // =====================================================
 
   initializeTheme();
+  initializeWaves();
 
   // =====================================================
   // ENTER KEY SUBMIT LISTENERS
@@ -493,6 +535,13 @@ document.addEventListener("DOMContentLoaded", () =>
     if (key === "t" || key === "T")
     {
       toggleTheme();
+      return;
+    }
+
+    // ── W : Toggle waves (works everywhere) ──────────────────────────
+    if (key === "w" || key === "W")
+    {
+      toggleWaves();
       return;
     }
 
@@ -983,11 +1032,18 @@ document.addEventListener("DOMContentLoaded", () =>
 
   function updateAdminButtonVisibility()
   {
-    const isMenuVisible = window.getComputedStyle(elements.menuPage).display !== "none";
+    const isMenuVisible = elements.menuPage && window.getComputedStyle(elements.menuPage).display !== "none";
     if (elements.adminLoginBtn)
     {
-      elements.adminLoginBtn.style.display = isMenuVisible ? "flex" : "none";
+      const currentVal = elements.adminLoginBtn.style.display;
+      const targetVal = isMenuVisible ? "flex" : "none";
+      if (currentVal !== targetVal)
+      {
+        elements.adminLoginBtn.style.display = targetVal;
+      }
     }
+
+    updateWavesVisibility();
   }
 
   // Watch for page changes to toggle admin button
@@ -1021,6 +1077,16 @@ document.addEventListener("DOMContentLoaded", () =>
   if (elements.themeToggleScorebboardBtn)
   {
     elements.themeToggleScorebboardBtn.addEventListener("click", toggleTheme);
+  }
+
+  if (elements.waveToggleScoreboardBtn)
+  {
+    elements.waveToggleScoreboardBtn.addEventListener("click", toggleWaves);
+  }
+
+  if (elements.waveToggleSpectateBtn)
+  {
+    elements.waveToggleSpectateBtn.addEventListener("click", toggleWaves);
   }
 
   elements.playCourtSearch.addEventListener("input", (e) =>
