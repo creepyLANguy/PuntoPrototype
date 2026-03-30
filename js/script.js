@@ -538,13 +538,6 @@ document.addEventListener("DOMContentLoaded", () =>
       return;
     }
 
-    // ── W : Toggle waves (works everywhere) ──────────────────────────
-    if (key === "w" || key === "W")
-    {
-      toggleWaves();
-      return;
-    }
-
     // ── ` : Open admin portal (works from menu) ───────────────────────
     if (key === "`")
     {
@@ -631,6 +624,13 @@ document.addEventListener("DOMContentLoaded", () =>
       if ((key === "b" || key === "B" || key === "2") && !isSpectating)
       {
         addPoint(EVENT_TYPES.POINT_TEAM_B);
+        return;
+      }
+
+      // W : Toggle waves
+      if (key === "w" || key === "W")
+      {
+        toggleWaves();
         return;
       }
     }
