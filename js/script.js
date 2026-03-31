@@ -68,7 +68,9 @@ document.addEventListener("DOMContentLoaded", () =>
     UNDO: "undoSound",
     SWOOSH: "swooshSound",
     START: "startSound",
-    WARNING: "warningSound"
+    WARNING: "warningSound",
+    POP: "popSound",
+    SNAP: "snapSound"
   };
 
   const STATUS = {
@@ -181,6 +183,8 @@ document.addEventListener("DOMContentLoaded", () =>
     localStorage.setItem("waves", isWavesEnabled);
 
     updateWavesVisibility();
+
+    playSound(SOUND_IDS.POP);
 
     showToast(isWavesEnabled ? "Waves enabled" : "Waves disabled", TOAST_TYPES.INFO);
   }
@@ -1450,6 +1454,8 @@ document.addEventListener("DOMContentLoaded", () =>
       loadSound("swooshSound", "media/sfx/swoosh.mp3"),
       loadSound("startSound", "media/sfx/start.mp3"),
       loadSound("warningSound", "media/sfx/warning.mp3"),
+      loadSound("popSound", "media/sfx/pop.mp3"),
+      loadSound("snapSound", "media/sfx/snap.mp3")
     ]);
 
     audioReady = true;
@@ -1959,6 +1965,11 @@ document.addEventListener("DOMContentLoaded", () =>
   {
     muted = !muted;
     elements.muteBtn.textContent = muted ? "🔇" : "🔊";
+
+    if (!muted)
+    {
+      playSound(SOUND_IDS.SNAP);
+    }
   });
 
   // =====================================================
