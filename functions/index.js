@@ -1,8 +1,10 @@
 const admin = require("firebase-admin");
 const { onDocumentCreated } = require("firebase-functions/v2/firestore");
 const { onCall } = require("firebase-functions/v2/https");
-
 const { defaultScore, applyEvent } = require("./scoringEngine");
+const { onRequest } = require("firebase-functions/v2/https");
+
+const REGION = "africa-south1";
 
 admin.initializeApp();
 const db = admin.firestore();
@@ -13,7 +15,7 @@ const db = admin.firestore();
 exports.onEventCreate = onDocumentCreated(
     {
         document: "courts/{courtId}/events/{eventId}",
-        region: "africa-south1"
+        region: REGION
     },
     async (event) =>
     {
@@ -99,7 +101,7 @@ exports.onEventCreate = onDocumentCreated(
 // Callable reset (shallow/deep)
 // -----------------------------
 exports.resetCourt = onCall(
-    { region: "africa-south1" },
+    { region: REGION },
     async (request) =>
     {
         const { courtId, deepReset, newPassword } = request.data;
@@ -138,5 +140,45 @@ exports.resetCourt = onCall(
         }
 
         return { success: true, archivedId: archiveId };
+    }
+);
+
+// -----------------------------
+// POST an event from ESP32 etc
+// -----------------------------
+exports.postEvent = onRequest(
+    { region: "africa-south1" },
+    async (req, res) =>
+    {
+        try
+        {
+            const { courtId, eventType } = req.body;
+
+            if (!courtId || !eventType)
+            {
+                return res.status(400).send("Missing fields");
+            }
+
+            // TODO: Add UNDO event
+            if (!["POINT_TEAM_A", "POINT_TEAM_B"].includes(eventType))
+            {
+                return res.status(400).send("Invalid eventType");
+            }
+
+            const ref = db.collection(`courts/${courtId}/events`).doc();
+
+            await ref.set({
+                eventType,
+                createdAt: admin.firestore.FieldValue.serverTimestamp(),
+                createdBy: "esp32" //TODO - Specify deviceId
+            });
+
+            res.send({ success: true });
+
+        } catch (err)
+        {
+            console.error(err);
+            res.status(500).send("Error");
+        }
     }
 );
