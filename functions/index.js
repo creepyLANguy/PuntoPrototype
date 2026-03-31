@@ -152,17 +152,25 @@ exports.postEvent = onRequest(
     {
         try
         {
-            const { courtId, eventType } = req.body;
+            const { deviceId, eventType } = req.body;
 
-            if (!courtId || !eventType)
+            if (!deviceId || !eventType)
             {
-                return res.status(400).send("Missing fields");
+                return res.status(400).send("Missing fields.");
+            }
+
+            //AL.
+            //TODO - get courtId for this deviceId
+            const courtId = await db.collection("courts").where("deviceId", "==", deviceId).limit(1).get().then(snapshot => snapshot.docs[0].id);
+            if (!courtId)
+            {
+                return res.status(400).send("Associated court not found.");
             }
 
             // TODO: Add UNDO event
             if (!["POINT_TEAM_A", "POINT_TEAM_B"].includes(eventType))
             {
-                return res.status(400).send("Invalid eventType");
+                return res.status(400).send("Invalid eventType.");
             }
 
             const ref = db.collection(`courts/${courtId}/events`).doc();
@@ -170,7 +178,7 @@ exports.postEvent = onRequest(
             await ref.set({
                 eventType,
                 createdAt: admin.firestore.FieldValue.serverTimestamp(),
-                createdBy: "esp32" //TODO - Specify deviceId
+                createdBy: deviceId
             });
 
             res.send({ success: true });
