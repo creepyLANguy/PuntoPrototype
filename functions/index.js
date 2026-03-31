@@ -156,7 +156,7 @@ exports.postEvent = onRequest(
 
             if (!deviceId || !eventType)
             {
-                return res.status(400).send("Missing fields.");
+                return res.status(400).send("Missing fields: both a deviceId and an eventType are required.");
             }
 
             //AL.
@@ -166,13 +166,13 @@ exports.postEvent = onRequest(
             //
             if (!courtId)
             {
-                return res.status(400).send("Associated court not found.");
+                return res.status(400).send("Associated court not found for deviceId: " + deviceId);
             }
 
             //TODO: Add UNDO event
             if (!["POINT_TEAM_A", "POINT_TEAM_B"].includes(eventType))
             {
-                return res.status(400).send("Invalid eventType.");
+                return res.status(400).send("Invalid eventType: " + eventType);
             }
 
             const ref = db.collection(`courts/${courtId}/events`).doc();
