@@ -169,6 +169,7 @@ exports.postEvent = onRequest(
                 return res.status(400).send("Associated court not found for deviceId: " + deviceId);
             }
 
+            //AL.
             //TODO: Add UNDO event
             if (!["POINT_TEAM_A", "POINT_TEAM_B"].includes(eventType))
             {
