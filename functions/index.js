@@ -161,13 +161,15 @@ exports.postEvent = onRequest(
 
             //AL.
             //TODO - get courtId for this deviceId
-            const courtId = await db.collection("courts").where("deviceId", "==", deviceId).limit(1).get().then(snapshot => snapshot.docs[0].id);
+            //const courtId = await db.collection("courts").where("deviceId", "==", deviceId).limit(1).get().then(snapshot => snapshot.docs[0].id);
+            const courtId = "dream2court1574594703";
+            //
             if (!courtId)
             {
                 return res.status(400).send("Associated court not found.");
             }
 
-            // TODO: Add UNDO event
+            //TODO: Add UNDO event
             if (!["POINT_TEAM_A", "POINT_TEAM_B"].includes(eventType))
             {
                 return res.status(400).send("Invalid eventType.");
