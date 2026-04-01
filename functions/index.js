@@ -168,13 +168,13 @@ exports.postEvent = onRequest(
 
             //AL.
             //const courtId = "dream2court1574594703";
-            const deviceSnap = await db.collection("devices").where("deviceId", "==", deviceId).get();
-            if (deviceSnap.empty)
+            const deviceSnap = await db.doc(`devices/${deviceId}`).get();
+            if (!deviceSnap.exists)
             {
                 return res.status(400).send("Device not found for deviceId: " + deviceId);
             }
 
-            const courtId = deviceSnap.docs[0].data().courtId;
+            const courtId = deviceSnap.data().courtId;
             if (!courtId)
             {
                 return res.status(400).send("Associated court not found for deviceId: " + deviceId);
