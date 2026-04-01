@@ -160,20 +160,24 @@ exports.postEvent = onRequest(
             }
 
             //AL.
-            //TODO - get courtId for this deviceId
-            //const courtId = await db.collection("courts").where("deviceId", "==", deviceId).limit(1).get().then(snapshot => snapshot.docs[0].id);
-            const courtId = "dream2court1574594703";
-            //
-            if (!courtId)
-            {
-                return res.status(400).send("Associated court not found for deviceId: " + deviceId);
-            }
-
-            //AL.
-            //TODO: Add UNDO event
+            //TODO: Add support for UNDO event
             if (!["POINT_TEAM_A", "POINT_TEAM_B"].includes(eventType))
             {
                 return res.status(400).send("Invalid eventType: " + eventType);
+            }
+
+            //AL.
+            //const courtId = "dream2court1574594703";
+            const deviceSnap = await db.collection("devices").where("deviceId", "==", deviceId).get();
+            if (deviceSnap.empty)
+            {
+                return res.status(400).send("Device not found for deviceId: " + deviceId);
+            }
+
+            const courtId = deviceSnap.docs[0].data().courtId;
+            if (!courtId)
+            {
+                return res.status(400).send("Associated court not found for deviceId: " + deviceId);
             }
 
             const ref = db.collection(`courts/${courtId}/events`).doc();
