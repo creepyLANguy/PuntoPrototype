@@ -159,9 +159,7 @@ exports.postEvent = onRequest(
                 return res.status(400).send("Missing fields: both a deviceId and an eventType are required.");
             }
 
-            //AL.
-            //TODO: Add support for UNDO event
-            if (!["POINT_TEAM_A", "POINT_TEAM_B"].includes(eventType))
+            if (!["POINT_TEAM_A", "POINT_TEAM_B", "UNDO"].includes(eventType))
             {
                 return res.status(400).send("Invalid eventType: " + eventType);
             }
