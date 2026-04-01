@@ -166,8 +166,6 @@ exports.postEvent = onRequest(
                 return res.status(400).send("Invalid eventType: " + eventType);
             }
 
-            //AL.
-            //const courtId = "dream2court1574594703";
             const deviceSnap = await db.doc(`devices/${deviceId}`).get();
             if (!deviceSnap.exists)
             {
