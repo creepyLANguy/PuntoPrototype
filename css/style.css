@@ -934,6 +934,7 @@ body.light-mode .settings-box {
   font-weight: 800;
   font-size: 1.5rem;
   letter-spacing: -0.5px;
+  padding: 0 45px; /* Added padding to prevent overlap with close-btn */
 }
 
 .settings-grid {
@@ -999,6 +1000,31 @@ body.light-mode .modal-btn {
 
 .settings-box .close-btn:hover {
   opacity: 1;
+}
+
+/* =======================================================
+   DETAILS MODAL
+======================================================= */
+
+.details-sets {
+  font-size: clamp(1.5rem, 6vmin, 3rem);
+  font-weight: 800;
+  margin: 20px 0;
+  letter-spacing: 2px;
+  color: var(--white);
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+}
+
+.details-score-summary {
+  font-size: 1.1rem;
+  opacity: 0.8;
+  margin-bottom: 10px;
+}
+
+body.light-mode .details-sets {
+  color: #000;
 }
 
 /* =======================================================

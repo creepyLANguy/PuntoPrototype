@@ -263,6 +263,14 @@ document.addEventListener("DOMContentLoaded", () =>
     sep1: $("sep1"),
     sep2: $("sep2"),
 
+    detailsBtn: $("detailsBtn"),
+    detailsModal: $("detailsModal"),
+    closeDetailsBtn: $("closeDetailsBtn"),
+    detailsTeamNames: $("detailsTeamNames"),
+    detailsSets: $("detailsSets"),
+    detailsScoreSummary: $("detailsScoreSummary"),
+    detailsLoading: $("detailsLoading"),
+
     confirmModal: $("confirmModal"),
     confirmMessage: $("confirmMessage"),
     confirmOkBtn: $("confirmOkBtn"),
@@ -441,6 +449,12 @@ document.addEventListener("DOMContentLoaded", () =>
     if (isVisible(elements.settingsModal))
     {
       elements.settingsModal.classList.add("hidden");
+      return;
+    }
+
+    if (isVisible(elements.detailsModal))
+    {
+      elements.detailsModal.classList.add("hidden");
       return;
     }
 
@@ -2027,6 +2041,56 @@ document.addEventListener("DOMContentLoaded", () =>
       }
     });
   });
+
+  // DETAILS MODAL logic
+  elements.detailsBtn.addEventListener("click", showMatchDetails);
+
+  elements.closeDetailsBtn.addEventListener("click", () =>
+  {
+    elements.detailsModal.classList.add("hidden");
+  });
+
+  elements.detailsModal.addEventListener("click", (e) =>
+  {
+    if (e.target === elements.detailsModal)
+      elements.detailsModal.classList.add("hidden");
+  });
+
+  async function showMatchDetails()
+  {
+    elements.detailsModal.classList.remove("hidden");
+    elements.detailsLoading.classList.remove("hidden");
+    elements.detailsSets.innerHTML = "";
+    elements.detailsScoreSummary.textContent = "";
+
+    const nameA = $("teamA").querySelector(".name-text").textContent;
+    const nameB = $("teamB").querySelector(".name-text").textContent;
+    elements.detailsTeamNames.textContent = `${nameA} vs ${nameB}`;
+
+    try
+    {
+      const getDetailedScore = httpsCallable(functions, "getDetailedScore");
+      const result = await getDetailedScore({ courtId: currentCourtId });
+      const { scoreString } = result.data;
+
+      // Extract set scores for big display (e.g., "6-4", "7-5")
+      // scoreString is "6-4 7-5 4-3 (40-15)"
+      const parts = scoreString.split(" ");
+      const sets = parts.filter(p => p.includes("-") && !p.includes("("));
+
+      elements.detailsSets.innerHTML = sets.map(s => `<span>${s}</span>`).join("");
+      elements.detailsScoreSummary.textContent = scoreString;
+    }
+    catch (err)
+    {
+      console.error("Match details failed:", err);
+      elements.detailsScoreSummary.textContent = "Unable to load details.";
+    }
+    finally
+    {
+      elements.detailsLoading.classList.add("hidden");
+    }
+  }
 
   // =====================================================
   // TEAM NAME EDITING
