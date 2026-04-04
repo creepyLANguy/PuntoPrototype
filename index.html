@@ -102,12 +102,38 @@
 
     <!-- ================= DETAILS MODAL ================= -->
     <div id="detailsModal" class="reset-modal hidden">
-      <div class="settings-box">
+      <div class="settings-box scrollable-modal">
         <button id="closeDetailsBtn" class="close-btn">✕</button>
-        <h2 id="detailsTeamNames">Match Details</h2>
-        <div id="detailsSets" class="details-sets"></div>
-        <div id="detailsScoreSummary" class="details-score-summary"></div>
-        <div class="loading hidden" id="detailsLoading">Calculating score...</div>
+        <h2 id="detailsTitle">Match Summary</h2>
+        <div id="detailsOverallContainer" class="details-overall">
+          <span id="detailsSetsA" class="overall-set-score">0</span>
+          <span class="set-divider">—</span>
+          <span id="detailsSetsB" class="overall-set-score">0</span>
+        </div>
+        <div class="score-table-wrapper">
+          <table id="scoreTable" class="score-table">
+            <thead>
+              <tr id="scoreTableHeader">
+                <th class="team-header">TEAM</th>
+                <!-- Set headers will be injected here -->
+                <th class="points-header">PTS</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr id="scoreTableTeamA">
+                <td id="detailsTeamANameCell" class="team-name-cell">Team A</td>
+                <!-- Set scores for Team A will be injected here -->
+                <td id="detailsPointsACell" class="points-cell">0</td>
+              </tr>
+              <tr id="scoreTableTeamB">
+                <td id="detailsTeamBNameCell" class="team-name-cell">Team B</td>
+                <!-- Set scores for Team B will be injected here -->
+                <td id="detailsPointsBCell" class="points-cell">0</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="loading hidden" id="detailsLoading">Syncing history...</div>
       </div>
     </div>
 

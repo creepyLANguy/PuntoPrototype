@@ -266,9 +266,15 @@ document.addEventListener("DOMContentLoaded", () =>
     detailsBtn: $("detailsBtn"),
     detailsModal: $("detailsModal"),
     closeDetailsBtn: $("closeDetailsBtn"),
-    detailsTeamNames: $("detailsTeamNames"),
-    detailsSets: $("detailsSets"),
-    detailsScoreSummary: $("detailsScoreSummary"),
+    detailsSetsA: $("detailsSetsA"),
+    detailsSetsB: $("detailsSetsB"),
+    detailsTeamANameCell: $("detailsTeamANameCell"),
+    detailsTeamBNameCell: $("detailsTeamBNameCell"),
+    detailsPointsACell: $("detailsPointsACell"),
+    detailsPointsBCell: $("detailsPointsBCell"),
+    scoreTableHeader: $("scoreTableHeader"),
+    scoreTableTeamA: $("scoreTableTeamA"),
+    scoreTableTeamB: $("scoreTableTeamB"),
     detailsLoading: $("detailsLoading"),
 
     confirmModal: $("confirmModal"),
@@ -2060,31 +2066,69 @@ document.addEventListener("DOMContentLoaded", () =>
   {
     elements.detailsModal.classList.remove("hidden");
     elements.detailsLoading.classList.remove("hidden");
-    elements.detailsSets.innerHTML = "";
-    elements.detailsScoreSummary.textContent = "";
+
+    // Clear dynamic table cells
+    while (elements.scoreTableHeader.cells.length > 2) elements.scoreTableHeader.deleteCell(1);
+    while (elements.scoreTableTeamA.cells.length > 2) elements.scoreTableTeamA.deleteCell(1);
+    while (elements.scoreTableTeamB.cells.length > 2) elements.scoreTableTeamB.deleteCell(1);
 
     const nameA = $("teamA").querySelector(".name-text").textContent;
     const nameB = $("teamB").querySelector(".name-text").textContent;
-    elements.detailsTeamNames.textContent = `${nameA} vs ${nameB}`;
+    elements.detailsTeamANameCell.textContent = nameA;
+    elements.detailsTeamBNameCell.textContent = nameB;
 
     try
     {
       const getDetailedScore = httpsCallable(functions, "getDetailedScore");
       const result = await getDetailedScore({ courtId: currentCourtId });
-      const { scoreString } = result.data;
+      const { sets, currentGames, points } = result.data;
 
-      // Extract set scores for big display (e.g., "6-4", "7-5")
-      // scoreString is "6-4 7-5 4-3 (40-15)"
-      const parts = scoreString.split(" ");
-      const sets = parts.filter(p => p.includes("-") && !p.includes("("));
+      // 1. Overall set scores
+      let totalSetsA = 0;
+      let totalSetsB = 0;
+      sets.forEach(s =>
+      {
+        if (s.A > s.B) totalSetsA++;
+        else if (s.B > s.A) totalSetsB++;
+      });
+      elements.detailsSetsA.textContent = totalSetsA;
+      elements.detailsSetsB.textContent = totalSetsB;
 
-      elements.detailsSets.innerHTML = sets.map(s => `<span>${s}</span>`).join("");
-      elements.detailsScoreSummary.textContent = scoreString;
+      // 2. Build Set Columns
+      // We want to show all completed sets + the current one
+      const allSetsData = [...sets, currentGames];
+
+      allSetsData.forEach((setData, idx) =>
+      {
+        const isCurrent = idx === allSetsData.length - 1;
+
+        // Header
+        const th = document.createElement("th");
+        th.className = "set-cell";
+        th.textContent = `S${idx + 1}`;
+        elements.scoreTableHeader.insertBefore(th, elements.scoreTableHeader.cells[elements.scoreTableHeader.cells.length - 1]);
+
+        // Team A
+        const tdA = document.createElement("td");
+        tdA.className = `set-cell ${isCurrent ? 'current' : ''}`;
+        tdA.textContent = setData.A;
+        elements.scoreTableTeamA.insertBefore(tdA, elements.scoreTableTeamA.cells[elements.scoreTableTeamA.cells.length - 1]);
+
+        // Team B
+        const tdB = document.createElement("td");
+        tdB.className = `set-cell ${isCurrent ? 'current' : ''}`;
+        tdB.textContent = setData.B;
+        elements.scoreTableTeamB.insertBefore(tdB, elements.scoreTableTeamB.cells[elements.scoreTableTeamB.cells.length - 1]);
+      });
+
+      // 3. Points
+      const POINTS_LABELS = [0, 15, 30, 40, "Ad"];
+      elements.detailsPointsACell.textContent = POINTS_LABELS[points.A] ?? points.A;
+      elements.detailsPointsBCell.textContent = POINTS_LABELS[points.B] ?? points.B;
     }
     catch (err)
     {
       console.error("Match details failed:", err);
-      elements.detailsScoreSummary.textContent = "Unable to load details.";
     }
     finally
     {
