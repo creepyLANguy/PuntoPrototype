@@ -268,13 +268,9 @@ document.addEventListener("DOMContentLoaded", () =>
     closeDetailsBtn: $("closeDetailsBtn"),
     detailsSetsA: $("detailsSetsA"),
     detailsSetsB: $("detailsSetsB"),
-    detailsTeamANameCell: $("detailsTeamANameCell"),
-    detailsTeamBNameCell: $("detailsTeamBNameCell"),
-    detailsPointsACell: $("detailsPointsACell"),
-    detailsPointsBCell: $("detailsPointsBCell"),
-    scoreTableHeader: $("scoreTableHeader"),
-    scoreTableTeamA: $("scoreTableTeamA"),
-    scoreTableTeamB: $("scoreTableTeamB"),
+    mdColLabels: $("mdColLabels"),
+    mdColTeamA: $("mdColTeamA"),
+    mdColTeamB: $("mdColTeamB"),
     detailsLoading: $("detailsLoading"),
 
     confirmModal: $("confirmModal"),
@@ -2067,15 +2063,13 @@ document.addEventListener("DOMContentLoaded", () =>
     elements.detailsModal.classList.remove("hidden");
     elements.detailsLoading.classList.remove("hidden");
 
-    // Clear dynamic table cells
-    while (elements.scoreTableHeader.cells.length > 2) elements.scoreTableHeader.deleteCell(1);
-    while (elements.scoreTableTeamA.cells.length > 2) elements.scoreTableTeamA.deleteCell(1);
-    while (elements.scoreTableTeamB.cells.length > 2) elements.scoreTableTeamB.deleteCell(1);
+    // Clear dynamic columns
+    elements.mdColLabels.innerHTML = "";
+    elements.mdColTeamA.innerHTML = "";
+    elements.mdColTeamB.innerHTML = "";
 
     const nameA = $("teamA").querySelector(".name-text").textContent;
     const nameB = $("teamB").querySelector(".name-text").textContent;
-    elements.detailsTeamANameCell.textContent = nameA;
-    elements.detailsTeamBNameCell.textContent = nameB;
 
     try
     {
@@ -2094,37 +2088,47 @@ document.addEventListener("DOMContentLoaded", () =>
       elements.detailsSetsA.textContent = totalSetsA;
       elements.detailsSetsB.textContent = totalSetsB;
 
-      // 2. Build Set Columns
-      // We want to show all completed sets + the current one
-      const allSetsData = [...sets, currentGames];
+      // 2. Helper to add cells
+      function addRow(label, valA, valB, isHeader = false, isPoints = false, isCurrent = false, winnerA = false, winnerB = false)
+      {
+        // Labels
+        const lblDiv = document.createElement("div");
+        lblDiv.className = isHeader ? "md-header md-cell md-team-name" : "md-header md-cell";
+        lblDiv.textContent = label;
+        elements.mdColLabels.appendChild(lblDiv);
 
+        // Team A (Score)
+        const aDiv = document.createElement("div");
+        aDiv.className = isHeader ? "md-cell md-team-name team-a-cell" : `md-cell team-a-cell ${isCurrent ? 'current' : ''} ${isPoints ? 'md-points' : ''} ${winnerA ? 'won-set' : ''}`;
+        aDiv.textContent = valA;
+        elements.mdColTeamA.appendChild(aDiv);
+
+        // Team B (Score)
+        const bDiv = document.createElement("div");
+        bDiv.className = isHeader ? "md-cell md-team-name team-b-cell" : `md-cell team-b-cell ${isCurrent ? 'current' : ''} ${isPoints ? 'md-points' : ''} ${winnerB ? 'won-set' : ''}`;
+        bDiv.textContent = valB;
+        elements.mdColTeamB.appendChild(bDiv);
+      }
+
+      // Add "TEAM" Header Row
+      addRow("TEAM", nameA, nameB, true);
+
+      // 3. Build Set Rows
+      const allSetsData = [...sets, currentGames];
       allSetsData.forEach((setData, idx) =>
       {
         const isCurrent = idx === allSetsData.length - 1;
+        const winnerA = !isCurrent && setData.A > setData.B;
+        const winnerB = !isCurrent && setData.B > setData.A;
 
-        // Header
-        const th = document.createElement("th");
-        th.className = "set-cell";
-        th.textContent = `S${idx + 1}`;
-        elements.scoreTableHeader.insertBefore(th, elements.scoreTableHeader.cells[elements.scoreTableHeader.cells.length - 1]);
-
-        // Team A
-        const tdA = document.createElement("td");
-        tdA.className = `set-cell ${isCurrent ? 'current' : ''}`;
-        tdA.textContent = setData.A;
-        elements.scoreTableTeamA.insertBefore(tdA, elements.scoreTableTeamA.cells[elements.scoreTableTeamA.cells.length - 1]);
-
-        // Team B
-        const tdB = document.createElement("td");
-        tdB.className = `set-cell ${isCurrent ? 'current' : ''}`;
-        tdB.textContent = setData.B;
-        elements.scoreTableTeamB.insertBefore(tdB, elements.scoreTableTeamB.cells[elements.scoreTableTeamB.cells.length - 1]);
+        addRow(`S${idx + 1}`, setData.A, setData.B, false, false, isCurrent, winnerA, winnerB);
       });
 
-      // 3. Points
+      // 4. Points Row
       const POINTS_LABELS = [0, 15, 30, 40, "Ad"];
-      elements.detailsPointsACell.textContent = POINTS_LABELS[points.A] ?? points.A;
-      elements.detailsPointsBCell.textContent = POINTS_LABELS[points.B] ?? points.B;
+      const pA = POINTS_LABELS[points.A] ?? points.A;
+      const pB = POINTS_LABELS[points.B] ?? points.B;
+      addRow("PTS", pA, pB, false, true, true);
     }
     catch (err)
     {

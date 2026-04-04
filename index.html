@@ -110,28 +110,12 @@
           <span class="set-divider">—</span>
           <span id="detailsSetsB" class="overall-set-score">0</span>
         </div>
-        <div class="score-table-wrapper">
-          <table id="scoreTable" class="score-table">
-            <thead>
-              <tr id="scoreTableHeader">
-                <th class="team-header">TEAM</th>
-                <!-- Set headers will be injected here -->
-                <th class="points-header">PTS</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr id="scoreTableTeamA">
-                <td id="detailsTeamANameCell" class="team-name-cell">Team A</td>
-                <!-- Set scores for Team A will be injected here -->
-                <td id="detailsPointsACell" class="points-cell">0</td>
-              </tr>
-              <tr id="scoreTableTeamB">
-                <td id="detailsTeamBNameCell" class="team-name-cell">Team B</td>
-                <!-- Set scores for Team B will be injected here -->
-                <td id="detailsPointsBCell" class="points-cell">0</td>
-              </tr>
-            </tbody>
-          </table>
+        <div class="score-grid-wrapper">
+          <div id="matchDetailsGrid" class="match-details-grid">
+            <div id="mdColLabels" class="md-column labels"></div>
+            <div id="mdColTeamA" class="md-column team-a"></div>
+            <div id="mdColTeamB" class="md-column team-b"></div>
+          </div>
         </div>
         <div class="loading hidden" id="detailsLoading">Syncing history...</div>
       </div>

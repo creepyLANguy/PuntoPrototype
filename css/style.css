@@ -1020,103 +1020,142 @@ body.light-mode .modal-btn {
   color: white;
 }
 
-#detailsSetsA {
-  color: var(--teamAcolour);
-}
-
-#detailsSetsB {
-  color: var(--teamBcolour);
-}
+#detailsSetsA { color: var(--teamAcolour); }
+#detailsSetsB { color: var(--teamBcolour); }
 
 .set-divider {
   font-size: 2rem;
   opacity: 0.5;
 }
 
-.score-table-wrapper {
+.score-grid-wrapper {
   width: 100%;
   overflow-x: auto;
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.03);
+  overflow-y: auto;
   padding: 5px;
 }
 
-.score-table {
-  width: 100%;
-  border-collapse: collapse;
-  text-align: left;
+.match-details-grid {
+  display: flex;
+  flex-direction: column; /* Default: Horizontal layout (Rows) */
+  gap: 8px;
 }
 
-.score-table th,
-.score-table td {
-  padding: 12px 15px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-  white-space: nowrap;
+.md-column {
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+  align-items: center;
 }
 
-.team-header {
-  min-width: 120px;
-  font-size: 0.8rem;
+/* Ensure all cells in rows align */
+.md-column > div {
+  flex: 0 0 60px; /* Default fixed size for sets/pts */
+}
+
+.md-column div:first-child {
+  flex: 1 0 120px; /* Larger space for team names/labels */
+}
+
+/* In Landscape/Desktop, make sure it's wide if many sets */
+.scrollable-modal {
+  width: max-content !important;
+  min-width: 400px;
+  max-width: 95vw !important;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.md-header {
+  font-size: 0.75rem;
   letter-spacing: 1px;
-  opacity: 0.5;
-}
-
-.points-header {
-  text-align: center;
+  color: rgba(255, 255, 255, 0.4); /* Grey headings */
+  text-transform: uppercase;
   font-weight: 900;
-  color: #ffcc00;
 }
 
-.team-name-cell {
-  font-weight: 700;
-  font-size: 1.1rem;
-}
-
-#scoreTableTeamA td.team-name-cell {
-  color: var(--teamAcolour);
-}
-
-#scoreTableTeamB td.team-name-cell {
-  color: var(--teamBcolour);
-}
-
-.set-cell {
+.md-cell {
+  padding: 12px 10px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 8px;
   text-align: center;
-  font-weight: 600;
+  font-weight: 500;
   font-size: 1.2rem;
-  width: 60px;
+  min-height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white; /* Games text colour white in dark mode */
 }
 
-.set-cell.current {
-  background: rgba(255, 255, 255, 0.08);
-  border-radius: 6px;
-  color: white;
+.md-team-name {
+  text-align: left;
+  justify-content: flex-start;
+  font-weight: 800;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding-left: 15px;
 }
 
-.points-cell {
-  text-align: center;
+.team-a-cell.md-team-name { color: var(--teamAcolour); }
+.team-b-cell.md-team-name { color: var(--teamBcolour); }
+
+.md-cell.current {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.md-cell.won-set {
+  font-weight: 900;
+}
+
+.md-points {
+  color: #fb0 !important;
   font-weight: 900;
   font-size: 1.4rem;
-  color: #ffcc00;
-  min-width: 60px;
 }
 
-body.light-mode .overall-set-score {
-  color: #000;
+/* Portrait Orientation - vertical stack (each item is a column) */
+@media (orientation: portrait) {
+  .match-details-grid {
+    flex-direction: row;
+    justify-content: center;
+  }
+
+  .md-column {
+    flex-direction: column;
+    flex: 1;
+    min-width: 80px;
+    max-width: 140px;
+  }
+
+  /* Reset flex overrides for vertical flow */
+  .md-column > div {
+    flex: 0 0 auto !important;
+    width: 100%;
+  }
+
+  .md-header {
+    text-align: center;
+    padding-left: 0;
+  }
+
+  .md-team-name {
+    padding-left: 0;
+    justify-content: center;
+    font-size: 0.9rem;
+    text-align: center;
+  }
+
+  .md-cell {
+    font-size: 1.3rem;
+  }
 }
 
-body.light-mode .score-table-wrapper {
-  background: rgba(0, 0, 0, 0.03);
-}
-
-body.light-mode .score-table th,
-body.light-mode .score-table td {
-  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-}
-
-.scrollable-modal {
-  max-width: clamp(320px, 95vw, 600px) !important;
-}
+body.light-mode .overall-set-score { color: #000; }
+body.light-mode .md-header { color: rgba(0, 0, 0, 0.4); }
+body.light-mode .md-cell { background: rgba(0, 0, 0, 0.03); }
+body.light-mode .md-team-name { background: rgba(0, 0, 0, 0.05); }
 
 /* =======================================================
    UNDO ANIMATION
