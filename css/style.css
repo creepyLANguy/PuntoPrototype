@@ -1037,8 +1037,14 @@ body.light-mode .settings-box .close-btn:hover {
 }
 
 body.light-mode .dm-box {
-  background: #fafafa;
+  background: #ffffff;
+  color: #111;
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.15);
+}
+
+/* Close button dark in light mode */
+body.light-mode .dm-close {
+  color: #111;
 }
 
 /* Close button */
@@ -1100,6 +1106,16 @@ body.light-mode .dm-watermark img { opacity: 0.05; }
   height: 36px;
   object-fit: contain;
   opacity: 0.85;
+}
+/* Invert white logo for light bg */
+body.light-mode .dm-logo {
+  filter: invert(1);
+  opacity: 0.7;
+}
+
+body.light-mode .dm-watermark img {
+  filter: invert(1) grayscale(1);
+  opacity: 0.06;
 }
 
 /* Title */
@@ -1166,7 +1182,9 @@ body.light-mode .dm-vs { color: rgba(0,0,0,0.25); }
   font-size: 1.8rem;
   opacity: 0.4;
   font-weight: 300;
+  color: white;
 }
+body.light-mode .dm-dash { color: #111; }
 
 /* ── Score table ── */
 .dm-table-wrap {
