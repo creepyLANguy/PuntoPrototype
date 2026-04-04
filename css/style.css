@@ -293,7 +293,36 @@ body.light-mode .menu-btn:hover {
   }
 }
 
-/* Court name in the sidebar/header. Grouped with badge. */
+/* App branding in the header/sidebar */
+.scoreboard-app-branding {
+  display: flex;
+  align-items: center;
+  gap: clamp(4px, 1vmin, 10px);
+  opacity: 0.5;
+  transition: opacity 0.3s;
+}
+
+.scoreboard-app-branding:hover {
+  opacity: 0.8;
+}
+
+.app-branding-logo {
+  width: clamp(22px, 3.5vmin, 36px);
+  height: clamp(22px, 3.5vmin, 36px);
+  object-fit: contain;
+}
+
+body.light-mode .app-branding-logo {
+  filter: invert(1);
+}
+
+@media (orientation: landscape) {
+  .scoreboard-app-branding {
+    flex-direction: column;
+    margin-bottom: clamp(10px, 2vmin, 20px);
+  }
+}
+
 #courtTitle {
   text-align: left;
   font-size: clamp(1.1rem, 5vmin, 2.5rem);
@@ -2139,7 +2168,21 @@ body.light-mode .court-item-info {
   }
 }
 
-/* .left and .right subclasses for spectator-badge are preserved for JS compatibility but empty as positioning is now handled by flex container */
+/* Left group of scoreboard header (Branding + Court Name) */
+.left-group {
+  display: flex;
+  align-items: center;
+  gap: clamp(10px, 4vmin, 25px);
+  min-width: 0;
+}
+
+@media (orientation: landscape) {
+  .left-group {
+    flex-direction: column;
+    gap: 0;
+  }
+}
+
 .spectator-badge.left {
   display: block;
 }
