@@ -158,101 +158,60 @@ exports.getDetailedScore = onCall(
 
         let score = defaultScore();
         let setScores = [];
-        // Tracks the game outcome within the CURRENT (unfinished) set
         let currentSetGames = { A: 0, B: 0 };
 
         eventsSnap.forEach(docSnap =>
         {
             const event = docSnap.data();
-            if (event.eventType === "UNDO")
-            {
-                // Simple replay undo: just drop the last point if we have history
-                if (score.history && score.history.length > 0)
-                {
-                    const prev = score.history.pop();
-                    const oldSetsA = score.A.sets;
-                    const oldSetsB = score.B.sets;
-
-                    score = { ...prev, history: score.history };
-
-                    // If a set was just undone, we need to pop the last setScore
-                    if (score.A.sets < oldSetsA || score.B.sets < oldSetsB)
-                    {
-                        const lastResult = setScores.pop();
-                        if (lastResult)
-                        {
-                            currentSetGames.A = lastResult.A;
-                            currentSetGames.B = lastResult.B;
-                        }
-                    }
-                    else
-                    {
-                        currentSetGames.A = score.A.games;
-                        currentSetGames.B = score.B.games;
-                    }
-                }
-                return;
-            }
-
-            if (event.eventType === "RESET")
-            {
-                score = defaultScore();
-                setScores = [];
-                currentSetGames = { A: 0, B: 0 };
-                return;
-            }
-
             const oldSetsA = score.A.sets;
             const oldSetsB = score.B.sets;
 
-            score = applyEvent(score, event);
-
-            // Did a set just finish?
-            if (score.A.sets > oldSetsA || score.B.sets > oldSetsB)
+            if (event.eventType === "UNDO")
             {
-                // We need to know what the game score was AT THE MOMENT the set was won
-                // For Padel/Tennis, it's usually 6-x or 7-x etc.
-                // Since applyEvent resets games to 0, we look at the state just before reset
-                const lastHistory = score.history[score.history.length - 1];
-                if (lastHistory)
+                if (score.history && score.history.length > 0)
                 {
-                    // But wait, the history is the state BEFORE the winning point.
-                    // If it was 5-4 40-15, history.games is 5-4.
-                    // We need to know the games at the time winGame() was called.
-                    // Let's rely on currentSetGames which we've been tracking?
-                    // Actually, let's just use a simple logic: if a set is won, 
-                    // the winning team's games in that set is usually 6 or 7.
-                    // Let's improve the tracking:
-                    setScores.push({ A: currentSetGames.A + (score.A.sets > oldSetsA ? 1 : 0), B: currentSetGames.B + (score.B.sets > oldSetsB ? 1 : 0) });
-                    currentSetGames = { A: 0, B: 0 };
+                    // Restore state BEFORE the point was added
+                    score = { ...score.history.pop(), history: score.history };
+
+                    // If we just undid a point that had finished a set, remove that set result
+                    if (score.A.sets < oldSetsA || score.B.sets < oldSetsB)
+                    {
+                        setScores.pop();
+                    }
                 }
+            }
+            else if (event.eventType === "RESET")
+            {
+                score = defaultScore();
+                setScores = [];
             }
             else
             {
-                currentSetGames.A = score.A.games;
-                currentSetGames.B = score.B.games;
+                // Normal point awarding
+                score = applyEvent(score, event);
+
+                // Did this point finish a set?
+                if (score.A.sets > oldSetsA || score.B.sets > oldSetsB)
+                {
+                    // The set-winning game score is in the state BEFORE the reset (which happened in applyEvent)
+                    // We can find it in the history item we just pushed
+                    const lastHistory = score.history[score.history.length - 1];
+                    if (lastHistory)
+                    {
+                        setScores.push({
+                            A: lastHistory.A.games + (score.A.sets > oldSetsA ? 1 : 0),
+                            B: lastHistory.B.games + (score.B.sets > oldSetsB ? 1 : 0)
+                        });
+                    }
+                }
             }
+
+            // Always keep currentSetGames in sync with the current (replayed) score
+            currentSetGames.A = score.A.games;
+            currentSetGames.B = score.B.games;
         });
 
-        const formattedSets = setScores.map(s => `${s.A}-${s.B}`).join(" ");
-        let fullResult = formattedSets;
-        if (currentSetGames.A > 0 || currentSetGames.B > 0 || (score.A.points > 0 || score.B.points > 0))
-        {
-            if (fullResult) fullResult += " ";
-            fullResult += `${currentSetGames.A}-${currentSetGames.B}`;
-        }
-
-        // Add current points if game is in progress
-        const POINTS_LABELS = [0, 15, 30, 40, "Ad"];
-        if (score.A.points > 0 || score.B.points > 0)
-        {
-            const pA = POINTS_LABELS[score.A.points] ?? score.A.points;
-            const pB = POINTS_LABELS[score.B.points] ?? score.B.points;
-            fullResult += ` (${pA}-${pB})`;
-        }
-
         return {
-            scoreString: fullResult || "0-0",
             sets: setScores,
             currentGames: currentSetGames,
             points: { A: score.A.points, B: score.B.points }

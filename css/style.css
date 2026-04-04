@@ -852,6 +852,8 @@ body.light-mode .btn-separator {
   display: flex;
   align-items: center;
   justify-content: center;
+  /* Safe gutter on all sides - modal never touches screen edge */
+  padding: 16px;
   z-index: 9999;
 }
 
@@ -917,7 +919,6 @@ body.light-mode .reset-actions button:hover {
   text-align: center;
   width: clamp(300px, 90vw, 450px);
   color: white;
-  border: 2px solid rgba(255, 255, 255, 0.1);
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
   position: relative;
   backdrop-filter: blur(20px);
@@ -926,7 +927,6 @@ body.light-mode .reset-actions button:hover {
 body.light-mode .settings-box {
   background: #fdfdfd;
   color: black;
-  border: 2px solid rgba(0, 0, 0, 0.1);
 }
 
 .settings-box h2 {
@@ -934,7 +934,8 @@ body.light-mode .settings-box {
   font-weight: 800;
   font-size: 1.5rem;
   letter-spacing: -0.5px;
-  padding: 0 45px; /* Added padding to prevent overlap with close-btn */
+  padding: 0 45px;
+  /* Added padding to prevent overlap with close-btn */
 }
 
 .settings-grid {
@@ -990,172 +991,482 @@ body.light-mode .modal-btn {
   position: absolute;
   top: 15px;
   right: 15px;
+  background: transparent;
+  border: none;
+  color: inherit;
+  font-size: 1.4rem;
+  cursor: pointer;
+  opacity: 0.6;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  z-index: 100;
+}
+
+.settings-box .close-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 50%;
+}
+
+body.light-mode .settings-box .close-btn:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+/* =======================================================
+   DETAILS MODAL  (dm-* namespace)
+======================================================= */
+
+/* The modal box itself */
+.dm-box {
+  position: relative;
+  background: #111;
+  border-radius: 24px;
+  padding: 28px 28px 24px;
+  width: 100%;
+  max-width: 480px;
+  max-height: calc(100svh - 32px);
+  overflow-y: auto;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.7);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+}
+
+body.light-mode .dm-box {
+  background: #fafafa;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.15);
+}
+
+/* Close button */
+.dm-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
   background: none;
   border: none;
   color: inherit;
   font-size: 1.2rem;
   cursor: pointer;
-  opacity: 0.6;
+  opacity: 0.5;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: background 0.15s, opacity 0.15s;
+}
+.dm-close:hover { opacity: 1; background: rgba(255,255,255,0.1); }
+body.light-mode .dm-close:hover { background: rgba(0,0,0,0.07); }
+
+/* Title */
+.dm-title {
+  font-size: 1.3rem;
+  font-weight: 800;
+  margin: 0 0 16px;
+  padding-right: 32px; /* don't overlap close btn */
+  text-align: center;
+  width: 100%;
 }
 
-.settings-box .close-btn:hover {
-  opacity: 1;
+/* ── Team names stacked with vs between ── */
+.dm-teams {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  margin-bottom: 18px;
+  width: 100%;
 }
 
-/* =======================================================
-   DETAILS MODAL
-======================================================= */
+.dm-name {
+  font-size: 1.25rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: -0.5px;
+  max-width: 320px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.2;
+}
+.dm-name-a { color: var(--teamAcolour); }
+.dm-name-b { color: var(--teamBcolour); }
+
+.dm-vs {
+  font-size: 0.65rem;
+  font-weight: 900;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.3);
+  line-height: 2;
+}
+body.light-mode .dm-vs { color: rgba(0,0,0,0.25); }
+
+/* ── Overall set score ── */
+.dm-overall {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.dm-sets {
+  font-size: 3rem;
+  font-weight: 900;
+  line-height: 1;
+}
+.dm-sets-a { color: var(--teamAcolour); }
+.dm-sets-b { color: var(--teamBcolour); }
+
+.dm-dash {
+  font-size: 1.8rem;
+  opacity: 0.4;
+  font-weight: 300;
+}
+
+/* ── Score table ── */
+.dm-table-wrap {
+  width: 100%;
+  overflow-x: auto;                     /* horizontal scroll when many sets */
+  border-radius: 16px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.07);
+  padding: 12px 16px;
+}
+
+body.light-mode .dm-table-wrap {
+  background: rgba(0,0,0,0.03);
+  border: 1px solid rgba(0,0,0,0.07);
+}
+
+.dm-table {
+  border-collapse: collapse;
+  width: 100%;
+  min-width: max-content;               /* never wrap columns */
+}
+
+/* Header row (S1, S2 …) */
+.dm-table thead th {
+  padding: 4px 10px 8px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.35);
+  text-align: center;
+}
+body.light-mode .dm-table thead th { color: rgba(0,0,0,0.35); }
+
+/* First header cell: the colour-marker column — zero width */
+.dm-table thead th:first-child {
+  width: 6px;
+  padding: 0;
+}
+
+/* Colour marker cell */
+.dm-marker-cell {
+  width: 6px;
+  padding: 0;
+  padding-right: 14px;
+}
+.dm-marker-cell span {
+  display: block;
+  width: 4px;
+  height: 100%;
+  min-height: 36px;
+  border-radius: 2px;
+}
+.dm-row-a .dm-marker-cell span { background: var(--teamAcolour); }
+.dm-row-b .dm-marker-cell span { background: var(--teamBcolour); }
+
+/* Score cells */
+.dm-table tbody td {
+  padding: 10px 8px;
+  text-align: center;
+  font-size: 1.2rem;
+  font-weight: 600;
+  white-space: nowrap;
+  min-width: 44px;
+}
+
+.dm-row-a td { color: var(--teamAcolour); }
+.dm-row-b td { color: var(--teamBcolour); }
+
+/* Winning set score: bold */
+.dm-table td.dm-won { font-weight: 900; font-size: 1.3rem; }
+
+/* Separate the two team rows slightly */
+.dm-row-a td { padding-bottom: 4px; }
+.dm-row-b td { padding-top: 4px; }
+.dm-row-separator td { height: 1px; padding: 0; }
+
+/* ── Responsive ── */
+
+/* Portrait: tighten name width */
+@media (orientation: portrait) {
+  .dm-name { max-width: min(260px, 75vw); }
+}
+
+/* Compact landscape (mobile landscape) */
+@media (orientation: landscape) and (max-height: 500px) {
+  .dm-box {
+    padding: 16px 20px 14px;
+    gap: 0;
+    max-height: calc(100svh - 32px);
+  }
+  .dm-title { font-size: 1.05rem; margin-bottom: 8px; }
+  .dm-teams { margin-bottom: 8px; }
+  .dm-name { font-size: 1rem; }
+  .dm-overall { margin-bottom: 10px; }
+  .dm-sets { font-size: 2rem; }
+  .dm-table-wrap { padding: 8px 10px; }
+  .dm-table tbody td { padding: 6px 6px; font-size: 1rem; }
+}
+
+
+
+.details-team-name {
+  font-size: 1.4rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  max-width: 320px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  border: none !important;
+  line-height: 1.1;
+  letter-spacing: -0.5px;
+}
+
+.details-team-name.team-a {
+  color: var(--teamAcolour);
+  margin-bottom: 2px;
+}
+
+.details-team-name.team-b {
+  color: var(--teamBcolour);
+  margin-top: 2px;
+}
+
+.vs-text {
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.4);
+  font-weight: 900;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  line-height: 1.6;
+  display: block;
+  text-align: center;
+}
+
+body.light-mode .vs-text {
+  color: rgba(0, 0, 0, 0.3);
+}
 
 .details-overall {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 20px;
-  margin-bottom: 30px;
+  gap: 15px;
+  margin-bottom: 15px;
+  background: rgba(255, 255, 255, 0.03);
+  padding: 10px 20px;
+  border-radius: 40px;
+  width: fit-content;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .overall-set-score {
-  font-size: 3.5rem;
+  font-size: 2.8rem;
   font-weight: 900;
   color: white;
+  border: none;
 }
 
-#detailsSetsA { color: var(--teamAcolour); }
-#detailsSetsB { color: var(--teamBcolour); }
+#detailsSetsA {
+  color: var(--teamAcolour);
+}
+
+#detailsSetsB {
+  color: var(--teamBcolour);
+}
 
 .set-divider {
   font-size: 2rem;
   opacity: 0.5;
 }
 
+/* === SCORE GRID WRAPPER === */
 .score-grid-wrapper {
   width: 100%;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+  padding: 14px 18px;
+  margin-top: 8px;
   overflow-x: auto;
-  overflow-y: auto;
-  padding: 5px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
 }
 
+body.light-mode .score-grid-wrapper {
+  background: rgba(0, 0, 0, 0.03);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+/* True CSS Grid: 2 rows (team A, team B) × N cols (sets), plus marker col */
 .match-details-grid {
-  display: flex;
-  flex-direction: column; /* Default: Horizontal layout (Rows) */
-  gap: 8px;
+  display: grid;
+  /* columns set inline by JS: 4px marker + N × minmax(44px,1fr) */
+  gap: 6px 0;
+  width: max-content;
+  min-width: 100%;
 }
 
-.md-column {
-  display: flex;
-  flex-direction: row;
-  gap: 8px;
-  align-items: center;
+/* Colour marker – stretches to full row height */
+.md-marker {
+  width: 4px;
+  border-radius: 2px;
+  align-self: stretch;
+  margin-right: 14px;
 }
 
-/* Ensure all cells in rows align */
-.md-column > div {
-  flex: 0 0 60px; /* Default fixed size for sets/pts */
-}
+.md-marker.team-a { background: var(--teamAcolour); }
+.md-marker.team-b { background: var(--teamBcolour); }
 
-.md-column div:first-child {
-  flex: 1 0 120px; /* Larger space for team names/labels */
-}
-
-/* In Landscape/Desktop, make sure it's wide if many sets */
-.scrollable-modal {
-  width: max-content !important;
-  min-width: 400px;
-  max-width: 95vw !important;
-  max-height: 90vh;
-  overflow-y: auto;
-}
-
-.md-header {
-  font-size: 0.75rem;
-  letter-spacing: 1px;
-  color: rgba(255, 255, 255, 0.4); /* Grey headings */
-  text-transform: uppercase;
-  font-weight: 900;
-}
-
+/* Score cells */
 .md-cell {
-  padding: 12px 10px;
-  background: rgba(255, 255, 255, 0.03);
-  border-radius: 8px;
+  padding: 10px 6px;
   text-align: center;
-  font-weight: 500;
-  font-size: 1.2rem;
-  min-height: 50px;
+  font-weight: 600;
+  font-size: 1.15rem;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: white; /* Games text colour white in dark mode */
+  color: white;
+  min-width: 44px;
 }
 
-.md-team-name {
-  text-align: left;
-  justify-content: flex-start;
-  font-weight: 800;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  padding-left: 15px;
+body.light-mode .md-cell { color: #111; }
+
+.team-a-cell { color: var(--teamAcolour); }
+.team-b-cell { color: var(--teamBcolour); }
+
+.team-a-cell.won-set,
+.team-b-cell.won-set { font-weight: 900; }
+
+/* === MODAL WIDTH === */
+.scrollable-modal {
+  /* Fits content but is capped by viewport (backdrop padding provides the edge gap) */
+  width: auto;
+  max-width: 500px;
+  max-height: calc(100svh - 32px);
+  overflow-y: auto;
 }
 
-.team-a-cell.md-team-name { color: var(--teamAcolour); }
-.team-b-cell.md-team-name { color: var(--teamBcolour); }
 
-.md-cell.current {
-  background: rgba(255, 255, 255, 0.1);
-}
-
-.md-cell.won-set {
-  font-weight: 900;
-}
-
-.md-points {
-  color: #fb0 !important;
-  font-weight: 900;
-  font-size: 1.4rem;
-}
-
-/* Portrait Orientation - vertical stack (each item is a column) */
+/* Portrait: make team names fit narrower width */
 @media (orientation: portrait) {
+  .settings-box {
+    width: clamp(280px, 92vw, 450px);
+    margin: 0 4vw;
+    padding: 20px;
+  }
+
+  .details-team-name {
+    max-width: 220px;
+    font-size: 1.1rem;
+  }
+
+  .overall-set-score {
+    font-size: 2.2rem;
+  }
+
+  /* In portrait: flip the grid so each team is a column (scores run down) */
   .match-details-grid {
-    flex-direction: row;
-    justify-content: center;
+    /* remove the set-count based columns; instead: one col per team */
+    grid-template-columns: 1fr 1fr !important;
+    grid-auto-rows: auto;
+    gap: 0 12px;
   }
 
-  .md-column {
-    flex-direction: column;
-    flex: 1;
-    min-width: 80px;
-    max-width: 140px;
-  }
-
-  /* Reset flex overrides for vertical flow */
-  .md-column > div {
-    flex: 0 0 auto !important;
+  /* In portrait the marker sits above the scores, not to the left */
+  .md-marker {
+    /* Make the marker horizontal (full width, thin height) */
     width: 100%;
+    height: 4px;
+    margin-right: 0;
+    margin-bottom: 6px;
+    align-self: auto;
+    grid-column: span 1;
+  }
+}
+
+
+/* Compact Landscape Fix */
+@media (orientation: landscape) and (max-height: 500px) {
+  /* Backdrop already has 16px padding; just tighten the box internals */
+  .settings-box.scrollable-modal {
+    padding: 14px 20px;
+    max-height: calc(100svh - 32px);
   }
 
-  .md-header {
-    text-align: center;
-    padding-left: 0;
+  .settings-box h2 {
+    margin-bottom: 4px;
+    font-size: 1.05rem;
+    padding: 0 50px;
   }
 
-  .md-team-name {
-    padding-left: 0;
-    justify-content: center;
-    font-size: 0.9rem;
-    text-align: center;
+  .details-names-container {
+    margin-bottom: 4px;
+  }
+
+  .details-team-name {
+    font-size: 1rem;
+  }
+
+  .details-overall {
+    margin-bottom: 4px;
+    padding: 5px 14px;
+  }
+
+  .overall-set-score {
+    font-size: 1.7rem;
+  }
+
+  .score-grid-wrapper {
+    padding: 8px 12px;
+    margin-top: 4px;
   }
 
   .md-cell {
-    font-size: 1.3rem;
+    min-height: 32px;
+    padding: 5px;
+    font-size: 1rem;
   }
 }
 
-body.light-mode .overall-set-score { color: #000; }
-body.light-mode .md-header { color: rgba(0, 0, 0, 0.4); }
-body.light-mode .md-cell { background: rgba(0, 0, 0, 0.03); }
-body.light-mode .md-team-name { background: rgba(0, 0, 0, 0.05); }
+body.light-mode .overall-set-score {
+  color: #000;
+}
+
+body.light-mode .md-header {
+  color: rgba(0, 0, 0, 0.4);
+}
+
+body.light-mode .md-cell {
+  background: none;
+}
+
+body.light-mode .md-team-name {
+  background: none;
+}
 
 /* =======================================================
    UNDO ANIMATION

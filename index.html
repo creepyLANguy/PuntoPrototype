@@ -102,22 +102,35 @@
 
     <!-- ================= DETAILS MODAL ================= -->
     <div id="detailsModal" class="reset-modal hidden">
-      <div class="settings-box scrollable-modal">
-        <button id="closeDetailsBtn" class="close-btn">✕</button>
-        <h2 id="detailsTitle">Match Summary</h2>
-        <div id="detailsOverallContainer" class="details-overall">
-          <span id="detailsSetsA" class="overall-set-score">0</span>
-          <span class="set-divider">—</span>
-          <span id="detailsSetsB" class="overall-set-score">0</span>
+      <div class="dm-box">
+        <button id="closeDetailsBtn" class="dm-close">✕</button>
+        <h2 class="dm-title">Match Summary</h2>
+
+        <!-- Team names header -->
+        <div class="dm-teams">
+          <span id="detailsTeamAName" class="dm-name dm-name-a">Team A</span>
+          <span class="dm-vs">vs</span>
+          <span id="detailsTeamBName" class="dm-name dm-name-b">Team B</span>
         </div>
-        <div class="score-grid-wrapper">
-          <div id="matchDetailsGrid" class="match-details-grid">
-            <div id="mdColLabels" class="md-column labels"></div>
-            <div id="mdColTeamA" class="md-column team-a"></div>
-            <div id="mdColTeamB" class="md-column team-b"></div>
-          </div>
+
+        <!-- Overall set score -->
+        <div class="dm-overall">
+          <span id="detailsSetsA" class="dm-sets dm-sets-a">0</span>
+          <span class="dm-dash">—</span>
+          <span id="detailsSetsB" class="dm-sets dm-sets-b">0</span>
         </div>
-        <div class="loading hidden" id="detailsLoading">Syncing history...</div>
+
+        <!-- Per-set breakdown table -->
+        <div class="dm-table-wrap">
+          <table id="dmTable" class="dm-table">
+            <thead id="dmHead">
+              <tr></tr>
+            </thead>
+            <tbody id="dmBody"></tbody>
+          </table>
+        </div>
+
+        <div class="loading hidden" id="detailsLoading">Loading…</div>
       </div>
     </div>
 
@@ -467,7 +480,7 @@
 
           <button id="resetBtn" class="floating-btn" title="Reset">!</button>
           <button id="undoBtn" class="floating-btn" title="Undo">↩</button>
-          <button id="detailsBtn" class="floating-btn" title="view match details">📊</button>
+          <button id="detailsBtn" class="floating-btn" title="Match Details">📊</button>
 
           <div id="sep2" class="btn-separator type-sep"></div>
 

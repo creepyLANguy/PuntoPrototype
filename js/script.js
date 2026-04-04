@@ -268,9 +268,10 @@ document.addEventListener("DOMContentLoaded", () =>
     closeDetailsBtn: $("closeDetailsBtn"),
     detailsSetsA: $("detailsSetsA"),
     detailsSetsB: $("detailsSetsB"),
-    mdColLabels: $("mdColLabels"),
-    mdColTeamA: $("mdColTeamA"),
-    mdColTeamB: $("mdColTeamB"),
+    detailsTeamAName: $("detailsTeamAName"),
+    detailsTeamBName: $("detailsTeamBName"),
+    dmHead: $("dmHead"),
+    dmBody: $("dmBody"),
     detailsLoading: $("detailsLoading"),
 
     confirmModal: $("confirmModal"),
@@ -2063,23 +2064,25 @@ document.addEventListener("DOMContentLoaded", () =>
     elements.detailsModal.classList.remove("hidden");
     elements.detailsLoading.classList.remove("hidden");
 
-    // Clear dynamic columns
-    elements.mdColLabels.innerHTML = "";
-    elements.mdColTeamA.innerHTML = "";
-    elements.mdColTeamB.innerHTML = "";
+    // Clear table
+    const headRow = elements.dmHead.querySelector("tr");
+    headRow.innerHTML = "";
+    elements.dmBody.innerHTML = "";
 
+    // Populate team names immediately
     const nameA = $("teamA").querySelector(".name-text").textContent;
     const nameB = $("teamB").querySelector(".name-text").textContent;
+    elements.detailsTeamAName.textContent = nameA;
+    elements.detailsTeamBName.textContent = nameB;
 
     try
     {
       const getDetailedScore = httpsCallable(functions, "getDetailedScore");
       const result = await getDetailedScore({ courtId: currentCourtId });
-      const { sets, currentGames, points } = result.data;
+      const { sets } = result.data;
 
-      // 1. Overall set scores
-      let totalSetsA = 0;
-      let totalSetsB = 0;
+      // Overall set counts
+      let totalSetsA = 0, totalSetsB = 0;
       sets.forEach(s =>
       {
         if (s.A > s.B) totalSetsA++;
@@ -2088,47 +2091,40 @@ document.addEventListener("DOMContentLoaded", () =>
       elements.detailsSetsA.textContent = totalSetsA;
       elements.detailsSetsB.textContent = totalSetsB;
 
-      // 2. Helper to add cells
-      function addRow(label, valA, valB, isHeader = false, isPoints = false, isCurrent = false, winnerA = false, winnerB = false)
+      // Build table header:  [marker-col] S1 S2 S3 …
+      const mkTh = (text) => { const th = document.createElement("th"); th.textContent = text; return th; };
+      headRow.appendChild(mkTh(""));          // marker col
+      sets.forEach((_, i) => headRow.appendChild(mkTh(`S${i + 1}`)));
+
+      // Helper: create a table row for one team
+      const mkRow = (team, setsData) =>
       {
-        // Labels
-        const lblDiv = document.createElement("div");
-        lblDiv.className = isHeader ? "md-header md-cell md-team-name" : "md-header md-cell";
-        lblDiv.textContent = label;
-        elements.mdColLabels.appendChild(lblDiv);
+        const tr = document.createElement("tr");
+        tr.className = `dm-row-${team}`;
 
-        // Team A (Score)
-        const aDiv = document.createElement("div");
-        aDiv.className = isHeader ? "md-cell md-team-name team-a-cell" : `md-cell team-a-cell ${isCurrent ? 'current' : ''} ${isPoints ? 'md-points' : ''} ${winnerA ? 'won-set' : ''}`;
-        aDiv.textContent = valA;
-        elements.mdColTeamA.appendChild(aDiv);
+        // Marker cell
+        const markerTd = document.createElement("td");
+        markerTd.className = "dm-marker-cell";
+        const markerBar = document.createElement("span");
+        markerTd.appendChild(markerBar);
+        tr.appendChild(markerTd);
 
-        // Team B (Score)
-        const bDiv = document.createElement("div");
-        bDiv.className = isHeader ? "md-cell md-team-name team-b-cell" : `md-cell team-b-cell ${isCurrent ? 'current' : ''} ${isPoints ? 'md-points' : ''} ${winnerB ? 'won-set' : ''}`;
-        bDiv.textContent = valB;
-        elements.mdColTeamB.appendChild(bDiv);
-      }
+        // Score cells
+        setsData.forEach(s =>
+        {
+          const td = document.createElement("td");
+          const score = team === "a" ? s.A : s.B;
+          const opponentScore = team === "a" ? s.B : s.A;
+          td.textContent = score;
+          if (score > opponentScore) td.classList.add("dm-won");
+          tr.appendChild(td);
+        });
 
-      // Add "TEAM" Header Row
-      addRow("TEAM", nameA, nameB, true);
+        return tr;
+      };
 
-      // 3. Build Set Rows
-      const allSetsData = [...sets, currentGames];
-      allSetsData.forEach((setData, idx) =>
-      {
-        const isCurrent = idx === allSetsData.length - 1;
-        const winnerA = !isCurrent && setData.A > setData.B;
-        const winnerB = !isCurrent && setData.B > setData.A;
-
-        addRow(`S${idx + 1}`, setData.A, setData.B, false, false, isCurrent, winnerA, winnerB);
-      });
-
-      // 4. Points Row
-      const POINTS_LABELS = [0, 15, 30, 40, "Ad"];
-      const pA = POINTS_LABELS[points.A] ?? points.A;
-      const pB = POINTS_LABELS[points.B] ?? points.B;
-      addRow("PTS", pA, pB, false, true, true);
+      elements.dmBody.appendChild(mkRow("a", sets));
+      elements.dmBody.appendChild(mkRow("b", sets));
     }
     catch (err)
     {
