@@ -164,7 +164,7 @@ document.addEventListener("DOMContentLoaded", () =>
   function updateThemeButtonIcons()
   {
     const themeBtn = $("themeToggleBtn");
-    const scoreboardBtn = $("themeToggleScorebboardBtn");
+    const scoreboardBtn = $("themeToggleScoreboardBtn");
 
     if (themeBtn) themeBtn.textContent = isLightMode ? "☀️" : "🌙";
     if (scoreboardBtn) scoreboardBtn.textContent = isLightMode ? "☀️" : "🌙";
@@ -252,9 +252,13 @@ document.addEventListener("DOMContentLoaded", () =>
     muteBtn: $("muteBtn"),
 
     themeToggleBtn: $("themeToggleBtn"),
-    themeToggleScorebboardBtn: $("themeToggleScorebboardBtn"),
+    themeToggleScoreboardBtn: $("themeToggleScoreboardBtn"),
     waveToggleScoreboardBtn: $("waveToggleScoreboardBtn"),
     waveToggleSpectateBtn: $("waveToggleSpectateBtn"),
+
+    settingsBtn: $("settingsBtn"),
+    settingsModal: $("settingsModal"),
+    closeSettingsBtn: $("closeSettingsBtn"),
 
     sep1: $("sep1"),
     sep2: $("sep2"),
@@ -431,6 +435,12 @@ document.addEventListener("DOMContentLoaded", () =>
     if (isVisible(elements.resetModal))
     {
       elements.resetModal.classList.add("hidden");
+      return;
+    }
+
+    if (isVisible(elements.settingsModal))
+    {
+      elements.settingsModal.classList.add("hidden");
       return;
     }
 
@@ -637,6 +647,13 @@ document.addEventListener("DOMContentLoaded", () =>
       if (key === "w" || key === "W")
       {
         toggleWaves();
+        return;
+      }
+
+      // O : Open settings
+      if (key === "o" || key === "O")
+      {
+        elements.settingsBtn.click();
         return;
       }
     }
@@ -1080,9 +1097,9 @@ document.addEventListener("DOMContentLoaded", () =>
     elements.themeToggleBtn.addEventListener("click", toggleTheme);
   }
 
-  if (elements.themeToggleScorebboardBtn)
+  if (elements.themeToggleScoreboardBtn)
   {
-    elements.themeToggleScorebboardBtn.addEventListener("click", toggleTheme);
+    elements.themeToggleScoreboardBtn.addEventListener("click", toggleTheme);
   }
 
   if (elements.waveToggleScoreboardBtn)
@@ -1370,7 +1387,8 @@ document.addEventListener("DOMContentLoaded", () =>
 
     elements.undoBtn.style.display = "none";
     elements.resetBtn.style.display = "none";
-    elements.muteBtn.style.display = "none";
+    if (elements.muteBtn.parentElement) elements.muteBtn.parentElement.style.display = "none";
+    if (elements.sep1) elements.sep1.style.display = "none";
     if (elements.sep2) elements.sep2.style.display = "none";
 
     showSpectatorBadges();
@@ -1388,7 +1406,8 @@ document.addEventListener("DOMContentLoaded", () =>
     // Use "" to let CSS (flex) decide display, not "inline-block"
     elements.undoBtn.style.display = "";
     elements.resetBtn.style.display = "";
-    elements.muteBtn.style.display = "";
+    if (elements.muteBtn.parentElement) elements.muteBtn.parentElement.style.display = "";
+    if (elements.sep1) elements.sep1.style.display = "";
     if (elements.sep2) elements.sep2.style.display = "";
 
     removeSpectatorBadges();
@@ -1696,7 +1715,7 @@ document.addEventListener("DOMContentLoaded", () =>
 
       nfcReader.onerror = () =>
       {
-        showToast("NFC Disabled", "NFC is disabled on your device.\nEnable it in settings to use tag scanning.", TOAST_TYPES.ERROR);
+        showToast("NFC Disabled", "NFC is disabled on your device.\nEnable it in you device settings to use tag scanning.", TOAST_TYPES.ERROR);
       };
 
     }
@@ -1977,6 +1996,36 @@ document.addEventListener("DOMContentLoaded", () =>
     {
       playSound(SOUND_IDS.SNAP);
     }
+  });
+
+  // Settings Modal logic
+  elements.settingsBtn.addEventListener("click", () =>
+  {
+    elements.settingsModal.classList.remove("hidden");
+  });
+
+  elements.closeSettingsBtn.addEventListener("click", () =>
+  {
+    elements.settingsModal.classList.add("hidden");
+  });
+
+  elements.settingsModal.addEventListener("click", (e) =>
+  {
+    if (e.target === elements.settingsModal)
+      elements.settingsModal.classList.add("hidden");
+  });
+
+  // Make option tiles clickable
+  document.querySelectorAll(".setting-item").forEach(item =>
+  {
+    item.addEventListener("click", (e) =>
+    {
+      const btn = item.querySelector("button");
+      if (btn && e.target !== btn)
+      {
+        btn.click();
+      }
+    });
   });
 
   // =====================================================

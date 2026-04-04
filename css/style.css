@@ -907,6 +907,101 @@ body.light-mode .reset-actions button:hover {
 }
 
 /* =======================================================
+   SETTINGS MODAL
+======================================================= */
+
+.settings-box {
+  background: #111;
+  padding: 30px;
+  border-radius: 24px;
+  text-align: center;
+  width: clamp(300px, 90vw, 450px);
+  color: white;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+  position: relative;
+  backdrop-filter: blur(20px);
+}
+
+body.light-mode .settings-box {
+  background: #fdfdfd;
+  color: black;
+  border: 2px solid rgba(0, 0, 0, 0.1);
+}
+
+.settings-box h2 {
+  margin: 0 0 30px 0;
+  font-weight: 800;
+  font-size: 1.5rem;
+  letter-spacing: -0.5px;
+}
+
+.settings-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+  justify-content: center;
+}
+
+.setting-item {
+  flex: 1 1 160px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 15px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 18px;
+  transition: transform 0.2s ease, background 0.2s ease;
+  cursor: pointer;
+}
+
+.setting-item:hover {
+  background: rgba(255, 255, 255, 0.1);
+  transform: translateY(-4px);
+}
+
+body.light-mode .setting-item {
+  background: rgba(0, 0, 0, 0.03);
+}
+
+body.light-mode .setting-item:hover {
+  background: rgba(0, 0, 0, 0.06);
+}
+
+.setting-item span {
+  font-size: 0.9rem;
+  font-weight: 600;
+  opacity: 0.8;
+}
+
+.modal-btn {
+  --btn-size: 50px;
+  opacity: 1 !important;
+  border-color: rgba(255, 255, 255, 0.3) !important;
+}
+
+body.light-mode .modal-btn {
+  border-color: rgba(0, 0, 0, 0.2) !important;
+}
+
+.settings-box .close-btn {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  background: none;
+  border: none;
+  color: inherit;
+  font-size: 1.2rem;
+  cursor: pointer;
+  opacity: 0.6;
+}
+
+.settings-box .close-btn:hover {
+  opacity: 1;
+}
+
+/* =======================================================
    UNDO ANIMATION
 ======================================================= */
 
