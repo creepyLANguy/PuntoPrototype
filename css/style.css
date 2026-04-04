@@ -293,7 +293,6 @@ body.light-mode .menu-btn:hover {
   }
 }
 
-/* Court name in the sidebar/header. Grouped with badge. */
 #courtTitle {
   text-align: left;
   font-size: clamp(1.1rem, 5vmin, 2.5rem);
@@ -2119,12 +2118,17 @@ body.light-mode .court-item-info {
 
 .spectator-badge::before {
   content: "";
-  width: 15px;
-  height: 15px;
+  width: 20px;
+  height: 20px;
   background-color: var(--spectating);
-  border-radius: 50%;
+  /* Use the logo as a mask so it takes the --spectating color (red) */
+  mask: url('../media/img/logo.svg') no-repeat center;
+  -webkit-mask: url('../media/img/logo.svg') no-repeat center;
+  mask-size: contain;
+  -webkit-mask-size: contain;
   flex-shrink: 0;
-  box-shadow: 0 0 8px var(--spectating);
+  box-shadow: none;
+  /* Shadow is handled by parent's drop-shadow animation */
 }
 
 @media (orientation: landscape) {
@@ -2137,9 +2141,28 @@ body.light-mode .court-item-info {
     transform: rotate(180deg);
     flex-direction: row;
   }
+
+  /* Counter-rotate the logo so it's upright in landscape */
+  .spectator-badge::before {
+    transform: rotate(-180deg);
+  }
 }
 
-/* .left and .right subclasses for spectator-badge are preserved for JS compatibility but empty as positioning is now handled by flex container */
+/* Left group of scoreboard header (Branding + Court Name) */
+.left-group {
+  display: flex;
+  align-items: center;
+  gap: clamp(10px, 4vmin, 25px);
+  min-width: 0;
+}
+
+@media (orientation: landscape) {
+  .left-group {
+    flex-direction: column;
+    gap: 0;
+  }
+}
+
 .spectator-badge.left {
   display: block;
 }
