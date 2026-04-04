@@ -1006,25 +1006,116 @@ body.light-mode .modal-btn {
    DETAILS MODAL
 ======================================================= */
 
-.details-sets {
-  font-size: clamp(1.5rem, 6vmin, 3rem);
-  font-weight: 800;
-  margin: 20px 0;
-  letter-spacing: 2px;
-  color: var(--white);
+.details-overall {
   display: flex;
+  align-items: center;
   justify-content: center;
-  gap: 15px;
+  gap: 20px;
+  margin-bottom: 30px;
 }
 
-.details-score-summary {
+.overall-set-score {
+  font-size: 3.5rem;
+  font-weight: 900;
+  color: white;
+}
+
+#detailsSetsA {
+  color: var(--teamAcolour);
+}
+
+#detailsSetsB {
+  color: var(--teamBcolour);
+}
+
+.set-divider {
+  font-size: 2rem;
+  opacity: 0.5;
+}
+
+.score-table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  padding: 5px;
+}
+
+.score-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.score-table th,
+.score-table td {
+  padding: 12px 15px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  white-space: nowrap;
+}
+
+.team-header {
+  min-width: 120px;
+  font-size: 0.8rem;
+  letter-spacing: 1px;
+  opacity: 0.5;
+}
+
+.points-header {
+  text-align: center;
+  font-weight: 900;
+  color: #ffcc00;
+}
+
+.team-name-cell {
+  font-weight: 700;
   font-size: 1.1rem;
-  opacity: 0.8;
-  margin-bottom: 10px;
 }
 
-body.light-mode .details-sets {
+#scoreTableTeamA td.team-name-cell {
+  color: var(--teamAcolour);
+}
+
+#scoreTableTeamB td.team-name-cell {
+  color: var(--teamBcolour);
+}
+
+.set-cell {
+  text-align: center;
+  font-weight: 600;
+  font-size: 1.2rem;
+  width: 60px;
+}
+
+.set-cell.current {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  color: white;
+}
+
+.points-cell {
+  text-align: center;
+  font-weight: 900;
+  font-size: 1.4rem;
+  color: #ffcc00;
+  min-width: 60px;
+}
+
+body.light-mode .overall-set-score {
   color: #000;
+}
+
+body.light-mode .score-table-wrapper {
+  background: rgba(0, 0, 0, 0.03);
+}
+
+body.light-mode .score-table th,
+body.light-mode .score-table td {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.scrollable-modal {
+  max-width: clamp(320px, 95vw, 600px) !important;
 }
 
 /* =======================================================
