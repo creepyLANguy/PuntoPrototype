@@ -100,6 +100,17 @@
       </div>
     </div>
 
+    <!-- ================= DETAILS MODAL ================= -->
+    <div id="detailsModal" class="reset-modal hidden">
+      <div class="settings-box">
+        <button id="closeDetailsBtn" class="close-btn">✕</button>
+        <h2 id="detailsTeamNames">Match Details</h2>
+        <div id="detailsSets" class="details-sets"></div>
+        <div id="detailsScoreSummary" class="details-score-summary"></div>
+        <div class="loading hidden" id="detailsLoading">Calculating score...</div>
+      </div>
+    </div>
+
     <!-- ================= MENU ================= -->
     <main id="menuPage" class="menu-page">
 
@@ -446,6 +457,7 @@
 
           <button id="resetBtn" class="floating-btn" title="Reset">!</button>
           <button id="undoBtn" class="floating-btn" title="Undo">↩</button>
+          <button id="detailsBtn" class="floating-btn" title="view match details">📊</button>
 
           <div id="sep2" class="btn-separator type-sep"></div>
 
