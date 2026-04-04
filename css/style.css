@@ -1063,14 +1063,53 @@ body.light-mode .dm-box {
 .dm-close:hover { opacity: 1; background: rgba(255,255,255,0.1); }
 body.light-mode .dm-close:hover { background: rgba(0,0,0,0.07); }
 
+/* Watermark — faded logo behind all content */
+.dm-watermark {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: 24px;
+}
+.dm-watermark img {
+  width: 70%;
+  max-width: 280px;
+  opacity: 0.04;
+  filter: grayscale(1);
+  user-select: none;
+}
+body.light-mode .dm-watermark img { opacity: 0.05; }
+
+/* Header block: logo + title centered */
+.dm-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 16px;
+  width: 100%;
+  text-align: center;
+}
+
+/* Inline logo above title */
+.dm-logo {
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+  opacity: 0.85;
+}
+
 /* Title */
 .dm-title {
-  font-size: 1.3rem;
+  font-size: 1.1rem;
   font-weight: 800;
-  margin: 0 0 16px;
-  padding-right: 32px; /* don't overlap close btn */
+  margin: 0;
   text-align: center;
-  width: 100%;
+  line-height: 1.25;
+  letter-spacing: -0.3px;
 }
 
 /* ── Team names stacked with vs between ── */
@@ -1197,8 +1236,8 @@ body.light-mode .dm-table thead th { color: rgba(0,0,0,0.35); }
 .dm-row-a td { color: var(--teamAcolour); }
 .dm-row-b td { color: var(--teamBcolour); }
 
-/* Winning set score: bold */
-.dm-table td.dm-won { font-weight: 900; font-size: 1.3rem; }
+/* Winning set score: bold only, same size */
+.dm-table td.dm-won { font-weight: 900; }
 
 /* Separate the two team rows slightly */
 .dm-row-a td { padding-bottom: 4px; }

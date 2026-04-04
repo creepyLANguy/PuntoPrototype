@@ -673,6 +673,14 @@ document.addEventListener("DOMContentLoaded", () =>
         elements.settingsBtn.click();
         return;
       }
+
+      // D : Open match details
+      if (key === "d" || key === "D")
+      {
+        e.preventDefault();
+        elements.detailsBtn.click();
+        return;
+      }
     }
   });
 
