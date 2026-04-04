@@ -1066,8 +1066,15 @@ body.light-mode .dm-close {
   border-radius: 50%;
   transition: background 0.15s, opacity 0.15s;
 }
-.dm-close:hover { opacity: 1; background: rgba(255,255,255,0.1); }
-body.light-mode .dm-close:hover { background: rgba(0,0,0,0.07); }
+
+.dm-close:hover {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+body.light-mode .dm-close:hover {
+  background: rgba(0, 0, 0, 0.07);
+}
 
 /* Watermark — faded logo behind all content */
 .dm-watermark {
@@ -1080,6 +1087,7 @@ body.light-mode .dm-close:hover { background: rgba(0,0,0,0.07); }
   overflow: hidden;
   border-radius: 24px;
 }
+
 .dm-watermark img {
   width: 70%;
   max-width: 280px;
@@ -1087,7 +1095,10 @@ body.light-mode .dm-close:hover { background: rgba(0,0,0,0.07); }
   filter: grayscale(1);
   user-select: none;
 }
-body.light-mode .dm-watermark img { opacity: 0.05; }
+
+body.light-mode .dm-watermark img {
+  opacity: 0.05;
+}
 
 /* Header block: logo + title centered */
 .dm-header {
@@ -1105,12 +1116,11 @@ body.light-mode .dm-watermark img { opacity: 0.05; }
   width: 36px;
   height: 36px;
   object-fit: contain;
-  opacity: 0.85;
 }
+
 /* Invert white logo for light bg */
 body.light-mode .dm-logo {
   filter: invert(1);
-  opacity: 0.7;
 }
 
 body.light-mode .dm-watermark img {
@@ -1149,18 +1159,27 @@ body.light-mode .dm-watermark img {
   text-overflow: ellipsis;
   line-height: 1.2;
 }
-.dm-name-a { color: var(--teamAcolour); }
-.dm-name-b { color: var(--teamBcolour); }
+
+.dm-name-a {
+  color: var(--teamAcolour);
+}
+
+.dm-name-b {
+  color: var(--teamBcolour);
+}
 
 .dm-vs {
   font-size: 0.65rem;
   font-weight: 900;
   letter-spacing: 2px;
   text-transform: uppercase;
-  color: rgba(255,255,255,0.3);
+  color: rgba(255, 255, 255, 0.3);
   line-height: 2;
 }
-body.light-mode .dm-vs { color: rgba(0,0,0,0.25); }
+
+body.light-mode .dm-vs {
+  color: rgba(0, 0, 0, 0.25);
+}
 
 /* ── Overall set score ── */
 .dm-overall {
@@ -1175,8 +1194,14 @@ body.light-mode .dm-vs { color: rgba(0,0,0,0.25); }
   font-weight: 900;
   line-height: 1;
 }
-.dm-sets-a { color: var(--teamAcolour); }
-.dm-sets-b { color: var(--teamBcolour); }
+
+.dm-sets-a {
+  color: var(--teamAcolour);
+}
+
+.dm-sets-b {
+  color: var(--teamBcolour);
+}
 
 .dm-dash {
   font-size: 1.8rem;
@@ -1184,27 +1209,32 @@ body.light-mode .dm-vs { color: rgba(0,0,0,0.25); }
   font-weight: 300;
   color: white;
 }
-body.light-mode .dm-dash { color: #111; }
+
+body.light-mode .dm-dash {
+  color: #111;
+}
 
 /* ── Score table ── */
 .dm-table-wrap {
   width: 100%;
-  overflow-x: auto;                     /* horizontal scroll when many sets */
+  overflow-x: auto;
+  /* horizontal scroll when many sets */
   border-radius: 16px;
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.07);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.07);
   padding: 12px 16px;
 }
 
 body.light-mode .dm-table-wrap {
-  background: rgba(0,0,0,0.03);
-  border: 1px solid rgba(0,0,0,0.07);
+  background: rgba(0, 0, 0, 0.03);
+  border: 1px solid rgba(0, 0, 0, 0.07);
 }
 
 .dm-table {
   border-collapse: collapse;
   width: 100%;
-  min-width: max-content;               /* never wrap columns */
+  min-width: max-content;
+  /* never wrap columns */
 }
 
 /* Header row (S1, S2 …) */
@@ -1214,10 +1244,13 @@ body.light-mode .dm-table-wrap {
   font-weight: 700;
   letter-spacing: 1px;
   text-transform: uppercase;
-  color: rgba(255,255,255,0.35);
+  color: rgba(255, 255, 255, 0.35);
   text-align: center;
 }
-body.light-mode .dm-table thead th { color: rgba(0,0,0,0.35); }
+
+body.light-mode .dm-table thead th {
+  color: rgba(0, 0, 0, 0.35);
+}
 
 /* First header cell: the colour-marker column — zero width */
 .dm-table thead th:first-child {
@@ -1231,6 +1264,7 @@ body.light-mode .dm-table thead th { color: rgba(0,0,0,0.35); }
   padding: 0;
   padding-right: 14px;
 }
+
 .dm-marker-cell span {
   display: block;
   width: 4px;
@@ -1238,8 +1272,14 @@ body.light-mode .dm-table thead th { color: rgba(0,0,0,0.35); }
   min-height: 36px;
   border-radius: 2px;
 }
-.dm-row-a .dm-marker-cell span { background: var(--teamAcolour); }
-.dm-row-b .dm-marker-cell span { background: var(--teamBcolour); }
+
+.dm-row-a .dm-marker-cell span {
+  background: var(--teamAcolour);
+}
+
+.dm-row-b .dm-marker-cell span {
+  background: var(--teamBcolour);
+}
 
 /* Score cells */
 .dm-table tbody td {
@@ -1251,38 +1291,149 @@ body.light-mode .dm-table thead th { color: rgba(0,0,0,0.35); }
   min-width: 44px;
 }
 
-.dm-row-a td { color: var(--teamAcolour); }
-.dm-row-b td { color: var(--teamBcolour); }
+.dm-row-a td {
+  color: var(--teamAcolour);
+}
+
+.dm-row-b td {
+  color: var(--teamBcolour);
+}
 
 /* Winning set score: bold only, same size */
-.dm-table td.dm-won { font-weight: 900; }
+.dm-table td.dm-won {
+  font-weight: 900;
+}
 
 /* Separate the two team rows slightly */
-.dm-row-a td { padding-bottom: 4px; }
-.dm-row-b td { padding-top: 4px; }
-.dm-row-separator td { height: 1px; padding: 0; }
+.dm-row-a td {
+  padding-bottom: 4px;
+}
+
+.dm-row-b td {
+  padding-top: 4px;
+}
+
+.dm-row-separator td {
+  height: 1px;
+  padding: 0;
+}
 
 /* ── Responsive ── */
 
 /* Portrait: tighten name width */
 @media (orientation: portrait) {
-  .dm-name { max-width: min(260px, 75vw); }
+  .dm-name {
+    max-width: min(260px, 75vw);
+  }
+}
+
+/* ── Middle section ── */
+.dm-mid-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
 }
 
 /* Compact landscape (mobile landscape) */
 @media (orientation: landscape) and (max-height: 500px) {
   .dm-box {
-    padding: 16px 20px 14px;
+    padding: 8px 12px 6px;
     gap: 0;
-    max-height: calc(100svh - 32px);
+    max-height: calc(100svh - 16px);
+    max-width: 520px;
   }
-  .dm-title { font-size: 1.05rem; margin-bottom: 8px; }
-  .dm-teams { margin-bottom: 8px; }
-  .dm-name { font-size: 1rem; }
-  .dm-overall { margin-bottom: 10px; }
-  .dm-sets { font-size: 2rem; }
-  .dm-table-wrap { padding: 8px 10px; }
-  .dm-table tbody td { padding: 6px 6px; font-size: 1rem; }
+
+  .dm-header {
+    margin-bottom: 2px;
+    gap: 0px;
+    flex-direction: row;
+    justify-content: center;
+  }
+
+  .dm-logo {
+    width: 22px;
+    height: 22px;
+    margin-right: 8px;
+  }
+
+  .dm-title {
+    font-size: 0.85rem;
+    margin: 0;
+    line-height: 1;
+    text-align: left;
+    white-space: nowrap;
+  }
+
+  .dm-title br {
+    display: none;
+  }
+
+  /* keep title on one line in landscape */
+
+  .dm-mid-section {
+    flex-direction: row;
+    justify-content: space-evenly;
+    align-items: center;
+    margin-top: 4px;
+    margin-bottom: 4px;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 12px;
+    padding: 2px 0;
+  }
+
+  .dm-teams {
+    margin-bottom: 0px;
+    width: auto;
+    align-items: flex-start;
+  }
+
+  .dm-vs {
+    line-height: 1.1;
+    font-size: 0.55rem;
+  }
+
+  .dm-name {
+    font-size: 0.85rem;
+    max-width: 140px;
+  }
+
+  .dm-overall {
+    margin: 0;
+    gap: 6px;
+  }
+
+  .dm-sets {
+    font-size: 1.5rem;
+  }
+
+  .dm-dash {
+    font-size: 1.1rem;
+  }
+
+  .dm-table-wrap {
+    padding: 4px 8px;
+    margin-top: 2px;
+  }
+
+  .dm-table thead th {
+    padding: 2px 6px 4px;
+    font-size: 0.6rem;
+  }
+
+  .dm-table tbody td {
+    padding: 3px 5px;
+    font-size: 0.9rem;
+    min-width: 40px;
+  }
+
+  .dm-watermark {
+    display: none;
+  }
+}
+
+body.light-mode .dm-mid-section {
+  background: rgba(0, 0, 0, 0.02);
 }
 
 
@@ -1394,8 +1545,13 @@ body.light-mode .score-grid-wrapper {
   margin-right: 14px;
 }
 
-.md-marker.team-a { background: var(--teamAcolour); }
-.md-marker.team-b { background: var(--teamBcolour); }
+.md-marker.team-a {
+  background: var(--teamAcolour);
+}
+
+.md-marker.team-b {
+  background: var(--teamBcolour);
+}
 
 /* Score cells */
 .md-cell {
@@ -1410,13 +1566,22 @@ body.light-mode .score-grid-wrapper {
   min-width: 44px;
 }
 
-body.light-mode .md-cell { color: #111; }
+body.light-mode .md-cell {
+  color: #111;
+}
 
-.team-a-cell { color: var(--teamAcolour); }
-.team-b-cell { color: var(--teamBcolour); }
+.team-a-cell {
+  color: var(--teamAcolour);
+}
+
+.team-b-cell {
+  color: var(--teamBcolour);
+}
 
 .team-a-cell.won-set,
-.team-b-cell.won-set { font-weight: 900; }
+.team-b-cell.won-set {
+  font-weight: 900;
+}
 
 /* === MODAL WIDTH === */
 .scrollable-modal {
@@ -1468,6 +1633,7 @@ body.light-mode .md-cell { color: #111; }
 
 /* Compact Landscape Fix */
 @media (orientation: landscape) and (max-height: 500px) {
+
   /* Backdrop already has 16px padding; just tighten the box internals */
   .settings-box.scrollable-modal {
     padding: 14px 20px;
