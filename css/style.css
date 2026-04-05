@@ -1094,7 +1094,7 @@ body.light-mode .dm-watermark {
 .dm-watermark img {
   width: 70%;
   max-width: 280px;
-  opacity: 0.05;
+  opacity: 0.035;
   filter: grayscale(1);
   user-select: none;
 }
@@ -1116,11 +1116,13 @@ body.light-mode .dm-watermark {
   width: 36px;
   height: 36px;
   object-fit: contain;
+  opacity: 0.9;
 }
 
 /* Invert white logo for light bg */
 body.light-mode .dm-logo {
   filter: invert(1);
+  opacity: 0.9;
 }
 
 body.light-mode .dm-watermark img {
@@ -1136,6 +1138,7 @@ body.light-mode .dm-watermark img {
   text-align: center;
   line-height: 1.25;
   letter-spacing: -0.3px;
+  opacity: 0.9;
 }
 
 /* ── Team names stacked with vs between ── */
@@ -1333,6 +1336,7 @@ body.light-mode .dm-table thead th {
   flex-direction: column;
   align-items: center;
   width: 100%;
+  background: rgba(255, 255, 255, 0);
 }
 
 /* Compact landscape (mobile landscape) */
@@ -1355,6 +1359,7 @@ body.light-mode .dm-table thead th {
     width: 22px;
     height: 22px;
     margin-right: 8px;
+    opacity: 0.9;
   }
 
   .dm-title {
@@ -1363,6 +1368,7 @@ body.light-mode .dm-table thead th {
     line-height: 1;
     text-align: left;
     white-space: nowrap;
+    opacity: 0.9;
   }
 
   .dm-title br {
@@ -1373,18 +1379,19 @@ body.light-mode .dm-table thead th {
 
   .dm-mid-section {
     flex-direction: row;
-    justify-content: space-evenly;
+    justify-content: space-between;
     align-items: center;
     margin-top: 4px;
     margin-bottom: 4px;
-    background: rgba(255, 255, 255, 0.02);
+    background: rgba(255, 255, 255, 0);
     border-radius: 12px;
-    padding: 2px 0;
+    padding: 2px 24px;
   }
 
   .dm-teams {
     margin-bottom: 0px;
-    width: auto;
+    flex: 1;
+    min-width: 0;
     align-items: flex-start;
   }
 
@@ -1395,12 +1402,13 @@ body.light-mode .dm-table thead th {
 
   .dm-name {
     font-size: 0.85rem;
-    max-width: 140px;
+    max-width: 320px;
   }
 
   .dm-overall {
     margin: 0;
     gap: 6px;
+    flex-shrink: 0;
   }
 
   .dm-sets {
@@ -1433,7 +1441,7 @@ body.light-mode .dm-table thead th {
 }
 
 body.light-mode .dm-mid-section {
-  background: rgba(0, 0, 0, 0.0);
+  background: rgba(0, 0, 0, 0);
 }
 
 
