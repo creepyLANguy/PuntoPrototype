@@ -70,7 +70,8 @@ document.addEventListener("DOMContentLoaded", () =>
     START: "startSound",
     WARNING: "warningSound",
     POP: "popSound",
-    SNAP: "snapSound"
+    SNAP: "snapSound",
+    SET: "setSound"
   };
 
   const STATUS = {
@@ -110,6 +111,8 @@ document.addEventListener("DOMContentLoaded", () =>
   });
 
   let score = defaultScore();
+  let lastKnownSets = { A: 0, B: 0 };
+  let sessionInitialized = false;
 
   let muted = false;
 
@@ -277,7 +280,9 @@ document.addEventListener("DOMContentLoaded", () =>
     confirmModal: $("confirmModal"),
     confirmMessage: $("confirmMessage"),
     confirmOkBtn: $("confirmOkBtn"),
-    confirmCancelBtn: $("confirmCancelBtn")
+    confirmCancelBtn: $("confirmCancelBtn"),
+
+    setWinOverlay: $("setWinOverlay")
   };
 
   //CREATE COURT ELEMENTS
@@ -1398,6 +1403,8 @@ document.addEventListener("DOMContentLoaded", () =>
       fitTextToContainer(nameB);
     }
     score = defaultScore();
+    lastKnownSets = { A: 0, B: 0 };
+    sessionInitialized = false;
     updateUI();
   }
 
@@ -1502,7 +1509,8 @@ document.addEventListener("DOMContentLoaded", () =>
       loadSound("startSound", "media/sfx/start.mp3"),
       loadSound("warningSound", "media/sfx/warning.mp3"),
       loadSound("popSound", "media/sfx/pop.mp3"),
-      loadSound("snapSound", "media/sfx/snap.mp3")
+      loadSound("snapSound", "media/sfx/snap.mp3"),
+      loadSound("setSound", "media/sfx/set.mp3")
     ]);
 
     audioReady = true;
@@ -1602,6 +1610,63 @@ document.addEventListener("DOMContentLoaded", () =>
       document.querySelector(`#team${team} .indicator`).style.opacity =
         score.lastPointTeam === team ? 1 : 0;
     });
+
+    // Detect Set Win - Only check if session is baseline-synced
+    if (sessionInitialized)
+    {
+      if (score.A.sets > lastKnownSets.A)
+      {
+        triggerSetWinAnimation("A");
+      }
+      else if (score.B.sets > lastKnownSets.B)
+      {
+        triggerSetWinAnimation("B");
+      }
+      
+      // Update baseline after detecting increments
+      lastKnownSets.A = score.A.sets;
+      lastKnownSets.B = score.B.sets;
+    }
+  }
+
+  function triggerSetWinAnimation(team)
+  {
+    const overlay = elements.setWinOverlay;
+    if (!overlay) return;
+
+    const teamNameEl = overlay.querySelector(".set-win-team-name");
+    const nameA = $("teamA").querySelector(".name-text").textContent;
+    const nameB = $("teamB").querySelector(".name-text").textContent;
+
+    teamNameEl.textContent = team === "A" ? nameA : nameB;
+    overlay.dataset.winner = team;
+
+    // Show set scores
+    overlay.querySelector(".sw-score-a").textContent = score.A.sets;
+    overlay.querySelector(".sw-score-b").textContent = score.B.sets;
+
+    // Remove hidden immediately to start transition
+    overlay.classList.remove("hidden");
+
+    playSound(SOUND_IDS.SET, true); // Play special set victory sound
+
+    // Clear any previous timeout to avoid multiple hide calls
+    if (overlay.hideTimeout) clearTimeout(overlay.hideTimeout);
+
+    overlay.hideTimeout = setTimeout(() =>
+    {
+      overlay.classList.add("hidden");
+    }, 4500);
+
+    // Initialise click-to-dismiss only once
+    if (!overlay.onclick)
+    {
+      overlay.onclick = () =>
+      {
+        overlay.classList.add("hidden");
+        if (overlay.hideTimeout) clearTimeout(overlay.hideTimeout);
+      };
+    }
   }
 
   function animate(team)
@@ -2337,7 +2402,16 @@ document.addEventListener("DOMContentLoaded", () =>
     {
       if (!snap.exists()) return;
 
-      score = snap.data();
+      const newData = snap.data();
+
+      // Establish baseline on first successful Firebase sync
+      if (!sessionInitialized)
+      {
+        lastKnownSets = { A: newData.A.sets, B: newData.B.sets };
+        sessionInitialized = true;
+      }
+
+      score = newData;
       updateUI();
     });
 
