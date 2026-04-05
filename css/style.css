@@ -3462,14 +3462,13 @@ body {
 ========================================================= */
 
 .set-win-overlay {
-  position: absolute;
+  position: fixed; /* Cover entire screen */
   inset: 0;
-  z-index: 2000;
+  z-index: 9999; /* Higher than modals and global controls */
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(0, 0, 0, 0.8); /* Darker background */
-  backdrop-filter: blur(25px); /* Heavier blur */
+  background: var(--bg); /* Solid theme background */
   pointer-events: none; /* Catch clicks only when active */
   opacity: 0;
   transition: opacity 0.5s ease;
@@ -3558,7 +3557,7 @@ body {
 
 .sw-score-dash {
   opacity: 0.5;
-  color: #fff;
+  color: var(--white);
 }
 
 @keyframes setWinPulse {
@@ -3582,7 +3581,7 @@ body {
 }
 
 body.light-mode .set-win-overlay {
-  background: rgba(255, 255, 255, 0.4);
+  background: var(--bg);
 }
 
 body.light-mode .set-win-label {

@@ -1648,7 +1648,7 @@ document.addEventListener("DOMContentLoaded", () =>
     // Remove hidden immediately to start transition
     overlay.classList.remove("hidden");
 
-    playSound(SOUND_IDS.SET, true); // Play special set victory sound
+    playSound(SOUND_IDS.SET); // Respect mute setting
 
     // Clear any previous timeout to avoid multiple hide calls
     if (overlay.hideTimeout) clearTimeout(overlay.hideTimeout);
