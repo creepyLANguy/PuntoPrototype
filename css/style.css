@@ -1087,17 +1087,18 @@ body.light-mode .dm-close:hover {
   border-radius: 24px;
 }
 
+body.light-mode .dm-watermark {
+  opacity: 0.5;
+}
+
 .dm-watermark img {
   width: 70%;
   max-width: 280px;
-  opacity: 0.04;
+  opacity: 0.05;
   filter: grayscale(1);
   user-select: none;
 }
 
-body.light-mode .dm-watermark img {
-  opacity: 0.05;
-}
 
 /* Header block: logo + title centered */
 .dm-header {
@@ -1432,7 +1433,7 @@ body.light-mode .dm-table thead th {
 }
 
 body.light-mode .dm-mid-section {
-  background: rgba(0, 0, 0, 0.02);
+  background: rgba(0, 0, 0, 0.0);
 }
 
 
