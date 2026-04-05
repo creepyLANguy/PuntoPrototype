@@ -3468,8 +3468,8 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(0, 0, 0, 0.4);
-  backdrop-filter: blur(12px);
+  background: rgba(0, 0, 0, 0.8); /* Darker background */
+  backdrop-filter: blur(25px); /* Heavier blur */
   pointer-events: none; /* Catch clicks only when active */
   opacity: 0;
   transition: opacity 0.5s ease;
@@ -3504,20 +3504,21 @@ body {
 }
 
 .set-win-team-name {
-  font-size: clamp(2rem, 12vw, 6rem);
-  font-weight: 900;
+  font-size: clamp(1.2rem, 6vw, 2.5rem);
+  font-weight: 700;
   text-transform: uppercase;
   margin-bottom: 0.1rem;
   line-height: 1;
-  text-shadow: 0 0 30px rgba(0, 0, 0, 0.3);
+  text-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+  opacity: 0.9;
 }
 
 .set-win-label {
-  font-size: clamp(0.75rem, 5vw, 2rem);
+  font-size: clamp(0.6rem, 3.5vw, 1.2rem);
   font-weight: 500;
-  letter-spacing: 0.3rem;
+  letter-spacing: 0.2rem;
   color: #fff;
-  opacity: 0.9;
+  opacity: 0.8;
   text-transform: uppercase;
 }
 
@@ -3525,14 +3526,15 @@ body {
   display: flex !important;
   align-items: center;
   justify-content: center;
-  gap: 1.5rem;
-  margin-top: 1.5rem;
-  font-size: clamp(2rem, 10vw, 5rem);
-  font-weight: 800;
-  color: #fff; /* Static white for the score generally */
+  gap: 2rem;
+  margin-top: 1rem;
+  font-size: clamp(5rem, 25vw, 12rem);
+  font-weight: 900;
+  color: #fff;
   /* slight delay on score popup */
   animation: swScorePop 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) backwards;
   animation-delay: 0.3s;
+  text-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
 }
 
 @keyframes swScorePop {
