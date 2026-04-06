@@ -3508,7 +3508,6 @@ body {
   text-transform: uppercase;
   margin-bottom: 0.1rem;
   line-height: 1;
-  text-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
   opacity: 0.9;
 }
 
@@ -3533,7 +3532,6 @@ body {
   /* slight delay on score popup */
   animation: swScorePop 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) backwards;
   animation-delay: 0.3s;
-  text-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
 }
 
 @keyframes swScorePop {
