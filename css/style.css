@@ -2580,6 +2580,16 @@ body.light-mode .theme-toggle-btn:hover {
   margin: 0;
 }
 
+#nfcToolBtn {
+  background: #0a91ac;
+  border-color: #0a91ac;
+  color: #fff;
+}
+
+#nfcToolBtn:hover {
+  filter: brightness(1.25);
+}
+
 @media (orientation: landscape) and (max-height: 520px) {
   .admin-dashboard-header {
     margin-bottom: 6px;
@@ -3462,14 +3472,18 @@ body {
 ========================================================= */
 
 .set-win-overlay {
-  position: fixed; /* Cover entire screen */
+  position: fixed;
+  /* Cover entire screen */
   inset: 0;
-  z-index: 9999; /* Higher than modals and global controls */
+  z-index: 9999;
+  /* Higher than modals and global controls */
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--bg); /* Solid theme background */
-  pointer-events: none; /* Catch clicks only when active */
+  background: var(--bg);
+  /* Solid theme background */
+  pointer-events: none;
+  /* Catch clicks only when active */
   opacity: 0;
   transition: opacity 0.5s ease;
 }
@@ -3539,6 +3553,7 @@ body {
     transform: scale(0.5);
     opacity: 0;
   }
+
   to {
     transform: scale(1);
     opacity: 1;
@@ -3563,6 +3578,7 @@ body {
     transform: scale(1);
     filter: brightness(1);
   }
+
   to {
     transform: scale(1.05);
     filter: brightness(1.25);

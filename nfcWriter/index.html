@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>NFC Writer v2</title>
+    <link rel="stylesheet" href="./style.css">
+
+</head>
+
+<body>
+    <div class="studio-shell">
+        <aside class="studio-sidebar">
+            <div class="brand">
+                <div class="logo-orb">{...}</div>
+                <div class="brand-meta">
+                    <h1>NFC Tag Writer</h1>
+                    <span class="version">by Padel Push</span>
+                </div>
+            </div>
+
+            <div class="nav-cluster">
+                <div class="nav-section">
+                    <p class="label">Main System</p>
+                    <button class="nav-pill back-btn" onclick="window.close()">← Back to Admin</button>
+                </div>
+
+                <div class="nav-section">
+                    <p class="label">System Mode</p>
+                    <div class="mode-segment">
+                        <button class="seg-btn active" onclick="setMode('write', this)">Write</button>
+                        <button class="seg-btn" onclick="setMode('write_missing', this)">Missing</button>
+                        <button class="seg-btn" onclick="setMode('verify', this)">Verify</button>
+                        <button class="seg-btn" onclick="setMode('locate', this)">Locate</button>
+                    </div>
+                    <button class="nav-pill" onclick="exportCSV()">Export Log</button>
+                </div>
+
+                <div class="nav-section">
+                    <p class="label">Data Management</p>
+                    <label class="nav-pill load-list-btn">
+                        Load List
+                        <input type="file" id="file" accept=".csv,.txt" hidden />
+                    </label>
+                    <button class="nav-pill danger" onclick="clearData()">Clear All</button>
+                </div>
+            </div>
+
+            <button class="theme-toggle" onclick="toggleDark()">🌓 Theme</button>
+        </aside>
+
+        <main class="studio-stage">
+            <header class="telemetry-bar">
+                <div class="engine-status">
+                    <div class="indicator" id="pulseIndicator"></div>
+                    <h2 id="status">System Ready</h2>
+                </div>
+
+                <div class="progress-box">
+                    <div class="progress-text">
+                        <span id="counter">0 / 0</span>
+                        <span id="percentLabel">0%</span>
+                    </div>
+                    <div class="progress-rail">
+                        <div id="progressFill" class="progress-thumb"></div>
+                    </div>
+                </div>
+            </header>
+
+            <section class="control-matrix">
+                <div class="action-row">
+                    <button class="btn-action primary" id="startBtn" onclick="start()">START SCANNING</button>
+                    <button class="btn-action abort" onclick="stop()">STOP</button>
+                </div>
+                <div class="action-row">
+                    <button class="btn-action secondary" onclick="prev()">BACK</button>
+                    <button class="btn-action secondary" onclick="next()">SKIP</button>
+                    <button class="btn-action secondary" onclick="resetProgress()">RESET</button>
+                </div>
+            </section>
+
+            <section class="ledger-container">
+                <div class="ledger-header">
+                    <h3>Batch Ledger</h3>
+                </div>
+                <div id="list" class="ledger-list"></div>
+            </section>
+        </main>
+    </div>
+    <script src="./script.js"></script>
+
+</body>
+
+</html>

@@ -314,6 +314,7 @@ document.addEventListener("DOMContentLoaded", () =>
   elements.showCreateCourtModalBtn = $("showCreateCourtModalBtn");
   elements.adminCourtSearch = $("adminCourtSearch");
   elements.adminStatusFilter = $("adminStatusFilter");
+  elements.nfcToolBtn = $("nfcToolBtn");
 
   // EDIT COURT ELEMENTS
   elements.editCourtPage = $("editCourtPage");
@@ -1034,6 +1035,14 @@ document.addEventListener("DOMContentLoaded", () =>
     elements.adminDashboardPage.style.display = "none";
     elements.menuPage.style.display = "flex";
   });
+
+  if (elements.nfcToolBtn)
+  {
+    elements.nfcToolBtn.addEventListener("click", () =>
+    {
+      window.open("/nfcWriter/index.html", "_blank");
+    });
+  }
 
   elements.showCreateCourtModalBtn.addEventListener("click", () =>
   {
