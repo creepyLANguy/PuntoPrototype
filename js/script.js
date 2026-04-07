@@ -169,8 +169,8 @@ document.addEventListener("DOMContentLoaded", () =>
     const themeBtn = $("themeToggleBtn");
     const scoreboardBtn = $("themeToggleScoreboardBtn");
 
-    if (themeBtn) themeBtn.textContent = isLightMode ? "☀️" : "🌙";
-    if (scoreboardBtn) scoreboardBtn.textContent = isLightMode ? "☀️" : "🌙";
+    if (themeBtn) themeBtn.textContent = isLightMode ? "🌙" : "☀️";
+    if (scoreboardBtn) scoreboardBtn.textContent = isLightMode ? "🌙" : "☀️";
   }
 
   // =====================================================
@@ -1622,7 +1622,7 @@ document.addEventListener("DOMContentLoaded", () =>
       {
         triggerSetWinAnimation("B");
       }
-      
+
       // Update baseline after detecting increments
       lastKnownSets.A = score.A.sets;
       lastKnownSets.B = score.B.sets;
