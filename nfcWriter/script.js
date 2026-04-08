@@ -162,6 +162,18 @@ function setMode(mode, el) {
     
     // Logic can branching here based on currentMode
     console.log("System Mode changed to:", currentMode);
+
+    // Auto-close sidebar on mobile
+    if (window.innerWidth <= 768) {
+        toggleSidebar();
+    }
+}
+
+function toggleSidebar() {
+    const sidebar = document.getElementById("sidebar");
+    const overlay = document.querySelector(".sidebar-overlay");
+    sidebar.classList.toggle("active");
+    overlay.classList.toggle("active");
 }
 
 // Logic to handle Drag and Drop remains consistent, 

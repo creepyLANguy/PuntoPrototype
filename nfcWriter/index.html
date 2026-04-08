@@ -3,6 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NFC Tag Writer | Padel Push</title>
     <link rel="stylesheet" href="./style.css">
     <link rel="icon" type="image/svg+xml" href="favicon.svg">
@@ -10,7 +11,17 @@
 
 <body>
     <div class="studio-shell">
-        <aside class="studio-sidebar">
+        <header class="mobile-top-bar">
+            <button class="menu-toggle" onclick="toggleSidebar()">☰</button>
+            <div class="mobile-brand">
+                <img src="favicon.svg" class="logo-img-small" alt="Logo">
+                <span>NFC Writer</span>
+            </div>
+            <div style="width: 40px;"></div> <!-- Spacer -->
+        </header>
+
+        <aside class="studio-sidebar" id="sidebar">
+            <button class="menu-close" onclick="toggleSidebar()">✕</button>
             <div class="brand">
                 <img src="favicon.svg" class="logo-img" alt="Padel Push Logo">
                 <div class="brand-meta">
@@ -87,6 +98,7 @@
             </section>
         </main>
     </div>
+    <div class="sidebar-overlay" onclick="toggleSidebar()"></div>
     <script src="./script.js"></script>
 
 </body>

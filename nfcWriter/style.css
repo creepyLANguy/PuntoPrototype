@@ -300,3 +300,223 @@ body {
     font-size: 11px;
     cursor: pointer;
 }
+
+/* Desktop Hidden Elements */
+.mobile-top-bar, .menu-close, .sidebar-overlay, .logo-img-small {
+    display: none;
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+    body {
+        overflow: auto; /* Allow scrolling for nested content */
+    }
+
+    .studio-shell {
+        display: flex;
+        flex-direction: column;
+        padding: 0;
+        gap: 0;
+        height: auto;
+        min-height: 100vh;
+    }
+
+    /* Mobile Header */
+    .mobile-top-bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 12px 16px;
+        background: var(--bg-panel);
+        border-bottom: 1px solid var(--border);
+        position: sticky;
+        top: 0;
+        z-index: 50;
+    }
+
+    .menu-toggle {
+        background: none;
+        border: none;
+        font-size: 24px;
+        color: var(--text-main);
+        cursor: pointer;
+        padding: 4px;
+    }
+
+    .mobile-brand {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-weight: 800;
+        font-size: 14px;
+    }
+
+    .logo-img-small {
+        display: block;
+        width: 24px;
+        height: 24px;
+    }
+
+    /* Collapsible Sidebar Overlay */
+    .studio-sidebar {
+        position: fixed;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 280px;
+        max-width: 85%;
+        z-index: 1000;
+        transform: translateX(-100%);
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        border-radius: 0;
+        box-shadow: 20px 0 50px rgba(0,0,0,0.2);
+    }
+
+    .studio-sidebar.active {
+        transform: translateX(0);
+    }
+
+    .menu-close {
+        display: block;
+        position: absolute;
+        top: 16px;
+        right: 16px;
+        background: var(--bg-app);
+        border: none;
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        font-size: 16px;
+        color: var(--text-sub);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+    }
+
+    .sidebar-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.5);
+        backdrop-filter: blur(4px);
+        z-index: 999;
+    }
+
+    .sidebar-overlay.active {
+        display: block;
+    }
+
+    /* Main Stage Adjustments */
+    .studio-stage {
+        padding: 12px;
+        gap: 12px;
+        flex: 1;
+    }
+
+    .telemetry-bar {
+        padding: 12px 16px;
+    }
+
+    /* Sticky Controls for UX */
+    .control-matrix {
+        position: sticky;
+        bottom: 0;
+        background: var(--bg-panel);
+        padding: 16px;
+        margin: 0 -12px -12px -12px;
+        border-top: 1px solid var(--border);
+        box-shadow: 0 -10px 20px rgba(0,0,0,0.05);
+        z-index: 40;
+    }
+
+    .btn-action {
+        padding: 14px;
+    }
+
+    .action-row {
+        gap: 8px;
+    }
+
+    .ledger-container {
+        margin-bottom: 20px;
+    }
+}
+
+/* Landscape Mode Optimizations */
+@media (max-width: 930px) and (orientation: landscape) {
+    .studio-shell {
+        display: grid;
+        grid-template-columns: 80px 1fr;
+        padding: 8px;
+    }
+
+    .studio-sidebar {
+        position: relative;
+        left: 0;
+        width: auto;
+        padding: 12px;
+        gap: 16px;
+        max-width: 100%;
+        box-shadow: none;
+        transform: none !important;
+    }
+
+    .studio-sidebar .brand-meta, 
+    .studio-sidebar .label,
+    .studio-sidebar .nav-pill span {
+        display: none;
+    }
+
+    .studio-sidebar .theme-toggle {
+        font-size: 0;
+        padding: 12px 0;
+    }
+
+    .studio-sidebar .theme-toggle::before {
+        content: '🌓';
+        font-size: 16px;
+    }
+
+    .mobile-top-bar, .menu-close, .sidebar-overlay {
+        display: none !important;
+    }
+
+    .studio-sidebar .brand {
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .studio-sidebar .logo-img {
+        width: 32px;
+        height: 32px;
+        margin-bottom: 0;
+    }
+
+    .nav-section {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .mode-segment {
+        flex-direction: column;
+        width: 100%;
+    }
+
+    .telemetry-bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 20px;
+    }
+
+    .engine-status {
+        margin-bottom: 0;
+    }
+
+    .progress-box {
+        flex: 1;
+    }
+}
