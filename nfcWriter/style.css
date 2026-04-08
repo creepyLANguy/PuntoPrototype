@@ -55,16 +55,11 @@ body {
     gap: 30px;
 }
 
-.logo-orb {
-    background: var(--accent);
-    color: white;
+.logo-img {
     width: 44px;
     height: 44px;
     border-radius: 10px;
-    display: grid;
-    place-items: center;
-    font-weight: 900;
-    font-size: 18px;
+    object-fit: contain;
 }
 
 .brand h1 {
