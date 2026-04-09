@@ -13,7 +13,7 @@ jobs:
         env:
           FIREBASE_CONFIG: ${{ secrets.FIREBASE_CONFIG_JS_CONTENT }}
         run: |
-          echo "$FIREBASE_CONFIG" > js/firebase-config.js
+          echo "$FIREBASE_CONFIG" > app/js/firebase-config.js
           
       - uses: FirebaseExtended/action-hosting-deploy@v0
         with:
