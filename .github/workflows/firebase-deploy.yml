@@ -39,7 +39,7 @@ jobs:
       # 5️⃣ Install project dependencies
       - name: Install dependencies
         run: npm ci
-        working-directory: ./functions
+        working-directory: ./app/functions
 
       # 6️⃣ Deploy Functions
       - name: Deploy Firebase Functions
