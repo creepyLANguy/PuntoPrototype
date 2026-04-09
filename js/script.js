@@ -2424,7 +2424,7 @@ document.addEventListener("DOMContentLoaded", () =>
       {
         lastKnownSets = { A: newData.A.sets, B: newData.B.sets };
         sessionInitialized = true;
- 
+
         // Hide loading overlay on first real payload
         if (elements.scoreboardLoading)
         {
