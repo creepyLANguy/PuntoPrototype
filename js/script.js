@@ -282,7 +282,8 @@ document.addEventListener("DOMContentLoaded", () =>
     confirmOkBtn: $("confirmOkBtn"),
     confirmCancelBtn: $("confirmCancelBtn"),
 
-    setWinOverlay: $("setWinOverlay")
+    setWinOverlay: $("setWinOverlay"),
+    scoreboardLoading: $("scoreboardLoading")
   };
 
   //CREATE COURT ELEMENTS
@@ -1384,6 +1385,11 @@ document.addEventListener("DOMContentLoaded", () =>
     elements.scoreboardPage.style.display = "flex";
     document.body.classList.add("scoreboard-active");
 
+    if (elements.scoreboardLoading)
+    {
+      elements.scoreboardLoading.classList.remove("hidden");
+    }
+
     BlankOutScoreboard();
 
     if (spectate) enableSpectateMode();
@@ -2418,7 +2424,14 @@ document.addEventListener("DOMContentLoaded", () =>
       {
         lastKnownSets = { A: newData.A.sets, B: newData.B.sets };
         sessionInitialized = true;
+ 
+        // Hide loading overlay on first real payload
+        if (elements.scoreboardLoading)
+        {
+          elements.scoreboardLoading.classList.add("hidden");
+        }
       }
+
 
       score = newData;
       updateUI();

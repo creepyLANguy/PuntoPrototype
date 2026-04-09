@@ -1986,6 +1986,57 @@ body.light-mode .loading {
   color: #666;
 }
 
+/* =======================================================
+   SCOREBOARD LOADING OVERLAY
+========================================================== */
+
+.scoreboard-loading {
+  position: absolute;
+  inset: 0;
+  z-index: 9999;
+  background: var(--bg);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: opacity 0.5s ease, visibility 0.5s ease;
+}
+
+.scoreboard-loading.hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.loading-content {
+  text-align: center;
+}
+
+.spinner {
+  width: 50px;
+  height: 50px;
+  border: 4px solid rgba(255, 255, 255, 0.1);
+  border-top-color: var(--teamAcolour);
+  border-right-color: var(--teamBcolour);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 15px;
+}
+
+body.light-mode .spinner {
+  border: 4px solid rgba(0, 0, 0, 0.05);
+  border-top-color: var(--teamAcolour);
+  border-right-color: var(--teamBcolour);
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+
 .no-courts {
   padding: 20px;
   text-align: center;
