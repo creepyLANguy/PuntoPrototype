@@ -40,13 +40,13 @@
                 var(--bg-dark);
         }
 
-        /* Floating orbs */
+        /* Orbs */
         .orb {
             position: absolute;
             border-radius: 50%;
             filter: blur(80px);
             opacity: 0.2;
-            animation: float 25s infinite ease-in-out alternate;
+            transition: transform 0.2s ease-out;
         }
 
         .orb.one {
@@ -65,17 +65,7 @@
             right: 10%;
         }
 
-        @keyframes float {
-            from {
-                transform: translate(0, 0);
-            }
-
-            to {
-                transform: translate(40px, -40px);
-            }
-        }
-
-        /* Particle shimmer */
+        /* Particles */
         .particles {
             position: absolute;
             width: 200%;
@@ -99,7 +89,7 @@
             }
         }
 
-        /* Glass container */
+        /* Glass card */
         .container {
             text-align: center;
             padding: 3rem 2.5rem;
@@ -111,18 +101,20 @@
             backdrop-filter: blur(20px);
             border-radius: 20px;
 
+            transition: all 0.3s ease;
+
             box-shadow:
                 0 0 40px rgba(0, 212, 255, 0.1),
-                0 0 80px rgba(124, 92, 255, 0.08);
+                0 0 80px rgba(124, 92, 255, 0.25);
         }
 
         .logo-img {
             width: 160px;
             margin-bottom: 2rem;
-            animation: logoanimation 6s ease-in-out infinite;
+            animation: floatLogo 6s ease-in-out infinite;
         }
 
-        @keyframes logoanimation {
+        @keyframes floatLogo {
 
             0%,
             100% {
@@ -134,16 +126,34 @@
             }
         }
 
+        /* Animated gradient text */
         .logo-text {
             font-size: 3.5rem;
             font-weight: 900;
             margin-bottom: 1rem;
             text-transform: uppercase;
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            letter-spacing: -1px;
+
+            background: linear-gradient(270deg, var(--primary), var(--secondary), var(--primary));
+            background-size: 400% 400%;
+            animation: gradientShift 8s ease infinite;
+
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            letter-spacing: -1px;
-            animation: fadeInUp 1s ease-out;
+        }
+
+        @keyframes gradientShift {
+            0% {
+                background-position: 0% 50%;
+            }
+
+            50% {
+                background-position: 100% 50%;
+            }
+
+            100% {
+                background-position: 0% 50%;
+            }
         }
 
         h1 {
@@ -151,7 +161,6 @@
             font-weight: 400;
             margin-bottom: 1.5rem;
             color: rgba(255, 255, 255, 0.85);
-            animation: fadeInUp 1.1s ease-out;
         }
 
         .badge {
@@ -165,20 +174,21 @@
             color: var(--primary);
             background: rgba(0, 212, 255, 0.1);
             border: 1px solid rgba(0, 212, 255, 0.3);
-
-            animation: fadeInUp 1.2s ease-out;
         }
 
-        @keyframes fadeInUp {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
+        /* Noise / grain overlay */
+        .noise {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            z-index: 2;
 
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+            opacity: 0.035;
+            /* VERY subtle */
+
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+
+            mix-blend-mode: overlay;
         }
     </style>
 </head>
@@ -186,9 +196,10 @@
 <body>
 
     <div class="particles"></div>
+    <div class="noise"></div>
 
-    <div class="orb one"></div>
-    <div class="orb two"></div>
+    <div class="orb one" id="orb1"></div>
+    <div class="orb two" id="orb2"></div>
 
     <div class="container">
         <img src="app/media/img/logo.svg" alt="Padel Push Logo" class="logo-img">
@@ -196,6 +207,20 @@
         <h1>The Ultimate Padel Scoring System</h1>
         <div class="badge">Currently In Development</div>
     </div>
+
+    <script>
+        const orb1 = document.getElementById('orb1');
+        const orb2 = document.getElementById('orb2');
+
+        document.addEventListener('mousemove', (e) =>
+        {
+            const x = (e.clientX / window.innerWidth - 0.5);
+            const y = (e.clientY / window.innerHeight - 0.5);
+
+            orb1.style.transform = `translate(${x * 40}px, ${y * 40}px)`;
+            orb2.style.transform = `translate(${x * -60}px, ${y * -60}px)`;
+        });
+    </script>
 
 </body>
 
