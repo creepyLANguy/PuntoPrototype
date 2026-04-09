@@ -8,6 +8,22 @@
     ],
     "rewrites": [
       {
+        "source": "/nfctool",
+        "destination": "/nfcWriter/index.html"
+      },
+      {
+        "source": "/nfc/**",
+        "destination": "/nfcWriter/index.html"
+      },
+      {
+        "source": "/app",
+        "destination": "/app/index.html"
+      },
+      {
+        "source": "/app/**",
+        "destination": "/app/index.html"
+      },
+      {
         "source": "**",
         "destination": "/index.html"
       }
@@ -25,8 +41,7 @@
         "firebase-debug.*.log",
         "*.local"
       ],
-      "predeploy": [
-      ]
+      "predeploy": []
     }
   ]
 }
