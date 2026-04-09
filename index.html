@@ -91,7 +91,7 @@
 
             background-size: 300px 300px;
             animation: shimmer 20s ease-in-out infinite alternate-reverse;
-            opacity: 0.1;
+            opacity: 0.25;
         }
 
         .particles-back {
@@ -103,7 +103,7 @@
                 radial-gradient(12px 12px at 10% 50%, rgba(255, 255, 255, 0.2), transparent),
                 radial-gradient(25px 25px at 10% 40%, rgba(255, 255, 255, 0.25), transparent);
 
-            opacity: 0.1;
+            opacity: 0.15;
             animation: shimmer2 200s linear infinite alternate-reverse;
             transform: scale(7);
         }
@@ -153,19 +153,14 @@
                 0 0 80px rgba(124, 92, 255, 0.2);
 
             transition: all 0.3s ease;
-        }
 
-        .container:hover {
-            transform: translateY(-5px) scale(1.01);
-            box-shadow:
-                0 0 60px rgba(0, 212, 255, 0.2),
-                0 0 120px rgba(124, 92, 255, 0.35);
+            animation: floatLogo 6s ease-in-out infinite;
+
         }
 
         .logo-img {
             width: clamp(100px, 30vw, 160px);
             margin-bottom: 1.5rem;
-            animation: floatLogo 6s ease-in-out infinite;
         }
 
         @keyframes floatLogo {
