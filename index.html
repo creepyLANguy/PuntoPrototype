@@ -6,11 +6,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Under Construction | Padel Push</title>
 
+    <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;900&display=swap" rel="stylesheet">
 
     <style>
+        /* ===== ROOT ===== */
         :root {
             --primary: #00d4ff;
             --secondary: #7c5cff;
@@ -18,20 +20,25 @@
             --text: #ffffff;
         }
 
+        /* ===== RESET ===== */
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: 'Outfit', system-ui, -apple-system, sans-serif;
+            font-family: 'Outfit', system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+            font-size-adjust: 0.52;
         }
 
         html,
         body {
-            height: 100vh;
-            height: 100dvh;
+            height: 100%;
+            width: 100%;
             overflow: hidden;
+            font-synthesis: none;
+            text-rendering: optimizeLegibility;
         }
 
+        /* ===== BODY ===== */
         body {
             display: flex;
             justify-content: center;
@@ -39,7 +46,6 @@
             color: var(--text);
             position: relative;
             padding: 1.25rem;
-            /* safe edges */
 
             background:
                 radial-gradient(circle at 20% 20%, rgba(0, 212, 255, 0.08), transparent 40%),
@@ -47,13 +53,12 @@
                 var(--bg-dark);
         }
 
-        /* Orbs */
+        /* ===== ORBS ===== */
         .orb {
             position: absolute;
             border-radius: 50%;
             filter: blur(80px);
             opacity: 0.2;
-            transition: transform 0.2s ease-out;
         }
 
         .orb.one {
@@ -62,7 +67,6 @@
             background: var(--primary);
             top: 10%;
             left: 10%;
-            animation: shimmer 10s linear infinite alternate-reverse;
         }
 
         .orb.two {
@@ -71,7 +75,113 @@
             background: var(--secondary);
             bottom: 10%;
             right: 10%;
+        }
+
+        /* ===== CONTAINER ===== */
+        .container {
+            text-align: center;
+            z-index: 3;
+            max-width: 520px;
+            width: 100%;
+            padding: clamp(1.5rem, 4vw, 3rem);
+
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+
+            box-shadow:
+                0 0 40px rgba(0, 212, 255, 0.1),
+                0 0 80px rgba(124, 92, 255, 0.2);
+
+            transform: translateY(10px) scale(0.98);
+            transition: transform 0.6s ease;
+        }
+
+        /* ===== LOGO ===== */
+        .logo-img {
+            width: 160px;
+            height: 160px;
+            margin-bottom: 1.5rem;
+        }
+
+        /* ===== TEXT ===== */
+        .logo-text {
+            font-size: clamp(2rem, 6vw, 3.5rem);
+            font-weight: 900;
+            margin-bottom: 1rem;
+            text-transform: uppercase;
+            letter-spacing: -0.02em;
+
+            background: linear-gradient(270deg, var(--primary), var(--secondary), var(--primary));
+            background-size: 400% 400%;
+
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        h1 {
+            font-size: clamp(1rem, 3.5vw, 1.8rem);
+            font-weight: 400;
+            margin-bottom: 1.5rem;
+            color: rgba(255, 255, 255, 0.85);
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.5rem 1.2rem;
+            font-size: clamp(0.7rem, 2.5vw, 0.9rem);
+            font-weight: 900;
+            letter-spacing: 1.5px;
+            border-radius: 100px;
+            color: #ffffff;
+            border: 2px solid rgba(255, 255, 0, 0.8);
+        }
+
+        /* ===== ANIMATIONS (DELAYED START) ===== */
+        body {
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        body.loaded {
+            opacity: 1;
+        }
+
+        body.loaded .container {
+            animation: floatLogo 6s ease-in-out infinite;
+            transform: translateY(0) scale(1);
+        }
+
+        body.loaded .logo-text {
+            animation: gradientShift 8s ease infinite;
+        }
+
+        body.loaded .orb.one {
+            animation: shimmer 10s linear infinite alternate-reverse;
+        }
+
+        body.loaded .orb.two {
             animation: shimmer2 10s linear infinite alternate-reverse;
+        }
+
+        /* ===== KEYFRAMES ===== */
+        @keyframes floatLogo {
+
+            0%,
+            100% {
+                transform: translateY(0);
+            }
+
+            50% {
+                transform: translateY(-12px);
+            }
         }
 
         @keyframes shimmer {
@@ -94,68 +204,6 @@
             }
         }
 
-        /* Glass card */
-        .container {
-            text-align: center;
-            z-index: 3;
-            max-width: 520px;
-            max-height: calc(100dvh - 2.5rem);
-            width: 100%;
-            padding: clamp(1.5rem, 4vw, 3rem);
-
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(20px);
-            border-radius: 20px;
-
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            overflow: hidden;
-
-            box-shadow:
-                0 0 40px rgba(0, 212, 255, 0.1),
-                0 0 80px rgba(124, 92, 255, 0.2);
-
-            transition: all 0.3s ease;
-
-            animation: floatLogo 6s ease-in-out infinite;
-            animation-play-state: paused;
-        }
-
-        .logo-img {
-            width: clamp(100px, 30vw, 160px);
-            margin-bottom: 1.5rem;
-        }
-
-        @keyframes floatLogo {
-
-            0%,
-            100% {
-                transform: translateY(0);
-            }
-
-            50% {
-                transform: translateY(-12px);
-            }
-        }
-
-        .logo-text {
-            font-size: clamp(2rem, 6vw, 3.5rem);
-            font-weight: 900;
-            margin-bottom: 1rem;
-            text-transform: uppercase;
-            letter-spacing: -1px;
-
-            background: linear-gradient(270deg, var(--primary), var(--secondary), var(--primary));
-            background-size: 400% 400%;
-            animation: gradientShift 8s ease infinite;
-
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-
         @keyframes gradientShift {
             0% {
                 background-position: 0% 50%;
@@ -169,70 +217,6 @@
                 background-position: 0% 50%;
             }
         }
-
-        h1 {
-            font-size: clamp(1rem, 3.5vw, 1.8rem);
-            font-weight: 400;
-            margin-bottom: 1.5rem;
-            color: rgba(255, 255, 255, 0.85);
-            text-wrap: balance;
-        }
-
-        .badge {
-            display: inline-block;
-            padding: 0.5rem 1.2rem;
-            font-size: clamp(0.7rem, 2.5vw, 0.9rem);
-            font-weight: 900;
-            letter-spacing: 1.5px;
-            border-radius: 100px;
-            color: #ffffff;
-            border: 2px solid rgba(255, 255, 0, 0.8);
-            margin-top: 5%;
-        }
-
-        body.loaded .container {
-            animation-play-state: running;
-        }
-
-        /* Landscape optimization */
-        @media (orientation: landscape) and (max-height: 700px) {
-            body {
-                padding: 2rem;
-            }
-
-            @media (orientation: landscape) {
-                .container {
-                    flex-direction: column;
-                    /* keep stacking */
-                    text-align: center;
-                    max-width: 520px;
-                    max-height: 90dvh;
-                    /* leave some breathing room */
-                    width: 100%;
-                    padding: 1rem 1.5rem;
-                    /* reduce padding slightly */
-                }
-            }
-
-            @media (orientation: landscape) and (max-height: 500px) {
-                .logo-img {
-                    width: clamp(80px, 25vw, 120px);
-                }
-
-                .logo-text {
-                    font-size: clamp(1.5rem, 5vw, 2.5rem);
-                }
-
-                h1 {
-                    font-size: clamp(0.9rem, 3vw, 1.2rem);
-                }
-
-                .badge {
-                    font-size: clamp(0.6rem, 2vw, 0.8rem);
-                    margin-top: 0%;
-                }
-            }
-        }
     </style>
 </head>
 
@@ -242,12 +226,26 @@
 
     <div class="container">
         <img src="app/media/img/logo.svg" alt="Padel Push Logo" class="logo-img" width="160" height="160">
+
         <div class="logo-text">Padel Push</div>
         <h1>The Ultimate Padel Scoring System</h1>
         <div class="badge">COMING SOON</div>
     </div>
 
     <script>
+        /* ===== START ANIMATIONS AFTER STABLE PAINT ===== */
+        window.addEventListener('load', () =>
+        {
+            requestAnimationFrame(() =>
+            {
+                requestAnimationFrame(() =>
+                {
+                    document.body.classList.add('loaded');
+                });
+            });
+        });
+
+        /* ===== MOUSE PARALLAX (NO LAYOUT SHIFT) ===== */
         const orb1 = document.getElementById('orb1');
         const orb2 = document.getElementById('orb2');
 
@@ -258,11 +256,6 @@
 
             orb1.style.transform = `translate(${x * 40}px, ${y * 40}px)`;
             orb2.style.transform = `translate(${x * -60}px, ${y * -60}px)`;
-        });
-
-        window.addEventListener('load', () =>
-        {
-            document.body.classList.add('loaded');
         });
     </script>
 </body>
