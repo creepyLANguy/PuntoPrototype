@@ -74,40 +74,6 @@
             animation: shimmer2 10s linear infinite alternate-reverse;
         }
 
-        /* Particles */
-        .particles {
-            position: absolute;
-            inset: 0;
-            pointer-events: none;
-            z-index: 1;
-
-            background-image:
-                radial-gradient(10px 10px at 10% 20%, rgba(255, 255, 255, 0.35), transparent),
-                radial-gradient(2.5px 2.5px at 30% 70%, rgba(255, 255, 255, 0.25), transparent),
-                radial-gradient(4px 4px at 70% 40%, rgba(255, 255, 255, 0.25), transparent),
-                radial-gradient(7px 7px at 80% 10%, rgba(255, 255, 255, 0.3), transparent),
-                radial-gradient(12px 12px at 50% 50%, rgba(255, 255, 255, 0.2), transparent),
-                radial-gradient(25px 25px at 90% 80%, rgba(255, 255, 255, 0.25), transparent);
-
-            background-size: 300px 300px;
-            animation: shimmer 20s ease-in-out infinite alternate-reverse;
-            opacity: 0.25;
-        }
-
-        .particles-back {
-            background-image:
-                radial-gradient(10px 10px at 50% 60%, rgba(255, 255, 255, 0.35), transparent),
-                radial-gradient(2.5px 2.5px at 30% 70%, rgba(255, 255, 255, 0.25), transparent),
-                radial-gradient(4px 4px at 10% 90%, rgba(255, 255, 255, 0.25), transparent),
-                radial-gradient(7px 7px at 40% 60%, rgba(255, 255, 255, 0.3), transparent),
-                radial-gradient(12px 12px at 10% 50%, rgba(255, 255, 255, 0.2), transparent),
-                radial-gradient(25px 25px at 10% 40%, rgba(255, 255, 255, 0.25), transparent);
-
-            opacity: 0.15;
-            animation: shimmer2 200s linear infinite alternate-reverse;
-            transform: scale(7);
-        }
-
         @keyframes shimmer {
             from {
                 transform: translate(0, 0);
@@ -120,11 +86,11 @@
 
         @keyframes shimmer2 {
             from {
-                transform: translate(100px, 100px) rotate(0deg);
+                transform: translate(100px, 100px);
             }
 
             to {
-                transform: translate(200px, 200px) rotate(720deg);
+                transform: translate(200px, 200px);
             }
         }
 
@@ -215,28 +181,15 @@
         .badge {
             display: inline-block;
             padding: 0.5rem 1.2rem;
-            border-radius: 100px;
             font-size: clamp(0.7rem, 2.5vw, 0.9rem);
-            font-weight: 600;
+            font-weight: 900;
             letter-spacing: 1.5px;
-
-            color: var(--primary);
-            background: rgba(0, 212, 255, 0.1);
-            border: 1px solid rgba(0, 212, 255, 0.3);
+            border-radius: 100px;
+            color: #ffffff;
+            border: 2px solid rgba(255, 255, 0, 0.8);
+            margin-top: 5%;
         }
 
-        .noise {
-            position: absolute;
-            inset: 0;
-            pointer-events: none;
-            z-index: 2;
-            opacity: 0.035;
-
-            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-            mix-blend-mode: overlay;
-        }
-
-        /* Landscape optimization */
         /* Landscape optimization */
         @media (orientation: landscape) and (max-height: 700px) {
             body {
@@ -272,6 +225,7 @@
 
                 .badge {
                     font-size: clamp(0.6rem, 2vw, 0.8rem);
+                    margin-top: 0%;
                 }
             }
         }
@@ -279,10 +233,6 @@
 </head>
 
 <body>
-    <div class="noise"></div>
-    <div class="particles"></div>
-    <div class="particles particles-back"></div>
-
     <div class="orb one" id="orb1"></div>
     <div class="orb two" id="orb2"></div>
 
@@ -290,7 +240,7 @@
         <img src="app/media/img/logo.svg" alt="Padel Push Logo" class="logo-img">
         <div class="logo-text">Padel Push</div>
         <h1>The Ultimate Padel Scoring System</h1>
-        <div class="badge">Currently In Development</div>
+        <div class="badge">COMING SOON</div>
     </div>
 
     <script>
