@@ -31,6 +31,8 @@
             --headline-gap: 1.5rem;
             --headline-width: 18ch;
             --headline-leading: 1.15;
+            --container-scale: 1;
+            --float-distance: 12px;
         }
 
         /* ===== RESET ===== */
@@ -115,7 +117,8 @@
                 0 0 40px rgba(0, 212, 255, 0.1),
                 0 0 80px rgba(124, 92, 255, 0.2);
 
-            transform: translateY(10px) scale(0.98);
+            transform: translateY(10px) scale(calc(var(--container-scale) * 0.98));
+            transform-origin: center center;
             transition: transform 0.6s ease;
         }
 
@@ -170,7 +173,7 @@
 
         body.loaded .container {
             animation: floatLogo 6s ease-in-out infinite;
-            transform: translateY(0) scale(1);
+            transform: translateY(0) scale(var(--container-scale));
         }
 
         body.loaded .logo-text {
@@ -190,11 +193,11 @@
 
             0%,
             100% {
-                transform: translateY(0);
+                transform: translateY(0) scale(var(--container-scale));
             }
 
             50% {
-                transform: translateY(-12px);
+                transform: translateY(calc(-1 * var(--float-distance))) scale(var(--container-scale));
             }
         }
 
@@ -231,78 +234,6 @@
                 background-position: 0% 50%;
             }
         }
-
-        @media (max-width: 767px) and (orientation: landscape) {
-            :root {
-                --card-padding: 0.75rem 1.25rem;
-                --logo-size: clamp(58px, 16vh, 90px);
-                --logo-gap: 0.25rem;
-                --brand-gap: 0.25rem;
-                --headline-gap: 0.5rem;
-                --headline-width: 22ch;
-                --headline-leading: 1.05;
-            }
-
-            body {
-                align-items: stretch;
-                padding: 0.5rem;
-            }
-
-            .container {
-                max-width: min(92vw, 640px);
-                min-height: 0;
-                max-height: calc(100dvh - 1rem);
-                gap: 0.35rem;
-            }
-
-            .logo-text {
-                font-size: clamp(1.2rem, 5vw, 1.95rem);
-            }
-
-            h1 {
-                font-size: clamp(0.88rem, 3vw, 1.1rem);
-            }
-
-            .badge {
-                padding: 0.35rem 0.95rem;
-                font-size: 0.68rem;
-                line-height: 1;
-            }
-
-            .orb.one {
-                width: 200px;
-                height: 200px;
-            }
-
-            .orb.two {
-                width: 280px;
-                height: 280px;
-            }
-        }
-
-        @media (max-width: 767px) and (max-height: 430px) and (orientation: landscape) {
-            :root {
-                --card-radius: 18px;
-                --card-padding: 0.65rem 1rem;
-                --logo-size: clamp(48px, 14vh, 72px);
-                --headline-gap: 0.4rem;
-                --headline-width: 20ch;
-            }
-
-            .logo-text {
-                font-size: clamp(1rem, 4.8vw, 1.6rem);
-            }
-
-            h1 {
-                font-size: clamp(0.78rem, 2.8vw, 0.98rem);
-            }
-
-            .badge {
-                padding: 0.3rem 0.8rem;
-                font-size: 0.62rem;
-                letter-spacing: 1.2px;
-            }
-        }
     </style>
 </head>
 
@@ -327,13 +258,40 @@
                 requestAnimationFrame(() =>
                 {
                     document.body.classList.add('loaded');
+                    updateLandscapeScale();
                 });
             });
         });
 
         /* ===== MOUSE PARALLAX (NO LAYOUT SHIFT) ===== */
+        const container = document.querySelector('.container');
         const orb1 = document.getElementById('orb1');
         const orb2 = document.getElementById('orb2');
+
+        function updateLandscapeScale()
+        {
+            container.style.setProperty('--container-scale', '1');
+
+            const isMobileLandscape = window.matchMedia('(max-width: 767px) and (orientation: landscape)').matches;
+
+            if (!isMobileLandscape)
+            {
+                return;
+            }
+
+            const bodyStyles = window.getComputedStyle(document.body);
+            const availableWidth = window.innerWidth
+                - parseFloat(bodyStyles.paddingLeft)
+                - parseFloat(bodyStyles.paddingRight);
+            const availableHeight = window.innerHeight
+                - parseFloat(bodyStyles.paddingTop)
+                - parseFloat(bodyStyles.paddingBottom);
+
+            const rect = container.getBoundingClientRect();
+            const scale = Math.min(1, availableWidth / rect.width, availableHeight / rect.height);
+
+            container.style.setProperty('--container-scale', scale.toFixed(4));
+        }
 
         document.addEventListener('mousemove', (e) =>
         {
@@ -343,6 +301,16 @@
             orb1.style.transform = `translate(${x * 40}px, ${y * 40}px)`;
             orb2.style.transform = `translate(${x * -60}px, ${y * -60}px)`;
         });
+
+        window.addEventListener('resize', updateLandscapeScale);
+        window.addEventListener('orientationchange', updateLandscapeScale);
+
+        if (document.fonts?.ready)
+        {
+            document.fonts.ready.then(updateLandscapeScale);
+        }
+
+        updateLandscapeScale();
     </script>
 </body>
 
