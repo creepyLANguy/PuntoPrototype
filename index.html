@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Under Construction | Padel Push</title>
+    <link rel="icon" type="image/svg+xml" href="app/media/img/favicon.svg">
 
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -18,6 +19,18 @@
             --secondary: #7c5cff;
             --bg-dark: #05070d;
             --text: #ffffff;
+            --glass-bg: rgba(255, 255, 255, 0.05);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --heading-copy: rgba(255, 255, 255, 0.85);
+            --badge-ring: rgba(255, 255, 0, 0.8);
+            --card-radius: 20px;
+            --card-padding: clamp(1.5rem, 4vw, 3rem);
+            --logo-size: 160px;
+            --logo-gap: 1.5rem;
+            --brand-gap: 1rem;
+            --headline-gap: 1.5rem;
+            --headline-width: 18ch;
+            --headline-leading: 1.15;
         }
 
         /* ===== RESET ===== */
@@ -45,12 +58,16 @@
             align-items: center;
             color: var(--text);
             position: relative;
+            min-height: 100dvh;
             padding: 1.25rem;
 
             background:
                 radial-gradient(circle at 20% 20%, rgba(0, 212, 255, 0.08), transparent 40%),
                 radial-gradient(circle at 80% 80%, rgba(124, 92, 255, 0.08), transparent 40%),
                 var(--bg-dark);
+
+            opacity: 0;
+            transition: opacity 0.3s ease;
         }
 
         /* ===== ORBS ===== */
@@ -79,21 +96,20 @@
 
         /* ===== CONTAINER ===== */
         .container {
-            text-align: center;
-            z-index: 3;
-            max-width: 520px;
-            width: 100%;
-            padding: clamp(1.5rem, 4vw, 3rem);
-
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(20px);
-            border-radius: 20px;
-
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
+            text-align: center;
+            z-index: 3;
+            max-width: 520px;
+            width: 100%;
+            padding: var(--card-padding);
+
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            backdrop-filter: blur(20px);
+            border-radius: var(--card-radius);
 
             box-shadow:
                 0 0 40px rgba(0, 212, 255, 0.1),
@@ -105,16 +121,16 @@
 
         /* ===== LOGO ===== */
         .logo-img {
-            width: 160px;
-            height: 160px;
-            margin-bottom: 1.5rem;
+            width: var(--logo-size);
+            height: var(--logo-size);
+            margin-bottom: var(--logo-gap);
         }
 
         /* ===== TEXT ===== */
         .logo-text {
             font-size: clamp(2rem, 6vw, 3.5rem);
             font-weight: 900;
-            margin-bottom: 1rem;
+            margin-bottom: var(--brand-gap);
             text-transform: uppercase;
             letter-spacing: -0.02em;
 
@@ -129,8 +145,11 @@
         h1 {
             font-size: clamp(1rem, 3.5vw, 1.8rem);
             font-weight: 400;
-            margin-bottom: 1.5rem;
-            color: rgba(255, 255, 255, 0.85);
+            margin-bottom: var(--headline-gap);
+            color: var(--heading-copy);
+            max-width: var(--headline-width);
+            line-height: var(--headline-leading);
+            text-wrap: balance;
         }
 
         .badge {
@@ -140,16 +159,11 @@
             font-weight: 900;
             letter-spacing: 1.5px;
             border-radius: 100px;
-            color: #ffffff;
-            border: 2px solid rgba(255, 255, 0, 0.8);
+            color: var(--text);
+            border: 2px solid var(--badge-ring);
         }
 
         /* ===== ANIMATIONS (DELAYED START) ===== */
-        body {
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        }
-
         body.loaded {
             opacity: 1;
         }
@@ -215,6 +229,78 @@
 
             100% {
                 background-position: 0% 50%;
+            }
+        }
+
+        @media (max-width: 767px) and (orientation: landscape) {
+            :root {
+                --card-padding: 0.75rem 1.25rem;
+                --logo-size: clamp(58px, 16vh, 90px);
+                --logo-gap: 0.25rem;
+                --brand-gap: 0.25rem;
+                --headline-gap: 0.5rem;
+                --headline-width: 22ch;
+                --headline-leading: 1.05;
+            }
+
+            body {
+                align-items: stretch;
+                padding: 0.5rem;
+            }
+
+            .container {
+                max-width: min(92vw, 640px);
+                min-height: 0;
+                max-height: calc(100dvh - 1rem);
+                gap: 0.35rem;
+            }
+
+            .logo-text {
+                font-size: clamp(1.2rem, 5vw, 1.95rem);
+            }
+
+            h1 {
+                font-size: clamp(0.88rem, 3vw, 1.1rem);
+            }
+
+            .badge {
+                padding: 0.35rem 0.95rem;
+                font-size: 0.68rem;
+                line-height: 1;
+            }
+
+            .orb.one {
+                width: 200px;
+                height: 200px;
+            }
+
+            .orb.two {
+                width: 280px;
+                height: 280px;
+            }
+        }
+
+        @media (max-width: 767px) and (max-height: 430px) and (orientation: landscape) {
+            :root {
+                --card-radius: 18px;
+                --card-padding: 0.65rem 1rem;
+                --logo-size: clamp(48px, 14vh, 72px);
+                --headline-gap: 0.4rem;
+                --headline-width: 20ch;
+            }
+
+            .logo-text {
+                font-size: clamp(1rem, 4.8vw, 1.6rem);
+            }
+
+            h1 {
+                font-size: clamp(0.78rem, 2.8vw, 0.98rem);
+            }
+
+            .badge {
+                padding: 0.3rem 0.8rem;
+                font-size: 0.62rem;
+                letter-spacing: 1.2px;
             }
         }
     </style>
