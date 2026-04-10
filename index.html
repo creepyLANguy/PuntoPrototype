@@ -22,13 +22,13 @@
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: 'Outfit', sans-serif;
+            font-family: 'Outfit', system-ui, -apple-system, sans-serif;
         }
 
         html,
         body {
+            height: 100vh;
             height: 100dvh;
-            width: 100vw;
             overflow: hidden;
         }
 
@@ -121,7 +121,7 @@
             transition: all 0.3s ease;
 
             animation: floatLogo 6s ease-in-out infinite;
-
+            animation-play-state: paused;
         }
 
         .logo-img {
@@ -190,6 +190,10 @@
             margin-top: 5%;
         }
 
+        body.loaded .container {
+            animation-play-state: running;
+        }
+
         /* Landscape optimization */
         @media (orientation: landscape) and (max-height: 700px) {
             body {
@@ -237,7 +241,7 @@
     <div class="orb two" id="orb2"></div>
 
     <div class="container">
-        <img src="app/media/img/logo.svg" alt="Padel Push Logo" class="logo-img">
+        <img src="app/media/img/logo.svg" alt="Padel Push Logo" class="logo-img" width="160" height="160">
         <div class="logo-text">Padel Push</div>
         <h1>The Ultimate Padel Scoring System</h1>
         <div class="badge">COMING SOON</div>
@@ -254,6 +258,11 @@
 
             orb1.style.transform = `translate(${x * 40}px, ${y * 40}px)`;
             orb2.style.transform = `translate(${x * -60}px, ${y * -60}px)`;
+        });
+
+        window.addEventListener('load', () =>
+        {
+            document.body.classList.add('loaded');
         });
     </script>
 </body>
