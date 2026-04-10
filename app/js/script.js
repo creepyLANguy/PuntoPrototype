@@ -60,7 +60,9 @@ document.addEventListener("DOMContentLoaded", () =>
     POINT_TEAM_B: "POINT_TEAM_B",
     UNDO: "UNDO",
     RESET: "RESET",
-    REGISTER: "REGISTER"
+    REGISTER: "REGISTER",
+    JOIN: "JOIN",
+    SPECTATE: "SPECTATE"
   };
 
   const SOUND_IDS = {
@@ -1795,7 +1797,7 @@ document.addEventListener("DOMContentLoaded", () =>
 
       console.log("NFC scanning started.");
 
-      nfcReader.onreading = (event) =>
+      nfcReader.onreading = async (event) =>
       {
         if (!elements.scoreboardPage ||
           elements.scoreboardPage.style.display === "none")
@@ -1813,7 +1815,7 @@ document.addEventListener("DOMContentLoaded", () =>
           {
             const text = decoder.decode(record.data).trim();
             console.log("NFC scanned:", text);
-            handleNfc(text);
+            await handleNfc(text);
           }
         }
       };
@@ -1844,7 +1846,7 @@ document.addEventListener("DOMContentLoaded", () =>
   // NFC HANDLING
   // =====================================================
 
-  function handleNfc(text)
+  async function handleNfc(text)
   {
     if (!text) return;
 
@@ -1864,7 +1866,26 @@ document.addEventListener("DOMContentLoaded", () =>
       return;
     }
 
-    if (!actionMap[eventType])
+    if (eventType == EVENT_TYPES.JOIN)
+    {
+      const snap = await getDoc(courtRef);
+
+      if (!snap.exists())
+      {
+        elements.playCourtNameError.textContent = "Court not found.";
+        return;
+      }
+      currentCourtPassword = snap.data().password;
+
+      enterCourt(json.courtId, false);
+      return;
+    }
+    else if (eventType == EVENT_TYPES.SPECTATE)
+    {
+      enterCourt(json.courtId, true);
+      return;
+    }
+    else if (!actionMap[eventType])
     {
       showToast("NFC event type unknown.", TOAST_TYPES.ERROR);
       console.warn("NFC event type unknown: ", text);
