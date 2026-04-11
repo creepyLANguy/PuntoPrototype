@@ -261,6 +261,29 @@
                 padding: 0.45rem 1rem;
                 font-size: clamp(0.68rem, 2vw, 0.82rem);
             }
+            
+            .container {
+                position: relative;
+                overflow: hidden;
+                border-radius: var(--card-radius);
+                transform: translateZ(0);
+                will-change: transform;
+            }
+            
+            .container::before {
+                content: "";
+                position: absolute;
+                inset: 0;
+                border-radius: inherit;
+
+                backdrop-filter: blur(20px);
+                -webkit-backdrop-filter: blur(20px);
+
+                background: var(--glass-bg);
+                border: 1px solid var(--glass-border);
+
+                z-index: -1;
+            }
         }
     </style>
 </head>
