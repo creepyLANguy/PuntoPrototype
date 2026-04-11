@@ -117,9 +117,11 @@
                 0 0 40px rgba(0, 212, 255, 0.1),
                 0 0 80px rgba(124, 92, 255, 0.2);
 
-            transform: translateY(10px) scale(calc(var(--container-scale) * 0.98));
+            transform: translateZ(0) translateY(10px) scale(calc(var(--container-scale) * 0.98));
             transform-origin: center center;
             transition: transform 0.6s ease;
+            will-change: transform;
+            overflow: hidden;
         }
 
         .logo-img {
@@ -309,14 +311,6 @@
             container.style.setProperty('--container-scale', scale.toFixed(4));
         }
 
-        function updateOrbParallax(e) {
-            const x = (e.clientX / window.innerWidth - 0.5);
-            const y = (e.clientY / window.innerHeight - 0.5);
-
-            orb1.style.transform = `translate(${x * 40}px, ${y * 40}px)`;
-            orb2.style.transform = `translate(${x * -60}px, ${y * -60}px)`;
-        }
-
         function startAnimations() {
             body.classList.add('loaded');
             updateLandscapeScale();
@@ -327,8 +321,7 @@
                 requestAnimationFrame(startAnimations);
             });
         });
-
-        document.addEventListener('mousemove', updateOrbParallax);
+        
         window.addEventListener('resize', updateLandscapeScale);
         window.addEventListener('orientationchange', updateLandscapeScale);
         mobileLandscapeQuery.addEventListener('change', updateLandscapeScale);
