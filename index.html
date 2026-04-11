@@ -1,207 +1,335 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Under Construction | Padel Push</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Under Construction | Padel Push</title>
+    <link rel="icon" type="image/svg+xml" href="app/media/img/favicon.svg">
 
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;900&display=swap" rel="stylesheet">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;900&display=swap" rel="stylesheet">
 
-<style>
-:root {
-    --primary: #00d4ff;
-    --secondary: #7c5cff;
-    --bg-dark: #05070d;
-    --text: #ffffff;
+    <style>
+        :root {
+            --primary: #00d4ff;
+            --secondary: #7c5cff;
+            --bg-dark: #05070d;
+            --text: #ffffff;
+            --glass-bg: rgba(255, 255, 255, 0.05);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --heading-copy: rgba(255, 255, 255, 0.85);
+            --badge-ring: rgba(255, 255, 0, 0.8);
+            --card-radius: 20px;
+            --card-padding: clamp(1.5rem, 4vw, 3rem);
+            --logo-size: 160px;
+            --logo-gap: 1.5rem;
+            --brand-gap: 1rem;
+            --headline-gap: 1.5rem;
+            --headline-width: 18ch;
+            --headline-leading: 1.15;
+            --container-scale: 1;
+            --float-distance: 12px;
+            --viewport-padding: 1.25rem;
+        }
 
-    --glass-bg: rgba(255,255,255,0.05);
-    --glass-border: rgba(255,255,255,0.1);
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Outfit', system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+            font-size-adjust: 0.52;
+        }
 
-    --radius: 20px;
-}
+        html,
+        body {
+            height: 100%;
+            width: 100%;
+            overflow: hidden;
+            font-synthesis: none;
+            text-rendering: optimizeLegibility;
+        }
 
-/* Reset */
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-    font-family: 'Outfit', system-ui, sans-serif;
-}
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: var(--text);
+            position: relative;
+            min-height: 100dvh;
+            padding:
+                max(var(--viewport-padding), env(safe-area-inset-top))
+                max(var(--viewport-padding), env(safe-area-inset-right))
+                max(var(--viewport-padding), env(safe-area-inset-bottom))
+                max(var(--viewport-padding), env(safe-area-inset-left));
 
-html, body {
-    height: 100%;
-    overflow: hidden;
-}
+            background:
+                radial-gradient(circle at 20% 20%, rgba(0, 212, 255, 0.08), transparent 40%),
+                radial-gradient(circle at 80% 80%, rgba(124, 92, 255, 0.08), transparent 40%),
+                var(--bg-dark);
 
-/* Layout */
-body {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background:
-        radial-gradient(circle at 20% 20%, rgba(0,212,255,0.08), transparent 40%),
-        radial-gradient(circle at 80% 80%, rgba(124,92,255,0.08), transparent 40%),
-        var(--bg-dark);
-    color: var(--text);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
 
-    opacity: 0;
-    transition: opacity 0.3s ease;
-}
+        .orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(80px);
+            opacity: 0.2;
+        }
 
-/* Orbs */
-.orb {
-    position: absolute;
-    border-radius: 50%;
-    filter: blur(80px);
-    opacity: 0; /* critical fix */
-}
+        .orb.one {
+            width: 300px;
+            height: 300px;
+            background: var(--primary);
+            top: 10%;
+            left: 10%;
+        }
 
-.orb.one {
-    width: 300px;
-    height: 300px;
-    background: var(--primary);
-    top: -20%;
-    left: -20%;
-}
+        .orb.two {
+            width: 500px;
+            height: 500px;
+            background: var(--secondary);
+            bottom: 10%;
+            right: 10%;
+        }
 
-.orb.two {
-    width: 500px;
-    height: 500px;
-    background: var(--secondary);
-    bottom: -20%;
-    right: -20%;
-}
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            z-index: 3;
+            max-width: 520px;
+            width: 100%;
+            padding: var(--card-padding);
 
-/* Card */
-.container {
-    position: relative;
-    z-index: 2;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            backdrop-filter: blur(20px);
+            border-radius: var(--card-radius);
 
-    max-width: 520px;
-    width: 100%;
-    padding: 2rem;
+            box-shadow:
+                0 0 40px rgba(0, 212, 255, 0.1),
+                0 0 80px rgba(124, 92, 255, 0.2);
 
-    border-radius: var(--radius);
-    overflow: hidden;
+            transform: translateY(10px) scale(calc(var(--container-scale) * 0.98));
+            transform-origin: center center;
+            transition: transform 0.6s ease;
+        }
 
-    transform: translateZ(0);
-    will-change: transform;
+        .logo-img {
+            width: var(--logo-size);
+            height: var(--logo-size);
+            margin-bottom: var(--logo-gap);
+        }
 
-    text-align: center;
-}
+        .logo-text {
+            font-size: clamp(2rem, 6vw, 3.5rem);
+            font-weight: 900;
+            margin-bottom: var(--brand-gap);
+            text-transform: uppercase;
+            letter-spacing: -0.02em;
 
-/* Glass layer (fixes mobile glitch) */
-.container::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    border-radius: inherit;
+            background: linear-gradient(270deg, var(--primary), var(--secondary), var(--primary));
+            background-size: 400% 400%;
 
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
 
-    background: var(--glass-bg);
-    border: 1px solid var(--glass-border);
+        h1 {
+            font-size: clamp(1rem, 3.5vw, 1.8rem);
+            font-weight: 400;
+            margin-bottom: var(--headline-gap);
+            color: var(--heading-copy);
+            max-width: var(--headline-width);
+            line-height: var(--headline-leading);
+            text-wrap: balance;
+        }
 
-    z-index: -1;
-}
+        .badge {
+            display: inline-block;
+            padding: 0.5rem 1.2rem;
+            font-size: clamp(0.7rem, 2.5vw, 0.9rem);
+            font-weight: 900;
+            letter-spacing: 1.5px;
+            border-radius: 100px;
+            color: var(--text);
+            border: 2px solid var(--badge-ring);
+        }
 
-/* Content */
-.logo-img {
-    width: 140px;
-    margin-bottom: 1rem;
-}
+        body.loaded {
+            opacity: 1;
+        }
 
-.logo-text {
-    font-size: clamp(2rem, 6vw, 3rem);
-    font-weight: 900;
-    margin-bottom: 1rem;
+        body.loaded .container {
+            animation: floatLogo 6s ease-in-out infinite;
+            transform: translateY(0) scale(var(--container-scale));
+        }
 
-    background: linear-gradient(270deg, var(--primary), var(--secondary), var(--primary));
-    background-size: 400% 400%;
+        body.loaded .logo-text {
+            animation: gradientShift 8s ease infinite;
+        }
 
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-}
+        body.loaded .orb.one {
+            animation: shimmer 10s linear infinite alternate-reverse;
+        }
 
-h1 {
-    font-size: clamp(1rem, 3vw, 1.5rem);
-    color: rgba(255,255,255,0.85);
-    margin-bottom: 1.5rem;
-}
+        body.loaded .orb.two {
+            animation: shimmer2 10s linear infinite alternate-reverse;
+        }
 
-.badge {
-    display: inline-block;
-    padding: 0.5rem 1.2rem;
-    font-weight: 900;
-    border-radius: 999px;
-    border: 2px solid rgba(255,255,0,0.8);
-}
+        @keyframes floatLogo {
+            0%,
+            100% {
+                transform: translateY(0) scale(var(--container-scale));
+            }
 
-/* Animations */
-body.loaded {
-    opacity: 1;
-}
+            50% {
+                transform: translateY(calc(-1 * var(--float-distance))) scale(var(--container-scale));
+            }
+        }
 
-body.loaded .orb {
-    opacity: 0.2;
-}
+        @keyframes shimmer {
+            from {
+                transform: translate(0, 0);
+            }
 
-body.loaded .orb.one {
-    animation: move1 10s linear infinite alternate;
-}
+            to {
+                transform: translate(-150px, -150px);
+            }
+        }
 
-body.loaded .orb.two {
-    animation: move2 10s linear infinite alternate;
-}
+        @keyframes shimmer2 {
+            from {
+                transform: translate(100px, 100px);
+            }
 
-body.loaded .logo-text {
-    animation: gradient 8s ease infinite;
-}
+            to {
+                transform: translate(200px, 200px);
+            }
+        }
 
-body.loaded .container {
-    animation: float 6s ease-in-out infinite;
-}
+        @keyframes gradientShift {
+            0% {
+                background-position: 0% 50%;
+            }
 
-@keyframes float {
-    50% { transform: translateY(-10px); }
-}
+            50% {
+                background-position: 100% 50%;
+            }
 
-@keyframes move1 {
-    to { transform: translate(-150px, -150px); }
-}
+            100% {
+                background-position: 0% 50%;
+            }
+        }
 
-@keyframes move2 {
-    to { transform: translate(150px, 150px); }
-}
+        @media (orientation: landscape) and (max-height: 500px) {
+            :root {
+                --viewport-padding: 0.85rem;
+                --card-padding: clamp(0.9rem, 2.6vw, 1.35rem);
+                --logo-size: clamp(72px, 13vw, 108px);
+                --logo-gap: 0.65rem;
+                --brand-gap: 0.45rem;
+                --headline-gap: 0.7rem;
+                --headline-width: 24ch;
+                --headline-leading: 1.05;
+                --float-distance: 6px;
+            }
 
-@keyframes gradient {
-    50% { background-position: 100% 50%; }
-}
-</style>
+            .container {
+                max-width: min(100%, 34rem);
+            }
+
+            .logo-text {
+                font-size: clamp(1.6rem, 4vw, 2.4rem);
+            }
+
+            h1 {
+                font-size: clamp(0.9rem, 2.5vw, 1.2rem);
+            }
+
+            .badge {
+                padding: 0.45rem 1rem;
+                font-size: clamp(0.68rem, 2vw, 0.82rem);
+            }
+        }
+    </style>
 </head>
 
 <body>
+    <div class="orb one" id="orb1"></div>
+    <div class="orb two" id="orb2"></div>
 
-<div class="orb one"></div>
-<div class="orb two"></div>
+    <div class="container">
+        <img src="app/media/img/logo.svg" alt="Padel Push Logo" class="logo-img" width="160" height="160">
 
-<div class="container">
-    <img src="app/media/img/logo.svg" class="logo-img">
-    <div class="logo-text">Padel Push</div>
-    <h1>The Ultimate Padel Scoring System</h1>
-    <div class="badge">COMING SOON</div>
-</div>
+        <div class="logo-text">Padel Push</div>
+        <h1>The Ultimate Padel Scoring System</h1>
+        <div class="badge">COMING SOON</div>
+    </div>
 
-<script>
-window.addEventListener('load', () => {
-    requestAnimationFrame(() => {
-        document.body.classList.add('loaded');
-    });
-});
-</script>
+    <script>
+        const body = document.body;
+        const container = document.querySelector('.container');
+        const orb1 = document.getElementById('orb1');
+        const orb2 = document.getElementById('orb2');
+        const mobileLandscapeQuery = window.matchMedia('(orientation: landscape) and (max-height: 500px)');
 
+        function getSpacingValue(styles, propertyName) {
+            return parseFloat(styles.getPropertyValue(propertyName)) || 0;
+        }
+
+        function updateLandscapeScale() {
+            container.style.setProperty('--container-scale', '1');
+
+            if (!mobileLandscapeQuery.matches) {
+                return;
+            }
+
+            const bodyStyles = window.getComputedStyle(document.body);
+            const rootStyles = window.getComputedStyle(document.documentElement);
+            const availableWidth = window.innerWidth
+                - getSpacingValue(bodyStyles, 'padding-left')
+                - getSpacingValue(bodyStyles, 'padding-right');
+            const availableHeight = window.innerHeight
+                - getSpacingValue(bodyStyles, 'padding-top')
+                - getSpacingValue(bodyStyles, 'padding-bottom')
+                - getSpacingValue(rootStyles, '--float-distance');
+
+            const rect = container.getBoundingClientRect();
+            const scale = Math.min(1, availableWidth / rect.width, availableHeight / rect.height);
+
+            container.style.setProperty('--container-scale', scale.toFixed(4));
+        }
+
+        function startAnimations() {
+            body.classList.add('loaded');
+            updateLandscapeScale();
+        }
+
+        window.addEventListener('load', () => {
+            requestAnimationFrame(() => {
+                requestAnimationFrame(startAnimations);
+            });
+        });
+        
+        window.addEventListener('resize', updateLandscapeScale);
+        window.addEventListener('orientationchange', updateLandscapeScale);
+        mobileLandscapeQuery.addEventListener('change', updateLandscapeScale);
+
+        if (document.fonts?.ready) {
+            document.fonts.ready.then(updateLandscapeScale);
+        }
+
+        updateLandscapeScale();
+    </script>
 </body>
+
 </html>
