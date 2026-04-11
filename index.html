@@ -13,7 +13,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;900&display=swap" rel="stylesheet">
 
     <style>
-        /* ===== ROOT ===== */
         :root {
             --primary: #00d4ff;
             --secondary: #7c5cff;
@@ -36,7 +35,6 @@
             --viewport-padding: 1.25rem;
         }
 
-        /* ===== RESET ===== */
         * {
             margin: 0;
             padding: 0;
@@ -54,7 +52,6 @@
             text-rendering: optimizeLegibility;
         }
 
-        /* ===== BODY ===== */
         body {
             display: flex;
             justify-content: center;
@@ -77,7 +74,6 @@
             transition: opacity 0.3s ease;
         }
 
-        /* ===== ORBS ===== */
         .orb {
             position: absolute;
             border-radius: 50%;
@@ -101,7 +97,6 @@
             right: 10%;
         }
 
-        /* ===== CONTAINER ===== */
         .container {
             display: flex;
             flex-direction: column;
@@ -127,14 +122,12 @@
             transition: transform 0.6s ease;
         }
 
-        /* ===== LOGO ===== */
         .logo-img {
             width: var(--logo-size);
             height: var(--logo-size);
             margin-bottom: var(--logo-gap);
         }
 
-        /* ===== TEXT ===== */
         .logo-text {
             font-size: clamp(2rem, 6vw, 3.5rem);
             font-weight: 900;
@@ -171,7 +164,6 @@
             border: 2px solid var(--badge-ring);
         }
 
-        /* ===== ANIMATIONS (DELAYED START) ===== */
         body.loaded {
             opacity: 1;
         }
@@ -193,9 +185,7 @@
             animation: shimmer2 10s linear infinite alternate-reverse;
         }
 
-        /* ===== KEYFRAMES ===== */
         @keyframes floatLogo {
-
             0%,
             100% {
                 transform: translateY(0) scale(var(--container-scale));
@@ -286,45 +276,32 @@
     </div>
 
     <script>
-        /* ===== START ANIMATIONS AFTER STABLE PAINT ===== */
-        window.addEventListener('load', () =>
-        {
-            requestAnimationFrame(() =>
-            {
-                requestAnimationFrame(() =>
-                {
-                    document.body.classList.add('loaded');
-                    updateLandscapeScale();
-                });
-            });
-        });
-
-        /* ===== MOUSE PARALLAX (NO LAYOUT SHIFT) ===== */
+        const body = document.body;
         const container = document.querySelector('.container');
         const orb1 = document.getElementById('orb1');
         const orb2 = document.getElementById('orb2');
+        const mobileLandscapeQuery = window.matchMedia('(orientation: landscape) and (max-height: 500px)');
 
-        function updateLandscapeScale()
-        {
+        function getSpacingValue(styles, propertyName) {
+            return parseFloat(styles.getPropertyValue(propertyName)) || 0;
+        }
+
+        function updateLandscapeScale() {
             container.style.setProperty('--container-scale', '1');
 
-            const isMobileLandscape = window.matchMedia('(orientation: landscape) and (max-height: 500px)').matches;
-
-            if (!isMobileLandscape)
-            {
+            if (!mobileLandscapeQuery.matches) {
                 return;
             }
 
             const bodyStyles = window.getComputedStyle(document.body);
-            const availableWidth = window.innerWidth
-                - parseFloat(bodyStyles.paddingLeft)
-                - parseFloat(bodyStyles.paddingRight);
             const rootStyles = window.getComputedStyle(document.documentElement);
-            const floatOffset = parseFloat(rootStyles.getPropertyValue('--float-distance')) || 0;
+            const availableWidth = window.innerWidth
+                - getSpacingValue(bodyStyles, 'padding-left')
+                - getSpacingValue(bodyStyles, 'padding-right');
             const availableHeight = window.innerHeight
-                - parseFloat(bodyStyles.paddingTop)
-                - parseFloat(bodyStyles.paddingBottom)
-                - floatOffset;
+                - getSpacingValue(bodyStyles, 'padding-top')
+                - getSpacingValue(bodyStyles, 'padding-bottom')
+                - getSpacingValue(rootStyles, '--float-distance');
 
             const rect = container.getBoundingClientRect();
             const scale = Math.min(1, availableWidth / rect.width, availableHeight / rect.height);
@@ -332,20 +309,31 @@
             container.style.setProperty('--container-scale', scale.toFixed(4));
         }
 
-        document.addEventListener('mousemove', (e) =>
-        {
+        function updateOrbParallax(e) {
             const x = (e.clientX / window.innerWidth - 0.5);
             const y = (e.clientY / window.innerHeight - 0.5);
 
             orb1.style.transform = `translate(${x * 40}px, ${y * 40}px)`;
             orb2.style.transform = `translate(${x * -60}px, ${y * -60}px)`;
+        }
+
+        function startAnimations() {
+            body.classList.add('loaded');
+            updateLandscapeScale();
+        }
+
+        window.addEventListener('load', () => {
+            requestAnimationFrame(() => {
+                requestAnimationFrame(startAnimations);
+            });
         });
 
+        document.addEventListener('mousemove', updateOrbParallax);
         window.addEventListener('resize', updateLandscapeScale);
         window.addEventListener('orientationchange', updateLandscapeScale);
+        mobileLandscapeQuery.addEventListener('change', updateLandscapeScale);
 
-        if (document.fonts?.ready)
-        {
+        if (document.fonts?.ready) {
             document.fonts.ready.then(updateLandscapeScale);
         }
 
