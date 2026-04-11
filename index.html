@@ -78,7 +78,8 @@
             position: absolute;
             border-radius: 50%;
             filter: blur(80px);
-            opacity: 0.2;
+            opacity: 0;
+            transform: translate(0, 0
         }
 
         .orb.one {
@@ -178,7 +179,11 @@
         body.loaded .logo-text {
             animation: gradientShift 8s ease infinite;
         }
-
+        
+        body.loaded .orb {
+            opacity: 0.2;
+        }
+        
         body.loaded .orb.one {
             animation: shimmer 10s linear infinite alternate-reverse;
         }
