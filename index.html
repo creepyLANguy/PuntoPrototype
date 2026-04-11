@@ -33,6 +33,7 @@
             --headline-leading: 1.15;
             --container-scale: 1;
             --float-distance: 12px;
+            --viewport-padding: 1.25rem;
         }
 
         /* ===== RESET ===== */
@@ -61,7 +62,11 @@
             color: var(--text);
             position: relative;
             min-height: 100dvh;
-            padding: 1.25rem;
+            padding:
+                max(var(--viewport-padding), env(safe-area-inset-top))
+                max(var(--viewport-padding), env(safe-area-inset-right))
+                max(var(--viewport-padding), env(safe-area-inset-bottom))
+                max(var(--viewport-padding), env(safe-area-inset-left));
 
             background:
                 radial-gradient(circle at 20% 20%, rgba(0, 212, 255, 0.08), transparent 40%),
@@ -234,6 +239,37 @@
                 background-position: 0% 50%;
             }
         }
+
+        @media (orientation: landscape) and (max-height: 500px) {
+            :root {
+                --viewport-padding: 0.85rem;
+                --card-padding: clamp(0.9rem, 2.6vw, 1.35rem);
+                --logo-size: clamp(72px, 13vw, 108px);
+                --logo-gap: 0.65rem;
+                --brand-gap: 0.45rem;
+                --headline-gap: 0.7rem;
+                --headline-width: 24ch;
+                --headline-leading: 1.05;
+                --float-distance: 6px;
+            }
+
+            .container {
+                max-width: min(100%, 34rem);
+            }
+
+            .logo-text {
+                font-size: clamp(1.6rem, 4vw, 2.4rem);
+            }
+
+            h1 {
+                font-size: clamp(0.9rem, 2.5vw, 1.2rem);
+            }
+
+            .badge {
+                padding: 0.45rem 1rem;
+                font-size: clamp(0.68rem, 2vw, 0.82rem);
+            }
+        }
     </style>
 </head>
 
@@ -272,7 +308,7 @@
         {
             container.style.setProperty('--container-scale', '1');
 
-            const isMobileLandscape = window.matchMedia('(max-width: 767px) and (orientation: landscape)').matches;
+            const isMobileLandscape = window.matchMedia('(orientation: landscape) and (max-height: 500px)').matches;
 
             if (!isMobileLandscape)
             {
@@ -283,9 +319,12 @@
             const availableWidth = window.innerWidth
                 - parseFloat(bodyStyles.paddingLeft)
                 - parseFloat(bodyStyles.paddingRight);
+            const rootStyles = window.getComputedStyle(document.documentElement);
+            const floatOffset = parseFloat(rootStyles.getPropertyValue('--float-distance')) || 0;
             const availableHeight = window.innerHeight
                 - parseFloat(bodyStyles.paddingTop)
-                - parseFloat(bodyStyles.paddingBottom);
+                - parseFloat(bodyStyles.paddingBottom)
+                - floatOffset;
 
             const rect = container.getBoundingClientRect();
             const scale = Math.min(1, availableWidth / rect.width, availableHeight / rect.height);
