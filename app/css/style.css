@@ -1332,6 +1332,12 @@ body.light-mode .dm-table thead th {
   font-weight: 900;
 }
 
+/* In-progress set column — subtle styling to differentiate from completed sets */
+.dm-table .dm-current-set {
+  opacity: 0.55;
+  font-style: italic;
+}
+
 /* Separate the two team rows slightly */
 .dm-row-a td {
   padding-bottom: 4px;

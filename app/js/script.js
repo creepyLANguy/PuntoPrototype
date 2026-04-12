@@ -2167,7 +2167,7 @@ document.addEventListener("DOMContentLoaded", () =>
     {
       const getDetailedScore = httpsCallable(functions, "getDetailedScore");
       const result = await getDetailedScore({ courtId: currentCourtId });
-      const { sets } = result.data;
+      const { sets, currentGames } = result.data;
 
       // Overall set counts
       let totalSetsA = 0, totalSetsB = 0;
@@ -2179,10 +2179,18 @@ document.addEventListener("DOMContentLoaded", () =>
       elements.detailsSetsA.textContent = totalSetsA;
       elements.detailsSetsB.textContent = totalSetsB;
 
+      // Include the current (in-progress) set if any games have been played
+      const hasCurrentSet = currentGames && (currentGames.A > 0 || currentGames.B > 0);
+      const allSets = hasCurrentSet ? [...sets, currentGames] : [...sets];
+
       // Build table header:  [marker-col] S1 S2 S3 …
-      const mkTh = (text) => { const th = document.createElement("th"); th.textContent = text; return th; };
+      const mkTh = (text, extraClass) => { const th = document.createElement("th"); th.textContent = text; if (extraClass) th.className = extraClass; return th; };
       headRow.appendChild(mkTh(""));          // marker col
-      sets.forEach((_, i) => headRow.appendChild(mkTh(`S${i + 1}`)));
+      allSets.forEach((_, i) =>
+      {
+        const isCurrentSet = hasCurrentSet && i === allSets.length - 1;
+        headRow.appendChild(mkTh(`S${i + 1}`, isCurrentSet ? "dm-current-set" : ""));
+      });
 
       // Helper: create a table row for one team
       const mkRow = (team, setsData) =>
@@ -2198,21 +2206,23 @@ document.addEventListener("DOMContentLoaded", () =>
         tr.appendChild(markerTd);
 
         // Score cells
-        setsData.forEach(s =>
+        setsData.forEach((s, i) =>
         {
           const td = document.createElement("td");
           const score = team === "a" ? s.A : s.B;
           const opponentScore = team === "a" ? s.B : s.A;
           td.textContent = score;
           if (score > opponentScore) td.classList.add("dm-won");
+          const isCurrentSet = hasCurrentSet && i === setsData.length - 1;
+          if (isCurrentSet) td.classList.add("dm-current-set");
           tr.appendChild(td);
         });
 
         return tr;
       };
 
-      elements.dmBody.appendChild(mkRow("a", sets));
-      elements.dmBody.appendChild(mkRow("b", sets));
+      elements.dmBody.appendChild(mkRow("a", allSets));
+      elements.dmBody.appendChild(mkRow("b", allSets));
     }
     catch (err)
     {
