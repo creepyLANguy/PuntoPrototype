@@ -8,24 +8,16 @@
     ],
     "rewrites": [
       {
-        "source": "/nfctool",
-        "destination": "/nfcWriter/index.html"
-      },
-      {
-        "source": "/nfc/**",
-        "destination": "/nfcWriter/index.html"
+        "source": "**",
+        "destination": "/index.html"
       },
       {
         "source": "/app",
         "destination": "/app/index.html"
       },
       {
-        "source": "/app/**",
-        "destination": "/app/index.html"
-      },
-      {
-        "source": "**",
-        "destination": "/index.html"
+        "source": "/nfc",
+        "destination": "/nfcWriter/index.html"
       }
     ]
   },
