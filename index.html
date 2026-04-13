@@ -70,21 +70,6 @@
             transition: opacity 0.5s ease;
         }
 
-        /* ─── Animated grid overlay ─── */
-        body::before {
-            content: '';
-            position: fixed;
-            inset: 0;
-            background-image:
-                linear-gradient(rgba(200, 255, 0, 0.02) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(200, 255, 0, 0.02) 1px, transparent 1px);
-            background-size: 60px 60px;
-            mask-image: radial-gradient(ellipse 70% 60% at 50% 50%, black 20%, transparent 70%);
-            -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 50%, black 20%, transparent 70%);
-            pointer-events: none;
-            z-index: 0;
-        }
-
         /* ─── Gradient orbs ─── */
         .orb {
             position: absolute;
