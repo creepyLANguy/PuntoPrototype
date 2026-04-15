@@ -12,38 +12,40 @@
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;700;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;900&display=swap"
+        rel="stylesheet">
 
     <style>
         :root {
             --accent: #c8ff00;
-            --accent-dim: rgba(200, 255, 0, 0.35);
+            --accent-glow: rgba(200, 255, 0, 0.4);
+            --accent-dim: rgba(200, 255, 0, 0.15);
             --primary: #00d4ff;
             --secondary: #7c5cff;
-            --bg-dark: #04060c;
+            --bg-dark: #03050a;
             --bg-surface: #0a0e1a;
-            --text: #f0f2f8;
-            --text-muted: rgba(240, 242, 248, 0.9);
-            --glass-bg: rgba(255, 255, 255, 0.04);
+            --text: #ffffff;
+            --text-muted: rgba(255, 255, 255, 0.7);
+            --glass-bg: rgba(255, 255, 255, 0.03);
             --glass-border: rgba(255, 255, 255, 0.08);
-            --card-radius: 24px;
-            --card-padding: clamp(2rem, 5vw, 3.5rem);
-            --logo-size: 150px;
-            --logo-gap: 1.8rem;
-            --brand-gap: 0.6rem;
-            --headline-gap: 1.6rem;
-            --headline-width: 35ch;
-            --headline-leading: 1.25;
+            --card-radius: 32px;
+            --card-padding: clamp(2.5rem, 6vw, 4rem);
+            --logo-size: clamp(120px, 15vw, 160px);
+            --logo-gap: 2rem;
+            --brand-gap: 0.75rem;
+            --headline-gap: 2rem;
+            --headline-width: 38ch;
+            --headline-leading: 1.3;
             --container-scale: 1;
-            --float-distance: 10px;
-            --viewport-padding: 1.5rem;
+            --float-distance: 12px;
+            --viewport-padding: 2rem;
         }
 
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: 'Outfit', system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+            font-family: 'Outfit', system-ui, -apple-system, sans-serif;
         }
 
         html,
@@ -51,80 +53,71 @@
             height: 100%;
             width: 100%;
             overflow: hidden;
-            font-synthesis: none;
-            text-rendering: optimizeLegibility;
+            background: var(--bg-dark);
+            color: var(--text);
             -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
         }
 
         body {
             display: flex;
             justify-content: center;
             align-items: center;
-            color: var(--text);
-            position: relative;
             min-height: 100dvh;
-            padding:
-                max(var(--viewport-padding), env(safe-area-inset-top)) max(var(--viewport-padding), env(safe-area-inset-right)) max(var(--viewport-padding), env(safe-area-inset-bottom)) max(var(--viewport-padding), env(safe-area-inset-left));
-            background: var(--bg-dark);
+            padding: var(--viewport-padding);
+            perspective: 1000px;
             opacity: 0;
-            transition: opacity 0.5s ease;
+            transition: opacity 1s ease;
+        }
+
+        body.loaded {
+            opacity: 1;
         }
 
         /* ─── Gradient orbs ─── */
         .orb {
             position: absolute;
             border-radius: 50%;
-            filter: blur(100px);
+            filter: blur(120px);
             opacity: 0;
-            transition: opacity 1.2s ease;
+            transition: opacity 1.5s ease;
             will-change: transform;
+            pointer-events: none;
+            z-index: 0;
         }
 
         body.loaded .orb {
-            opacity: 1;
+            opacity: 0.25;
         }
 
         .orb.one {
-            width: 380px;
-            height: 380px;
+            width: 45vw;
+            height: 45vw;
             background: radial-gradient(circle, var(--primary), transparent 70%);
-            top: 8%;
-            left: 8%;
-            opacity: 0.18;
+            top: -10%;
+            left: -5%;
         }
 
         .orb.two {
-            width: 500px;
-            height: 500px;
+            width: 50vw;
+            height: 50vw;
             background: radial-gradient(circle, var(--secondary), transparent 70%);
-            bottom: 5%;
-            right: 5%;
-            opacity: 0.15;
+            bottom: -15%;
+            right: -5%;
         }
 
         .orb.three {
-            width: 300px;
-            height: 300px;
+            width: 35vw;
+            height: 35vw;
             background: radial-gradient(circle, var(--accent), transparent 70%);
-            top: 50%;
-            left: 55%;
+            top: 40%;
+            left: 50%;
             transform: translate(-50%, -50%);
-            opacity: 0.06;
-        }
-
-        body.loaded .orb.one {
-            opacity: 0.18;
-            animation: orbDrift1 14s ease-in-out infinite alternate;
-        }
-
-        body.loaded .orb.two {
-            opacity: 0.15;
-            animation: orbDrift2 16s ease-in-out infinite alternate;
+            opacity: 0;
         }
 
         body.loaded .orb.three {
-            opacity: 0.06;
-            animation: orbDrift3 12s ease-in-out infinite alternate;
+            opacity: 0.1;
         }
 
         /* ─── Particle canvas ─── */
@@ -133,48 +126,135 @@
             inset: 0;
             z-index: 1;
             pointer-events: none;
+            opacity: 0.4;
         }
 
         /* ─── Card container ─── */
+        .container-wrapper {
+            position: relative;
+            z-index: 10;
+            width: 100%;
+            max-width: 600px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
         .container {
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: center;
             text-align: center;
-            z-index: 3;
-            max-width: 560px;
             width: 100%;
             padding: var(--card-padding);
             position: relative;
 
             background: var(--glass-bg);
             border: 1px solid var(--glass-border);
-            backdrop-filter: blur(24px) saturate(1.3);
-            -webkit-backdrop-filter: blur(24px) saturate(1.3);
+            backdrop-filter: blur(32px) saturate(1.8);
+            -webkit-backdrop-filter: blur(32px) saturate(1.8);
             border-radius: var(--card-radius);
 
             box-shadow:
-                0 0 0 1px rgba(200, 255, 0, 0.04),
-                0 8px 40px rgba(0, 0, 0, 0.4),
-                0 0 80px rgba(124, 92, 255, 0.08),
-                0 0 120px rgba(0, 212, 255, 0.06);
-
-            transform: translateY(20px) scale(calc(var(--container-scale) * 0.97));
-            transform-origin: center center;
-            transition: transform 0.8s cubic-bezier(0.23, 1, 0.32, 1);
+                0 0 0 1px rgba(255, 255, 255, 0.05),
+                0 20px 50px rgba(0, 0, 0, 0.5),
+                0 0 100px rgba(124, 92, 255, 0.1);
         }
 
-        /* Subtle accent glow line at top of card */
-        .container::before {
+        /* Inner shine effect */
+        .container-shine {
+            position: absolute;
+            inset: 0;
+            border-radius: inherit;
+            background: radial-gradient(circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
+                    rgba(255, 255, 255, 0.08) 0%,
+                    transparent 60%);
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        /* ─── Badge ─── */
+        .badge-wrapper {
+            margin-bottom: 2rem;
+            opacity: 0;
+            transform: translateY(-10px);
+            transition: all 0.8s cubic-bezier(0.23, 1, 0.32, 1);
+            transition-delay: 0.2s;
+        }
+
+        body.loaded .badge-wrapper {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.6rem;
+            padding: 0.6rem 1.4rem;
+            font-size: 0.75rem;
+            font-weight: 700;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            border-radius: 100px;
+            color: var(--accent);
+            background: rgba(200, 255, 0, 0.1);
+            border: 1px solid var(--accent-dim);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .badge .dot {
+            width: 6px;
+            height: 6px;
+            background: var(--accent);
+            border-radius: 50%;
+            display: inline-block;
+            box-shadow: 0 0 10px var(--accent);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                opacity: 1;
+                transform: scale(1);
+            }
+
+            50% {
+                opacity: 0.5;
+                transform: scale(1.2);
+            }
+
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        .badge::after {
             content: '';
             position: absolute;
-            bottom: -1px;
-            left: 15%;
-            right: 15%;
-            height: 2px;
-            background: linear-gradient(90deg, transparent, var(--accent-dim), transparent);
-            border-radius: 999px;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg,
+                    transparent,
+                    rgba(200, 255, 0, 0.1),
+                    transparent);
+            transform: rotate(45deg);
+            animation: badgeShine 3s infinite;
+        }
+
+        @keyframes badgeShine {
+            0% {
+                transform: translateX(-100%) rotate(45deg);
+            }
+
+            100% {
+                transform: translateX(100%) rotate(45deg);
+            }
         }
 
         /* ─── Logo ─── */
@@ -186,320 +266,205 @@
             display: flex;
             align-items: center;
             justify-content: center;
-        }
-
-        /* Pulsing glow ring */
-        .logo-wrapper::before {
-            content: '';
-            position: absolute;
-            inset: -12px;
-            border-radius: 50%;
-            background: radial-gradient(circle, var(--accent-dim), transparent 70%);
-            opacity: 0;
-            transition: opacity 0.8s ease;
-        }
-
-        body.loaded .logo-wrapper::before {
-            animation: logoPulse 4s ease-in-out infinite;
+            z-index: 2;
         }
 
         .logo-img {
             width: 100%;
             height: 100%;
-            position: relative;
-            z-index: 1;
-            filter: drop-shadow(0 0 20px rgba(200, 255, 0, 0.15));
+            filter: drop-shadow(0 0 30px var(--accent-glow));
             opacity: 0;
-            transform: scale(0.85);
-            transition: opacity 0.6s ease, transform 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+            transform: scale(0.8) translateZ(30px);
+            transition: all 1s cubic-bezier(0.23, 1, 0.32, 1);
+            transition-delay: 0.4s;
         }
 
         body.loaded .logo-img {
             opacity: 1;
-            transform: scale(1);
-            transition-delay: 0.15s;
+            transform: scale(1) translateZ(30px);
         }
 
         /* ─── Brand text ─── */
         .logo-text {
-            font-size: clamp(2.2rem, 6.5vw, 3.5rem);
+            font-size: clamp(2.8rem, 8vw, 4rem);
             font-weight: 900;
             margin-bottom: var(--brand-gap);
             text-transform: uppercase;
-            letter-spacing: 0.04em;
+            letter-spacing: -0.01em;
+            line-height: 1;
 
-            background: linear-gradient(135deg, var(--accent) 0%, #fff 50%, var(--accent) 100%);
-            background-size: 300% 300%;
+            background: linear-gradient(to bottom, #fff 40%, rgba(255, 255, 255, 0.7) 100%);
             background-clip: text;
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
 
             opacity: 0;
-            transform: translateY(10px);
-            transition: opacity 0.6s ease, transform 0.6s ease;
+            transform: translateY(20px) translateZ(20px);
+            transition: all 0.8s cubic-bezier(0.23, 1, 0.32, 1);
+            transition-delay: 0.5s;
         }
 
         body.loaded .logo-text {
             opacity: 1;
-            transform: translateY(0);
-            transition-delay: 0.3s;
-            animation: gradientShift 6s ease infinite;
-            animation-delay: 0.3s;
+            transform: translateY(0) translateZ(20px);
         }
 
         /* ─── Heading ─── */
         h1 {
-            font-size: clamp(1rem, 3.2vw, 1.5rem);
-            font-weight: 300;
+            font-size: clamp(1.1rem, 3.5vw, 1.4rem);
+            font-weight: 400;
             margin-bottom: var(--headline-gap);
             color: var(--text-muted);
             max-width: var(--headline-width);
             line-height: var(--headline-leading);
             text-wrap: balance;
-            letter-spacing: 0.01em;
+            letter-spacing: 0.02em;
 
             opacity: 0;
-            transform: translateY(8px);
-            transition: opacity 0.6s ease, transform 0.6s ease;
+            transform: translateY(20px) translateZ(10px);
+            transition: all 0.8s cubic-bezier(0.23, 1, 0.32, 1);
+            transition-delay: 0.6s;
         }
 
         body.loaded h1 {
             opacity: 1;
-            transform: translateY(0);
-            transition-delay: 0.45s;
+            transform: translateY(0) translateZ(10px);
         }
 
-        /* ─── Badge ─── */
-        .badge {
-            display: inline-block;
-            padding: 0.55rem 1.6rem;
-            font-size: clamp(0.65rem, 2.2vw, 0.8rem);
-            font-weight: 700;
-            letter-spacing: 3px;
-            border-radius: 100px;
-            color: var(--bg-dark);
-            background: var(--accent);
-            border: none;
-            box-shadow: 0 0 30px rgba(200, 255, 0, 0.4), 0 0 80px rgba(200, 255, 0, 0.15);
-        }
-
-        /* ─── Platforms ─── */
-        /* ─── Info Section (Restructured) ─── */
+        /* ─── Info Section ─── */
         .info-section {
-            margin-top: 1rem;
-            padding-top: 2.5rem;
             width: 100%;
+            padding-top: 2.5rem;
+            margin-top: 1rem;
             border-top: 1px solid var(--glass-border);
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 1.8rem;
+            gap: 2rem;
             opacity: 0;
-            transform: translateY(10px);
-            transition: opacity 0.8s cubic-bezier(0.23, 1, 0.32, 1), transform 0.8s cubic-bezier(0.23, 1, 0.32, 1);
+            transform: translateY(20px);
+            transition: all 1s cubic-bezier(0.23, 1, 0.32, 1);
+            transition-delay: 0.7s;
         }
 
         body.loaded .info-section {
             opacity: 1;
             transform: translateY(0);
-            transition-delay: 0.6s;
-        }
-
-        .platform-container {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 0.5rem;
         }
 
         .platform-text {
-            font-size: clamp(0.75rem, 2.2vw, 0.85rem);
-            font-weight: 400;
+            font-size: 0.85rem;
+            font-weight: 500;
             color: var(--text-muted);
-            letter-spacing: 0.05em;
+            letter-spacing: 0.1em;
             text-transform: uppercase;
-            opacity: 0.6;
         }
 
         /* ─── Hardware ─── */
         .hardware-announce {
             display: flex;
             flex-direction: column;
-
+            gap: 0.8rem;
         }
 
         .hw-label {
-            font-size: 0.65rem;
-            font-weight: 700;
-            letter-spacing: 0.2em;
+            font-size: 0.7rem;
+            font-weight: 600;
+            letter-spacing: 0.15em;
             text-transform: uppercase;
             color: var(--accent);
-            opacity: 0.8;
-            text-wrap: balance;
-        }
-
-        .hw-items {
-            font-size: clamp(0.85rem, 2.5vw, 1.05rem);
-            font-weight: 300;
-            color: var(--text);
-            display: flex;
-            justify-content: center;
-            gap: 0.8rem;
-            margin-top: 0.5rem;
-        }
-
-        .hw-items span {
             opacity: 0.9;
         }
 
-        .hw-items .sep {
-            opacity: 0.2;
+        .hw-list {
+            display: flex;
+            justify-content: center;
+            gap: 1.5rem;
+            flex-wrap: wrap;
         }
 
-        /* ─── Loaded state — float ─── */
-        body.loaded {
-            opacity: 1;
+        .hw-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.25rem;
         }
 
-        body.loaded .container {
-            animation: floatCard 7s ease-in-out infinite;
-            animation-delay: 0.8s;
-            transform: translateY(0) scale(var(--container-scale));
+        .hw-name {
+            font-size: 1.1rem;
+            font-weight: 500;
+            color: #fff;
         }
 
-        /* ─── Keyframes ─── */
-        @keyframes floatCard {
+        .hw-status {
+            font-size: 0.6rem;
+            font-weight: 700;
+            color: var(--text-muted);
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
+
+        /* ─── Animation helpers ─── */
+        @keyframes float {
 
             0%,
             100% {
-                transform: translateY(0) scale(var(--container-scale));
+                transform: translateY(0);
             }
 
             50% {
-                transform: translateY(calc(-1 * var(--float-distance))) scale(var(--container-scale));
+                transform: translateY(calc(-1 * var(--float-distance)));
             }
         }
 
-        @keyframes orbDrift1 {
-            from {
-                transform: translate(0, 0) scale(1);
-            }
-
-            to {
-                transform: translate(-80px, 60px) scale(1.15);
-            }
-        }
-
-        @keyframes orbDrift2 {
-            from {
-                transform: translate(0, 0) scale(1);
-            }
-
-            to {
-                transform: translate(100px, -80px) scale(0.9);
-            }
-        }
-
-        @keyframes orbDrift3 {
-            from {
-                transform: translate(-50%, -50%) scale(1);
-            }
-
-            to {
-                transform: translate(calc(-50% + 60px), calc(-50% - 40px)) scale(1.2);
-            }
-        }
-
-        @keyframes gradientShift {
-            0% {
-                background-position: 0% 50%;
-            }
-
-            50% {
-                background-position: 100% 50%;
-            }
-
-            100% {
-                background-position: 0% 50%;
-            }
-        }
-
-        @keyframes logoPulse {
-
-            0%,
-            100% {
-                opacity: 0.3;
-                transform: scale(1);
-            }
-
-            50% {
-                opacity: 0.6;
-                transform: scale(1.08);
-            }
-        }
-
-        /* ─── Landscape mobile ─── */
-        @media (orientation: landscape) and (max-height: 500px) {
+        /* ─── Mobile Optimizations ─── */
+        @media (max-width: 480px) {
             :root {
-                --viewport-padding: 0.85rem;
-                --card-padding: clamp(0.9rem, 2.6vw, 1.35rem);
-                --logo-size: clamp(64px, 12vw, 96px);
-                --logo-gap: 0.5rem;
-                --brand-gap: 0.3rem;
-                --headline-gap: 0.6rem;
-                --headline-width: 28ch;
-                --headline-leading: 1.1;
-                --float-distance: 5px;
+                --card-padding: 2rem 1.5rem;
+                --logo-gap: 1.5rem;
+                --headline-gap: 1.5rem;
             }
 
-            .container {
-                max-width: min(100%, 34rem);
+            .hw-list {
+                gap: 1rem;
             }
 
-            .logo-text {
-                font-size: clamp(1.5rem, 4vw, 2.2rem);
-            }
-
-            h1 {
-                font-size: clamp(0.85rem, 2.3vw, 1.1rem);
-            }
-
-            .badge {
-                padding: 0.4rem 1rem;
-                font-size: clamp(0.6rem, 1.8vw, 0.72rem);
-            }
-
-            .platform-container {
-                margin-top: 1.2rem;
-                gap: 0.6rem;
-            }
-
-            .platform-text {
-                font-size: 0.7rem;
-            }
-
-            .hardware-announce {
-                padding-top: 1.2rem;
-            }
-
-            .hw-items {
-                font-size: 0.8rem;
-                gap: 0.5rem;
-            }
-
-            .logo-wrapper::before {
-                inset: -6px;
+            .hw-name {
+                font-size: 0.95rem;
             }
         }
 
-        /* Reduced motion */
-        @media (prefers-reduced-motion: reduce) {
+        /* Landscape fix for small screens */
+        @media (orientation: landscape) and (max-height: 500px) {
+            body {
+                padding: 1rem;
+                overflow-y: auto;
+                align-items: flex-start;
+            }
 
-            *,
-            *::before,
-            *::after {
-                animation-duration: 0.01s !important;
-                transition-duration: 0.01s !important;
+            .container-wrapper {
+                margin: 2rem 0;
+            }
+
+            :root {
+                --logo-size: 80px;
+                --card-padding: 1.5rem;
+            }
+
+            .badge-wrapper {
+                margin-bottom: 1rem;
+            }
+
+            .info-section {
+                padding-top: 1.5rem;
+                gap: 1rem;
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            * {
+                animation: none !important;
+                transition: none !important;
             }
         }
     </style>
@@ -508,176 +473,118 @@
 <body>
     <canvas id="particles" aria-hidden="true"></canvas>
 
-    <div class="orb one" id="orb1"></div>
-    <div class="orb two" id="orb2"></div>
-    <div class="orb three" id="orb3"></div>
+    <div class="orb one"></div>
+    <div class="orb two"></div>
+    <div class="orb three"></div>
 
-    <div class="container" id="mainCard">
-        <div class="logo-wrapper">
-            <img src="app/media/img/logo.svg" alt="Padel Push Logo" class="logo-img" width="150" height="150">
-        </div>
-
-        <div class="logo-text">Padel Push</div>
-        <h1>Simpler, Smarter Scoring</h1>
-        <div class="info-section">
-            <div class="badge" id="badge">COMING SOON</div>
-
-            <div class="platform-container">
-                <div class="platform-text">Android • iOS • Web</div>
+    <div class="container-wrapper">
+        <div class="container" id="mainCard">
+            <div class="badge-wrapper">
+                <div class="badge">
+                    <span class="dot"></span>
+                    Coming Soon
+                </div>
             </div>
 
-            <div class="hardware-announce">
-                <div class="hw-label">Launching with next-gen hardware</div>
+            <div class="logo-wrapper">
+                <img src="app/media/img/logo.svg" alt="Padel Push Logo" class="logo-img">
+            </div>
 
-                <div class="hw-items">
-                    <span>Beacon</span>
-                    <span class="sep">/</span>
-                    <span>Beacon Pro</span>
-                    <span class="sep">/</span>
-                    <span>Pulse Mini</span>
+            <div class="logo-text">Padel Push</div>
+            <h1>Simpler, Smarter Scoring</h1>
+
+            <div class="info-section">
+                <div class="platform-text">Coming to Android • iOS • Web</div>
+
+                <div class="hardware-announce">
+                    <div class="hw-label">Next-Gen Hardware Early Access</div>
+                    <div class="hw-list">
+                        <div class="hw-item">
+                            <span class="hw-name">Beacon Pro</span>
+                            <span class="hw-status">Flagship</span>
+                        </div>
+                        <div class="hw-item">
+                            <span class="hw-name">Beacon Basic</span>
+                            <span class="hw-status">Core Series</span>
+                        </div>
+                        <div class="hw-item">
+                            <span class="hw-name">Pulse Mini</span>
+                            <span class="hw-status">Ultra Portable</span>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
     <script>
-        /* ─── References ─── */
-        const body = document.body;
-        const container = document.getElementById('mainCard');
+        const card = document.getElementById('mainCard');
         const canvas = document.getElementById('particles');
         const ctx = canvas.getContext('2d');
-        const orb1 = document.getElementById('orb1');
-        const orb2 = document.getElementById('orb2');
-        const mobileLandscapeQuery = window.matchMedia('(orientation: landscape) and (max-height: 500px)');
 
-        /* ─── Particle system ─── */
+        // Particle System
         let particles = [];
-        const PARTICLE_COUNT = 150;
-
-        function resizeCanvas()
+        function resize()
         {
             canvas.width = window.innerWidth;
             canvas.height = window.innerHeight;
+            initParticles();
         }
 
-        function createParticles()
+        function initParticles()
         {
             particles = [];
-            for (let i = 0; i < PARTICLE_COUNT; i++)
+            const count = Math.min(window.innerWidth / 10, 100);
+            for (let i = 0; i < count; i++)
             {
                 particles.push({
                     x: Math.random() * canvas.width,
                     y: Math.random() * canvas.height,
-                    size: Math.random() * 1.5 + 0.3,
-                    speedX: (Math.random() - 0.5) * 0.3,
-                    speedY: (Math.random() - 0.5) * 0.3,
-                    opacity: Math.random() * 0.4 + 0.05,
-                    pulse: Math.random() * Math.PI * 2,
+                    size: Math.random() * 2 + 0.5,
+                    vx: (Math.random() - 0.5) * 0.4,
+                    vy: (Math.random() - 0.5) * 0.4,
+                    o: Math.random() * 0.5 + 0.2
                 });
             }
         }
 
-        function drawParticles()
+        function animate()
         {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            for (const p of particles)
+            particles.forEach(p =>
             {
-                p.x += p.speedX;
-                p.y += p.speedY;
-                p.pulse += 0.015;
-
-                // Wrap around
+                p.x += p.vx;
+                p.y += p.vy;
                 if (p.x < 0) p.x = canvas.width;
                 if (p.x > canvas.width) p.x = 0;
                 if (p.y < 0) p.y = canvas.height;
                 if (p.y > canvas.height) p.y = 0;
 
-                const flicker = 0.5 + 0.5 * Math.sin(p.pulse);
-                ctx.globalAlpha = p.opacity * flicker;
-                ctx.fillStyle = '#c8ff00';
+                ctx.fillStyle = `rgba(200, 255, 0, ${p.o})`;
                 ctx.beginPath();
                 ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
                 ctx.fill();
-            }
-            requestAnimationFrame(drawParticles);
-        }
-
-        resizeCanvas();
-        createParticles();
-        drawParticles();
-        window.addEventListener('resize', () =>
-        {
-            resizeCanvas();
-            createParticles();
-        });
-
-        /* ─── Landscape scale helper ─── */
-        function getSpacingValue(styles, propertyName)
-        {
-            return parseFloat(styles.getPropertyValue(propertyName)) || 0;
-        }
-
-        function updateLandscapeScale()
-        {
-            container.style.setProperty('--container-scale', '1');
-
-            if (!mobileLandscapeQuery.matches)
-            {
-                return;
-            }
-
-            const bodyStyles = window.getComputedStyle(document.body);
-            const rootStyles = window.getComputedStyle(document.documentElement);
-            const availableWidth = window.innerWidth
-                - getSpacingValue(bodyStyles, 'padding-left')
-                - getSpacingValue(bodyStyles, 'padding-right');
-            const availableHeight = window.innerHeight
-                - getSpacingValue(bodyStyles, 'padding-top')
-                - getSpacingValue(bodyStyles, 'padding-bottom')
-                - getSpacingValue(rootStyles, '--float-distance');
-
-            const rect = container.getBoundingClientRect();
-            const scale = Math.min(1, availableWidth / rect.width, availableHeight / rect.height);
-
-            container.style.setProperty('--container-scale', scale.toFixed(4));
-        }
-
-        /* ─── Orb parallax on mouse ─── */
-        function updateOrbParallax(e)
-        {
-            const x = (e.clientX / window.innerWidth - 0.5);
-            const y = (e.clientY / window.innerHeight - 0.5);
-
-            orb1.style.transform = `translate(${x * 50}px, ${y * 50}px)`;
-            orb2.style.transform = `translate(${x * -70}px, ${y * -70}px)`;
-        }
-
-        /* ─── Init ─── */
-        function startAnimations()
-        {
-            body.classList.add('loaded');
-            updateLandscapeScale();
-        }
-
-        window.addEventListener('load', () =>
-        {
-            requestAnimationFrame(() =>
-            {
-                requestAnimationFrame(startAnimations);
             });
-        });
-
-        document.addEventListener('mousemove', updateOrbParallax);
-        window.addEventListener('resize', updateLandscapeScale);
-        window.addEventListener('orientationchange', updateLandscapeScale);
-        mobileLandscapeQuery.addEventListener('change', updateLandscapeScale);
-
-        if (document.fonts?.ready)
-        {
-            document.fonts.ready.then(updateLandscapeScale);
+            requestAnimationFrame(animate);
         }
 
-        updateLandscapeScale();
+        window.addEventListener('resize', resize);
+        resize();
+        animate();
+
+        // Reveal effect
+        function revealPage()
+        {
+            document.body.classList.add('loaded');
+        }
+
+        if (document.readyState === 'loading')
+        {
+            document.addEventListener('DOMContentLoaded', () => setTimeout(revealPage, 100));
+        } else
+        {
+            setTimeout(revealPage, 100);
+        }
     </script>
 </body>
 
