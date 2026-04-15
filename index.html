@@ -32,7 +32,7 @@
             --logo-gap: 1.8rem;
             --brand-gap: 0.6rem;
             --headline-gap: 1.6rem;
-            --headline-width: 22ch;
+            --headline-width: 35ch;
             --headline-leading: 1.25;
             --container-scale: 1;
             --float-distance: 10px;
@@ -143,7 +143,7 @@
             justify-content: center;
             text-align: center;
             z-index: 3;
-            max-width: 520px;
+            max-width: 560px;
             width: 100%;
             padding: var(--card-padding);
             position: relative;
@@ -169,7 +169,7 @@
         .container::before {
             content: '';
             position: absolute;
-            top: -1px;
+            bottom: -1px;
             left: 15%;
             right: 15%;
             height: 2px;
@@ -281,34 +281,35 @@
             background: var(--accent);
             border: none;
             box-shadow: 0 0 30px rgba(200, 255, 0, 0.4), 0 0 80px rgba(200, 255, 0, 0.15);
-
-            opacity: 0;
-            transform: translateY(8px);
-            transition: opacity 0.6s ease, transform 0.6s ease;
-        }
-
-        body.loaded .badge {
-            opacity: 1;
-            transform: translateY(0);
-            transition-delay: 0.6s;
         }
 
         /* ─── Platforms ─── */
-        .platform-container {
-            margin-top: 2rem;
+        /* ─── Info Section (Restructured) ─── */
+        .info-section {
+            margin-top: 1rem;
+            padding-top: 2.5rem;
+            width: 100%;
+            border-top: 1px solid var(--glass-border);
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 1rem;
+            gap: 1.8rem;
             opacity: 0;
             transform: translateY(10px);
             transition: opacity 0.8s cubic-bezier(0.23, 1, 0.32, 1), transform 0.8s cubic-bezier(0.23, 1, 0.32, 1);
         }
 
-        body.loaded .platform-container {
+        body.loaded .info-section {
             opacity: 1;
             transform: translateY(0);
-            transition-delay: 0.75s;
+            transition-delay: 0.6s;
+        }
+
+        .platform-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
         }
 
         .platform-text {
@@ -322,22 +323,9 @@
 
         /* ─── Hardware ─── */
         .hardware-announce {
-            margin-top: 2.8rem;
-            padding-top: 2rem;
-            width: 100%;
-            border-top: 1px solid var(--glass-border);
             display: flex;
             flex-direction: column;
-            gap: 0.6rem;
-            opacity: 0;
-            transform: translateY(10px);
-            transition: opacity 0.8s cubic-bezier(0.23, 1, 0.32, 1), transform 0.8s cubic-bezier(0.23, 1, 0.32, 1);
-        }
 
-        body.loaded .hardware-announce {
-            opacity: 1;
-            transform: translateY(0);
-            transition-delay: 0.9s;
         }
 
         .hw-label {
@@ -347,6 +335,7 @@
             text-transform: uppercase;
             color: var(--accent);
             opacity: 0.8;
+            text-wrap: balance;
         }
 
         .hw-items {
@@ -356,6 +345,7 @@
             display: flex;
             justify-content: center;
             gap: 0.8rem;
+            margin-top: 0.5rem;
         }
 
         .hw-items span {
@@ -489,7 +479,6 @@
             }
 
             .hardware-announce {
-                margin-top: 1.5rem;
                 padding-top: 1.2rem;
             }
 
@@ -530,21 +519,23 @@
 
         <div class="logo-text">Padel Push</div>
         <h1>Match Scoring, Made Easy</h1>
-        <div class="badge" id="badge">COMING SOON</div>
+        <div class="info-section">
+            <div class="badge" id="badge">COMING SOON</div>
 
-        <div class="platform-container">
-            <div class="platform-text">Android • iOS • Web</div>
-        </div>
+            <div class="platform-container">
+                <div class="platform-text">Android • iOS • Web</div>
+            </div>
 
-        <div class="hardware-announce">
-            <div class="hw-label">Powered by next-gen hardware</div>
+            <div class="hardware-announce">
+                <div class="hw-label">Launching with next-gen hardware</div>
 
-            <div class="hw-items">
-                <span>Beacon</span>
-                <span class="sep">/</span>
-                <span>Beacon Pro</span>
-                <span class="sep">/</span>
-                <span>Pulse Mini</span>
+                <div class="hw-items">
+                    <span>Beacon</span>
+                    <span class="sep">/</span>
+                    <span>Beacon Pro</span>
+                    <span class="sep">/</span>
+                    <span>Pulse Mini</span>
+                </div>
             </div>
         </div>
     </div>
