@@ -404,13 +404,16 @@
             text-transform: uppercase;
             color: var(--accent);
             opacity: 0.9;
+            text-wrap: balance;
+            margin-bottom: 5%;
         }
 
         .hw-list {
             display: flex;
             justify-content: center;
             gap: 1.5rem;
-            flex-wrap: wrap;
+            flex-wrap: nowrap;
+            width: 100%;
         }
 
         .hw-item {
@@ -418,6 +421,8 @@
             flex-direction: column;
             align-items: center;
             gap: 0.25rem;
+            flex: 1 1 0;
+            min-width: 0;
         }
 
         .hw-name {
@@ -471,7 +476,7 @@
             }
 
             .hw-list {
-                gap: 1rem;
+                gap: 0.5rem;
             }
 
             .hw-name {
