@@ -25,9 +25,9 @@
             --bg-dark: #03050a;
             --bg-surface: #0a0e1a;
             --text: #ffffff;
-            --text-muted: rgba(255, 255, 255, 0.7);
-            --glass-bg: rgba(255, 255, 255, 0.03);
-            --glass-border: rgba(255, 255, 255, 0.08);
+            --text-muted: rgba(255, 255, 255, 0.85);
+            --glass-bg: rgba(255, 255, 255, 0.05);
+            --glass-border: rgba(255, 255, 255, 0.12);
             --card-radius: 32px;
             --card-padding: clamp(2.5rem, 6vw, 4rem);
             --logo-size: clamp(120px, 15vw, 160px);
@@ -293,7 +293,7 @@
             letter-spacing: -0.01em;
             line-height: 1;
 
-            background: linear-gradient(to bottom, #fff 40%, rgba(255, 255, 255, 0.7) 100%);
+            background: linear-gradient(to bottom, #fff 40%, rgba(255, 255, 255, 0.85) 100%);
             background-clip: text;
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
@@ -312,13 +312,13 @@
         /* ─── Heading ─── */
         h1 {
             font-size: clamp(1.1rem, 3.5vw, 1.4rem);
-            font-weight: 400;
+            font-weight: 500;
             margin-bottom: var(--headline-gap);
             color: var(--text-muted);
             max-width: var(--headline-width);
             line-height: var(--headline-leading);
             text-wrap: balance;
-            letter-spacing: 0.02em;
+            letter-spacing: 0.03em;
 
             opacity: 0;
             transform: translateY(20px) translateZ(10px);
@@ -352,11 +352,38 @@
             transform: translateY(0);
         }
 
+        .platform-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1.25rem;
+        }
+
+        .platform-logos {
+            display: flex;
+            gap: 2.5rem;
+            align-items: center;
+        }
+
+        .platform-icon {
+            height: clamp(20px, 4vw, 24px);
+            width: auto;
+            opacity: 0.7;
+            filter: brightness(0) invert(1);
+            transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+        }
+
+        .platform-icon:hover {
+            opacity: 1;
+            transform: translateY(-2px);
+            filter: brightness(0) invert(1) drop-shadow(0 0 8px rgba(255, 255, 255, 0.3));
+        }
+
         .platform-text {
-            font-size: 0.85rem;
-            font-weight: 500;
+            font-size: 0.8rem;
+            font-weight: 600;
             color: var(--text-muted);
-            letter-spacing: 0.1em;
+            letter-spacing: 0.15em;
             text-transform: uppercase;
         }
 
@@ -365,6 +392,9 @@
             display: flex;
             flex-direction: column;
             gap: 0.8rem;
+            border-top: 1px solid var(--glass-border);
+            padding-top: 2.5rem;
+            width: 100%;
         }
 
         .hw-label {
@@ -404,6 +434,21 @@
             text-transform: uppercase;
         }
 
+        .hw-icon {
+            height: clamp(30px, 6vw, 46px);
+            width: auto;
+            margin-top: 1rem;
+            opacity: 0.75;
+            filter: brightness(0) invert(1);
+            transition: all 0.5s cubic-bezier(0.23, 1, 0.32, 1);
+        }
+
+        .hw-item:hover .hw-icon {
+            opacity: 1;
+            transform: scale(1.1) translateY(-5px);
+            filter: brightness(0) invert(1) drop-shadow(0 0 12px var(--accent-glow));
+        }
+
         /* ─── Animation helpers ─── */
         @keyframes float {
 
@@ -431,6 +476,10 @@
 
             .hw-name {
                 font-size: 0.95rem;
+            }
+
+            .platform-logos {
+                gap: 1.5rem;
             }
         }
 
@@ -494,22 +543,32 @@
             <h1>Simpler, Smarter Scoring</h1>
 
             <div class="info-section">
-                <div class="platform-text">Coming to Android • iOS • Web</div>
+                <div class="platform-container">
+                    <div class="platform-logos">
+                        <img src="media/logos/apple.svg" alt="iOS" class="platform-icon">
+                        <img src="media/logos/android.svg" alt="Android" class="platform-icon">
+                        <img src="media/logos/web.svg" alt="Web" class="platform-icon">
+                    </div>
+                    <div class="platform-text">iOS • Android • Web</div>
+                </div>
 
                 <div class="hardware-announce">
-                    <div class="hw-label">Next-Gen Hardware Early Access</div>
+                    <div class="hw-label">Next-Gen Hardware in Development</div>
                     <div class="hw-list">
                         <div class="hw-item">
-                            <span class="hw-name">Beacon Pro</span>
-                            <span class="hw-status">Flagship</span>
+                            <span class="hw-name">Pulse Mini</span>
+                            <span class="hw-status">Ultra Portable</span>
+                            <img src="media/logos/d1.svg" alt="Pulse Mini" class="hw-icon">
                         </div>
                         <div class="hw-item">
                             <span class="hw-name">Beacon Basic</span>
                             <span class="hw-status">Core Series</span>
+                            <img src="media/logos/d2.svg" alt="Beacon Basic" class="hw-icon">
                         </div>
                         <div class="hw-item">
-                            <span class="hw-name">Pulse Mini</span>
-                            <span class="hw-status">Ultra Portable</span>
+                            <span class="hw-name">Beacon Pro</span>
+                            <span class="hw-status">Flagship</span>
+                            <img src="media/logos/d3.svg" alt="Beacon Pro" class="hw-icon">
                         </div>
                     </div>
                 </div>
