@@ -1041,7 +1041,7 @@ document.addEventListener("DOMContentLoaded", () =>
   {
     elements.nfcToolBtn.addEventListener("click", () =>
     {
-      window.open("/nfcWriter/index.html", "_blank");
+      window.open("/nfc/index.html", "_blank");
     });
   }
 
