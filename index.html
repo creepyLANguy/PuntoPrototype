@@ -22,12 +22,12 @@
             --accent-dim: rgba(200, 255, 0, 0.15);
             --primary: #00d4ff;
             --secondary: #7c5cff;
-            --bg-dark: #03050a;
-            --bg-surface: #0a0e1a;
+            --bg-dark: #080c17;
+            --bg-surface: #0e1425;
             --text: #ffffff;
-            --text-muted: rgba(255, 255, 255, 0.85);
-            --glass-bg: rgba(255, 255, 255, 0.05);
-            --glass-border: rgba(255, 255, 255, 0.12);
+            --text-muted: rgba(255, 255, 255, 0.9);
+            --glass-bg: rgba(0, 0, 0, 0.5);
+            --glass-border: rgba(255, 255, 255, 0.2);
             --card-radius: 32px;
             --card-padding: clamp(2.5rem, 6vw, 4rem);
             --logo-size: clamp(120px, 15vw, 160px);
@@ -53,7 +53,7 @@
             height: 100%;
             width: 100%;
             overflow: hidden;
-            background: var(--bg-dark);
+            background: radial-gradient(circle at center, #11182c 0%, var(--bg-dark) 100%);
             color: var(--text);
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
@@ -87,23 +87,23 @@
         }
 
         body.loaded .orb {
-            opacity: 0.25;
+            opacity: 0.45;
         }
 
         .orb.one {
-            width: 45vw;
-            height: 45vw;
+            width: 60vw;
+            height: 60vw;
             background: radial-gradient(circle, var(--primary), transparent 70%);
-            top: -10%;
-            left: -5%;
+            top: -20%;
+            left: -10%;
         }
 
         .orb.two {
-            width: 50vw;
-            height: 50vw;
+            width: 65vw;
+            height: 65vw;
             background: radial-gradient(circle, var(--secondary), transparent 70%);
-            bottom: -15%;
-            right: -5%;
+            bottom: -25%;
+            right: -10%;
         }
 
         .orb.three {
@@ -117,7 +117,7 @@
         }
 
         body.loaded .orb.three {
-            opacity: 0.1;
+            opacity: 0.2;
         }
 
         /* ─── Particle canvas ─── */
@@ -156,9 +156,10 @@
             border-radius: var(--card-radius);
 
             box-shadow:
-                0 0 0 1px rgba(255, 255, 255, 0.05),
+                0 0 0 1px rgba(255, 255, 255, 0.1),
                 0 20px 50px rgba(0, 0, 0, 0.5),
-                0 0 100px rgba(124, 92, 255, 0.1);
+                0 0 100px rgba(124, 92, 255, 0.25),
+                0 0 40px rgba(200, 255, 0, 0.05);
         }
 
         /* Inner shine effect */
@@ -368,7 +369,7 @@
         .platform-icon {
             height: clamp(20px, 4vw, 24px);
             width: auto;
-            opacity: 0.7;
+            opacity: 0.85;
             filter: brightness(0) invert(1);
             transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
         }
@@ -437,7 +438,7 @@
             height: clamp(26px, 5vw, 40px);
             width: auto;
             margin-top: 0.25rem;
-            opacity: 0.75;
+            opacity: 0.9;
             filter: brightness(0) invert(1);
             transition: all 0.5s cubic-bezier(0.23, 1, 0.32, 1);
         }
