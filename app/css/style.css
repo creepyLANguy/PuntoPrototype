@@ -2440,6 +2440,14 @@ body.light-mode .alert-btn {
   opacity: 0.9;
 }
 
+.home-link-btn {
+  position: fixed;
+  top: clamp(10px, 2vh, 20px);
+  left: clamp(10px, 2vw, 20px);
+  z-index: 1000;
+  text-decoration: none;
+}
+
 .theme-toggle-btn:hover {
   background: rgba(255, 255, 255, 0.2);
   transform: scale(1.1);

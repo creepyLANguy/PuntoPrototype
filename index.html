@@ -162,6 +162,43 @@
                 0 0 40px rgba(200, 255, 0, 0.05);
         }
 
+        .secret-link {
+            position: absolute;
+            right: 1rem;
+            bottom: 1rem;
+            width: 18px;
+            height: 18px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            text-decoration: none;
+            color: rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 0 12px rgba(200, 255, 0, 0.08);
+            opacity: 0.2;
+            transition: opacity 0.25s ease, transform 0.25s ease, color 0.25s ease, border-color 0.25s ease;
+            z-index: 3;
+        }
+
+        .secret-link::before {
+            content: '';
+            width: 4px;
+            height: 4px;
+            border-radius: 50%;
+            background: currentColor;
+        }
+
+        .secret-link:hover,
+        .secret-link:focus-visible {
+            opacity: 0.72;
+            color: var(--accent);
+            border-color: rgba(200, 255, 0, 0.35);
+            transform: scale(1.08);
+            outline: none;
+        }
+
         /* Inner shine effect */
         .container-shine {
             position: absolute;
@@ -523,6 +560,7 @@
 
     <div class="container-wrapper">
         <div class="container" id="mainCard">
+            <a href="app/" class="secret-link" aria-label="Open app" title="Open app"></a>
             <div class="badge-wrapper">
                 <div class="badge">
                     <span class="dot"></span>
@@ -552,21 +590,21 @@
                         <div class="hw-item">
                             <span class="hw-name">Pulse</span>
                             <div class="hw-item">
-                                <img src="media/logos/d1.svg" alt="Pulse Mini" class="hw-icon">
+                                <img src="media/logos/d1.svg" alt="Pulse" class="hw-icon">
                             </div>
                             <span class="hw-status">Ultra Portable</span>
                         </div>
                         <div class="hw-item">
                             <div class="hw-item">
                                 <span class="hw-name">Beacon</span>
-                                <img src="media/logos/d2.svg" alt="Beacon Basic" class="hw-icon">
+                                <img src="media/logos/d2.svg" alt="Beacon" class="hw-icon">
                             </div>
                             <span class="hw-status">Core Scoring</span>
                         </div>
                         <div class="hw-item">
                             <div class="hw-item">
                                 <span class="hw-name">Hub</span>
-                                <img src="media/logos/d3.svg" alt="Beacon Pro" class="hw-icon">
+                                <img src="media/logos/d3.svg" alt="Hub" class="hw-icon">
                             </div>
                             <span class="hw-status">Full Control</span>
                         </div>

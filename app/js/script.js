@@ -220,6 +220,7 @@ document.addEventListener("DOMContentLoaded", () =>
   const $ = (id) => document.getElementById(id);
 
   const elements = {
+    homeLinkBtn: $("homeLinkBtn"),
     menuPage: $("menuPage"),
     scoreboardPage: $("scoreboardPage"),
 
@@ -1096,6 +1097,16 @@ document.addEventListener("DOMContentLoaded", () =>
   function updateAdminButtonVisibility()
   {
     const isMenuVisible = elements.menuPage && window.getComputedStyle(elements.menuPage).display !== "none";
+    if (elements.homeLinkBtn)
+    {
+      const currentVal = elements.homeLinkBtn.style.display;
+      const targetVal = isMenuVisible ? "flex" : "none";
+      if (currentVal !== targetVal)
+      {
+        elements.homeLinkBtn.style.display = targetVal;
+      }
+    }
+
     if (elements.adminLoginBtn)
     {
       const currentVal = elements.adminLoginBtn.style.display;
