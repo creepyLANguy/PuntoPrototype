@@ -1074,8 +1074,8 @@ body.light-mode .dm-close {
 /* Close button */
 .dm-close {
   position: absolute;
-  top: 16px;
-  right: 16px;
+  top: 10px;
+  right: 10px;
   background: none;
   border: none;
   color: inherit;
@@ -1377,6 +1377,11 @@ body.light-mode .dm-table thead th {
     gap: 0;
     max-height: calc(100svh - 16px);
     max-width: 520px;
+  }
+
+  .dm-close {
+    top: 6px;
+    right: 6px;
   }
 
   .dm-header {
