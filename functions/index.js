@@ -5,9 +5,45 @@ const { defaultScore, applyEvent } = require("./scoringEngine");
 const { onRequest } = require("firebase-functions/v2/https");
 
 const REGION = "africa-south1";
+const SCORING_EVENTS = new Set(["POINT_TEAM_A", "POINT_TEAM_B", "UNDO", "RESET"]);
+const OPERATIONAL_EVENTS = new Set(["SPECTATE", "REGISTER"]);
+const SUPPORTED_EVENTS = new Set([...SCORING_EVENTS, ...OPERATIONAL_EVENTS]);
 
 admin.initializeApp();
 const db = admin.firestore();
+
+function sendJson(res, status, body)
+{
+    return res.status(status).json(body);
+}
+
+async function requireDevice(deviceId)
+{
+    const deviceRef = db.doc(`devices/${deviceId}`);
+    const deviceSnap = await deviceRef.get();
+
+    if (!deviceSnap.exists)
+    {
+        return null;
+    }
+
+    return {
+        ref: deviceRef,
+        snap: deviceSnap,
+        data: deviceSnap.data() || {}
+    };
+}
+
+async function appendCourtEvent(courtId, event)
+{
+    const ref = db.collection(`courts/${courtId}/events`).doc();
+    await ref.set({
+        ...event,
+        createdAt: admin.firestore.FieldValue.serverTimestamp()
+    });
+
+    return ref.id;
+}
 
 // -----------------------------
 // Event processor
@@ -25,6 +61,12 @@ exports.onEventCreate = onDocumentCreated(
         console.log(`Processing event ${eventId} for court ${courtId}:`, newEvent?.eventType);
 
         if (!newEvent) return;
+
+        if (!SCORING_EVENTS.has(newEvent.eventType))
+        {
+            console.log(`Ignoring non-scoring event ${eventId} (${newEvent.eventType}) for score processing.`);
+            return;
+        }
 
         const scoreRef = db.doc(`courts/${courtId}/score/current`);
 
@@ -228,44 +270,138 @@ exports.postEvent = onRequest(
     {
         try
         {
-            const { deviceId, eventType } = req.body;
+            if (req.method !== "POST")
+            {
+                return sendJson(res, 405, { success: false, error: "Method not allowed" });
+            }
+
+            const { deviceId, eventType, courtId: targetCourtId, registeringDeviceId } = req.body || {};
 
             if (!deviceId || !eventType)
             {
-                return res.status(400).send("Missing fields: both a deviceId and an eventType are required.");
+                return sendJson(res, 400, {
+                    success: false,
+                    error: "Missing fields: both a deviceId and an eventType are required."
+                });
             }
 
-            if (!["POINT_TEAM_A", "POINT_TEAM_B", "UNDO", "RESET", "SPECTATE", "REGISTER"].includes(eventType))
+            if (!SUPPORTED_EVENTS.has(eventType))
             {
-                return res.status(400).send("Invalid eventType: " + eventType);
+                return sendJson(res, 400, {
+                    success: false,
+                    error: "Invalid eventType: " + eventType
+                });
             }
 
-            const deviceSnap = await db.doc(`devices/${deviceId}`).get();
-            if (!deviceSnap.exists)
+            const actingDevice = await requireDevice(deviceId);
+            if (!actingDevice)
             {
-                return res.status(400).send("Device not found for deviceId: " + deviceId);
+                return sendJson(res, 400, {
+                    success: false,
+                    error: "Device not found for deviceId: " + deviceId
+                });
             }
 
-            const courtId = deviceSnap.data().courtId;
-            if (!courtId)
+            const actingCourtId = actingDevice.data.courtId || null;
+
+            if (eventType === "SPECTATE")
             {
-                return res.status(400).send("Associated court not found for deviceId: " + deviceId);
+                if (!targetCourtId)
+                {
+                    return sendJson(res, 400, {
+                        success: false,
+                        error: "Missing field: courtId is required for SPECTATE."
+                    });
+                }
+
+                const targetCourtRef = db.doc(`courts/${targetCourtId}`);
+                const targetCourtSnap = await targetCourtRef.get();
+                if (!targetCourtSnap.exists)
+                {
+                    return sendJson(res, 400, {
+                        success: false,
+                        error: "Court not found for courtId: " + targetCourtId
+                    });
+                }
+
+                await actingDevice.ref.set({ courtId: targetCourtId }, { merge: true });
+
+                const eventId = await appendCourtEvent(targetCourtId, {
+                    eventType,
+                    createdBy: deviceId,
+                    sourceCourtId: actingCourtId,
+                    targetCourtId,
+                    actorDeviceId: deviceId
+                });
+
+                return sendJson(res, 200, {
+                    success: true,
+                    eventId,
+                    courtId: targetCourtId,
+                    deviceId
+                });
             }
 
-            const ref = db.collection(`courts/${courtId}/events`).doc();
+            if (eventType === "REGISTER")
+            {
+                if (!registeringDeviceId)
+                {
+                    return sendJson(res, 400, {
+                        success: false,
+                        error: "Missing field: registeringDeviceId is required for REGISTER."
+                    });
+                }
 
-            await ref.set({
+                if (!actingCourtId)
+                {
+                    return sendJson(res, 400, {
+                        success: false,
+                        error: "Associated court not found for deviceId: " + deviceId
+                    });
+                }
+
+                await db.doc(`devices/${registeringDeviceId}`).set(
+                    { courtId: actingCourtId },
+                    { merge: true }
+                );
+
+                const eventId = await appendCourtEvent(actingCourtId, {
+                    eventType,
+                    createdBy: deviceId,
+                    actorDeviceId: deviceId,
+                    registeringDeviceId,
+                    targetCourtId: actingCourtId
+                });
+
+                return sendJson(res, 200, {
+                    success: true,
+                    eventId,
+                    courtId: actingCourtId,
+                    deviceId,
+                    registeringDeviceId
+                });
+            }
+
+            if (!actingCourtId)
+            {
+                return sendJson(res, 400, {
+                    success: false,
+                    error: "Associated court not found for deviceId: " + deviceId
+                });
+            }
+
+            const eventId = await appendCourtEvent(actingCourtId, {
                 eventType,
-                createdAt: admin.firestore.FieldValue.serverTimestamp(),
-                createdBy: deviceId
+                createdBy: deviceId,
+                actorDeviceId: deviceId
             });
 
-            res.send({ success: true });
+            return sendJson(res, 200, { success: true, eventId });
 
         } catch (err)
         {
             console.error(err);
-            res.status(500).send("Error");
+            return sendJson(res, 500, { success: false, error: "Error" });
         }
     }
 );
