@@ -235,7 +235,7 @@ exports.postEvent = onRequest(
                 return res.status(400).send("Missing fields: both a deviceId and an eventType are required.");
             }
 
-            if (!["POINT_TEAM_A", "POINT_TEAM_B", "UNDO"].includes(eventType))
+            if (!["POINT_TEAM_A", "POINT_TEAM_B", "UNDO", "RESET", "SPECTATE", "REGISTER"].includes(eventType))
             {
                 return res.status(400).send("Invalid eventType: " + eventType);
             }
