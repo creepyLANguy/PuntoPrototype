@@ -1855,18 +1855,35 @@ document.addEventListener("DOMContentLoaded", () =>
   // NFC HANDLING
   // =====================================================
 
+  //AL.
+  //TODO - do not process json. Instead, use a simple format like "EVENT:POINT_TEAM_A;deviceId:12345"
   function handleNfc(text)
   {
     if (!text) return;
 
-    const json = JSON.parse(text);
+    const parsed = {};
+    const segments = text.split(";");
 
-    if (json.deviceId)
+    for (const segment of segments)
     {
-      lastScannedDeviceId = json.deviceId;
+      const separatorIndex = segment.indexOf(":");
+
+      if (separatorIndex === -1) continue;
+
+      const rawKey = segment.slice(0, separatorIndex).trim();
+      const rawValue = segment.slice(separatorIndex + 1).trim();
+
+      if (!rawKey || !rawValue) continue;
+
+      parsed[rawKey.toUpperCase()] = rawValue;
     }
 
-    const eventType = json.eventType;
+    if (parsed.DEVICEID)
+    {
+      lastScannedDeviceId = parsed.DEVICEID;
+    }
+
+    const eventType = parsed.EVENT ? parsed.EVENT.toUpperCase() : "";
 
     if (!eventType)
     {
