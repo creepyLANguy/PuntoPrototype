@@ -1,7 +1,7 @@
 let data = [];
 let index = 0;
 let scanning = false;
-let tagMap = {}; // Maps URL -> Tag UID
+let tagMap = {}; // Maps tag text -> Tag UID
 let draggedItemIndex = null;
 let currentMode = "write";
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -61,7 +61,7 @@ async function start() {
                 const tagContent = record ? decoder.decode(record.data) : "";
 
                 if (currentMode === "write") {
-                    await reader.write({ records: [{ recordType: "url", data: data[index] }] });
+                    await reader.write({ records: [{ recordType: "text", data: data[index] }] });
                     tagMap[data[index]] = serialNumber || "N/A";
                     playFeedback(true);
                     index++; 
@@ -103,13 +103,13 @@ async function start() {
                       stop();
                     } else {
                       document.getElementById("status").innerText = "SKIPPED: SEEKING NEXT...";
-                      await reader.write({ records: [{ recordType: "url", data: data[index] }] });
+                      await reader.write({ records: [{ recordType: "text", data: data[index] }] });
                       tagMap[data[index]] = serialNumber || "N/A";
                       playFeedback(true);
                       index++;
                     }
                   } else {
-                      await reader.write({ records: [{ recordType: "url", data: data[index] }] });
+                      await reader.write({ records: [{ recordType: "text", data: data[index] }] });
                       tagMap[data[index]] = serialNumber || "N/A";
                       playFeedback(true);
                       index++;
@@ -243,7 +243,7 @@ function playBeep(freq, duration) {
 function exportCSV() {
     if (data.length === 0) return alert("No data to export.");
 
-    let csvContent = "data:text/csv;charset=utf-8,Index,URL,Status,Tag UID\n";
+    let csvContent = "data:text/csv;charset=utf-8,Index,Tag Text,Status,Tag UID\n";
 
     data.forEach((val, i) => {
         const uid = tagMap[val];
