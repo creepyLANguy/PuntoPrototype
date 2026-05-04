@@ -60,6 +60,7 @@ document.addEventListener("DOMContentLoaded", () =>
     POINT_TEAM_B: "POINT_TEAM_B",
     UNDO: "UNDO",
     RESET: "RESET",
+    SPECTATE: "SPECTATE",
     REGISTER: "REGISTER"
   };
 
@@ -95,7 +96,8 @@ document.addEventListener("DOMContentLoaded", () =>
     [EVENT_TYPES.POINT_TEAM_B]: () => addPoint(EVENT_TYPES.POINT_TEAM_B),
     [EVENT_TYPES.UNDO]: () => undoLastPoint(),
     [EVENT_TYPES.RESET]: () => performShallowReset(),
-    [EVENT_TYPES.REGISTER]: () => registerDeviceToCurrentCourt()
+    [EVENT_TYPES.SPECTATE]: ({ courtId }) => spectateCourtFromNfc(courtId),
+    [EVENT_TYPES.REGISTER]: ({ deviceId }) => registerDeviceToCurrentCourt(deviceId)
   };
 
   // =====================================================
@@ -1493,7 +1495,7 @@ document.addEventListener("DOMContentLoaded", () =>
     if (badge) badge.remove();
   }
 
-  async function registerDeviceToCurrentCourt()
+  async function registerDeviceToCurrentCourt(deviceId = lastScannedDeviceId)
   {
     if (!currentCourtId)
     {
@@ -1501,17 +1503,19 @@ document.addEventListener("DOMContentLoaded", () =>
       return;
     }
 
-    if (!lastScannedDeviceId)
+    if (!deviceId)
     {
       showToast("Cannot register device - no deviceId specified.", TOAST_TYPES.ERROR);
       return;
     }
 
-    await updateDoc(doc(db, "devices", lastScannedDeviceId), {
+    lastScannedDeviceId = deviceId;
+
+    await updateDoc(doc(db, "devices", deviceId), {
       courtId: currentCourtId
     });
 
-    showToast(`Device ${lastScannedDeviceId} registered to this court.`, TOAST_TYPES.SUCCESS);
+    showToast(`Device ${deviceId} registered to this court.`, TOAST_TYPES.SUCCESS);
   }
 
   // =====================================================
@@ -1808,7 +1812,8 @@ document.addEventListener("DOMContentLoaded", () =>
 
       nfcReader.onreading = (event) =>
       {
-        if (!elements.scoreboardPage ||
+        if (isSpectating ||
+          !elements.scoreboardPage ||
           elements.scoreboardPage.style.display === "none")
         {
           return;
@@ -1816,13 +1821,12 @@ document.addEventListener("DOMContentLoaded", () =>
 
         if (!canProcessNfc()) return;
 
-        const decoder = new TextDecoder();
-
         for (const record of event.message.records)
         {
-          if (record.recordType === "text")
+          const text = readNfcRecordText(record);
+
+          if (text)
           {
-            const text = decoder.decode(record.data).trim();
             console.log("NFC scanned:", text);
             handleNfc(text);
           }
@@ -1831,7 +1835,7 @@ document.addEventListener("DOMContentLoaded", () =>
 
       nfcReader.onerror = () =>
       {
-        showToast("NFC Disabled", "NFC is disabled on your device.\nEnable it in you device settings to use tag scanning.", TOAST_TYPES.ERROR);
+        showToast("NFC is disabled on your device. Enable it in device settings to use tag scanning.", TOAST_TYPES.ERROR);
       };
 
     }
@@ -1855,18 +1859,34 @@ document.addEventListener("DOMContentLoaded", () =>
   // NFC HANDLING
   // =====================================================
 
+  function readNfcRecordText(record)
+  {
+    if (!record || !record.data) return "";
+
+    const decoder = new TextDecoder(record.encoding || "utf-8");
+    const text = decoder.decode(record.data).trim();
+
+    if (record.recordType === "text") return text;
+
+    if (record.recordType === "url" || record.recordType === "absolute-url")
+    {
+      return text.replace(/^[\u0000-\u001f]+/, "").trim();
+    }
+
+    return "";
+  }
+
   function handleNfc(text)
   {
     if (!text) return;
 
-    const json = JSON.parse(text);
+    const tag = parseNfcTag(text);
+    const eventType = tag.eventType;
 
-    if (json.deviceId)
+    if (tag.deviceId)
     {
-      lastScannedDeviceId = json.deviceId;
+      lastScannedDeviceId = tag.deviceId;
     }
-
-    const eventType = json.eventType;
 
     if (!eventType)
     {
@@ -1875,14 +1895,60 @@ document.addEventListener("DOMContentLoaded", () =>
       return;
     }
 
-    if (!actionMap[eventType])
+    const action = actionMap[eventType];
+    if (!action)
     {
       showToast("NFC event type unknown.", TOAST_TYPES.ERROR);
       console.warn("NFC event type unknown: ", text);
       return;
     }
 
-    actionMap[eventType]();
+    action(tag);
+  }
+
+  function parseNfcTag(text)
+  {
+    const fields = {};
+    const rawText = text.trim();
+
+    for (const segment of rawText.split(";"))
+    {
+      const separatorIndex = segment.indexOf(":");
+      if (separatorIndex === -1) continue;
+
+      const key = segment.slice(0, separatorIndex).trim().toUpperCase();
+      const value = segment.slice(separatorIndex + 1).trim();
+
+      if (key && value) fields[key] = value;
+    }
+
+    const eventType = (
+      fields.EVENT ||
+      fields.EVENTTYPE ||
+      fields.EVENT_TYPE ||
+      (Object.keys(fields).length ? "" : rawText)
+    ).trim().toUpperCase();
+
+    return {
+      rawText,
+      fields,
+      eventType,
+      courtId: fields.COURTID || fields.COURT_ID || "",
+      deviceId: fields.DEVICEID || fields.DEVICE_ID || "",
+      ssid: fields.SSID || "",
+      password: fields.PASS || fields.PASSWORD || ""
+    };
+  }
+
+  async function spectateCourtFromNfc(courtId)
+  {
+    if (!courtId)
+    {
+      showToast("Cannot spectate - no courtId specified.", TOAST_TYPES.ERROR);
+      return;
+    }
+
+    await enterCourt(courtId, true);
   }
 
   function canProcessNfc()

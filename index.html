@@ -618,6 +618,13 @@
         const card = document.getElementById('mainCard');
         const canvas = document.getElementById('particles');
         const ctx = canvas.getContext('2d');
+        const landscapeScrollableQuery = window.matchMedia('(orientation: landscape) and (max-height: 500px)');
+        let wasLandscapeScrollable = landscapeScrollableQuery.matches;
+
+        if ('scrollRestoration' in history)
+        {
+            history.scrollRestoration = 'manual';
+        }
 
         // Particle System
         let particles = [];
@@ -626,6 +633,28 @@
             canvas.width = window.innerWidth;
             canvas.height = window.innerHeight;
             initParticles();
+        }
+
+        function resetScrollPosition()
+        {
+            window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+            document.documentElement.scrollTop = 0;
+            document.body.scrollTop = 0;
+        }
+
+        function handleViewportChange()
+        {
+            const isLandscapeScrollable = landscapeScrollableQuery.matches;
+
+            // Leaving the scrollable landscape layout can preserve a stale scroll
+            // offset, so snap back to the top before portrait re-centers the card.
+            if (wasLandscapeScrollable && !isLandscapeScrollable)
+            {
+                window.setTimeout(resetScrollPosition, 50);
+            }
+
+            wasLandscapeScrollable = isLandscapeScrollable;
+            resize();
         }
 
         function initParticles()
@@ -665,8 +694,10 @@
             requestAnimationFrame(animate);
         }
 
-        window.addEventListener('resize', resize);
-        resize();
+        window.addEventListener('resize', handleViewportChange);
+        window.addEventListener('orientationchange', () => window.setTimeout(handleViewportChange, 50));
+        window.addEventListener('load', resetScrollPosition, { once: true });
+        handleViewportChange();
         animate();
 
         // Reveal effect
