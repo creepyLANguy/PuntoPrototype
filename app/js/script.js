@@ -84,7 +84,8 @@ document.addEventListener("DOMContentLoaded", () =>
   const TOAST_TYPES = {
     SUCCESS: "success",
     ERROR: "error",
-    INFO: "info"
+    INFO: "info",
+    WARNING: "warning"
   };
 
   // =====================================================
@@ -1512,12 +1513,6 @@ document.addEventListener("DOMContentLoaded", () =>
 
   async function registerDeviceToCurrentCourt()
   {
-    //AL.
-    //TODO - implement spectate and register events
-    console.warn("Register device from NFC not implemented.");
-    showToast("Register device from NFC not implemented.", TOAST_TYPES.WARNING);
-    return;
-    //
 
     if (!currentCourtId)
     {
@@ -1925,7 +1920,7 @@ document.addEventListener("DOMContentLoaded", () =>
     action(tag);
   }
 
-  function parseNfcTg(text)
+  function parseNfcTag(text)
   {
     const fields = {};
     const rawText = text.trim();
@@ -1964,12 +1959,6 @@ document.addEventListener("DOMContentLoaded", () =>
 
   async function spectateCourtFromNfc()
   {
-    //AL.
-    //TODO - implement spectate and register events
-    console.warn("Spectate from NFC not implemented.");
-    showToast("Spectate from NFC not implemented.", TOAST_TYPES.WARNING);
-    return;
-    //
 
     let courtId = lastScannedCourtId;
 

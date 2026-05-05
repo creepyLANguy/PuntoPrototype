@@ -3824,3 +3824,50 @@ body.light-mode .set-win-label {
     animation: none;
   }
 }
+
+/* =======================================================
+   TOAST NOTIFICATIONS
+======================================================= */
+
+.toast-container {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10000;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  pointer-events: none;
+}
+
+.toast {
+  padding: 12px 24px;
+  border-radius: 50px;
+  background: rgba(0, 0, 0, 0.85);
+  color: white;
+  font-weight: 600;
+  font-size: 0.9rem;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(10px);
+  animation: toastFadeIn 0.3s ease forwards;
+  pointer-events: auto;
+  min-width: 200px;
+  text-align: center;
+}
+
+@keyframes toastFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.toast.success { border: 1px solid #2ecc71; }
+.toast.error { border: 1px solid #e74c3c; }
+.toast.info { border: 1px solid #3498db; }
+.toast.warning { border: 1px solid #f1c40f; }
