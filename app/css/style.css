@@ -55,8 +55,10 @@ body {
 body {
   background: var(--bg);
   color: var(--white);
-  font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-  transition: background-color 0.3s ease, color 0.3s ease;
+  font-family: "Inter", "Outfit", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  transition: background-color 0.4s var(--transition-smooth), color 0.3s ease;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 button {
@@ -1838,6 +1840,7 @@ body.light-mode .close-btn {
   background: black;
   color: white;
   font-size: 14px;
+  font-family: inherit;
 }
 
 body.light-mode .form-group input {
@@ -1877,6 +1880,7 @@ body.light-mode .error {
   box-sizing: border-box;
   margin-top: 6px;
   font-size: 15px;
+  font-family: inherit;
 }
 
 body.light-mode .primary-btn {
@@ -2396,6 +2400,7 @@ body.light-mode .alert-box p {
   font-weight: bold;
   cursor: pointer;
   font-size: clamp(0.85rem, 2.5vmin, 1rem);
+  font-family: inherit;
 }
 
 body.light-mode .alert-btn {
@@ -3308,6 +3313,7 @@ body.light-mode .menu-btn:nth-child(4)::before,
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.2s;
+  font-family: inherit;
 }
 
 .tab-btn.active {
@@ -3575,10 +3581,10 @@ body.light-mode #adminCourtSearch {
 
 /* Page setup */
 body {
-  font-family: system-ui, -apple-system, sans-serif;
+  font-family: "Outfit", "Inter", system-ui, -apple-system, sans-serif;
   background: var(--waveBg);
   /* dark base */
-  color: white;
+  color: var(--white);
   overflow-x: hidden;
 }
 
