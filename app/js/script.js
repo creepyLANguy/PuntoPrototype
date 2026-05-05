@@ -1512,6 +1512,13 @@ document.addEventListener("DOMContentLoaded", () =>
 
   async function registerDeviceToCurrentCourt()
   {
+    //AL.
+    //TODO - implement spectate and register events
+    console.warn("Register device from NFC not implemented.");
+    showToast("Register device from NFC not implemented.", TOAST_TYPES.WARNING);
+    return;
+    //
+
     if (!currentCourtId)
     {
       showToast("Cannot register device - no court currently selected.", TOAST_TYPES.ERROR);
@@ -1957,6 +1964,13 @@ document.addEventListener("DOMContentLoaded", () =>
 
   async function spectateCourtFromNfc()
   {
+    //AL.
+    //TODO - implement spectate and register events
+    console.warn("Spectate from NFC not implemented.");
+    showToast("Spectate from NFC not implemented.", TOAST_TYPES.WARNING);
+    return;
+    //
+
     let courtId = lastScannedCourtId;
 
     lastScannedCourtId = null;
