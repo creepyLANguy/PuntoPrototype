@@ -96,8 +96,8 @@ document.addEventListener("DOMContentLoaded", () =>
     [EVENT_TYPES.POINT_TEAM_B]: () => addPoint(EVENT_TYPES.POINT_TEAM_B),
     [EVENT_TYPES.UNDO]: () => undoLastPoint(),
     [EVENT_TYPES.RESET]: () => performShallowReset(),
-    [EVENT_TYPES.SPECTATE]: ({ tagData }) => spectateCourtFromNfc(tagData),
-    [EVENT_TYPES.REGISTER]: ({ tagData }) => registerDeviceToCurrentCourt(tagData)
+    [EVENT_TYPES.SPECTATE]: () => spectateCourtFromNfc(),
+    [EVENT_TYPES.REGISTER]: () => registerDeviceToCurrentCourt()
   };
 
   // =====================================================
@@ -127,6 +127,9 @@ document.addEventListener("DOMContentLoaded", () =>
   let isAdmin = false;
 
   let thisDeviceId = DetermineThisDeviceId();
+
+  let lastScannedCourtId = null;
+  let lastScannedDeviceId = null;
 
   // =====================================================
   // NFC STATE
@@ -1507,7 +1510,7 @@ document.addEventListener("DOMContentLoaded", () =>
     if (badge) badge.remove();
   }
 
-  async function registerDeviceToCurrentCourt(tagData)
+  async function registerDeviceToCurrentCourt()
   {
     if (!currentCourtId)
     {
@@ -1515,8 +1518,11 @@ document.addEventListener("DOMContentLoaded", () =>
       return;
     }
 
-    let deviceId = tagData.deviceId;
-    if (!deviceId)
+    let deviceId = lastScannedDeviceId;
+
+    lastScannedDeviceId = null;
+
+    if (!deviceId || deviceId === null || deviceId === "")
     {
       showToast("Cannot register device - no deviceId specified.", TOAST_TYPES.ERROR);
       return;
@@ -1912,7 +1918,7 @@ document.addEventListener("DOMContentLoaded", () =>
     action(tag);
   }
 
-  function parseNfcTag(text)
+  function parseNfcTg(text)
   {
     const fields = {};
     const rawText = text.trim();
@@ -1946,18 +1952,21 @@ document.addEventListener("DOMContentLoaded", () =>
     };
   }
 
-  async function spectateCourtFromNfc(tagData)
+  async function spectateCourtFromNfc()
   {
-    if (!courtId)
+    let courtId = lastScannedCourtId;
+
+    lastScannedCourtId = null;
+
+    if (!courtId || courtId === null || courtId === "")
     {
       showToast("Cannot spectate - no courtId specified.", TOAST_TYPES.ERROR);
       return;
     }
 
-    let courtId = tagData.courtId;
-    if (!courtId)
+    if (courtId === currentCourtId)
     {
-      showToast("Cannot spectate - no courtId specified.", TOAST_TYPES.ERROR);
+      showToast("You are already spectating this court.", TOAST_TYPES.INFO);
       return;
     }
 
