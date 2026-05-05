@@ -96,8 +96,8 @@ document.addEventListener("DOMContentLoaded", () =>
     [EVENT_TYPES.POINT_TEAM_B]: () => addPoint(EVENT_TYPES.POINT_TEAM_B),
     [EVENT_TYPES.UNDO]: () => undoLastPoint(),
     [EVENT_TYPES.RESET]: () => performShallowReset(),
-    [EVENT_TYPES.SPECTATE]: ({ courtId }) => spectateCourtFromNfc(courtId),
-    [EVENT_TYPES.REGISTER]: ({ deviceId }) => registerDeviceToCurrentCourt(deviceId)
+    [EVENT_TYPES.SPECTATE]: ({ tagData }) => spectateCourtFromNfc(tagData),
+    [EVENT_TYPES.REGISTER]: ({ tagData }) => registerDeviceToCurrentCourt(tagData)
   };
 
   // =====================================================
@@ -125,8 +125,6 @@ document.addEventListener("DOMContentLoaded", () =>
   let isSpectating = false;
 
   let isAdmin = false;
-
-  let lastScannedDeviceId = null;
 
   let thisDeviceId = DetermineThisDeviceId();
 
@@ -493,18 +491,7 @@ document.addEventListener("DOMContentLoaded", () =>
 
     if (isVisible(elements.scoreboardPage))
     {
-      disableSpectateMode();
-      document.body.classList.remove("scoreboard-active");
-      if (elements.themeToggleBtn)
-      {
-        elements.themeToggleBtn.style.display = "";
-      }
-      if (elements.adminLoginBtn)
-      {
-        elements.adminLoginBtn.style.display = "";
-      }
-      elements.scoreboardPage.style.display = "none";
-      elements.menuPage.style.display = "flex";
+      leaveCourt();
       return;
     }
 
@@ -1415,6 +1402,31 @@ document.addEventListener("DOMContentLoaded", () =>
     await initNfc();
   }
 
+  function leaveCourt()
+  {
+    console.log("Leaving court: " + currentCourtId);
+
+    disableSpectateMode();
+    releaseWakeLock();
+
+    if (unsubscribe)
+    {
+      unsubscribe();
+      unsubscribe = null;
+    }
+
+    currentCourtId = null;
+    currentCourtPassword = null;
+    currentCourtStatus = null;
+
+    document.body.classList.remove("scoreboard-active");
+    if (elements.themeToggleBtn) elements.themeToggleBtn.style.display = "";
+    if (elements.adminLoginBtn) elements.adminLoginBtn.style.display = "";
+
+    elements.scoreboardPage.style.display = "none";
+    elements.menuPage.style.display = "flex";
+  }
+
   function BlankOutScoreboard()
   {
     showCourtTitle(".");
@@ -1495,21 +1507,20 @@ document.addEventListener("DOMContentLoaded", () =>
     if (badge) badge.remove();
   }
 
-  async function registerDeviceToCurrentCourt(deviceId = lastScannedDeviceId)
+  async function registerDeviceToCurrentCourt(tagData)
   {
     if (!currentCourtId)
     {
-      showToast("Cannot register device - no court selected.", TOAST_TYPES.ERROR);
+      showToast("Cannot register device - no court currently selected.", TOAST_TYPES.ERROR);
       return;
     }
 
+    let deviceId = tagData.deviceId;
     if (!deviceId)
     {
       showToast("Cannot register device - no deviceId specified.", TOAST_TYPES.ERROR);
       return;
     }
-
-    lastScannedDeviceId = deviceId;
 
     await updateDoc(doc(db, "devices", deviceId), {
       courtId: currentCourtId
@@ -1883,11 +1894,6 @@ document.addEventListener("DOMContentLoaded", () =>
     const tag = parseNfcTag(text);
     const eventType = tag.eventType;
 
-    if (tag.deviceId)
-    {
-      lastScannedDeviceId = tag.deviceId;
-    }
-
     if (!eventType)
     {
       showToast("NFC event type missing.", TOAST_TYPES.ERROR);
@@ -1940,8 +1946,15 @@ document.addEventListener("DOMContentLoaded", () =>
     };
   }
 
-  async function spectateCourtFromNfc(courtId)
+  async function spectateCourtFromNfc(tagData)
   {
+    if (!courtId)
+    {
+      showToast("Cannot spectate - no courtId specified.", TOAST_TYPES.ERROR);
+      return;
+    }
+
+    let courtId = tagData.courtId;
     if (!courtId)
     {
       showToast("Cannot spectate - no courtId specified.", TOAST_TYPES.ERROR);
@@ -2153,17 +2166,7 @@ document.addEventListener("DOMContentLoaded", () =>
   {
     if (await showConfirm("Exit to the main menu?"))
     {
-      disableSpectateMode();
-      releaseWakeLock();
-
-      document.body.classList.remove("scoreboard-active");
-      // Show top-right theme toggle when leaving court view
-      if (elements.themeToggleBtn)
-      {
-        elements.themeToggleBtn.style.display = "";
-      }
-      elements.scoreboardPage.style.display = "none";
-      elements.menuPage.style.display = "flex";
+      leaveCourt();
     }
   });
 
@@ -2533,16 +2536,7 @@ document.addEventListener("DOMContentLoaded", () =>
         if (currentCourtId !== courtId) return;
 
         showToast("This court no longer exists.", TOAST_TYPES.ERROR);
-        // Return to menu
-        disableSpectateMode();
-        releaseWakeLock();
-        document.body.classList.remove("scoreboard-active");
-        if (elements.themeToggleBtn) elements.themeToggleBtn.style.display = "";
-        elements.scoreboardPage.style.display = "none";
-        elements.menuPage.style.display = "flex";
-        if (unsubscribeScore) unsubscribeScore();
-        if (unsubscribeCourt) unsubscribeCourt();
-        unsubscribe = null;
+        leaveCourt();
         return;
       }
 
@@ -2566,17 +2560,7 @@ document.addEventListener("DOMContentLoaded", () =>
       if (data.status === STATUS.PRIVATE && currentCourtStatus !== STATUS.PRIVATE)
       {
         showToast("This court has been made private by admin.", TOAST_TYPES.INFO);
-
-        // Return to menu
-        disableSpectateMode();
-        releaseWakeLock();
-        document.body.classList.remove("scoreboard-active");
-        if (elements.themeToggleBtn) elements.themeToggleBtn.style.display = "";
-        elements.scoreboardPage.style.display = "none";
-        elements.menuPage.style.display = "flex";
-        if (unsubscribeScore) unsubscribeScore();
-        if (unsubscribeCourt) unsubscribeCourt();
-        unsubscribe = null;
+        leaveCourt();
         return;
       }
 
@@ -2584,17 +2568,7 @@ document.addEventListener("DOMContentLoaded", () =>
       if (data.status === STATUS.CLOSED && !isAdmin)
       {
         showToast("The court has been closed by admin.", TOAST_TYPES.ERROR);
-
-        // Return to menu
-        disableSpectateMode();
-        releaseWakeLock();
-        document.body.classList.remove("scoreboard-active");
-        if (elements.themeToggleBtn) elements.themeToggleBtn.style.display = "";
-        elements.scoreboardPage.style.display = "none";
-        elements.menuPage.style.display = "flex";
-        if (unsubscribeScore) unsubscribeScore();
-        if (unsubscribeCourt) unsubscribeCourt();
-        unsubscribe = null;
+        leaveCourt();
         return;
       }
 
