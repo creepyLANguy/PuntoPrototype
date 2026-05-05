@@ -1516,17 +1516,16 @@ document.addEventListener("DOMContentLoaded", () =>
 
     if (!currentCourtId)
     {
-      showToast("Cannot register device - no court currently selected.", TOAST_TYPES.ERROR);
+      showToast("Cannot register device - enter a court first.", TOAST_TYPES.ERROR);
       return;
     }
 
     let deviceId = lastScannedDeviceId;
-
     lastScannedDeviceId = null;
 
-    if (!deviceId || deviceId === null || deviceId === "")
+    if (!deviceId)
     {
-      showToast("Cannot register device - no deviceId specified.", TOAST_TYPES.ERROR);
+      showToast("Scan failed - no device ID found on tag.", TOAST_TYPES.ERROR);
       return;
     }
 
@@ -1831,24 +1830,33 @@ document.addEventListener("DOMContentLoaded", () =>
 
       nfcReader.onreading = (event) =>
       {
-        if (isSpectating ||
-          !elements.scoreboardPage ||
-          elements.scoreboardPage.style.display === "none")
-        {
-          return;
-        }
+        console.log("NFC Reading event triggered");
 
         if (!canProcessNfc()) return;
 
+        let foundValidRecord = false;
+
         for (const record of event.message.records)
         {
-          const text = readNfcRecordText(record);
-
-          if (text)
+          try
           {
-            console.log("NFC scanned:", text);
-            handleNfc(text);
+            const text = readNfcRecordText(record);
+            if (text)
+            {
+              console.log("NFC text found:", text);
+              foundValidRecord = true;
+              handleNfc(text);
+            }
           }
+          catch (err)
+          {
+            console.error("Error processing NFC record:", err);
+          }
+        }
+
+        if (!foundValidRecord)
+        {
+          showToast("NFC tag scanned but no valid data found.", TOAST_TYPES.INFO);
         }
       };
 
@@ -1891,6 +1899,9 @@ document.addEventListener("DOMContentLoaded", () =>
     {
       return text.replace(/^[\u0000-\u001f]+/, "").trim();
     }
+
+    // Fallback for other types (like MIME) if they contain readable text
+    if (text.length > 0) return text;
 
     return "";
   }
@@ -1972,7 +1983,15 @@ document.addEventListener("DOMContentLoaded", () =>
 
     if (courtId === currentCourtId)
     {
-      showToast("You are already spectating this court.", TOAST_TYPES.INFO);
+      if (!isSpectating)
+      {
+        enableSpectateMode();
+        showToast("Switched to spectate mode.", TOAST_TYPES.SUCCESS);
+      }
+      else
+      {
+        showToast("Already spectating this court.", TOAST_TYPES.INFO);
+      }
       return;
     }
 
