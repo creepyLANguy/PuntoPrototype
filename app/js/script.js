@@ -1402,8 +1402,6 @@ document.addEventListener("DOMContentLoaded", () =>
     listenToCourt(courtId);
 
     requestWakeLock();
-
-    await initNfc();
   }
 
   function leaveCourt()
@@ -1806,13 +1804,10 @@ document.addEventListener("DOMContentLoaded", () =>
   // NFC INITIALISATION
   // =====================================================
 
+  let nfcInitialized = false;
   async function initNfc()
   {
-    if (isSpectating)
-    {
-      console.warn("NFC not initialized in Spectate mode.");
-      return;
-    }
+    if (nfcInitialized) return;
 
     // Check NFC support
     if (!("NDEFReader" in window))
@@ -1825,6 +1820,7 @@ document.addEventListener("DOMContentLoaded", () =>
     {
       nfcReader = new NDEFReader();
       await nfcReader.scan();
+      nfcInitialized = true;
 
       console.log("NFC scanning started.");
 
@@ -2447,6 +2443,7 @@ document.addEventListener("DOMContentLoaded", () =>
   // =====================================================
 
   updateUI();
+  initNfc();
 
   $("addPointA").addEventListener("click", () => addPoint(EVENT_TYPES.POINT_TEAM_A));
   $("addPointB").addEventListener("click", () => addPoint(EVENT_TYPES.POINT_TEAM_B));
