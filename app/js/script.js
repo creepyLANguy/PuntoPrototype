@@ -1900,7 +1900,7 @@ document.addEventListener("DOMContentLoaded", () =>
     const tag = parseNfcTag(text);
     const eventType = tag.eventType;
 
-    if (!eventType)
+    if (!eventType || eventType === null || eventType === "")
     {
       showToast("NFC event type missing.", TOAST_TYPES.ERROR);
       console.warn("NFC eventType missing: ", text);
@@ -1941,12 +1941,15 @@ document.addEventListener("DOMContentLoaded", () =>
       (Object.keys(fields).length ? "" : rawText)
     ).trim().toUpperCase();
 
+    lastScannedCourtId = fields.COURTID || fields.COURT_ID || "";
+    lastScannedDeviceId = fields.DEVICEID || fields.DEVICE_ID || "";
+
     return {
       rawText,
       fields,
       eventType,
-      courtId: fields.COURTID || fields.COURT_ID || "",
-      deviceId: fields.DEVICEID || fields.DEVICE_ID || "",
+      courtId: lastScannedCourtId,
+      deviceId: lastScannedDeviceId,
       ssid: fields.SSID || "",
       password: fields.PASS || fields.PASSWORD || ""
     };
