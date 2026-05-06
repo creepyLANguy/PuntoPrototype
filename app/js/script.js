@@ -139,6 +139,7 @@ document.addEventListener("DOMContentLoaded", () =>
   let nfcReader = null;
   let nfcCooldown = false;
   let lastNfcScanTime = 0;
+  let nfcDenied = false;
 
   // =====================================================
   // THEME STATE
@@ -263,6 +264,8 @@ document.addEventListener("DOMContentLoaded", () =>
     themeToggleScoreboardBtn: $("themeToggleScoreboardBtn"),
     waveToggleScoreboardBtn: $("waveToggleScoreboardBtn"),
     waveToggleSpectateBtn: $("waveToggleSpectateBtn"),
+
+    activateNfcBtn: $("activateNfcBtn"),
 
     settingsBtn: $("settingsBtn"),
     settingsModal: $("settingsModal"),
@@ -1039,6 +1042,11 @@ document.addEventListener("DOMContentLoaded", () =>
     });
   }
 
+  elements.activateNfcBtn.addEventListener("click", async () =>
+  {
+    await initNfc();
+  });
+
   elements.showCreateCourtModalBtn.addEventListener("click", () =>
   {
     elements.adminDashboardPage.style.display = "none";
@@ -1385,6 +1393,10 @@ document.addEventListener("DOMContentLoaded", () =>
     {
       elements.adminLoginBtn.style.display = "none";
     }
+    if (elements.activateNfcBtn)
+    {
+      elements.activateNfcBtn.classList.add("hidden");
+    }
 
     elements.scoreboardPage.style.display = "flex";
     document.body.classList.add("scoreboard-active");
@@ -1424,6 +1436,11 @@ document.addEventListener("DOMContentLoaded", () =>
     document.body.classList.remove("scoreboard-active");
     if (elements.themeToggleBtn) elements.themeToggleBtn.style.display = "";
     if (elements.adminLoginBtn) elements.adminLoginBtn.style.display = "";
+
+    if (nfcDenied && elements.activateNfcBtn)
+    {
+      elements.activateNfcBtn.classList.remove("hidden");
+    }
 
     elements.scoreboardPage.style.display = "none";
     elements.menuPage.style.display = "flex";
@@ -1821,6 +1838,8 @@ document.addEventListener("DOMContentLoaded", () =>
       nfcReader = new NDEFReader();
       await nfcReader.scan();
       nfcInitialized = true;
+      nfcDenied = false;
+      elements.activateNfcBtn.classList.add("hidden");
 
       console.log("NFC scanning started.");
 
@@ -1867,6 +1886,8 @@ document.addEventListener("DOMContentLoaded", () =>
       if (error.name === "NotAllowedError")
       {
         showToast("NFC permission denied.", TOAST_TYPES.ERROR);
+        nfcDenied = true;
+        elements.activateNfcBtn.classList.remove("hidden");
       } else if (error.name === "NotSupportedError")
       {
         showToast("NFC not available on this device.", TOAST_TYPES.ERROR);
