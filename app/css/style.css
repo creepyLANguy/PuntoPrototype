@@ -159,7 +159,7 @@ body.light-mode::before {
 }
 
 .app-title {
-  font-family: "Outfit", "Arial";
+  font-family: "Arial";
   text-transform: uppercase;
   font-size: clamp(2.5rem, 10vw, 5rem);
   font-weight: 900;
