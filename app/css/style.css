@@ -159,7 +159,7 @@ body.light-mode::before {
 }
 
 .app-title {
-  font-family: "Arial";
+  font-family: "Outfit", "Arial";
   text-transform: uppercase;
   font-size: clamp(2.5rem, 10vw, 5rem);
   font-weight: 900;
@@ -171,6 +171,7 @@ body.light-mode::before {
   background-clip: text;
   -webkit-text-fill-color: transparent;
   animation: apptitleanimation 6s infinite;
+  word-spacing: 0.2em;
 }
 
 body.light-mode .app-title {
@@ -185,6 +186,7 @@ body.light-mode .app-title {
   color: rgba(255, 255, 255, 0.9);
   letter-spacing: 0.5px;
   animation: subtitleanimation 6s infinite;
+    word-spacing: 0.2em;
 }
 
 body.light-mode .app-subtitle {
