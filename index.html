@@ -2,932 +2,1074 @@
 <html lang="en">
 
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Padel Push | The Smart Scoring System for Modern Padel Clubs</title>
-    <meta name="description"
-        content="Padel Push transforms padel courts into connected smart courts with real-time scoring, interactive devices, and a scalable club ecosystem.">
-    <link rel="icon" type="image/svg+xml" href="app/media/img/favicon.svg">
-
-    <!-- Google Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;900&display=swap"
-        rel="stylesheet">
-
-    <style>
-        :root {
-            --accent: #c8ff00;
-            --accent-glow: rgba(200, 255, 0, 0.4);
-            --accent-dim: rgba(200, 255, 0, 0.15);
-            --primary: #00d4ff;
-            --secondary: #7c5cff;
-            --bg-dark: #080c17;
-            --bg-surface: #0e1425;
-            --text: #ffffff;
-            --text-muted: rgba(255, 255, 255, 0.7);
-            --glass-bg: rgba(255, 255, 255, 0.03);
-            --glass-border: rgba(255, 255, 255, 0.1);
-            --card-radius: 24px;
-            --section-padding: clamp(4rem, 10vw, 8rem);
-            --container-width: 1200px;
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Outfit', system-ui, -apple-system, sans-serif;
-        }
-
-        html {
-            scroll-behavior: smooth;
-        }
-
-        body {
-            background-color: var(--bg-dark);
-            background-image: radial-gradient(circle at 50% 0%, #11182c 0%, var(--bg-dark) 100%);
-            color: var(--text);
-            line-height: 1.6;
-            overflow-x: hidden;
-            -webkit-font-smoothing: antialiased;
-        }
-
-        /* ─── Background Elements ─── */
-        #particles {
-            position: fixed;
-            inset: 0;
-            z-index: -1;
-            pointer-events: none;
-            opacity: 0.3;
-        }
-
-        .orb {
-            position: fixed;
-            border-radius: 50%;
-            filter: blur(120px);
-            opacity: 0.15;
-            pointer-events: none;
-            z-index: -1;
-            will-change: transform;
-        }
-
-        .orb-1 { width: 60vw; height: 60vw; background: var(--primary); top: -20%; left: -10%; }
-        .orb-2 { width: 50vw; height: 50vw; background: var(--secondary); bottom: -10%; right: -10%; }
-        .orb-3 { width: 30vw; height: 30vw; background: var(--accent); top: 40%; left: 40%; }
-
-        /* ─── Layout ─── */
-        .container {
-            max-width: var(--container-width);
-            margin: 0 auto;
-            padding: 0 2rem;
-        }
-
-        section {
-            padding: var(--section-padding) 0;
-            position: relative;
-        }
-
-        /* ─── Header ─── */
-        header {
-            position: fixed;
-            top: 0;
-            width: 100%;
-            z-index: 100;
-            padding: 1.5rem 0;
-            transition: all 0.3s ease;
-        }
-
-        header.scrolled {
-            background: rgba(8, 12, 23, 0.8);
-            backdrop-filter: blur(20px);
-            border-bottom: 1px solid var(--glass-border);
-            padding: 1rem 0;
-        }
-
-        nav {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .logo {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            text-decoration: none;
-            color: white;
-            font-weight: 800;
-            font-size: 1.25rem;
-            letter-spacing: -0.02em;
-        }
-
-        .logo img {
-            height: 32px;
-            filter: drop-shadow(0 0 10px var(--accent-glow));
-        }
-
-        .nav-links {
-            display: flex;
-            gap: 2rem;
-            align-items: center;
-        }
-
-        .nav-links a {
-            text-decoration: none;
-            color: var(--text-muted);
-            font-size: 0.9rem;
-            font-weight: 500;
-            transition: color 0.3s ease;
-        }
-
-        .nav-links a:hover {
-            color: var(--accent);
-        }
-
-        .btn {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            padding: 0.8rem 1.6rem;
-            border-radius: 100px;
-            font-weight: 600;
-            text-decoration: none;
-            transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);
-            font-size: 0.9rem;
-            cursor: pointer;
-            border: none;
-        }
-
-        .btn-primary {
-            background: var(--accent);
-            color: var(--bg-dark);
-            box-shadow: 0 4px 20px var(--accent-dim);
-        }
-
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 30px var(--accent-glow);
-        }
-
-        .btn-outline {
-            background: rgba(255, 255, 255, 0.05);
-            color: white;
-            border: 1px solid var(--glass-border);
-        }
-
-        .btn-outline:hover {
-            background: rgba(255, 255, 255, 0.1);
-            border-color: rgba(255, 255, 255, 0.3);
-        }
-
-        /* ─── Hero ─── */
-        .hero {
-            padding-top: 10rem;
-            text-align: center;
-            min-height: 90vh;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-        }
-
-        .badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            padding: 0.5rem 1.25rem;
-            background: var(--accent-dim);
-            border: 1px solid var(--accent-dim);
-            color: var(--accent);
-            border-radius: 100px;
-            font-size: 0.75rem;
-            font-weight: 700;
-            letter-spacing: 0.1em;
-            text-transform: uppercase;
-            margin-bottom: 2rem;
-        }
-
-        .hero h1 {
-            font-size: clamp(2.5rem, 8vw, 5rem);
-            font-weight: 900;
-            line-height: 1.1;
-            margin-bottom: 1.5rem;
-            letter-spacing: -0.03em;
-            background: linear-gradient(to bottom, #fff 50%, rgba(255, 255, 255, 0.7) 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-
-        .hero p {
-            font-size: clamp(1.1rem, 2vw, 1.4rem);
-            color: var(--text-muted);
-            max-width: 800px;
-            margin: 0 auto 3rem;
-            text-wrap: balance;
-        }
-
-        .hero-btns {
-            display: flex;
-            gap: 1rem;
-            justify-content: center;
-            flex-wrap: wrap;
-        }
-
-        /* ─── Devices Section ─── */
-        .section-title {
-            text-align: center;
-            margin-bottom: 4rem;
-        }
-
-        .section-title h2 {
-            font-size: clamp(2rem, 5vw, 3rem);
-            font-weight: 800;
-            margin-bottom: 1rem;
-        }
-
-        .section-title p {
-            color: var(--text-muted);
-            font-size: 1.1rem;
-            max-width: 600px;
-            margin: 0 auto;
-        }
-
-        .device-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 2rem;
-        }
-
-        .device-card {
-            background: var(--glass-bg);
-            border: 1px solid var(--glass-border);
-            border-radius: var(--card-radius);
-            padding: 3rem 2rem;
-            text-align: center;
-            transition: all 0.4s ease;
-            backdrop-filter: blur(10px);
-            display: flex;
-            flex-direction: column;
-            height: 100%;
-        }
-
-        .device-card:hover {
-            transform: translateY(-10px);
-            border-color: var(--accent-dim);
-            background: rgba(200, 255, 0, 0.03);
-        }
-
-        .device-icon {
-            height: 80px;
-            margin-bottom: 2rem;
-            filter: brightness(0) invert(1) drop-shadow(0 0 15px var(--accent-glow));
-            opacity: 0.9;
-        }
-
-        .device-card h3 {
-            font-size: 1.75rem;
-            margin-bottom: 1rem;
-            color: white;
-        }
-
-        .device-card .tagline {
-            color: var(--accent);
-            font-size: 0.8rem;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.1em;
-            margin-bottom: 1.5rem;
-        }
-
-        .device-card ul {
-            list-style: none;
-            text-align: left;
-            margin-bottom: 2rem;
-            flex-grow: 1;
-        }
-
-        .device-card li {
-            font-size: 0.95rem;
-            color: var(--text-muted);
-            margin-bottom: 0.75rem;
-            display: flex;
-            align-items: flex-start;
-            gap: 0.75rem;
-        }
-
-        .device-card li::before {
-            content: '•';
-            color: var(--accent);
-            font-weight: bold;
-        }
-
-        .ideal-for {
-            border-top: 1px solid var(--glass-border);
-            padding-top: 1.5rem;
-            margin-top: auto;
-        }
-
-        .ideal-for h4 {
-            font-size: 0.75rem;
-            text-transform: uppercase;
-            letter-spacing: 0.1em;
-            color: rgba(255, 255, 255, 0.4);
-            margin-bottom: 0.75rem;
-        }
-
-        .ideal-tags {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.5rem;
-            justify-content: center;
-        }
-
-        .ideal-tags span {
-            background: rgba(255, 255, 255, 0.05);
-            padding: 0.25rem 0.75rem;
-            border-radius: 50px;
-            font-size: 0.8rem;
-            color: var(--text-muted);
-        }
-
-        /* ─── Steps Section ─── */
-        .steps-container {
-            display: flex;
-            flex-direction: column;
-            gap: 4rem;
-            max-width: 800px;
-            margin: 0 auto;
-        }
-
-        .step {
-            display: flex;
-            gap: 2rem;
-            align-items: flex-start;
-        }
-
-        .step-number {
-            flex-shrink: 0;
-            width: 50px;
-            height: 50px;
-            background: var(--accent);
-            color: var(--bg-dark);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 900;
-            font-size: 1.25rem;
-            box-shadow: 0 0 20px var(--accent-glow);
-        }
-
-        .step-content h3 {
-            font-size: 1.5rem;
-            margin-bottom: 0.5rem;
-        }
-
-        .step-content p {
-            color: var(--text-muted);
-        }
-
-        /* ─── Platforms ─── */
-        .platforms {
-            background: rgba(255, 255, 255, 0.02);
-            padding: 4rem 0;
-            border-top: 1px solid var(--glass-border);
-            border-bottom: 1px solid var(--glass-border);
-        }
-
-        .platform-list {
-            display: flex;
-            justify-content: center;
-            gap: 4rem;
-            flex-wrap: wrap;
-        }
-
-        .platform-item {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 1rem;
-            opacity: 0.6;
-            transition: opacity 0.3s ease;
-        }
-
-        .platform-item:hover { opacity: 1; }
-
-        .platform-item img {
-            height: 32px;
-            filter: invert(1);
-        }
-
-        .platform-item span {
-            font-size: 0.8rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.1em;
-        }
-
-        /* ─── Benefits ─── */
-        .benefits-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 2rem;
-        }
-
-        .benefit-item {
-            padding: 2rem;
-            background: var(--glass-bg);
-            border-radius: var(--card-radius);
-            border: 1px solid var(--glass-border);
-        }
-
-        .benefit-item h3 {
-            font-size: 1.25rem;
-            margin-bottom: 1rem;
-            color: var(--accent);
-        }
-
-        /* ─── Pilot Program ─── */
-        .pilot {
-            background: linear-gradient(135deg, rgba(124, 92, 255, 0.1) 0%, rgba(200, 255, 0, 0.05) 100%);
-            border-radius: 40px;
-            padding: 6rem 4rem;
-            text-align: center;
-            border: 1px solid var(--glass-border);
-        }
-
-        .pilot h2 {
-            font-size: clamp(2rem, 5vw, 3.5rem);
-            margin-bottom: 2rem;
-        }
-
-        .pilot-perks {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 2rem;
-            margin-bottom: 4rem;
-            text-align: left;
-        }
-
-        .perk {
-            display: flex;
-            gap: 1rem;
-            font-size: 1.1rem;
-            color: var(--text-muted);
-        }
-
-        .perk::before {
-            content: '✓';
-            color: var(--accent);
-            font-weight: bold;
-        }
-
-        /* ─── FAQ ─── */
-        .faq-grid {
-            max-width: 800px;
-            margin: 0 auto;
-            display: flex;
-            flex-direction: column;
-            gap: 1.5rem;
-        }
-
-        .faq-item {
-            background: var(--glass-bg);
-            border: 1px solid var(--glass-border);
-            border-radius: 16px;
-            padding: 1.5rem;
-        }
-
-        .faq-item h3 {
-            font-size: 1.1rem;
-            margin-bottom: 0.5rem;
-            color: white;
-        }
-
-        .faq-item p {
-            color: var(--text-muted);
-            font-size: 0.95rem;
-        }
-
-        /* ─── Footer ─── */
-        footer {
-            padding: 6rem 0 3rem;
-            border-top: 1px solid var(--glass-border);
-            text-align: center;
-        }
-
-        .footer-logo {
-            margin-bottom: 2rem;
-        }
-
-        .social-links {
-            display: flex;
-            justify-content: center;
-            gap: 2rem;
-            margin-bottom: 3rem;
-        }
-
-        .social-links a {
-            color: var(--text-muted);
-            text-decoration: none;
-            transition: color 0.3s ease;
-        }
-
-        .social-links a:hover { color: var(--accent); }
-
-        .copyright {
-            font-size: 0.8rem;
-            color: rgba(255, 255, 255, 0.3);
-        }
-
-        /* ─── Animations ─── */
-        .reveal {
-            opacity: 0;
-            transform: translateY(30px);
-            transition: all 0.8s cubic-bezier(0.23, 1, 0.32, 1);
-        }
-
-        .reveal.active {
-            opacity: 1;
-            transform: translateY(0);
-        }
-
-        /* ─── Mobile ─── */
-        @media (max-width: 768px) {
-            :root {
-                --section-padding: 4rem 0;
-            }
-
-            .nav-links { display: none; }
-
-            .hero h1 { font-size: 3rem; }
-
-            .pilot { padding: 4rem 2rem; }
-
-            .device-grid { grid-template-columns: 1fr; }
-
-            .platform-list { gap: 2rem; }
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Padel Push | Smart Scoring for Modern Padel Clubs</title>
+  <meta name="description"
+    content="Padel Push is a connected smart court ecosystem with portable scoring devices, live scoreboards, NFC interactions, and scalable tools for padel clubs and players.">
+  <link rel="icon" type="image/svg+xml" href="app/media/img/favicon.svg">
+  <style>
+    :root {
+      --ink: #10151f;
+      --muted: #5c6675;
+      --soft: #eef3f6;
+      --panel: #ffffff;
+      --line: #dce4ea;
+      --brand: #b8f300;
+      --brand-strong: #90c400;
+      --cyan: #00a9c7;
+      --court: #103f46;
+      --court-2: #0a2a31;
+      --shadow: 0 18px 50px rgba(16, 21, 31, 0.12);
+      --radius: 8px;
+      --wrap: 1160px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: #f8fbfc;
+      font-family: Inter, Outfit, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+    }
+
+    img {
+      max-width: 100%;
+      display: block;
+    }
+
+    a {
+      color: inherit;
+    }
+
+    .wrap {
+      width: min(var(--wrap), calc(100% - 40px));
+      margin: 0 auto;
+    }
+
+    .site-header {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      background: rgba(248, 251, 252, 0.92);
+      border-bottom: 1px solid rgba(220, 228, 234, 0.8);
+      backdrop-filter: blur(14px);
+    }
+
+    .nav {
+      min-height: 74px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+    }
+
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+      font-weight: 900;
+      font-size: clamp(1.18rem, 3vw, 1.55rem);
+    }
+
+    .brand-mark {
+      width: 46px;
+      height: 46px;
+      border-radius: 8px;
+      background: var(--ink);
+      padding: 8px;
+      box-shadow: 0 10px 24px rgba(16, 21, 31, 0.16);
+    }
+
+    .brand-mark img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 22px;
+      font-size: 0.94rem;
+      font-weight: 700;
+    }
+
+    .nav-links a {
+      text-decoration: none;
+      color: var(--muted);
+    }
+
+    .nav-links a:hover {
+      color: var(--ink);
+    }
+
+    .social-links {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .social-links a {
+      width: 36px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      background: var(--soft);
+      color: var(--muted);
+      text-decoration: none;
+      font-weight: 600;
+      transition: all 160ms ease;
+      font-size: 0.95rem;
+    }
+
+    .social-links a:hover {
+      background: var(--brand);
+      color: var(--ink);
+      transform: translateY(-2px);
+    }
+
+    .button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 44px;
+      padding: 0 18px;
+      border: 1px solid var(--ink);
+      border-radius: var(--radius);
+      background: var(--ink);
+      color: #fff;
+      text-decoration: none;
+      font-weight: 800;
+      font-size: 0.95rem;
+      transition: transform 160ms ease, box-shadow 160ms ease, background 160ms ease;
+    }
+
+    .button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 10px 24px rgba(16, 21, 31, 0.15);
+    }
+
+    .button.primary {
+      background: var(--brand);
+      border-color: var(--brand);
+      color: var(--ink);
+    }
+
+    .button.ghost {
+      background: transparent;
+      color: var(--ink);
+      border-color: var(--line);
+    }
+
+    .hero {
+      background:
+        linear-gradient(135deg, rgba(184, 243, 0, 0.22), rgba(0, 169, 199, 0.12) 44%, rgba(255, 255, 255, 0) 78%),
+        #f8fbfc;
+      padding: clamp(54px, 9vw, 106px) 0 clamp(40px, 7vw, 74px);
+    }
+
+    .hero-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.05fr) minmax(330px, 0.95fr);
+      gap: clamp(36px, 6vw, 70px);
+      align-items: center;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      min-height: 30px;
+      padding: 0 10px;
+      border-radius: 999px;
+      background: #eaff9d;
+      color: #263000;
+      font-size: 0.78rem;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
+    h1,
+    h2,
+    h3,
+    p {
+      margin-top: 0;
+    }
+
+    h1 {
+      margin-bottom: 18px;
+      font-size: clamp(3rem, 8vw, 5.6rem);
+      line-height: 0.96;
+      font-weight: 950;
+    }
+
+    .hero h1 span {
+      display: block;
+      color: var(--cyan);
+    }
+
+    .lead {
+      max-width: 680px;
+      color: #394452;
+      font-size: clamp(1.08rem, 2.3vw, 1.32rem);
+      margin-bottom: 28px;
+    }
+
+    .hero-actions,
+    .cta-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .hero-points {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 34px;
+      max-width: 650px;
+    }
+
+    .point {
+      border-left: 3px solid var(--brand);
+      padding-left: 12px;
+      color: var(--muted);
+      font-size: 0.95rem;
+      font-weight: 650;
+    }
+
+    .score-preview {
+      background: var(--court-2);
+      color: #fff;
+      border-radius: 18px;
+      padding: 20px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .preview-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 18px;
+    }
+
+    .preview-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 900;
+      font-size: 1.2rem;
+    }
+
+    .preview-brand img {
+      width: 38px;
+      height: 38px;
+    }
+
+    .live-pill {
+      padding: 5px 9px;
+      border-radius: 999px;
+      background: rgba(184, 243, 0, 0.16);
+      color: var(--brand);
+      font-size: 0.74rem;
+      font-weight: 900;
+    }
+
+    .court-lines {
+      border: 2px solid rgba(255, 255, 255, 0.22);
+      border-radius: 10px;
+      padding: 14px;
+      background:
+        linear-gradient(90deg, transparent calc(50% - 1px), rgba(255, 255, 255, 0.14) calc(50% - 1px), rgba(255, 255, 255, 0.14) calc(50% + 1px), transparent calc(50% + 1px)),
+        var(--court);
+    }
+
+    .team-row {
+      display: grid;
+      grid-template-columns: 1fr auto auto;
+      align-items: center;
+      gap: 12px;
+      min-height: 82px;
+      padding: 12px 14px;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.06);
+    }
+
+    .team-row + .team-row {
+      margin-top: 12px;
+    }
+
+    .team-name {
+      color: rgba(255, 255, 255, 0.72);
+      font-weight: 800;
+      text-transform: uppercase;
+      font-size: 0.85rem;
+    }
+
+    .score {
+      color: var(--brand);
+      font-size: clamp(3rem, 9vw, 4.8rem);
+      line-height: 1;
+      font-weight: 950;
+    }
+
+    .sets {
+      color: rgba(255, 255, 255, 0.7);
+      font-weight: 800;
+    }
+
+    .preview-devices {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .preview-device {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+      padding: 10px;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.07);
+      font-size: 0.78rem;
+      font-weight: 800;
+      color: rgba(255, 255, 255, 0.78);
+    }
+
+    .preview-device img {
+      width: 26px;
+      height: 26px;
+      filter: brightness(0) invert(1);
+      opacity: 0.9;
+      flex: 0 0 auto;
+    }
+
+    section {
+      padding: clamp(54px, 8vw, 92px) 0;
+    }
+
+    .section-head {
+      max-width: 740px;
+      margin-bottom: 30px;
+    }
+
+    .center {
+      text-align: center;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    h2 {
+      margin-bottom: 12px;
+      font-size: clamp(2rem, 5vw, 3.25rem);
+      line-height: 1.05;
+      font-weight: 930;
+    }
+
+    h3 {
+      margin-bottom: 10px;
+      font-size: 1.18rem;
+      line-height: 1.2;
+    }
+
+    .section-head p,
+    .card p,
+    .feature p,
+    .step p,
+    .faq p,
+    .cta p {
+      color: var(--muted);
+    }
+
+    .split {
+      display: grid;
+      grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+      gap: clamp(28px, 5vw, 56px);
+      align-items: start;
+    }
+
+    .feature-list {
+      display: grid;
+      gap: 14px;
+    }
+
+    .feature {
+      padding: 18px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--panel);
+    }
+
+    .display-grid,
+    .benefit-grid,
+    .faq-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .device-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 18px;
+    }
+
+    .card {
+      min-height: 100%;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--panel);
+      padding: 22px;
+      box-shadow: 0 12px 34px rgba(16, 21, 31, 0.06);
+    }
+
+    .device-card {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .device-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .device-icon {
+      width: 54px;
+      height: 54px;
+      border-radius: 8px;
+      background: var(--ink);
+      padding: 10px;
+    }
+
+    .device-icon img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      filter: brightness(0) invert(1);
+    }
+
+    .tag {
+      width: fit-content;
+      padding: 5px 8px;
+      border-radius: 999px;
+      background: var(--soft);
+      color: var(--muted);
+      font-size: 0.72rem;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
+    .card ul {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      display: grid;
+      gap: 9px;
+    }
+
+    .card li {
+      color: var(--muted);
+      font-size: 0.95rem;
+      padding-left: 18px;
+      position: relative;
+    }
+
+    .card li::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 0.66em;
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--brand-strong);
+    }
+
+    .path {
+      background: #0d1720;
+      color: #fff;
+    }
+
+    .path .section-head p {
+      color: rgba(255, 255, 255, 0.7);
+    }
+
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .step {
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: var(--radius);
+      padding: 22px;
+      background: rgba(255, 255, 255, 0.06);
+    }
+
+    .step-num {
+      width: 38px;
+      height: 38px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      background: var(--brand);
+      color: var(--ink);
+      font-weight: 950;
+      margin-bottom: 18px;
+    }
+
+    .step p {
+      color: rgba(255, 255, 255, 0.72);
+      margin-bottom: 0;
+    }
+
+    .display-card {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-height: 88px;
+    }
+
+    .display-card img {
+      width: 36px;
+      height: 36px;
+    }
+
+    .display-card strong {
+      display: block;
+      margin-bottom: 2px;
+    }
+
+    .benefit-grid {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .players {
+      background: var(--soft);
+    }
+
+    .cta {
+      background: #10151f;
+      color: #fff;
+      padding: clamp(52px, 7vw, 78px) 0;
+    }
+
+    .cta-box {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 30px;
+      align-items: center;
+    }
+
+    .cta p {
+      max-width: 690px;
+      color: rgba(255, 255, 255, 0.74);
+      margin-bottom: 0;
+    }
+
+    .cta .button.ghost {
+      color: #fff;
+      border-color: rgba(255, 255, 255, 0.3);
+    }
+
+    .faq-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    footer {
+      padding: 34px 0;
+      border-top: 1px solid var(--line);
+      background: #fff;
+    }
+
+    .footer-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    .footer-links {
+      display: flex;
+      gap: 18px;
+      font-weight: 750;
+    }
+
+    .footer-links a {
+      text-decoration: none;
+    }
+
+    @media (max-width: 900px) {
+      .nav-links a:not(.button) {
+        display: none;
+      }
+
+      .hero-grid,
+      .split,
+      .cta-box {
+        grid-template-columns: 1fr;
+      }
+
+      .score-preview {
+        max-width: 560px;
+      }
+
+      .device-grid,
+      .steps,
+      .display-grid,
+      .benefit-grid,
+      .faq-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .cta-actions {
+        justify-content: flex-start;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .wrap {
+        width: min(100% - 28px, var(--wrap));
+      }
+
+      .nav {
+        min-height: 66px;
+      }
+
+      .brand-mark {
+        width: 42px;
+        height: 42px;
+      }
+
+      .nav-links {
+        gap: 0;
+      }
+
+      .nav-links .button {
+        display: none;
+      }
+
+      .social-links {
+        gap: 10px;
+      }
+
+      .social-links a {
+        width: 32px;
+        height: 32px;
+        font-size: 0.85rem;
+      }
+
+      .hero {
+        padding-top: 38px;
+      }
+
+      h1 {
+        font-size: clamp(2.8rem, 14vw, 4.1rem);
+      }
+
+      .hero-actions,
+      .cta-actions {
+        display: grid;
+        grid-template-columns: 1fr;
+      }
+
+      .button {
+        width: 100%;
+      }
+
+      .hero-points,
+      .device-grid,
+      .steps,
+      .display-grid,
+      .benefit-grid,
+      .faq-grid,
+      .preview-devices {
+        grid-template-columns: 1fr;
+      }
+
+      .point {
+        font-size: 0.92rem;
+      }
+
+      .score-preview {
+        padding: 14px;
+        border-radius: 12px;
+      }
+
+      .team-row {
+        min-height: 70px;
+        grid-template-columns: 1fr auto;
+      }
+
+      .sets {
+        display: none;
+      }
+
+      .score {
+        font-size: clamp(3rem, 18vw, 4.4rem);
+      }
+
+      .footer-row {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+    }
+  </style>
 </head>
 
 <body>
-    <canvas id="particles"></canvas>
-    <div class="orb orb-1"></div>
-    <div class="orb orb-2"></div>
-    <div class="orb orb-3"></div>
+  <header class="site-header">
+    <div class="wrap nav">
+      <a href="#" class="brand" aria-label="Padel Push home">
+        <span class="brand-mark"><img src="app/media/img/logo.svg" alt=""></span>
+        <span>Padel Push</span>
+      </a>
+      <nav class="nav-links" aria-label="Primary navigation">
+        <a href="#ecosystem">Ecosystem</a>
+        <a href="#devices">Devices</a>
+        <a href="#clubs">Clubs</a>
+        <a href="#faq">FAQ</a>
+        <a href="#pilot" class="button primary">Book a demo</a>
+      </nav>
+      <div class="social-links">
+        <a href="https://instagram.com" title="Instagram" aria-label="Instagram">📷</a>
+        <a href="https://facebook.com" title="Facebook" aria-label="Facebook">f</a>
+        <a href="https://twitter.com" title="Twitter" aria-label="Twitter">𝕏</a>
+        <a href="https://linkedin.com" title="LinkedIn" aria-label="LinkedIn">in</a>
+      </div>
+    </div>
+  </header>
 
-    <header id="header">
-        <div class="container">
-            <nav>
-                <a href="#" class="logo">
-                    <img src="app/media/img/logo.svg" alt="Padel Push">
-                    <span>Padel Push</span>
-                </a>
-                <div class="nav-links">
-                    <a href="#devices">Devices</a>
-                    <a href="#smart-courts">Smart Courts</a>
-                    <a href="#benefits">Benefits</a>
-                    <a href="#pilot" class="btn btn-primary">Join Pilot</a>
-                </div>
-            </nav>
+  <main>
+    <section class="hero">
+      <div class="wrap hero-grid">
+        <div>
+          <span class="eyebrow">Smart scoring for padel</span>
+          <h1>Padel Push <span>connects every court.</span></h1>
+          <p class="lead">Smart devices. Live scoring. Connected courts. Padel Push helps clubs and players modernise
+            every match with portable scoring, hands-free automation, NFC interactions, and real-time scoreboards.</p>
+          <div class="hero-actions">
+            <a class="button primary" href="mailto:hello@padelpush.com?subject=Padel%20Push%20demo">Book a free demo</a>
+            <a class="button ghost" href="#ecosystem">See how it works</a>
+          </div>
+          <div class="hero-points" aria-label="Padel Push highlights">
+            <div class="point">No phones needed on court</div>
+            <div class="point">Scores visible on any screen</div>
+            <div class="point">Start small and scale naturally</div>
+          </div>
         </div>
-    </header>
 
-    <main>
-        <!-- Hero Section -->
-        <section class="hero">
-            <div class="container">
-                <div class="badge reveal">The Future of Padel Scoring</div>
-                <h1 class="reveal">Smart devices. Live scoring. Connected courts.</h1>
-                <p class="reveal">Padel Push transforms padel courts into connected smart courts with real-time scoring, interactive devices, and a scalable club ecosystem.</p>
-                <div class="hero-btns reveal">
-                    <a href="#pilot" class="btn btn-primary btn-lg">Book a Free Demo</a>
-                    <a href="#devices" class="btn btn-outline btn-lg">Explore Devices</a>
-                </div>
+        <div class="score-preview" aria-label="Padel Push live scoreboard preview">
+          <div class="preview-top">
+            <div class="preview-brand">
+              <img src="app/media/img/logo.svg" alt="">
+              <span>Padel Push</span>
             </div>
-        </section>
-
-        <!-- Vision Section -->
-        <section id="vision">
-            <div class="container">
-                <div class="section-title reveal">
-                    <h2>Modernise Your Venue</h2>
-                    <p>Whether you're running social matches, competitive leagues, or a professional club, Padel Push delivers a seamless scoring experience.</p>
-                </div>
-                <div class="benefits-grid">
-                    <div class="benefit-item reveal">
-                        <h3>Effortless</h3>
-                        <p>Scoring that feels natural and never interrupts the flow of the game.</p>
-                    </div>
-                    <div class="benefit-item reveal">
-                        <h3>Accessible</h3>
-                        <p>Real-time scores visible on any screen, from courtside TVs to mobile phones.</p>
-                    </div>
-                    <div class="benefit-item reveal">
-                        <h3>Scalable</h3>
-                        <p>Start with a single portable device and grow into a fully automated smart court.</p>
-                    </div>
-                </div>
+            <span class="live-pill">LIVE SCORE</span>
+          </div>
+          <div class="court-lines">
+            <div class="team-row">
+              <span class="team-name">Team A</span>
+              <span class="sets">Sets 1</span>
+              <span class="score">40</span>
             </div>
-        </section>
-
-        <!-- Devices Section -->
-        <section id="devices">
-            <div class="container">
-                <div class="section-title reveal">
-                    <h2>Our Ecosystem</h2>
-                    <p>Purpose-built hardware designed for simplicity, portability, and reliability.</p>
-                </div>
-                <div class="device-grid">
-                    <!-- Pulse -->
-                    <div class="device-card reveal">
-                        <div class="tagline">The Portable Scorer</div>
-                        <img src="media/logos/d1.svg" alt="Pulse" class="device-icon">
-                        <h3>Pulse</h3>
-                        <ul>
-                            <li>Ultra-portable ESP32-C powered</li>
-                            <li>Single-button operation</li>
-                            <li>Audible score feedback</li>
-                            <li>NFC registration support</li>
-                        </ul>
-                        <div class="ideal-for">
-                            <h4>Ideal For</h4>
-                            <div class="ideal-tags">
-                                <span>Casual Matches</span>
-                                <span>Club Rentals</span>
-                                <span>Entry-level</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Beacon -->
-                    <div class="device-card reveal">
-                        <div class="tagline">Hands-Free Scoring</div>
-                        <img src="media/logos/d2.svg" alt="Beacon" class="device-icon">
-                        <h3>Beacon</h3>
-                        <ul>
-                            <li>Distance-based score triggering</li>
-                            <li>Physical team assignment switch</li>
-                            <li>Minimal interaction required</li>
-                            <li>Rechargeable battery</li>
-                        </ul>
-                        <div class="ideal-for">
-                            <h4>Ideal For</h4>
-                            <div class="ideal-tags">
-                                <span>High-traffic Courts</span>
-                                <span>Competitive Matches</span>
-                                <span>Clean Gameplay</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Hub -->
-                    <div class="device-card reveal">
-                        <div class="tagline">Central Control</div>
-                        <img src="media/logos/d3.svg" alt="Hub" class="device-icon">
-                        <h3>Hub</h3>
-                        <ul>
-                            <li>NFC reader integration</li>
-                            <li>Device-to-court registration</li>
-                            <li>Court management tools</li>
-                            <li>Smart device allocation</li>
-                        </ul>
-                        <div class="ideal-for">
-                            <h4>Ideal For</h4>
-                            <div class="ideal-tags">
-                                <span>Club Management</span>
-                                <span>Multi-court Venues</span>
-                                <span>Full Automation</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+            <div class="team-row">
+              <span class="team-name">Team B</span>
+              <span class="sets">Sets 0</span>
+              <span class="score">30</span>
             </div>
-        </section>
-
-        <!-- Growth Section -->
-        <section id="smart-courts">
-            <div class="container">
-                <div class="section-title reveal">
-                    <h2>Grow With Your Club</h2>
-                    <p>Three steps to a fully connected smart court experience.</p>
-                </div>
-                <div class="steps-container">
-                    <div class="step reveal">
-                        <div class="step-number">1</div>
-                        <div class="step-content">
-                            <h3>Pulse — Start Simple</h3>
-                            <p>Lend or rent portable Pulse devices to players for manual scoring. Instant live scoreboards with zero infrastructure.</p>
-                        </div>
-                    </div>
-                    <div class="step reveal">
-                        <div class="step-number">2</div>
-                        <div class="step-content">
-                            <h3>Beacon — Automate</h3>
-                            <p>Add Beacon devices courtside for hands-free score triggering. Reduce interruptions and simplify gameplay.</p>
-                        </div>
-                    </div>
-                    <div class="step reveal">
-                        <div class="step-number">3</div>
-                        <div class="step-content">
-                            <h3>Hub — Connect</h3>
-                            <p>Integrate Hubs to unlock full smart court functionality. Manage devices and enable NFC-powered interactions venue-wide.</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- Platforms -->
-        <section class="platforms reveal">
-            <div class="container">
-                <div class="platform-list">
-                    <div class="platform-item">
-                        <img src="media/logos/apple.svg" alt="iOS">
-                        <span>iOS App</span>
-                    </div>
-                    <div class="platform-item">
-                        <img src="media/logos/android.svg" alt="Android">
-                        <span>Android App</span>
-                    </div>
-                    <div class="platform-item">
-                        <img src="media/logos/web.svg" alt="Web">
-                        <span>Web Player</span>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- Benefits Section -->
-        <section id="benefits">
-            <div class="container">
-                <div class="section-title reveal">
-                    <h2>Why Padel Push?</h2>
-                    <p>Designed to improve player engagement and simplify club operations.</p>
-                </div>
-                <div class="benefits-grid">
-                    <div class="benefit-item reveal">
-                        <h3>Player Experience</h3>
-                        <p>Modern scoring without interrupting gameplay. Players feel professional and engaged.</p>
-                    </div>
-                    <div class="benefit-item reveal">
-                        <h3>Zero Friction</h3>
-                        <p>No dedicated scoreboard operator required. The system runs itself.</p>
-                    </div>
-                    <div class="benefit-item reveal">
-                        <h3>Revenue Growth</h3>
-                        <p>Opportunities for device rentals, premium memberships, and sponsored court experiences.</p>
-                    </div>
-                    <div class="benefit-item reveal">
-                        <h3>Local Support</h3>
-                        <p>Built for South African clubs with local support and direct feedback channels.</p>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- Pilot Section -->
-        <section id="pilot" class="container reveal">
-            <div class="pilot">
-                <h2>Join the Pilot Program</h2>
-                <p style="color: var(--text-muted); margin-bottom: 3rem; max-width: 700px; margin-left: auto; margin-right: auto;">We're partnering with selected clubs to help shape the future of connected padel. Get exclusive early access and benefits.</p>
-                
-                <div class="pilot-perks">
-                    <div class="perk">Free prototype devices</div>
-                    <div class="perk">Free onboarding & setup</div>
-                    <div class="perk">Lifetime software updates</div>
-                    <div class="perk">Direct support access</div>
-                    <div class="perk">Early feature access</div>
-                    <div class="perk">Feedback collaboration</div>
-                </div>
-
-                <div class="hero-btns">
-                    <a href="mailto:hello@padelpush.com" class="btn btn-primary btn-lg">Apply for Pilot Access</a>
-                    <a href="mailto:hello@padelpush.com" class="btn btn-outline btn-lg">Contact Us</a>
-                </div>
-            </div>
-        </section>
-
-        <!-- FAQ Section -->
-        <section id="faq">
-            <div class="container">
-                <div class="section-title reveal">
-                    <h2>Frequently Asked Questions</h2>
-                </div>
-                <div class="faq-grid">
-                    <div class="faq-item reveal">
-                        <h3>Do players need phones to score?</h3>
-                        <p>No. Pulse and Beacon devices work independently on court, so players can focus on the game.</p>
-                    </div>
-                    <div class="faq-item reveal">
-                        <h3>Can scoreboards be viewed remotely?</h3>
-                        <p>Yes. Matches can be viewed in real-time from any internet-connected display, including phones and TVs.</p>
-                    </div>
-                    <div class="faq-item reveal">
-                        <h3>Do devices work on battery power?</h3>
-                        <p>Yes. All devices include rechargeable batteries with USB-C support for continuous power if needed.</p>
-                    </div>
-                    <div class="faq-item reveal">
-                        <h3>Can clubs start with only a few devices?</h3>
-                        <p>Absolutely. Padel Push is designed to be modular and scalable to fit any club size.</p>
-                    </div>
-                </div>
-            </div>
-        </section>
-    </main>
-
-    <footer>
-        <div class="container">
-            <div class="footer-logo">
-                <a href="#" class="logo" style="justify-content: center;">
-                    <img src="app/media/img/logo.svg" alt="Padel Push">
-                    <span>Padel Push</span>
-                </a>
-            </div>
-            <div class="social-links">
-                <a href="#">Instagram</a>
-                <a href="#">LinkedIn</a>
-                <a href="#">X (Twitter)</a>
-            </div>
-            <p class="copyright">&copy; 2026 Padel Push. Built for the future of the game.</p>
+          </div>
+          <div class="preview-devices">
+            <div class="preview-device"><img src="media/logos/d1.svg" alt="">Pulse</div>
+            <div class="preview-device"><img src="media/logos/d2.svg" alt="">Beacon</div>
+            <div class="preview-device"><img src="media/logos/d3.svg" alt="">Hub</div>
+          </div>
         </div>
-    </footer>
+      </div>
+    </section>
 
-    <script>
-        // Header Scroll Effect
-        window.addEventListener('scroll', () => {
-            const header = document.getElementById('header');
-            if (window.scrollY > 50) {
-                header.classList.add('scrolled');
-            } else {
-                header.classList.remove('scrolled');
-            }
-        });
+    <section id="ecosystem">
+      <div class="wrap split">
+        <div class="section-head">
+          <span class="eyebrow">The ecosystem</span>
+          <h2>A complete smart court layer for clubs and players.</h2>
+          <p>Padel Push combines intelligent hardware devices with a cloud-powered scoring platform. Players interact
+            with physical devices on court while scores, matches, and device management sync instantly online.</p>
+        </div>
+        <div class="feature-list">
+          <div class="feature">
+            <h3>Display scores anywhere</h3>
+            <p>Use courtside TVs, tablets, club displays, mobile phones, web browsers, and kiosks as live scoreboards.
+            </p>
+          </div>
+          <div class="feature">
+            <h3>Built for real courts</h3>
+            <p>Rechargeable batteries, USB-C power, smart Wi-Fi reconnects, offline setup recovery, and buzzer feedback
+              keep the system practical in live club environments.</p>
+          </div>
+          <div class="feature">
+            <h3>Ready to grow</h3>
+            <p>Start with manual scoring, add hands-free triggers, then unlock club-wide device allocation and NFC
+              powered interactions.</p>
+          </div>
+        </div>
+      </div>
+    </section>
 
-        // Reveal Animations
-        const observerOptions = {
-            threshold: 0.1
-        };
+    <section id="devices">
+      <div class="wrap">
+        <div class="section-head center">
+          <span class="eyebrow">Devices</span>
+          <h2>Purpose-built scoring hardware.</h2>
+          <p>Each Padel Push device is designed for simplicity, portability, and reliable match-day use.</p>
+        </div>
 
-        const observer = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    entry.target.classList.add('active');
-                }
-            });
-        }, observerOptions);
+        <div class="device-grid">
+          <article class="card device-card">
+            <div class="device-top">
+              <div>
+                <span class="tag">Portable scorer</span>
+                <h3>Pulse</h3>
+              </div>
+              <span class="device-icon"><img src="media/logos/d1.svg" alt=""></span>
+            </div>
+            <p>Direct player control with a tiny portable device designed for fast gameplay.</p>
+            <ul>
+              <li>Single-button scoring</li>
+              <li>Hold actions for undo, switch teams, and reset</li>
+              <li>Audible score feedback</li>
+              <li>NFC registration support</li>
+              <li>Ideal for casual matches and club rentals</li>
+            </ul>
+          </article>
 
-        document.querySelectorAll('.reveal').forEach((el) => observer.observe(el));
+          <article class="card device-card">
+            <div class="device-top">
+              <div>
+                <span class="tag">Hands-free scoring</span>
+                <h3>Beacon</h3>
+              </div>
+              <span class="device-icon"><img src="media/logos/d2.svg" alt=""></span>
+            </div>
+            <p>Automatic scoring interactions using distance sensing technology.</p>
+            <ul>
+              <li>Distance-based score triggering</li>
+              <li>Physical team assignment switch</li>
+              <li>Minimal interaction required</li>
+              <li>Rechargeable battery</li>
+              <li>Ideal for high-traffic and competitive courts</li>
+            </ul>
+          </article>
 
-        // Particle System (Updated for full page)
-        const canvas = document.getElementById('particles');
-        const ctx = canvas.getContext('2d');
-        let particles = [];
+          <article class="card device-card">
+            <div class="device-top">
+              <div>
+                <span class="tag">Central control</span>
+                <h3>Hub</h3>
+              </div>
+              <span class="device-icon"><img src="media/logos/d3.svg" alt=""></span>
+            </div>
+            <p>The connection point for full smart court functionality and club-wide management.</p>
+            <ul>
+              <li>NFC reader integration</li>
+              <li>Device-to-court registration</li>
+              <li>Court management tools</li>
+              <li>Smart device allocation</li>
+              <li>Ideal for multi-court venues</li>
+            </ul>
+          </article>
+        </div>
+      </div>
+    </section>
 
-        function resize() {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-            initParticles();
-        }
+    <section id="smart-courts" class="path">
+      <div class="wrap">
+        <div class="section-head center">
+          <span class="eyebrow">Upgrade path</span>
+          <h2>Start simple. Scale naturally.</h2>
+          <p>Padel Push grows with your club, from portable scorekeeping to a fully connected venue.</p>
+        </div>
+        <div class="steps">
+          <div class="step">
+            <div class="step-num">1</div>
+            <h3>Pulse</h3>
+            <p>Lend or rent portable Pulse devices to players for manual scoring with instant live scoreboards and
+              minimal infrastructure.</p>
+          </div>
+          <div class="step">
+            <div class="step-num">2</div>
+            <h3>Beacon</h3>
+            <p>Add Beacon devices courtside for hands-free score triggering that reduces interruptions and simplifies
+              gameplay interactions.</p>
+          </div>
+          <div class="step">
+            <div class="step-num">3</div>
+            <h3>Hub</h3>
+            <p>Integrate Hubs to manage devices, assign courts dynamically, and enable NFC-powered interactions across
+              the venue.</p>
+          </div>
+        </div>
+      </div>
+    </section>
 
-        function initParticles() {
-            particles = [];
-            const count = Math.min(window.innerWidth / 10, 100);
-            for (let i = 0; i < count; i++) {
-                particles.push({
-                    x: Math.random() * canvas.width,
-                    y: Math.random() * canvas.height,
-                    size: Math.random() * 2 + 0.5,
-                    vx: (Math.random() - 0.5) * 0.4,
-                    vy: (Math.random() - 0.5) * 0.4,
-                    o: Math.random() * 0.5 + 0.2
-                });
-            }
-        }
+    <section>
+      <div class="wrap">
+        <div class="section-head center">
+          <span class="eyebrow">Live scoreboards</span>
+          <h2>Your match. Any screen.</h2>
+          <p>Scores can be followed live from virtually any internet-connected display. Native Android and iOS apps are
+            in development.</p>
+        </div>
+        <div class="display-grid">
+          <div class="card display-card"><img src="media/logos/web.svg" alt="">
+            <div><strong>Web browsers</strong><span>Scoreboards for phones, TVs, kiosks, and club displays.</span></div>
+          </div>
+          <div class="card display-card"><img src="media/logos/android.svg" alt="">
+            <div><strong>Android</strong><span>Native mobile app coming soon for players and spectators.</span></div>
+          </div>
+          <div class="card display-card"><img src="media/logos/apple.svg" alt="">
+            <div><strong>iOS</strong><span>Native mobile app coming soon for iPhone users.</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
 
-        function animate() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            particles.forEach(p => {
-                p.x += p.vx;
-                p.y += p.vy;
-                if (p.x < 0) p.x = canvas.width;
-                if (p.x > canvas.width) p.x = 0;
-                if (p.y < 0) p.y = canvas.height;
-                if (p.y > canvas.height) p.y = 0;
+    <section id="clubs">
+      <div class="wrap">
+        <div class="section-head center">
+          <span class="eyebrow">Club benefits</span>
+          <h2>Why clubs choose Padel Push.</h2>
+          <p>A modern player experience without adding operational complexity.</p>
+        </div>
+        <div class="benefit-grid">
+          <div class="card">
+            <h3>Improve player experience</h3>
+            <p>Modern scoring without interrupting gameplay.</p>
+          </div>
+          <div class="card">
+            <h3>Reduce friction</h3>
+            <p>No dedicated scoreboard operator required.</p>
+          </div>
+          <div class="card">
+            <h3>Create revenue options</h3>
+            <p>Device rentals, premium court experiences, and smart court memberships.</p>
+          </div>
+          <div class="card">
+            <h3>Built in South Africa</h3>
+            <p>Local development, local support, and direct feedback channels.</p>
+          </div>
+        </div>
+      </div>
+    </section>
 
-                ctx.fillStyle = `rgba(100, 100, 255, ${p.o})`;
-                ctx.beginPath();
-                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-                ctx.fill();
-            });
-            requestAnimationFrame(animate);
-        }
+    <section class="players">
+      <div class="wrap split">
+        <div class="section-head">
+          <span class="eyebrow">For players</span>
+          <h2>Smart scoring beyond the club.</h2>
+          <p>Players who purchase Pulse or Beacon pairs can access their own private digital scoreboard experience for
+            friendly matches, training sessions, private courts, and social tournaments.</p>
+        </div>
+        <div class="feature-list">
+          <div class="feature">
+            <h3>Play without phone handling</h3>
+            <p>Score from a physical device and keep the match flowing.</p>
+          </div>
+          <div class="feature">
+            <h3>Follow matches live</h3>
+            <p>Let friends, spectators, and other players view the score from any connected display.</p>
+          </div>
+          <div class="feature">
+            <h3>Future ecosystem potential</h3>
+            <p>Padel Push is evolving toward match tracking, court analytics, club management, tournaments, player
+              engagement, and automated match workflows.</p>
+          </div>
+        </div>
+      </div>
+    </section>
 
-        window.addEventListener('resize', resize);
-        resize();
-        animate();
-    </script>
+    <section id="pilot" class="cta">
+      <div class="wrap cta-box">
+        <div>
+          <span class="eyebrow">Pilot program</span>
+          <h2>Ready to modernise your courts?</h2>
+          <p>We are partnering with selected clubs and courts to shape the future of connected padel. Pilot clubs get
+            prototype devices, onboarding, setup support, lifetime software updates, early feature access, and direct
+            collaboration opportunities.</p>
+        </div>
+        <div class="cta-actions">
+          <a class="button primary" href="mailto:hello@padelpush.com?subject=Padel%20Push%20pilot%20access">Apply for
+            pilot access</a>
+          <a class="button ghost" href="mailto:hello@padelpush.com?subject=Padel%20Push%20contact">Contact us</a>
+        </div>
+      </div>
+    </section>
+
+    <section id="faq">
+      <div class="wrap">
+        <div class="section-head center">
+          <span class="eyebrow">FAQ</span>
+          <h2>Quick answers.</h2>
+        </div>
+        <div class="faq-grid">
+          <div class="card faq">
+            <h3>Do players need phones to score?</h3>
+            <p>No. Pulse and Beacon devices work independently on court.</p>
+          </div>
+          <div class="card faq">
+            <h3>Can scoreboards be viewed remotely?</h3>
+            <p>Yes. Matches can be viewed from any internet-connected display.</p>
+          </div>
+          <div class="card faq">
+            <h3>Do devices work on battery power?</h3>
+            <p>Yes. Devices include rechargeable batteries and USB-C support.</p>
+          </div>
+          <div class="card faq">
+            <h3>Can clubs start with only a few devices?</h3>
+            <p>Absolutely. Padel Push is designed around a scalable upgrade path.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap footer-row">
+      <a href="#" class="brand" aria-label="Padel Push home">
+        <span class="brand-mark"><img src="app/media/img/logo.svg" alt=""></span>
+        <span>Padel Push</span>
+      </a>
+      <div class="footer-links">
+        <a href="app/">Launch scoreboard</a>
+        <a href="mailto:hello@padelpush.com">hello@padelpush.com</a>
+      </div>
+      <span>&copy; 2026 Padel Push</span>
+    </div>
+  </footer>
 </body>
 
 </html>
