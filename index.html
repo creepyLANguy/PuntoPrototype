@@ -4,9 +4,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Coming Soon | Padel Push</title>
+    <title>Padel Push | The Smart Scoring System for Modern Padel Clubs</title>
     <meta name="description"
-        content="Padel Push — The ultimate padel scoring system. Track scores, sets, and matches in real-time. Coming soon.">
+        content="Padel Push transforms padel courts into connected smart courts with real-time scoring, interactive devices, and a scalable club ecosystem.">
     <link rel="icon" type="image/svg+xml" href="app/media/img/favicon.svg">
 
     <!-- Google Fonts -->
@@ -25,20 +25,12 @@
             --bg-dark: #080c17;
             --bg-surface: #0e1425;
             --text: #ffffff;
-            --text-muted: rgba(255, 255, 255, 0.9);
-            --glass-bg: rgba(0, 0, 0, 0.2);
-            --glass-border: rgba(255, 255, 255, 0.2);
-            --card-radius: 32px;
-            --card-padding: clamp(2.5rem, 6vw, 4rem);
-            --logo-size: clamp(120px, 15vw, 160px);
-            --logo-gap: 2rem;
-            --brand-gap: 0.75rem;
-            --headline-gap: 2rem;
-            --headline-width: 38ch;
-            --headline-leading: 1.3;
-            --container-scale: 1;
-            --float-distance: 12px;
-            --viewport-padding: 2rem;
+            --text-muted: rgba(255, 255, 255, 0.7);
+            --glass-bg: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --card-radius: 24px;
+            --section-padding: clamp(4rem, 10vw, 8rem);
+            --container-width: 1200px;
         }
 
         * {
@@ -48,621 +40,861 @@
             font-family: 'Outfit', system-ui, -apple-system, sans-serif;
         }
 
-        html,
+        html {
+            scroll-behavior: smooth;
+        }
+
         body {
-            height: 100%;
-            width: 100%;
-            overflow: hidden;
-            background: radial-gradient(circle at center, #11182c 0%, var(--bg-dark) 100%);
+            background-color: var(--bg-dark);
+            background-image: radial-gradient(circle at 50% 0%, #11182c 0%, var(--bg-dark) 100%);
             color: var(--text);
+            line-height: 1.6;
+            overflow-x: hidden;
             -webkit-font-smoothing: antialiased;
-            -moz-osx-font-smoothing: grayscale;
         }
 
-        body {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100dvh;
-            padding: var(--viewport-padding);
-            perspective: 1000px;
-            opacity: 0;
-            transition: opacity 1s ease;
-        }
-
-        body.loaded {
-            opacity: 1;
-        }
-
-        /* ─── Gradient orbs ─── */
-        .orb {
-            position: absolute;
-            border-radius: 50%;
-            filter: blur(120px);
-            opacity: 0;
-            transition: opacity 1.5s ease;
-            will-change: transform;
-            pointer-events: none;
-            z-index: 0;
-        }
-
-        body.loaded .orb {
-            opacity: 0.45;
-        }
-
-        .orb.one {
-            width: 60vw;
-            height: 60vw;
-            background: radial-gradient(circle, var(--primary), transparent 70%);
-            top: -20%;
-            left: -10%;
-        }
-
-        .orb.two {
-            width: 65vw;
-            height: 65vw;
-            background: radial-gradient(circle, var(--secondary), transparent 70%);
-            bottom: -25%;
-            right: -10%;
-        }
-
-        .orb.three {
-            width: 35vw;
-            height: 35vw;
-            background: radial-gradient(circle, var(--accent), transparent 70%);
-            top: 40%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            opacity: 0;
-        }
-
-        body.loaded .orb.three {
-            opacity: 0.2;
-        }
-
-        /* ─── Particle canvas ─── */
+        /* ─── Background Elements ─── */
         #particles {
             position: fixed;
             inset: 0;
-            z-index: 1;
+            z-index: -1;
             pointer-events: none;
-            opacity: 0.4;
+            opacity: 0.3;
         }
 
-        /* ─── Card container ─── */
-        .container-wrapper {
-            position: relative;
-            z-index: 10;
-            width: 100%;
-            max-width: 600px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
+        .orb {
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(120px);
+            opacity: 0.15;
+            pointer-events: none;
+            z-index: -1;
+            will-change: transform;
         }
 
+        .orb-1 { width: 60vw; height: 60vw; background: var(--primary); top: -20%; left: -10%; }
+        .orb-2 { width: 50vw; height: 50vw; background: var(--secondary); bottom: -10%; right: -10%; }
+        .orb-3 { width: 30vw; height: 30vw; background: var(--accent); top: 40%; left: 40%; }
+
+        /* ─── Layout ─── */
         .container {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            text-align: center;
-            width: 100%;
-            padding: var(--card-padding);
-            position: relative;
-
-            background: var(--glass-bg);
-            border: 1px solid var(--glass-border);
-            backdrop-filter: blur(32px) saturate(1.8);
-            -webkit-backdrop-filter: blur(32px) saturate(1.8);
-            border-radius: var(--card-radius);
-
-            box-shadow:
-                0 0 0 1px rgba(255, 255, 255, 0.1),
-                0 20px 50px rgba(0, 0, 0, 0.5),
-                0 0 100px rgba(124, 92, 255, 0.25),
-                0 0 40px rgba(200, 255, 0, 0.05);
+            max-width: var(--container-width);
+            margin: 0 auto;
+            padding: 0 2rem;
         }
 
-        .secret-link {
-            position: absolute;
-            right: 1rem;
-            bottom: 1rem;
-            width: 18px;
-            height: 18px;
+        section {
+            padding: var(--section-padding) 0;
+            position: relative;
+        }
+
+        /* ─── Header ─── */
+        header {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            z-index: 100;
+            padding: 1.5rem 0;
+            transition: all 0.3s ease;
+        }
+
+        header.scrolled {
+            background: rgba(8, 12, 23, 0.8);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--glass-border);
+            padding: 1rem 0;
+        }
+
+        nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            text-decoration: none;
+            color: white;
+            font-weight: 800;
+            font-size: 1.25rem;
+            letter-spacing: -0.02em;
+        }
+
+        .logo img {
+            height: 32px;
+            filter: drop-shadow(0 0 10px var(--accent-glow));
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+            align-items: center;
+        }
+
+        .nav-links a {
+            text-decoration: none;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: color 0.3s ease;
+        }
+
+        .nav-links a:hover {
+            color: var(--accent);
+        }
+
+        .btn {
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            border-radius: 50%;
+            padding: 0.8rem 1.6rem;
+            border-radius: 100px;
+            font-weight: 600;
             text-decoration: none;
-            color: rgba(255, 255, 255, 0.2);
-            background: rgba(255, 255, 255, 0.04);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            box-shadow: 0 0 12px rgba(200, 255, 0, 0.08);
-            opacity: 0.2;
-            transition: opacity 0.25s ease, transform 0.25s ease, color 0.25s ease, border-color 0.25s ease;
-            z-index: 3;
+            transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+            font-size: 0.9rem;
+            cursor: pointer;
+            border: none;
         }
 
-        .secret-link::before {
-            content: '';
-            width: 4px;
-            height: 4px;
-            border-radius: 50%;
-            background: currentColor;
+        .btn-primary {
+            background: var(--accent);
+            color: var(--bg-dark);
+            box-shadow: 0 4px 20px var(--accent-dim);
         }
 
-        .secret-link:hover,
-        .secret-link:focus-visible {
-            opacity: 0.72;
-            color: var(--accent);
-            border-color: rgba(200, 255, 0, 0.35);
-            transform: scale(1.08);
-            outline: none;
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px var(--accent-glow);
         }
 
-        /* Inner shine effect */
-        .container-shine {
-            position: absolute;
-            inset: 0;
-            border-radius: inherit;
-            background: radial-gradient(circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
-                    rgba(255, 255, 255, 0.08) 0%,
-                    transparent 60%);
-            pointer-events: none;
-            z-index: 1;
+        .btn-outline {
+            background: rgba(255, 255, 255, 0.05);
+            color: white;
+            border: 1px solid var(--glass-border);
         }
 
-        /* ─── Badge ─── */
-        .badge-wrapper {
-            margin-bottom: 2rem;
-            opacity: 0;
-            transform: translateY(-10px);
-            transition: all 0.8s cubic-bezier(0.23, 1, 0.32, 1);
-            transition-delay: 0.2s;
+        .btn-outline:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.3);
         }
 
-        body.loaded .badge-wrapper {
-            opacity: 1;
-            transform: translateY(0);
+        /* ─── Hero ─── */
+        .hero {
+            padding-top: 10rem;
+            text-align: center;
+            min-height: 90vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
         }
 
         .badge {
             display: inline-flex;
             align-items: center;
-            gap: 0.6rem;
-            padding: 0.6rem 1.4rem;
+            gap: 0.5rem;
+            padding: 0.5rem 1.25rem;
+            background: var(--accent-dim);
+            border: 1px solid var(--accent-dim);
+            color: var(--accent);
+            border-radius: 100px;
             font-size: 0.75rem;
             font-weight: 700;
-            letter-spacing: 0.2em;
+            letter-spacing: 0.1em;
             text-transform: uppercase;
-            border-radius: 100px;
+            margin-bottom: 2rem;
+        }
+
+        .hero h1 {
+            font-size: clamp(2.5rem, 8vw, 5rem);
+            font-weight: 900;
+            line-height: 1.1;
+            margin-bottom: 1.5rem;
+            letter-spacing: -0.03em;
+            background: linear-gradient(to bottom, #fff 50%, rgba(255, 255, 255, 0.7) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .hero p {
+            font-size: clamp(1.1rem, 2vw, 1.4rem);
+            color: var(--text-muted);
+            max-width: 800px;
+            margin: 0 auto 3rem;
+            text-wrap: balance;
+        }
+
+        .hero-btns {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        /* ─── Devices Section ─── */
+        .section-title {
+            text-align: center;
+            margin-bottom: 4rem;
+        }
+
+        .section-title h2 {
+            font-size: clamp(2rem, 5vw, 3rem);
+            font-weight: 800;
+            margin-bottom: 1rem;
+        }
+
+        .section-title p {
+            color: var(--text-muted);
+            font-size: 1.1rem;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .device-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+        }
+
+        .device-card {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--card-radius);
+            padding: 3rem 2rem;
+            text-align: center;
+            transition: all 0.4s ease;
+            backdrop-filter: blur(10px);
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        .device-card:hover {
+            transform: translateY(-10px);
+            border-color: var(--accent-dim);
+            background: rgba(200, 255, 0, 0.03);
+        }
+
+        .device-icon {
+            height: 80px;
+            margin-bottom: 2rem;
+            filter: brightness(0) invert(1) drop-shadow(0 0 15px var(--accent-glow));
+            opacity: 0.9;
+        }
+
+        .device-card h3 {
+            font-size: 1.75rem;
+            margin-bottom: 1rem;
+            color: white;
+        }
+
+        .device-card .tagline {
             color: var(--accent);
-            background: rgba(200, 255, 0, 0.1);
-            border: 1px solid var(--accent-dim);
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-            position: relative;
-            overflow: hidden;
+            font-size: 0.8rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 1.5rem;
         }
 
-        .badge .dot {
-            width: 6px;
-            height: 6px;
+        .device-card ul {
+            list-style: none;
+            text-align: left;
+            margin-bottom: 2rem;
+            flex-grow: 1;
+        }
+
+        .device-card li {
+            font-size: 0.95rem;
+            color: var(--text-muted);
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+        }
+
+        .device-card li::before {
+            content: '•';
+            color: var(--accent);
+            font-weight: bold;
+        }
+
+        .ideal-for {
+            border-top: 1px solid var(--glass-border);
+            padding-top: 1.5rem;
+            margin-top: auto;
+        }
+
+        .ideal-for h4 {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: rgba(255, 255, 255, 0.4);
+            margin-bottom: 0.75rem;
+        }
+
+        .ideal-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            justify-content: center;
+        }
+
+        .ideal-tags span {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 0.25rem 0.75rem;
+            border-radius: 50px;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        /* ─── Steps Section ─── */
+        .steps-container {
+            display: flex;
+            flex-direction: column;
+            gap: 4rem;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .step {
+            display: flex;
+            gap: 2rem;
+            align-items: flex-start;
+        }
+
+        .step-number {
+            flex-shrink: 0;
+            width: 50px;
+            height: 50px;
             background: var(--accent);
+            color: var(--bg-dark);
             border-radius: 50%;
-            display: inline-block;
-            box-shadow: 0 0 10px var(--accent);
-            animation: pulse 2s infinite;
-        }
-
-        @keyframes pulse {
-            0% {
-                opacity: 1;
-                transform: scale(1);
-            }
-
-            50% {
-                opacity: 0.5;
-                transform: scale(1.2);
-            }
-
-            100% {
-                opacity: 1;
-                transform: scale(1);
-            }
-        }
-
-        .badge::after {
-            content: '';
-            position: absolute;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: linear-gradient(45deg,
-                    transparent,
-                    rgba(200, 255, 0, 0.1),
-                    transparent);
-            transform: rotate(45deg);
-            animation: badgeShine 3s infinite;
-        }
-
-        @keyframes badgeShine {
-            0% {
-                transform: translateX(-100%) rotate(45deg);
-            }
-
-            100% {
-                transform: translateX(100%) rotate(45deg);
-            }
-        }
-
-        /* ─── Logo ─── */
-        .logo-wrapper {
-            position: relative;
-            width: var(--logo-size);
-            height: var(--logo-size);
-            margin-bottom: var(--logo-gap);
             display: flex;
             align-items: center;
             justify-content: center;
-            z-index: 2;
-        }
-
-        .logo-img {
-            width: 100%;
-            height: 100%;
-            filter: drop-shadow(0 0 30px var(--accent-glow));
-            opacity: 0;
-            transform: scale(0.8) translateZ(30px);
-            transition: all 1s cubic-bezier(0.23, 1, 0.32, 1);
-            transition-delay: 0.4s;
-        }
-
-        body.loaded .logo-img {
-            opacity: 1;
-            transform: scale(1) translateZ(30px);
-        }
-
-        /* ─── Brand text ─── */
-        .logo-text {
-            font-size: clamp(2.8rem, 8vw, 4rem);
             font-weight: 900;
-            margin-bottom: var(--brand-gap);
-            text-transform: uppercase;
-            letter-spacing: -0.01em;
-            line-height: 1;
-
-            background: linear-gradient(to bottom, #fff 40%, rgba(255, 255, 255, 0.85) 100%);
-            background-clip: text;
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-
-            opacity: 0;
-            transform: translateY(20px) translateZ(20px);
-            transition: all 0.8s cubic-bezier(0.23, 1, 0.32, 1);
-            transition-delay: 0.5s;
+            font-size: 1.25rem;
+            box-shadow: 0 0 20px var(--accent-glow);
         }
 
-        body.loaded .logo-text {
-            opacity: 1;
-            transform: translateY(0) translateZ(20px);
+        .step-content h3 {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
         }
 
-        /* ─── Heading ─── */
-        h1 {
-            font-size: clamp(1.1rem, 3.5vw, 1.4rem);
-            font-weight: 500;
-            margin-bottom: var(--headline-gap);
+        .step-content p {
             color: var(--text-muted);
-            max-width: var(--headline-width);
-            line-height: var(--headline-leading);
-            text-wrap: balance;
-            letter-spacing: 0.03em;
-
-            opacity: 0;
-            transform: translateY(20px) translateZ(10px);
-            transition: all 0.8s cubic-bezier(0.23, 1, 0.32, 1);
-            transition-delay: 0.6s;
         }
 
-        body.loaded h1 {
-            opacity: 1;
-            transform: translateY(0) translateZ(10px);
-        }
-
-        /* ─── Info Section ─── */
-        .info-section {
-            width: 100%;
-            padding-top: 2.5rem;
-            margin-top: 1rem;
+        /* ─── Platforms ─── */
+        .platforms {
+            background: rgba(255, 255, 255, 0.02);
+            padding: 4rem 0;
             border-top: 1px solid var(--glass-border);
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .platform-list {
+            display: flex;
+            justify-content: center;
+            gap: 4rem;
+            flex-wrap: wrap;
+        }
+
+        .platform-item {
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 2rem;
-            opacity: 0;
-            transform: translateY(20px);
-            transition: all 1s cubic-bezier(0.23, 1, 0.32, 1);
-            transition-delay: 0.7s;
+            gap: 1rem;
+            opacity: 0.6;
+            transition: opacity 0.3s ease;
         }
 
-        body.loaded .info-section {
+        .platform-item:hover { opacity: 1; }
+
+        .platform-item img {
+            height: 32px;
+            filter: invert(1);
+        }
+
+        .platform-item span {
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        /* ─── Benefits ─── */
+        .benefits-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+        }
+
+        .benefit-item {
+            padding: 2rem;
+            background: var(--glass-bg);
+            border-radius: var(--card-radius);
+            border: 1px solid var(--glass-border);
+        }
+
+        .benefit-item h3 {
+            font-size: 1.25rem;
+            margin-bottom: 1rem;
+            color: var(--accent);
+        }
+
+        /* ─── Pilot Program ─── */
+        .pilot {
+            background: linear-gradient(135deg, rgba(124, 92, 255, 0.1) 0%, rgba(200, 255, 0, 0.05) 100%);
+            border-radius: 40px;
+            padding: 6rem 4rem;
+            text-align: center;
+            border: 1px solid var(--glass-border);
+        }
+
+        .pilot h2 {
+            font-size: clamp(2rem, 5vw, 3.5rem);
+            margin-bottom: 2rem;
+        }
+
+        .pilot-perks {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 2rem;
+            margin-bottom: 4rem;
+            text-align: left;
+        }
+
+        .perk {
+            display: flex;
+            gap: 1rem;
+            font-size: 1.1rem;
+            color: var(--text-muted);
+        }
+
+        .perk::before {
+            content: '✓';
+            color: var(--accent);
+            font-weight: bold;
+        }
+
+        /* ─── FAQ ─── */
+        .faq-grid {
+            max-width: 800px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .faq-item {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 1.5rem;
+        }
+
+        .faq-item h3 {
+            font-size: 1.1rem;
+            margin-bottom: 0.5rem;
+            color: white;
+        }
+
+        .faq-item p {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+        }
+
+        /* ─── Footer ─── */
+        footer {
+            padding: 6rem 0 3rem;
+            border-top: 1px solid var(--glass-border);
+            text-align: center;
+        }
+
+        .footer-logo {
+            margin-bottom: 2rem;
+        }
+
+        .social-links {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+
+        .social-links a {
+            color: var(--text-muted);
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+
+        .social-links a:hover { color: var(--accent); }
+
+        .copyright {
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.3);
+        }
+
+        /* ─── Animations ─── */
+        .reveal {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: all 0.8s cubic-bezier(0.23, 1, 0.32, 1);
+        }
+
+        .reveal.active {
             opacity: 1;
             transform: translateY(0);
         }
 
-        .platform-container {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 1.25rem;
-        }
-
-        .platform-logos {
-            display: flex;
-            gap: 2.5rem;
-            align-items: center;
-        }
-
-        .platform-icon {
-            height: clamp(20px, 4vw, 24px);
-            width: auto;
-            opacity: 0.85;
-            filter: brightness(0) invert(1);
-            transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
-        }
-
-        .platform-text {
-            font-size: 0.8rem;
-            font-weight: 600;
-            color: var(--text-muted);
-            letter-spacing: 0.15em;
-            text-transform: uppercase;
-        }
-
-        /* ─── Hardware ─── */
-        .hardware-announce {
-            display: flex;
-            flex-direction: column;
-            gap: 0.8rem;
-            border-top: 1px solid var(--glass-border);
-            padding-top: 2.5rem;
-            width: 100%;
-        }
-
-        .hw-label {
-            font-size: 0.7rem;
-            font-weight: 600;
-            letter-spacing: 0.15em;
-            text-transform: uppercase;
-            color: var(--accent);
-            opacity: 0.9;
-            text-wrap: balance;
-            margin-bottom: 5%;
-        }
-
-        .hw-list {
-            display: flex;
-            justify-content: center;
-            gap: 1.5rem;
-            flex-wrap: nowrap;
-            width: 100%;
-        }
-
-        .hw-item {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 0.25rem;
-            flex: 1 1 0;
-            min-width: 0;
-        }
-
-        .hw-name {
-            font-size: 1.1rem;
-            font-weight: 500;
-            color: #fff;
-        }
-
-        .hw-status {
-            font-size: 0.6rem;
-            font-weight: 700;
-            color: var(--text-muted);
-            letter-spacing: 0.05em;
-            text-transform: uppercase;
-            margin-top: 0.5rem;
-        }
-
-        .hw-icon {
-            height: clamp(26px, 5vw, 40px);
-            width: auto;
-            margin-top: 0.25rem;
-            opacity: 0.9;
-            filter: brightness(0) invert(1);
-            transition: all 0.5s cubic-bezier(0.23, 1, 0.32, 1);
-        }
-
-        /* ─── Animation helpers ─── */
-        @keyframes float {
-
-            0%,
-            100% {
-                transform: translateY(0);
-            }
-
-            50% {
-                transform: translateY(calc(-1 * var(--float-distance)));
-            }
-        }
-
-        /* ─── Mobile Optimizations ─── */
-        @media (max-width: 480px) {
+        /* ─── Mobile ─── */
+        @media (max-width: 768px) {
             :root {
-                --card-padding: 2rem 1.5rem;
-                --logo-gap: 1.5rem;
-                --headline-gap: 1.5rem;
+                --section-padding: 4rem 0;
             }
 
-            .hw-list {
-                gap: 0.5rem;
-            }
+            .nav-links { display: none; }
 
-            .hw-name {
-                font-size: 0.95rem;
-            }
+            .hero h1 { font-size: 3rem; }
 
-            .platform-logos {
-                gap: 1.5rem;
-            }
-        }
+            .pilot { padding: 4rem 2rem; }
 
-        /* Landscape fix for small screens */
-        @media (orientation: landscape) and (max-height: 500px) {
-            body {
-                padding: 1rem;
-                overflow-y: auto;
-                align-items: flex-start;
-            }
+            .device-grid { grid-template-columns: 1fr; }
 
-            .container-wrapper {
-                margin: 2rem 0;
-            }
-
-            :root {
-                --logo-size: 80px;
-                --card-padding: 1.5rem;
-            }
-
-            .badge-wrapper {
-                margin-bottom: 1rem;
-            }
-
-            .info-section {
-                padding-top: 1.5rem;
-                gap: 1rem;
-            }
-        }
-
-        @media (prefers-reduced-motion: reduce) {
-            * {
-                animation: none !important;
-                transition: none !important;
-            }
+            .platform-list { gap: 2rem; }
         }
     </style>
 </head>
 
 <body>
-    <canvas id="particles" aria-hidden="true"></canvas>
+    <canvas id="particles"></canvas>
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
 
-    <div class="orb one"></div>
-    <div class="orb two"></div>
-    <div class="orb three"></div>
-
-    <div class="container-wrapper">
-        <div class="container" id="mainCard">
-            <a href="app/" class="secret-link" aria-label="Open app" title="Open app"></a>
-            <div class="badge-wrapper">
-                <div class="badge">
-                    <span class="dot"></span>
-                    Coming Soon
+    <header id="header">
+        <div class="container">
+            <nav>
+                <a href="#" class="logo">
+                    <img src="app/media/img/logo.svg" alt="Padel Push">
+                    <span>Padel Push</span>
+                </a>
+                <div class="nav-links">
+                    <a href="#devices">Devices</a>
+                    <a href="#smart-courts">Smart Courts</a>
+                    <a href="#benefits">Benefits</a>
+                    <a href="#pilot" class="btn btn-primary">Join Pilot</a>
                 </div>
-            </div>
-
-            <div class="logo-wrapper">
-                <img src="app/media/img/logo.svg" alt="Padel Push Logo" class="logo-img">
-            </div>
-
-            <div class="logo-text">Padel Push</div>
-            <h1>Scoring. Simplified.</h1>
-            <div class="info-section">
-                <div class="platform-container">
-                    <div class="platform-logos">
-                        <img src="media/logos/apple.svg" alt="iOS" class="platform-icon">
-                        <img src="media/logos/android.svg" alt="Android" class="platform-icon">
-                        <img src="media/logos/web.svg" alt="Web" class="platform-icon">
-                    </div>
-                    <div class="platform-text">iOS • Android • Web</div>
-                </div>
-
-                <div class="hardware-announce">
-                    <div class="hw-label">Next-Gen Hardware</div>
-                    <div class="hw-list">
-                        <div class="hw-item">
-                            <span class="hw-name">Pulse</span>
-                            <div class="hw-item">
-                                <img src="media/logos/d1.svg" alt="Pulse" class="hw-icon">
-                            </div>
-                            <span class="hw-status">Ultra Portable</span>
-                        </div>
-                        <div class="hw-item">
-                            <div class="hw-item">
-                                <span class="hw-name">Beacon</span>
-                                <img src="media/logos/d2.svg" alt="Beacon" class="hw-icon">
-                            </div>
-                            <span class="hw-status">Core Scoring</span>
-                        </div>
-                        <div class="hw-item">
-                            <div class="hw-item">
-                                <span class="hw-name">Hub</span>
-                                <img src="media/logos/d3.svg" alt="Hub" class="hw-icon">
-                            </div>
-                            <span class="hw-status">Full Control</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            </nav>
         </div>
-    </div>
+    </header>
+
+    <main>
+        <!-- Hero Section -->
+        <section class="hero">
+            <div class="container">
+                <div class="badge reveal">The Future of Padel Scoring</div>
+                <h1 class="reveal">Smart devices. Live scoring. Connected courts.</h1>
+                <p class="reveal">Padel Push transforms padel courts into connected smart courts with real-time scoring, interactive devices, and a scalable club ecosystem.</p>
+                <div class="hero-btns reveal">
+                    <a href="#pilot" class="btn btn-primary btn-lg">Book a Free Demo</a>
+                    <a href="#devices" class="btn btn-outline btn-lg">Explore Devices</a>
+                </div>
+            </div>
+        </section>
+
+        <!-- Vision Section -->
+        <section id="vision">
+            <div class="container">
+                <div class="section-title reveal">
+                    <h2>Modernise Your Venue</h2>
+                    <p>Whether you're running social matches, competitive leagues, or a professional club, Padel Push delivers a seamless scoring experience.</p>
+                </div>
+                <div class="benefits-grid">
+                    <div class="benefit-item reveal">
+                        <h3>Effortless</h3>
+                        <p>Scoring that feels natural and never interrupts the flow of the game.</p>
+                    </div>
+                    <div class="benefit-item reveal">
+                        <h3>Accessible</h3>
+                        <p>Real-time scores visible on any screen, from courtside TVs to mobile phones.</p>
+                    </div>
+                    <div class="benefit-item reveal">
+                        <h3>Scalable</h3>
+                        <p>Start with a single portable device and grow into a fully automated smart court.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Devices Section -->
+        <section id="devices">
+            <div class="container">
+                <div class="section-title reveal">
+                    <h2>Our Ecosystem</h2>
+                    <p>Purpose-built hardware designed for simplicity, portability, and reliability.</p>
+                </div>
+                <div class="device-grid">
+                    <!-- Pulse -->
+                    <div class="device-card reveal">
+                        <div class="tagline">The Portable Scorer</div>
+                        <img src="media/logos/d1.svg" alt="Pulse" class="device-icon">
+                        <h3>Pulse</h3>
+                        <ul>
+                            <li>Ultra-portable ESP32-C powered</li>
+                            <li>Single-button operation</li>
+                            <li>Audible score feedback</li>
+                            <li>NFC registration support</li>
+                        </ul>
+                        <div class="ideal-for">
+                            <h4>Ideal For</h4>
+                            <div class="ideal-tags">
+                                <span>Casual Matches</span>
+                                <span>Club Rentals</span>
+                                <span>Entry-level</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Beacon -->
+                    <div class="device-card reveal">
+                        <div class="tagline">Hands-Free Scoring</div>
+                        <img src="media/logos/d2.svg" alt="Beacon" class="device-icon">
+                        <h3>Beacon</h3>
+                        <ul>
+                            <li>Distance-based score triggering</li>
+                            <li>Physical team assignment switch</li>
+                            <li>Minimal interaction required</li>
+                            <li>Rechargeable battery</li>
+                        </ul>
+                        <div class="ideal-for">
+                            <h4>Ideal For</h4>
+                            <div class="ideal-tags">
+                                <span>High-traffic Courts</span>
+                                <span>Competitive Matches</span>
+                                <span>Clean Gameplay</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Hub -->
+                    <div class="device-card reveal">
+                        <div class="tagline">Central Control</div>
+                        <img src="media/logos/d3.svg" alt="Hub" class="device-icon">
+                        <h3>Hub</h3>
+                        <ul>
+                            <li>NFC reader integration</li>
+                            <li>Device-to-court registration</li>
+                            <li>Court management tools</li>
+                            <li>Smart device allocation</li>
+                        </ul>
+                        <div class="ideal-for">
+                            <h4>Ideal For</h4>
+                            <div class="ideal-tags">
+                                <span>Club Management</span>
+                                <span>Multi-court Venues</span>
+                                <span>Full Automation</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Growth Section -->
+        <section id="smart-courts">
+            <div class="container">
+                <div class="section-title reveal">
+                    <h2>Grow With Your Club</h2>
+                    <p>Three steps to a fully connected smart court experience.</p>
+                </div>
+                <div class="steps-container">
+                    <div class="step reveal">
+                        <div class="step-number">1</div>
+                        <div class="step-content">
+                            <h3>Pulse — Start Simple</h3>
+                            <p>Lend or rent portable Pulse devices to players for manual scoring. Instant live scoreboards with zero infrastructure.</p>
+                        </div>
+                    </div>
+                    <div class="step reveal">
+                        <div class="step-number">2</div>
+                        <div class="step-content">
+                            <h3>Beacon — Automate</h3>
+                            <p>Add Beacon devices courtside for hands-free score triggering. Reduce interruptions and simplify gameplay.</p>
+                        </div>
+                    </div>
+                    <div class="step reveal">
+                        <div class="step-number">3</div>
+                        <div class="step-content">
+                            <h3>Hub — Connect</h3>
+                            <p>Integrate Hubs to unlock full smart court functionality. Manage devices and enable NFC-powered interactions venue-wide.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Platforms -->
+        <section class="platforms reveal">
+            <div class="container">
+                <div class="platform-list">
+                    <div class="platform-item">
+                        <img src="media/logos/apple.svg" alt="iOS">
+                        <span>iOS App</span>
+                    </div>
+                    <div class="platform-item">
+                        <img src="media/logos/android.svg" alt="Android">
+                        <span>Android App</span>
+                    </div>
+                    <div class="platform-item">
+                        <img src="media/logos/web.svg" alt="Web">
+                        <span>Web Player</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Benefits Section -->
+        <section id="benefits">
+            <div class="container">
+                <div class="section-title reveal">
+                    <h2>Why Padel Push?</h2>
+                    <p>Designed to improve player engagement and simplify club operations.</p>
+                </div>
+                <div class="benefits-grid">
+                    <div class="benefit-item reveal">
+                        <h3>Player Experience</h3>
+                        <p>Modern scoring without interrupting gameplay. Players feel professional and engaged.</p>
+                    </div>
+                    <div class="benefit-item reveal">
+                        <h3>Zero Friction</h3>
+                        <p>No dedicated scoreboard operator required. The system runs itself.</p>
+                    </div>
+                    <div class="benefit-item reveal">
+                        <h3>Revenue Growth</h3>
+                        <p>Opportunities for device rentals, premium memberships, and sponsored court experiences.</p>
+                    </div>
+                    <div class="benefit-item reveal">
+                        <h3>Local Support</h3>
+                        <p>Built for South African clubs with local support and direct feedback channels.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Pilot Section -->
+        <section id="pilot" class="container reveal">
+            <div class="pilot">
+                <h2>Join the Pilot Program</h2>
+                <p style="color: var(--text-muted); margin-bottom: 3rem; max-width: 700px; margin-left: auto; margin-right: auto;">We're partnering with selected clubs to help shape the future of connected padel. Get exclusive early access and benefits.</p>
+                
+                <div class="pilot-perks">
+                    <div class="perk">Free prototype devices</div>
+                    <div class="perk">Free onboarding & setup</div>
+                    <div class="perk">Lifetime software updates</div>
+                    <div class="perk">Direct support access</div>
+                    <div class="perk">Early feature access</div>
+                    <div class="perk">Feedback collaboration</div>
+                </div>
+
+                <div class="hero-btns">
+                    <a href="mailto:hello@padelpush.com" class="btn btn-primary btn-lg">Apply for Pilot Access</a>
+                    <a href="mailto:hello@padelpush.com" class="btn btn-outline btn-lg">Contact Us</a>
+                </div>
+            </div>
+        </section>
+
+        <!-- FAQ Section -->
+        <section id="faq">
+            <div class="container">
+                <div class="section-title reveal">
+                    <h2>Frequently Asked Questions</h2>
+                </div>
+                <div class="faq-grid">
+                    <div class="faq-item reveal">
+                        <h3>Do players need phones to score?</h3>
+                        <p>No. Pulse and Beacon devices work independently on court, so players can focus on the game.</p>
+                    </div>
+                    <div class="faq-item reveal">
+                        <h3>Can scoreboards be viewed remotely?</h3>
+                        <p>Yes. Matches can be viewed in real-time from any internet-connected display, including phones and TVs.</p>
+                    </div>
+                    <div class="faq-item reveal">
+                        <h3>Do devices work on battery power?</h3>
+                        <p>Yes. All devices include rechargeable batteries with USB-C support for continuous power if needed.</p>
+                    </div>
+                    <div class="faq-item reveal">
+                        <h3>Can clubs start with only a few devices?</h3>
+                        <p>Absolutely. Padel Push is designed to be modular and scalable to fit any club size.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="container">
+            <div class="footer-logo">
+                <a href="#" class="logo" style="justify-content: center;">
+                    <img src="app/media/img/logo.svg" alt="Padel Push">
+                    <span>Padel Push</span>
+                </a>
+            </div>
+            <div class="social-links">
+                <a href="#">Instagram</a>
+                <a href="#">LinkedIn</a>
+                <a href="#">X (Twitter)</a>
+            </div>
+            <p class="copyright">&copy; 2026 Padel Push. Built for the future of the game.</p>
+        </div>
+    </footer>
 
     <script>
-        const card = document.getElementById('mainCard');
+        // Header Scroll Effect
+        window.addEventListener('scroll', () => {
+            const header = document.getElementById('header');
+            if (window.scrollY > 50) {
+                header.classList.add('scrolled');
+            } else {
+                header.classList.remove('scrolled');
+            }
+        });
+
+        // Reveal Animations
+        const observerOptions = {
+            threshold: 0.1
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('active');
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('.reveal').forEach((el) => observer.observe(el));
+
+        // Particle System (Updated for full page)
         const canvas = document.getElementById('particles');
         const ctx = canvas.getContext('2d');
-        const landscapeScrollableQuery = window.matchMedia('(orientation: landscape) and (max-height: 500px)');
-        let wasLandscapeScrollable = landscapeScrollableQuery.matches;
-
-        if ('scrollRestoration' in history)
-        {
-            history.scrollRestoration = 'manual';
-        }
-
-        // Particle System
         let particles = [];
-        function resize()
-        {
+
+        function resize() {
             canvas.width = window.innerWidth;
             canvas.height = window.innerHeight;
             initParticles();
         }
 
-        function resetScrollPosition()
-        {
-            window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
-            document.documentElement.scrollTop = 0;
-            document.body.scrollTop = 0;
-        }
-
-        function handleViewportChange()
-        {
-            const isLandscapeScrollable = landscapeScrollableQuery.matches;
-
-            // Leaving the scrollable landscape layout can preserve a stale scroll
-            // offset, so snap back to the top before portrait re-centers the card.
-            if (wasLandscapeScrollable && !isLandscapeScrollable)
-            {
-                window.setTimeout(resetScrollPosition, 50);
-            }
-
-            wasLandscapeScrollable = isLandscapeScrollable;
-            resize();
-        }
-
-        function initParticles()
-        {
+        function initParticles() {
             particles = [];
             const count = Math.min(window.innerWidth / 10, 100);
-            for (let i = 0; i < count; i++)
-            {
+            for (let i = 0; i < count; i++) {
                 particles.push({
                     x: Math.random() * canvas.width,
                     y: Math.random() * canvas.height,
@@ -674,11 +906,9 @@
             }
         }
 
-        function animate()
-        {
+        function animate() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            particles.forEach(p =>
-            {
+            particles.forEach(p => {
                 p.x += p.vx;
                 p.y += p.vy;
                 if (p.x < 0) p.x = canvas.width;
@@ -694,25 +924,9 @@
             requestAnimationFrame(animate);
         }
 
-        window.addEventListener('resize', handleViewportChange);
-        window.addEventListener('orientationchange', () => window.setTimeout(handleViewportChange, 50));
-        window.addEventListener('load', resetScrollPosition, { once: true });
-        handleViewportChange();
+        window.addEventListener('resize', resize);
+        resize();
         animate();
-
-        // Reveal effect
-        function revealPage()
-        {
-            document.body.classList.add('loaded');
-        }
-
-        if (document.readyState === 'loading')
-        {
-            document.addEventListener('DOMContentLoaded', () => setTimeout(revealPage, 100));
-        } else
-        {
-            setTimeout(revealPage, 100);
-        }
     </script>
 </body>
 
