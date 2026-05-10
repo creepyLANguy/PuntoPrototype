@@ -11,7 +11,7 @@
   <style>
     :root {
       --ink: #10151f;
-      --muted: #5c6675;
+      --muted: #3a4452;
       --soft: #eef3f6;
       --panel: #ffffff;
       --line: #dce4ea;
@@ -20,7 +20,7 @@
       --cyan: #00a9c7;
       --court: #103f46;
       --court-2: #0a2a31;
-      --shadow: 0 18px 50px rgba(16, 21, 31, 0.12);
+      --shadow: 0 18px 50px rgba(20, 16, 31, 0.05);
       --radius: 8px;
       --wrap: 1160px;
     }
@@ -83,19 +83,11 @@
       font-size: clamp(1.18rem, 3vw, 1.55rem);
     }
 
-    .brand-mark {
-      width: 46px;
-      height: 46px;
-      border-radius: 8px;
-      background: var(--ink);
-      padding: 8px;
-      box-shadow: 0 10px 24px rgba(16, 21, 31, 0.16);
-    }
-
     .brand-mark img {
-      width: 100%;
-      height: 100%;
+      width: 50px;
+      height: 50px;
       object-fit: contain;
+      filter: brightness(0) invert(0);
     }
 
     .nav-links {
@@ -136,7 +128,15 @@
       font-size: 0.95rem;
     }
 
-    .social-links a:hover {
+    .social-links a svg,
+    .footer-links a.social-icon svg {
+      width: 18px;
+      height: 18px;
+      display: block;
+    }
+
+    .social-links a:hover,
+    .footer-links a.social-icon:hover {
       background: var(--brand);
       color: var(--ink);
       transform: translateY(-2px);
@@ -176,30 +176,46 @@
     }
 
     .hero {
+      position: relative;
       background:
         linear-gradient(135deg, rgba(184, 243, 0, 0.22), rgba(0, 169, 199, 0.12) 44%, rgba(255, 255, 255, 0) 78%),
         #f8fbfc;
       padding: clamp(54px, 9vw, 106px) 0 clamp(40px, 7vw, 74px);
     }
 
-    .hero-grid {
-      display: grid;
-      grid-template-columns: minmax(0, 1.05fr) minmax(330px, 0.95fr);
-      gap: clamp(36px, 6vw, 70px);
-      align-items: center;
+    .hero::before {
+      content: "";
+      display: none;
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background: url('app/media/img/logo.svg') center center / cover no-repeat;
+      opacity: 0.06;
     }
 
-    .eyebrow {
-      display: inline-flex;
+    .hero-logo {
+      display: flex;
       align-items: center;
-      min-height: 30px;
-      padding: 0 10px;
-      border-radius: 999px;
-      background: #eaff9d;
-      color: #263000;
-      font-size: 0.78rem;
-      font-weight: 900;
-      text-transform: uppercase;
+      justify-content: center;
+      min-height: 360px;
+    }
+
+    .hero-logo img {
+      width: min(420px, 100%);
+      height: auto;
+      display: block;
+      filter: brightness(0);
+    }
+
+    .hero-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.1fr) minmax(300px, 0.9fr);
+      gap: clamp(36px, 6vw, 70px);
+      align-items: start;
+    }
+
+    .hero-logo {
+      align-self: start;
     }
 
     h1,
@@ -214,10 +230,11 @@
       font-size: clamp(3rem, 8vw, 5.6rem);
       line-height: 0.96;
       font-weight: 950;
+      text-wrap: balance;
     }
 
     .hero h1 span {
-      display: block;
+      display: inline;
       color: var(--cyan);
     }
 
@@ -249,15 +266,6 @@
       color: var(--muted);
       font-size: 0.95rem;
       font-weight: 650;
-    }
-
-    .score-preview {
-      background: var(--court-2);
-      color: #fff;
-      border-radius: 18px;
-      padding: 20px;
-      box-shadow: var(--shadow);
-      overflow: hidden;
     }
 
     .preview-top {
@@ -311,7 +319,7 @@
       background: rgba(255, 255, 255, 0.06);
     }
 
-    .team-row + .team-row {
+    .team-row+.team-row {
       margin-top: 12px;
     }
 
@@ -367,7 +375,7 @@
     }
 
     .section-head {
-      max-width: 740px;
+      max-width: 900px;
       margin-bottom: 30px;
     }
 
@@ -382,6 +390,7 @@
       font-size: clamp(2rem, 5vw, 3.25rem);
       line-height: 1.05;
       font-weight: 930;
+      text-wrap: balance;
     }
 
     h3 {
@@ -409,13 +418,25 @@
     .feature-list {
       display: grid;
       gap: 14px;
+      width: 90%;
+      margin-left: auto;
+      margin-right: auto;
     }
 
     .feature {
       padding: 18px;
-      border: 1px solid var(--line);
+      border: 1px solid rgba(163, 175, 188, 0.28);
       border-radius: var(--radius);
-      background: var(--panel);
+      background: rgba(255, 255, 255, 0.96);
+    }
+
+    .card {
+      min-height: 100%;
+      border: 1px solid rgba(220, 228, 234, 0.75);
+      border-radius: var(--radius);
+      background: rgba(255, 255, 255, 0.96);
+      padding: 22px;
+      box-shadow: 0 20px 40px rgba(16, 21, 31, 0.08);
     }
 
     .display-grid,
@@ -432,15 +453,6 @@
       gap: 18px;
     }
 
-    .card {
-      min-height: 100%;
-      border: 1px solid var(--line);
-      border-radius: var(--radius);
-      background: var(--panel);
-      padding: 22px;
-      box-shadow: 0 12px 34px rgba(16, 21, 31, 0.06);
-    }
-
     .device-card {
       display: flex;
       flex-direction: column;
@@ -455,11 +467,12 @@
     }
 
     .device-icon {
-      width: 54px;
-      height: 54px;
-      border-radius: 8px;
-      background: var(--ink);
+      width: 64px;
+      height: 64px;
+      border-radius: 32px;
+      background: var(--brand-strong);
       padding: 10px;
+      box-shadow: 0 10px 24px rgba(16, 21, 31, 0.2);
     }
 
     .device-icon img {
@@ -507,12 +520,25 @@
     }
 
     .path {
-      background: #0d1720;
+      background: #0e1b27;
       color: #fff;
     }
 
     .path .section-head p {
-      color: rgba(255, 255, 255, 0.7);
+      color: rgba(255, 255, 255, 0.72);
+    }
+
+    main>section:nth-of-type(even):not(.path):not(.cta) {
+      background: rgba(216, 239, 255, 0.24);
+    }
+
+    .section-head {
+      margin-bottom: 30px;
+      padding-bottom: 4px;
+    }
+
+    .section-head h2 {
+      max-width: 100%;
     }
 
     .steps {
@@ -522,10 +548,10 @@
     }
 
     .step {
-      border: 1px solid rgba(255, 255, 255, 0.14);
+      border: 1px solid rgba(255, 255, 255, 0.18);
       border-radius: var(--radius);
       padding: 22px;
-      background: rgba(255, 255, 255, 0.06);
+      background: rgba(255, 255, 255, 0.12);
     }
 
     .step-num {
@@ -553,7 +579,6 @@
     }
 
     .display-card img {
-      width: 36px;
       height: 36px;
     }
 
@@ -585,7 +610,7 @@
 
     .cta p {
       max-width: 690px;
-      color: rgba(255, 255, 255, 0.74);
+      color: rgba(255, 255, 255, 0.84);
       margin-bottom: 0;
     }
 
@@ -628,14 +653,43 @@
         display: none;
       }
 
+      .hero {
+        overflow: hidden;
+      }
+
+      .hero::before {
+        display: none;
+      }
+
       .hero-grid,
       .split,
       .cta-box {
         grid-template-columns: 1fr;
       }
 
-      .score-preview {
-        max-width: 560px;
+      .hero-grid {
+        position: relative;
+        z-index: 1;
+      }
+
+      .hero-logo {
+        position: absolute;
+        top: 18px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 140px;
+        min-height: auto;
+        padding: 0;
+        align-items: center;
+        justify-content: center;
+        z-index: 0;
+        opacity: 0.08;
+      }
+
+      .hero-logo img {
+        width: 100%;
+        height: auto;
+        object-fit: contain;
       }
 
       .device-grid,
@@ -687,6 +741,14 @@
         padding-top: 38px;
       }
 
+      .hero-logo {
+        position: absolute;
+        width: auto;
+        filter: invert(100%);
+        opacity: 0.7;
+        z-index: -1;
+      }
+
       h1 {
         font-size: clamp(2.8rem, 14vw, 4.1rem);
       }
@@ -713,11 +775,6 @@
 
       .point {
         font-size: 0.92rem;
-      }
-
-      .score-preview {
-        padding: 14px;
-        border-radius: 12px;
       }
 
       .team-row {
@@ -748,18 +805,33 @@
         <span class="brand-mark"><img src="app/media/img/logo.svg" alt=""></span>
         <span>Padel Push</span>
       </a>
-      <nav class="nav-links" aria-label="Primary navigation">
-        <a href="#ecosystem">Ecosystem</a>
-        <a href="#devices">Devices</a>
-        <a href="#clubs">Clubs</a>
-        <a href="#faq">FAQ</a>
-        <a href="#pilot" class="button primary">Book a demo</a>
-      </nav>
       <div class="social-links">
-        <a href="https://instagram.com" title="Instagram" aria-label="Instagram">📷</a>
+        <a href="mailto:info@padelpush.com" title="Email" aria-label="Email">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <path
+              d="M4 6.5C4 5.94772 4.44772 5.5 5 5.5H19C19.5523 5.5 20 5.94772 20 6.5V17.5C20 18.0523 19.5523 18.5 19 18.5H5C4.44772 18.5 4 18.0523 4 17.5V6.5Z"
+              stroke="currentColor" stroke-width="1.8" />
+            <path d="M4 6.5L12 12.5L20 6.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
+              stroke-linejoin="round" />
+          </svg>
+        </a>
+        <a href="https://instagram.com" title="Instagram" aria-label="Instagram" class="social-icon">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <rect x="3" y="3" width="18" height="18" rx="5" stroke="currentColor" stroke-width="1.8" />
+            <path d="M8.5 8.5H8.51" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+            <path
+              d="M12 7.5C9.79 7.5 8 9.29 8 11.5C8 13.71 9.79 15.5 12 15.5C14.21 15.5 16 13.71 16 11.5C16 9.29 14.21 7.5 12 7.5Z"
+              stroke="currentColor" stroke-width="1.8" />
+          </svg>
+        </a>
+        <a href="https://tiktok.com" title="TikTok" aria-label="TikTok">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <path
+              d="M15.25 4.5V12.16C15.25 13.88 13.77 15.35 12.05 15.35C10.33 15.35 8.85 13.88 8.85 12.16C8.85 10.44 10.33 8.96 12.05 8.96C12.47 8.96 12.86 9.03 13.22 9.17V7.28C12.88 7.14 12.48 7.07 12.05 7.07C9.01 7.07 6.45 9.61 6.45 12.65C6.45 15.69 9 18.23 12.05 18.23C15.09 18.23 17.63 15.69 17.63 12.65V5.5H15.25Z"
+              fill="currentColor" />
+          </svg>
+        </a>
         <a href="https://facebook.com" title="Facebook" aria-label="Facebook">f</a>
-        <a href="https://twitter.com" title="Twitter" aria-label="Twitter">𝕏</a>
-        <a href="https://linkedin.com" title="LinkedIn" aria-label="LinkedIn">in</a>
       </div>
     </div>
   </header>
@@ -768,13 +840,11 @@
     <section class="hero">
       <div class="wrap hero-grid">
         <div>
-          <span class="eyebrow">Smart scoring for padel</span>
-          <h1>Padel Push <span>connects every court.</span></h1>
+          <h1>Padel Push</h1>
           <p class="lead">Smart devices. Live scoring. Connected courts. Padel Push helps clubs and players modernise
             every match with portable scoring, hands-free automation, NFC interactions, and real-time scoreboards.</p>
           <div class="hero-actions">
             <a class="button primary" href="mailto:hello@padelpush.com?subject=Padel%20Push%20demo">Book a free demo</a>
-            <a class="button ghost" href="#ecosystem">See how it works</a>
           </div>
           <div class="hero-points" aria-label="Padel Push highlights">
             <div class="point">No phones needed on court</div>
@@ -782,59 +852,32 @@
             <div class="point">Start small and scale naturally</div>
           </div>
         </div>
-
-        <div class="score-preview" aria-label="Padel Push live scoreboard preview">
-          <div class="preview-top">
-            <div class="preview-brand">
-              <img src="app/media/img/logo.svg" alt="">
-              <span>Padel Push</span>
-            </div>
-            <span class="live-pill">LIVE SCORE</span>
-          </div>
-          <div class="court-lines">
-            <div class="team-row">
-              <span class="team-name">Team A</span>
-              <span class="sets">Sets 1</span>
-              <span class="score">40</span>
-            </div>
-            <div class="team-row">
-              <span class="team-name">Team B</span>
-              <span class="sets">Sets 0</span>
-              <span class="score">30</span>
-            </div>
-          </div>
-          <div class="preview-devices">
-            <div class="preview-device"><img src="media/logos/d1.svg" alt="">Pulse</div>
-            <div class="preview-device"><img src="media/logos/d2.svg" alt="">Beacon</div>
-            <div class="preview-device"><img src="media/logos/d3.svg" alt="">Hub</div>
-          </div>
+        <div class="hero-logo">
+          <img src="app/media/img/logo.svg" alt="Padel Push logo">
         </div>
       </div>
     </section>
 
-    <section id="ecosystem">
-      <div class="wrap split">
-        <div class="section-head">
-          <span class="eyebrow">The ecosystem</span>
-          <h2>A complete smart court layer for clubs and players.</h2>
-          <p>Padel Push combines intelligent hardware devices with a cloud-powered scoring platform. Players interact
-            with physical devices on court while scores, matches, and device management sync instantly online.</p>
+    <section id="whatis">
+      <div class="wrap">
+        <div class="section-head center">
+          <h2>A complete smart court solution for clubs and players.</h2>
         </div>
         <div class="feature-list">
           <div class="feature">
-            <h3>Display scores anywhere</h3>
-            <p>Use courtside TVs, tablets, club displays, mobile phones, web browsers, and kiosks as live scoreboards.
+            <h3>Eliminate uncertainty</h3>
+            <p>No more guessing the score. Padel Push provides real-time, accurate scoring for every match.
             </p>
           </div>
           <div class="feature">
-            <h3>Built for real courts</h3>
-            <p>Rechargeable batteries, USB-C power, smart Wi-Fi reconnects, offline setup recovery, and buzzer feedback
-              keep the system practical in live club environments.</p>
+            <h3>Built for action</h3>
+            <p>Rechargeable batteries, USB-C power, smart Wi-Fi, audio feedback and NFC keep the system practical in
+              live
+              club environments.</p>
           </div>
           <div class="feature">
-            <h3>Ready to grow</h3>
-            <p>Start with manual scoring, add hands-free triggers, then unlock club-wide device allocation and NFC
-              powered interactions.</p>
+            <h3>Cloud-based</h3>
+            <p>Device registration, assignment, and score management syncs to the cloud.</p>
           </div>
         </div>
       </div>
@@ -843,17 +886,14 @@
     <section id="devices">
       <div class="wrap">
         <div class="section-head center">
-          <span class="eyebrow">Devices</span>
           <h2>Purpose-built scoring hardware.</h2>
-          <p>Each Padel Push device is designed for simplicity, portability, and reliable match-day use.</p>
         </div>
 
         <div class="device-grid">
           <article class="card device-card">
             <div class="device-top">
               <div>
-                <span class="tag">Portable scorer</span>
-                <h3>Pulse</h3>
+                <h2>Pulse</h2>
               </div>
               <span class="device-icon"><img src="media/logos/d1.svg" alt=""></span>
             </div>
@@ -870,8 +910,7 @@
           <article class="card device-card">
             <div class="device-top">
               <div>
-                <span class="tag">Hands-free scoring</span>
-                <h3>Beacon</h3>
+                <h2>Beacon</h2>
               </div>
               <span class="device-icon"><img src="media/logos/d2.svg" alt=""></span>
             </div>
@@ -888,8 +927,7 @@
           <article class="card device-card">
             <div class="device-top">
               <div>
-                <span class="tag">Central control</span>
-                <h3>Hub</h3>
+                <h2>Hub</h2>
               </div>
               <span class="device-icon"><img src="media/logos/d3.svg" alt=""></span>
             </div>
@@ -909,7 +947,6 @@
     <section id="smart-courts" class="path">
       <div class="wrap">
         <div class="section-head center">
-          <span class="eyebrow">Upgrade path</span>
           <h2>Start simple. Scale naturally.</h2>
           <p>Padel Push grows with your club, from portable scorekeeping to a fully connected venue.</p>
         </div>
@@ -939,20 +976,19 @@
     <section>
       <div class="wrap">
         <div class="section-head center">
-          <span class="eyebrow">Live scoreboards</span>
-          <h2>Your match. Any screen.</h2>
-          <p>Scores can be followed live from virtually any internet-connected display. Native Android and iOS apps are
-            in development.</p>
+          <h2>Your match on any device.</h2>
+          <p>Scores can be controlled and viewed from virtually any internet-connected display. <br />Native Android and
+            iOS apps are coming soon.</p>
         </div>
         <div class="display-grid">
-          <div class="card display-card"><img src="media/logos/web.svg" alt="">
-            <div><strong>Web browsers</strong><span>Scoreboards for phones, TVs, kiosks, and club displays.</span></div>
+          <div class="card display-card"><img src="media/logos/web.svg" alt=""
+              style="margin-left: auto; margin-right: auto;">
           </div>
-          <div class="card display-card"><img src="media/logos/android.svg" alt="">
-            <div><strong>Android</strong><span>Native mobile app coming soon for players and spectators.</span></div>
+          <div class="card display-card"><img src="media/logos/android.svg" alt=""
+              style="margin-left: auto; margin-right: auto;">
           </div>
-          <div class="card display-card"><img src="media/logos/apple.svg" alt="">
-            <div><strong>iOS</strong><span>Native mobile app coming soon for iPhone users.</span></div>
+          <div class="card display-card"><img src="media/logos/apple.svg" alt=""
+              style="margin-left: auto; margin-right: auto;">
           </div>
         </div>
       </div>
@@ -961,9 +997,7 @@
     <section id="clubs">
       <div class="wrap">
         <div class="section-head center">
-          <span class="eyebrow">Club benefits</span>
           <h2>Why clubs choose Padel Push.</h2>
-          <p>A modern player experience without adding operational complexity.</p>
         </div>
         <div class="benefit-grid">
           <div class="card">
@@ -986,88 +1020,27 @@
       </div>
     </section>
 
-    <section class="players">
-      <div class="wrap split">
-        <div class="section-head">
-          <span class="eyebrow">For players</span>
-          <h2>Smart scoring beyond the club.</h2>
-          <p>Players who purchase Pulse or Beacon pairs can access their own private digital scoreboard experience for
-            friendly matches, training sessions, private courts, and social tournaments.</p>
-        </div>
-        <div class="feature-list">
-          <div class="feature">
-            <h3>Play without phone handling</h3>
-            <p>Score from a physical device and keep the match flowing.</p>
-          </div>
-          <div class="feature">
-            <h3>Follow matches live</h3>
-            <p>Let friends, spectators, and other players view the score from any connected display.</p>
-          </div>
-          <div class="feature">
-            <h3>Future ecosystem potential</h3>
-            <p>Padel Push is evolving toward match tracking, court analytics, club management, tournaments, player
-              engagement, and automated match workflows.</p>
-          </div>
-        </div>
-      </div>
-    </section>
-
     <section id="pilot" class="cta">
       <div class="wrap cta-box">
         <div>
-          <span class="eyebrow">Pilot program</span>
           <h2>Ready to modernise your courts?</h2>
           <p>We are partnering with selected clubs and courts to shape the future of connected padel. Pilot clubs get
             prototype devices, onboarding, setup support, lifetime software updates, early feature access, and direct
             collaboration opportunities.</p>
         </div>
         <div class="cta-actions">
-          <a class="button primary" href="mailto:hello@padelpush.com?subject=Padel%20Push%20pilot%20access">Apply for
+          <a class="button primary" href="mailto:info@padelpush.com?subject=Padel%20Push%20pilot%20access">Apply for
             pilot access</a>
-          <a class="button ghost" href="mailto:hello@padelpush.com?subject=Padel%20Push%20contact">Contact us</a>
+          <a class="button ghost" href="mailto:info@padelpush.com?subject=Padel%20Push%20contact">Contact us</a>
         </div>
       </div>
     </section>
 
-    <section id="faq">
-      <div class="wrap">
-        <div class="section-head center">
-          <span class="eyebrow">FAQ</span>
-          <h2>Quick answers.</h2>
-        </div>
-        <div class="faq-grid">
-          <div class="card faq">
-            <h3>Do players need phones to score?</h3>
-            <p>No. Pulse and Beacon devices work independently on court.</p>
-          </div>
-          <div class="card faq">
-            <h3>Can scoreboards be viewed remotely?</h3>
-            <p>Yes. Matches can be viewed from any internet-connected display.</p>
-          </div>
-          <div class="card faq">
-            <h3>Do devices work on battery power?</h3>
-            <p>Yes. Devices include rechargeable batteries and USB-C support.</p>
-          </div>
-          <div class="card faq">
-            <h3>Can clubs start with only a few devices?</h3>
-            <p>Absolutely. Padel Push is designed around a scalable upgrade path.</p>
-          </div>
-        </div>
-      </div>
-    </section>
   </main>
 
   <footer>
     <div class="wrap footer-row">
-      <a href="#" class="brand" aria-label="Padel Push home">
-        <span class="brand-mark"><img src="app/media/img/logo.svg" alt=""></span>
-        <span>Padel Push</span>
-      </a>
-      <div class="footer-links">
-        <a href="app/">Launch scoreboard</a>
-        <a href="mailto:hello@padelpush.com">hello@padelpush.com</a>
-      </div>
-      <span>&copy; 2026 Padel Push</span>
+      <span style="margin-left: auto; margin-right: auto;">&copy; 2026 Padel Push</span>
     </div>
   </footer>
 </body>
