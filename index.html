@@ -204,7 +204,7 @@
       width: min(420px, 100%);
       height: auto;
       display: block;
-      filter: brightness(0);
+      filter: invert(100%);
     }
 
     .hero-grid {
@@ -241,6 +241,13 @@
     .lead {
       max-width: 680px;
       color: #394452;
+      font-size: clamp(1.08rem, 2.3vw, 1.32rem);
+      margin-bottom: 28px;
+    }
+
+    .motivation {
+      max-width: 680px;
+      color: var(--soft);
       font-size: clamp(1.08rem, 2.3vw, 1.32rem);
       margin-bottom: 28px;
     }
@@ -803,10 +810,10 @@
     <div class="wrap nav">
       <a href="#" class="brand" aria-label="Padel Push home">
         <span class="brand-mark"><img src="app/media/img/logo.svg" alt=""></span>
-        <span>Padel Push</span>
+        <span>PADEL PUSH</span>
       </a>
       <div class="social-links">
-        <a href="mailto:info@padelpush.com" title="Email" aria-label="Email">
+        <a href="mailto:[EMAIL_ADDRESS]?subject=Padel%20Push%20-%20General%20Query" title="Email" aria-label="Email">
           <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
             <path
               d="M4 6.5C4 5.94772 4.44772 5.5 5 5.5H19C19.5523 5.5 20 5.94772 20 6.5V17.5C20 18.0523 19.5523 18.5 19 18.5H5C4.44772 18.5 4 18.0523 4 17.5V6.5Z"
@@ -840,16 +847,11 @@
     <section class="hero">
       <div class="wrap hero-grid">
         <div>
-          <h1>Padel Push</h1>
-          <p class="lead">Smart devices. Live scoring. Connected courts. Padel Push helps clubs and players modernise
-            every match with portable scoring, hands-free automation, NFC interactions, and real-time scoreboards.</p>
+          <h1>PADEL PUSH</h1>
+          <p class="lead">Smart devices. Live scoring. Connected courts.</p>
           <div class="hero-actions">
-            <a class="button primary" href="mailto:hello@padelpush.com?subject=Padel%20Push%20demo">Book a free demo</a>
-          </div>
-          <div class="hero-points" aria-label="Padel Push highlights">
-            <div class="point">No phones needed on court</div>
-            <div class="point">Scores visible on any screen</div>
-            <div class="point">Start small and scale naturally</div>
+            <a class="button primary" href="mailto:[EMAIL_ADDRESS]?subject=Padel%20Push%20-%20Request%20for%20Demo">Book
+              a free demo</a>
           </div>
         </div>
         <div class="hero-logo">
@@ -860,24 +862,24 @@
 
     <section id="whatis">
       <div class="wrap">
-        <div class="section-head center">
-          <h2>A complete smart court solution for clubs and players.</h2>
-        </div>
         <div class="feature-list">
           <div class="feature">
             <h3>Eliminate uncertainty</h3>
-            <p>No more guessing the score. Padel Push provides real-time, accurate scoring for every match.
+            <p>No more guessing - Padel Push brings real-time, accurate scoring to every player.
             </p>
           </div>
           <div class="feature">
-            <h3>Built for action</h3>
-            <p>Rechargeable batteries, USB-C power, smart Wi-Fi, audio feedback and NFC keep the system practical in
-              live
-              club environments.</p>
+            <h3>Cloud-based software</h3>
+            <p>Devices, court details and scores sync instantly to the cloud, and can be accessed from any smart
+              device.</p>
           </div>
           <div class="feature">
-            <h3>Cloud-based</h3>
-            <p>Device registration, assignment, and score management syncs to the cloud.</p>
+            <h3>Simple and affordable</h3>
+            <p>Our product range is priced and designed to make smart scoring accessible to all.</p>
+          </div>
+          <div class="feature">
+            <h3>Infinitely scalable</h3>
+            <p>Padel Push supports unlimited devices and courts.</p>
           </div>
         </div>
       </div>
@@ -888,7 +890,14 @@
         <div class="section-head center">
           <h2>Purpose-built scoring hardware.</h2>
         </div>
-
+        <div class="subhead">
+          <p>
+          <div class="feature center">
+            All devices are equipped with rechargeable batteries, USB-C power, smart Wi-Fi, audio feedback and RFID
+            integration.
+          </div>
+          </p>
+        </div>
         <div class="device-grid">
           <article class="card device-card">
             <div class="device-top">
@@ -897,12 +906,10 @@
               </div>
               <span class="device-icon"><img src="media/logos/d1.svg" alt=""></span>
             </div>
-            <p>Direct player control with a tiny portable device designed for fast gameplay.</p>
+            <p>Direct control with tiny portable devices.</p>
             <ul>
               <li>Single-button scoring</li>
-              <li>Hold actions for undo, switch teams, and reset</li>
-              <li>Audible score feedback</li>
-              <li>NFC registration support</li>
+              <li>Undo, switch teams, and reset actions</li>
               <li>Ideal for casual matches and club rentals</li>
             </ul>
           </article>
@@ -914,13 +921,12 @@
               </div>
               <span class="device-icon"><img src="media/logos/d2.svg" alt=""></span>
             </div>
-            <p>Automatic scoring interactions using distance sensing technology.</p>
+            <p>Hands-free scoring.</p>
             <ul>
-              <li>Distance-based score triggering</li>
-              <li>Physical team assignment switch</li>
-              <li>Minimal interaction required</li>
-              <li>Rechargeable battery</li>
-              <li>Ideal for high-traffic and competitive courts</li>
+              <li>Ultrasonic sensor</li>
+              <li>Physical team assignment</li>
+              <li>Most natural interaction for players</li>
+              <li>Built for high-traffic, competitive courts</li>
             </ul>
           </article>
 
@@ -933,63 +939,12 @@
             </div>
             <p>The connection point for full smart court functionality and club-wide management.</p>
             <ul>
-              <li>NFC reader integration</li>
-              <li>Device-to-court registration</li>
-              <li>Court management tools</li>
-              <li>Smart device allocation</li>
-              <li>Ideal for multi-court venues</li>
+              <li>RFID-based triggers</li>
+              <li>Extended battery life</li>
+              <li>Full smart court management</li>
+              <li>Perfect for venues with multiple courts</li>
             </ul>
           </article>
-        </div>
-      </div>
-    </section>
-
-    <section id="smart-courts" class="path">
-      <div class="wrap">
-        <div class="section-head center">
-          <h2>Start simple. Scale naturally.</h2>
-          <p>Padel Push grows with your club, from portable scorekeeping to a fully connected venue.</p>
-        </div>
-        <div class="steps">
-          <div class="step">
-            <div class="step-num">1</div>
-            <h3>Pulse</h3>
-            <p>Lend or rent portable Pulse devices to players for manual scoring with instant live scoreboards and
-              minimal infrastructure.</p>
-          </div>
-          <div class="step">
-            <div class="step-num">2</div>
-            <h3>Beacon</h3>
-            <p>Add Beacon devices courtside for hands-free score triggering that reduces interruptions and simplifies
-              gameplay interactions.</p>
-          </div>
-          <div class="step">
-            <div class="step-num">3</div>
-            <h3>Hub</h3>
-            <p>Integrate Hubs to manage devices, assign courts dynamically, and enable NFC-powered interactions across
-              the venue.</p>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <section>
-      <div class="wrap">
-        <div class="section-head center">
-          <h2>Your match on any device.</h2>
-          <p>Scores can be controlled and viewed from virtually any internet-connected display. <br />Native Android and
-            iOS apps are coming soon.</p>
-        </div>
-        <div class="display-grid">
-          <div class="card display-card"><img src="media/logos/web.svg" alt=""
-              style="margin-left: auto; margin-right: auto;">
-          </div>
-          <div class="card display-card"><img src="media/logos/android.svg" alt=""
-              style="margin-left: auto; margin-right: auto;">
-          </div>
-          <div class="card display-card"><img src="media/logos/apple.svg" alt=""
-              style="margin-left: auto; margin-right: auto;">
-          </div>
         </div>
       </div>
     </section>
@@ -1001,20 +956,25 @@
         </div>
         <div class="benefit-grid">
           <div class="card">
-            <h3>Improve player experience</h3>
+            <p class="center" style="font-size: 1.5rem;">😃</p>
+            <h3>Improve the player experience</h3>
             <p>Modern scoring without interrupting gameplay.</p>
           </div>
           <div class="card">
-            <h3>Reduce friction</h3>
+            <p class="center" style="font-size: 1.5rem;">🙌</p>
+            <h3>Reduces admin</h3>
             <p>No dedicated scoreboard operator required.</p>
+
           </div>
           <div class="card">
-            <h3>Create revenue options</h3>
+            <p class="center" style="font-size: 1.5rem;">💰</p>
+            <h3>Creates new revenue streams</h3>
             <p>Device rentals, premium court experiences, and smart court memberships.</p>
           </div>
           <div class="card">
-            <h3>Built in South Africa</h3>
-            <p>Local development, local support, and direct feedback channels.</p>
+            <p class="center" style="font-size: 1.5rem;">🇿🇦</p>
+            <h3>Proudly South African</h3>
+            <p>Local development means direct feedback channels and personal support.</p>
           </div>
         </div>
       </div>
@@ -1023,15 +983,20 @@
     <section id="pilot" class="cta">
       <div class="wrap cta-box">
         <div>
-          <h2>Ready to modernise your courts?</h2>
-          <p>We are partnering with selected clubs and courts to shape the future of connected padel. Pilot clubs get
-            prototype devices, onboarding, setup support, lifetime software updates, early feature access, and direct
-            collaboration opportunities.</p>
+          <h2>Are you an innovative club?</h2>
+          <div class="motivation">
+            <p>
+              We are partnering with selected clubs to shape the future of connected padel.
+              Pilot clubs get early access to prototype devices, new features, direct support, and help guide the
+              development of Padel Push.
+            </p>
+          </div>
         </div>
         <div class="cta-actions">
-          <a class="button primary" href="mailto:info@padelpush.com?subject=Padel%20Push%20pilot%20access">Apply for
+          <a class="button primary" href="mailto:[EMAIL_ADDRESS]?subject=Padel%20Push%20-%20Pilot%20Access">Apply for
             pilot access</a>
-          <a class="button ghost" href="mailto:info@padelpush.com?subject=Padel%20Push%20contact">Contact us</a>
+          <a class="button ghost" href="mailto:[EMAIL_ADDRESS]?subject=Padel%20Push%20-%20General%20Query">Contact
+            us</a>
         </div>
       </div>
     </section>
