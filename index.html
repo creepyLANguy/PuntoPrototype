@@ -186,9 +186,9 @@
     .hero {
       position: relative;
       background:
-        linear-gradient(135deg, rgba(184, 243, 0, 0.22), rgba(0, 169, 199, 0.12) 44%, rgba(255, 255, 255, 0) 78%),
+        linear-gradient(135deg, rgba(0, 169, 199, 0.15), rgba(139, 92, 246, 0.08) 44%, rgba(255, 255, 255, 0) 78%),
         #f8fbfc;
-      padding: clamp(54px, 9vw, 106px) 0 clamp(40px, 7vw, 74px);
+      padding: clamp(16px, 3vw, 24px) 0 clamp(24px, 4vw, 40px);
     }
 
     .hero::before {
@@ -402,12 +402,16 @@
     }
 
     section {
-      padding: clamp(54px, 8vw, 92px) 0;
+      padding: clamp(80px, 12vw, 120px) 0 clamp(40px, 6vw, 60px);
+    }
+
+    section.tight-top {
+      padding-top: clamp(24px, 4vw, 40px);
     }
 
     .section-head {
       max-width: 900px;
-      margin-bottom: 30px;
+      margin-bottom: 50px;
     }
 
     .center {
@@ -455,9 +459,16 @@
     }
 
     .feature {
-      padding: 16px;
-      border-radius: var(--radius);
-      text-align: left;
+      padding: 24px;
+      border: 1px solid rgba(163, 175, 188, 0.2);
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.96);
+      transition: transform 160ms ease, box-shadow 160ms ease;
+    }
+
+    .feature:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 15px 30px rgba(16, 21, 31, 0.05);
     }
 
     .hero-features .feature {
@@ -467,23 +478,29 @@
     }
 
     .hero-features .feature h3 {
-      font-size: 1rem;
-      margin-bottom: 6px;
+      font-size: 1.15rem;
+      margin-bottom: 8px;
       color: var(--ink);
     }
 
     .hero-features .feature p {
-      font-size: 0.9rem;
-      line-height: 1.4;
+      font-size: 1rem;
+      line-height: 1.5;
     }
 
     .card {
       min-height: 100%;
-      border: 1px solid rgba(220, 228, 234, 0.75);
-      border-radius: var(--radius);
-      background: rgba(255, 255, 255, 0.96);
-      padding: 22px;
-      box-shadow: 0 20px 40px rgba(16, 21, 31, 0.08);
+      border: 1px solid rgba(220, 228, 234, 0.6);
+      border-radius: 20px;
+      background: #ffffff;
+      padding: 32px;
+      box-shadow: 0 15px 45px rgba(16, 21, 31, 0.04);
+      transition: transform 160ms ease, box-shadow 160ms ease;
+    }
+
+    .card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 25px 60px rgba(16, 21, 31, 0.08);
     }
 
     .display-grid,
@@ -643,16 +660,41 @@
     }
 
     .cta {
-      background: #10151f;
+      background: radial-gradient(circle at top right, #1a2436, #10151f);
       color: #fff;
-      padding: clamp(52px, 7vw, 78px) 0;
+      padding: clamp(32px, 5vw, 48px) 0 clamp(40px, 6vw, 60px);
     }
 
     .cta-box {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) auto;
-      gap: 30px;
+      display: flex;
+      flex-direction: column;
       align-items: center;
+      text-align: center;
+      max-width: 820px;
+      margin: 0 auto;
+    }
+
+    .cta h2 {
+      margin-bottom: 24px;
+    }
+
+    .cta-actions {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 16px;
+      margin-top: 32px;
+    }
+
+    .motivation {
+      max-width: 680px;
+      margin: 0 auto;
+    }
+
+    .motivation p {
+      text-wrap: balance;
+      color: rgba(255, 255, 255, 0.85);
+      line-height: 1.6;
     }
 
     .cta p {
@@ -910,26 +952,22 @@
         </div>
 
         <div class="hero-image-container">
-          <img src="media/main.jpeg" class="hero-main-img" alt="Padel Push Smart Court">
+          <img src="media/main.webp" class="hero-main-img" alt="Padel Push Smart Court">
         </div>
       </div>
     </section>
 
-    <section id="devices">
+    <section id="devices" class="tight-top">
       <div class="wrap">
         <div class="section-head center">
-          <h2>Purpose-built scoring hardware.</h2>
-        </div>
-        <div class="subhead">
-          <p>
-          <div class="feature center">
-            All devices are equipped with rechargeable batteries, USB-C power, smart Wi-Fi, audio feedback and RFID
-            integration.
-          </div>
-          </p>
         </div>
         <div class="device-grid">
           <article class="card device-card">
+            <!-- <div
+              style="margin-bottom: 20px; aspect-ratio: 16/10; background: var(--soft); border-radius: 12px; overflow: hidden;">
+              <img src="https://placehold.co/800x500/eef3f6/10151f?text=Pulse+Device" alt="Pulse device preview"
+                style="width: 100%; height: 100%; object-fit: cover;">
+            </div> -->
             <div class="device-top">
               <div>
                 <h2>Pulse</h2>
@@ -945,6 +983,11 @@
           </article>
 
           <article class="card device-card">
+            <!-- <div
+              style="margin-bottom: 20px; aspect-ratio: 16/10; background: var(--soft); border-radius: 12px; overflow: hidden;">
+              <img src="https://placehold.co/800x500/eef3f6/10151f?text=Beacon+Sensor" alt="Beacon sensor preview"
+                style="width: 100%; height: 100%; object-fit: cover;">
+            </div> -->
             <div class="device-top">
               <div>
                 <h2>Beacon</h2>
@@ -961,6 +1004,11 @@
           </article>
 
           <article class="card device-card">
+            <!-- <div
+              style="margin-bottom: 20px; aspect-ratio: 16/10; background: var(--soft); border-radius: 12px; overflow: hidden;">
+              <img src="https://placehold.co/800x500/eef3f6/10151f?text=Smart+Hub" alt="Smart Hub preview"
+                style="width: 100%; height: 100%; object-fit: cover;">
+            </div> -->
             <div class="device-top">
               <div>
                 <h2>Hub</h2>
@@ -976,10 +1024,18 @@
             </ul>
           </article>
         </div>
+        <div class="subhead">
+          <p>
+          <div class="feature center">
+            All devices are equipped with rechargeable batteries, USB-C power, smart Wi-Fi, audio feedback and RFID
+            integration.
+          </div>
+          </p>
+        </div>
       </div>
     </section>
 
-    <section id="clubs">
+    <section id="clubs" class="tight-top">
       <div class="wrap">
         <div class="section-head center">
           <h2>Why clubs choose Padel Push.</h2>
@@ -1023,9 +1079,11 @@
           </div>
         </div>
         <div class="cta-actions">
-          <a class="button primary" href="mailto:[EMAIL_ADDRESS]?subject=Padel%20Push%20-%20Pilot%20Access">Apply for
+          <a class="button primary hero-cta"
+            href="mailto:[EMAIL_ADDRESS]?subject=Padel%20Push%20-%20Pilot%20Access">Apply for
             pilot access</a>
-          <a class="button ghost" href="mailto:[EMAIL_ADDRESS]?subject=Padel%20Push%20-%20General%20Query">Contact
+          <a class="button ghost hero-cta"
+            href="mailto:[EMAIL_ADDRESS]?subject=Padel%20Push%20-%20General%20Query">Contact
             us</a>
         </div>
       </div>
