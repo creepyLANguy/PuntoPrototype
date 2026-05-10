@@ -169,6 +169,14 @@
       color: var(--ink);
     }
 
+    .button.hero-cta {
+      min-height: 62px;
+      padding: 0 40px;
+      font-size: 1.18rem;
+      border-radius: 12px;
+      box-shadow: 0 15px 30px rgba(184, 243, 0, 0.2);
+    }
+
     .button.ghost {
       background: transparent;
       color: var(--ink);
@@ -193,44 +201,60 @@
       opacity: 0.06;
     }
 
-    .hero-logo {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 360px;
-    }
-
-    .hero-logo img {
-      width: min(420px, 100%);
-      height: auto;
-      display: block;
-      filter: invert(100%);
-    }
-
     .hero-grid {
-      display: grid;
-      grid-template-columns: minmax(0, 1.1fr) minmax(300px, 0.9fr);
-      gap: clamp(36px, 6vw, 70px);
-      align-items: start;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      gap: 40px;
     }
 
-    .hero-logo {
-      align-self: start;
-    }
-
-    h1,
-    h2,
-    h3,
-    p {
-      margin-top: 0;
+    .hero-text {
+      max-width: 900px;
     }
 
     h1 {
-      margin-bottom: 18px;
-      font-size: clamp(3rem, 8vw, 5.6rem);
-      line-height: 0.96;
+      margin-bottom: 24px;
+      font-size: clamp(3rem, 7.5vw, 5.2rem);
+      line-height: 0.94;
       font-weight: 950;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.25em;
       text-wrap: balance;
+    }
+
+    .hero-title-mark {
+      height: 0.9em;
+      width: auto;
+      object-fit: contain;
+      filter: invert(1);
+      opacity: 0.9;
+      margin-top: 15px;
+    }
+
+    .hero .lead {
+      margin-left: auto;
+      margin-right: auto;
+      max-width: 720px;
+    }
+
+    .hero-actions {
+      justify-content: center;
+    }
+
+    .hero-image-container {
+      width: 100%;
+      max-width: 1000px;
+      margin-top: 20px;
+    }
+
+    .hero-main-img {
+      width: 100%;
+      height: auto;
+      border-radius: 20px;
+      box-shadow: 0 40px 100px rgba(0, 0, 0, 0.12);
     }
 
     .hero h1 span {
@@ -424,17 +448,33 @@
 
     .feature-list {
       display: grid;
-      gap: 14px;
-      width: 90%;
-      margin-left: auto;
-      margin-right: auto;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 24px;
+      margin-top: 20px;
+      width: 100%;
     }
 
     .feature {
-      padding: 18px;
-      border: 1px solid rgba(163, 175, 188, 0.28);
+      padding: 16px;
       border-radius: var(--radius);
-      background: rgba(255, 255, 255, 0.96);
+      text-align: left;
+    }
+
+    .hero-features .feature {
+      background: transparent;
+      border: none;
+      padding: 0;
+    }
+
+    .hero-features .feature h3 {
+      font-size: 1rem;
+      margin-bottom: 6px;
+      color: var(--ink);
+    }
+
+    .hero-features .feature p {
+      font-size: 0.9rem;
+      line-height: 1.4;
     }
 
     .card {
@@ -668,43 +708,17 @@
         display: none;
       }
 
-      .hero-grid,
+      .hero-grid {
+        gap: 30px;
+      }
+
       .split,
       .cta-box {
         grid-template-columns: 1fr;
       }
 
-      .hero-grid {
-        position: relative;
-        z-index: 1;
-      }
-
-      .hero-logo {
-        position: absolute;
-        top: 18px;
-        left: 50%;
-        transform: translateX(-50%);
-        width: 140px;
-        min-height: auto;
-        padding: 0;
-        align-items: center;
-        justify-content: center;
-        z-index: 0;
-        opacity: 0.08;
-      }
-
-      .hero-logo img {
-        width: 100%;
-        height: auto;
-        object-fit: contain;
-      }
-
-      .device-grid,
-      .steps,
-      .display-grid,
-      .benefit-grid,
-      .faq-grid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+      .feature-list {
+        grid-template-columns: repeat(2, 1fr);
       }
 
       .cta-actions {
@@ -757,7 +771,19 @@
       }
 
       h1 {
-        font-size: clamp(2.8rem, 14vw, 4.1rem);
+        font-size: clamp(2.6rem, 12vw, 3.8rem);
+        text-align: center;
+        justify-content: center;
+        flex-direction: column;
+        gap: 15px;
+      }
+
+      .hero-title-mark {
+        height: 80px;
+      }
+
+      .hero .lead {
+        text-align: center;
       }
 
       .hero-actions,
@@ -771,6 +797,7 @@
       }
 
       .hero-points,
+      .feature-list,
       .device-grid,
       .steps,
       .display-grid,
@@ -778,6 +805,10 @@
       .faq-grid,
       .preview-devices {
         grid-template-columns: 1fr;
+      }
+
+      .hero-features .feature {
+        text-align: center;
       }
 
       .point {
@@ -846,41 +877,40 @@
   <main>
     <section class="hero">
       <div class="wrap hero-grid">
-        <div>
-          <h1>PADEL PUSH</h1>
+        <div class="hero-text">
+          <h1>
+            <img src="app/media/img/logo.svg" class="hero-title-mark" alt="">
+            PADEL PUSH
+          </h1>
           <p class="lead">Smart devices. Live scoring. Connected courts.</p>
           <div class="hero-actions">
-            <a class="button primary" href="mailto:[EMAIL_ADDRESS]?subject=Padel%20Push%20-%20Request%20for%20Demo">Book
+            <a class="button primary hero-cta"
+              href="mailto:[EMAIL_ADDRESS]?subject=Padel%20Push%20-%20Request%20for%20Demo">Book
               a free demo</a>
           </div>
-        </div>
-        <div class="hero-logo">
-          <img src="app/media/img/logo.svg" alt="Padel Push logo">
-        </div>
-      </div>
-    </section>
 
-    <section id="whatis">
-      <div class="wrap">
-        <div class="feature-list">
-          <div class="feature">
-            <h3>Eliminate uncertainty</h3>
-            <p>No more guessing - Padel Push brings real-time, accurate scoring to every player.
-            </p>
+          <div class="feature-list hero-features">
+            <div class="feature">
+              <h3>Know the score</h3>
+              <p>Real-time, accurate scoring for every match.</p>
+            </div>
+            <div class="feature">
+              <h3>Always connected</h3>
+              <p>Instant cloud sync, accessible from anywhere.</p>
+            </div>
+            <div class="feature">
+              <h3>Purely accessible</h3>
+              <p>Priced and designed for all clubs and players.</p>
+            </div>
+            <div class="feature">
+              <h3>Totally scalable</h3>
+              <p>Unlimited devices and courts, no limits.</p>
+            </div>
           </div>
-          <div class="feature">
-            <h3>Cloud-based software</h3>
-            <p>Devices, court details and scores sync instantly to the cloud, and can be accessed from any smart
-              device.</p>
-          </div>
-          <div class="feature">
-            <h3>Simple and affordable</h3>
-            <p>Our product range is priced and designed to make smart scoring accessible to all.</p>
-          </div>
-          <div class="feature">
-            <h3>Infinitely scalable</h3>
-            <p>Padel Push supports unlimited devices and courts.</p>
-          </div>
+        </div>
+
+        <div class="hero-image-container">
+          <img src="media/main.jpeg" class="hero-main-img" alt="Padel Push Smart Court">
         </div>
       </div>
     </section>
@@ -983,7 +1013,7 @@
     <section id="pilot" class="cta">
       <div class="wrap cta-box">
         <div>
-          <h2>Are you an innovative club?</h2>
+          <h2>Are you a forward thinking Padel Club?</h2>
           <div class="motivation">
             <p>
               We are partnering with selected clubs to shape the future of connected padel.
