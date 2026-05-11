@@ -1208,7 +1208,38 @@ document.addEventListener("DOMContentLoaded", () =>
   function showCourtTitle(name)
   {
     const existing = document.getElementById("courtTitle");
-    if (existing) existing.textContent = name;
+    if (existing)
+    {
+      existing.textContent = name;
+      updateMarqueeScrolling();
+    }
+  }
+
+  function updateMarqueeScrolling()
+  {
+    const container = document.querySelector(".marquee-wrapper");
+    const content = document.querySelector(".marquee-content");
+    if (!container || !content) return;
+
+    // Reset before measuring
+    content.classList.remove("scrolling");
+
+    const isLandscape = window.innerHeight < window.innerWidth && window.matchMedia("(orientation: landscape)").matches;
+
+    if (isLandscape)
+    {
+      if (content.scrollHeight > container.clientHeight)
+      {
+        content.classList.add("scrolling");
+      }
+    }
+    else
+    {
+      if (content.scrollWidth > container.clientWidth)
+      {
+        content.classList.add("scrolling");
+      }
+    }
   }
 
   elements.createCourtBtn.addEventListener("click", async () =>
@@ -2456,6 +2487,7 @@ document.addEventListener("DOMContentLoaded", () =>
   {
     document.querySelectorAll(".team-name .name-text")
       .forEach(fitTextToContainer);
+    updateMarqueeScrolling();
   });
 
 

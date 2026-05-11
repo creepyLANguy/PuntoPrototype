@@ -11,7 +11,9 @@
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800;900&family=Outfit:wght@300;400;600;700;800;900&display=swap" rel="stylesheet" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800;900&family=Outfit:wght@300;400;600;700;800;900&display=swap"
+    rel="stylesheet" />
   <link rel="stylesheet" href="css/style.css" />
   <script type="module" src="js/script.js"></script>
   <link rel="icon" type="image/svg+xml" href="media/img/favicon.svg">
@@ -440,7 +442,16 @@
         <!-- SIDEBAR (Landscape) / HEADER (Portrait) -->
         <aside class="sidebar-left">
           <div class="left-group">
-            <span id="courtTitle"></span>
+            <div class="marquee-wrapper">
+              <div class="marquee-content">
+                <div class="scoreboard-branding">
+                  <img src="media/img/logo.svg" alt="Padel Push Logo" class="scoreboard-logo" />
+                  <span class="scoreboard-app-name">Padel Push</span>
+                </div>
+                <span class="marquee-separator">/</span>
+                <span id="courtTitle"></span>
+              </div>
+            </div>
           </div>
 
           <!-- Spectator badge is injected by JS here -->
@@ -544,6 +555,10 @@
     </div>
 
   </div> <!-- CONTENT CONTAINER -->
+</body>
+
+</html>
+</div> <!-- CONTENT CONTAINER -->
 </body>
 
 </html>

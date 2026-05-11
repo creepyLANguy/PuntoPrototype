@@ -2306,6 +2306,147 @@ body.light-mode .court-item-info {
   min-width: 0;
 }
 
+.left-group {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  flex: 1;
+}
+
+.scoreboard-branding {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.scoreboard-logo {
+  width: clamp(24px, 6vmin, 48px);
+  height: auto;
+  filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.2));
+}
+
+body.light-mode .scoreboard-logo {
+  filter: invert(1) drop-shadow(0 0 5px rgba(0, 0, 0, 0.1));
+}
+
+.scoreboard-app-name {
+  font-family: "Outfit", sans-serif;
+  font-weight: 800;
+  font-size: clamp(1.1rem, 5vmin, 2.5rem);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--white);
+  white-space: nowrap;
+}
+
+.marquee-separator {
+  color: rgba(255, 255, 255, 0.3);
+  font-weight: 300;
+  margin: 0 15px;
+  font-size: clamp(1.1rem, 5vmin, 2.5rem);
+}
+
+#courtTitle {
+  font-family: "Outfit", sans-serif;
+  font-weight: 800;
+  font-size: clamp(1.1rem, 5vmin, 2.5rem);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--white);
+  white-space: nowrap;
+}
+
+.marquee-wrapper {
+  width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  position: relative;
+  mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
+  -webkit-mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
+}
+
+.marquee-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: max-content;
+  min-width: 100%;
+  transition: transform 0.3s ease;
+}
+
+.marquee-content.scrolling {
+  padding-left: 100%;
+  animation: marquee 12s linear infinite;
+  justify-content: flex-start;
+}
+
+@keyframes marquee {
+  0% {
+    transform: translateX(0);
+  }
+
+  100% {
+    transform: translateX(-100%);
+  }
+}
+
+@media (orientation: landscape) {
+  .left-group {
+    width: 100%;
+    height: 100%;
+    justify-content: center;
+  }
+
+  .marquee-wrapper {
+    height: 100%;
+    width: clamp(50px, 8vmin, 85px);
+    mask-image: linear-gradient(to bottom, transparent, black 10%, black 90%, transparent);
+    -webkit-mask-image: linear-gradient(to bottom, transparent, black 10%, black 90%, transparent);
+  }
+
+  .marquee-content {
+    flex-direction: column;
+    padding-left: 0;
+    width: 100%;
+    min-height: 100%;
+    justify-content: center;
+  }
+
+  .marquee-content.scrolling {
+    padding-top: 100%;
+    animation: marquee-vertical 15s linear infinite;
+    justify-content: flex-start;
+  }
+
+  .scoreboard-branding {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .scoreboard-app-name,
+  #courtTitle {
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+    text-align: center;
+  }
+
+  .marquee-separator {
+    margin: 15px 0;
+    transform: rotate(90deg);
+  }
+}
+
+@keyframes marquee-vertical {
+  0% {
+    transform: translateY(0);
+  }
+
+  100% {
+    transform: translateY(-100%);
+  }
+}
+
 @media (orientation: landscape) {
   .left-group {
     flex-direction: column;
@@ -3927,6 +4068,59 @@ body.light-mode .set-win-label {
 
 .toast.info {
   border: 1px solid #3498db;
+}
+
+.toast.warning {
+  border: 1px solid #f1c40f;
+}
+
+display: flex;
+flex-direction: column;
+gap: 10px;
+pointer-events: none;
+}
+
+.toast {
+  padding: 12px 24px;
+  border-radius: 50px;
+  background: rgba(0, 0, 0, 0.85);
+  color: white;
+  font-weight: 600;
+  font-size: 0.9rem;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(10px);
+  animation: toastFadeIn 0.3s ease forwards;
+  pointer-events: auto;
+  min-width: 200px;
+  text-align: center;
+}
+
+@keyframes toastFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.toast.success {
+  border: 1px solid #2ecc71;
+}
+
+.toast.error {
+  border: 1px solid #e74c3c;
+}
+
+.toast.info {
+  border: 1px solid #3498db;
+}
+
+.toast.warning {
+  border: 1px solid #f1c40f;
 }
 
 .toast.warning {
