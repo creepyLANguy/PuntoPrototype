@@ -1223,13 +1223,16 @@ document.addEventListener("DOMContentLoaded", () =>
 
     // Reset before measuring
     content.classList.remove("scrolling");
+    content.style.removeProperty("--marquee-vertical-offset");
 
     const isLandscape = window.innerHeight < window.innerWidth && window.matchMedia("(orientation: landscape)").matches;
 
     if (isLandscape)
     {
-      if (content.scrollHeight > container.clientHeight)
+      const containerHeight = container.clientHeight;
+      if (containerHeight > 0 && content.scrollHeight > containerHeight)
       {
+        content.style.setProperty("--marquee-vertical-offset", `${containerHeight}px`);
         content.classList.add("scrolling");
       }
     }

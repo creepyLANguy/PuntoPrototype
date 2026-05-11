@@ -2414,7 +2414,8 @@ body.light-mode .scoreboard-logo {
   }
 
   .marquee-content.scrolling {
-    padding-top: 100%;
+    padding-left: 0;
+    padding-top: var(--marquee-vertical-offset, 100svh);
     animation: marquee-vertical 15s linear infinite;
     justify-content: flex-start;
   }
@@ -2429,6 +2430,11 @@ body.light-mode .scoreboard-logo {
     writing-mode: vertical-rl;
     transform: rotate(180deg);
     text-align: center;
+  }
+
+  #courtTitle {
+    overflow: visible;
+    text-overflow: clip;
   }
 
   .marquee-separator {
