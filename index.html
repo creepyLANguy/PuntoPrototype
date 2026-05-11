@@ -297,20 +297,9 @@
       gap: 12px;
     }
 
-    .hero-points {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 12px;
+    .hero-features {
       margin-top: 34px;
-      max-width: 650px;
-    }
-
-    .point {
-      border-left: 3px solid var(--brand);
-      padding-left: 12px;
-      color: var(--muted);
-      font-size: 0.95rem;
-      font-weight: 650;
+      width: 100%;
     }
 
     .preview-top {
@@ -587,7 +576,7 @@
     .device-image {
       position: relative;
       margin-bottom: 24px;
-      aspect-ratio: 16/10;
+      aspect-ratio: 4/3;
       background: var(--soft);
       border-radius: var(--radius);
       overflow: hidden;
@@ -860,110 +849,382 @@
     }
 
     @media (max-width: 640px) {
+      :root {
+        --radius-lg: 16px;
+      }
+
       .wrap {
-        width: min(100% - 28px, var(--wrap));
+        width: min(100% - 32px, var(--wrap));
+      }
+
+      section {
+        padding: 32px 0;
+      }
+
+      section.tight-top {
+        padding-top: 12px;
+      }
+
+      .section-head {
+        margin-bottom: 24px;
+        text-align: left;
+      }
+
+      .center {
+        text-align: left;
       }
 
       .nav {
-        min-height: 66px;
+        min-height: 60px;
       }
 
-      .brand-mark {
-        width: 42px;
-        height: 42px;
+      .brand-mark img {
+        width: 36px;
+        height: 36px;
       }
 
-      .nav-links {
-        gap: 0;
+      .brand {
+        font-size: 1.1rem;
       }
 
-      .nav-links .button {
-        display: none;
-      }
-
+      .nav-links,
       .social-links {
-        gap: 10px;
+        gap: 8px;
       }
 
       .social-links a {
-        width: 32px;
-        height: 32px;
-        font-size: 0.85rem;
-      }
-
-      .hero {
-        padding-top: 38px;
-      }
-
-      .hero-logo {
-        position: absolute;
-        width: auto;
-        filter: invert(100%);
-        opacity: 0.7;
-        z-index: -1;
+        width: 30px;
+        height: 30px;
       }
 
       h1 {
-        font-size: clamp(2.6rem, 12vw, 3.8rem);
-        text-align: center;
-        justify-content: center;
-        flex-direction: column;
-        gap: 15px;
+        font-size: clamp(2.2rem, 9vw, 2.8rem);
+        text-align: left;
+        justify-content: flex-start;
+        flex-direction: row;
+        flex-wrap: wrap;
+        gap: 8px;
+        line-height: 1;
+        margin-bottom: 8px;
       }
 
       .hero-title-mark {
-        height: 80px;
+        height: 36px;
+        margin-top: 0;
+      }
+
+      .hero {
+        padding-top: 30px;
+      }
+
+      .hero-grid {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        text-align: left;
+      }
+
+      .hero-text {
+        display: contents;
+        /* Allows children to be siblings of hero-image-container for ordering */
       }
 
       .hero .lead {
-        text-align: center;
+        margin: 0 0 8px 0;
+        text-align: left;
+        font-size: 1.1rem;
       }
 
-      .hero-actions,
-      .cta-actions {
-        display: grid;
-        grid-template-columns: 1fr;
+      /* Reordering: Title -> Subtitle -> Image -> Points */
+      .hero-text h1 {
+        order: 1;
+      }
+
+      .hero-text .lead {
+        order: 2;
+      }
+
+      .hero-image-container {
+        order: 3;
+        margin-top: 12px;
+        height: 280px;
+        /* Fixed height to force cropping */
+        overflow: hidden;
+        border-radius: 16px;
+      }
+
+      .hero-main-img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        object-position: center 70%;
+        /* Show more of the top while keeping focus low */
+      }
+
+      .hero-features {
+        order: 4;
+        margin-top: 16px;
+      }
+
+      .hero-actions {
+        order: 5;
+        margin-top: 8px;
+      }
+
+      .hero-features.feature-list {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        margin-top: 20px;
+      }
+
+      .hero-features .feature {
+        position: relative;
+        padding-left: 32px;
+        text-align: left;
+        min-height: 24px;
+      }
+
+      .hero-features .feature::before {
+        content: "✓";
+        position: absolute;
+        left: 0;
+        top: 1em;
+        /* Lowered to align with title text */
+        color: var(--brand-strong);
+        font-weight: 900;
+        font-size: 1rem;
+
+      }
+
+      .hero-features .feature h3 {
+        font-size: 1rem;
+        margin-bottom: 2px;
+        line-height: 1.2;
+        color: var(--ink);
+      }
+
+      .hero-features .feature p {
+        display: block;
+        font-size: 0.88rem;
+        line-height: 1.4;
+        margin: 0;
+        color: var(--muted);
       }
 
       .button {
         width: 100%;
+        min-height: 50px;
       }
 
-      .hero-points,
-      .feature-list,
+      .button.hero-cta {
+        min-height: 54px;
+        font-size: 1.1rem;
+      }
+
+      /* Transform cards and steps into list items */
       .device-grid,
-      .steps,
-      .display-grid,
       .benefit-grid,
       .faq-grid,
-      .preview-devices {
-        grid-template-columns: 1fr;
+      .steps {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
       }
 
-      .hero-features .feature {
+      .card {
+        padding: 16px;
+        min-height: auto;
+        flex-direction: row;
+        align-items: center;
+        gap: 16px;
+        border-radius: var(--radius);
+        background: #fff;
+        border: 1px solid var(--line);
+      }
+
+      .step {
+        padding: 12px 16px;
+        min-height: auto;
+        flex-direction: row;
+        align-items: center;
+        gap: 14px;
+        border-radius: var(--radius);
+        background: rgba(255, 255, 255, 0.08);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+
+      .step-num {
+        width: 28px;
+        height: 28px;
+        font-size: 0.85rem;
+        margin-bottom: 0;
+        flex-shrink: 0;
+      }
+
+      .step h3 {
+        font-size: 1rem;
+        margin: 0;
+        color: #fff;
+      }
+
+      .step p {
+        display: block;
+        font-size: 0.82rem;
+        margin-top: 4px;
+      }
+
+      .device-image {
+        width: 100%;
+        height: 140px;
+        margin-bottom: 12px;
+        border-radius: 8px;
+        flex-shrink: 0;
+      }
+
+      .device-card {
+        flex-direction: column;
+        align-items: stretch;
+        padding: 14px;
+        /* Reduced from 20px */
+        gap: 10px;
+      }
+
+      .device-image {
+        width: 100%;
+        height: 220px;
+        /* Reduced from 140px */
+        margin-bottom: 0;
+        border-radius: 8px;
+        flex-shrink: 0;
+      }
+
+      .device-icon {
+        display: flex;
+        width: 28px;
+        height: 28px;
+        padding: 5px;
+      }
+
+      .device-card h2 {
+        font-size: 1.2rem;
+        margin-bottom: 0;
+      }
+
+      .device-card p {
+        display: block;
+        font-size: 0.85rem;
+        margin: 0;
+        line-height: 1.4;
+        text-align: justify;
+      }
+
+      .device-card ul {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        margin: 6px 0 0 0;
+        padding: 8px 0 0 0;
+        border-top: 1px solid rgba(0, 0, 0, 0.05);
+        list-style: none;
+      }
+
+      .device-card li {
+        display: block;
+        /* Use block + absolute for consistent indicator gap */
+        position: relative;
+        padding-left: 20px;
+        /* Indicator (6px) + 14px gap roughly */
+        font-size: 0.85rem;
+        line-height: 1.4;
+        color: var(--muted);
+        text-align: left;
+        /* Justify is risky for lists */
+        margin-bottom: 4px;
+      }
+
+      .device-card li::before {
+        content: "";
+        position: absolute;
+        left: 0;
+        top: 0.5em;
+        width: 6px;
+        height: 6px;
+        border-radius: 2px;
+        background: var(--brand-strong);
+        display: block;
+      }
+
+      .benefit-grid .card {
+        display: grid;
+        grid-template-columns: 32px 1fr;
+        gap: 4px 12px;
+        padding: 12px;
+        align-items: start;
+      }
+
+      .benefit-grid .card p[style*="font-size: 1.5rem"] {
+        margin: 0;
+        font-size: 1.2rem !important;
+        grid-column: 1;
+        grid-row: 1 / span 2;
         text-align: center;
       }
 
-      .point {
-        font-size: 0.92rem;
+      .benefit-grid h3 {
+        font-size: 0.95rem;
+        margin: 0;
+        grid-column: 2;
+        line-height: 1.2;
       }
 
-      .team-row {
-        min-height: 70px;
-        grid-template-columns: 1fr auto;
+      .benefit-grid .card p:not([style]) {
+        display: block;
+        font-size: 0.82rem;
+        margin: 0;
+        line-height: 1.4;
+        grid-column: 2;
       }
 
-      .sets {
-        display: none;
+      .cta-box {
+        text-align: left;
+        align-items: flex-start;
+      }
+
+      .cta h2 {
+        font-size: 1.8rem;
+        margin-bottom: 16px;
+      }
+
+      .motivation p {
+        font-size: 1rem;
+      }
+
+      .cta-actions {
+        display: flex;
+        flex-direction: column;
+        width: 100%;
       }
 
       .score {
-        font-size: clamp(3rem, 18vw, 4.4rem);
+        font-size: 2.5rem;
       }
 
-      .footer-row {
-        align-items: flex-start;
-        flex-direction: column;
+      .site-footer {
+        padding: 40px 0 24px;
+      }
+
+      .footer-bottom {
+        padding-top: 24px;
+      }
+
+      .subhead {
+        margin-top: 16px;
+      }
+
+      .subhead .feature {
+        font-size: 0.85rem;
+        padding: 0;
       }
     }
   </style>
@@ -1032,7 +1293,7 @@
               <p>Instant cloud sync, accessible from anywhere.</p>
             </div>
             <div class="feature">
-              <h3>Purely accessible</h3>
+              <h3>Cost-effective</h3>
               <p>Priced and designed for all clubs and players.</p>
             </div>
             <div class="feature">
@@ -1111,10 +1372,9 @@
         </div>
         <div class="subhead">
           <p>
-          <div class="feature center">
-            All devices are equipped with rechargeable batteries, USB-C power, smart Wi-Fi, audio feedback and RFID
-            integration.
-          </div>
+          <h4 class="center">All devices are equipped with rechargeable batteries, USB-C power, smart Wi-Fi, audio
+            feedback and RFID
+            integration.</h4>
           </p>
         </div>
       </div>
