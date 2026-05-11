@@ -980,7 +980,7 @@ body.light-mode .settings-box {
 }
 
 .setting-item {
-  flex: 1 1 160px;
+  flex: 1 1 115px;
   display: flex;
   flex-direction: column;
   align-items: center;

@@ -219,6 +219,85 @@ document.addEventListener("DOMContentLoaded", () =>
   }
 
   // =====================================================
+  // FULLSCREEN FUNCTIONS
+  // =====================================================
+
+  function getFullscreenElement()
+  {
+    return document.fullscreenElement ||
+      document.webkitFullscreenElement ||
+      document.msFullscreenElement ||
+      null;
+  }
+
+  function isFullscreenSupported()
+  {
+    const target = document.documentElement;
+    return Boolean(document.fullscreenEnabled ||
+      document.webkitFullscreenEnabled ||
+      document.msFullscreenEnabled ||
+      target.requestFullscreen ||
+      target.webkitRequestFullscreen ||
+      target.msRequestFullscreen);
+  }
+
+  function updateFullscreenButton()
+  {
+    if (!elements.fullscreenBtn) return;
+
+    const isActive = Boolean(getFullscreenElement());
+    const label = isActive ? "Exit fullscreen" : "Enter fullscreen";
+
+    elements.fullscreenBtn.textContent = "\u26F6";
+    elements.fullscreenBtn.title = label;
+    elements.fullscreenBtn.setAttribute("aria-label", label);
+
+    if (elements.fullscreenLabel)
+    {
+      elements.fullscreenLabel.textContent = isActive ? "Exit full" : "Fullscreen";
+    }
+  }
+
+  async function toggleFullscreen()
+  {
+    if (!isFullscreenSupported())
+    {
+      showToast("Fullscreen is not supported on this device.", TOAST_TYPES.ERROR);
+      return;
+    }
+
+    try
+    {
+      if (getFullscreenElement())
+      {
+        const exit = document.exitFullscreen ||
+          document.webkitExitFullscreen ||
+          document.msExitFullscreen;
+
+        if (exit) await Promise.resolve(exit.call(document));
+        showToast("Fullscreen off", TOAST_TYPES.INFO);
+      }
+      else
+      {
+        const target = document.documentElement;
+        const request = target.requestFullscreen ||
+          target.webkitRequestFullscreen ||
+          target.msRequestFullscreen;
+
+        if (request) await Promise.resolve(request.call(target));
+        showToast("Fullscreen on", TOAST_TYPES.INFO);
+      }
+
+      updateFullscreenButton();
+    }
+    catch (error)
+    {
+      console.warn("Fullscreen toggle failed:", error);
+      showToast("Fullscreen could not be changed.", TOAST_TYPES.ERROR);
+    }
+  }
+
+  // =====================================================
   // DOM REFERENCES
   // =====================================================
 
@@ -259,6 +338,8 @@ document.addEventListener("DOMContentLoaded", () =>
     resetBtn: $("resetBtn"),
     swapBtn: $("swapBtn"),
     muteBtn: $("muteBtn"),
+    fullscreenBtn: $("fullscreenBtn"),
+    fullscreenLabel: $("fullscreenLabel"),
 
     themeToggleBtn: $("themeToggleBtn"),
     themeToggleScoreboardBtn: $("themeToggleScoreboardBtn"),
@@ -413,6 +494,12 @@ document.addEventListener("DOMContentLoaded", () =>
 
   initializeTheme();
   initializeWaves();
+  updateFullscreenButton();
+
+  ["fullscreenchange", "webkitfullscreenchange", "MSFullscreenChange"].forEach(eventName =>
+  {
+    document.addEventListener(eventName, updateFullscreenButton);
+  });
 
   // =====================================================
   // ENTER KEY SUBMIT LISTENERS
@@ -2268,9 +2355,12 @@ document.addEventListener("DOMContentLoaded", () =>
     }
   });
 
+  elements.fullscreenBtn.addEventListener("click", toggleFullscreen);
+
   // Settings Modal logic
   elements.settingsBtn.addEventListener("click", () =>
   {
+    updateFullscreenButton();
     elements.settingsModal.classList.remove("hidden");
   });
 
