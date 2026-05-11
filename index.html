@@ -543,23 +543,22 @@
       gap: 16px;
     }
 
-    .device-top {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 16px;
-    }
 
     .device-icon {
-      width: 56px;
-      height: 56px;
+      position: absolute;
+      bottom: 4px;
+      right: 4px;
+      z-index: 2;
+      width: 48px;
+      height: 48px;
       border-radius: 50%;
       background: var(--brand-strong);
-      padding: 12px;
+      padding: 10px;
       display: flex;
       align-items: center;
       justify-content: center;
-      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+      border: 2px solid white;
     }
 
     .device-icon img {
@@ -573,7 +572,7 @@
       display: flex;
       justify-content: space-between;
       align-items: flex-start;
-      margin-bottom: 12px;
+      margin-bottom: 4px;
     }
 
     .device-card h2 {
@@ -586,8 +585,9 @@
     }
 
     .device-image {
+      position: relative;
       margin-bottom: 24px;
-      aspect-ratio: 16/13;
+      aspect-ratio: 16/10;
       background: var(--soft);
       border-radius: var(--radius);
       overflow: hidden;
@@ -1056,12 +1056,12 @@
           <article class="card device-card">
             <div class="device-image">
               <img src="media/devices/pulse.jpeg" alt="Pulse device">
+              <span class="device-icon"><img src="media/logos/d1.svg" alt=""></span>
             </div>
             <div class="device-top">
               <div>
                 <h2>Pulse</h2>
               </div>
-              <span class="device-icon"><img src="media/logos/d1.svg" alt=""></span>
             </div>
             <p>Direct control with tiny portable devices.</p>
             <ul>
@@ -1074,12 +1074,12 @@
           <article class="card device-card">
             <div class="device-image">
               <img src="media/devices/beacon.jpeg" alt="Beacon sensor">
+              <span class="device-icon"><img src="media/logos/d2.svg" alt=""></span>
             </div>
             <div class="device-top">
               <div>
                 <h2>Beacon</h2>
               </div>
-              <span class="device-icon"><img src="media/logos/d2.svg" alt=""></span>
             </div>
             <p>Hands-free scoring.</p>
             <ul>
@@ -1093,12 +1093,12 @@
           <article class="card device-card">
             <div class="device-image">
               <img src="media/devices/hub.jpeg" alt="Smart Hub">
+              <span class="device-icon"><img src="media/logos/d3.svg" alt=""></span>
             </div>
             <div class="device-top">
               <div>
                 <h2>Hub</h2>
               </div>
-              <span class="device-icon"><img src="media/logos/d3.svg" alt=""></span>
             </div>
             <p>The connection point for full smart court functionality and club-wide management.</p>
             <ul>
