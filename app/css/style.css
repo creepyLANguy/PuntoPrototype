@@ -1409,6 +1409,9 @@ body.light-mode .dm-table thead th {
   }
 
   .dm-title {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
     font-size: 0.85rem;
     margin: 0;
     line-height: 1;
