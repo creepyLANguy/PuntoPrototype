@@ -198,9 +198,7 @@
 
     .hero {
       position: relative;
-      background:
-        linear-gradient(135deg, rgba(0, 169, 199, 0.15), rgba(139, 92, 246, 0.08) 44%, rgba(255, 255, 255, 0) 78%),
-        #f8fbfc;
+      background:#f8fbfc;
       padding: clamp(16px, 3vw, 24px) 0 clamp(24px, 4vw, 40px);
     }
 
@@ -424,7 +422,6 @@
     }
 
     h2 {
-      margin-bottom: 16px;
       font-size: clamp(2.2rem, 5vw, 3.8rem);
       line-height: 1.05;
       font-weight: 900;
@@ -516,7 +513,7 @@
 
     .benefit-grid {
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
+      grid-template-columns: repeat(3, 1fr);
       gap: 24px;
     }
 
@@ -692,7 +689,89 @@
     }
 
     .benefit-grid {
-      grid-template-columns: repeat(4, minmax(0, 1fr));
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      max-width: 720px;
+      margin: 0 auto;
+    }
+
+    .benefit-grid .card {
+      flex-direction: row;
+      align-items: flex-start;
+      gap: 20px;
+      border: none;
+      border-radius: 0;
+      background: transparent;
+      box-shadow: none;
+      padding: 24px 0;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .benefit-grid .card:last-child {
+      border-bottom: none;
+    }
+
+    .benefit-grid .card p[style*="font-size"] {
+      margin: 0;
+      flex-shrink: 0;
+      font-size: 1.6rem !important;
+      line-height: 1;
+      width: 40px;
+      text-align: center;
+    }
+
+    .benefit-grid .card h3 {
+      font-size: 1.1rem;
+      margin-bottom: 4px;
+    }
+
+    .benefit-grid .card p:not([style]) {
+      font-size: 0.95rem;
+      margin: 0;
+      line-height: 1.5;
+    }
+
+    @media (min-width: 900px) {
+      .benefit-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 18px;
+        margin: 0 auto;
+        width: min(100%, 920px);
+        max-width: 920px;
+      }
+
+      .benefit-grid .card {
+        display: grid;
+        grid-template-columns: 40px minmax(180px, 240px) minmax(260px, 420px);
+        gap: 0 16px;
+        align-items: start;
+        justify-content: center;
+        padding: 18px;
+      }
+
+      .benefit-grid .card > * {
+        padding: 0;
+      }
+
+      .benefit-grid .card p[style*="font-size"],
+      .benefit-grid .benefit-icon {
+        margin: 0;
+        grid-column: 1;
+        grid-row: 1 / span 2;
+      }
+
+      .benefit-grid .card h3 {
+        margin: 0;
+        grid-column: 2;
+      }
+
+      .benefit-grid .card p:not([style]) {
+        margin: 0;
+        grid-column: 3;
+        min-width: 0;
+      }
     }
 
     .players {
@@ -1163,6 +1242,11 @@
         align-items: start;
       }
 
+      .benefit-grid .card > * {
+        padding: 0;
+        border-bottom: none;
+      }
+
       .benefit-grid .card p[style*="font-size: 1.5rem"] {
         margin: 0;
         font-size: 1.2rem !important;
@@ -1372,7 +1456,7 @@
         </div>
         <div class="subhead">
           <p>
-          <h4 class="center">* All devices are equipped with rechargeable batteries, USB-C power, smart Wi-Fi, audio
+          <h4 class="center">All devices are equipped with rechargeable batteries, USB-C power, smart Wi-Fi, audio
             feedback and RFID
             integration.</h4>
           </p>
@@ -1387,23 +1471,23 @@
         </div>
         <div class="benefit-grid">
           <div class="card">
-            <p class="center" style="font-size: 1.5rem;">😃</p>
+            <img src="media/icons/player.svg" alt="Smiling Face" class="benefit-icon">
             <h3>Improved player experience</h3>
             <p>Modern scoring without interrupting gameplay.</p>
           </div>
           <div class="card">
-            <p class="center" style="font-size: 1.5rem;">🙌</p>
+            <img src="media/icons/admin.svg" alt="Thumbs Up" class="benefit-icon">
             <h3>Reduced admin</h3>
             <p>No dedicated scoreboard operator required.</p>
 
           </div>
           <div class="card">
-            <p class="center" style="font-size: 1.5rem;">💳</p>
+            <img src="media/icons/card.svg" alt="Payment Card" class="benefit-icon">
             <h3>New revenue streams</h3>
             <p>Device rentals, premium court experiences, and smart court memberships.</p>
           </div>
           <div class="card">
-            <p class="center" style="font-size: 1.5rem;">🇿🇦</p>
+            <img src="media/icons/flag.svg" alt="South African Flag" class="benefit-icon">
             <h3>Proudly South African</h3>
             <p>Local development means direct feedback channels and personal support.</p>
           </div>
