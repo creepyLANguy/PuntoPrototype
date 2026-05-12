@@ -422,6 +422,7 @@
     }
 
     h2 {
+      margin-bottom: 16px;
       font-size: clamp(2.2rem, 5vw, 3.8rem);
       line-height: 1.05;
       font-weight: 900;
@@ -745,7 +746,8 @@
       .benefit-grid .card {
         display: grid;
         grid-template-columns: 40px minmax(180px, 240px) minmax(260px, 420px);
-        gap: 0 16px;
+        column-gap: 24px;
+        row-gap: 0;
         align-items: start;
         justify-content: center;
         padding: 18px;
@@ -1011,7 +1013,8 @@
       .hero .lead {
         margin: 0 0 8px 0;
         text-align: left;
-        font-size: 1.1rem;
+        font-size: clamp(0.82rem, 3.8vw, 1.1rem);
+        white-space: nowrap;
       }
 
       /* Reordering: Title -> Subtitle -> Image -> Points */
@@ -1472,8 +1475,8 @@
         <div class="benefit-grid">
           <div class="card">
             <img src="media/icons/player.svg" alt="Smiling Face" class="benefit-icon">
-            <h3>Improved player experience</h3>
-            <p>Modern scoring without interrupting gameplay.</p>
+            <h3>Attract more visitors</h3>
+            <p>A compelling experience that keeps players and spectators engaged.</p>
           </div>
           <div class="card">
             <img src="media/icons/admin.svg" alt="Thumbs Up" class="benefit-icon">
@@ -1498,7 +1501,7 @@
     <section id="pilot" class="cta">
       <div class="wrap cta-box">
         <div>
-          <h2>Are you a forward thinking Padel Club?</h2>
+          <h2>Are you an <i>innovative</i> Padel Club?</h2>
           <div class="motivation">
             <p>
               We are partnering with selected clubs to shape the future of connected padel.
