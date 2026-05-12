@@ -258,7 +258,6 @@
     .hero-image-container {
       width: 100%;
       max-width: 1060px;
-      margin-top: 40px;
     }
 
     .hero-main-img {
@@ -267,6 +266,9 @@
       border-radius: 20px;
       display: block;
       border: 1px solid rgba(0, 0, 0, 0.05);
+      aspect-ratio: 16/9;
+      object-fit: cover;
+      object-position: center 65%;
     }
 
     .hero h1 span {
@@ -407,7 +409,7 @@
     }
 
     section.tight-top {
-      padding-top: clamp(24px, 4vw, 40px);
+      padding-top: clamp(0px, 4vw, 4px);
     }
 
     .section-head {
@@ -939,10 +941,6 @@
         padding: 32px 0;
       }
 
-      section.tight-top {
-        padding-top: 12px;
-      }
-
       .section-head {
         margin-bottom: 24px;
         text-align: left;
@@ -1384,7 +1382,7 @@
         </div>
 
         <div class="hero-image-container">
-          <img src="media/main.jpg" class="hero-main-img" alt="Padel Push Smart Court">
+          <img src="media/main.webp" class="hero-main-img" alt="Padel Push Smart Court">
         </div>
       </div>
     </section>
