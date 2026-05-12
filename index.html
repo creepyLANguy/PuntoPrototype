@@ -83,14 +83,25 @@
       gap: 12px;
       text-decoration: none;
       font-weight: 900;
-      font-size: clamp(1.18rem, 3vw, 1.55rem);
+      font-size: 1.08rem;
+      line-height: 1;
+    }
+
+    .brand-mark {
+      width: 42px;
+      height: 42px;
+      display: grid;
+      place-items: center;
+      border: 1px solid rgba(16, 24, 32, 0.1);
+      border-radius: var(--radius);
+      background: #fff;
+      box-shadow: var(--shadow-sm);
     }
 
     .brand-mark img {
-      width: 50px;
-      height: 50px;
+      width: 28px;
+      height: 28px;
       object-fit: contain;
-      filter: brightness(0) invert(0);
     }
 
     .nav-links {
@@ -108,6 +119,57 @@
 
     .nav-links a:hover {
       color: var(--ink);
+    }
+
+    .nav-menu {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 28px;
+      color: var(--muted);
+      font-size: 0.94rem;
+      font-weight: 750;
+    }
+
+    .nav-menu a {
+      text-decoration: none;
+      transition: color 160ms ease;
+    }
+
+    .nav-menu a:hover {
+      color: var(--ink);
+    }
+
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+
+    .icon-link {
+      width: 38px;
+      height: 38px;
+      display: grid;
+      place-items: center;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #fff;
+      color: #344250;
+      text-decoration: none;
+      font-weight: 900;
+      transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+    }
+
+    .icon-link svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    .icon-link:hover {
+      transform: translateY(-1px);
+      border-color: rgba(16, 24, 32, 0.2);
+      box-shadow: var(--shadow-sm);
     }
 
     .social-links {
@@ -425,7 +487,7 @@
 
     h2 {
       margin-bottom: 16px;
-      font-size: clamp(2.2rem, 5vw, 3.8rem);
+      font-size: clamp(1.2rem, 4vw, 2.8rem);
       line-height: 1.05;
       font-weight: 900;
       letter-spacing: -0.04em;
@@ -445,15 +507,25 @@
     .feature p,
     .step p,
     .faq p,
-    .cta p {
+    .cta p,
+    .device-note {
       color: var(--muted);
       font-size: 1.05rem;
       line-height: 1.6;
     }
 
+    .device-note {
+      margin: 24px auto 0;
+      padding: 18px 22px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: rgba(255, 255, 255, 0.78);
+      text-align: center;
+    }
+
     .feature-list {
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
+      grid-template-columns: repeat(3, 1fr);
       gap: 32px;
       margin-top: 40px;
       width: 100%;
@@ -472,13 +544,15 @@
       border: none;
       padding: 0;
       opacity: 0.9;
+      border-top: #ddd 4px solid;
+      border-bottom: var(--brand-strong) 4px solid;
     }
 
     .hero-features .feature h3 {
       font-size: 1.1rem;
       margin-bottom: 8px;
       color: var(--ink);
-      font-weight: 800;
+      font-weight: 800;      
     }
 
     .hero-features .feature p {
@@ -566,16 +640,16 @@
 
     .device-card h2 {
       margin-top: 4px;
+      margin-bottom: -20px;
+      font-size: 2.2rem;
     }
 
     .device-card p {
       min-height: 3em;
-      margin-bottom: 20px;
     }
 
     .device-image {
       position: relative;
-      margin-bottom: 24px;
       aspect-ratio: 4/3;
       background: var(--soft);
       border-radius: var(--radius);
@@ -633,7 +707,7 @@
     }
 
     main>section:nth-of-type(even):not(.path):not(.cta) {
-      background: rgba(216, 239, 255, 0.24);
+      background: #F0F6F5F0
     }
 
     .section-head {
@@ -736,6 +810,7 @@
     }
 
     @media (min-width: 900px) {
+      
       .benefit-grid {
         display: grid;
         grid-template-columns: 1fr;
@@ -764,6 +839,19 @@
         margin: 0;
         grid-column: 1;
         grid-row: 1 / span 2;
+      }
+
+      .benefit-icon {
+        width: 40px;
+        height: 40px;
+        display: grid;
+        place-items: center;
+        border-radius: 40px;
+        border: 8px solid var(--brand-strong);
+        background: var(--brand-strong);
+        color: var(--ink);
+        font-weight: 900;
+        ;
       }
 
       .benefit-grid .card h3 {
@@ -898,6 +986,11 @@
     }
 
     @media (max-width: 900px) {
+
+      .device-note {      
+        font-size: 0.85rem;
+      }
+
       .nav-links a:not(.button) {
         display: none;
       }
@@ -1060,6 +1153,7 @@
         padding-left: 32px;
         text-align: left;
         min-height: 24px;
+        border: none;
       }
 
       .hero-features .feature::before {
@@ -1312,36 +1406,38 @@
   <header class="site-header">
     <div class="wrap nav">
       <a href="#" class="brand" aria-label="Padel Push home">
-        <span class="brand-mark"><img src="app/media/img/logo.svg" alt=""></span>
+        <span class="brand-mark"><img src="app/media/img/favicon.svg" alt=""></span>
         <span>PADEL PUSH</span>
       </a>
-      <div class="social-links">
-        <a href="mailto:[EMAIL_ADDRESS]?subject=Padel%20Push%20-%20General%20Query" title="Email" aria-label="Email">
-          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-            <path
-              d="M4 6.5C4 5.94772 4.44772 5.5 5 5.5H19C19.5523 5.5 20 5.94772 20 6.5V17.5C20 18.0523 19.5523 18.5 19 18.5H5C4.44772 18.5 4 18.0523 4 17.5V6.5Z"
+
+      <div class="nav-actions">
+        <a href="mailto:[EMAIL_ADDRESS]?subject=Padel%20Push%20-%20General%20Query" class="icon-link" title="Email"
+          aria-label="Email Padel Push">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M4 6.5C4 5.95 4.45 5.5 5 5.5h14c.55 0 1 .45 1 1v11c0 .55-.45 1-1 1H5c-.55 0-1-.45-1-1v-11Z"
               stroke="currentColor" stroke-width="1.8" />
-            <path d="M4 6.5L12 12.5L20 6.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
+            <path d="m4 7 8 6 8-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
               stroke-linejoin="round" />
           </svg>
         </a>
-        <a href="https://instagram.com" title="Instagram" aria-label="Instagram" class="social-icon">
-          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-            <rect x="3" y="3" width="18" height="18" rx="5" stroke="currentColor" stroke-width="1.8" />
-            <path d="M8.5 8.5H8.51" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
-            <path
-              d="M12 7.5C9.79 7.5 8 9.29 8 11.5C8 13.71 9.79 15.5 12 15.5C14.21 15.5 16 13.71 16 11.5C16 9.29 14.21 7.5 12 7.5Z"
-              stroke="currentColor" stroke-width="1.8" />
+        <a href="https://instagram.com" class="icon-link" title="Instagram" aria-label="Instagram">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <rect x="3.5" y="3.5" width="17" height="17" rx="5" stroke="currentColor" stroke-width="1.8" />
+            <path d="M16.8 7.2h.01" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" />
+            <circle cx="12" cy="12" r="4.1" stroke="currentColor" stroke-width="1.8" />
           </svg>
         </a>
-        <a href="https://tiktok.com" title="TikTok" aria-label="TikTok">
-          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <a href="https://tiktok.com" class="icon-link" title="TikTok" aria-label="TikTok">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
             <path
-              d="M15.25 4.5V12.16C15.25 13.88 13.77 15.35 12.05 15.35C10.33 15.35 8.85 13.88 8.85 12.16C8.85 10.44 10.33 8.96 12.05 8.96C12.47 8.96 12.86 9.03 13.22 9.17V7.28C12.88 7.14 12.48 7.07 12.05 7.07C9.01 7.07 6.45 9.61 6.45 12.65C6.45 15.69 9 18.23 12.05 18.23C15.09 18.23 17.63 15.69 17.63 12.65V5.5H15.25Z"
+              d="M15.4 4.5c.3 2 1.55 3.2 3.55 3.45v2.7a6.3 6.3 0 0 1-3.55-1.1v4.72a5.2 5.2 0 1 1-5.2-5.2c.35 0 .68.03 1 .1v2.75a2.45 2.45 0 1 0 1.45 2.23V4.5h2.75Z"
               fill="currentColor" />
           </svg>
         </a>
-        <a href="https://facebook.com" title="Facebook" aria-label="Facebook">f</a>
+        <a href="https://facebook.com" class="icon-link" title="Facebook" aria-label="Facebook">f</a>
+        <a class="button primary" href="mailto:[EMAIL_ADDRESS]?subject=Padel%20Push%20-%20Request%20for%20Demo">
+          Book demo
+        </a>
       </div>
     </div>
   </header>
@@ -1357,18 +1453,12 @@
           <p class="lead">Smart devices. Live scoring. Connected courts.</p>
           <div class="hero-actions">
             <a class="button primary hero-cta"
-              href="mailto:[EMAIL_ADDRESS]?subject=Padel%20Push%20-%20Request%20for%20Demo">Book
-              a free demo</a>
+              href="mailto:[EMAIL_ADDRESS]?subject=Padel%20Push%20-%20Request%20for%20Demo">Book a free demo</a>
           </div>
-
           <div class="feature-list hero-features">
             <div class="feature">
               <h3>Know the score</h3>
-              <p>Real-time, accurate scoring for every match.</p>
-            </div>
-            <div class="feature">
-              <h3>Always connected</h3>
-              <p>Instant cloud sync, accessible from anywhere.</p>
+              <p>Instant cloud syncing of matches across all devices.</p>
             </div>
             <div class="feature">
               <h3>Cost-effective</h3>
@@ -1376,7 +1466,7 @@
             </div>
             <div class="feature">
               <h3>Totally scalable</h3>
-              <p>Unlimited devices and courts, no limits.</p>
+              <p>Unlimited devices and courts, perfect for growing clubs.</p>
             </div>
           </div>
         </div>
@@ -1448,13 +1538,8 @@
             </ul>
           </article>
         </div>
-        <div class="subhead">
-          <p>
-          <h4 class="center">All devices are equipped with rechargeable batteries, USB-C power, smart Wi-Fi, audio
-            feedback and RFID
-            integration.</h4>
-          </p>
-        </div>
+          <p class="device-note"><strong>Every device includes</strong> rechargeable batteries, USB-C power, smart Wi-Fi,
+            audio feedback, and RFID integration.</p>
       </div>
     </section>
 
