@@ -67,6 +67,8 @@
       background: rgba(248, 251, 252, 0.92);
       border-bottom: 1px solid rgba(220, 228, 234, 0.8);
       backdrop-filter: blur(14px);
+      overflow-x: clip;
+      width: 100%;
     }
 
     .nav {
@@ -96,11 +98,11 @@
       border-radius: var(--radius);
       background: #fff;
       box-shadow: var(--shadow-sm);
+      aspect-ratio: 1 / 1;
     }
 
     .brand-mark img {
-      width: 28px;
-      height: 28px;
+      padding: 2px;
       object-fit: contain;
     }
 
@@ -148,8 +150,6 @@
     }
 
     .icon-link {
-      width: 38px;
-      height: 38px;
       display: grid;
       place-items: center;
       border: 1px solid var(--line);
@@ -159,6 +159,8 @@
       text-decoration: none;
       font-weight: 900;
       transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+      aspect-ratio: 1/1;
+      padding: 12px;
     }
 
     .icon-link svg {
@@ -170,6 +172,7 @@
       transform: translateY(-1px);
       border-color: rgba(16, 24, 32, 0.2);
       box-shadow: var(--shadow-sm);
+      background-color: var(--brand);
     }
 
     .social-links {
@@ -260,7 +263,7 @@
 
     .hero {
       position: relative;
-      background:#f8fbfc;
+      background: #f8fbfc;
       padding: clamp(16px, 3vw, 24px) 0 clamp(24px, 4vw, 40px);
     }
 
@@ -514,6 +517,10 @@
       line-height: 1.6;
     }
 
+    .feature p {
+      text-wrap: balance;
+    }
+
     .device-note {
       margin: 24px auto 0;
       padding: 18px 22px;
@@ -552,7 +559,7 @@
       font-size: 1.1rem;
       margin-bottom: 8px;
       color: var(--ink);
-      font-weight: 800;      
+      font-weight: 800;
     }
 
     .hero-features .feature p {
@@ -646,6 +653,7 @@
 
     .device-card p {
       min-height: 3em;
+      text-wrap: balance;
     }
 
     .device-image {
@@ -810,7 +818,7 @@
     }
 
     @media (min-width: 900px) {
-      
+
       .benefit-grid {
         display: grid;
         grid-template-columns: 1fr;
@@ -830,7 +838,7 @@
         padding: 18px;
       }
 
-      .benefit-grid .card > * {
+      .benefit-grid .card>* {
         padding: 0;
       }
 
@@ -987,8 +995,15 @@
 
     @media (max-width: 900px) {
 
-      .device-note {      
+      .device-note {
         font-size: 0.85rem;
+      }
+
+      .icon-link {
+        padding: 8px;
+        border-radius: 50%;
+        aspect-ratio: 1/1;
+        gap: 20px;
       }
 
       .nav-links a:not(.button) {
@@ -1047,9 +1062,15 @@
         min-height: 60px;
       }
 
+      .brand-mark {
+        background-color: transparent;
+        border-color: transparent;
+        box-shadow: none;
+      }
+
       .brand-mark img {
-        width: 36px;
-        height: 36px;
+        width: 42px;
+        height: 42px;
       }
 
       .brand {
@@ -1334,7 +1355,7 @@
         align-items: start;
       }
 
-      .benefit-grid .card > * {
+      .benefit-grid .card>* {
         padding: 0;
         border-bottom: none;
       }
@@ -1434,9 +1455,12 @@
               fill="currentColor" />
           </svg>
         </a>
-        <a href="https://facebook.com" class="icon-link" title="Facebook" aria-label="Facebook">f</a>
-        <a class="button primary" href="mailto:[EMAIL_ADDRESS]?subject=Padel%20Push%20-%20Request%20for%20Demo">
-          Book demo
+        <a href="https://facebook.com" class="icon-link" title="Facebook" aria-label="Facebook">
+          <svg fill="currentColor" stroke="none" viewBox="-337 220 120 356" xml:space="preserve">
+            <path
+              d="M-260.9,327.8c0-10.3,9.2-14,19.5-14c10.3,0,21.3,3.2,21.3,3.2l6.6-39.2c0,0-14-4.8-47.4-4.8c-20.5,0-32.4,7.8-41.1,19.3 c-8.2,10.9-8.5,28.4-8.5,39.7v25.7H-337V396h26.5v133h49.6V396h39.3l2.9-38.3h-42.2V327.8z">
+            </path>
+          </svg>
         </a>
       </div>
     </div>
@@ -1453,7 +1477,8 @@
           <p class="lead">Smart devices. Live scoring. Connected courts.</p>
           <div class="hero-actions">
             <a class="button primary hero-cta"
-              href="mailto:[EMAIL_ADDRESS]?subject=Padel%20Push%20-%20Request%20for%20Demo">Book a free demo</a>
+              href="mailto:[EMAIL_ADDRESS]?subject=Padel%20Push%20-%20Request%20for%20Demo">Book a free demo
+              &RightArrow;</a>
           </div>
           <div class="feature-list hero-features">
             <div class="feature">
@@ -1492,7 +1517,7 @@
                 <h2>Pulse</h2>
               </div>
             </div>
-            <p>Direct control with tiny portable devices.</p>
+            <p>Direct, portable control.</p>
             <ul>
               <li>Single-button scoring</li>
               <li>Undo, switch teams, and reset actions</li>
@@ -1510,7 +1535,7 @@
                 <h2>Beacon</h2>
               </div>
             </div>
-            <p>Hands-free scoring.</p>
+            <p>Hands-free, intuitive scoring.</p>
             <ul>
               <li>Ultrasonic sensor</li>
               <li>Physical team assignment</li>
@@ -1529,17 +1554,17 @@
                 <h2>Hub</h2>
               </div>
             </div>
-            <p>The connection point for full smart court functionality and club-wide management.</p>
+            <p>Full smart court integration.</p>
             <ul>
               <li>RFID-based triggers</li>
               <li>Extended battery life</li>
-              <li>Full smart court management</li>
+              <li>Central control for all devices</li>
               <li>Perfect for venues with multiple courts</li>
             </ul>
           </article>
         </div>
-          <p class="device-note"><strong>Every device includes</strong> rechargeable batteries, USB-C power, smart Wi-Fi,
-            audio feedback, and RFID integration.</p>
+        <p class="device-note"><strong>Every device includes</strong> rechargeable batteries, USB-C power, smart Wi-Fi,
+          audio feedback, and RFID integration.</p>
       </div>
     </section>
 
