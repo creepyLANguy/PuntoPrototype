@@ -233,7 +233,8 @@ a {
 .hero {
     position: relative;
     background: #f8fbfc;
-    padding: clamp(16px, 3vw, 24px) 0 clamp(24px, 4vw, 40px);
+    padding: 0px;
+    padding-bottom: 40px;
 }
 
 .hero::before {
@@ -276,7 +277,6 @@ h1 {
     object-fit: contain;
     filter: invert(1);
     opacity: 0.9;
-    margin-top: 15px;
 }
 
 .hero .lead {
@@ -332,7 +332,6 @@ h1 {
 }
 
 .hero-features {
-    margin-top: 34px;
     width: 100%;
 }
 
@@ -500,40 +499,35 @@ h3 {
 
 .feature-list {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(4, 1fr);
     gap: 32px;
     margin-top: 40px;
     width: 100%;
 }
 
 .feature {
-    padding: 24px;
-    border: 1px solid var(--line);
-    border-radius: var(--radius);
-    background: #ffffff;
     transition: all 0.2s ease;
 }
 
 .hero-features .feature {
-    background: transparent;
-    border: none;
-    padding: 0;
-    opacity: 0.9;
-    border-top: #ddd 4px solid;
-    border-bottom: var(--brand-strong) 4px solid;
+    padding: 0px;
+    border-left: 3px solid var(--brand-strong);
 }
 
 .hero-features .feature h3 {
     font-size: 1.1rem;
-    margin-bottom: 8px;
     color: var(--ink);
     font-weight: 800;
+    text-align: left;
+    padding-left: 14px;
 }
 
 .hero-features .feature p {
     font-size: 0.95rem;
     line-height: 1.6;
     color: var(--muted);
+    text-align: left;
+    padding-left: 14px;
 }
 
 .card {
@@ -776,13 +770,15 @@ main>section:nth-of-type(even):not(.path):not(.cta) {
     border-bottom: none;
 }
 
-.benefit-grid .card p[style*="font-size"] {
+.benefit-number {
     margin: 0;
     flex-shrink: 0;
     font-size: 1.6rem !important;
     line-height: 1;
     width: 40px;
     text-align: center;
+    font-weight: 900;
+    color: var(--brand-strong);
 }
 
 .benefit-grid .card h3 {
@@ -821,7 +817,7 @@ main>section:nth-of-type(even):not(.path):not(.cta) {
         padding: 0;
     }
 
-    .benefit-grid .card p[style*="font-size"] {
+    .benefit-number {
         margin: 0;
         grid-column: 1;
         grid-row: 1 / span 2;
@@ -1122,13 +1118,24 @@ main>section:nth-of-type(even):not(.path):not(.cta) {
     }
 
     /* Transform cards and steps into list items */
-    .device-grid,
     .benefit-grid,
     .faq-grid,
     .steps {
         display: flex;
         flex-direction: column;
         gap: 10px;
+    }
+
+    .device-grid {
+        display: flex;
+        flex-direction: row;
+        overflow-x: auto;
+        scroll-snap-type: x mandatory;
+        gap: 16px;
+        padding-bottom: 16px;
+        -webkit-overflow-scrolling: touch;
+        margin: 0 -16px;
+        padding: 0 16px 16px;
     }
 
     .card {
@@ -1186,6 +1193,8 @@ main>section:nth-of-type(even):not(.path):not(.cta) {
         align-items: stretch;
         padding: 14px;
         gap: 10px;
+        flex: 0 0 85%;
+        scroll-snap-align: start;
     }
 
     .device-image {
@@ -1265,12 +1274,14 @@ main>section:nth-of-type(even):not(.path):not(.cta) {
         border-bottom: none;
     }
 
-    .benefit-grid .card p[style*="font-size: 1.5rem"] {
+    .benefit-number {
         margin: 0;
         font-size: 1.2rem !important;
         grid-column: 1;
         grid-row: 1 / span 2;
         text-align: center;
+        font-weight: 900;
+        color: var(--brand-strong);
     }
 
     .benefit-grid h3 {
