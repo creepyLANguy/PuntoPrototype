@@ -107,23 +107,6 @@ a {
     object-fit: contain;
 }
 
-.nav-links {
-    display: flex;
-    align-items: center;
-    gap: 22px;
-    font-size: 0.94rem;
-    font-weight: 700;
-}
-
-.nav-links a {
-    text-decoration: none;
-    color: var(--muted);
-}
-
-.nav-links a:hover {
-    color: var(--ink);
-}
-
 .nav-menu {
     display: flex;
     justify-content: center;
@@ -169,8 +152,8 @@ a {
 }
 
 .icon-link svg {
-    width: 18px;
-    height: 18px;
+    width: 20px;
+    height: 20px;
 }
 
 .icon-link:hover {
@@ -178,15 +161,6 @@ a {
     box-shadow: 0px 0px 24px rgba(191, 255, 0, 0.5);
     filter: brightness(1.1) hue-rotate(3deg);
     border-color: rgba(200, 255, 0, 1);
-}
-
-.nav-links {
-    display: flex;
-    align-items: center;
-    gap: 32px;
-    font-size: 0.9rem;
-    font-weight: 600;
-    letter-spacing: 0.01em;
 }
 
 .button {
@@ -476,7 +450,6 @@ h3 {
 .card p,
 .feature p,
 .step p,
-.faq p,
 .cta p,
 .device-note {
     color: var(--muted);
@@ -542,18 +515,7 @@ h3 {
     flex-direction: column;
 }
 
-.benefit-card:hover {
-    transform: none;
-    box-shadow: none;
-    border-color: none;
-}
-
-.benefit-card img {
-    filter: grayscale(100%);
-}
-
 .display-grid,
-.benefit-grid,
 .device-grid,
 .display-grid {
     display: grid;
@@ -565,12 +527,6 @@ h3 {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 24px;
-}
-
-.faq-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 32px;
 }
 
 .device-card {
@@ -746,7 +702,6 @@ main>section:nth-of-type(even):not(.path):not(.cta) {
     display: flex;
     flex-direction: column;
     gap: 0;
-    max-width: 720px;
     margin: 0 auto;
 }
 
@@ -762,16 +717,11 @@ main>section:nth-of-type(even):not(.path):not(.cta) {
     border-bottom: 1px solid var(--line);
 }
 
-.benefit-grid .card:last-child {
-    border-bottom: none;
-}
-
 .benefit-number {
     margin: 0;
     flex-shrink: 0;
     font-size: 1.6rem !important;
     line-height: 1;
-    width: 40px;
     text-align: center;
     font-weight: 900;
     color: var(--brand-strong);
@@ -792,19 +742,18 @@ main>section:nth-of-type(even):not(.path):not(.cta) {
 
     .benefit-grid {
         display: grid;
-        grid-template-columns: 1fr;
+        grid-template-columns: 1fr 1fr;
         gap: 18px;
         margin: 0 auto;
-        width: min(100%, 920px);
-        max-width: 920px;
+        width: min(100%, var(--wrap));
     }
 
     .benefit-grid .card {
         display: grid;
-        grid-template-columns: 40px minmax(180px, 240px) minmax(260px, 420px);
+        grid-template-columns: 50px minmax(180px, 240px) minmax(260px, 420px);
         column-gap: 24px;
         row-gap: 0;
-        align-items: start;
+        align-items: center;
         justify-content: center;
         padding: 18px;
     }
@@ -879,10 +828,6 @@ main>section:nth-of-type(even):not(.path):not(.cta) {
     margin-bottom: 0;
 }
 
-.faq-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
 .site-footer {
     background: var(--panel);
     padding-top: 40px;
@@ -903,10 +848,6 @@ main>section:nth-of-type(even):not(.path):not(.cta) {
         border-radius: 50%;
         aspect-ratio: 1/1;
         gap: 20px;
-    }
-
-    .nav-links a:not(.button) {
-        display: none;
     }
 
     .hero {
@@ -974,11 +915,6 @@ main>section:nth-of-type(even):not(.path):not(.cta) {
 
     .brand {
         font-size: 1.1rem;
-    }
-
-    .nav-links,
-    .social-links {
-        gap: 8px;
     }
 
     .social-links a {
@@ -1115,7 +1051,6 @@ main>section:nth-of-type(even):not(.path):not(.cta) {
 
     /* Transform cards and steps into list items */
     .benefit-grid,
-    .faq-grid,
     .steps {
         display: flex;
         flex-direction: column;
