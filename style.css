@@ -227,7 +227,7 @@ a {
 }
 
 .button.hero-cta.glow {
-    box-shadow: 0 15px 30px rgba(184, 243, 0, 0.2);
+    box-shadow: 0 5px 0px rgba(184, 243, 0, 0.2);
 }
 
 .hero {
