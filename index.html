@@ -88,6 +88,13 @@
               <p>Devices connect automatically within a private, intelligent network. No need for manual setup.</p>
             </div>
           </div>
+          <div class="carousel-dots feature-dots" aria-label="Feature carousel position">
+            <button class="carousel-dot is-active" type="button" aria-label="Show Know The Score" aria-current="true"
+              data-feature-slide="0"></button>
+            <button class="carousel-dot" type="button" aria-label="Show Cost-Effective" data-feature-slide="1"></button>
+            <button class="carousel-dot" type="button" aria-label="Show Truly Scalable" data-feature-slide="2"></button>
+            <button class="carousel-dot" type="button" aria-label="Show Autonomous" data-feature-slide="3"></button>
+          </div>
         </div>
       </div>
     </section>
@@ -153,13 +160,19 @@
             </ul>
           </article>
         </div>
+        <div class="carousel-dots device-dots" aria-label="Device carousel position">
+          <button class="carousel-dot is-active" type="button" aria-label="Show Pulse" aria-current="true"
+            data-device-slide="0"></button>
+          <button class="carousel-dot" type="button" aria-label="Show Beacon" data-device-slide="1"></button>
+          <button class="carousel-dot" type="button" aria-label="Show Hub" data-device-slide="2"></button>
+        </div>
         <p class="device-note"><strong>Every device includes</strong> rechargeable batteries, USB-C power, smart Wi-Fi,
           audio feedback, and RFID integration.</p>
       </div>
     </section>
 
     <section id="clubs" class="tight-top">
-      <div class="">
+      <div class="wrap">
         <div class="section-head center">
           <h2>Why clubs choose Padel Push</h2>
         </div>
@@ -217,6 +230,50 @@
     </div>
   </footer>
 
+  <script>
+    const initCarouselDots = (trackSelector, itemSelector, dotSelector) => {
+      const track = document.querySelector(trackSelector);
+      const items = Array.from(document.querySelectorAll(itemSelector));
+      const dots = Array.from(document.querySelectorAll(dotSelector));
+
+      if (!track || !items.length || !dots.length) return;
+
+      const setActiveDot = (index) => {
+        dots.forEach((dot, dotIndex) => {
+          const isActive = dotIndex === index;
+          dot.classList.toggle("is-active", isActive);
+          dot.setAttribute("aria-current", isActive ? "true" : "false");
+        });
+      };
+
+      const updateActiveDot = () => {
+        const trackLeft = track.getBoundingClientRect().left;
+        const closestIndex = items.reduce((closest, item, index) => {
+          const distance = Math.abs(item.getBoundingClientRect().left - trackLeft);
+          return distance < closest.distance ? { index, distance } : closest;
+        }, { index: 0, distance: Infinity }).index;
+
+        setActiveDot(closestIndex);
+      };
+
+      dots.forEach((dot, index) => {
+        dot.addEventListener("click", () => {
+          items[index]?.scrollIntoView({
+            behavior: "smooth",
+            block: "nearest",
+            inline: "start"
+          });
+        });
+      });
+
+      track.addEventListener("scroll", () => requestAnimationFrame(updateActiveDot), { passive: true });
+      window.addEventListener("resize", updateActiveDot);
+      updateActiveDot();
+    };
+
+    initCarouselDots(".hero-features", ".hero-features .feature", "[data-feature-slide]");
+    initCarouselDots(".device-grid", ".device-card", "[data-device-slide]");
+  </script>
 </body>
 
 </html>

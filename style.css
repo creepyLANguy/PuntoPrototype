@@ -468,6 +468,10 @@ h3 {
     text-align: center;
 }
 
+.carousel-dots {
+    display: none;
+}
+
 .feature-list {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
@@ -905,7 +909,50 @@ main>section:nth-of-type(even):not(.path):not(.cta) {
     }
 
     .nav {
+        display: grid;
+        grid-template-columns: auto repeat(4, 28px);
+        justify-content: start;
+        align-items: center;
         min-height: 60px;
+        gap: 6px;
+    }
+
+    .nav-actions {
+        display: contents;
+    }
+
+    .nav-actions .button {
+        display: none;
+    }
+
+    .nav-actions .icon-link {
+        grid-row: 1;
+        display: grid;
+        width: 28px;
+        height: 28px;
+        padding: 6px;
+        border-radius: 50%;
+    }
+
+    .nav-actions a:nth-of-type(2) {
+        grid-column: 2;
+    }
+
+    .nav-actions a:nth-of-type(3) {
+        grid-column: 3;
+    }
+
+    .nav-actions a:nth-of-type(4) {
+        grid-column: 4;
+    }
+
+    .nav-actions a:nth-of-type(5) {
+        grid-column: 5;
+    }
+
+    .nav-actions .icon-link svg {
+        width: 15px;
+        height: 15px;
     }
 
     .brand-mark {
@@ -921,6 +968,10 @@ main>section:nth-of-type(even):not(.path):not(.cta) {
 
     .brand {
         font-size: 1.1rem;
+        gap: 6px;
+        grid-column: 1;
+        grid-row: 1;
+        min-width: 0;
     }
 
     .social-links a {
@@ -953,6 +1004,7 @@ main>section:nth-of-type(even):not(.path):not(.cta) {
         flex-direction: column;
         gap: 16px;
         text-align: left;
+        align-items: stretch;
     }
 
     .hero-text {
@@ -964,7 +1016,8 @@ main>section:nth-of-type(even):not(.path):not(.cta) {
         margin: 0 0 8px 0;
         text-align: left;
         font-size: clamp(0.82rem, 3.8vw, 1.1rem);
-        white-space: nowrap;
+        max-width: 100%;
+        width: 100%;
     }
 
     /* Reordering: Title -> Subtitle -> Image -> Points */
@@ -999,23 +1052,43 @@ main>section:nth-of-type(even):not(.path):not(.cta) {
     }
 
     .hero-actions {
-        order: 5;
+        order: 6;
         margin-top: 8px;
+    }
+
+    .feature-dots {
+        order: 5;
+        margin: 8px 0 14px;
     }
 
     .hero-features.feature-list {
         display: flex;
-        flex-direction: column;
-        gap: 14px;
-        margin-top: 20px;
+        flex-direction: row;
+        gap: 12px;
+        margin: 18px -16px 0;
+        padding: 0 16px 6px;
+        overflow-x: auto;
+        scroll-snap-type: x mandatory;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+    }
+
+    .hero-features.feature-list::-webkit-scrollbar {
+        display: none;
     }
 
     .hero-features .feature {
+        flex: 0 0 min(78vw, 280px);
+        scroll-snap-align: start;
         position: relative;
-        padding-left: 32px;
+        padding: 14px 16px;
         text-align: left;
-        min-height: 24px;
-        border: none;
+        min-height: 132px;
+        border: 1px solid var(--line);
+        border-left: 4px solid var(--brand-strong);
+        border-radius: var(--radius);
+        background: #fff;
+        box-shadow: var(--shadow-sm);
     }
 
     .hero-features .feature::before {
@@ -1032,9 +1105,10 @@ main>section:nth-of-type(even):not(.path):not(.cta) {
 
     .hero-features .feature h3 {
         font-size: 1rem;
-        margin-bottom: 2px;
+        margin: 0 0 6px;
         line-height: 1.2;
         color: var(--ink);
+        padding-left: 0;
     }
 
     .hero-features .feature p {
@@ -1043,6 +1117,11 @@ main>section:nth-of-type(even):not(.path):not(.cta) {
         line-height: 1.4;
         margin: 0;
         color: var(--muted);
+        padding-left: 0;
+    }
+
+    .hero-features .feature::before {
+        display: none;
     }
 
     .button {
@@ -1053,6 +1132,11 @@ main>section:nth-of-type(even):not(.path):not(.cta) {
     .button.hero-cta {
         min-height: 54px;
         font-size: 1.1rem;
+    }
+
+    .nav-actions .button {
+        width: auto;
+        min-height: 36px;
     }
 
     /* Transform cards and steps into list items */
@@ -1073,6 +1157,35 @@ main>section:nth-of-type(even):not(.path):not(.cta) {
         -webkit-overflow-scrolling: touch;
         margin: 0 -16px;
         padding: 0 16px 16px;
+        scrollbar-width: none;
+    }
+
+    .device-grid::-webkit-scrollbar {
+        display: none;
+    }
+
+    .carousel-dots {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 8px;
+        margin: 4px 0 18px;
+    }
+
+    .carousel-dot {
+        width: 8px;
+        height: 8px;
+        padding: 0;
+        border: 0;
+        border-radius: 999px;
+        background: #cbd5e1;
+        cursor: pointer;
+        transition: width 160ms ease, background-color 160ms ease;
+    }
+
+    .carousel-dot.is-active {
+        width: 22px;
+        background: var(--brand-strong);
     }
 
     .card {
@@ -1130,7 +1243,7 @@ main>section:nth-of-type(even):not(.path):not(.cta) {
         align-items: stretch;
         padding: 14px;
         gap: 10px;
-        flex: 0 0 85%;
+        flex: 0 0 min(84vw, 340px);
         scroll-snap-align: start;
     }
 
@@ -1200,10 +1313,15 @@ main>section:nth-of-type(even):not(.path):not(.cta) {
 
     .benefit-grid .card {
         display: grid;
-        grid-template-columns: 32px 1fr;
-        gap: 4px 12px;
-        padding: 12px;
+        grid-template-columns: 28px 1fr;
+        gap: 2px 10px;
+        padding: 8px 0;
         align-items: start;
+        border: 0;
+        border-bottom: 1px solid var(--line);
+        border-radius: 0;
+        background: transparent;
+        box-shadow: none;
     }
 
     .benefit-grid .card>* {
@@ -1213,7 +1331,7 @@ main>section:nth-of-type(even):not(.path):not(.cta) {
 
     .benefit-number {
         margin: 0;
-        font-size: 1.2rem !important;
+        font-size: 1rem !important;
         grid-column: 1;
         grid-row: 1 / span 2;
         text-align: center;
@@ -1222,7 +1340,7 @@ main>section:nth-of-type(even):not(.path):not(.cta) {
     }
 
     .benefit-grid h3 {
-        font-size: 0.95rem;
+        font-size: 0.9rem;
         margin: 0;
         grid-column: 2;
         line-height: 1.2;
@@ -1230,15 +1348,15 @@ main>section:nth-of-type(even):not(.path):not(.cta) {
 
     .benefit-grid .card p:not([style]) {
         display: block;
-        font-size: 0.82rem;
+        font-size: 0.78rem;
         margin: 0;
-        line-height: 1.4;
+        line-height: 1.35;
         grid-column: 2;
     }
 
     .cta-box {
-        text-align: left;
-        align-items: flex-start;
+        text-align: center;
+        align-items: center;
     }
 
     .cta h2 {
@@ -1248,6 +1366,7 @@ main>section:nth-of-type(even):not(.path):not(.cta) {
 
     .motivation p {
         font-size: 1rem;
+        text-align: center;
     }
 
     .cta-actions {
