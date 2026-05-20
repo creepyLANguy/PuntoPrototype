@@ -228,7 +228,8 @@ a {
 }
 
 .hero-text {
-    max-width: 900px;
+    width: 100%;
+    max-width: var(--wrap);
 }
 
 h1 {
@@ -459,12 +460,13 @@ h3 {
 }
 
 .device-note {
-    margin: 24px auto 0;
+    margin: 24px 0 0;
     padding: 18px 22px;
     border: 1px solid var(--line);
     border-radius: var(--radius);
     background: rgba(255, 255, 255, 0.78);
     text-align: center;
+    text-wrap: balance;
 }
 
 .carousel-dots {
@@ -493,7 +495,7 @@ h3 {
     color: var(--ink);
     font-weight: 800;
     text-align: left;
-    padding-left: 14px;
+    padding-left: 24px;
 }
 
 .hero-features .feature p {
@@ -501,7 +503,7 @@ h3 {
     line-height: 1.6;
     color: var(--muted);
     text-align: left;
-    padding-left: 14px;
+    padding-left: 24px;
 }
 
 .card {
@@ -1252,10 +1254,10 @@ main>section:nth-of-type(even):not(.path):not(.cta) {
 
     .device-card {
         flex-direction: column;
-        align-items: stretch;
+        align-items: center;
         padding: 14px;
         gap: 10px;
-        flex: 0 0 min(84vw, 340px);
+        flex: 0 0 min(70vw, 290px);
         scroll-snap-align: start;
     }
 
