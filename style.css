@@ -4,7 +4,7 @@
     --soft: #f3f4f6;
     --panel: #ffffff;
     --line: #e5e7eb;
-    --brand: #c3ff00;
+    --brand: #cdff2a;
     --brand-strong: #a8db00;
     --cyan: #06b6d4;
     --court: #0f172a;
@@ -199,7 +199,7 @@ a {
 }
 
 .button.hero-cta.glow {
-    box-shadow: 0 5px 0px rgba(184, 243, 0, 0.2);
+    box-shadow: 0 4px 5px rgba(0, 0, 0, 0.1);
 }
 
 .hero {
@@ -740,7 +740,8 @@ main>section:nth-of-type(even):not(.path):not(.cta) {
 }
 
 .app-cta {
-    box-shadow: 0 5px 0px rgba(0, 0, 0, 0.2);
+    background-color: var(--court);
+    box-shadow: 0 4px 5px rgba(0,0,0, 0.2);
 }
 
 .app-cta:hover {
