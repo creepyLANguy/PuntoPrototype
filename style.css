@@ -418,7 +418,6 @@ section.tight-top {
 
 .section-head {
     max-width: 900px;
-    margin-bottom: 60px;
 }
 
 .center {
@@ -646,7 +645,7 @@ main>section:nth-of-type(even):not(.path):not(.cta) {
 }
 
 .section-head {
-    margin-bottom: 30px;
+    margin-bottom: 10px;
     padding-bottom: 4px;
 }
 
@@ -709,7 +708,7 @@ main>section:nth-of-type(even):not(.path):not(.cta) {
 
 .benefit-grid .card {
     flex-direction: row;
-    align-items: flex-start;
+    align-items: flex-end;
     gap: 20px;
     border: none;
     border-radius: 0;
@@ -884,6 +883,10 @@ main>section:nth-of-type(even):not(.path):not(.cta) {
     .cta-actions {
         justify-content: flex-start;
     }
+
+    .section-head {
+        padding-bottom: 0px;
+    }
 }
 
 @media (max-width: 640px) {
@@ -891,8 +894,13 @@ main>section:nth-of-type(even):not(.path):not(.cta) {
         --radius-lg: 16px;
     }
 
+    html,
+    body {
+        overflow-x: hidden;
+    }
+
     .wrap {
-        width: min(100% - 32px, var(--wrap));
+        width: min(calc(100vw - 32px), var(--wrap));
     }
 
     section {
@@ -901,24 +909,25 @@ main>section:nth-of-type(even):not(.path):not(.cta) {
 
     .section-head {
         margin-bottom: 24px;
-        text-align: left;
-    }
-
-    .center {
-        text-align: left;
+        text-align: center;
     }
 
     .nav {
-        display: grid;
-        grid-template-columns: auto repeat(4, 28px);
-        justify-content: start;
+        position: relative;
+        display: flex;
         align-items: center;
         min-height: 60px;
-        gap: 6px;
+        gap: 12px;
     }
 
     .nav-actions {
-        display: contents;
+        position: static;
+        margin-left: auto;
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 5px;
+        flex: 0 0 auto;
     }
 
     .nav-actions .button {
@@ -926,12 +935,13 @@ main>section:nth-of-type(even):not(.path):not(.cta) {
     }
 
     .nav-actions .icon-link {
-        grid-row: 1;
         display: grid;
-        width: 28px;
-        height: 28px;
-        padding: 6px;
+        place-items: center;
+        width: 34px;
+        height: 34px;
+        padding: 0;
         border-radius: 50%;
+        flex: 0 0 34px;
     }
 
     .nav-actions a:nth-of-type(2) {
@@ -951,8 +961,8 @@ main>section:nth-of-type(even):not(.path):not(.cta) {
     }
 
     .nav-actions .icon-link svg {
-        width: 15px;
-        height: 15px;
+        width: 18px;
+        height: 18px;
     }
 
     .brand-mark {
@@ -962,12 +972,12 @@ main>section:nth-of-type(even):not(.path):not(.cta) {
     }
 
     .brand-mark img {
-        width: 42px;
-        height: 42px;
+        width: 38px;
+        height: 38px;
     }
 
     .brand {
-        font-size: 1.1rem;
+        font-size: 1rem;
         gap: 6px;
         grid-column: 1;
         grid-row: 1;
@@ -980,14 +990,14 @@ main>section:nth-of-type(even):not(.path):not(.cta) {
     }
 
     h1 {
-        font-size: clamp(2.2rem, 9vw, 2.8rem);
-        text-align: left;
-        justify-content: flex-start;
+        font-size: clamp(2rem, 7.4vw, 2.25rem);
+        text-align: center;
+        justify-content: center;
         flex-direction: row;
         flex-wrap: wrap;
         gap: 8px;
         line-height: 1;
-        margin-bottom: 8px;
+        margin-bottom: 4px;
     }
 
     .hero-title-mark {
@@ -996,14 +1006,14 @@ main>section:nth-of-type(even):not(.path):not(.cta) {
     }
 
     .hero {
-        padding-top: 30px;
+        padding-top: 14px;
     }
 
     .hero-grid {
         display: flex;
         flex-direction: column;
-        gap: 16px;
-        text-align: left;
+        gap: 12px;
+        text-align: center;
         align-items: stretch;
     }
 
@@ -1013,9 +1023,10 @@ main>section:nth-of-type(even):not(.path):not(.cta) {
     }
 
     .hero .lead {
-        margin: 0 0 8px 0;
-        text-align: left;
-        font-size: clamp(0.82rem, 3.8vw, 1.1rem);
+        margin: 0 auto;
+        text-align: center;
+        font-size: clamp(0.82rem, 3.5vw, 0.98rem);
+        line-height: 1.35;
         max-width: 100%;
         width: 100%;
     }
@@ -1048,7 +1059,7 @@ main>section:nth-of-type(even):not(.path):not(.cta) {
 
     .hero-features {
         order: 4;
-        margin-top: 16px;
+        margin-top: 10px;
     }
 
     .hero-actions {
@@ -1065,8 +1076,8 @@ main>section:nth-of-type(even):not(.path):not(.cta) {
         display: flex;
         flex-direction: row;
         gap: 12px;
-        margin: 18px -16px 0;
-        padding: 0 16px 6px;
+        margin: 14px 0 0;
+        padding: 0 0 6px;
         overflow-x: auto;
         scroll-snap-type: x mandatory;
         -webkit-overflow-scrolling: touch;
@@ -1155,8 +1166,8 @@ main>section:nth-of-type(even):not(.path):not(.cta) {
         gap: 16px;
         padding-bottom: 16px;
         -webkit-overflow-scrolling: touch;
-        margin: 0 -16px;
-        padding: 0 16px 16px;
+        margin: 0;
+        padding: 0 0 16px;
         scrollbar-width: none;
     }
 
@@ -1322,6 +1333,15 @@ main>section:nth-of-type(even):not(.path):not(.cta) {
         border-radius: 0;
         background: transparent;
         box-shadow: none;
+        text-align: left;
+    }
+
+    #clubs {
+        text-align: left;
+    }
+
+    .benefit-grid .card:last-child {
+        border-bottom: 0;
     }
 
     .benefit-grid .card>* {
@@ -1344,6 +1364,7 @@ main>section:nth-of-type(even):not(.path):not(.cta) {
         margin: 0;
         grid-column: 2;
         line-height: 1.2;
+        text-align: left;
     }
 
     .benefit-grid .card p:not([style]) {
@@ -1352,11 +1373,16 @@ main>section:nth-of-type(even):not(.path):not(.cta) {
         margin: 0;
         line-height: 1.35;
         grid-column: 2;
+        text-align: left;
     }
 
     .cta-box {
         text-align: center;
         align-items: center;
+    }
+
+    .cta {
+        padding-top: 0px;
     }
 
     .cta h2 {
@@ -1365,8 +1391,8 @@ main>section:nth-of-type(even):not(.path):not(.cta) {
     }
 
     .motivation p {
-        font-size: 1rem;
         text-align: center;
+        font-size: 1rem;
     }
 
     .cta-actions {
@@ -1386,5 +1412,13 @@ main>section:nth-of-type(even):not(.path):not(.cta) {
     .subhead .feature {
         font-size: 0.85rem;
         padding: 0;
+    }
+
+    .site-footer {
+        padding-top: 0;
+    }
+
+    .site-footer .divider {
+        padding: 12px;
     }
 }
