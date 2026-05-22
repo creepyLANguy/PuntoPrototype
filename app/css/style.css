@@ -718,11 +718,11 @@ body.light-mode .game-dot.filled {
 }
 
 .team-a .ref-zone:active {
-  background: rgba(255, 255, 0, 0.15);
+  background: color-mix(in srgb, var(--teamAcolour) 18%, transparent);
 }
 
 .team-b .ref-zone:active {
-  background: rgba(0, 255, 255, 0.15);
+  background: color-mix(in srgb, var(--teamBcolour) 18%, transparent);
 }
 
 /* =======================================================
@@ -951,7 +951,7 @@ body.light-mode .reset-actions button:hover {
   padding: 30px;
   border-radius: 24px;
   text-align: center;
-  width: clamp(300px, 90vw, 450px);
+  width: clamp(300px, 90vw, 520px);
   color: white;
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
   position: relative;
@@ -1047,6 +1047,131 @@ body.light-mode .modal-btn {
 
 body.light-mode .settings-box .close-btn:hover {
   background: rgba(0, 0, 0, 0.05);
+}
+
+.settings-appearance {
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+body.light-mode .settings-appearance {
+  border-top-color: rgba(0, 0, 0, 0.1);
+}
+
+.settings-appearance h3,
+.appearance-menu-title {
+  margin: 0 0 12px;
+  font-size: 0.95rem;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+.theme-choice-group {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.theme-choice-btn,
+.reset-theme-colours-btn {
+  min-height: 40px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.06);
+  color: inherit;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+}
+
+.theme-choice-btn:hover,
+.reset-theme-colours-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.theme-choice-btn.active {
+  background: linear-gradient(90deg, var(--teamAcolour), var(--teamBcolour));
+  border-color: transparent;
+  color: #000;
+}
+
+body.light-mode .theme-choice-btn,
+body.light-mode .reset-theme-colours-btn {
+  border-color: rgba(0, 0, 0, 0.14);
+  background: rgba(0, 0, 0, 0.04);
+}
+
+body.light-mode .theme-choice-btn:hover,
+body.light-mode .reset-theme-colours-btn:hover {
+  background: rgba(0, 0, 0, 0.08);
+}
+
+body.light-mode .theme-choice-btn.active {
+  background: linear-gradient(90deg, var(--teamAcolour), var(--teamBcolour));
+  border-color: transparent;
+  color: #fff;
+}
+
+.colour-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.colour-field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+body.light-mode .colour-field {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.team-colour-input {
+  width: 42px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.team-colour-input::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+
+.team-colour-input::-webkit-color-swatch {
+  border: 2px solid rgba(255, 255, 255, 0.55);
+  border-radius: 8px;
+}
+
+.team-colour-input::-moz-color-swatch {
+  border: 2px solid rgba(255, 255, 255, 0.55);
+  border-radius: 8px;
+}
+
+body.light-mode .team-colour-input::-webkit-color-swatch {
+  border-color: rgba(0, 0, 0, 0.28);
+}
+
+body.light-mode .team-colour-input::-moz-color-swatch {
+  border-color: rgba(0, 0, 0, 0.28);
+}
+
+.reset-theme-colours-btn {
+  width: 100%;
+  margin-top: 12px;
 }
 
 /* =======================================================
@@ -2016,14 +2141,14 @@ body.light-mode .court-list {
 }
 
 .court-list::-webkit-scrollbar-thumb {
-  background: #ffff00;
+  background: var(--teamAcolour);
   border-radius: 8px;
   border: 2px solid rgba(0, 0, 0, 0.3);
 }
 
 .court-list::-webkit-scrollbar-thumb:hover {
-  background: #ffff00;
-  box-shadow: 0 0 8px #ffff00;
+  background: var(--teamAcolour);
+  box-shadow: 0 0 8px var(--teamAcolour);
 }
 
 .loading {
@@ -2165,22 +2290,22 @@ body.light-mode .court-item:hover {
 
 .court-item.active {
   background: rgba(255, 255, 255, 0.0);
-  border: 2px solid #ffff00;
+  border: 2px solid var(--teamAcolour);
   padding-left: 15px;
   padding-right: 15px;
   margin-left: 5px;
   margin-right: 5px;
   border-radius: 12px;
-  box-shadow: 0 0 12px #ffff00;
+  box-shadow: 0 0 12px var(--teamAcolour);
 }
 
 body.light-mode .court-item.active {
-  border: 2px solid #0aaaaa;
-  box-shadow: 0 0 8px #088888;
+  border: 2px solid var(--teamBcolour);
+  box-shadow: 0 0 8px var(--teamBcolour);
 }
 
 .court-item.active .court-item-name {
-  color: #ffff00;
+  color: var(--teamAcolour);
   font-weight: 700;
 }
 
@@ -2639,6 +2764,28 @@ body.light-mode .theme-toggle-btn:hover {
   opacity: 1;
 }
 
+.appearance-menu {
+  position: absolute;
+  top: 0;
+  right: calc(clamp(40px, 8vmin, 55px) + 12px);
+  width: min(280px, calc(100vw - 90px));
+  padding: 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(17, 17, 17, 0.92);
+  color: #fff;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+body.light-mode .appearance-menu {
+  border-color: rgba(0, 0, 0, 0.12);
+  background: rgba(255, 255, 255, 0.94);
+  color: #111;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.16);
+}
+
 /* =======================================================
    ACTIVATE NFC BUTTON
 ======================================================= */
@@ -2929,8 +3076,8 @@ body.light-mode .activate-nfc-btn:hover {
 }
 
 #nfcToolBtn {
-  background: #0a91ac;
-  border-color: #0a91ac;
+  background: var(--teamBcolour);
+  border-color: var(--teamBcolour);
   color: #fff;
 }
 
@@ -3428,8 +3575,8 @@ body.light-mode .menu-btn::before {
 
   background: linear-gradient(120deg,
       transparent 0%,
-      rgba(255, 255, 0, 0.06) 46%,
-      rgba(0, 200, 255, 0.05) 54%,
+      color-mix(in srgb, var(--teamAcolour) 8%, transparent) 46%,
+      color-mix(in srgb, var(--teamBcolour) 7%, transparent) 54%,
       transparent 100%);
 
   transform: rotate(25deg);

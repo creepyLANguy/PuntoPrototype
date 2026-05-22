@@ -145,8 +145,15 @@ document.addEventListener("DOMContentLoaded", () =>
   // THEME STATE
   // =====================================================
 
+  const TEAM_COLOUR_STORAGE_KEY = "punto_team_colours";
+  const DEFAULT_TEAM_COLOURS = {
+    dark: { A: "#ffff00", B: "#00ffff" },
+    light: { A: "#ad7535", B: "#0a91ac" }
+  };
+
   let isLightMode = localStorage.getItem("theme") === "light";
   let isWavesEnabled = localStorage.getItem("waves") !== "false";
+  let teamColours = loadStoredTeamColours();
 
   // =====================================================
   // THEME FUNCTIONS
@@ -157,25 +164,145 @@ document.addEventListener("DOMContentLoaded", () =>
     if (isLightMode)
     {
       document.body.classList.add("light-mode");
-      updateThemeButtonIcons();
     }
+
+    applyTeamColours();
+    syncAppearanceControls();
+  }
+
+  function setTheme(theme)
+  {
+    isLightMode = theme === "light";
+    document.body.classList.toggle("light-mode", isLightMode);
+    localStorage.setItem("theme", isLightMode ? "light" : "dark");
+    applyTeamColours();
+    syncAppearanceControls();
   }
 
   function toggleTheme()
   {
-    isLightMode = !isLightMode;
-    document.body.classList.toggle("light-mode");
-    localStorage.setItem("theme", isLightMode ? "light" : "dark");
-    updateThemeButtonIcons();
+    setTheme(isLightMode ? "dark" : "light");
   }
 
-  function updateThemeButtonIcons()
+  function getCurrentThemeName()
   {
-    const themeBtn = $("themeToggleBtn");
-    const scoreboardBtn = $("themeToggleScoreboardBtn");
+    return isLightMode ? "light" : "dark";
+  }
 
-    if (themeBtn) themeBtn.textContent = isLightMode ? "🌙" : "☀️";
-    if (scoreboardBtn) scoreboardBtn.textContent = isLightMode ? "🌙" : "☀️";
+  function getDefaultTeamColours()
+  {
+    return DEFAULT_TEAM_COLOURS[getCurrentThemeName()];
+  }
+
+  function loadStoredTeamColours()
+  {
+    try
+    {
+      const stored = JSON.parse(localStorage.getItem(TEAM_COLOUR_STORAGE_KEY) || "null");
+      if (!stored) return null;
+
+      const A = normalizeHexColour(stored.A);
+      const B = normalizeHexColour(stored.B);
+      return A && B ? { A, B } : null;
+    }
+    catch (err)
+    {
+      console.warn("Could not load team colours:", err);
+      return null;
+    }
+  }
+
+  function normalizeHexColour(value)
+  {
+    if (typeof value !== "string") return null;
+
+    const colour = value.trim().toLowerCase();
+    return /^#[0-9a-f]{6}$/.test(colour) ? colour : null;
+  }
+
+  function getActiveTeamColours()
+  {
+    return teamColours || getDefaultTeamColours();
+  }
+
+  function applyTeamColours()
+  {
+    if (teamColours)
+    {
+      document.body.style.setProperty("--teamAcolour", teamColours.A);
+      document.body.style.setProperty("--teamBcolour", teamColours.B);
+      return;
+    }
+
+    document.body.style.removeProperty("--teamAcolour");
+    document.body.style.removeProperty("--teamBcolour");
+  }
+
+  function setTeamColour(team, colour)
+  {
+    const normalizedColour = normalizeHexColour(colour);
+    if (!normalizedColour || !["A", "B"].includes(team)) return;
+
+    teamColours = {
+      ...getActiveTeamColours(),
+      [team]: normalizedColour
+    };
+
+    localStorage.setItem(TEAM_COLOUR_STORAGE_KEY, JSON.stringify(teamColours));
+    applyTeamColours();
+    syncAppearanceControls();
+  }
+
+  function resetTeamColours()
+  {
+    teamColours = null;
+    localStorage.removeItem(TEAM_COLOUR_STORAGE_KEY);
+    applyTeamColours();
+    syncAppearanceControls();
+    showToast("Team colours reset", TOAST_TYPES.INFO);
+  }
+
+  function syncAppearanceControls()
+  {
+    const activeTheme = getCurrentThemeName();
+    const activeColours = getActiveTeamColours();
+
+    document.querySelectorAll("[data-theme-choice]").forEach((button) =>
+    {
+      const isActive = button.dataset.themeChoice === activeTheme;
+      button.classList.toggle("active", isActive);
+      button.setAttribute("aria-pressed", isActive ? "true" : "false");
+    });
+
+    document.querySelectorAll("[data-team-colour]").forEach((input) =>
+    {
+      input.value = activeColours[input.dataset.teamColour];
+    });
+  }
+
+  function openAppearanceMenu()
+  {
+    if (!elements.appearanceMenu || !elements.appearanceMenuBtn) return;
+
+    syncAppearanceControls();
+    elements.appearanceMenu.classList.remove("hidden");
+    elements.appearanceMenuBtn.setAttribute("aria-expanded", "true");
+  }
+
+  function closeAppearanceMenu()
+  {
+    if (!elements.appearanceMenu || !elements.appearanceMenuBtn) return;
+
+    elements.appearanceMenu.classList.add("hidden");
+    elements.appearanceMenuBtn.setAttribute("aria-expanded", "false");
+  }
+
+  function toggleAppearanceMenu()
+  {
+    if (!elements.appearanceMenu) return;
+
+    if (elements.appearanceMenu.classList.contains("hidden")) openAppearanceMenu();
+    else closeAppearanceMenu();
   }
 
   // =====================================================
@@ -341,8 +468,8 @@ document.addEventListener("DOMContentLoaded", () =>
     fullscreenBtn: $("fullscreenBtn"),
     fullscreenLabel: $("fullscreenLabel"),
 
-    themeToggleBtn: $("themeToggleBtn"),
-    themeToggleScoreboardBtn: $("themeToggleScoreboardBtn"),
+    appearanceMenuBtn: $("appearanceMenuBtn"),
+    appearanceMenu: $("appearanceMenu"),
     waveToggleScoreboardBtn: $("waveToggleScoreboardBtn"),
     waveToggleSpectateBtn: $("waveToggleSpectateBtn"),
 
@@ -1205,6 +1332,17 @@ document.addEventListener("DOMContentLoaded", () =>
       }
     }
 
+    if (elements.appearanceMenuBtn)
+    {
+      const currentVal = elements.appearanceMenuBtn.style.display;
+      const targetVal = isMenuVisible ? "flex" : "none";
+      if (currentVal !== targetVal)
+      {
+        if (targetVal === "none") closeAppearanceMenu();
+        elements.appearanceMenuBtn.style.display = targetVal;
+      }
+    }
+
     updateWavesVisibility();
   }
 
@@ -1231,15 +1369,42 @@ document.addEventListener("DOMContentLoaded", () =>
     elements.menuPage.style.display = "flex";
   });
 
-  if (elements.themeToggleBtn)
+  if (elements.appearanceMenuBtn)
   {
-    elements.themeToggleBtn.addEventListener("click", toggleTheme);
+    elements.appearanceMenuBtn.addEventListener("click", (e) =>
+    {
+      e.stopPropagation();
+      toggleAppearanceMenu();
+    });
   }
 
-  if (elements.themeToggleScoreboardBtn)
+  document.querySelectorAll("[data-theme-choice]").forEach((button) =>
   {
-    elements.themeToggleScoreboardBtn.addEventListener("click", toggleTheme);
-  }
+    button.addEventListener("click", () => setTheme(button.dataset.themeChoice));
+  });
+
+  document.querySelectorAll("[data-team-colour]").forEach((input) =>
+  {
+    input.addEventListener("input", () => setTeamColour(input.dataset.teamColour, input.value));
+  });
+
+  document.querySelectorAll(".reset-theme-colours-btn").forEach((button) =>
+  {
+    button.addEventListener("click", resetTeamColours);
+  });
+
+  document.addEventListener("click", (e) =>
+  {
+    if (!elements.appearanceMenu || elements.appearanceMenu.classList.contains("hidden")) return;
+    if (elements.appearanceMenu.contains(e.target) || elements.appearanceMenuBtn?.contains(e.target)) return;
+
+    closeAppearanceMenu();
+  });
+
+  document.addEventListener("keydown", (e) =>
+  {
+    if (e.key === "Escape") closeAppearanceMenu();
+  });
 
   if (elements.waveToggleScoreboardBtn)
   {
@@ -1506,9 +1671,10 @@ document.addEventListener("DOMContentLoaded", () =>
     elements.spectatePage.style.display = "none";
 
     // Hide top-right buttons in court view
-    if (elements.themeToggleBtn)
+    if (elements.appearanceMenuBtn)
     {
-      elements.themeToggleBtn.style.display = "none";
+      closeAppearanceMenu();
+      elements.appearanceMenuBtn.style.display = "none";
     }
     if (elements.adminLoginBtn)
     {
@@ -1555,7 +1721,7 @@ document.addEventListener("DOMContentLoaded", () =>
     currentCourtStatus = null;
 
     document.body.classList.remove("scoreboard-active");
-    if (elements.themeToggleBtn) elements.themeToggleBtn.style.display = "";
+    if (elements.appearanceMenuBtn) elements.appearanceMenuBtn.style.display = "";
     if (elements.adminLoginBtn) elements.adminLoginBtn.style.display = "";
 
     if (nfcDenied && elements.activateNfcBtn)
