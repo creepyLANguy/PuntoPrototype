@@ -375,7 +375,7 @@ document.addEventListener("DOMContentLoaded", () =>
     const isActive = Boolean(getFullscreenElement());
     const label = isActive ? "Exit fullscreen" : "Enter fullscreen";
 
-    elements.fullscreenBtn.textContent = "\u26F6";
+    elements.fullscreenBtn.textContent = isActive ? "⬚" : "\u26F6";
     elements.fullscreenBtn.title = label;
     elements.fullscreenBtn.setAttribute("aria-label", label);
 
