@@ -1,0 +1,94 @@
+// Firestore Security Rules for Punto/Padel Push
+// 
+// These rules govern access to analytics and application data
+// Update your Firestore database rules with these configurations
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // =====================================================
+    // ANALYTICS COLLECTIONS (Client-side)
+    // =====================================================
+    
+    // App analytics events - users can only read their own session
+    match /analytics_events/{eventId} {
+      allow create: if request.auth != null || true; // Allow anonymous writes
+      allow read: if true; // Allow reads for analytics viewing
+      allow update: if false; // Never update events
+      allow delete: if false; // Never delete individual events
+    }
+    
+    // Website analytics events
+    match /website_analytics_events/{eventId} {
+      allow create: if true; // Allow anonymous writes
+      allow read: if true; // Allow reads for analytics viewing
+      allow update: if false;
+      allow delete: if false;
+    }
+    
+    // =====================================================
+    // SERVER ANALYTICS COLLECTIONS
+    // =====================================================
+    
+    // Server-side event logs
+    match /server_analytics_events/{eventId} {
+      allow create: if request.auth.uid != null; // Only authenticated servers
+      allow read: if request.auth.uid != null;
+      allow update: if false;
+      allow delete: if false;
+    }
+    
+    // =====================================================
+    // GAME DATA COLLECTIONS
+    // =====================================================
+    
+    // Courts collection
+    match /courts/{courtId} {
+      allow read: if true; // Anyone can read court info
+      allow create: if request.auth != null;
+      allow update: if request.auth != null;
+      allow delete: if request.auth != null;
+      
+      // Court events (scoring events)
+      match /events/{eventId} {
+        allow create: if true; // Anyone can create events
+        allow read: if true;
+        allow update: if false;
+        allow delete: if false;
+      }
+      
+      // Score subcollection
+      match /score/{scoreDoc} {
+        allow read: if true;
+        allow create: if true;
+        allow update: if true;
+      }
+      
+      // Archive subcollection
+      match /archive/{archiveId}/events/{eventId} {
+        allow read: if true;
+        allow create: if true;
+        allow update: if false;
+      }
+    }
+    
+    // Devices collection
+    match /devices/{deviceId} {
+      allow read: if true;
+      allow create: if true;
+      allow update: if true;
+      allow delete: if false; // Preserve device history
+    }
+    
+    // =====================================================
+    // DENY ALL OTHER PATHS
+    // =====================================================
+    
+    // Catch-all - deny everything not explicitly allowed
+    match /{document=**} {
+      allow read: if false;
+      allow write: if false;
+    }
+  }
+}

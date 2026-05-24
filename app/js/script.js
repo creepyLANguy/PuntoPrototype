@@ -1,4 +1,5 @@
 import { app, db } from "./firebase.js";
+import { initializeAnalytics, getAnalyticsManager } from "./analytics.js";
 
 import
 {
@@ -21,6 +22,9 @@ import
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-functions.js";
 
 const functions = getFunctions(app, "africa-south1");
+
+// Initialize analytics
+initializeAnalytics(app);
 
 export async function resetCourt(courtId, deepReset = false, newPassword = null)
 {
@@ -1650,6 +1654,14 @@ document.addEventListener("DOMContentLoaded", () =>
     currentCourtPassword = data.password;
     currentCourtStatus = data.status;
 
+    // Track court entry with analytics
+    const analytics = getAnalyticsManager();
+    analytics.setCourtContext(courtId, currentCourtStatus);
+    analytics.trackGameEvent(spectate ? "SPECTATE" : "REGISTER", null, null, {
+      court_id: courtId,
+      is_spectating: spectate
+    });
+
     if (muted)
     {
       elements.muteBtn.textContent = "🔇";
@@ -1835,6 +1847,10 @@ document.addEventListener("DOMContentLoaded", () =>
       courtId: currentCourtId
     });
 
+    // Track device registration with analytics
+    const analytics = getAnalyticsManager();
+    analytics.trackDeviceRegistration(currentCourtId, "scorer");
+
     showToast(`Device ${deviceId} registered to this court.`, TOAST_TYPES.SUCCESS);
   }
 
@@ -1910,6 +1926,10 @@ document.addEventListener("DOMContentLoaded", () =>
       }
     );
 
+    // Track point with analytics
+    const analytics = getAnalyticsManager();
+    analytics.trackPoint(addpointevent === EVENT_TYPES.POINT_TEAM_A ? "A" : "B", score);
+
     animate(addpointevent === EVENT_TYPES.POINT_TEAM_A ? "A" : "B");
     playSound(SOUND_IDS.POINT);
   }
@@ -1928,6 +1948,10 @@ document.addEventListener("DOMContentLoaded", () =>
           createdBy: thisDeviceId
         }
       );
+
+      // Track undo with analytics
+      const analytics = getAnalyticsManager();
+      analytics.trackUndo(score.lastPointTeam ? `POINT_TEAM_${score.lastPointTeam}` : null);
 
       if (score.lastPointTeam)
       {
@@ -2147,6 +2171,11 @@ document.addEventListener("DOMContentLoaded", () =>
             {
               console.log("NFC text found:", text);
               foundValidRecord = true;
+
+              // Track NFC scan with analytics
+              const analytics = getAnalyticsManager();
+              analytics.trackNfcScan(null, text, true);
+
               handleNfc(text);
             }
           }
@@ -2159,6 +2188,10 @@ document.addEventListener("DOMContentLoaded", () =>
         if (!foundValidRecord)
         {
           showToast("NFC tag scanned but no valid data found.", TOAST_TYPES.INFO);
+          
+          // Track NFC scan failure with analytics
+          const analytics = getAnalyticsManager();
+          analytics.trackNfcScan(null, null, false, { reason: "no_valid_record" });
         }
       };
 
@@ -2290,6 +2323,11 @@ document.addEventListener("DOMContentLoaded", () =>
       if (!isSpectating)
       {
         enableSpectateMode();
+        
+        // Track spectating mode with analytics
+        const analytics = getAnalyticsManager();
+        analytics.trackSpectating(courtId, true);
+        
         showToast("Switched to spectate mode.", TOAST_TYPES.SUCCESS);
       }
       else
@@ -2298,6 +2336,10 @@ document.addEventListener("DOMContentLoaded", () =>
       }
       return;
     }
+
+    // Track NFC scan with analytics
+    const analytics = getAnalyticsManager();
+    analytics.trackNfcScan(courtId, null, true, { action: "spectate" });
 
     await enterCourt(courtId, true);
   }
@@ -2365,6 +2407,11 @@ document.addEventListener("DOMContentLoaded", () =>
           createdBy: thisDeviceId
         }
       );
+
+      // Track reset with analytics
+      const analytics = getAnalyticsManager();
+      analytics.trackReset(false);
+
       elements.resetModal.classList.add("hidden");
       playSound(SOUND_IDS.START);
     }
@@ -2414,6 +2461,10 @@ document.addEventListener("DOMContentLoaded", () =>
         { password: newPassword },
         { merge: true }
       );
+
+      // Track deep reset with analytics
+      const analytics = getAnalyticsManager();
+      analytics.trackReset(true);
 
       elements.resetModal.classList.add("hidden");
 

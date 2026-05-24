@@ -11,11 +11,15 @@ import
   collection,
   getDocs
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-analytics.js";
 
 import { firebaseConfig } from "./firebase-config.js";
 
 export const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app);
+
+// Initialize Google Analytics
+export const analytics = getAnalytics(app);
 
 export
 {
@@ -26,5 +30,6 @@ export
   onSnapshot,
   serverTimestamp,
   collection,
-  getDocs
+  getDocs,
+  analytics
 };

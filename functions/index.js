@@ -12,6 +12,26 @@ const SUPPORTED_EVENTS = new Set([...SCORING_EVENTS, ...OPERATIONAL_EVENTS]);
 admin.initializeApp();
 const db = admin.firestore();
 
+// =====================================================
+// ANALYTICS LOGGING UTILITIES
+// =====================================================
+
+async function logAnalyticsEvent(eventType, data = {})
+{
+    try
+    {
+        await db.collection('server_analytics_events').add({
+            type: eventType,
+            ...data,
+            timestamp: admin.firestore.FieldValue.serverTimestamp()
+        });
+    }
+    catch (err)
+    {
+        console.error(`Failed to log analytics event ${eventType}:`, err);
+    }
+}
+
 function sendJson(res, status, body)
 {
     return res.status(status).json(body);
@@ -135,6 +155,12 @@ exports.onEventCreate = onDocumentCreated(
         } catch (err)
         {
             console.error(`Transaction failed for event ${eventId}:`, err);
+            await logAnalyticsEvent('game_event_error', {
+                court_id: courtId,
+                event_id: eventId,
+                event_type: newEvent?.eventType,
+                error_message: err.message
+            });
         }
     }
 );
@@ -396,11 +422,22 @@ exports.postEvent = onRequest(
                 actorDeviceId: deviceId
             });
 
-            return sendJson(res, 200, { success: true, eventId });
+                // Log analytics for successful event posting
+                await logAnalyticsEvent('api_call_success', {
+                    endpoint: '/postEvent',
+                    method: 'POST',
+                    device_id: deviceId,
+                    event_type: eventType,
+                    event_id: eventId,
+                    court_id: actingCourtId
+                });
 
-        } catch (err)
-        {
-            console.error(err);
+                endpoint: '/postEvent',
+                method: 'POST',
+                error_message: err.message,
+                device_id: req.body?.deviceId,
+                event_type: req.body?.eventType
+            });
             return sendJson(res, 500, { success: false, error: "Error" });
         }
     }
