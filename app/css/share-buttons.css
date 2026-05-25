@@ -1,0 +1,81 @@
+/* Share Button Styling */
+
+#shareCourtBtn,
+#shareDetailsBtn {
+  background: var(--btn-bg, rgba(255, 255, 255, 0.1));
+  color: var(--btn-text, #fff);
+  border: 1px solid var(--btn-border, rgba(255, 255, 255, 0.2));
+  border-radius: 8px;
+  padding: 8px 12px;
+  cursor: pointer;
+  font-size: 20px;
+  transition: all 0.2s ease;
+  backdrop-filter: blur(10px);
+}
+
+#shareCourtBtn:hover,
+#shareDetailsBtn:hover {
+  background: var(--btn-hover-bg, rgba(255, 255, 255, 0.2));
+  border-color: var(--btn-hover-border, rgba(255, 255, 255, 0.4));
+  transform: scale(1.05);
+}
+
+#shareCourtBtn:active,
+#shareDetailsBtn:active {
+  transform: scale(0.95);
+}
+
+/* Toast Notifications */
+.toast {
+  position: fixed;
+  bottom: 20px;
+  left: 20px;
+  max-width: 300px;
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  animation: slideUp 0.3s ease;
+  z-index: 10000;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.toast.success {
+  background: #4caf50;
+  color: white;
+}
+
+.toast.error {
+  background: #f44336;
+  color: white;
+}
+
+.toast.info {
+  background: #2196f3;
+  color: white;
+}
+
+.toast.warning {
+  background: #ff9800;
+  color: white;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@media (max-width: 600px) {
+  .toast {
+    bottom: 10px;
+    left: 10px;
+    right: 10px;
+    max-width: none;
+  }
+}
