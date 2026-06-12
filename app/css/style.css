@@ -1138,35 +1138,70 @@ body.light-mode .colour-field {
 }
 
 .team-colour-input {
-  width: 42px;
-  height: 32px;
-  padding: 0;
-  border: 0;
+  --picker-colour: #ffffff;
+  width: 108px;
+  min-width: 108px;
+  height: 36px;
+  padding: 0 10px 0 44px;
+  border: 1px solid rgba(255, 255, 255, 0.24);
   border-radius: 8px;
-  background: transparent;
+  background:
+    linear-gradient(90deg,
+      var(--picker-colour) 0 34px,
+      rgba(255, 255, 255, 0.1) 34px 100%);
+  color: inherit;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 800;
+  line-height: 36px;
+  letter-spacing: 0;
+  text-transform: lowercase;
   cursor: pointer;
+  outline: none;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.2);
+  -webkit-tap-highlight-color: transparent;
 }
 
-.team-colour-input::-webkit-color-swatch-wrapper {
-  padding: 0;
+.team-colour-input:focus-visible,
+.team-colour-input.jscolor-active {
+  border-color: currentColor;
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 0, 0, 0.2),
+    0 0 0 3px rgba(255, 255, 255, 0.18);
 }
 
-.team-colour-input::-webkit-color-swatch {
-  border: 2px solid rgba(255, 255, 255, 0.55);
-  border-radius: 8px;
+.team-colour-input[readonly] {
+  caret-color: transparent;
 }
 
-.team-colour-input::-moz-color-swatch {
-  border: 2px solid rgba(255, 255, 255, 0.55);
-  border-radius: 8px;
+body.light-mode .team-colour-input {
+  border-color: rgba(0, 0, 0, 0.16);
+  background:
+    linear-gradient(90deg,
+      var(--picker-colour) 0 34px,
+      rgba(0, 0, 0, 0.06) 34px 100%);
 }
 
-body.light-mode .team-colour-input::-webkit-color-swatch {
-  border-color: rgba(0, 0, 0, 0.28);
+body.light-mode .team-colour-input:focus-visible,
+body.light-mode .team-colour-input.jscolor-active {
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.35),
+    0 0 0 3px rgba(0, 0, 0, 0.1);
 }
 
-body.light-mode .team-colour-input::-moz-color-swatch {
-  border-color: rgba(0, 0, 0, 0.28);
+@media (max-width: 420px) {
+  .colour-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .colour-field {
+    gap: 8px;
+  }
+
+  .team-colour-input {
+    width: 104px;
+    min-width: 104px;
+  }
 }
 
 .reset-theme-colours-btn {
