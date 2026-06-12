@@ -150,6 +150,20 @@ document.addEventListener("DOMContentLoaded", () =>
     dark: { A: "#ffff00", B: "#00ffff" },
     light: { A: "#ad7535", B: "#0a91ac" }
   };
+  const TEAM_COLOUR_PICKER_OPTIONS = {
+    format: "hex",
+    hash: true,
+    uppercase: false,
+    required: true,
+    width: 176,
+    height: 112,
+    sliderSize: 18,
+    padding: 12,
+    borderRadius: 8,
+    smartPosition: true,
+    zIndex: 20000,
+    forceStyle: false
+  };
 
   let isLightMode = localStorage.getItem("theme") === "light";
   let isWavesEnabled = localStorage.getItem("waves") !== "false";
@@ -166,6 +180,7 @@ document.addEventListener("DOMContentLoaded", () =>
       document.body.classList.add("light-mode");
     }
 
+    initializeTeamColourPickers();
     applyTeamColours();
     syncAppearanceControls();
   }
@@ -253,6 +268,44 @@ document.addEventListener("DOMContentLoaded", () =>
     syncAppearanceControls();
   }
 
+  function initializeTeamColourPickers()
+  {
+    const inputs = document.querySelectorAll("[data-team-colour]");
+    const JsColor = window.JSColor || window.jscolor;
+
+    if (!JsColor)
+    {
+      inputs.forEach((input) =>
+      {
+        input.readOnly = false;
+        input.inputMode = "text";
+      });
+      return;
+    }
+
+    inputs.forEach((input) =>
+    {
+      if (!input.jscolor)
+      {
+        new JsColor(input, TEAM_COLOUR_PICKER_OPTIONS);
+      }
+    });
+  }
+
+  function updateTeamColourInput(input, colour)
+  {
+    input.value = colour;
+    input.style.setProperty("--picker-colour", colour);
+
+    if (!input.jscolor) return;
+
+    const pickerColour = normalizeHexColour(input.jscolor.toHEXString());
+    if (pickerColour !== colour)
+    {
+      input.jscolor.fromString(colour);
+    }
+  }
+
   function resetTeamColours()
   {
     teamColours = null;
@@ -276,7 +329,7 @@ document.addEventListener("DOMContentLoaded", () =>
 
     document.querySelectorAll("[data-team-colour]").forEach((input) =>
     {
-      input.value = activeColours[input.dataset.teamColour];
+      updateTeamColourInput(input, activeColours[input.dataset.teamColour]);
     });
   }
 
@@ -1386,6 +1439,7 @@ document.addEventListener("DOMContentLoaded", () =>
   document.querySelectorAll("[data-team-colour]").forEach((input) =>
   {
     input.addEventListener("input", () => setTeamColour(input.dataset.teamColour, input.value));
+    input.addEventListener("change", () => setTeamColour(input.dataset.teamColour, input.value));
   });
 
   document.querySelectorAll(".reset-theme-colours-btn").forEach((button) =>
@@ -1397,6 +1451,7 @@ document.addEventListener("DOMContentLoaded", () =>
   {
     if (!elements.appearanceMenu || elements.appearanceMenu.classList.contains("hidden")) return;
     if (elements.appearanceMenu.contains(e.target) || elements.appearanceMenuBtn?.contains(e.target)) return;
+    if (document.querySelector(".team-colour-input.jscolor-active")) return;
 
     closeAppearanceMenu();
   });

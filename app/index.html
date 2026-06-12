@@ -15,6 +15,7 @@
     href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800;900&family=Outfit:wght@300;400;600;700;800;900&display=swap"
     rel="stylesheet" />
   <link rel="stylesheet" href="css/style.css" />
+  <script src="js/jscolor.min.js"></script>
   <script type="module" src="js/script.js"></script>
   <link rel="icon" type="image/svg+xml" href="media/img/favicon.svg">
 </head>
@@ -57,11 +58,15 @@
         </div>
         <label class="colour-field">
           <span>Team A</span>
-          <input type="color" class="team-colour-input" data-team-colour="A" aria-label="Team A colour" />
+          <input type="text" class="team-colour-input" data-team-colour="A" aria-label="Team A colour"
+            aria-haspopup="dialog" inputmode="none" autocomplete="off" autocapitalize="off" spellcheck="false"
+            readonly />
         </label>
         <label class="colour-field">
           <span>Team B</span>
-          <input type="color" class="team-colour-input" data-team-colour="B" aria-label="Team B colour" />
+          <input type="text" class="team-colour-input" data-team-colour="B" aria-label="Team B colour"
+            aria-haspopup="dialog" inputmode="none" autocomplete="off" autocapitalize="off" spellcheck="false"
+            readonly />
         </label>
         <button type="button" class="reset-theme-colours-btn">Reset colours</button>
       </div>
@@ -139,11 +144,15 @@
           <div class="colour-grid">
             <label class="colour-field">
               <span>Team A</span>
-              <input type="color" class="team-colour-input" data-team-colour="A" aria-label="Team A colour" />
+              <input type="text" class="team-colour-input" data-team-colour="A" aria-label="Team A colour"
+                aria-haspopup="dialog" inputmode="none" autocomplete="off" autocapitalize="off" spellcheck="false"
+                readonly />
             </label>
             <label class="colour-field">
               <span>Team B</span>
-              <input type="color" class="team-colour-input" data-team-colour="B" aria-label="Team B colour" />
+              <input type="text" class="team-colour-input" data-team-colour="B" aria-label="Team B colour"
+                aria-haspopup="dialog" inputmode="none" autocomplete="off" autocapitalize="off" spellcheck="false"
+                readonly />
             </label>
           </div>
           <button type="button" class="reset-theme-colours-btn">Reset colours</button>
