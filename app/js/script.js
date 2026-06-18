@@ -167,7 +167,7 @@ document.addEventListener("DOMContentLoaded", () =>
 
   let isLightMode = localStorage.getItem("theme") === "light";
   let isWavesEnabled = localStorage.getItem("waves") !== "false";
-  let teamColours = loadStoredTeamColours();
+  let teamColoursByTheme = loadStoredTeamColours();
 
   // =====================================================
   // THEME FUNCTIONS
@@ -204,9 +204,12 @@ document.addEventListener("DOMContentLoaded", () =>
     return isLightMode ? "light" : "dark";
   }
 
-  function getDefaultTeamColours()
+  function createEmptyTeamColourState()
   {
-    return DEFAULT_TEAM_COLOURS[getCurrentThemeName()];
+    return {
+      dark: null,
+      light: null
+    };
   }
 
   function loadStoredTeamColours()
@@ -214,17 +217,36 @@ document.addEventListener("DOMContentLoaded", () =>
     try
     {
       const stored = JSON.parse(localStorage.getItem(TEAM_COLOUR_STORAGE_KEY) || "null");
-      if (!stored) return null;
+      if (!stored) return createEmptyTeamColourState();
 
-      const A = normalizeHexColour(stored.A);
-      const B = normalizeHexColour(stored.B);
-      return A && B ? { A, B } : null;
+      const legacyColours = normalizeTeamColourPair(stored);
+      if (legacyColours)
+      {
+        return {
+          dark: { ...legacyColours },
+          light: { ...legacyColours }
+        };
+      }
+
+      return {
+        dark: normalizeTeamColourPair(stored.dark),
+        light: normalizeTeamColourPair(stored.light)
+      };
     }
     catch (err)
     {
       console.warn("Could not load team colours:", err);
-      return null;
+      return createEmptyTeamColourState();
     }
+  }
+
+  function normalizeTeamColourPair(value)
+  {
+    if (!value || typeof value !== "object") return null;
+
+    const A = normalizeHexColour(value.A);
+    const B = normalizeHexColour(value.B);
+    return A && B ? { A, B } : null;
   }
 
   function normalizeHexColour(value)
@@ -237,15 +259,34 @@ document.addEventListener("DOMContentLoaded", () =>
 
   function getActiveTeamColours()
   {
-    return teamColours || getDefaultTeamColours();
+    return getTeamColoursForTheme(getCurrentThemeName());
+  }
+
+  function getTeamColoursForTheme(theme)
+  {
+    return teamColoursByTheme[theme] || DEFAULT_TEAM_COLOURS[theme];
+  }
+
+  function saveStoredTeamColours()
+  {
+    if (!teamColoursByTheme.dark && !teamColoursByTheme.light)
+    {
+      localStorage.removeItem(TEAM_COLOUR_STORAGE_KEY);
+      return;
+    }
+
+    localStorage.setItem(TEAM_COLOUR_STORAGE_KEY, JSON.stringify(teamColoursByTheme));
   }
 
   function applyTeamColours()
   {
-    if (teamColours)
+    const activeTheme = getCurrentThemeName();
+    const customColours = teamColoursByTheme[activeTheme];
+
+    if (customColours)
     {
-      document.body.style.setProperty("--teamAcolour", teamColours.A);
-      document.body.style.setProperty("--teamBcolour", teamColours.B);
+      document.body.style.setProperty("--teamAcolour", customColours.A);
+      document.body.style.setProperty("--teamBcolour", customColours.B);
       return;
     }
 
@@ -258,12 +299,14 @@ document.addEventListener("DOMContentLoaded", () =>
     const normalizedColour = normalizeHexColour(colour);
     if (!normalizedColour || !["A", "B"].includes(team)) return;
 
-    teamColours = {
-      ...getActiveTeamColours(),
+    const activeTheme = getCurrentThemeName();
+
+    teamColoursByTheme[activeTheme] = {
+      ...getTeamColoursForTheme(activeTheme),
       [team]: normalizedColour
     };
 
-    localStorage.setItem(TEAM_COLOUR_STORAGE_KEY, JSON.stringify(teamColours));
+    saveStoredTeamColours();
     applyTeamColours();
     syncAppearanceControls();
   }
@@ -308,11 +351,13 @@ document.addEventListener("DOMContentLoaded", () =>
 
   function resetTeamColours()
   {
-    teamColours = null;
-    localStorage.removeItem(TEAM_COLOUR_STORAGE_KEY);
+    const activeTheme = getCurrentThemeName();
+
+    teamColoursByTheme[activeTheme] = null;
+    saveStoredTeamColours();
     applyTeamColours();
     syncAppearanceControls();
-    showToast("Team colours reset", TOAST_TYPES.INFO);
+    showToast(`${activeTheme[0].toUpperCase()}${activeTheme.slice(1)} colours reset`, TOAST_TYPES.INFO);
   }
 
   function syncAppearanceControls()
@@ -322,7 +367,13 @@ document.addEventListener("DOMContentLoaded", () =>
 
     document.querySelectorAll("[data-theme-choice]").forEach((button) =>
     {
+      const choiceTheme = button.dataset.themeChoice;
+      const previewColours = getTeamColoursForTheme(choiceTheme);
       const isActive = button.dataset.themeChoice === activeTheme;
+
+      button.style.setProperty("--theme-choice-a", previewColours.A);
+      button.style.setProperty("--theme-choice-b", previewColours.B);
+      button.style.setProperty("--theme-choice-text", getReadableTextColour(previewColours));
       button.classList.toggle("active", isActive);
       button.setAttribute("aria-pressed", isActive ? "true" : "false");
     });
@@ -331,6 +382,22 @@ document.addEventListener("DOMContentLoaded", () =>
     {
       updateTeamColourInput(input, activeColours[input.dataset.teamColour]);
     });
+  }
+
+  function getReadableTextColour(colours)
+  {
+    const averageLuminance = (getRelativeLuminance(colours.A) + getRelativeLuminance(colours.B)) / 2;
+    return averageLuminance > 0.45 ? "#000000" : "#ffffff";
+  }
+
+  function getRelativeLuminance(hexColour)
+  {
+    const channels = [1, 3, 5].map((start) => parseInt(hexColour.slice(start, start + 2), 16) / 255);
+    const linearChannels = channels.map((channel) =>
+      channel <= 0.03928 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4
+    );
+
+    return (linearChannels[0] * 0.2126) + (linearChannels[1] * 0.7152) + (linearChannels[2] * 0.0722);
   }
 
   function openAppearanceMenu()
