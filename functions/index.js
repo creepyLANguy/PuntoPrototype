@@ -1,7 +1,13 @@
 const admin = require("firebase-admin");
 const { onDocumentCreated } = require("firebase-functions/v2/firestore");
 const { onCall } = require("firebase-functions/v2/https");
-const { defaultScore, applyEvent } = require("./scoringEngine");
+const {
+    DEFAULT_SCORING_OPTIONS,
+    defaultScore,
+    normalizeScoringOptions,
+    applyEvent,
+    replayEvents
+} = require("./scoringEngine");
 const { onRequest } = require("firebase-functions/v2/https");
 
 const REGION = "africa-south1";
@@ -45,6 +51,26 @@ async function appendCourtEvent(courtId, event)
     return ref.id;
 }
 
+function eventFromDoc(docSnap)
+{
+    return {
+        id: docSnap.id,
+        ...docSnap.data()
+    };
+}
+
+async function recalculateScoreForCourt(courtId, scoringOptions)
+{
+    const eventsSnap = await db.collection(`courts/${courtId}/events`)
+        .orderBy("createdAt", "asc")
+        .get();
+
+    const events = [];
+    eventsSnap.forEach(docSnap => events.push(eventFromDoc(docSnap)));
+
+    return replayEvents(events, scoringOptions);
+}
+
 // -----------------------------
 // Event processor
 // -----------------------------
@@ -74,8 +100,13 @@ exports.onEventCreate = onDocumentCreated(
         {
             await db.runTransaction(async (tx) =>
             {
-                const scoreSnap = await tx.get(scoreRef);
-                let score = scoreSnap.exists ? scoreSnap.data() : defaultScore();
+                const courtRef = db.doc(`courts/${courtId}`);
+                const [scoreSnap, courtSnap] = await Promise.all([
+                    tx.get(scoreRef),
+                    tx.get(courtRef)
+                ]);
+                const scoringOptions = normalizeScoringOptions(courtSnap.data()?.scoringOptions);
+                let score = scoreSnap.exists ? scoreSnap.data() : defaultScore(scoringOptions);
 
                 if (score.lastEventId === eventId) 
                 {
@@ -113,7 +144,7 @@ exports.onEventCreate = onDocumentCreated(
                     await deleteBatch.commit();
 
                     tx.set(scoreRef, {
-                        ...defaultScore(),
+                        ...defaultScore(scoringOptions),
                         lastEventId: eventId,
                         updatedAt: admin.firestore.FieldValue.serverTimestamp()
                     });
@@ -122,7 +153,7 @@ exports.onEventCreate = onDocumentCreated(
                 }
 
                 // Normal point/undo event
-                const updatedScore = applyEvent(score, newEvent);
+                const updatedScore = applyEvent(score, { id: eventId, ...newEvent }, scoringOptions);
 
                 console.log(`Updating score for ${courtId}. New points: A:${updatedScore.A.points}, B:${updatedScore.B.points}`);
 
@@ -173,7 +204,9 @@ exports.resetCourt = onCall(
         await deleteBatch.commit();
 
         // Reset score
-        await db.doc(`courts/${courtId}/score/current`).set(defaultScore());
+        const courtSnap = await db.doc(`courts/${courtId}`).get();
+        const scoringOptions = normalizeScoringOptions(courtSnap.data()?.scoringOptions);
+        await db.doc(`courts/${courtId}/score/current`).set(defaultScore(scoringOptions));
 
         // Optional password reset for deep reset
         if (deepReset && newPassword)
@@ -182,6 +215,43 @@ exports.resetCourt = onCall(
         }
 
         return { success: true, archivedId: archiveId };
+    }
+);
+
+// -----------------------------
+// Update scoring options and replay events
+// -----------------------------
+exports.updateScoringOptions = onCall(
+    { region: REGION },
+    async (request) =>
+    {
+        const { courtId, scoringOptions } = request.data;
+        if (!courtId) throw new Error("Missing courtId");
+
+        const normalizedOptions = normalizeScoringOptions(scoringOptions || DEFAULT_SCORING_OPTIONS);
+        const courtRef = db.doc(`courts/${courtId}`);
+        const courtSnap = await courtRef.get();
+
+        if (!courtSnap.exists)
+        {
+            throw new Error("Court not found");
+        }
+
+        const recalculatedScore = await recalculateScoreForCourt(courtId, normalizedOptions);
+
+        const batch = db.batch();
+        batch.set(courtRef, { scoringOptions: normalizedOptions }, { merge: true });
+        batch.set(db.doc(`courts/${courtId}/score/current`), {
+            ...recalculatedScore,
+            updatedAt: admin.firestore.FieldValue.serverTimestamp()
+        });
+        await batch.commit();
+
+        return {
+            success: true,
+            scoringOptions: normalizedOptions,
+            score: recalculatedScore
+        };
     }
 );
 
@@ -198,65 +268,17 @@ exports.getDetailedScore = onCall(
         const eventsRef = db.collection(`courts/${courtId}/events`).orderBy("createdAt", "asc");
         const eventsSnap = await eventsRef.get();
 
-        let score = defaultScore();
-        let setScores = [];
-        let currentSetGames = { A: 0, B: 0 };
-
-        eventsSnap.forEach(docSnap =>
-        {
-            const event = docSnap.data();
-            const oldSetsA = score.A.sets;
-            const oldSetsB = score.B.sets;
-
-            if (event.eventType === "UNDO")
-            {
-                if (score.history && score.history.length > 0)
-                {
-                    // Restore state BEFORE the point was added
-                    score = { ...score.history.pop(), history: score.history };
-
-                    // If we just undid a point that had finished a set, remove that set result
-                    if (score.A.sets < oldSetsA || score.B.sets < oldSetsB)
-                    {
-                        setScores.pop();
-                    }
-                }
-            }
-            else if (event.eventType === "RESET")
-            {
-                score = defaultScore();
-                setScores = [];
-            }
-            else
-            {
-                // Normal point awarding
-                score = applyEvent(score, event);
-
-                // Did this point finish a set?
-                if (score.A.sets > oldSetsA || score.B.sets > oldSetsB)
-                {
-                    // The set-winning game score is in the state BEFORE the reset (which happened in applyEvent)
-                    // We can find it in the history item we just pushed
-                    const lastHistory = score.history[score.history.length - 1];
-                    if (lastHistory)
-                    {
-                        setScores.push({
-                            A: lastHistory.A.games + (score.A.sets > oldSetsA ? 1 : 0),
-                            B: lastHistory.B.games + (score.B.sets > oldSetsB ? 1 : 0)
-                        });
-                    }
-                }
-            }
-
-            // Always keep currentSetGames in sync with the current (replayed) score
-            currentSetGames.A = score.A.games;
-            currentSetGames.B = score.B.games;
-        });
+        const courtSnap = await db.doc(`courts/${courtId}`).get();
+        const scoringOptions = normalizeScoringOptions(courtSnap.data()?.scoringOptions);
+        const events = [];
+        eventsSnap.forEach(docSnap => events.push(eventFromDoc(docSnap)));
+        const score = replayEvents(events, scoringOptions);
 
         return {
-            sets: setScores,
-            currentGames: currentSetGames,
-            points: { A: score.A.points, B: score.B.points }
+            sets: score.completedSets || [],
+            currentGames: { A: score.A.games, B: score.B.games },
+            points: { A: score.A.points, B: score.B.points },
+            scoringOptions
         };
     }
 );

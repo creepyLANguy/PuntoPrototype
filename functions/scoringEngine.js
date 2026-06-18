@@ -1,34 +1,110 @@
-function defaultScore()
+const SCORING_MODES = new Set(["standard", "straight", "tiebreakTen"]);
+const DEUCE_MODES = new Set(["standard", "golden", "silver"]);
+const TIEBREAK_MODES = new Set(["off", "sixAllSeven", "sixAllTen"]);
+
+const DEFAULT_SCORING_OPTIONS = {
+  scoringMode: "standard",
+  deuceMode: "standard",
+  tiebreakMode: "sixAllSeven"
+};
+
+function clone(value)
+{
+  return structuredClone(value);
+}
+
+function normalizeScoringOptions(options = {})
+{
+  const normalized = {
+    ...DEFAULT_SCORING_OPTIONS,
+    ...(options || {})
+  };
+
+  if (!SCORING_MODES.has(normalized.scoringMode))
+  {
+    normalized.scoringMode = DEFAULT_SCORING_OPTIONS.scoringMode;
+  }
+
+  if (!DEUCE_MODES.has(normalized.deuceMode))
+  {
+    normalized.deuceMode = DEFAULT_SCORING_OPTIONS.deuceMode;
+  }
+
+  if (!TIEBREAK_MODES.has(normalized.tiebreakMode))
+  {
+    normalized.tiebreakMode = DEFAULT_SCORING_OPTIONS.tiebreakMode;
+  }
+
+  return normalized;
+}
+
+function defaultScore(scoringOptions = DEFAULT_SCORING_OPTIONS)
 {
   return {
-    A: { points: 0, games: 0, sets: 0 },
-    B: { points: 0, games: 0, sets: 0 },
+    A: { points: 0, games: 0, sets: 0, totalPoints: 0 },
+    B: { points: 0, games: 0, sets: 0, totalPoints: 0 },
     lastPointTeam: null,
     lastGameTeam: null,
     lastSetTeam: null,
     lastEventId: null,
+    inTiebreak: false,
+    deuceCycles: 0,
+    matchComplete: false,
+    completedSets: [],
+    scoringOptions: normalizeScoringOptions(scoringOptions),
     history: []
   };
 }
 
-function applyEvent(score, event)
+function normalizeScore(score, scoringOptions)
 {
-  if (event.eventType === "UNDO")
+  const normalizedOptions = normalizeScoringOptions(scoringOptions || score?.scoringOptions);
+  const base = defaultScore(normalizedOptions);
+  const merged = {
+    ...base,
+    ...(score || {}),
+    A: { ...base.A, ...(score?.A || {}) },
+    B: { ...base.B, ...(score?.B || {}) },
+    scoringOptions: normalizedOptions
+  };
+
+  if (!Array.isArray(merged.history)) merged.history = [];
+  if (!Array.isArray(merged.completedSets)) merged.completedSets = [];
+  if (typeof merged.inTiebreak !== "boolean") merged.inTiebreak = false;
+  if (typeof merged.deuceCycles !== "number") merged.deuceCycles = 0;
+  if (typeof merged.matchComplete !== "boolean") merged.matchComplete = false;
+
+  return merged;
+}
+
+function applyEvent(score, event, scoringOptions)
+{
+  const options = normalizeScoringOptions(scoringOptions || score?.scoringOptions);
+
+  if (event.eventType === "RESET")
   {
-    return undo(score);
+    return {
+      ...defaultScore(options),
+      lastEventId: event.id || event.eventId || null
+    };
   }
 
-  const newScore = structuredClone(score);
+  if (event.eventType === "UNDO")
+  {
+    return undo(score, options);
+  }
 
-  // Ensure history exists (for legacy score documents)
-  if (!newScore.history) newScore.history = [];
+  const newScore = normalizeScore(clone(score), options);
 
-  // Before applying a point, save the current state (excluding history) to history
-  const snapshot = structuredClone(newScore);
+  if (newScore.matchComplete && options.scoringMode === "tiebreakTen")
+  {
+    return newScore;
+  }
+
+  const snapshot = clone(newScore);
   delete snapshot.history;
   newScore.history.push(snapshot);
 
-  // Keep history reasonable (e.g., last 'n'' events)
   if (newScore.history.length > 100)
   {
     newScore.history.shift();
@@ -37,85 +113,206 @@ function applyEvent(score, event)
   switch (event.eventType)
   {
     case "POINT_TEAM_A":
-      awardPoint(newScore, "A", "B");
+      awardPoint(newScore, "A", "B", options);
       break;
 
     case "POINT_TEAM_B":
-      awardPoint(newScore, "B", "A");
+      awardPoint(newScore, "B", "A", options);
       break;
 
     default:
-      // If it's not a point event, we shouldn't have added to history
       newScore.history.pop();
       break;
   }
 
+  if (event.id || event.eventId)
+  {
+    newScore.lastEventId = event.id || event.eventId;
+  }
+
   return newScore;
 }
 
-function undo(score)
+function undo(score, scoringOptions)
 {
   if (!score.history || score.history.length === 0)
   {
     console.log("Nothing to undo");
-    return score;
+    return normalizeScore(score, scoringOptions);
   }
 
-  const newScore = score.history.pop();
-  // Ensure the history itself is preserved in the new state
-  newScore.history = score.history;
-  return newScore;
+  const history = [...score.history];
+  const newScore = history.pop();
+  newScore.history = history;
+  newScore.scoringOptions = normalizeScoringOptions(scoringOptions || score.scoringOptions);
+  return normalizeScore(newScore, newScore.scoringOptions);
 }
 
-function awardPoint(score, scoringTeam, otherTeam)
+function awardPoint(score, scoringTeam, otherTeam, options)
+{
+  score.lastPointTeam = scoringTeam;
+  score[scoringTeam].totalPoints = (score[scoringTeam].totalPoints || 0) + 1;
+
+  if (options.scoringMode === "straight")
+  {
+    score[scoringTeam].points++;
+    return;
+  }
+
+  if (options.scoringMode === "tiebreakTen")
+  {
+    awardTiebreakPoint(score, scoringTeam, otherTeam, 10, true);
+    return;
+  }
+
+  if (isTiebreakGame(score, options))
+  {
+    score.inTiebreak = true;
+    awardTiebreakPoint(score, scoringTeam, otherTeam, getTiebreakTarget(options), false);
+    return;
+  }
+
+  awardRegularGamePoint(score, scoringTeam, otherTeam, options);
+}
+
+function awardRegularGamePoint(score, scoringTeam, otherTeam, options)
 {
   const team = score[scoringTeam];
   const opponent = score[otherTeam];
 
-  score.lastPointTeam = scoringTeam;
-
-  function winGame()
-  {
-    team.games++;
-    score.lastGameTeam = scoringTeam;
-
-    team.points = 0;
-    opponent.points = 0;
-
-    if (team.games >= 6 && (team.games - opponent.games) >= 2)
-    {
-      team.sets++;
-      score.lastSetTeam = scoringTeam;
-      team.games = 0;
-      opponent.games = 0;
-    }
-  }
-
-  // POINT LOGIC: 0 -> 15 (1) -> 30 (2) -> 40 (3) -> Ad (4)
   if (team.points < 3)
   {
     team.points++;
     return;
   }
 
-  // Deuce logic
+  if (team.points >= 3 && opponent.points < 3)
+  {
+    winGame(score, scoringTeam, otherTeam);
+    return;
+  }
+
   if (team.points === 3 && opponent.points === 3)
   {
-    team.points = 4; // advantage
+    if (options.deuceMode === "golden" || (options.deuceMode === "silver" && score.deuceCycles > 0))
+    {
+      winGame(score, scoringTeam, otherTeam);
+      return;
+    }
+
+    team.points = 4;
+    return;
+  }
+
+  if (team.points === 4)
+  {
+    winGame(score, scoringTeam, otherTeam);
     return;
   }
 
   if (opponent.points === 4)
   {
-    opponent.points = 3; // back to deuce
-    return;
+    opponent.points = 3;
+    if (options.deuceMode === "silver")
+    {
+      score.deuceCycles++;
+    }
   }
+}
 
-  // Win game from 40 or Ad
-  winGame();
+function winGame(score, scoringTeam, otherTeam)
+{
+  const team = score[scoringTeam];
+  const opponent = score[otherTeam];
+
+  team.games++;
+  score.lastGameTeam = scoringTeam;
+  score.deuceCycles = 0;
+
+  team.points = 0;
+  opponent.points = 0;
+
+  if (team.games >= 6 && (team.games - opponent.games) >= 2)
+  {
+    completeSet(score, scoringTeam);
+  }
+}
+
+function completeSet(score, scoringTeam, tiebreakPoints = null)
+{
+  score.completedSets.push({
+    A: score.A.games,
+    B: score.B.games,
+    tiebreakPoints
+  });
+
+  score[scoringTeam].sets++;
+  score.lastSetTeam = scoringTeam;
+  score.A.games = 0;
+  score.B.games = 0;
+  score.A.points = 0;
+  score.B.points = 0;
+  score.deuceCycles = 0;
+  score.inTiebreak = false;
+}
+
+function isTiebreakGame(score, options)
+{
+  if (options.tiebreakMode === "off") return false;
+  return score.inTiebreak || (score.A.games === 6 && score.B.games === 6);
+}
+
+function getTiebreakTarget(options)
+{
+  return options.tiebreakMode === "sixAllTen" ? 10 : 7;
+}
+
+function awardTiebreakPoint(score, scoringTeam, otherTeam, target, isMatchTiebreak)
+{
+  const team = score[scoringTeam];
+  const opponent = score[otherTeam];
+
+  team.points++;
+
+  if (team.points >= target && (team.points - opponent.points) >= 2)
+  {
+    score.lastGameTeam = scoringTeam;
+
+    if (isMatchTiebreak)
+    {
+      score[scoringTeam].sets = 1;
+      score.lastSetTeam = scoringTeam;
+      score.matchComplete = true;
+      return;
+    }
+
+    const tiebreakPoints = {
+      A: score.A.points,
+      B: score.B.points
+    };
+
+    team.games++;
+    completeSet(score, scoringTeam, tiebreakPoints);
+  }
+}
+
+function replayEvents(events, scoringOptions = DEFAULT_SCORING_OPTIONS)
+{
+  const options = normalizeScoringOptions(scoringOptions);
+  let score = defaultScore(options);
+
+  events.forEach((event) =>
+  {
+    score = applyEvent(score, event, options);
+  });
+
+  return score;
 }
 
 module.exports = {
+  DEFAULT_SCORING_OPTIONS,
   defaultScore,
-  applyEvent
+  normalizeScoringOptions,
+  applyEvent,
+  replayEvents
 };
