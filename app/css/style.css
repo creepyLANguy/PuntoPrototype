@@ -952,6 +952,8 @@ body.light-mode .reset-actions button:hover {
   border-radius: 24px;
   text-align: center;
   width: clamp(300px, 90vw, 520px);
+  max-height: calc(100svh - 32px);
+  overflow-y: auto;
   color: white;
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
   position: relative;
@@ -1055,16 +1057,72 @@ body.light-mode .settings-box .close-btn:hover {
   border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 
+.settings-scoring {
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  text-align: left;
+}
+
 body.light-mode .settings-appearance {
   border-top-color: rgba(0, 0, 0, 0.1);
 }
 
+body.light-mode .settings-scoring {
+  border-top-color: rgba(0, 0, 0, 0.1);
+}
+
 .settings-appearance h3,
+.settings-scoring h3,
 .appearance-menu-title {
   margin: 0 0 12px;
   font-size: 0.95rem;
   font-weight: 800;
   letter-spacing: 0;
+}
+
+.scoring-field {
+  display: grid;
+  grid-template-columns: minmax(80px, 0.45fr) minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.scoring-field span {
+  font-size: 0.85rem;
+  font-weight: 700;
+  opacity: 0.78;
+}
+
+.scoring-field select {
+  min-width: 0;
+  min-height: 40px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.08);
+  color: inherit;
+  font: inherit;
+  font-weight: 700;
+  padding: 0 10px;
+}
+
+body.light-mode .scoring-field select {
+  border-color: rgba(0, 0, 0, 0.18);
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.scoring-field select:disabled {
+  opacity: 0.5;
+}
+
+.scoring-status {
+  min-height: 18px;
+  margin-top: 10px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  opacity: 0.75;
+  text-align: right;
 }
 
 .theme-choice-group {
@@ -2668,6 +2726,30 @@ body.light-mode .scoreboard-logo {
   font-weight: bold;
   font-size: clamp(14px, 2.5vmin, 18px);
   z-index: 9999;
+}
+
+.score-format-badge {
+  position: absolute;
+  top: clamp(12px, 2vmin, 20px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 25;
+  max-width: min(82vw, 520px);
+  padding: 7px 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  color: var(--white);
+  font-size: clamp(0.72rem, 1.6vmin, 0.95rem);
+  font-weight: 800;
+  text-align: center;
+  backdrop-filter: blur(10px);
+  pointer-events: none;
+}
+
+body.light-mode .score-format-badge {
+  background: rgba(0, 0, 0, 0.06);
+  border-color: rgba(0, 0, 0, 0.18);
 }
 
 .hidden {

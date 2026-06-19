@@ -1,7 +1,7 @@
 const admin = require("firebase-admin");
 const { onDocumentCreated } = require("firebase-functions/v2/firestore");
 const { onCall } = require("firebase-functions/v2/https");
-const { defaultScore, applyEvent } = require("./scoringEngine");
+const { defaultScore, applyEvent, normalizeScoringOptions, replayEvents } = require("./scoringEngine");
 const { onRequest } = require("firebase-functions/v2/https");
 
 const REGION = "africa-south1";
@@ -74,10 +74,13 @@ exports.onEventCreate = onDocumentCreated(
         {
             await db.runTransaction(async (tx) =>
             {
+                const courtRef = db.doc(`courts/${courtId}`);
+                const courtSnap = await tx.get(courtRef);
+                const courtData = courtSnap.exists ? courtSnap.data() : {};
                 const scoreSnap = await tx.get(scoreRef);
-                let score = scoreSnap.exists ? scoreSnap.data() : defaultScore();
+                let score = scoreSnap.exists ? scoreSnap.data() : defaultScore(courtData.scoringOptions);
 
-                if (score.lastEventId === eventId) 
+                if (score.lastEventId === eventId)
                 {
                     console.log(`Event ${eventId} already processed, skipping.`);
                     return;
@@ -89,7 +92,6 @@ exports.onEventCreate = onDocumentCreated(
                 if (newEvent.eventType === "RESET")
                 {
                     console.log(`Resetting court ${courtId}`);
-                    // ... (rest of reset logic remains same)
                     const eventsRef = db.collection(`courts/${courtId}/events`);
                     const eventsSnap = await eventsRef.get();
                     const archiveId = new Date().toISOString();
@@ -113,7 +115,7 @@ exports.onEventCreate = onDocumentCreated(
                     await deleteBatch.commit();
 
                     tx.set(scoreRef, {
-                        ...defaultScore(),
+                        ...defaultScore(score.scoringOptions || courtData.scoringOptions),
                         lastEventId: eventId,
                         updatedAt: admin.firestore.FieldValue.serverTimestamp()
                     });
@@ -122,7 +124,7 @@ exports.onEventCreate = onDocumentCreated(
                 }
 
                 // Normal point/undo event
-                const updatedScore = applyEvent(score, newEvent);
+                const updatedScore = applyEvent(score, newEvent, score.scoringOptions || courtData.scoringOptions);
 
                 console.log(`Updating score for ${courtId}. New points: A:${updatedScore.A.points}, B:${updatedScore.B.points}`);
 
@@ -149,6 +151,10 @@ exports.resetCourt = onCall(
         const { courtId, deepReset, newPassword } = request.data;
         if (!courtId) throw new Error("Missing courtId");
 
+        const courtDoc = await db.doc(`courts/${courtId}`).get();
+        const courtData = courtDoc.exists ? courtDoc.data() : {};
+        const scoringOptions = courtData.scoringOptions || undefined;
+
         const eventsRef = db.collection(`courts/${courtId}/events`);
         const eventsSnap = await eventsRef.get();
         const archiveId = new Date().toISOString();
@@ -173,7 +179,7 @@ exports.resetCourt = onCall(
         await deleteBatch.commit();
 
         // Reset score
-        await db.doc(`courts/${courtId}/score/current`).set(defaultScore());
+        await db.doc(`courts/${courtId}/score/current`).set(defaultScore(scoringOptions));
 
         // Optional password reset for deep reset
         if (deepReset && newPassword)
@@ -182,6 +188,44 @@ exports.resetCourt = onCall(
         }
 
         return { success: true, archivedId: archiveId };
+    }
+);
+
+// -----------------------------
+// Update scoring options and replay events
+// -----------------------------
+exports.updateScoringOptions = onCall(
+    { region: REGION },
+    async (request) =>
+    {
+        const { courtId, scoringOptions } = request.data;
+        if (!courtId) throw new Error("Missing courtId");
+        if (!scoringOptions) throw new Error("Missing scoringOptions");
+
+        const courtRef = db.doc(`courts/${courtId}`);
+        const scoreRef = db.doc(`courts/${courtId}/score/current`);
+        const eventsRef = db.collection(`courts/${courtId}/events`).orderBy("createdAt", "asc");
+
+        const courtSnap = await courtRef.get();
+        if (!courtSnap.exists)
+        {
+            throw new Error("Court not found");
+        }
+
+        const normalizedOptions = normalizeScoringOptions(scoringOptions);
+        await courtRef.update({ scoringOptions: normalizedOptions });
+
+        const eventsSnap = await eventsRef.get();
+        const events = eventsSnap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+        const replayedScore = replayEvents(events, normalizedOptions);
+
+        await scoreRef.set({
+            ...replayedScore,
+            lastEventId: replayedScore.lastEventId || null,
+            updatedAt: admin.firestore.FieldValue.serverTimestamp()
+        });
+
+        return { success: true, scoringOptions: normalizedOptions };
     }
 );
 
@@ -195,10 +239,14 @@ exports.getDetailedScore = onCall(
         const { courtId } = request.data;
         if (!courtId) throw new Error("Missing courtId");
 
+        const courtSnap = await db.doc(`courts/${courtId}`).get();
+        const courtData = courtSnap.exists ? courtSnap.data() : {};
+        const scoringOptions = courtData.scoringOptions || undefined;
+
         const eventsRef = db.collection(`courts/${courtId}/events`).orderBy("createdAt", "asc");
         const eventsSnap = await eventsRef.get();
 
-        let score = defaultScore();
+        let score = defaultScore(scoringOptions);
         let setScores = [];
         let currentSetGames = { A: 0, B: 0 };
 
@@ -224,13 +272,13 @@ exports.getDetailedScore = onCall(
             }
             else if (event.eventType === "RESET")
             {
-                score = defaultScore();
+                score = defaultScore(scoringOptions);
                 setScores = [];
             }
             else
             {
                 // Normal point awarding
-                score = applyEvent(score, event);
+                score = applyEvent(score, event, scoringOptions);
 
                 // Did this point finish a set?
                 if (score.A.sets > oldSetsA || score.B.sets > oldSetsB)

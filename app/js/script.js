@@ -45,6 +45,21 @@ document.addEventListener("DOMContentLoaded", () =>
   // =====================================================
 
   const POINTS = [0, 15, 30, 40];
+  const DEFAULT_SCORING_OPTIONS = {
+    scoringMode: "standard",
+    deuceMode: "standard",
+    tiebreakMode: "sixAllSeven"
+  };
+  const SCORING_LABELS = {
+    standard: "Games and sets",
+    straight: "Straight points",
+    tiebreakTen: "Tiebreak Tens",
+    golden: "Golden point",
+    silver: "Silver deuce",
+    sixAllSeven: "7-point tiebreak",
+    sixAllTen: "10-point tiebreak",
+    off: "No tiebreak"
+  };
   const COOLDOWN_MS = 3000;
   const BACK_HOLD_MS = 550;
   const UNDO_HOLD_MS = 550;
@@ -106,12 +121,50 @@ document.addEventListener("DOMContentLoaded", () =>
   // =====================================================
 
   const defaultScore = () => ({
-    A: { points: 0, games: 0, sets: 0 },
-    B: { points: 0, games: 0, sets: 0 },
+    A: { points: 0, games: 0, sets: 0, totalPoints: 0 },
+    B: { points: 0, games: 0, sets: 0, totalPoints: 0 },
     lastPointTeam: null,
     lastGameTeam: null,
-    lastSetTeam: null
+    lastSetTeam: null,
+    inTiebreak: false,
+    matchComplete: false,
+    scoringOptions: { ...DEFAULT_SCORING_OPTIONS }
   });
+
+  function normalizeScoringOptions(options = {})
+  {
+    const normalized = {
+      ...DEFAULT_SCORING_OPTIONS,
+      ...(options || {})
+    };
+
+    if (!["standard", "straight", "tiebreakTen"].includes(normalized.scoringMode))
+    {
+      normalized.scoringMode = DEFAULT_SCORING_OPTIONS.scoringMode;
+    }
+
+    if (!["standard", "golden", "silver"].includes(normalized.deuceMode))
+    {
+      normalized.deuceMode = DEFAULT_SCORING_OPTIONS.deuceMode;
+    }
+
+    if (!["off", "sixAllSeven", "sixAllTen"].includes(normalized.tiebreakMode))
+    {
+      normalized.tiebreakMode = DEFAULT_SCORING_OPTIONS.tiebreakMode;
+    }
+
+    return normalized;
+  }
+
+  function areScoringOptionsEqual(a, b)
+  {
+    const left = normalizeScoringOptions(a);
+    const right = normalizeScoringOptions(b);
+
+    return left.scoringMode === right.scoringMode &&
+      left.deuceMode === right.deuceMode &&
+      left.tiebreakMode === right.tiebreakMode;
+  }
 
   let score = defaultScore();
   let lastKnownSets = { A: 0, B: 0 };
@@ -122,6 +175,7 @@ document.addEventListener("DOMContentLoaded", () =>
   let currentCourtId = null;
   let currentCourtPassword = null;
   let currentCourtStatus = null;
+  let currentScoringOptions = { ...DEFAULT_SCORING_OPTIONS };
 
   let isSpectating = false;
 
@@ -598,6 +652,11 @@ document.addEventListener("DOMContentLoaded", () =>
     settingsBtn: $("settingsBtn"),
     settingsModal: $("settingsModal"),
     closeSettingsBtn: $("closeSettingsBtn"),
+    scoringModeSelect: $("scoringModeSelect"),
+    deuceModeSelect: $("deuceModeSelect"),
+    tiebreakModeSelect: $("tiebreakModeSelect"),
+    scoringStatus: $("scoringStatus"),
+    scoreFormatBadge: $("scoreFormatBadge"),
 
     sep1: $("sep1"),
     sep2: $("sep2"),
@@ -1662,7 +1721,8 @@ document.addEventListener("DOMContentLoaded", () =>
       password: courtPass,
       createdAt: serverTimestamp(),
       teamNames: { A: "Team A", B: "Team B" },
-      status: elements.courtStatus.value
+      status: elements.courtStatus.value,
+      scoringOptions: { ...DEFAULT_SCORING_OPTIONS }
     });
 
     // Create initial score document
@@ -1771,6 +1831,8 @@ document.addEventListener("DOMContentLoaded", () =>
     const data = snap.data();
     currentCourtPassword = data.password;
     currentCourtStatus = data.status;
+    currentScoringOptions = normalizeScoringOptions(data.scoringOptions);
+    syncScoringControls();
 
     if (muted)
     {
@@ -1841,6 +1903,8 @@ document.addEventListener("DOMContentLoaded", () =>
     currentCourtId = null;
     currentCourtPassword = null;
     currentCourtStatus = null;
+    currentScoringOptions = { ...DEFAULT_SCORING_OPTIONS };
+    syncScoringControls();
 
     document.body.classList.remove("scoreboard-active");
     if (elements.appearanceMenuBtn) elements.appearanceMenuBtn.style.display = "";
@@ -1891,6 +1955,7 @@ document.addEventListener("DOMContentLoaded", () =>
     if (elements.sep1) elements.sep1.style.display = "none";
     if (elements.sep2) elements.sep2.style.display = "none";
 
+    syncScoringControls();
     showSpectatorBadges();
   }
 
@@ -1910,6 +1975,7 @@ document.addEventListener("DOMContentLoaded", () =>
     if (elements.sep1) elements.sep1.style.display = "";
     if (elements.sep2) elements.sep2.style.display = "";
 
+    syncScoringControls();
     removeSpectatorBadges();
   }
 
@@ -2021,6 +2087,94 @@ document.addEventListener("DOMContentLoaded", () =>
   // SCORE LOGIC
   // =====================================================
 
+  let isSyncingScoringControls = false;
+
+  function syncScoringControls()
+  {
+    isSyncingScoringControls = true;
+    const options = normalizeScoringOptions(currentScoringOptions);
+
+    if (elements.scoringModeSelect) elements.scoringModeSelect.value = options.scoringMode;
+    if (elements.deuceModeSelect) elements.deuceModeSelect.value = options.deuceMode;
+    if (elements.tiebreakModeSelect) elements.tiebreakModeSelect.value = options.tiebreakMode;
+
+    const standardFormat = options.scoringMode === "standard";
+    [elements.scoringModeSelect, elements.deuceModeSelect, elements.tiebreakModeSelect].forEach(select =>
+    {
+      if (select) select.disabled = isSpectating || !currentCourtId;
+    });
+
+    if (elements.deuceModeSelect) elements.deuceModeSelect.disabled = isSpectating || !currentCourtId || !standardFormat;
+    if (elements.tiebreakModeSelect) elements.tiebreakModeSelect.disabled = isSpectating || !currentCourtId || !standardFormat;
+
+    if (elements.scoringStatus)
+    {
+      if (isSpectating)
+      {
+        elements.scoringStatus.textContent = "Spectating";
+      }
+      else if (options.scoringMode === "straight")
+      {
+        elements.scoringStatus.textContent = "Running point totals";
+      }
+      else if (options.scoringMode === "tiebreakTen")
+      {
+        elements.scoringStatus.textContent = "Single 10-point tiebreak";
+      }
+      else
+      {
+        elements.scoringStatus.textContent = `${SCORING_LABELS[options.deuceMode]}, ${SCORING_LABELS[options.tiebreakMode]}`;
+      }
+    }
+
+    isSyncingScoringControls = false;
+  }
+
+  function readScoringControls()
+  {
+    const scoringMode = elements.scoringModeSelect?.value || DEFAULT_SCORING_OPTIONS.scoringMode;
+    const standardFormat = scoringMode === "standard";
+
+    return normalizeScoringOptions({
+      scoringMode,
+      deuceMode: standardFormat ? elements.deuceModeSelect?.value : DEFAULT_SCORING_OPTIONS.deuceMode,
+      tiebreakMode: standardFormat ? elements.tiebreakModeSelect?.value : DEFAULT_SCORING_OPTIONS.tiebreakMode
+    });
+  }
+
+  async function saveScoringOptionsFromSettings()
+  {
+    if (isSyncingScoringControls || isSpectating || !currentCourtId) return;
+
+    const nextOptions = readScoringControls();
+    if (areScoringOptionsEqual(nextOptions, currentScoringOptions)) return;
+
+    try
+    {
+      if (elements.scoringStatus) elements.scoringStatus.textContent = "Recalculating...";
+      [elements.scoringModeSelect, elements.deuceModeSelect, elements.tiebreakModeSelect].forEach(select =>
+      {
+        if (select) select.disabled = true;
+      });
+
+      const updateScoringOptions = httpsCallable(functions, "updateScoringOptions");
+      await updateScoringOptions({
+        courtId: currentCourtId,
+        scoringOptions: nextOptions
+      });
+
+      currentScoringOptions = nextOptions;
+      syncScoringControls();
+      showToast("Scoring updated", TOAST_TYPES.SUCCESS);
+    }
+    catch (err)
+    {
+      console.error("Scoring update failed:", err);
+      showToast("Scoring update failed: " + (err.message || "Unknown error"), TOAST_TYPES.ERROR);
+      syncScoringControls();
+    }
+  }
+
   async function addPoint(addpointevent)
   {
     await addDoc(
@@ -2069,10 +2223,49 @@ document.addEventListener("DOMContentLoaded", () =>
   // UI
   // =====================================================
 
-  const pointLabel = (p) => p === 4 ? "Ad" : POINTS[p];
+  function usesNumericPoints()
+  {
+    const options = normalizeScoringOptions(score.scoringOptions || currentScoringOptions);
+    return options.scoringMode === "straight" ||
+      options.scoringMode === "tiebreakTen" ||
+      score.inTiebreak;
+  }
+
+  function pointLabel(p)
+  {
+    if (usesNumericPoints()) return p;
+    return p === 4 ? "Ad" : (POINTS[p] ?? p);
+  }
+
+  function updateScoreFormatBadge()
+  {
+    if (!elements.scoreFormatBadge) return;
+
+    const options = normalizeScoringOptions(score.scoringOptions || currentScoringOptions);
+    const total = (score.A.totalPoints || 0) + (score.B.totalPoints || 0);
+    let label = "";
+
+    if (options.scoringMode === "straight")
+    {
+      label = `Straight points - total ${total}`;
+    }
+    else if (options.scoringMode === "tiebreakTen")
+    {
+      label = "Tiebreak Tens - first to 10, win by 2";
+    }
+    else if (score.inTiebreak)
+    {
+      label = options.tiebreakMode === "sixAllTen" ? "10-point tiebreak" : "7-point tiebreak";
+    }
+
+    elements.scoreFormatBadge.textContent = label;
+    elements.scoreFormatBadge.classList.toggle("hidden", !label);
+  }
 
   function updateUI()
   {
+    updateScoreFormatBadge();
+
     ["A", "B"].forEach(team =>
     {
       renderSets(team);
@@ -2649,6 +2842,7 @@ document.addEventListener("DOMContentLoaded", () =>
   elements.settingsBtn.addEventListener("click", () =>
   {
     updateFullscreenButton();
+    syncScoringControls();
     elements.settingsModal.classList.remove("hidden");
   });
 
@@ -2661,6 +2855,12 @@ document.addEventListener("DOMContentLoaded", () =>
   {
     if (e.target === elements.settingsModal)
       elements.settingsModal.classList.add("hidden");
+  });
+
+  [elements.scoringModeSelect, elements.deuceModeSelect, elements.tiebreakModeSelect].forEach(select =>
+  {
+    if (!select) return;
+    select.addEventListener("change", saveScoringOptionsFromSettings);
   });
 
   // Make option tiles clickable
@@ -3049,6 +3249,15 @@ document.addEventListener("DOMContentLoaded", () =>
 
       // Ensure local state tracks newest password
       currentCourtPassword = data.password;
+      currentCourtStatus = data.status;
+
+      const nextScoringOptions = normalizeScoringOptions(data.scoringOptions);
+      if (!areScoringOptionsEqual(nextScoringOptions, currentScoringOptions))
+      {
+        currentScoringOptions = nextScoringOptions;
+        syncScoringControls();
+        updateScoreFormatBadge();
+      }
 
       // Update UI title (Rename propagation for the display name)
       showCourtTitle(data.name || snap.id);

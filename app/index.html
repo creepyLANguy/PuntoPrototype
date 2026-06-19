@@ -135,6 +135,34 @@
             <span>Swap sides</span>
           </div>
         </div>
+        <div class="settings-scoring">
+          <h3>Scoring</h3>
+          <label class="scoring-field">
+            <span>Format</span>
+            <select id="scoringModeSelect">
+              <option value="standard">Games and sets</option>
+              <option value="straight">Straight points</option>
+              <option value="tiebreakTen">Tiebreak Tens</option>
+            </select>
+          </label>
+          <label class="scoring-field">
+            <span>Deuce</span>
+            <select id="deuceModeSelect">
+              <option value="standard">Advantage</option>
+              <option value="golden">Golden point</option>
+              <option value="silver">Silver deuce</option>
+            </select>
+          </label>
+          <label class="scoring-field">
+            <span>Tiebreak</span>
+            <select id="tiebreakModeSelect">
+              <option value="sixAllSeven">7-point at 6-all</option>
+              <option value="sixAllTen">10-point at 6-all</option>
+              <option value="off">Off</option>
+            </select>
+          </label>
+          <div id="scoringStatus" class="scoring-status"></div>
+        </div>
         <div class="settings-appearance">
           <h3>Appearance</h3>
           <div class="theme-choice-group" aria-label="Theme">
@@ -514,6 +542,8 @@
             <div id="nfcCooldownBanner" class="nfc-cooldown hidden">
               Scan locked — <span id="nfcCountdown">3</span>s
             </div>
+
+            <div id="scoreFormatBadge" class="score-format-badge hidden"></div>
 
             <!-- TEAM A -->
             <div class="team team-a" id="teamA">
