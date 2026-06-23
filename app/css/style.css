@@ -417,6 +417,67 @@ body.light-mode .menu-btn:hover {
 }
 
 /* =======================================================
+   STRAIGHT POINTS TOTAL — sits in the gap between the two team cards
+======================================================= */
+
+.straight-total {
+  /* Fits in the flex gap without shrinking the team cards */
+  flex: 0 0 auto;
+  align-self: center;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(4px, 1vmin, 10px);
+
+  padding: clamp(4px, 0.8vmin, 8px) clamp(12px, 2vmin, 24px);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  backdrop-filter: blur(10px);
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.straight-total-label {
+  font-size: clamp(0.55rem, 1.4vmin, 0.8rem);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  opacity: 0.6;
+  color: var(--white);
+}
+
+.straight-total-value {
+  font-size: clamp(0.75rem, 2vmin, 1.15rem);
+  font-weight: 800;
+  color: var(--white);
+  min-width: 1.5ch;
+  text-align: center;
+}
+
+body.light-mode .straight-total {
+  background: rgba(0, 0, 0, 0.06);
+  border-color: rgba(0, 0, 0, 0.14);
+}
+
+body.light-mode .straight-total-label,
+body.light-mode .straight-total-value {
+  color: var(--ink, #111);
+}
+
+@media (orientation: landscape) {
+  .straight-total {
+    /* In landscape the scoreboard is flex-row, so the pill sits vertically */
+    flex-direction: column;
+    gap: clamp(2px, 0.6vmin, 6px);
+    padding: clamp(8px, 1.5vmin, 16px) clamp(6px, 1vmin, 10px);
+    border-radius: clamp(8px, 1.5vmin, 16px);
+  }
+}
+
+/* =======================================================
    TEAM CARD
 ======================================================= */
 
@@ -700,47 +761,33 @@ body.light-mode .game-dot.filled {
 }
 
 /* =======================================================
-   CRITICAL POINT INDICATOR
+   CRITICAL POINT INDICATOR — pulsating score glow
 ======================================================= */
 
+/* The old .critical-badge is kept hidden; the effect is now on .points */
 .critical-badge {
-  position: absolute;
-  top: clamp(2px, 1.5vmin, 16px);
-  left: 50%;
-  transform: translateX(-50%);
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid currentColor;
-  color: inherit;
-  padding: clamp(2px, 0.6vmin, 6px) clamp(8px, 1.8vmin, 18px);
-  border-radius: clamp(6px, 1vmin, 12px);
-  font-size: clamp(0.5rem, 3.5cqi, 1.1rem);
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  pointer-events: none;
-  white-space: nowrap;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
-  backdrop-filter: blur(10px);
-  transition: opacity 0.3s ease, transform 0.3s ease;
-  z-index: 5;
-  animation: subtle-pulse 2s infinite ease-in-out;
+  display: none !important;
 }
 
-body.light-mode .critical-badge {
-  background: rgba(0, 0, 0, 0.05);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+/* When it's a critical point, the score number pulses with a colour glow */
+.points.is-critical {
+  animation: critical-pulse 2.5s infinite ease-in-out;
 }
 
-@keyframes subtle-pulse {
-  0%, 100% {
-    opacity: 0.95;
-    transform: translateX(-50%) scale(1);
+@keyframes critical-pulse {
+
+  0%,
+  100% {
+    text-shadow:
+      0 0 0px currentColor;
   }
+
   50% {
-    opacity: 1;
-    transform: translateX(-50%) scale(1.03);
+    text-shadow:
+      0 0 20px currentColor;
   }
 }
+
 
 /* =======================================================
    TEAM TAP ZONE
@@ -2772,27 +2819,11 @@ body.light-mode .scoreboard-logo {
 }
 
 .score-format-badge {
-  position: absolute;
-  top: clamp(12px, 2vmin, 20px);
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 25;
-  max-width: min(82vw, 520px);
-  padding: 7px 12px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.12);
-  border: 1px solid rgba(255, 255, 255, 0.24);
-  color: var(--white);
-  font-size: clamp(0.72rem, 1.6vmin, 0.95rem);
-  font-weight: 800;
-  text-align: center;
-  backdrop-filter: blur(10px);
-  pointer-events: none;
+  display: none;
 }
 
 body.light-mode .score-format-badge {
-  background: rgba(0, 0, 0, 0.06);
-  border-color: rgba(0, 0, 0, 0.18);
+  display: none;
 }
 
 .hidden {

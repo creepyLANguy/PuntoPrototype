@@ -662,6 +662,8 @@ document.addEventListener("DOMContentLoaded", () =>
     tiebreakModeSelect: $("tiebreakModeSelect"),
     scoringStatus: $("scoringStatus"),
     scoreFormatBadge: $("scoreFormatBadge"),
+    straightPointsTotal: $("straightPointsTotal"),
+    straightTotalValue: $("straightTotalValue"),
 
     sep1: $("sep1"),
     sep2: $("sep2"),
@@ -2392,6 +2394,18 @@ document.addEventListener("DOMContentLoaded", () =>
     document.querySelectorAll(".sets-row").forEach(el => el.classList.toggle("hidden", !standardFormat));
     document.querySelectorAll(".games-row").forEach(el => el.classList.toggle("hidden", !standardFormat));
 
+    // Update straight-points total display
+    const isStraight = options.scoringMode === "straight";
+    if (elements.straightPointsTotal)
+    {
+      elements.straightPointsTotal.classList.toggle("hidden", !isStraight);
+      if (isStraight && elements.straightTotalValue)
+      {
+        const total = (score.A.totalPoints || 0) + (score.B.totalPoints || 0);
+        elements.straightTotalValue.textContent = total;
+      }
+    }
+
     // Update critical point indicators
     const criticalStatus = getCriticalPointStatus(score);
 
@@ -2404,21 +2418,13 @@ document.addEventListener("DOMContentLoaded", () =>
       document.querySelector(`#team${team} .indicator`).style.opacity =
         score.lastPointTeam === team ? 1 : 0;
 
-      // Render critical badge
+      // Toggle critical pulsate on the score display
+      const statusVal = criticalStatus[team];
+      elements.points[team].classList.toggle("is-critical", !!statusVal);
+
+      // Keep the badge element hidden (replaced by pulsate effect)
       const badge = elements.critical[team];
-      if (badge)
-      {
-        const statusVal = criticalStatus[team];
-        if (statusVal)
-        {
-          badge.textContent = `${statusVal} Point`;
-          badge.classList.remove("hidden");
-        }
-        else
-        {
-          badge.classList.add("hidden");
-        }
-      }
+      if (badge) badge.classList.add("hidden");
     });
 
     // Detect Set Win - Only check if session is baseline-synced
