@@ -700,6 +700,49 @@ body.light-mode .game-dot.filled {
 }
 
 /* =======================================================
+   CRITICAL POINT INDICATOR
+======================================================= */
+
+.critical-badge {
+  position: absolute;
+  top: clamp(2px, 1.5vmin, 16px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid currentColor;
+  color: inherit;
+  padding: clamp(2px, 0.6vmin, 6px) clamp(8px, 1.8vmin, 18px);
+  border-radius: clamp(6px, 1vmin, 12px);
+  font-size: clamp(0.5rem, 3.5cqi, 1.1rem);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  pointer-events: none;
+  white-space: nowrap;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(10px);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  z-index: 5;
+  animation: subtle-pulse 2s infinite ease-in-out;
+}
+
+body.light-mode .critical-badge {
+  background: rgba(0, 0, 0, 0.05);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+@keyframes subtle-pulse {
+  0%, 100% {
+    opacity: 0.95;
+    transform: translateX(-50%) scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: translateX(-50%) scale(1.03);
+  }
+}
+
+/* =======================================================
    TEAM TAP ZONE
 ======================================================= */
 
