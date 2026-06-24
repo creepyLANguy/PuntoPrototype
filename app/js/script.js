@@ -2454,6 +2454,8 @@ document.addEventListener("DOMContentLoaded", () =>
     const nameA = $("teamA").querySelector(".name-text").textContent;
     const nameB = $("teamB").querySelector(".name-text").textContent;
 
+    overlay.querySelector(".set-win-label").textContent = normalizeScoringOptions(score.scoringOptions || currentScoringOptions).scoringMode === "tiebreakTen" ? "WINS THE MATCH!" : "WINS THE SET!";
+
     teamNameEl.textContent = team === "A" ? nameA : nameB;
     overlay.dataset.winner = team;
 
