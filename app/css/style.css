@@ -4494,3 +4494,140 @@ pointer-events: none;
 .toast.warning {
   border: 1px solid #f1c40f;
 }
+
+/* ============================================================
+   BUG FIX PATCH — apply these rules to app/css/style.css
+   ============================================================
+
+   HOW TO APPLY
+   ------------
+   Option A (recommended): paste the two rule-blocks below into
+   style.css, replacing the existing matching selectors.
+
+   Option B: append this entire file to style.css — the later
+   rules will override the earlier ones via cascade.
+   ============================================================ */
+
+
+/* ============================================================
+   FIX 1 — Scoring-mode <select> dropdowns: dark-mode legibility
+   Problem: browser renders the native <option> list with a
+   white/system background even when the <select> itself is
+   styled dark, making the text invisible in dark mode.
+   Solution: give the <select> explicit dark colours so the
+   native popup inherits them on most browsers, and add a
+   light-mode override that restores contrast there too.
+   ============================================================ */
+
+.scoring-field select {
+  min-width: 0;
+  min-height: 40px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 10px;
+  /* Dark-mode defaults — explicit background + text colour so
+     the native option list is readable on Chrome/Edge/Firefox */
+  background: #1a1a1a;
+  color: #ffffff;
+  font: inherit;
+  font-weight: 700;
+  padding: 0 10px;
+  /* colour-scheme tells the browser to render native controls
+     (scrollbars, dropdowns) in dark mode */
+  color-scheme: dark;
+}
+
+/* Override for light mode */
+body.light-mode .scoring-field select {
+  border-color: rgba(0, 0, 0, 0.18);
+  background: #ffffff;
+  color: #111111;
+  color-scheme: light;
+}
+
+.scoring-field select:disabled {
+  opacity: 0.5;
+}
+
+
+/* ============================================================
+   FIX 2 — Straight-points total pill: landscape / desktop layout
+   Problem: in landscape the scoreboard is flex-row, so the
+   .straight-total pill sits inside that row between the two
+   .team cards — but it stretches to full height and doesn't
+   look like a linking bridge.
+   Solution: in landscape (and implicitly on wide desktop where
+   the scoreboard is also row-direction) reposition the pill so
+   it:
+     • does NOT participate in the main flex-row as a normal
+       sibling (we take it out with absolute positioning)
+     • sits centred vertically over the gap between the two cards
+     • is horizontally centred on the viewport (or the .app
+       container, which is the same thing here)
+   ============================================================ */
+
+/* Base (portrait) styles are unchanged — keep them as-is.
+   The rules below only activate in landscape / wide screens. */
+
+@media (orientation: landscape) {
+
+  /* The scoreboard is position: relative already via .scoreboard,
+     so we can use absolute positioning inside it. */
+  .scoreboard {
+    position: relative;
+    /* ensure this exists */
+  }
+
+  .straight-total {
+    /* Pull out of flex flow */
+    position: absolute;
+    /* Centre horizontally across the full scoreboard width */
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+
+    /* Stack vertically so label sits above value */
+    flex-direction: column;
+    gap: clamp(2px, 0.5vmin, 6px);
+
+    /* Compact pill dimensions for the bridge look */
+    padding: clamp(10px, 1.8vmin, 18px) clamp(8px, 1.2vmin, 14px);
+    border-radius: clamp(10px, 1.8vmin, 18px);
+
+    /* Slightly more opaque so it reads clearly over the cards */
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+
+    /* Sit on top of both cards */
+    z-index: 10;
+
+    /* Prevent the pill from becoming too wide */
+    width: max-content;
+    max-width: clamp(60px, 10vmin, 100px);
+    text-align: center;
+  }
+
+  .straight-total-label {
+    font-size: clamp(0.45rem, 1.1vmin, 0.7rem);
+    letter-spacing: 0.12em;
+  }
+
+  .straight-total-value {
+    font-size: clamp(0.9rem, 2.4vmin, 1.4rem);
+    font-weight: 900;
+  }
+}
+
+/* Light-mode tint for the bridging pill in landscape */
+@media (orientation: landscape) {
+  body.light-mode .straight-total {
+    background: rgba(0, 0, 0, 0.07);
+    border-color: rgba(0, 0, 0, 0.18);
+  }
+
+  body.light-mode .straight-total-label,
+  body.light-mode .straight-total-value {
+    color: var(--ink, #111);
+  }
+}
