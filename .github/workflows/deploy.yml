@@ -7,14 +7,14 @@ jobs:
   build_and_deploy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      
+      - uses: actions/checkout@v5
+
       - name: Create firebase-config.js
         env:
           FIREBASE_CONFIG: ${{ secrets.FIREBASE_CONFIG_JS_CONTENT }}
         run: |
           echo "$FIREBASE_CONFIG" > app/js/firebase-config.js
-          
+
       - uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
