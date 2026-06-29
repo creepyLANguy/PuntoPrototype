@@ -626,6 +626,11 @@ document.addEventListener("DOMContentLoaded", () =>
       B: $("gamesB")
     },
 
+    critical: {
+      A: $("criticalA"),
+      B: $("criticalB")
+    },
+
     cooldown: $("cooldown"),
     controls: $("controls"),
     resetModal: $("resetModal"),
@@ -657,6 +662,8 @@ document.addEventListener("DOMContentLoaded", () =>
     tiebreakModeSelect: $("tiebreakModeSelect"),
     scoringStatus: $("scoringStatus"),
     scoreFormatBadge: $("scoreFormatBadge"),
+    straightPointsTotal: $("straightPointsTotal"),
+    straightTotalValue: $("straightTotalValue"),
 
     sep1: $("sep1"),
     sep2: $("sep2"),
@@ -2237,6 +2244,120 @@ document.addEventListener("DOMContentLoaded", () =>
     return p === 4 ? "Ad" : (POINTS[p] ?? p);
   }
 
+  function getCriticalPointStatus(currentScore)
+  {
+    const status = {
+      A: null, // "Game", "Set", "Match", or null
+      B: null
+    };
+
+    if (!currentScore || currentScore.matchComplete)
+    {
+      return status;
+    }
+
+    const options = normalizeScoringOptions(currentScore.scoringOptions || currentScoringOptions);
+
+    if (options.scoringMode === "straight")
+    {
+      return status;
+    }
+
+    const teams = ["A", "B"];
+
+    for (const team of teams)
+    {
+      const opponent = team === "A" ? "B" : "A";
+
+      if (options.scoringMode === "tiebreakTen")
+      {
+        const target = 10;
+        const pts = currentScore[team].points;
+        const oppPts = currentScore[opponent].points;
+        if (pts >= target - 1 && (pts - oppPts) >= 1)
+        {
+          status[team] = "Match";
+        }
+        continue;
+      }
+
+      // Standard scoring mode
+      if (currentScore.inTiebreak || (currentScore.A.games === 6 && currentScore.B.games === 6))
+      {
+        const target = options.tiebreakMode === "sixAllTen" ? 10 : 7;
+        const pts = currentScore[team].points;
+        const oppPts = currentScore[opponent].points;
+
+        if (pts >= target - 1 && (pts - oppPts) >= 1)
+        {
+          if (currentScore[team].sets === 1)
+          {
+            status[team] = "Match";
+          }
+          else
+          {
+            status[team] = "Set";
+          }
+        }
+      }
+      else
+      {
+        const pts = currentScore[team].points;
+        const oppPts = currentScore[opponent].points;
+        const gms = currentScore[team].games;
+        const oppGms = currentScore[opponent].games;
+
+        let winsGame = false;
+        if (pts === 3 && oppPts < 3)
+        {
+          winsGame = true;
+        }
+        else if (pts === 3 && oppPts === 3)
+        {
+          if (options.deuceMode === "golden" || (options.deuceMode === "silver" && currentScore.deuceCycles > 0))
+          {
+            winsGame = true;
+          }
+        }
+        else if (pts === 4)
+        {
+          winsGame = true;
+        }
+
+        if (winsGame)
+        {
+          let winsSet = false;
+          if (gms === 5 && oppGms <= 4)
+          {
+            winsSet = true;
+          }
+          else if (gms === 6 && oppGms === 5)
+          {
+            winsSet = true;
+          }
+
+          if (winsSet)
+          {
+            if (currentScore[team].sets === 1)
+            {
+              status[team] = "Match";
+            }
+            else
+            {
+              status[team] = "Set";
+            }
+          }
+          else
+          {
+            status[team] = "Game";
+          }
+        }
+      }
+    }
+
+    return status;
+  }
+
   function updateScoreFormatBadge()
   {
     if (!elements.scoreFormatBadge) return;
@@ -2266,6 +2387,28 @@ document.addEventListener("DOMContentLoaded", () =>
   {
     updateScoreFormatBadge();
 
+    const options = normalizeScoringOptions(score.scoringOptions || currentScoringOptions);
+    const standardFormat = options.scoringMode === "standard";
+
+    // Hide sets/games if not applicable
+    document.querySelectorAll(".sets-row").forEach(el => el.classList.toggle("hidden", !standardFormat));
+    document.querySelectorAll(".games-row").forEach(el => el.classList.toggle("hidden", !standardFormat));
+
+    // Update straight-points total display
+    const isStraight = options.scoringMode === "straight";
+    if (elements.straightPointsTotal)
+    {
+      elements.straightPointsTotal.classList.toggle("hidden", !isStraight);
+      if (isStraight && elements.straightTotalValue)
+      {
+        const total = (score.A.totalPoints || 0) + (score.B.totalPoints || 0);
+        elements.straightTotalValue.textContent = total;
+      }
+    }
+
+    // Update critical point indicators
+    const criticalStatus = getCriticalPointStatus(score);
+
     ["A", "B"].forEach(team =>
     {
       renderSets(team);
@@ -2274,6 +2417,14 @@ document.addEventListener("DOMContentLoaded", () =>
 
       document.querySelector(`#team${team} .indicator`).style.opacity =
         score.lastPointTeam === team ? 1 : 0;
+
+      // Toggle critical pulsate on the score display
+      const statusVal = criticalStatus[team];
+      elements.points[team].classList.toggle("is-critical", !!statusVal);
+
+      // Keep the badge element hidden (replaced by pulsate effect)
+      const badge = elements.critical[team];
+      if (badge) badge.classList.add("hidden");
     });
 
     // Detect Set Win - Only check if session is baseline-synced
@@ -2302,6 +2453,8 @@ document.addEventListener("DOMContentLoaded", () =>
     const teamNameEl = overlay.querySelector(".set-win-team-name");
     const nameA = $("teamA").querySelector(".name-text").textContent;
     const nameB = $("teamB").querySelector(".name-text").textContent;
+
+    overlay.querySelector(".set-win-label").textContent = normalizeScoringOptions(score.scoringOptions || currentScoringOptions).scoringMode === "tiebreakTen" ? "WINS THE MATCH!" : "WINS THE SET!";
 
     teamNameEl.textContent = team === "A" ? nameA : nameB;
     overlay.dataset.winner = team;
@@ -2893,18 +3046,31 @@ document.addEventListener("DOMContentLoaded", () =>
   async function showMatchDetails()
   {
     elements.detailsModal.classList.remove("hidden");
-    elements.detailsLoading.classList.remove("hidden");
 
-    // Clear table
-    const headRow = elements.dmHead.querySelector("tr");
-    headRow.innerHTML = "";
-    elements.dmBody.innerHTML = "";
+    const options = normalizeScoringOptions(score.scoringOptions || currentScoringOptions);
+    const standardFormat = options.scoringMode === "standard";
+
+    document.querySelector(".dm-overall").classList.toggle("hidden", !standardFormat);
+    document.querySelector(".dm-table-wrap").classList.toggle("hidden", !standardFormat);
 
     // Populate team names immediately
     const nameA = $("teamA").querySelector(".name-text").textContent;
     const nameB = $("teamB").querySelector(".name-text").textContent;
     elements.detailsTeamAName.textContent = nameA;
     elements.detailsTeamBName.textContent = nameB;
+
+    if (!standardFormat)
+    {
+      elements.detailsLoading.classList.add("hidden");
+      return;
+    }
+
+    elements.detailsLoading.classList.remove("hidden");
+
+    // Clear table
+    const headRow = elements.dmHead.querySelector("tr");
+    headRow.innerHTML = "";
+    elements.dmBody.innerHTML = "";
 
     try
     {
