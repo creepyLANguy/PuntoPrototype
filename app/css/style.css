@@ -4631,3 +4631,43 @@ body.light-mode .scoring-field select {
     color: var(--ink, #111);
   }
 }
+
+@media (orientation: landscape) {
+  
+  .straight-total-label {
+    display: none !important;
+  }
+
+  .straight-total {
+    aspect-ratio: 1 / 1;
+    border-radius: 50% !important;
+
+    border: clamp(2px, 0.6cqi, 5px) solid transparent !important;
+    background-image:
+      linear-gradient(var(--waveBg), var(--waveBg)),
+      linear-gradient(to right, var(--teamAcolour), var(--teamBcolour)) !important;
+    background-clip: padding-box, border-box !important;
+    background-origin: padding-box, border-box !important;
+
+    padding: 0 !important;
+    width: clamp(45px, 9vmin, 75px);
+    height: clamp(45px, 9vmin, 75px);
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .straight-total-value {
+    font-size: clamp(0.9rem, 2.5vmin, 1.5rem);
+  }
+}
+
+.straight-total 
+{
+  background: var(--waveBg);
+}
+
+body.light-mode .straight-total {
+    background-color: var(--waveBg);
+}
