@@ -31,4 +31,11 @@ jobs:
       - run: firebase --version
 
       - name: Deploy Hosting
-        run: firebase deploy --only hosting --project punto-8888 --token "${{ secrets.FIREBASE_TOKEN }}"  
+        run: |
+          firebase deploy --only hosting --project punto-8888 --token "${{ secrets.FIREBASE_TOKEN }}" || {
+            if grep -q "current active version" firebase-debug.log; then
+              echo "Hosting already up to date."
+              exit 0
+            fi
+            exit 1
+          }
