@@ -4665,3 +4665,7 @@ body.light-mode .scoring-field select {
 body.light-mode .straight-total {
     background-color: var(--waveBg);
 }
+
+.straight-total.hidden {
+  display: none;
+}
