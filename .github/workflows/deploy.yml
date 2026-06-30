@@ -32,10 +32,21 @@ jobs:
 
       - name: Deploy Hosting
         run: |
-          firebase deploy --only hosting --project punto-8888 --token "${{ secrets.FIREBASE_TOKEN }}" || {
-            if grep -q "current active version" firebase-debug.log; then
-              echo "Hosting already up to date."
-              exit 0
-            fi
-            exit 1
-          }
+          set +e
+          output=$(firebase deploy --only hosting --project punto-8888 --token "${{ secrets.FIREBASE_TOKEN }}" 2>&1)
+          exit_code=$?
+
+          echo "$output"
+
+          if [ $exit_code -eq 0 ]; then
+            echo "Deployment successful"
+            exit 0
+          fi
+
+          if echo "$output" | grep -q "current active version"; then
+            echo "Already deployed - no changes to hosting"
+            exit 0
+          fi
+
+          echo "Deployment failed"
+          exit $exit_code
