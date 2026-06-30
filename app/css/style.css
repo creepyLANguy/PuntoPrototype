@@ -4651,6 +4651,12 @@ body.light-mode .scoring-field select {
     align-items: center;
     justify-content: center;
   }
+  
+  .scoreboard.swapped .straight-total {
+    background-image:
+      linear-gradient(var(--waveBg), var(--waveBg)),
+      linear-gradient(to left, var(--teamAcolour), var(--teamBcolour)) !important;
+  }
 
   .straight-total-value {
     font-size: clamp(0.9rem, 2.5vmin, 1.5rem);
