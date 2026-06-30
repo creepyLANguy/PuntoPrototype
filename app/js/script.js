@@ -3081,14 +3081,11 @@ document.addEventListener("DOMContentLoaded", () =>
     {
       const getDetailedScore = httpsCallable(functions, "getDetailedScore");
       const result = await getDetailedScore({ courtId: currentCourtId });
-
-      // Destructure data parameters safely
       const { sets, currentGames, points, mode, matchComplete } = result.data;
 
-      // Fallback matrix calculations for robust set count representation
+      // Unpack sets safely or calculate fallbacks from historical sets tracking if missing
       let setsA = result.data.setsA;
       let setsB = result.data.setsB;
-
       if (setsA === undefined || setsB === undefined)
       {
         setsA = 0;
@@ -3114,21 +3111,21 @@ document.addEventListener("DOMContentLoaded", () =>
 
       if (isStraight || isTiebreakTen)
       {
-        // Hide the set-by-set breakdown table since single-frame frames are absolute points
+        // 1) Hide the breakdown table completely since individual sets are not tracked
         if (dmTableWrap) dmTableWrap.classList.add("hidden");
         if (dmOverall) dmOverall.classList.add("large-points-mode");
 
-        // Set the absolute points directly onto the large displays
+        // 2) Populate the main sets labels with the cumulative match points
         elements.detailsSetsA.textContent = (points && points.A !== undefined) ? points.A : 0;
         elements.detailsSetsB.textContent = (points && points.B !== undefined) ? points.B : 0;
       }
       else
       {
-        // Standard Format - ensure table is displayed and point sizing matches sets tracker
+        // Normal Scoring Mode remains perfectly untouched
         if (dmTableWrap) dmTableWrap.classList.remove("hidden");
         if (dmOverall) dmOverall.classList.remove("large-points-mode");
 
-        // Repopulate overall set scores (e.g., 0 - 2) dynamically above the table log
+        // Populate overall set scores normally (e.g. 0 and 2)
         elements.detailsSetsA.textContent = setsA;
         elements.detailsSetsB.textContent = setsB;
 
@@ -3151,7 +3148,7 @@ document.addEventListener("DOMContentLoaded", () =>
           headRow.appendChild(mkTh(`S${i + 1}`, isCurrentSet ? "dm-current-set" : ""));
         });
 
-        // Helper to construct team score rows
+        // Helper to construct team score table rows
         const mkRow = (team, setsData) =>
         {
           const tr = document.createElement("tr");
@@ -3182,13 +3179,12 @@ document.addEventListener("DOMContentLoaded", () =>
           return tr;
         };
 
-        // Render rows reflecting the screen's visual team layout rotation
+        // Render rows adhering to the visual swapped rotation state
         if (isSwapped)
         {
           elements.dmBody.appendChild(mkRow("b", allSets));
           elements.dmBody.appendChild(mkRow("a", allSets));
-        } 
-        else
+        } else
         {
           elements.dmBody.appendChild(mkRow("a", allSets));
           elements.dmBody.appendChild(mkRow("b", allSets));
@@ -3197,7 +3193,7 @@ document.addEventListener("DOMContentLoaded", () =>
     }
     catch (err)
     {
-      console.error("Match details failed to populate correctly:", err);
+      console.error("Match details initialization error:", err);
     }
     finally
     {
