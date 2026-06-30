@@ -242,11 +242,12 @@ exports.getDetailedScore = onCall(
         const courtSnap = await db.doc(`courts/${courtId}`).get();
         const courtData = courtSnap.exists ? courtSnap.data() : {};
         const scoringOptions = courtData.scoringOptions || undefined;
+        const normalizedOptions = normalizeScoringOptions(scoringOptions);
 
         const eventsRef = db.collection(`courts/${courtId}/events`).orderBy("createdAt", "asc");
         const eventsSnap = await eventsRef.get();
 
-        let score = defaultScore(scoringOptions);
+        let score = defaultScore(normalizedOptions);
         let setScores = [];
         let currentSetGames = { A: 0, B: 0 };
 
@@ -272,26 +273,26 @@ exports.getDetailedScore = onCall(
             }
             else if (event.eventType === "RESET")
             {
-                score = defaultScore(scoringOptions);
+                score = defaultScore(normalizedOptions);
                 setScores = [];
             }
             else
             {
                 // Normal point awarding
-                score = applyEvent(score, event, scoringOptions);
+                score = applyEvent(score, event, normalizedOptions);
 
-                // Did this point finish a set?
-                if (score.A.sets > oldSetsA || score.B.sets > oldSetsB)
-                {
-                    // The set-winning game score is in the state BEFORE the reset (which happened in applyEvent)
-                    // We can find it in the history item we just pushed
-                    const lastHistory = score.history[score.history.length - 1];
-                    if (lastHistory)
+                // Did this point finish a set? (Only track this actively in standard format)
+                if (normalizedOptions.scoringMode === "standard") {
+                    if (score.A.sets > oldSetsA || score.B.sets > oldSetsB)
                     {
-                        setScores.push({
-                            A: lastHistory.A.games + (score.A.sets > oldSetsA ? 1 : 0),
-                            B: lastHistory.B.games + (score.B.sets > oldSetsB ? 1 : 0)
-                        });
+                        const lastHistory = score.history[score.history.length - 1];
+                        if (lastHistory)
+                        {
+                            setScores.push({
+                                A: lastHistory.A.games + (score.A.sets > oldSetsA ? 1 : 0),
+                                B: lastHistory.B.games + (score.B.sets > oldSetsB ? 1 : 0)
+                            });
+                        }
                     }
                 }
             }
@@ -304,7 +305,11 @@ exports.getDetailedScore = onCall(
         return {
             sets: setScores,
             currentGames: currentSetGames,
-            points: { A: score.A.points, B: score.B.points }
+            points: { A: score.A.points, B: score.B.points },
+            setsA: score.A.sets,
+            setsB: score.B.sets,
+            mode: normalizedOptions.scoringMode,
+            matchComplete: score.matchComplete
         };
     }
 );

@@ -3047,23 +3047,11 @@ document.addEventListener("DOMContentLoaded", () =>
   {
     elements.detailsModal.classList.remove("hidden");
 
-    const options = normalizeScoringOptions(score.scoringOptions || currentScoringOptions);
-    const standardFormat = options.scoringMode === "standard";
-
-    document.querySelector(".dm-overall").classList.toggle("hidden", !standardFormat);
-    document.querySelector(".dm-table-wrap").classList.toggle("hidden", !standardFormat);
-
     // Populate team names immediately
     const nameA = $("teamA").querySelector(".name-text").textContent;
     const nameB = $("teamB").querySelector(".name-text").textContent;
     elements.detailsTeamAName.textContent = nameA;
     elements.detailsTeamBName.textContent = nameB;
-
-    if (!standardFormat)
-    {
-      elements.detailsLoading.classList.add("hidden");
-      return;
-    }
 
     elements.detailsLoading.classList.remove("hidden");
 
@@ -3076,62 +3064,106 @@ document.addEventListener("DOMContentLoaded", () =>
     {
       const getDetailedScore = httpsCallable(functions, "getDetailedScore");
       const result = await getDetailedScore({ courtId: currentCourtId });
-      const { sets, currentGames } = result.data;
+      const { sets, currentGames, points, mode, setsA, setsB, matchComplete } = result.data;
 
-      // Overall set counts
-      let totalSetsA = 0, totalSetsB = 0;
-      sets.forEach(s =>
-      {
-        if (s.A > s.B) totalSetsA++;
-        else if (s.B > s.A) totalSetsB++;
-      });
-      elements.detailsSetsA.textContent = totalSetsA;
-      elements.detailsSetsB.textContent = totalSetsB;
+      const isStraight = mode === "straight";
+      const isTiebreakTen = mode === "tiebreakTen";
 
-      // Include the current (in-progress) set if any games have been played
-      const hasCurrentSet = currentGames && (currentGames.A > 0 || currentGames.B > 0);
-      const allSets = hasCurrentSet ? [...sets, currentGames] : [...sets];
+      // Always show overall container; only hide the table wrap if doing straight points
+      document.querySelector(".dm-overall").classList.remove("hidden");
+      document.querySelector(".dm-table-wrap").classList.toggle("hidden", isStraight);
 
-      // Build table header:  [marker-col] S1 S2 S3 …
-      const mkTh = (text, extraClass) => { const th = document.createElement("th"); th.textContent = text; if (extraClass) th.className = extraClass; return th; };
-      headRow.appendChild(mkTh(""));          // marker col
-      allSets.forEach((_, i) =>
-      {
-        const isCurrentSet = hasCurrentSet && i === allSets.length - 1;
-        headRow.appendChild(mkTh(`S${i + 1}`, isCurrentSet ? "dm-current-set" : ""));
-      });
+      if (isStraight) {
+        // Just render total straight points where the sets would normally be
+        elements.detailsSetsA.textContent = points.A;
+        elements.detailsSetsB.textContent = points.B;
+        
+      } else if (isTiebreakTen) {
+        // Overall match sets (e.g., 1 - 0)
+        elements.detailsSetsA.textContent = setsA;
+        elements.detailsSetsB.textContent = setsB;
 
-      // Helper: create a table row for one team
-      const mkRow = (team, setsData) =>
-      {
-        const tr = document.createElement("tr");
-        tr.className = `dm-row-${team}`;
+        // Build a single-column table showing the current Match Tiebreak score
+        const mkTh = (text, extraClass) => { const th = document.createElement("th"); th.textContent = text; if (extraClass) th.className = extraClass; return th; };
+        headRow.appendChild(mkTh(""));
+        headRow.appendChild(mkTh("MATCH", !matchComplete ? "dm-current-set" : ""));
 
-        // Marker cell
-        const markerTd = document.createElement("td");
-        markerTd.className = "dm-marker-cell";
-        const markerBar = document.createElement("span");
-        markerTd.appendChild(markerBar);
-        tr.appendChild(markerTd);
+        const mkRow = (team) => {
+          const tr = document.createElement("tr");
+          tr.className = `dm-row-${team}`;
 
-        // Score cells
-        setsData.forEach((s, i) =>
-        {
+          const markerTd = document.createElement("td");
+          markerTd.className = "dm-marker-cell";
+          markerTd.appendChild(document.createElement("span"));
+          tr.appendChild(markerTd);
+
           const td = document.createElement("td");
-          const score = team === "a" ? s.A : s.B;
-          const opponentScore = team === "a" ? s.B : s.A;
-          td.textContent = score;
-          if (score > opponentScore) td.classList.add("dm-won");
-          const isCurrentSet = hasCurrentSet && i === setsData.length - 1;
-          if (isCurrentSet) td.classList.add("dm-current-set");
+          const pts = team === "a" ? points.A : points.B;
+          const oppPts = team === "a" ? points.B : points.A;
+          td.textContent = pts;
+          
+          if (pts > oppPts && matchComplete) td.classList.add("dm-won");
+          if (!matchComplete) td.classList.add("dm-current-set");
           tr.appendChild(td);
+
+          return tr;
+        };
+
+        elements.dmBody.appendChild(mkRow("a"));
+        elements.dmBody.appendChild(mkRow("b"));
+
+      } else {
+        // Standard Format
+        elements.detailsSetsA.textContent = setsA;
+        elements.detailsSetsB.textContent = setsB;
+
+        // Include the current (in-progress) set if match is not yet complete
+        const hasCurrentSet = !matchComplete;
+        const allSets = hasCurrentSet ? [...sets, currentGames] : [...sets];
+
+        // Build table header:  [marker-col] S1 S2 S3 …
+        const mkTh = (text, extraClass) => { const th = document.createElement("th"); th.textContent = text; if (extraClass) th.className = extraClass; return th; };
+        headRow.appendChild(mkTh(""));
+        allSets.forEach((_, i) =>
+        {
+          const isCurrentSet = hasCurrentSet && i === allSets.length - 1;
+          headRow.appendChild(mkTh(`S${i + 1}`, isCurrentSet ? "dm-current-set" : ""));
         });
 
-        return tr;
-      };
+        // Helper: create a table row for one team
+        const mkRow = (team, setsData) =>
+        {
+          const tr = document.createElement("tr");
+          tr.className = `dm-row-${team}`;
 
-      elements.dmBody.appendChild(mkRow("a", allSets));
-      elements.dmBody.appendChild(mkRow("b", allSets));
+          // Marker cell
+          const markerTd = document.createElement("td");
+          markerTd.className = "dm-marker-cell";
+          markerTd.appendChild(document.createElement("span"));
+          tr.appendChild(markerTd);
+
+          // Score cells
+          setsData.forEach((s, i) =>
+          {
+            const td = document.createElement("td");
+            const teamScore = team === "a" ? s.A : s.B;
+            const opponentScore = team === "a" ? s.B : s.A;
+            td.textContent = teamScore;
+            
+            // Only bold winning sets that are fully complete
+            const isCurrentSet = hasCurrentSet && i === setsData.length - 1;
+            if (!isCurrentSet && teamScore > opponentScore) td.classList.add("dm-won");
+            if (isCurrentSet) td.classList.add("dm-current-set");
+            
+            tr.appendChild(td);
+          });
+
+          return tr;
+        };
+
+        elements.dmBody.appendChild(mkRow("a", allSets));
+        elements.dmBody.appendChild(mkRow("b", allSets));
+      }
     }
     catch (err)
     {
