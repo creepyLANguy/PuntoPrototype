@@ -3100,6 +3100,8 @@ document.addEventListener("DOMContentLoaded", () =>
         }
       }
 
+      //AL.
+      //TODO - fix issue where mode is not being returned. 
       const isStraight = mode === "straight";
       const isTiebreakTen = mode === "tiebreakTen";
       const dmTableWrap = document.querySelector(".dm-table-wrap");
@@ -3118,77 +3120,76 @@ document.addEventListener("DOMContentLoaded", () =>
         // 2) Populate the main sets labels with the cumulative match points
         elements.detailsSetsA.textContent = (points && points.A !== undefined) ? points.A : 0;
         elements.detailsSetsB.textContent = (points && points.B !== undefined) ? points.B : 0;
+        return;
       }
-      else
+      
+      // Normal Scoring Mode remains perfectly untouched
+      if (dmTableWrap) dmTableWrap.classList.remove("hidden");
+      if (dmOverall) dmOverall.classList.remove("large-points-mode");
+
+      // Populate overall set scores normally (e.g. 0 and 2)
+      elements.detailsSetsA.textContent = setsA;
+      elements.detailsSetsB.textContent = setsB;
+
+      const hasCurrentSet = !matchComplete;
+      const allSets = hasCurrentSet ? [...sets, currentGames] : [...sets];
+
+      // Build table header columns: [marker] S1 S2 S3 ...
+      const mkTh = (text, extraClass) =>
       {
-        // Normal Scoring Mode remains perfectly untouched
-        if (dmTableWrap) dmTableWrap.classList.remove("hidden");
-        if (dmOverall) dmOverall.classList.remove("large-points-mode");
+        const th = document.createElement("th");
+        th.textContent = text;
+        if (extraClass) th.className = extraClass;
+        return th;
+      };
 
-        // Populate overall set scores normally (e.g. 0 and 2)
-        elements.detailsSetsA.textContent = setsA;
-        elements.detailsSetsB.textContent = setsB;
+      headRow.appendChild(mkTh(""));
+      allSets.forEach((_, i) =>
+      {
+        const isCurrentSet = hasCurrentSet && i === allSets.length - 1;
+        headRow.appendChild(mkTh(`S${i + 1}`, isCurrentSet ? "dm-current-set" : ""));
+      });
 
-        const hasCurrentSet = !matchComplete;
-        const allSets = hasCurrentSet ? [...sets, currentGames] : [...sets];
+      // Helper to construct team score table rows
+      const mkRow = (team, setsData) =>
+      {
+        const tr = document.createElement("tr");
+        tr.className = `dm-row-${team}`;
 
-        // Build table header columns: [marker] S1 S2 S3 ...
-        const mkTh = (text, extraClass) =>
+        const markerTd = document.createElement("td");
+        markerTd.className = "dm-marker-cell";
+        markerTd.appendChild(document.createElement("span"));
+        tr.appendChild(markerTd);
+
+        setsData.forEach((s, i) =>
         {
-          const th = document.createElement("th");
-          th.textContent = text;
-          if (extraClass) th.className = extraClass;
-          return th;
-        };
+          if (s)
+          {
+            const td = document.createElement("td");
+            const teamScore = team === "a" ? s.A : s.B;
+            const opponentScore = team === "a" ? s.B : s.A;
+            td.textContent = teamScore !== undefined ? teamScore : 0;
 
-        headRow.appendChild(mkTh(""));
-        allSets.forEach((_, i) =>
-        {
-          const isCurrentSet = hasCurrentSet && i === allSets.length - 1;
-          headRow.appendChild(mkTh(`S${i + 1}`, isCurrentSet ? "dm-current-set" : ""));
+            const isCurrentSet = hasCurrentSet && i === setsData.length - 1;
+            if (!isCurrentSet && teamScore > opponentScore) td.classList.add("dm-won");
+            if (isCurrentSet) td.classList.add("dm-current-set");
+
+            tr.appendChild(td);
+          }
         });
 
-        // Helper to construct team score table rows
-        const mkRow = (team, setsData) =>
-        {
-          const tr = document.createElement("tr");
-          tr.className = `dm-row-${team}`;
+        return tr;
+      };
 
-          const markerTd = document.createElement("td");
-          markerTd.className = "dm-marker-cell";
-          markerTd.appendChild(document.createElement("span"));
-          tr.appendChild(markerTd);
-
-          setsData.forEach((s, i) =>
-          {
-            if (s)
-            {
-              const td = document.createElement("td");
-              const teamScore = team === "a" ? s.A : s.B;
-              const opponentScore = team === "a" ? s.B : s.A;
-              td.textContent = teamScore !== undefined ? teamScore : 0;
-
-              const isCurrentSet = hasCurrentSet && i === setsData.length - 1;
-              if (!isCurrentSet && teamScore > opponentScore) td.classList.add("dm-won");
-              if (isCurrentSet) td.classList.add("dm-current-set");
-
-              tr.appendChild(td);
-            }
-          });
-
-          return tr;
-        };
-
-        // Render rows adhering to the visual swapped rotation state
-        if (isSwapped)
-        {
-          elements.dmBody.appendChild(mkRow("b", allSets));
-          elements.dmBody.appendChild(mkRow("a", allSets));
-        } else
-        {
-          elements.dmBody.appendChild(mkRow("a", allSets));
-          elements.dmBody.appendChild(mkRow("b", allSets));
-        }
+      // Render rows adhering to the visual swapped rotation state
+      if (isSwapped)
+      {
+        elements.dmBody.appendChild(mkRow("b", allSets));
+        elements.dmBody.appendChild(mkRow("a", allSets));
+      } else
+      {
+        elements.dmBody.appendChild(mkRow("a", allSets));
+        elements.dmBody.appendChild(mkRow("b", allSets));
       }
     }
     catch (err)
