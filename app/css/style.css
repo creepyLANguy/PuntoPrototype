@@ -4675,3 +4675,38 @@ body.light-mode .straight-total {
 .straight-total.hidden {
   display: none;
 }
+
+/* =======================================================
+   MATCH DETAILS - SCORING MODES ADAPTATION
+======================================================= */
+
+/* Scale up typography and spacing when sets are not tracked */
+.dm-overall.large-points-mode {
+  gap: 4rem;
+  padding: 2rem 0;
+}
+
+.dm-overall.large-points-mode .dm-sets {
+  font-size: 6.5rem;
+  font-weight: 900;
+  line-height: 1;
+  margin-top: 0.5rem;
+  letter-spacing: -0.03em;
+}
+
+.dm-overall.large-points-mode .dm-team-name {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--white);
+}
+
+.dm-overall.large-points-mode .dm-vs {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: #555;
+}
+
+/* Invert visual side orientation instantly when layout is swapped */
+.dm-overall.swapped {
+  flex-direction: row-reverse;
+}

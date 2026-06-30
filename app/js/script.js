@@ -2447,6 +2447,12 @@ document.addEventListener("DOMContentLoaded", () =>
 
   function triggerSetWinAnimation(team)
   {
+    const isMenuVisible = elements.settingsModal && window.getComputedStyle(elements.settingsModal).display !== "none";
+    if (isMenuVisible)
+    {
+      return;
+    } 
+
     const overlay = elements.setWinOverlay;
     if (!overlay) return;
 
@@ -2454,15 +2460,15 @@ document.addEventListener("DOMContentLoaded", () =>
     const nameA = $("teamA").querySelector(".name-text").textContent;
     const nameB = $("teamB").querySelector(".name-text").textContent;
 
-    overlay.querySelector(".set-win-label").textContent = normalizeScoringOptions(score.scoringOptions || currentScoringOptions).scoringMode === "tiebreakTen" ? "WINS THE MATCH!" : "WINS THE SET!";
-
     teamNameEl.textContent = team === "A" ? nameA : nameB;
     overlay.dataset.winner = team;
 
-    // Show set scores
-    overlay.querySelector(".sw-score-a").textContent = score.A.sets;
-    overlay.querySelector(".sw-score-b").textContent = score.B.sets;
-
+    const isTiebreakTen = normalizeScoringOptions(score.scoringOptions || currentScoringOptions).scoringMode === "tiebreakTen";
+    overlay.querySelector(".set-win-label").textContent = isTiebreakTen ? "WINS THE MATCH!" : "WINS THE SET!";
+    
+    overlay.querySelector(".sw-score-a").textContent = isTiebreakTen ? score.A.points : score.A.sets;
+    overlay.querySelector(".sw-score-b").textContent = isTiebreakTen ? score.B.points : score.B.sets;
+  
     // Remove hidden immediately to start transition
     overlay.classList.remove("hidden");
 
@@ -3047,6 +3053,17 @@ document.addEventListener("DOMContentLoaded", () =>
   {
     elements.detailsModal.classList.remove("hidden");
 
+    // Check if the primary scoreboard is currently swapped
+    const scoreboardEl = document.querySelector(".scoreboard");
+    const isSwapped = scoreboardEl && scoreboardEl.classList.contains("swapped");
+
+    // Mirror the swapped layout state onto the details header container
+    const dmOverall = document.querySelector(".dm-overall");
+    if (dmOverall)
+    {
+      dmOverall.classList.toggle("swapped", isSwapped);
+    }
+
     // Populate team names immediately
     const nameA = $("teamA").querySelector(".name-text").textContent;
     const nameB = $("teamB").querySelector(".name-text").textContent;
@@ -3055,7 +3072,7 @@ document.addEventListener("DOMContentLoaded", () =>
 
     elements.detailsLoading.classList.remove("hidden");
 
-    // Clear table
+    // Clear table rows and columns safely
     const headRow = elements.dmHead.querySelector("tr");
     headRow.innerHTML = "";
     elements.dmBody.innerHTML = "";
@@ -3064,65 +3081,69 @@ document.addEventListener("DOMContentLoaded", () =>
     {
       const getDetailedScore = httpsCallable(functions, "getDetailedScore");
       const result = await getDetailedScore({ courtId: currentCourtId });
-      const { sets, currentGames, points, mode, setsA, setsB, matchComplete } = result.data;
+
+      // Destructure data parameters safely
+      const { sets, currentGames, points, mode, matchComplete } = result.data;
+
+      // Fallback matrix calculations for robust set count representation
+      let setsA = result.data.setsA;
+      let setsB = result.data.setsB;
+
+      if (setsA === undefined || setsB === undefined)
+      {
+        setsA = 0;
+        setsB = 0;
+        if (sets && Array.isArray(sets))
+        {
+          sets.forEach(s =>
+          {
+            if (s.A > s.B) setsA++;
+            if (s.B > s.A) setsB++;
+          });
+        }
+      }
 
       const isStraight = mode === "straight";
       const isTiebreakTen = mode === "tiebreakTen";
+      const dmTableWrap = document.querySelector(".dm-table-wrap");
 
-      // Always show overall container; only hide the table wrap if doing straight points
-      document.querySelector(".dm-overall").classList.remove("hidden");
-      document.querySelector(".dm-table-wrap").classList.toggle("hidden", isStraight);
+      if (dmOverall)
+      {
+        dmOverall.classList.remove("hidden");
+      }
 
-      if (isStraight) {
-        // Just render total straight points where the sets would normally be
-        elements.detailsSetsA.textContent = points.A;
-        elements.detailsSetsB.textContent = points.B;
-        
-      } else if (isTiebreakTen) {
-        // Overall match sets (e.g., 1 - 0)
+      if (isStraight || isTiebreakTen)
+      {
+        // Hide the set-by-set breakdown table since single-frame frames are absolute points
+        if (dmTableWrap) dmTableWrap.classList.add("hidden");
+        if (dmOverall) dmOverall.classList.add("large-points-mode");
+
+        // Set the absolute points directly onto the large displays
+        elements.detailsSetsA.textContent = (points && points.A !== undefined) ? points.A : 0;
+        elements.detailsSetsB.textContent = (points && points.B !== undefined) ? points.B : 0;
+      }
+      else
+      {
+        // Standard Format - ensure table is displayed and point sizing matches sets tracker
+        if (dmTableWrap) dmTableWrap.classList.remove("hidden");
+        if (dmOverall) dmOverall.classList.remove("large-points-mode");
+
+        // Repopulate overall set scores (e.g., 0 - 2) dynamically above the table log
         elements.detailsSetsA.textContent = setsA;
         elements.detailsSetsB.textContent = setsB;
 
-        // Build a single-column table showing the current Match Tiebreak score
-        const mkTh = (text, extraClass) => { const th = document.createElement("th"); th.textContent = text; if (extraClass) th.className = extraClass; return th; };
-        headRow.appendChild(mkTh(""));
-        headRow.appendChild(mkTh("MATCH", !matchComplete ? "dm-current-set" : ""));
-
-        const mkRow = (team) => {
-          const tr = document.createElement("tr");
-          tr.className = `dm-row-${team}`;
-
-          const markerTd = document.createElement("td");
-          markerTd.className = "dm-marker-cell";
-          markerTd.appendChild(document.createElement("span"));
-          tr.appendChild(markerTd);
-
-          const td = document.createElement("td");
-          const pts = team === "a" ? points.A : points.B;
-          const oppPts = team === "a" ? points.B : points.A;
-          td.textContent = pts;
-          
-          if (pts > oppPts && matchComplete) td.classList.add("dm-won");
-          if (!matchComplete) td.classList.add("dm-current-set");
-          tr.appendChild(td);
-
-          return tr;
-        };
-
-        elements.dmBody.appendChild(mkRow("a"));
-        elements.dmBody.appendChild(mkRow("b"));
-
-      } else {
-        // Standard Format
-        elements.detailsSetsA.textContent = setsA;
-        elements.detailsSetsB.textContent = setsB;
-
-        // Include the current (in-progress) set if match is not yet complete
         const hasCurrentSet = !matchComplete;
         const allSets = hasCurrentSet ? [...sets, currentGames] : [...sets];
 
-        // Build table header:  [marker-col] S1 S2 S3 …
-        const mkTh = (text, extraClass) => { const th = document.createElement("th"); th.textContent = text; if (extraClass) th.className = extraClass; return th; };
+        // Build table header columns: [marker] S1 S2 S3 ...
+        const mkTh = (text, extraClass) =>
+        {
+          const th = document.createElement("th");
+          th.textContent = text;
+          if (extraClass) th.className = extraClass;
+          return th;
+        };
+
         headRow.appendChild(mkTh(""));
         allSets.forEach((_, i) =>
         {
@@ -3130,44 +3151,53 @@ document.addEventListener("DOMContentLoaded", () =>
           headRow.appendChild(mkTh(`S${i + 1}`, isCurrentSet ? "dm-current-set" : ""));
         });
 
-        // Helper: create a table row for one team
+        // Helper to construct team score rows
         const mkRow = (team, setsData) =>
         {
           const tr = document.createElement("tr");
           tr.className = `dm-row-${team}`;
 
-          // Marker cell
           const markerTd = document.createElement("td");
           markerTd.className = "dm-marker-cell";
           markerTd.appendChild(document.createElement("span"));
           tr.appendChild(markerTd);
 
-          // Score cells
           setsData.forEach((s, i) =>
           {
-            const td = document.createElement("td");
-            const teamScore = team === "a" ? s.A : s.B;
-            const opponentScore = team === "a" ? s.B : s.A;
-            td.textContent = teamScore;
-            
-            // Only bold winning sets that are fully complete
-            const isCurrentSet = hasCurrentSet && i === setsData.length - 1;
-            if (!isCurrentSet && teamScore > opponentScore) td.classList.add("dm-won");
-            if (isCurrentSet) td.classList.add("dm-current-set");
-            
-            tr.appendChild(td);
+            if (s)
+            {
+              const td = document.createElement("td");
+              const teamScore = team === "a" ? s.A : s.B;
+              const opponentScore = team === "a" ? s.B : s.A;
+              td.textContent = teamScore !== undefined ? teamScore : 0;
+
+              const isCurrentSet = hasCurrentSet && i === setsData.length - 1;
+              if (!isCurrentSet && teamScore > opponentScore) td.classList.add("dm-won");
+              if (isCurrentSet) td.classList.add("dm-current-set");
+
+              tr.appendChild(td);
+            }
           });
 
           return tr;
         };
 
-        elements.dmBody.appendChild(mkRow("a", allSets));
-        elements.dmBody.appendChild(mkRow("b", allSets));
+        // Render rows reflecting the screen's visual team layout rotation
+        if (isSwapped)
+        {
+          elements.dmBody.appendChild(mkRow("b", allSets));
+          elements.dmBody.appendChild(mkRow("a", allSets));
+        } 
+        else
+        {
+          elements.dmBody.appendChild(mkRow("a", allSets));
+          elements.dmBody.appendChild(mkRow("b", allSets));
+        }
       }
     }
     catch (err)
     {
-      console.error("Match details failed:", err);
+      console.error("Match details failed to populate correctly:", err);
     }
     finally
     {
