@@ -4442,12 +4442,6 @@ body.light-mode .set-win-label {
   border: 1px solid #f1c40f;
 }
 
-display: flex;
-flex-direction: column;
-gap: 10px;
-pointer-events: none;
-}
-
 .toast {
   padding: 12px 24px;
   border-radius: 50px;
