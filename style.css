@@ -939,10 +939,6 @@ main>section:nth-of-type(even):not(.path):not(.cta) {
         flex: 0 0 auto;
     }
 
-    .nav-actions .button {
-        display: none;
-    }
-
     .nav-actions .icon-link {
         display: grid;
         place-items: center;
