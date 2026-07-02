@@ -502,12 +502,36 @@ document.addEventListener("DOMContentLoaded", () =>
     updateWavesVisibility();
   }
 
+  function syncSettingsTiles()
+  {
+    const updateItem = (button, active, activeLabel, inactiveLabel) =>
+    {
+      if (!button) return;
+      const wrapper = button.closest(".setting-item");
+      if (!wrapper) return;
+      wrapper.classList.toggle("active", Boolean(active));
+      const label = wrapper.querySelector("span");
+      if (label)
+      {
+        label.textContent = active ? activeLabel : inactiveLabel;
+      }
+      button.setAttribute("aria-pressed", active ? "true" : "false");
+    };
+
+    updateItem(elements.muteBtn, muted, "Muted", "Mute");
+    updateItem(elements.waveToggleScoreboardBtn, isWavesEnabled, "Waves on", "Waves off");
+    updateItem(elements.fullscreenBtn, Boolean(getFullscreenElement()), "Exit full", "Fullscreen");
+    updateItem(elements.swapBtn, document.querySelector(".scoreboard")?.classList.contains("swapped"), "Swapped", "Swap sides");
+  }
+
   function toggleWaves()
   {
     isWavesEnabled = !isWavesEnabled;
     localStorage.setItem("waves", isWavesEnabled);
+    elements.waveToggleScoreboardBtn.textContent = isWavesEnabled ? "🌊" : "♒︎";
 
     updateWavesVisibility();
+    syncSettingsTiles();
 
     playSound(SOUND_IDS.POP);
 
@@ -571,6 +595,8 @@ document.addEventListener("DOMContentLoaded", () =>
     {
       elements.fullscreenLabel.textContent = isActive ? "Exit full" : "Fullscreen";
     }
+
+    syncSettingsTiles();
   }
 
   async function toggleFullscreen()
@@ -604,6 +630,7 @@ document.addEventListener("DOMContentLoaded", () =>
       }
 
       updateFullscreenButton();
+      syncSettingsTiles();
     }
     catch (error)
     {
@@ -828,7 +855,11 @@ document.addEventListener("DOMContentLoaded", () =>
 
   ["fullscreenchange", "webkitfullscreenchange", "MSFullscreenChange"].forEach(eventName =>
   {
-    document.addEventListener(eventName, updateFullscreenButton);
+    document.addEventListener(eventName, () =>
+    {
+      updateFullscreenButton();
+      syncSettingsTiles();
+    });
   });
 
   // =====================================================
@@ -837,6 +868,8 @@ document.addEventListener("DOMContentLoaded", () =>
 
   function submitOnEnter(inputEl, buttonEl)
   {
+    if (!inputEl || !buttonEl) return;
+
     inputEl.addEventListener("keydown", (e) =>
     {
       if (e.key === "Enter")
@@ -847,18 +880,43 @@ document.addEventListener("DOMContentLoaded", () =>
     });
   }
 
+  function submitFormOnEnter(formEl)
+  {
+    if (!formEl) return;
+
+    formEl.addEventListener("keydown", (e) =>
+    {
+      if (e.key !== "Enter") return;
+      const target = e.target;
+      if (target && (target.tagName === "TEXTAREA" || target.isContentEditable)) return;
+      const submitButton = formEl.querySelector("button[type='submit'], .primary-btn");
+      if (submitButton)
+      {
+        e.preventDefault();
+        submitButton.click();
+      }
+    });
+  }
+
   // CREATE PAGE
   submitOnEnter(elements.courtName, elements.createCourtBtn);
   submitOnEnter(elements.courtPassword, elements.createCourtBtn);
+  submitFormOnEnter(elements.createPage);
 
   // ADMIN AUTH PAGE
   submitOnEnter(elements.adminAuthPassword, elements.submitAdminAuthBtn);
+  submitFormOnEnter(elements.adminAuthPage);
 
   // PLAY PAGE
   submitOnEnter(elements.playCourtPassword, elements.enterCourtBtn);
+  submitFormOnEnter(elements.playPage);
+
+  // SPECTATE PAGE
+  submitFormOnEnter(elements.spectatePage);
 
   // RESET MODAL
   submitOnEnter(elements.resetCourtPassword, elements.confirmResetBtn);
+  submitFormOnEnter(elements.resetModal);
 
   // ADMIN DASHBOARD SEARCH & FILTER
   elements.adminCourtSearch.addEventListener("input", filterAndDisplayAdminCourts);
@@ -1918,6 +1976,11 @@ document.addEventListener("DOMContentLoaded", () =>
     if (muted)
     {
       elements.muteBtn.textContent = "🔇";
+    }
+
+    if (isWavesEnabled == false)
+    {
+      elements.waveToggleScoreboardBtn.textContent = "♒︎";
     }
 
     try
@@ -3047,6 +3110,7 @@ document.addEventListener("DOMContentLoaded", () =>
     playSound(SOUND_IDS.SWOOSH);
 
     document.querySelector(".scoreboard").classList.toggle("swapped");
+    syncSettingsTiles();
   });
 
   // =====================================================
@@ -3075,7 +3139,7 @@ document.addEventListener("DOMContentLoaded", () =>
   {
     muted = !muted;
     elements.muteBtn.textContent = muted ? "🔇" : "🔊";
-
+      syncSettingsTiles();
     if (!muted)
     {
       playSound(SOUND_IDS.SNAP);
@@ -3090,6 +3154,7 @@ document.addEventListener("DOMContentLoaded", () =>
     updateFullscreenButton();
     syncScoringControls();
     elements.settingsModal.classList.remove("hidden");
+    syncSettingsTiles();
   });
 
   elements.closeSettingsBtn.addEventListener("click", () =>

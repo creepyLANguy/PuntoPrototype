@@ -1080,13 +1080,30 @@ body.light-mode .settings-box {
   padding: 15px;
   background: rgba(255, 255, 255, 0.05);
   border-radius: 18px;
-  transition: transform 0.2s ease, background 0.2s ease;
+  transition: transform 0.2s ease, background 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
   cursor: pointer;
+  opacity: 0.9;
 }
 
 .setting-item:hover {
-  background: rgba(255, 255, 255, 0.1);
-  transform: translateY(-4px);
+  background: rgba(255, 255, 255, 0.12);
+  transform: translateY(-2px);
+}
+
+.setting-item.active {
+  background: rgba(255, 255, 255, 0.22);
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  opacity: 1;
+}
+
+.setting-item.active button {
+  transform: translateY(-1px);
+}
+
+body.light-mode .setting-item.active {
+  background: rgba(0, 0, 0, 0.1);
+  border-color: rgba(0, 0, 0, 0.18);
 }
 
 body.light-mode .setting-item {
