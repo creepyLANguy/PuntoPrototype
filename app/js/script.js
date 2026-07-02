@@ -166,6 +166,20 @@ document.addEventListener("DOMContentLoaded", () =>
       left.tiebreakMode === right.tiebreakMode;
   }
 
+  function resolveScoringOptions(scoreData = score)
+  {
+    const courtOptions = normalizeScoringOptions(currentScoringOptions || {});
+    const scoreOptions = normalizeScoringOptions(scoreData?.scoringOptions || {});
+
+    return normalizeScoringOptions({
+      ...scoreOptions,
+      ...courtOptions,
+      scoringMode: courtOptions.scoringMode || scoreOptions.scoringMode || DEFAULT_SCORING_OPTIONS.scoringMode,
+      deuceMode: courtOptions.deuceMode || scoreOptions.deuceMode || DEFAULT_SCORING_OPTIONS.deuceMode,
+      tiebreakMode: courtOptions.tiebreakMode || scoreOptions.tiebreakMode || DEFAULT_SCORING_OPTIONS.tiebreakMode
+    });
+  }
+
   let score = defaultScore();
   let lastKnownSets = { A: 0, B: 0 };
   let sessionInitialized = false;
@@ -701,6 +715,7 @@ document.addEventListener("DOMContentLoaded", () =>
   elements.courtNameError = $("courtNameError");
   elements.courtPasswordError = $("courtPasswordError");
   elements.courtStatus = $("courtStatus");
+  elements.courtScoringMode = $("courtScoringMode");
 
   // ADMIN AUTH ELEMENTS
   elements.adminLoginBtn = $("adminLoginBtn");
@@ -727,6 +742,8 @@ document.addEventListener("DOMContentLoaded", () =>
   elements.editTeamBName = $("editTeamBName");
   elements.editCourtPassword = $("editCourtPassword");
   elements.editCourtStatus = $("editCourtStatus");
+  elements.editCourtScoringMode = $("editCourtScoringMode");
+  elements.clearCourtScoreBtn = $("clearCourtScoreBtn");
   elements.saveEditBtn = $("saveEditBtn");
   elements.deleteCourtBtn = $("deleteCourtBtn");
   elements.closeEditBtn = $("closeEditBtn");
@@ -1321,12 +1338,18 @@ document.addEventListener("DOMContentLoaded", () =>
   function openEditModal(court)
   {
     courtToEdit = court;
+    const scoringOptions = normalizeScoringOptions({
+      ...(court.scoringOptions || {}),
+      scoringMode: court.scoringMode || court.scoringOptions?.scoringMode
+    });
+
     elements.editCourtNameTitle.textContent = court.name || court.id;
     elements.editCourtName.value = court.name || "";
     elements.editTeamAName.value = court.teamNames?.A || "";
     elements.editTeamBName.value = court.teamNames?.B || "";
     elements.editCourtPassword.value = court.password || "";
     elements.editCourtStatus.value = court.status || STATUS.CLOSED;
+    elements.editCourtScoringMode.value = scoringOptions.scoringMode;
 
     elements.adminDashboardPage.style.display = "none";
     elements.editCourtPage.style.display = "flex";
@@ -1343,6 +1366,10 @@ document.addEventListener("DOMContentLoaded", () =>
 
       if (!newName) throw new Error("Court name cannot be empty");
 
+      const scoringOptions = normalizeScoringOptions({
+        ...(courtToEdit.scoringOptions || {}),
+        scoringMode: elements.editCourtScoringMode.value
+      });
       const courtRef = doc(db, "courts", courtId);
 
       await updateDoc(courtRef, {
@@ -1352,8 +1379,24 @@ document.addEventListener("DOMContentLoaded", () =>
           B: elements.editTeamBName.value.trim()
         },
         password: elements.editCourtPassword.value.trim(),
-        status: elements.editCourtStatus.value
+        status: elements.editCourtStatus.value,
+        scoringMode: scoringOptions.scoringMode,
+        scoringOptions
       });
+
+      const updateScoringOptions = httpsCallable(functions, "updateScoringOptions");
+      const result = await updateScoringOptions({
+        courtId,
+        scoringMode: scoringOptions.scoringMode,
+        scoringOptions
+      });
+      currentScoringOptions = normalizeScoringOptions(result?.data?.scoringOptions || scoringOptions);
+      score = {
+        ...score,
+        scoringOptions: currentScoringOptions
+      };
+      syncScoringControls();
+      updateUI();
 
       showToast("Court updated successfully!", TOAST_TYPES.SUCCESS);
       elements.editCourtPage.style.display = "none";
@@ -1363,6 +1406,23 @@ document.addEventListener("DOMContentLoaded", () =>
     catch (err)
     {
       showToast("Failed to update: " + err.message, TOAST_TYPES.ERROR);
+    }
+  });
+
+  elements.clearCourtScoreBtn.addEventListener("click", async () =>
+  {
+    if (!courtToEdit) return;
+
+    if (!(await showConfirm(`Clear the existing score for court "${courtToEdit.id}"?`))) return;
+
+    try
+    {
+      await resetCourt(courtToEdit.id, false);
+      showToast("Court score cleared.", TOAST_TYPES.SUCCESS);
+    }
+    catch (err)
+    {
+      showToast("Failed to clear score: " + err.message, TOAST_TYPES.ERROR);
     }
   });
 
@@ -1689,6 +1749,8 @@ document.addEventListener("DOMContentLoaded", () =>
   {
     const courtName = elements.courtName.value.trim();
     const courtPass = elements.courtPassword.value.trim();
+    const scoringMode = elements.courtScoringMode?.value || DEFAULT_SCORING_OPTIONS.scoringMode;
+    const scoringOptions = normalizeScoringOptions({ scoringMode });
 
     elements.courtNameError.textContent = "";
     elements.courtPasswordError.textContent = "";
@@ -1729,13 +1791,14 @@ document.addEventListener("DOMContentLoaded", () =>
       createdAt: serverTimestamp(),
       teamNames: { A: "Team A", B: "Team B" },
       status: elements.courtStatus.value,
-      scoringOptions: { ...DEFAULT_SCORING_OPTIONS }
+      scoringMode: scoringOptions.scoringMode,
+      scoringOptions
     });
 
     // Create initial score document
     await setDoc(
       doc(db, "courts", courtId, "score", "current"),
-      defaultScore()
+      defaultScore(scoringOptions)
     );
 
     showToast(`Court "${courtName}" created successfully.`, TOAST_TYPES.SUCCESS);
@@ -1753,6 +1816,7 @@ document.addEventListener("DOMContentLoaded", () =>
 
     elements.courtName.value = "";
     elements.courtPassword.value = "";
+    if (elements.courtScoringMode) elements.courtScoringMode.value = DEFAULT_SCORING_OPTIONS.scoringMode;
   });
 
   elements.enterCourtBtn.addEventListener("click", async () =>
@@ -1838,7 +1902,10 @@ document.addEventListener("DOMContentLoaded", () =>
     const data = snap.data();
     currentCourtPassword = data.password;
     currentCourtStatus = data.status;
-    currentScoringOptions = normalizeScoringOptions(data.scoringOptions);
+    currentScoringOptions = normalizeScoringOptions({
+      ...(data.scoringOptions || {}),
+      scoringMode: data.scoringMode || data.scoringOptions?.scoringMode
+    });
     syncScoringControls();
 
     if (muted)
@@ -2099,7 +2166,7 @@ document.addEventListener("DOMContentLoaded", () =>
   function syncScoringControls()
   {
     isSyncingScoringControls = true;
-    const options = normalizeScoringOptions(currentScoringOptions);
+    const options = resolveScoringOptions(score);
 
     if (elements.scoringModeSelect) elements.scoringModeSelect.value = options.scoringMode;
     if (elements.deuceModeSelect) elements.deuceModeSelect.value = options.deuceMode;
@@ -2165,13 +2232,20 @@ document.addEventListener("DOMContentLoaded", () =>
       });
 
       const updateScoringOptions = httpsCallable(functions, "updateScoringOptions");
-      await updateScoringOptions({
+      const result = await updateScoringOptions({
         courtId: currentCourtId,
-        scoringOptions: nextOptions
+        scoringOptions: nextOptions,
+        scoringMode: nextOptions.scoringMode
       });
 
-      currentScoringOptions = nextOptions;
+      const serverOptions = normalizeScoringOptions(result?.data?.scoringOptions || nextOptions);
+      currentScoringOptions = serverOptions;
+      score = {
+        ...score,
+        scoringOptions: serverOptions
+      };
       syncScoringControls();
+      updateUI();
       showToast("Scoring updated", TOAST_TYPES.SUCCESS);
     }
     catch (err)
@@ -2232,7 +2306,7 @@ document.addEventListener("DOMContentLoaded", () =>
 
   function usesNumericPoints()
   {
-    const options = normalizeScoringOptions(score.scoringOptions || currentScoringOptions);
+    const options = resolveScoringOptions(score);
     return options.scoringMode === "straight" ||
       options.scoringMode === "tiebreakTen" ||
       score.inTiebreak;
@@ -2256,7 +2330,7 @@ document.addEventListener("DOMContentLoaded", () =>
       return status;
     }
 
-    const options = normalizeScoringOptions(currentScore.scoringOptions || currentScoringOptions);
+    const options = resolveScoringOptions(currentScore);
 
     if (options.scoringMode === "straight")
     {
@@ -2362,7 +2436,7 @@ document.addEventListener("DOMContentLoaded", () =>
   {
     if (!elements.scoreFormatBadge) return;
 
-    const options = normalizeScoringOptions(score.scoringOptions || currentScoringOptions);
+    const options = resolveScoringOptions(score);
     const total = (score.A.totalPoints || 0) + (score.B.totalPoints || 0);
     let label = "";
 
@@ -2387,7 +2461,7 @@ document.addEventListener("DOMContentLoaded", () =>
   {
     updateScoreFormatBadge();
 
-    const options = normalizeScoringOptions(score.scoringOptions || currentScoringOptions);
+    const options = resolveScoringOptions(score);
     const standardFormat = options.scoringMode === "standard";
 
     // Hide sets/games if not applicable
@@ -2463,7 +2537,7 @@ document.addEventListener("DOMContentLoaded", () =>
     teamNameEl.textContent = team === "A" ? nameA : nameB;
     overlay.dataset.winner = team;
 
-    const isTiebreakTen = normalizeScoringOptions(score.scoringOptions || currentScoringOptions).scoringMode === "tiebreakTen";
+    const isTiebreakTen = resolveScoringOptions(score).scoringMode === "tiebreakTen";
     overlay.querySelector(".set-win-label").textContent = isTiebreakTen ? "WINS THE MATCH!" : "WINS THE SET!";
     
     overlay.querySelector(".sw-score-a").textContent = isTiebreakTen ? score.A.points : score.A.sets;
@@ -3081,7 +3155,8 @@ document.addEventListener("DOMContentLoaded", () =>
     {
       const getDetailedScore = httpsCallable(functions, "getDetailedScore");
       const result = await getDetailedScore({ courtId: currentCourtId });
-      const { sets, currentGames, points, mode, matchComplete } = result.data;
+      const { sets, currentGames, points, mode, scoringMode, matchComplete } = result.data;
+      const resolvedMode = normalizeScoringOptions({ scoringMode: scoringMode || mode }).scoringMode;
 
       // Unpack sets safely or calculate fallbacks from historical sets tracking if missing
       let setsA = result.data.setsA;
@@ -3102,8 +3177,8 @@ document.addEventListener("DOMContentLoaded", () =>
 
       //AL.
       //TODO - fix issue where mode is not being returned. 
-      const isStraight = mode === "straight";
-      const isTiebreakTen = mode === "tiebreakTen";
+      const isStraight = resolvedMode === "straight";
+      const isTiebreakTen = resolvedMode === "tiebreakTen";
       const dmTableWrap = document.querySelector(".dm-table-wrap");
 
       if (dmOverall)
@@ -3476,7 +3551,10 @@ document.addEventListener("DOMContentLoaded", () =>
       currentCourtPassword = data.password;
       currentCourtStatus = data.status;
 
-      const nextScoringOptions = normalizeScoringOptions(data.scoringOptions);
+      const nextScoringOptions = normalizeScoringOptions({
+        ...(data.scoringOptions || {}),
+        scoringMode: data.scoringMode || data.scoringOptions?.scoringMode
+      });
       if (!areScoringOptionsEqual(nextScoringOptions, currentScoringOptions))
       {
         currentScoringOptions = nextScoringOptions;

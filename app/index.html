@@ -365,6 +365,7 @@
           </div>
         </div>
         <button id="saveEditDeviceBtn" class="primary-btn">Save Mapping</button>
+        <hr />
         <button id="deleteDeviceBtn" class="danger-btn" style="margin-top: 10px; background: #ff4444;">Delete
           Device</button>
       </div>
@@ -392,6 +393,16 @@
               <option value="closed">Closed</option>
               <option value="open">Open</option>
               <option value="private">Private</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Scoring Mode</label>
+          <div class="select-wrapper">
+            <select id="courtScoringMode">
+              <option value="standard">Games and sets</option>
+              <option value="straight">Straight points</option>
+              <option value="tiebreakTen">Tiebreak Tens</option>
             </select>
           </div>
         </div>
@@ -431,9 +442,21 @@
             </select>
           </div>
         </div>
-        <button id="saveEditBtn" class="primary-btn">Save Changes</button>
-        <button id="deleteCourtBtn" class="danger-btn" style="margin-top: 10px; background: #ff4444;">Delete
-          Court</button>
+        <div class="form-group">
+          <label>Scoring Mode</label>
+          <div class="select-wrapper">
+            <select id="editCourtScoringMode">
+              <option value="standard">Games and sets</option>
+              <option value="straight">Straight points</option>
+              <option value="tiebreakTen">Tiebreak Tens</option>
+            </select>
+          </div>
+        </div>
+        <hr style="visibility: hidden;" />
+          <button id="saveEditBtn" class="primary-btn">Save Changes</button>
+        <hr />
+          <button id="clearCourtScoreBtn" class="danger-btn" style="background: #ff9800;">Clear Score</button>
+          <button id="deleteCourtBtn" class="danger-btn" style="background: #ff4444;">Delete Court</button>
       </div>
     </div>
 

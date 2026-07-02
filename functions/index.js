@@ -17,6 +17,38 @@ function sendJson(res, status, body)
     return res.status(status).json(body);
 }
 
+function buildScoringOptions(source = {})
+{
+    const normalizedInput = { ...(source || {}) };
+    const explicitScoringMode = typeof normalizedInput.scoringMode === "string" ? normalizedInput.scoringMode : undefined;
+    const explicitDeuceMode = typeof normalizedInput.deuceMode === "string" ? normalizedInput.deuceMode : undefined;
+    const explicitTiebreakMode = typeof normalizedInput.tiebreakMode === "string" ? normalizedInput.tiebreakMode : undefined;
+
+    const options = normalizeScoringOptions({
+        ...(normalizedInput.scoringOptions || {}),
+        scoringMode: explicitScoringMode,
+        deuceMode: explicitDeuceMode,
+        tiebreakMode: explicitTiebreakMode
+    });
+
+    if (explicitScoringMode)
+    {
+        options.scoringMode = explicitScoringMode;
+    }
+
+    if (explicitDeuceMode)
+    {
+        options.deuceMode = explicitDeuceMode;
+    }
+
+    if (explicitTiebreakMode)
+    {
+        options.tiebreakMode = explicitTiebreakMode;
+    }
+
+    return normalizeScoringOptions(options);
+}
+
 async function requireDevice(deviceId)
 {
     const deviceRef = db.doc(`devices/${deviceId}`);
@@ -78,7 +110,11 @@ exports.onEventCreate = onDocumentCreated(
                 const courtSnap = await tx.get(courtRef);
                 const courtData = courtSnap.exists ? courtSnap.data() : {};
                 const scoreSnap = await tx.get(scoreRef);
-                let score = scoreSnap.exists ? scoreSnap.data() : defaultScore(courtData.scoringOptions);
+                const activeScoringOptions = buildScoringOptions({
+                    ...(courtData.scoringOptions || {}),
+                    scoringMode: courtData.scoringMode || courtData.scoringOptions?.scoringMode
+                });
+                let score = scoreSnap.exists ? scoreSnap.data() : defaultScore(activeScoringOptions);
 
                 if (score.lastEventId === eventId)
                 {
@@ -115,7 +151,7 @@ exports.onEventCreate = onDocumentCreated(
                     await deleteBatch.commit();
 
                     tx.set(scoreRef, {
-                        ...defaultScore(score.scoringOptions || courtData.scoringOptions),
+                        ...defaultScore(activeScoringOptions),
                         lastEventId: eventId,
                         updatedAt: admin.firestore.FieldValue.serverTimestamp()
                     });
@@ -124,7 +160,7 @@ exports.onEventCreate = onDocumentCreated(
                 }
 
                 // Normal point/undo event
-                const updatedScore = applyEvent(score, newEvent, score.scoringOptions || courtData.scoringOptions);
+                const updatedScore = applyEvent(score, newEvent, activeScoringOptions);
 
                 console.log(`Updating score for ${courtId}. New points: A:${updatedScore.A.points}, B:${updatedScore.B.points}`);
 
@@ -148,12 +184,17 @@ exports.resetCourt = onCall(
     { region: REGION },
     async (request) =>
     {
-        const { courtId, deepReset, newPassword } = request.data;
+        const { courtId, deepReset, newPassword, scoringMode, scoringOptions: incomingScoringOptions } = request.data;
         if (!courtId) throw new Error("Missing courtId");
 
-        const courtDoc = await db.doc(`courts/${courtId}`).get();
+        const courtRef = db.doc(`courts/${courtId}`);
+        const courtDoc = await courtRef.get();
         const courtData = courtDoc.exists ? courtDoc.data() : {};
-        const scoringOptions = courtData.scoringOptions || undefined;
+        const scoringOptions = buildScoringOptions({
+            ...(courtData.scoringOptions || {}),
+            ...(incomingScoringOptions || {}),
+            scoringMode: scoringMode || courtData.scoringMode || courtData.scoringOptions?.scoringMode
+        });
 
         const eventsRef = db.collection(`courts/${courtId}/events`);
         const eventsSnap = await eventsRef.get();
@@ -181,13 +222,22 @@ exports.resetCourt = onCall(
         // Reset score
         await db.doc(`courts/${courtId}/score/current`).set(defaultScore(scoringOptions));
 
-        // Optional password reset for deep reset
+        const courtUpdates = {
+            scoringOptions,
+            scoringMode: scoringOptions.scoringMode
+        };
+
         if (deepReset && newPassword)
         {
-            await db.doc(`courts/${courtId}`).update({ password: newPassword });
+            courtUpdates.password = newPassword;
         }
 
-        return { success: true, archivedId: archiveId };
+        if (Object.keys(courtUpdates).length > 0)
+        {
+            await courtRef.set(courtUpdates, { merge: true });
+        }
+
+        return { success: true, archivedId: archiveId, scoringMode: scoringOptions.scoringMode, scoringOptions };
     }
 );
 
@@ -198,9 +248,8 @@ exports.updateScoringOptions = onCall(
     { region: REGION },
     async (request) =>
     {
-        const { courtId, scoringOptions } = request.data;
+        const { courtId, scoringOptions: incomingScoringOptions, scoringMode } = request.data;
         if (!courtId) throw new Error("Missing courtId");
-        if (!scoringOptions) throw new Error("Missing scoringOptions");
 
         const courtRef = db.doc(`courts/${courtId}`);
         const scoreRef = db.doc(`courts/${courtId}/score/current`);
@@ -212,8 +261,13 @@ exports.updateScoringOptions = onCall(
             throw new Error("Court not found");
         }
 
-        const normalizedOptions = normalizeScoringOptions(scoringOptions);
-        await courtRef.update({ scoringOptions: normalizedOptions });
+        const courtData = courtSnap.data() || {};
+        const normalizedOptions = buildScoringOptions({
+            ...(courtData.scoringOptions || {}),
+            ...(incomingScoringOptions || {}),
+            scoringMode: scoringMode || courtData.scoringMode || courtData.scoringOptions?.scoringMode
+        });
+        await courtRef.set({ scoringOptions: normalizedOptions, scoringMode: normalizedOptions.scoringMode }, { merge: true });
 
         const eventsSnap = await eventsRef.get();
         const events = eventsSnap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
@@ -225,7 +279,7 @@ exports.updateScoringOptions = onCall(
             updatedAt: admin.firestore.FieldValue.serverTimestamp()
         });
 
-        return { success: true, scoringOptions: normalizedOptions };
+        return { success: true, scoringOptions: normalizedOptions, scoringMode: normalizedOptions.scoringMode, mode: normalizedOptions.scoringMode };
     }
 );
 
@@ -241,7 +295,10 @@ exports.getDetailedScore = onCall(
 
         const courtSnap = await db.doc(`courts/${courtId}`).get();
         const courtData = courtSnap.exists ? courtSnap.data() : {};
-        const scoringOptions = courtData.scoringOptions || undefined;
+        const scoringOptions = buildScoringOptions({
+            ...(courtData.scoringOptions || {}),
+            scoringMode: courtData.scoringMode || courtData.scoringOptions?.scoringMode
+        });
         const normalizedOptions = normalizeScoringOptions(scoringOptions);
 
         const eventsRef = db.collection(`courts/${courtId}/events`).orderBy("createdAt", "asc");
@@ -309,6 +366,8 @@ exports.getDetailedScore = onCall(
             setsA: score.A.sets,
             setsB: score.B.sets,
             mode: normalizedOptions.scoringMode,
+            scoringMode: normalizedOptions.scoringMode,
+            scoringOptions: normalizedOptions,
             matchComplete: score.matchComplete
         };
     }
