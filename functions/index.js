@@ -269,17 +269,20 @@ exports.updateScoringOptions = onCall(
         });
         await courtRef.set({ scoringOptions: normalizedOptions, scoringMode: normalizedOptions.scoringMode }, { merge: true });
 
-        const eventsSnap = await eventsRef.get();
-        const events = eventsSnap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-        const replayedScore = replayEvents(events, normalizedOptions);
-
+        const resetScore = defaultScore(normalizedOptions);
         await scoreRef.set({
-            ...replayedScore,
-            lastEventId: replayedScore.lastEventId || null,
+            ...resetScore,
+            lastEventId: null,
             updatedAt: admin.firestore.FieldValue.serverTimestamp()
         });
 
-        return { success: true, scoringOptions: normalizedOptions, scoringMode: normalizedOptions.scoringMode, mode: normalizedOptions.scoringMode };
+        return {
+            success: true,
+            scoringOptions: normalizedOptions,
+            scoringMode: normalizedOptions.scoringMode,
+            mode: normalizedOptions.scoringMode,
+            score: resetScore
+        };
     }
 );
 

@@ -1390,11 +1390,18 @@ document.addEventListener("DOMContentLoaded", () =>
         scoringMode: scoringOptions.scoringMode,
         scoringOptions
       });
-      currentScoringOptions = normalizeScoringOptions(result?.data?.scoringOptions || scoringOptions);
-      score = {
-        ...score,
-        scoringOptions: currentScoringOptions
-      };
+      const serverOptions = normalizeScoringOptions(result?.data?.scoringOptions || scoringOptions);
+      const replayedScore = result?.data?.score;
+      currentScoringOptions = serverOptions;
+      score = replayedScore
+        ? {
+            ...replayedScore,
+            scoringOptions: serverOptions
+          }
+        : {
+            ...score,
+            scoringOptions: serverOptions
+          };
       syncScoringControls();
       updateUI();
 
@@ -2239,11 +2246,17 @@ document.addEventListener("DOMContentLoaded", () =>
       });
 
       const serverOptions = normalizeScoringOptions(result?.data?.scoringOptions || nextOptions);
+      const replayedScore = result?.data?.score;
       currentScoringOptions = serverOptions;
-      score = {
-        ...score,
-        scoringOptions: serverOptions
-      };
+      score = replayedScore
+        ? {
+            ...replayedScore,
+            scoringOptions: serverOptions
+          }
+        : {
+            ...score,
+            scoringOptions: serverOptions
+          };
       syncScoringControls();
       updateUI();
       showToast("Scoring updated", TOAST_TYPES.SUCCESS);
