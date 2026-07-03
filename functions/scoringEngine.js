@@ -56,6 +56,69 @@ function defaultScore(scoringOptions = DEFAULT_SCORING_OPTIONS)
   };
 }
 
+function getCompletedMatchGames(score)
+{
+  const completedSets = Array.isArray(score.completedSets) ? score.completedSets : [];
+  const completedGames = completedSets.reduce((sum, set) =>
+  {
+    const setA = Number(set.A) || 0;
+    const setB = Number(set.B) || 0;
+    return sum + setA + setB;
+  }, 0);
+
+  return completedGames + (Number(score.A.games) || 0) + (Number(score.B.games) || 0);
+}
+
+function getGameServerLabel(totalCompletedGames)
+{
+  const servingTeam = totalCompletedGames % 2 === 0 ? "A" : "B";
+  const serviceRotationIndex = Math.floor(totalCompletedGames / 2);
+  const playerNumber = serviceRotationIndex % 2 === 0 ? "1" : "2";
+  return `${servingTeam}${playerNumber}`;
+}
+
+function getTiebreakServerLabel(score)
+{
+  const totalCompletedGames = getCompletedMatchGames(score);
+  const startingServer = getGameServerLabel(totalCompletedGames);
+  const totalPoints = (Number(score.A.points) || 0) + (Number(score.B.points) || 0);
+
+  if (totalPoints === 0)
+  {
+    return startingServer;
+  }
+
+  const startingTeam = startingServer[0];
+  const oppositeTeam = startingTeam === "A" ? "B" : "A";
+  const segment = Math.floor((totalPoints + 1) / 2);
+  const servingTeam = segment % 2 === 0 ? startingTeam : oppositeTeam;
+  const serviceSegmentIndex = Math.floor(segment / 2);
+  const playerNumber = serviceSegmentIndex % 2 === 0 ? "1" : "2";
+
+  return `${servingTeam}${playerNumber}`;
+}
+
+function getCurrentServerLabel(score)
+{
+  const options = normalizeScoringOptions(score.scoringOptions);
+  if (options.scoringMode === "straight")
+  {
+    return null;
+  }
+
+  const totalCompletedGames = getCompletedMatchGames(score);
+  const isStandardTiebreak = options.scoringMode === "standard" &&
+    (score.inTiebreak || (score.A.games === 6 && score.B.games === 6));
+  const isMatchTiebreak = options.scoringMode === "tiebreakTen";
+
+  if (isStandardTiebreak || isMatchTiebreak)
+  {
+    return getTiebreakServerLabel(score);
+  }
+
+  return getGameServerLabel(totalCompletedGames);
+}
+
 function normalizeScore(score, scoringOptions)
 {
   const normalizedOptions = normalizeScoringOptions(scoringOptions || score?.scoringOptions);
@@ -314,5 +377,9 @@ module.exports = {
   defaultScore,
   normalizeScoringOptions,
   applyEvent,
-  replayEvents
+  replayEvents,
+  getCompletedMatchGames,
+  getGameServerLabel,
+  getTiebreakServerLabel,
+  getCurrentServerLabel
 };

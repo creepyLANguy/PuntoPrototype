@@ -760,6 +760,16 @@ body.light-mode .game-dot.filled {
   background-color: transparent;
 }
 
+.server-badge {
+  position: absolute;
+  bottom: 4%;
+  left: 4%;
+  transition: opacity 0.2s ease;  
+  color: var(--white);
+  font-weight: 900;
+  font-size: clamp(0.75rem, 2vmin, 2.15rem);
+}
+
 /* =======================================================
    CRITICAL POINT INDICATOR — pulsating score glow
 ======================================================= */
