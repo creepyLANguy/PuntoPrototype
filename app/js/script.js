@@ -3253,8 +3253,6 @@ document.addEventListener("DOMContentLoaded", () =>
         }
       }
 
-      //AL.
-      //TODO - fix issue where mode is not being returned. 
       const isStraight = resolvedMode === "straight";
       const isTiebreakTen = resolvedMode === "tiebreakTen";
       const dmTableWrap = document.querySelector(".dm-table-wrap");
