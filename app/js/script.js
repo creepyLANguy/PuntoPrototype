@@ -705,6 +705,8 @@ document.addEventListener("DOMContentLoaded", () =>
     scoreFormatBadge: $("scoreFormatBadge"),
     straightPointsTotal: $("straightPointsTotal"),
     straightTotalValue: $("straightTotalValue"),
+    serverBadgeA: $("serverBadgeA"),
+    serverBadgeB: $("serverBadgeB"),
 
     sep1: $("sep1"),
     sep2: $("sep2"),
@@ -2394,6 +2396,74 @@ document.addEventListener("DOMContentLoaded", () =>
     return p === 4 ? "Ad" : (POINTS[p] ?? p);
   }
 
+  function getCompletedMatchGames(currentScore)
+  {
+    const completedSets = Array.isArray(currentScore.completedSets) ? currentScore.completedSets : [];
+    const completedGames = completedSets.reduce((sum, set) =>
+    {
+      const setA = Number(set.A) || 0;
+      const setB = Number(set.B) || 0;
+      return sum + setA + setB;
+    }, 0);
+
+    return completedGames + (Number(currentScore.A.games) || 0) + (Number(currentScore.B.games) || 0);
+  }
+
+  function getGameServerLabel(totalCompletedGames)
+  {
+    const servingTeam = totalCompletedGames % 2 === 0 ? "A" : "B";
+    const serviceRotationIndex = Math.floor(totalCompletedGames / 2);
+    const playerNumber = serviceRotationIndex % 2 === 0 ? "1" : "2";
+    return `${servingTeam}${playerNumber}`;
+  }
+
+  function getTiebreakServerLabel(currentScore)
+  {
+    const totalCompletedGames = getCompletedMatchGames(currentScore);
+    const startingServer = getGameServerLabel(totalCompletedGames);
+    const totalPoints = (Number(currentScore.A.points) || 0) + (Number(currentScore.B.points) || 0);
+
+    if (totalPoints === 0)
+    {
+      return startingServer;
+    }
+
+    const startingTeam = startingServer[0];
+    const oppositeTeam = startingTeam === "A" ? "B" : "A";
+    const segment = Math.floor((totalPoints + 1) / 2);
+    const servingTeam = segment % 2 === 0 ? startingTeam : oppositeTeam;
+    const serviceSegmentIndex = Math.floor(segment / 2);
+    const playerNumber = serviceSegmentIndex % 2 === 0 ? "1" : "2";
+
+    return `${servingTeam}${playerNumber}`;
+  }
+
+  function getCurrentServerLabel(currentScore)
+  {
+    if (!currentScore || currentScore.matchComplete)
+    {
+      return null;
+    }
+
+    const options = resolveScoringOptions(currentScore);
+    if (options.scoringMode === "straight")
+    {
+      return null;
+    }
+
+    const totalCompletedGames = getCompletedMatchGames(currentScore);
+    const isStandardTiebreak = options.scoringMode === "standard" &&
+      (currentScore.inTiebreak || (currentScore.A.games === 6 && currentScore.B.games === 6));
+    const isMatchTiebreak = options.scoringMode === "tiebreakTen";
+
+    if (isStandardTiebreak || isMatchTiebreak)
+    {
+      return getTiebreakServerLabel(currentScore);
+    }
+
+    return getGameServerLabel(totalCompletedGames);
+  }
+
   function getCriticalPointStatus(currentScore)
   {
     const status = {
@@ -2592,6 +2662,32 @@ document.addEventListener("DOMContentLoaded", () =>
       // Update baseline after detecting increments
       lastKnownSets.A = score.A.sets;
       lastKnownSets.B = score.B.sets;
+    }
+
+    updateServerIndicator();
+  }
+
+  function updateServerIndicator()
+  {
+    if (!elements.serverBadgeA || !elements.serverBadgeB)
+    {
+      return;
+    }
+
+    const label = getCurrentServerLabel(score);
+    const teamAServing = label?.startsWith("A");
+    const teamBServing = label?.startsWith("B");
+
+    elements.serverBadgeA.classList.toggle("hidden", !teamAServing);
+    elements.serverBadgeB.classList.toggle("hidden", !teamBServing);
+
+    if (teamAServing)
+    {
+      elements.serverBadgeA.textContent = `${label}`;
+    }
+    if (teamBServing)
+    {
+      elements.serverBadgeB.textContent = `${label}`;
     }
   }
 
