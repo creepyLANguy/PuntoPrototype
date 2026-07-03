@@ -18,6 +18,23 @@
   <script src="js/jscolor.min.js"></script>
   <script type="module" src="js/script.js"></script>
   <link rel="icon" type="image/svg+xml" href="media/img/favicon.svg">
+
+  <meta name="theme-color" content="#111827" />
+  <meta name="color-scheme" content="dark light" />
+  
+  <link rel="canonical" href="https://www.padelpush.co.za/app/" />
+
+  <meta property="og:title" content="Padel Push - Live Scoreboard" />
+  <meta property="og:description"
+    content="Live padel scoring system. Track points, games, sets and matches in real time." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://www.padelpush.co.za/app/" />
+  <meta property="og:image" content="https://www.padelpush.co.za/media/img/social-preview.png" />
+
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Padel Push - Live Scoreboard" />
+  <meta name="twitter:description" content="Live padel scoring system." />
+  <meta name="twitter:image" content="https://www.padelpush.co.za/media/img/social-preview.png" />
 </head>
 
 <body>
@@ -567,6 +584,9 @@
             </div>
 
             <div id="scoreFormatBadge" class="score-format-badge hidden"></div>
+            <div id="serverIndicator" class="server-indicator hidden">
+              Serving: <span id="serverName">A1</span>
+            </div>
 
             <!-- TEAM A -->
             <div class="team team-a" id="teamA">
@@ -665,10 +685,6 @@
     </div>
 
   </div> <!-- CONTENT CONTAINER -->
-</body>
-
-</html>
-</div> <!-- CONTENT CONTAINER -->
 </body>
 
 </html>
