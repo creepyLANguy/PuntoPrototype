@@ -235,6 +235,7 @@ document.addEventListener("DOMContentLoaded", () =>
 
   let isLightMode = localStorage.getItem("theme") === "light";
   let isWavesEnabled = localStorage.getItem("waves") !== "false";
+  let isServerBadgeVisible = localStorage.getItem("serverBadge") !== "false";
   let teamColoursByTheme = loadStoredTeamColours();
 
   // =====================================================
@@ -522,6 +523,7 @@ document.addEventListener("DOMContentLoaded", () =>
     updateItem(elements.waveToggleScoreboardBtn, isWavesEnabled, "Waves on", "Waves off");
     updateItem(elements.fullscreenBtn, Boolean(getFullscreenElement()), "Exit full", "Fullscreen");
     updateItem(elements.swapBtn, document.querySelector(".scoreboard")?.classList.contains("swapped"), "Swapped", "Swap sides");
+    updateItem(elements.serverToggleBtn, isServerBadgeVisible, "Server on", "Server off");
   }
 
   function toggleWaves()
@@ -682,7 +684,6 @@ document.addEventListener("DOMContentLoaded", () =>
 
     undoBtn: $("undoBtn"),
     backBtn: $("backBtn"),
-    resetBtn: $("resetBtn"),
     swapBtn: $("swapBtn"),
     muteBtn: $("muteBtn"),
     fullscreenBtn: $("fullscreenBtn"),
@@ -707,6 +708,11 @@ document.addEventListener("DOMContentLoaded", () =>
     straightTotalValue: $("straightTotalValue"),
     serverBadgeA: $("serverBadgeA"),
     serverBadgeB: $("serverBadgeB"),
+
+    serverToggleBtn: $("serverToggleBtn"),
+    serverToggleTile: $("serverToggleTile"),
+    resetSettingsBtn: $("resetSettingsBtn"),
+    resetSettingsTile: $("resetSettingsTile"),
 
     sep1: $("sep1"),
     sep2: $("sep2"),
@@ -1101,7 +1107,8 @@ document.addEventListener("DOMContentLoaded", () =>
         if (!isSpectating)
         {
           e.preventDefault();
-          elements.resetBtn.click();
+          // Open settings modal to the reset tile
+          elements.settingsBtn.click();
         }
         return;
       }
@@ -2096,10 +2103,13 @@ document.addEventListener("DOMContentLoaded", () =>
     $("addPointB").style.pointerEvents = "none";
 
     elements.undoBtn.style.display = "none";
-    elements.resetBtn.style.display = "none";
     if (elements.muteBtn.parentElement) elements.muteBtn.parentElement.style.display = "none";
     if (elements.sep1) elements.sep1.style.display = "none";
     if (elements.sep2) elements.sep2.style.display = "none";
+
+    // Hide player-only tiles in the settings modal
+    if (elements.serverToggleTile) elements.serverToggleTile.style.display = "none";
+    if (elements.resetSettingsTile) elements.resetSettingsTile.style.display = "none";
 
     syncScoringControls();
     showSpectatorBadges();
@@ -2116,10 +2126,13 @@ document.addEventListener("DOMContentLoaded", () =>
 
     // Use "" to let CSS (flex) decide display, not "inline-block"
     elements.undoBtn.style.display = "";
-    elements.resetBtn.style.display = "";
     if (elements.muteBtn.parentElement) elements.muteBtn.parentElement.style.display = "";
     if (elements.sep1) elements.sep1.style.display = "";
     if (elements.sep2) elements.sep2.style.display = "";
+
+    // Restore player-only tiles in the settings modal
+    if (elements.serverToggleTile) elements.serverToggleTile.style.display = "";
+    if (elements.resetSettingsTile) elements.resetSettingsTile.style.display = "";
 
     syncScoringControls();
     removeSpectatorBadges();
@@ -2675,8 +2688,8 @@ document.addEventListener("DOMContentLoaded", () =>
     }
 
     const label = getCurrentServerLabel(score);
-    const teamAServing = label?.startsWith("A");
-    const teamBServing = label?.startsWith("B");
+    const teamAServing = isServerBadgeVisible && label?.startsWith("A");
+    const teamBServing = isServerBadgeVisible && label?.startsWith("B");
 
     elements.serverBadgeA.classList.toggle("hidden", !teamAServing);
     elements.serverBadgeB.classList.toggle("hidden", !teamBServing);
@@ -3229,7 +3242,30 @@ document.addEventListener("DOMContentLoaded", () =>
     }
   });
 
-  elements.resetBtn.addEventListener("click", openResetModal);
+  // Reset tile in settings modal (player-only)
+  if (elements.resetSettingsBtn)
+  {
+    elements.resetSettingsBtn.addEventListener("click", () =>
+    {
+      // Close settings first, then open reset modal
+      elements.settingsModal.classList.add("hidden");
+      openResetModal();
+    });
+  }
+
+  // Server visibility toggle tile (player-only)
+  if (elements.serverToggleBtn)
+  {
+    elements.serverToggleBtn.addEventListener("click", () =>
+    {
+      isServerBadgeVisible = !isServerBadgeVisible;
+      localStorage.setItem("serverBadge", isServerBadgeVisible);
+      updateServerIndicator();
+      syncSettingsTiles();
+      playSound(SOUND_IDS.POP);
+      showToast(isServerBadgeVisible ? "Server indicator on" : "Server indicator off", TOAST_TYPES.INFO);
+    });
+  }
 
   elements.muteBtn.addEventListener("click", () =>
   {

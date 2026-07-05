@@ -764,7 +764,7 @@ body.light-mode .game-dot.filled {
   position: absolute;
   bottom: 4%;
   left: 4%;
-  transition: opacity 0.2s ease;  
+  transition: opacity 0.2s ease;
   color: var(--white);
   font-weight: 900;
   font-size: clamp(0.75rem, 2vmin, 2.15rem);
@@ -1140,6 +1140,12 @@ body.light-mode .setting-item:hover {
   --btn-size: 50px;
   opacity: 1 !important;
   border-color: rgba(255, 255, 255, 0.3) !important;
+}
+
+.setting-item:hover .reset-tile-btn {
+  background: rgba(255, 107, 107, 0.15) !important;
+  border-color: #ff6b6b !important;
+  color: #ff6b6b !important;
 }
 
 body.light-mode .modal-btn {
@@ -4660,7 +4666,7 @@ body.light-mode .scoring-field select {
 }
 
 @media (orientation: landscape) {
-  
+
   .straight-total-label {
     display: none !important;
   }
@@ -4684,7 +4690,7 @@ body.light-mode .scoring-field select {
     align-items: center;
     justify-content: center;
   }
-  
+
   .scoreboard.swapped .straight-total {
     background-image:
       linear-gradient(var(--waveBg), var(--waveBg)),
@@ -4696,13 +4702,12 @@ body.light-mode .scoring-field select {
   }
 }
 
-.straight-total 
-{
+.straight-total {
   background: var(--waveBg);
 }
 
 body.light-mode .straight-total {
-    background-color: var(--waveBg);
+  background-color: var(--waveBg);
 }
 
 .straight-total.hidden {
