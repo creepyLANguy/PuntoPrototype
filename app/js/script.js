@@ -37,7 +37,7 @@ export async function resetCourt(courtId, deepReset = false, newPassword = null)
   }
 }
 
-document.addEventListener("DOMContentLoaded", () =>
+document.addEventListener("DOMContentLoaded", async () =>
 {
 
   // =====================================================
@@ -1615,6 +1615,7 @@ document.addEventListener("DOMContentLoaded", () =>
   {
     const normalizedCourtId = (courtId || "").trim();
     if (!normalizedCourtId) return;
+    const lowerCourtId = normalizedCourtId.toLowerCase();
 
     selectedPlayCourt = null;
     elements.playCourtNameError.textContent = "";
@@ -1626,7 +1627,7 @@ document.addEventListener("DOMContentLoaded", () =>
       el.classList.remove("active");
     });
 
-    const matchedCourt = allCourts.find(court => court.id.toLowerCase() === normalizedCourtId.toLowerCase());
+    const matchedCourt = allCourts.find(court => court.id.toLowerCase() === lowerCourtId);
     if (!matchedCourt)
     {
       elements.playCourtNameError.textContent = "Court not found.";
@@ -1636,8 +1637,9 @@ document.addEventListener("DOMContentLoaded", () =>
     selectedPlayCourt = matchedCourt.id;
     elements.playCourtSearch.value = matchedCourt.name;
 
+    const lowerCourtName = matchedCourt.name.toLowerCase();
     const selectedItem = [...elements.playCourtList.querySelectorAll(".court-item")]
-      .find(el => (el.dataset.courtName || "").toLowerCase() === matchedCourt.name.toLowerCase());
+      .find(el => (el.dataset.courtName || "").toLowerCase() === lowerCourtName);
     if (selectedItem)
     {
       selectedItem.classList.add("active");
@@ -3686,8 +3688,8 @@ document.addEventListener("DOMContentLoaded", () =>
   // =====================================================
 
   updateUI();
+  await handleDeepLinkFromUrl();
   initNfc();
-  handleDeepLinkFromUrl();
 
   $("addPointA").addEventListener("click", () => addPoint(EVENT_TYPES.POINT_TEAM_A));
   $("addPointB").addEventListener("click", () => addPoint(EVENT_TYPES.POINT_TEAM_B));
