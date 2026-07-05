@@ -95,6 +95,8 @@ document.addEventListener("DOMContentLoaded", () =>
     CLOSED: "closed",
     PRIVATE: "private"
   };
+  const DEEPLINK_SPECTATE_PATHS = new Set(["watch", "view", "spectate"]);
+  const DEEPLINK_PLAY_PATHS = new Set(["play", "join"]);
 
   const TOAST_TYPES = {
     SUCCESS: "success",
@@ -1581,6 +1583,123 @@ document.addEventListener("DOMContentLoaded", () =>
     await initNfc();
   });
 
+  async function openPlayMenu()
+  {
+    elements.menuPage.style.display = "none";
+    elements.playPage.style.display = "flex";
+    elements.playPasswordSection.style.display = "none";
+    selectedPlayCourt = null;
+    elements.playCourtSearch.value = "";
+    elements.playCourtPassword.value = "";
+    elements.playCourtNameError.textContent = "";
+    elements.playCourtPasswordError.textContent = "";
+
+    await loadAllActiveCourts();
+    displayPlayCourtList(allCourts);
+    elements.playCourtSearch.focus();
+  }
+
+  async function openSpectateMenu()
+  {
+    elements.menuPage.style.display = "none";
+    elements.spectatePage.style.display = "flex";
+    elements.spectateCourtSearch.value = "";
+    elements.spectateCourtNameError.textContent = "";
+
+    await loadAllActiveCourts(false);
+    displaySpectateCourtList(allCourts);
+    elements.spectateCourtSearch.focus();
+  }
+
+  function selectPlayCourtById(courtId)
+  {
+    const normalizedCourtId = (courtId || "").trim();
+    if (!normalizedCourtId) return;
+
+    selectedPlayCourt = null;
+    elements.playCourtNameError.textContent = "";
+    elements.playCourtPasswordError.textContent = "";
+    elements.playPasswordSection.style.display = "none";
+
+    elements.playCourtList.querySelectorAll(".court-item").forEach(el =>
+    {
+      el.classList.remove("active");
+    });
+
+    const matchedCourt = allCourts.find(court => court.id.toLowerCase() === normalizedCourtId.toLowerCase());
+    if (!matchedCourt)
+    {
+      elements.playCourtNameError.textContent = "Court not found.";
+      return;
+    }
+
+    selectedPlayCourt = matchedCourt.id;
+    elements.playCourtSearch.value = matchedCourt.name;
+
+    const selectedItem = [...elements.playCourtList.querySelectorAll(".court-item")]
+      .find(el => (el.dataset.courtName || "").toLowerCase() === matchedCourt.name.toLowerCase());
+    if (selectedItem)
+    {
+      selectedItem.classList.add("active");
+      selectedItem.scrollIntoView({ block: "nearest" });
+    }
+
+    elements.playPasswordSection.style.display = "block";
+    elements.playCourtPassword.focus();
+  }
+
+  function parseDeepLinkPath(pathname)
+  {
+    const segments = (pathname || "")
+      .split("/")
+      .map(segment => segment.trim())
+      .filter(Boolean);
+
+    if (!segments.length) return null;
+
+    const routeSegments = segments[0].toLowerCase() === "app"
+      ? segments.slice(1)
+      : segments;
+    if (!routeSegments.length) return null;
+
+    const routeName = routeSegments[0].toLowerCase();
+    const courtId = routeSegments[1] ? decodeURIComponent(routeSegments[1]).trim() : "";
+
+    if (DEEPLINK_SPECTATE_PATHS.has(routeName))
+    {
+      return { flow: "spectate", courtId };
+    }
+
+    if (DEEPLINK_PLAY_PATHS.has(routeName))
+    {
+      return { flow: "play", courtId };
+    }
+
+    return null;
+  }
+
+  async function handleDeepLinkFromUrl()
+  {
+    const deepLink = parseDeepLinkPath(window.location.pathname);
+    if (!deepLink) return;
+
+    if (deepLink.flow === "spectate")
+    {
+      await openSpectateMenu();
+      if (deepLink.courtId)
+      {
+        await enterCourt(deepLink.courtId, true);
+      }
+      return;
+    }
+
+    await openPlayMenu();
+    if (deepLink.courtId)
+    {
+      selectPlayCourtById(deepLink.courtId);
+    }
+  }
+
   elements.showCreateCourtModalBtn.addEventListener("click", () =>
   {
     elements.adminDashboardPage.style.display = "none";
@@ -1599,31 +1718,13 @@ document.addEventListener("DOMContentLoaded", () =>
 
       if (action === "Play")
       {
-        elements.menuPage.style.display = "none";
-        elements.playPage.style.display = "flex";
-        elements.playPasswordSection.style.display = "none";
-        selectedPlayCourt = null;
-        elements.playCourtSearch.value = "";
-        elements.playCourtPassword.value = "";
-        elements.playCourtNameError.textContent = "";
-        elements.playCourtPasswordError.textContent = "";
-
-        await loadAllActiveCourts();
-        displayPlayCourtList(allCourts);
-        elements.playCourtSearch.focus();
+        await openPlayMenu();
         return;
       }
 
       if (action === "Spectate")
       {
-        elements.menuPage.style.display = "none";
-        elements.spectatePage.style.display = "flex";
-        elements.spectateCourtSearch.value = "";
-        elements.spectateCourtNameError.textContent = "";
-
-        await loadAllActiveCourts(false);
-        displaySpectateCourtList(allCourts);
-        elements.spectateCourtSearch.focus();
+        await openSpectateMenu();
         return;
       }
     });
@@ -3586,6 +3687,7 @@ document.addEventListener("DOMContentLoaded", () =>
 
   updateUI();
   initNfc();
+  handleDeepLinkFromUrl();
 
   $("addPointA").addEventListener("click", () => addPoint(EVENT_TYPES.POINT_TEAM_A));
   $("addPointB").addEventListener("click", () => addPoint(EVENT_TYPES.POINT_TEAM_B));

@@ -24,6 +24,46 @@
         "destination": "/nfcWriter/index.html"
       },
       {
+        "source": "/watch",
+        "destination": "/app/index.html"
+      },
+      {
+        "source": "/watch/**",
+        "destination": "/app/index.html"
+      },
+      {
+        "source": "/view",
+        "destination": "/app/index.html"
+      },
+      {
+        "source": "/view/**",
+        "destination": "/app/index.html"
+      },
+      {
+        "source": "/spectate",
+        "destination": "/app/index.html"
+      },
+      {
+        "source": "/spectate/**",
+        "destination": "/app/index.html"
+      },
+      {
+        "source": "/play",
+        "destination": "/app/index.html"
+      },
+      {
+        "source": "/play/**",
+        "destination": "/app/index.html"
+      },
+      {
+        "source": "/join",
+        "destination": "/app/index.html"
+      },
+      {
+        "source": "/join/**",
+        "destination": "/app/index.html"
+      },
+      {
         "source": "**",
         "destination": "/index.html"
       }
