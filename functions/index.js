@@ -354,17 +354,20 @@ exports.getDetailedScore = onCall(
             }
             else
             {
+                const previousTotalPoints = (Number(score.A.totalPoints) || 0) + (Number(score.B.totalPoints) || 0);
                 // Normal point awarding
                 score = applyEvent(score, event, normalizedOptions);
+                const nextTotalPoints = (Number(score.A.totalPoints) || 0) + (Number(score.B.totalPoints) || 0);
+                const pointApplied = nextTotalPoints > previousTotalPoints;
 
                 // Track who scored this point (only POINT_TEAM_A/B contribute to momentum)
-                if (event.eventType === "POINT_TEAM_A")
+                if (event.eventType === "POINT_TEAM_A" && pointApplied)
                     pointHistory.push("A");
-                else if (event.eventType === "POINT_TEAM_B")
+                else if (event.eventType === "POINT_TEAM_B" && pointApplied)
                     pointHistory.push("B");
                 // Other non-reset scoring events (e.g. WARMUP) are intentionally ignored
 
-                if ((event.eventType === "POINT_TEAM_A" || event.eventType === "POINT_TEAM_B") &&
+                if (pointApplied && (event.eventType === "POINT_TEAM_A" || event.eventType === "POINT_TEAM_B") &&
                     (score.A.sets > oldSetsA || score.B.sets > oldSetsB))
                 {
                     setPointMarkers.push(pointHistory.length);
