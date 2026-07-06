@@ -727,6 +727,8 @@ document.addEventListener("DOMContentLoaded", () =>
     dmHead: $("dmHead"),
     dmBody: $("dmBody"),
     detailsLoading: $("detailsLoading"),
+    dmMomentumWrap: $("dmMomentumWrap"),
+    dmMomentumCanvas: $("dmMomentumCanvas"),
 
     confirmModal: $("confirmModal"),
     confirmMessage: $("confirmMessage"),
@@ -3333,6 +3335,107 @@ document.addEventListener("DOMContentLoaded", () =>
       elements.detailsModal.classList.add("hidden");
   });
 
+  function renderMomentumGraph(pointHistory, colourA, colourB)
+  {
+    const wrap = elements.dmMomentumWrap;
+    const canvas = elements.dmMomentumCanvas;
+
+    if (!pointHistory || pointHistory.length < 2)
+    {
+      wrap.classList.add("hidden");
+      return;
+    }
+
+    wrap.classList.remove("hidden");
+
+    // Defer drawing so the canvas has a settled layout width
+    requestAnimationFrame(() =>
+    {
+      const dpr = window.devicePixelRatio || 1;
+      const cssW = canvas.offsetWidth || canvas.parentElement.offsetWidth || 320;
+      const cssH = 120;
+      canvas.width = cssW * dpr;
+      canvas.height = cssH * dpr;
+      canvas.style.height = cssH + "px";
+
+      const ctx = canvas.getContext("2d");
+      ctx.scale(dpr, dpr);
+
+      const W = cssW;
+      const H = cssH;
+      const padX = 8;
+      const padY = 10;
+      const midY = H / 2;
+
+      // Build cumulative momentum: +1 per A point, -1 per B point
+      const values = [0];
+      for (const p of pointHistory)
+        values.push(values[values.length - 1] + (p === "A" ? 1 : -1));
+
+      const maxVal = Math.max(...values.map(Math.abs), 1);
+
+      // Map index → x, value → y
+      const toX = i => padX + (i / (values.length - 1)) * (W - padX * 2);
+      const toY = v => midY - (v / maxVal) * (midY - padY);
+
+      // --- Background fill above midline (team A) ---
+      const fillAbove = new Path2D();
+      fillAbove.moveTo(toX(0), midY);
+      for (let i = 0; i < values.length; i++)
+        fillAbove.lineTo(toX(i), toY(values[i]));
+      fillAbove.lineTo(toX(values.length - 1), midY);
+      fillAbove.closePath();
+
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(0, 0, W, midY);
+      ctx.clip();
+      ctx.fillStyle = colourA + "55";
+      ctx.fill(fillAbove);
+      ctx.restore();
+
+      // --- Background fill below midline (team B) ---
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(0, midY, W, H - midY);
+      ctx.clip();
+      ctx.fillStyle = colourB + "55";
+      ctx.fill(fillAbove);
+      ctx.restore();
+
+      // --- Centre balanced line ---
+      ctx.beginPath();
+      ctx.moveTo(padX, midY);
+      ctx.lineTo(W - padX, midY);
+      const isLight = document.body.classList.contains("light-mode");
+      ctx.strokeStyle = isLight ? "rgba(0,0,0,0.12)" : "rgba(255,255,255,0.15)";
+      ctx.lineWidth = 1;
+      ctx.setLineDash([4, 4]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // --- Momentum line ---
+      ctx.beginPath();
+      for (let i = 0; i < values.length; i++)
+      {
+        if (i === 0) ctx.moveTo(toX(i), toY(values[i]));
+        else ctx.lineTo(toX(i), toY(values[i]));
+      }
+      ctx.strokeStyle = values[values.length - 1] >= 0 ? colourA : colourB;
+      ctx.lineWidth = 2;
+      ctx.lineJoin = "round";
+      ctx.stroke();
+
+      // --- End dot ---
+      const lastX = toX(values.length - 1);
+      const lastY = toY(values[values.length - 1]);
+      ctx.beginPath();
+      ctx.arc(lastX, lastY, 3.5, 0, Math.PI * 2);
+      ctx.fillStyle = values[values.length - 1] >= 0 ? colourA : colourB;
+      ctx.fill();
+    });
+  }
+
   async function showMatchDetails()
   {
     elements.detailsModal.classList.remove("hidden");
@@ -3356,10 +3459,11 @@ document.addEventListener("DOMContentLoaded", () =>
 
     elements.detailsLoading.classList.remove("hidden");
 
-    // Clear table rows and columns safely
+    // Clear table rows, columns, and momentum graph safely
     const headRow = elements.dmHead.querySelector("tr");
     headRow.innerHTML = "";
     elements.dmBody.innerHTML = "";
+    elements.dmMomentumWrap.classList.add("hidden");
 
     try
     {
@@ -3403,6 +3507,10 @@ document.addEventListener("DOMContentLoaded", () =>
         // 2) Populate the main sets labels with the cumulative match points
         elements.detailsSetsA.textContent = (points && points.A !== undefined) ? points.A : 0;
         elements.detailsSetsB.textContent = (points && points.B !== undefined) ? points.B : 0;
+
+        const colourA = getComputedStyle(document.body).getPropertyValue("--teamAcolour").trim();
+        const colourB = getComputedStyle(document.body).getPropertyValue("--teamBcolour").trim();
+        renderMomentumGraph(result.data.pointHistory, colourA, colourB);
         return;
       }
       
@@ -3474,6 +3582,10 @@ document.addEventListener("DOMContentLoaded", () =>
         elements.dmBody.appendChild(mkRow("a", allSets));
         elements.dmBody.appendChild(mkRow("b", allSets));
       }
+
+      const colourA = getComputedStyle(document.body).getPropertyValue("--teamAcolour").trim();
+      const colourB = getComputedStyle(document.body).getPropertyValue("--teamBcolour").trim();
+      renderMomentumGraph(result.data.pointHistory, colourA, colourB);
     }
     catch (err)
     {
