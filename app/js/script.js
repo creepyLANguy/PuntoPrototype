@@ -3787,14 +3787,14 @@ document.addEventListener("DOMContentLoaded", () =>
         `${primaryTeamStats.pointsWon}/${totalPoints} · ${formatPct(primaryTeamStats.pointWinPct)}`,
         `${secondaryTeamStats.pointsWon}/${totalPoints} · ${formatPct(secondaryTeamStats.pointWinPct)}`
       ),
-      row("Streak", primaryTeamStats.longestScoringStreak, secondaryTeamStats.longestScoringStreak),
+      row("Longest Streak", primaryTeamStats.longestScoringStreak, secondaryTeamStats.longestScoringStreak),
       row("Breaks Faced", primaryTeamStats.breakPointsFaced, secondaryTeamStats.breakPointsFaced),
       row("Breaks Held", `${primaryTeamStats.breakPointsWon}/${primaryTeamStats.breakPointsFaced} · ${formatPct(primaryTeamStats.breakPointWinPct)}`,
                           `${secondaryTeamStats.breakPointsWon}/${secondaryTeamStats.breakPointsFaced} · ${formatPct(secondaryTeamStats.breakPointWinPct)}`),
       row("Break Chances", primaryTeamStats.breakPointConversionOpportunities, secondaryTeamStats.breakPointConversionOpportunities),
       row("Breaks Won", `${primaryTeamStats.breakPointConversions}/${primaryTeamStats.breakPointConversionOpportunities} · ${formatPct(primaryTeamStats.breakPointConversionPct)}`,
                         `${secondaryTeamStats.breakPointConversions}/${secondaryTeamStats.breakPointConversionOpportunities} · ${formatPct(secondaryTeamStats.breakPointConversionPct)}`),
-      row("Closing",
+      row("Closing Pts Won",
         `${formatPct(primaryTeamStats.closingEfficiencyPct)} (${primaryTeamStats.gamePointConversions}/${primaryTeamStats.gamePointGames})`,
         `${formatPct(secondaryTeamStats.closingEfficiencyPct)} (${secondaryTeamStats.gamePointConversions}/${secondaryTeamStats.gamePointGames})`),
       sectionRow("Deuce"),
@@ -3844,7 +3844,7 @@ document.addEventListener("DOMContentLoaded", () =>
 
     elements.dmStatsMeta.innerHTML = `
       <ul class="dm-meta-list">
-        <li><span class="dm-meta-key">Match swings:</span> ${matchStats.leadChanges} lead changes.</li>
+        <li><span class="dm-meta-key">Match swings:<br/></span> ${matchStats.leadChanges} lead changes.</li>
         <li><span class="dm-meta-key">Largest comeback:<br/></span> ${comebackText}</li>
       </ul>
     `;
