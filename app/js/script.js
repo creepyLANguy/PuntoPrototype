@@ -3350,7 +3350,7 @@ document.addEventListener("DOMContentLoaded", () =>
       elements.detailsModal.classList.add("hidden");
   });
 
-  function renderMomentumGraph(pointHistory, colourA, colourB)
+  function renderMomentumGraph(pointHistory, colourA, colourB, setPointMarkers = [])
   {
     const wrap = elements.dmMomentumWrap;
     const canvas = elements.dmMomentumCanvas;
@@ -3433,24 +3433,54 @@ document.addEventListener("DOMContentLoaded", () =>
       ctx.stroke();
       ctx.setLineDash([]);
 
-      // --- Momentum line ---
-      ctx.beginPath();
-      for (let i = 0; i < values.length; i++)
+      // --- Set point markers ---
+      const markerIndices = Array.isArray(setPointMarkers)
+        ? [...new Set(setPointMarkers
+          .filter((index) => Number.isInteger(index) && index > 0 && index < values.length))]
+        : [];
+
+      markerIndices.forEach((index) =>
       {
-        if (i === 0) ctx.moveTo(toX(i), toY(values[i]));
-        else ctx.lineTo(toX(i), toY(values[i]));
-      }
-      ctx.strokeStyle = values[values.length - 1] >= 0 ? colourA : colourB;
+        const x = toX(index);
+        ctx.beginPath();
+        ctx.moveTo(x, padY);
+        ctx.lineTo(x, H - padY);
+        ctx.strokeStyle = "rgba(255,255,255,0.95)";
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      });
+
+      // --- Momentum line (segment colours by active momentum) ---
       ctx.lineWidth = 2;
       ctx.lineJoin = "round";
-      ctx.stroke();
+      ctx.lineCap = "round";
+      for (let i = 0; i < values.length - 1; i++)
+      {
+        const segmentEndValue = values[i + 1];
+        const segmentColour =
+          segmentEndValue > 0 ? colourA :
+            segmentEndValue < 0 ? colourB :
+              "#ffffff";
+
+        ctx.beginPath();
+        ctx.moveTo(toX(i), toY(values[i]));
+        ctx.lineTo(toX(i + 1), toY(values[i + 1]));
+        ctx.strokeStyle = segmentColour;
+        ctx.stroke();
+      }
+
+      const finalMomentum = values[values.length - 1];
+      const finalMomentumColour =
+        finalMomentum > 0 ? colourA :
+          finalMomentum < 0 ? colourB :
+            "#ffffff";
 
       // --- End dot ---
       const lastX = toX(values.length - 1);
       const lastY = toY(values[values.length - 1]);
       ctx.beginPath();
       ctx.arc(lastX, lastY, 3.5, 0, Math.PI * 2);
-      ctx.fillStyle = values[values.length - 1] >= 0 ? colourA : colourB;
+      ctx.fillStyle = finalMomentumColour;
       ctx.fill();
     });
   }
@@ -3529,7 +3559,7 @@ document.addEventListener("DOMContentLoaded", () =>
 
         const colourA = getComputedStyle(document.body).getPropertyValue("--teamAcolour").trim();
         const colourB = getComputedStyle(document.body).getPropertyValue("--teamBcolour").trim();
-        renderMomentumGraph(result.data.pointHistory, colourA, colourB);
+        renderMomentumGraph(result.data.pointHistory, colourA, colourB, result.data.setPointMarkers || []);
         return;
       }
       
@@ -3604,7 +3634,7 @@ document.addEventListener("DOMContentLoaded", () =>
 
       const colourA = getComputedStyle(document.body).getPropertyValue("--teamAcolour").trim();
       const colourB = getComputedStyle(document.body).getPropertyValue("--teamBcolour").trim();
-      renderMomentumGraph(result.data.pointHistory, colourA, colourB);
+      renderMomentumGraph(result.data.pointHistory, colourA, colourB, result.data.setPointMarkers || []);
     }
     catch (err)
     {

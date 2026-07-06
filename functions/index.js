@@ -311,6 +311,7 @@ exports.getDetailedScore = onCall(
         let setScores = [];
         let currentSetGames = { A: 0, B: 0 };
         let pointHistory = []; // "A" or "B" for each point scored, in order
+        let setPointMarkers = []; // 1-based point index where a set is won
 
         eventsSnap.forEach(docSnap =>
         {
@@ -333,6 +334,11 @@ exports.getDetailedScore = onCall(
 
                     // Remove the last recorded point from history
                     pointHistory.pop();
+
+                    while (setPointMarkers.length > 0 && setPointMarkers[setPointMarkers.length - 1] > pointHistory.length)
+                    {
+                        setPointMarkers.pop();
+                    }
                 }
             }
             else if (event.eventType === "RESET")
@@ -340,6 +346,7 @@ exports.getDetailedScore = onCall(
                 score = defaultScore(normalizedOptions);
                 setScores = [];
                 pointHistory = [];
+                setPointMarkers = [];
             }
             else
             {
@@ -352,6 +359,12 @@ exports.getDetailedScore = onCall(
                 else if (event.eventType === "POINT_TEAM_B")
                     pointHistory.push("B");
                 // Other non-reset scoring events (e.g. WARMUP) are intentionally ignored
+
+                if ((event.eventType === "POINT_TEAM_A" || event.eventType === "POINT_TEAM_B") &&
+                    (score.A.sets > oldSetsA || score.B.sets > oldSetsB))
+                {
+                    setPointMarkers.push(pointHistory.length);
+                }
 
                 // Did this point finish a set? (Only track this actively in standard format)
                 if (normalizedOptions.scoringMode === "standard") {
@@ -384,7 +397,8 @@ exports.getDetailedScore = onCall(
             scoringMode: normalizedOptions.scoringMode,
             scoringOptions: normalizedOptions,
             matchComplete: score.matchComplete,
-            pointHistory
+            pointHistory,
+            setPointMarkers
         };
     }
 );
