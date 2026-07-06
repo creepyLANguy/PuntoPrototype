@@ -3391,18 +3391,53 @@ document.addEventListener("DOMContentLoaded", () =>
       for (const p of pointHistory)
         values.push(values[values.length - 1] + (p === "A" ? 1 : -1));
 
+      // Smooth sharp directional changes so peaks/troughs render less jagged.
+      const smoothedValues = values.map((v, i, arr) =>
+      {
+        if (i === 0 || i === arr.length - 1) return v;
+        return (arr[i - 1] + arr[i] * 2 + arr[i + 1]) / 4;
+      });
+
       const maxVal = Math.max(...values.map(Math.abs), 1);
 
       // Map index → x, value → y
       const toX = i => padX + (i / (values.length - 1)) * (W - padX * 2);
       const toY = v => midY - (v / maxVal) * (midY - padY);
 
+      const points = smoothedValues.map((v, i) => ({ x: toX(i), y: toY(v) }));
+
+      const traceQuadraticPath = (target, pts, moveToStart = true) =>
+      {
+        if (!pts || pts.length === 0) return;
+
+        if (moveToStart)
+          target.moveTo(pts[0].x, pts[0].y);
+
+        if (pts.length === 1) return;
+
+        if (pts.length === 2)
+        {
+          target.lineTo(pts[1].x, pts[1].y);
+          return;
+        }
+
+        for (let i = 1; i < pts.length - 1; i++)
+        {
+          const midX = (pts[i].x + pts[i + 1].x) / 2;
+          const midY = (pts[i].y + pts[i + 1].y) / 2;
+          target.quadraticCurveTo(pts[i].x, pts[i].y, midX, midY);
+        }
+
+        const last = pts.length - 1;
+        target.quadraticCurveTo(pts[last - 1].x, pts[last - 1].y, pts[last].x, pts[last].y);
+      };
+
       // --- Background fill above midline (team A) ---
       const fillAbove = new Path2D();
-      fillAbove.moveTo(toX(0), midY);
-      for (let i = 0; i < values.length; i++)
-        fillAbove.lineTo(toX(i), toY(values[i]));
-      fillAbove.lineTo(toX(values.length - 1), midY);
+      fillAbove.moveTo(points[0].x, midY);
+      fillAbove.lineTo(points[0].x, points[0].y);
+      traceQuadraticPath(fillAbove, points, false);
+      fillAbove.lineTo(points[points.length - 1].x, midY);
       fillAbove.closePath();
 
       ctx.save();
@@ -3454,6 +3489,10 @@ document.addEventListener("DOMContentLoaded", () =>
       ctx.lineWidth = 2;
       ctx.lineJoin = "round";
       ctx.lineCap = "round";
+
+      // Group contiguous segments by colour, then draw each group as a smooth curve.
+      const lineGroups = [];
+
       for (let i = 0; i < values.length - 1; i++)
       {
         const segmentEndValue = values[i + 1];
@@ -3462,12 +3501,25 @@ document.addEventListener("DOMContentLoaded", () =>
             segmentEndValue < 0 ? colourB :
               "#ffffff";
 
-        ctx.beginPath();
-        ctx.moveTo(toX(i), toY(values[i]));
-        ctx.lineTo(toX(i + 1), toY(values[i + 1]));
-        ctx.strokeStyle = segmentColour;
-        ctx.stroke();
+        const previousGroup = lineGroups[lineGroups.length - 1];
+        if (!previousGroup || previousGroup.colour !== segmentColour)
+        {
+          lineGroups.push({ start: i, end: i + 1, colour: segmentColour });
+        }
+        else
+        {
+          previousGroup.end = i + 1;
+        }
       }
+
+      lineGroups.forEach(group =>
+      {
+        const groupPoints = points.slice(group.start, group.end + 1);
+        ctx.beginPath();
+        traceQuadraticPath(ctx, groupPoints, true);
+        ctx.strokeStyle = group.colour;
+        ctx.stroke();
+      });
 
       const finalMomentum = values[values.length - 1];
       const finalMomentumColour =
@@ -3476,8 +3528,8 @@ document.addEventListener("DOMContentLoaded", () =>
             "#ffffff";
 
       // --- End dot ---
-      const lastX = toX(values.length - 1);
-      const lastY = toY(values[values.length - 1]);
+      const lastX = points[points.length - 1].x;
+      const lastY = points[points.length - 1].y;
       ctx.beginPath();
       ctx.arc(lastX, lastY, 3.5, 0, Math.PI * 2);
       ctx.fillStyle = finalMomentumColour;
