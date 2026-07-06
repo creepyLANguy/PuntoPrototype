@@ -3571,7 +3571,8 @@ document.addEventListener("DOMContentLoaded", () =>
       elements.detailsSetsA.textContent = setsA;
       elements.detailsSetsB.textContent = setsB;
 
-      const hasCurrentSet = !matchComplete;
+      const hasCurrentSetGames = (Number(currentGames?.A) || 0) > 0 || (Number(currentGames?.B) || 0) > 0;
+      const hasCurrentSet = !matchComplete && hasCurrentSetGames;
       const allSets = hasCurrentSet ? [...sets, currentGames] : [...sets];
 
       // Build table header columns: [marker] S1 S2 S3 ...
