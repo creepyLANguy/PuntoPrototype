@@ -949,6 +949,12 @@ document.addEventListener("DOMContentLoaded", () =>
     const isVisible = (el) =>
       window.getComputedStyle(el).display !== "none";
 
+    if (playPageReturnToScoreboard) 
+    {
+      closePlayPage();
+      return;
+    }
+
     if (isVisible(elements.resetModal))
     {
       elements.resetModal.classList.add("hidden");
