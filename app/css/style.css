@@ -4908,6 +4908,26 @@ body.light-mode .dm-details-content {
 .dm-details-content .dm-stats-wrap {
   margin-top: 10px;
 }
+
+.dm-empty-state {
+  width: 100%;
+  margin-top: 14px;
+  border-radius: 14px;
+  border: 1px dashed rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.03);
+  padding: 14px 16px;
+  text-align: center;
+  font-size: 0.8rem;
+  font-weight: 700;
+  line-height: 1.4;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+body.light-mode .dm-empty-state {
+  border-color: rgba(0, 0, 0, 0.2);
+  background: rgba(0, 0, 0, 0.02);
+  color: rgba(0, 0, 0, 0.7);
+}
 /* =======================================================
    MOMENTUM GRAPH  (dm-momentum-* namespace)
 ======================================================= */

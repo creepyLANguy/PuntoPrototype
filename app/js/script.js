@@ -736,6 +736,7 @@ document.addEventListener("DOMContentLoaded", () =>
     dmDetailsPanel: $("dmDetailsPanel"),
     dmDetailsToggle: $("dmDetailsToggle"),
     dmDetailsContent: $("dmDetailsContent"),
+    dmEmptyState: $("dmEmptyState"),
     dmStatsWrap: $("dmStatsWrap"),
     dmStatsTeamA: $("dmStatsTeamA"),
     dmStatsMeta: $("dmStatsMeta"),
@@ -3770,13 +3771,13 @@ document.addEventListener("DOMContentLoaded", () =>
         `${sA.pointsWon}/${totalPoints} · ${formatPct(sA.pointWinPct)}`,
         `${sB.pointsWon}/${totalPoints} · ${formatPct(sB.pointWinPct)}`
       ),
-      row("Streak",   sA.longestScoringStreak, sB.longestScoringStreak),
-      row("BP Faced", bpFacedA, bpFacedB),
-      row("BP Held",   `${bpWonA}/${bpFacedA} · ${formatPct(sA.breakPointWinPct)}`,
-                      `${bpWonB}/${bpFacedB} · ${formatPct(sB.breakPointWinPct)}`),
-      row("BP Opps",  bpOppsA, bpOppsB),
-      row("BP Conv",  `${bpConvA}/${bpOppsA} · ${formatPct(sA.breakPointConversionPct)}`,
-                      `${bpConvB}/${bpOppsB} · ${formatPct(sB.breakPointConversionPct)}`),
+      row("Streak", sA.longestScoringStreak, sB.longestScoringStreak),
+      row("Breaks Faced", bpFacedA, bpFacedB),
+      row("Breaks Held", `${bpWonA}/${bpFacedA} · ${formatPct(sA.breakPointWinPct)}`,
+                          `${bpWonB}/${bpFacedB} · ${formatPct(sB.breakPointWinPct)}`),
+      row("Break Chances", bpOppsA, bpOppsB),
+      row("Breaks Won", `${bpConvA}/${bpOppsA} · ${formatPct(sA.breakPointConversionPct)}`,
+                        `${bpConvB}/${bpOppsB} · ${formatPct(sB.breakPointConversionPct)}`),
       row("Closing",
         `${formatPct(sA.closingEfficiencyPct)} (${gpConvA}/${gpGamesA})`,
         `${formatPct(sB.closingEfficiencyPct)} (${gpConvB}/${gpGamesB})`),
@@ -3786,8 +3787,7 @@ document.addEventListener("DOMContentLoaded", () =>
         "Won",
         deucePctA, deucePctB,
         `${deuceWonA} · ${formatPct(deucePctA)}`,
-        `${deuceWonB} · ${formatPct(deucePctB)}`
-      )
+        `${deuceWonB} · ${formatPct(deucePctB)}`)
     ];
 
     if (isGoldenMode)
@@ -3867,6 +3867,10 @@ document.addEventListener("DOMContentLoaded", () =>
     elements.dmStatsWrap.classList.add("hidden");
     elements.dmStatsTeamA.innerHTML = "";
     elements.dmStatsMeta.innerHTML = "";
+    if (elements.dmEmptyState)
+    {
+      elements.dmEmptyState.classList.add("hidden");
+    }
     setDetailsPanelExpanded(false);
     syncDetailsPanelAvailability();
 
@@ -3876,6 +3880,34 @@ document.addEventListener("DOMContentLoaded", () =>
       const result = await getDetailedScore({ courtId: currentCourtId });
       const { sets, currentGames, points, mode, scoringMode, matchComplete } = result.data;
       const resolvedMode = normalizeScoringOptions({ scoringMode: scoringMode || mode }).scoringMode;
+      const dmTableWrap = document.querySelector(".dm-table-wrap");
+
+      const hasCompletedSets = Array.isArray(sets) && sets.length > 0;
+      const hasCurrentSetGames = (Number(currentGames?.A) || 0) > 0 || (Number(currentGames?.B) || 0) > 0;
+      const hasAnyPoints = (Number(points?.A) || 0) > 0 || (Number(points?.B) || 0) > 0;
+      const hasAnyMatchDetails = hasCompletedSets || hasCurrentSetGames || hasAnyPoints;
+
+      if (elements.dmEmptyState)
+      {
+        elements.dmEmptyState.classList.toggle("hidden", hasAnyMatchDetails);
+      }
+
+      if (!hasAnyMatchDetails)
+      {
+        if (dmOverall)
+        {
+          dmOverall.classList.add("hidden");
+        }
+        if (dmTableWrap)
+        {
+          dmTableWrap.classList.add("hidden");
+        }
+        if (elements.dmDetailsPanel)
+        {
+          elements.dmDetailsPanel.classList.add("hidden");
+        }
+        return;
+      }
 
       // Unpack sets safely or calculate fallbacks from historical sets tracking if missing
       let setsA = result.data.setsA;
@@ -3896,7 +3928,6 @@ document.addEventListener("DOMContentLoaded", () =>
 
       const isStraight = resolvedMode === "straight";
       const isTiebreakTen = resolvedMode === "tiebreakTen";
-      const dmTableWrap = document.querySelector(".dm-table-wrap");
 
       if (dmOverall)
       {
@@ -3929,7 +3960,6 @@ document.addEventListener("DOMContentLoaded", () =>
       elements.detailsSetsA.textContent = setsA;
       elements.detailsSetsB.textContent = setsB;
 
-      const hasCurrentSetGames = (Number(currentGames?.A) || 0) > 0 || (Number(currentGames?.B) || 0) > 0;
       const hasCurrentSet = !matchComplete && hasCurrentSetGames;
       const allSets = hasCurrentSet ? [...sets, currentGames] : [...sets];
 
