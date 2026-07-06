@@ -346,11 +346,12 @@ exports.getDetailedScore = onCall(
                 // Normal point awarding
                 score = applyEvent(score, event, normalizedOptions);
 
-                // Track who scored this point
+                // Track who scored this point (only POINT_TEAM_A/B contribute to momentum)
                 if (event.eventType === "POINT_TEAM_A")
                     pointHistory.push("A");
                 else if (event.eventType === "POINT_TEAM_B")
                     pointHistory.push("B");
+                // Other non-reset scoring events (e.g. WARMUP) are intentionally ignored
 
                 // Did this point finish a set? (Only track this actively in standard format)
                 if (normalizedOptions.scoringMode === "standard") {

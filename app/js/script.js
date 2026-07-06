@@ -3340,7 +3340,8 @@ document.addEventListener("DOMContentLoaded", () =>
     const wrap = elements.dmMomentumWrap;
     const canvas = elements.dmMomentumCanvas;
 
-    if (!pointHistory || pointHistory.length < 2)
+    // Need at least one scored point to draw a meaningful momentum line
+    if (!pointHistory || pointHistory.length < 1)
     {
       wrap.classList.add("hidden");
       return;
@@ -3348,11 +3349,14 @@ document.addEventListener("DOMContentLoaded", () =>
 
     wrap.classList.remove("hidden");
 
+    const CANVAS_FALLBACK_WIDTH = 320;
+    const FILL_OPACITY = "55"; // ~34% opacity for the area fill
+
     // Defer drawing so the canvas has a settled layout width
     requestAnimationFrame(() =>
     {
       const dpr = window.devicePixelRatio || 1;
-      const cssW = canvas.offsetWidth || canvas.parentElement.offsetWidth || 320;
+      const cssW = canvas.offsetWidth || canvas.parentElement.offsetWidth || CANVAS_FALLBACK_WIDTH;
       const cssH = 120;
       canvas.width = cssW * dpr;
       canvas.height = cssH * dpr;
@@ -3390,7 +3394,7 @@ document.addEventListener("DOMContentLoaded", () =>
       ctx.beginPath();
       ctx.rect(0, 0, W, midY);
       ctx.clip();
-      ctx.fillStyle = colourA + "55";
+      ctx.fillStyle = colourA + FILL_OPACITY;
       ctx.fill(fillAbove);
       ctx.restore();
 
@@ -3399,7 +3403,7 @@ document.addEventListener("DOMContentLoaded", () =>
       ctx.beginPath();
       ctx.rect(0, midY, W, H - midY);
       ctx.clip();
-      ctx.fillStyle = colourB + "55";
+      ctx.fillStyle = colourB + FILL_OPACITY;
       ctx.fill(fillAbove);
       ctx.restore();
 
