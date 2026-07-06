@@ -3878,8 +3878,8 @@ document.addEventListener("DOMContentLoaded", () =>
       elements.detailsTeamBName.textContent = nameA;
       elements.detailsTeamAName.style.color = teamBColour;
       elements.detailsTeamBName.style.color = teamAColour;
-      elements.detailsSetsA.style.color = teamBColour;
-      elements.detailsSetsB.style.color = teamAColour;
+      elements.detailsSetsA.style.color = teamAColour;
+      elements.detailsSetsB.style.color = teamBColour;
     }
     else
     {
