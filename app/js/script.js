@@ -3311,6 +3311,13 @@ document.addEventListener("DOMContentLoaded", () =>
     playSound(SOUND_IDS.SWOOSH);
 
     document.querySelector(".scoreboard").classList.toggle("swapped");
+
+    // Keep the details modal synchronized with the currently visible side orientation.
+    if (!elements.detailsModal.classList.contains("hidden"))
+    {
+      showMatchDetails();
+    }
+
     syncSettingsTiles();
   });
 
@@ -3675,7 +3682,12 @@ document.addEventListener("DOMContentLoaded", () =>
     return `${Math.round(numeric)}%`;
   }
 
-  function renderAdvancedStats(advancedStats, teamNames)
+  function isScoreboardSwapped()
+  {
+    return document.querySelector(".scoreboard")?.classList.contains("swapped") || false;
+  }
+
+  function renderAdvancedStats(advancedStats, teamNames, isSwapped = false)
   {
     if (!elements.dmStatsWrap || !elements.dmStatsTeamA || !elements.dmStatsMeta)
     {
@@ -3700,35 +3712,27 @@ document.addEventListener("DOMContentLoaded", () =>
     }
 
     const isGoldenMode = advancedStats.deuceMode === "golden";
+    const primaryTeamKey = isSwapped ? "B" : "A";
+    const secondaryTeamKey = isSwapped ? "A" : "B";
+    const primaryTeamName = teamNames[primaryTeamKey];
+    const secondaryTeamName = teamNames[secondaryTeamKey];
+    const primaryTeamStats = primaryTeamKey === "A" ? sA : sB;
+    const secondaryTeamStats = secondaryTeamKey === "A" ? sA : sB;
+    const primaryClassSuffix = primaryTeamKey.toLowerCase();
+    const secondaryClassSuffix = secondaryTeamKey.toLowerCase();
+    const primaryColour = primaryTeamKey === "A" ? "var(--teamAcolour)" : "var(--teamBcolour)";
+    const secondaryColour = secondaryTeamKey === "A" ? "var(--teamAcolour)" : "var(--teamBcolour)";
+
     const totalPoints = Number(matchStats.totalPoints) || 0;
     const deuceGames = Number(matchStats.deuceGames) || 0;
     const goldenPointsPlayed = Number(matchStats.goldenPointsPlayed) || 0;
 
-    const bpFacedA = Number(sA.breakPointsFaced) || 0;
-    const bpWonA   = Number(sA.breakPointsWon) || 0;
-    const bpOppsA  = Number(sA.breakPointConversionOpportunities) || 0;
-    const bpConvA  = Number(sA.breakPointConversions) || 0;
-    const gpGamesA = Number(sA.gamePointGames) || 0;
-    const gpConvA  = Number(sA.gamePointConversions) || 0;
-
-    const bpFacedB = Number(sB.breakPointsFaced) || 0;
-    const bpWonB   = Number(sB.breakPointsWon) || 0;
-    const bpOppsB  = Number(sB.breakPointConversionOpportunities) || 0;
-    const bpConvB  = Number(sB.breakPointConversions) || 0;
-    const gpGamesB = Number(sB.gamePointGames) || 0;
-    const gpConvB  = Number(sB.gamePointConversions) || 0;
-
-    const deuceWonA = Number(sA.gamesWonAfterDeuce) || 0;
-    const deuceWonB = Number(sB.gamesWonAfterDeuce) || 0;
-    const deucePctA = deuceGames > 0 ? (deuceWonA / deuceGames) * 100 : 0;
-    const deucePctB = deuceGames > 0 ? (deuceWonB / deuceGames) * 100 : 0;
-
-    function row(label, valA, valB)
+    function row(label, valPrimary, valSecondary)
     {
       return `<tr class="dm-st-row">
         <td class="dm-st-label">${label}</td>
-        <td class="dm-st-val dm-st-a">${valA}</td>
-        <td class="dm-st-val dm-st-b">${valB}</td>
+        <td class="dm-st-val dm-st-${primaryClassSuffix}">${valPrimary}</td>
+        <td class="dm-st-val dm-st-${secondaryClassSuffix}">${valSecondary}</td>
       </tr>`;
     }
 
@@ -3745,57 +3749,70 @@ document.addEventListener("DOMContentLoaded", () =>
       return `<tr class="dm-st-section-hdr"><td colspan="3">${label}</td></tr>`;
     }
 
-    function barRow(label, pctA, pctB, lblA, lblB)
+    function barRow(label, pctPrimary, pctSecondary, lblPrimary, lblSecondary)
     {
-      const safeA = Math.max(0, Math.min(100, Number(pctA) || 0));
-      const safeB = Math.max(0, Math.min(100, Number(pctB) || 0));
+      const safePrimary = Math.max(0, Math.min(100, Number(pctPrimary) || 0));
+      const safeSecondary = Math.max(0, Math.min(100, Number(pctSecondary) || 0));
       return `<tr class="dm-st-row dm-st-bar-row">
         <td class="dm-st-label">${label}</td>
         <td class="dm-st-bar-cell" colspan="2">
           <div class="dm-split-bar">
-            <span class="dm-split-lbl-a">${lblA}</span>
+            <span class="dm-split-lbl-a" style="color:${primaryColour};">${lblPrimary}</span>
             <div class="dm-split-track">
-              <div class="dm-split-fill-a" style="width:${safeA}%"></div>
-              <div class="dm-split-fill-b"></div>
+              <div class="dm-split-fill-a" style="width:${safePrimary}%; background:${primaryColour};"></div>
+              <div class="dm-split-fill-b" style="flex:0 0 ${safeSecondary}%; background:${secondaryColour};"></div>
             </div>
-            <span class="dm-split-lbl-b">${lblB}</span>
+            <span class="dm-split-lbl-b" style="color:${secondaryColour};">${lblSecondary}</span>
           </div>
         </td>
       </tr>`;
     }
 
+    const primaryDeuceWon = Number(primaryTeamStats.gamesWonAfterDeuce) || 0;
+    const secondaryDeuceWon = Number(secondaryTeamStats.gamesWonAfterDeuce) || 0;
+    const primaryDeucePctRaw = Number(primaryTeamStats.gamesWonAfterDeucePct);
+    const secondaryDeucePctRaw = Number(secondaryTeamStats.gamesWonAfterDeucePct);
+    const primaryDeucePct = Number.isFinite(primaryDeucePctRaw)
+      ? primaryDeucePctRaw
+      : (deuceGames > 0 ? (primaryDeuceWon / deuceGames) * 100 : 0);
+    const secondaryDeucePct = Number.isFinite(secondaryDeucePctRaw)
+      ? secondaryDeucePctRaw
+      : (deuceGames > 0 ? (secondaryDeuceWon / deuceGames) * 100 : 0);
+
     const rows = [
       barRow(
         "Pts Won",
-        sA.pointWinPct, sB.pointWinPct,
-        `${sA.pointsWon}/${totalPoints} · ${formatPct(sA.pointWinPct)}`,
-        `${sB.pointsWon}/${totalPoints} · ${formatPct(sB.pointWinPct)}`
+        primaryTeamStats.pointWinPct,
+        secondaryTeamStats.pointWinPct,
+        `${primaryTeamStats.pointsWon}/${totalPoints} · ${formatPct(primaryTeamStats.pointWinPct)}`,
+        `${secondaryTeamStats.pointsWon}/${totalPoints} · ${formatPct(secondaryTeamStats.pointWinPct)}`
       ),
-      row("Streak", sA.longestScoringStreak, sB.longestScoringStreak),
-      row("Breaks Faced", bpFacedA, bpFacedB),
-      row("Breaks Held", `${bpWonA}/${bpFacedA} · ${formatPct(sA.breakPointWinPct)}`,
-                          `${bpWonB}/${bpFacedB} · ${formatPct(sB.breakPointWinPct)}`),
-      row("Break Chances", bpOppsA, bpOppsB),
-      row("Breaks Won", `${bpConvA}/${bpOppsA} · ${formatPct(sA.breakPointConversionPct)}`,
-                        `${bpConvB}/${bpOppsB} · ${formatPct(sB.breakPointConversionPct)}`),
+      row("Streak", primaryTeamStats.longestScoringStreak, secondaryTeamStats.longestScoringStreak),
+      row("Breaks Faced", primaryTeamStats.breakPointsFaced, secondaryTeamStats.breakPointsFaced),
+      row("Breaks Held", `${primaryTeamStats.breakPointsWon}/${primaryTeamStats.breakPointsFaced} · ${formatPct(primaryTeamStats.breakPointWinPct)}`,
+                          `${secondaryTeamStats.breakPointsWon}/${secondaryTeamStats.breakPointsFaced} · ${formatPct(secondaryTeamStats.breakPointWinPct)}`),
+      row("Break Chances", primaryTeamStats.breakPointConversionOpportunities, secondaryTeamStats.breakPointConversionOpportunities),
+      row("Breaks Won", `${primaryTeamStats.breakPointConversions}/${primaryTeamStats.breakPointConversionOpportunities} · ${formatPct(primaryTeamStats.breakPointConversionPct)}`,
+                        `${secondaryTeamStats.breakPointConversions}/${secondaryTeamStats.breakPointConversionOpportunities} · ${formatPct(secondaryTeamStats.breakPointConversionPct)}`),
       row("Closing",
-        `${formatPct(sA.closingEfficiencyPct)} (${gpConvA}/${gpGamesA})`,
-        `${formatPct(sB.closingEfficiencyPct)} (${gpConvB}/${gpGamesB})`),
+        `${formatPct(primaryTeamStats.closingEfficiencyPct)} (${primaryTeamStats.gamePointConversions}/${primaryTeamStats.gamePointGames})`,
+        `${formatPct(secondaryTeamStats.closingEfficiencyPct)} (${secondaryTeamStats.gamePointConversions}/${secondaryTeamStats.gamePointGames})`),
       sectionRow("Deuce"),
       sharedRow("Games", deuceGames),
       barRow(
         "Won",
-        deucePctA, deucePctB,
-        `${deuceWonA} · ${formatPct(deucePctA)}`,
-        `${deuceWonB} · ${formatPct(deucePctB)}`)
+        primaryDeucePct,
+        secondaryDeucePct,
+        `${primaryDeuceWon}/${deuceGames} · ${formatPct(primaryDeucePct)}`,
+        `${secondaryDeuceWon}/${deuceGames} · ${formatPct(secondaryDeucePct)}`)
     ];
 
     if (isGoldenMode)
     {
       rows.push(row(
         "Golden Pts",
-        `${sA.goldenPointsWon}/${goldenPointsPlayed} · ${formatPct(sA.goldenPointWinPct)}`,
-        `${sB.goldenPointsWon}/${goldenPointsPlayed} · ${formatPct(sB.goldenPointWinPct)}`
+        `${primaryTeamStats.goldenPointsWon}/${goldenPointsPlayed} · ${formatPct(primaryTeamStats.goldenPointWinPct)}`,
+        `${secondaryTeamStats.goldenPointsWon}/${goldenPointsPlayed} · ${formatPct(secondaryTeamStats.goldenPointWinPct)}`
       ));
     }
 
@@ -3804,8 +3821,8 @@ document.addEventListener("DOMContentLoaded", () =>
         <thead>
           <tr>
             <th class="dm-st-col-label"></th>
-            <th class="dm-st-col-team dm-st-col-a">${teamNames.A}</th>
-            <th class="dm-st-col-team dm-st-col-b">${teamNames.B}</th>
+            <th class="dm-st-col-team dm-st-col-${primaryClassSuffix}">${primaryTeamName}</th>
+            <th class="dm-st-col-team dm-st-col-${secondaryClassSuffix}">${secondaryTeamName}</th>
           </tr>
         </thead>
         <tbody>${rows.join("")}</tbody>
@@ -3841,8 +3858,7 @@ document.addEventListener("DOMContentLoaded", () =>
     elements.detailsModal.classList.remove("hidden");
 
     // Check if the primary scoreboard is currently swapped
-    const scoreboardEl = document.querySelector(".scoreboard");
-    const isSwapped = scoreboardEl && scoreboardEl.classList.contains("swapped");
+    const isSwapped = isScoreboardSwapped();
 
     // Mirror the swapped layout state onto the details header container
     const dmOverall = document.querySelector(".dm-overall");
@@ -3854,8 +3870,26 @@ document.addEventListener("DOMContentLoaded", () =>
     // Populate team names immediately
     const nameA = $("teamA").querySelector(".name-text").textContent;
     const nameB = $("teamB").querySelector(".name-text").textContent;
-    elements.detailsTeamAName.textContent = nameA;
-    elements.detailsTeamBName.textContent = nameB;
+    const teamAColour = getComputedStyle(document.body).getPropertyValue("--teamAcolour").trim();
+    const teamBColour = getComputedStyle(document.body).getPropertyValue("--teamBcolour").trim();
+    if (isSwapped)
+    {
+      elements.detailsTeamAName.textContent = nameB;
+      elements.detailsTeamBName.textContent = nameA;
+      elements.detailsTeamAName.style.color = teamBColour;
+      elements.detailsTeamBName.style.color = teamAColour;
+      elements.detailsSetsA.style.color = teamBColour;
+      elements.detailsSetsB.style.color = teamAColour;
+    }
+    else
+    {
+      elements.detailsTeamAName.textContent = nameA;
+      elements.detailsTeamBName.textContent = nameB;
+      elements.detailsTeamAName.style.color = teamAColour;
+      elements.detailsTeamBName.style.color = teamBColour;
+      elements.detailsSetsA.style.color = teamAColour;
+      elements.detailsSetsB.style.color = teamBColour;
+    }
 
     elements.detailsLoading.classList.remove("hidden");
 
@@ -3947,7 +3981,7 @@ document.addEventListener("DOMContentLoaded", () =>
         const colourA = getComputedStyle(document.body).getPropertyValue("--teamAcolour").trim();
         const colourB = getComputedStyle(document.body).getPropertyValue("--teamBcolour").trim();
         renderMomentumGraph(result.data.pointHistory, colourA, colourB, result.data.setPointMarkers || []);
-        renderAdvancedStats(result.data.advancedStats, { A: nameA, B: nameB });
+        renderAdvancedStats(result.data.advancedStats, { A: nameA, B: nameB }, isSwapped);
         syncDetailsPanelAvailability();
         return;
       }
@@ -4024,7 +4058,7 @@ document.addEventListener("DOMContentLoaded", () =>
       const colourA = getComputedStyle(document.body).getPropertyValue("--teamAcolour").trim();
       const colourB = getComputedStyle(document.body).getPropertyValue("--teamBcolour").trim();
       renderMomentumGraph(result.data.pointHistory, colourA, colourB, result.data.setPointMarkers || []);
-      renderAdvancedStats(result.data.advancedStats, { A: nameA, B: nameB });
+      renderAdvancedStats(result.data.advancedStats, { A: nameA, B: nameB }, isSwapped);
       syncDetailsPanelAvailability();
     }
     catch (err)
