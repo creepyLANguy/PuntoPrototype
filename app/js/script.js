@@ -3702,7 +3702,7 @@ document.addEventListener("DOMContentLoaded", () =>
             <span class="dm-split-lbl-a">${lblA}</span>
             <div class="dm-split-track">
               <div class="dm-split-fill-a" style="width:${safeA}%"></div>
-              <div class="dm-split-fill-b" style="width:${safeB}%"></div>
+              <div class="dm-split-fill-b"></div>
             </div>
             <span class="dm-split-lbl-b">${lblB}</span>
           </div>
