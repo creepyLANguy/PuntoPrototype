@@ -4748,3 +4748,45 @@ body.light-mode .straight-total {
 .dm-overall.swapped {
   flex-direction: row-reverse;
 }
+/* =======================================================
+   MOMENTUM GRAPH  (dm-momentum-* namespace)
+======================================================= */
+
+.dm-momentum-wrap {
+  width: 100%;
+  margin-top: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.dm-momentum-label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.35);
+  text-align: center;
+}
+
+body.light-mode .dm-momentum-label {
+  color: rgba(0, 0, 0, 0.35);
+}
+
+.dm-momentum-canvas {
+  width: 100%;
+  height: 120px;
+  display: block;
+  border-radius: 12px;
+}
+
+@media (orientation: landscape) and (max-height: 500px) {
+  .dm-momentum-wrap {
+    margin-top: 10px;
+  }
+
+  .dm-momentum-canvas {
+    height: 80px;
+  }
+}
