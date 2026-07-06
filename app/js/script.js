@@ -733,6 +733,9 @@ document.addEventListener("DOMContentLoaded", () =>
     detailsLoading: $("detailsLoading"),
     dmMomentumWrap: $("dmMomentumWrap"),
     dmMomentumCanvas: $("dmMomentumCanvas"),
+    dmDetailsPanel: $("dmDetailsPanel"),
+    dmDetailsToggle: $("dmDetailsToggle"),
+    dmDetailsContent: $("dmDetailsContent"),
     dmStatsWrap: $("dmStatsWrap"),
     dmStatsTeamA: $("dmStatsTeamA"),
     dmStatsMeta: $("dmStatsMeta"),
@@ -984,7 +987,7 @@ document.addEventListener("DOMContentLoaded", () =>
 
     if (isVisible(elements.playPage))
     {
-      elements.playPage.style.display = "none";
+      setPlayPageVisible(false);
       elements.menuPage.style.display = "flex";
       return;
     }
@@ -1619,7 +1622,7 @@ document.addEventListener("DOMContentLoaded", () =>
       if (action === "Play")
       {
         elements.menuPage.style.display = "none";
-        elements.playPage.style.display = "flex";
+        setPlayPageVisible(true);
         elements.playPasswordSection.style.display = "none";
         selectedPlayCourt = null;
         elements.playCourtSearch.value = "";
@@ -1778,6 +1781,12 @@ document.addEventListener("DOMContentLoaded", () =>
     }
   });
 
+  function setPlayPageVisible(isVisible)
+  {
+    elements.playPage.style.display = isVisible ? "flex" : "none";
+    document.body.classList.toggle("play-page-open", isVisible);
+  }
+
   async function openPlayerJoinPrompt(courtId)
   {
     playPageReturnToScoreboard = true;
@@ -1791,7 +1800,7 @@ document.addEventListener("DOMContentLoaded", () =>
     displayPlayCourtList(allCourts);
 
     const court = allCourts.find((item) => item.id === courtId);
-    elements.playPage.style.display = "flex";
+    setPlayPageVisible(true);
     elements.playPasswordSection.style.display = "block";
     elements.playCourtSearch.value = court?.name || currentCourtName || courtId;
     elements.playCourtNameError.textContent = "";
@@ -1810,7 +1819,7 @@ document.addEventListener("DOMContentLoaded", () =>
 
   function closePlayPage()
   {
-    elements.playPage.style.display = "none";
+    setPlayPageVisible(false);
 
     if (playPageReturnToScoreboard && currentCourtId)
     {
@@ -2081,7 +2090,7 @@ document.addEventListener("DOMContentLoaded", () =>
 
     elements.menuPage.style.display = "none";
     elements.createPage.style.display = "none";
-    elements.playPage.style.display = "none";
+    setPlayPageVisible(false);
     elements.spectatePage.style.display = "none";
 
     // Hide top-right buttons in court view
@@ -3419,6 +3428,46 @@ document.addEventListener("DOMContentLoaded", () =>
   // DETAILS MODAL logic
   elements.detailsBtn.addEventListener("click", showMatchDetails);
 
+  function setDetailsPanelExpanded(isExpanded)
+  {
+    if (!elements.dmDetailsToggle || !elements.dmDetailsContent)
+    {
+      return;
+    }
+
+    elements.dmDetailsToggle.setAttribute("aria-expanded", isExpanded ? "true" : "false");
+    elements.dmDetailsToggle.querySelector(".dm-details-toggle-hint").textContent = isExpanded ? "Tap to collapse" : "Tap to expand";
+    elements.dmDetailsContent.hidden = !isExpanded;
+  }
+
+  function syncDetailsPanelAvailability()
+  {
+    if (!elements.dmDetailsPanel || !elements.dmDetailsToggle)
+    {
+      return;
+    }
+
+    const hasMomentum = elements.dmMomentumWrap && !elements.dmMomentumWrap.classList.contains("hidden");
+    const hasStats = elements.dmStatsWrap && !elements.dmStatsWrap.classList.contains("hidden");
+    const hasDetails = hasMomentum || hasStats;
+
+    elements.dmDetailsPanel.classList.toggle("hidden", !hasDetails);
+
+    if (!hasDetails)
+    {
+      setDetailsPanelExpanded(false);
+    }
+  }
+
+  if (elements.dmDetailsToggle)
+  {
+    elements.dmDetailsToggle.addEventListener("click", () =>
+    {
+      const expanded = elements.dmDetailsToggle.getAttribute("aria-expanded") === "true";
+      setDetailsPanelExpanded(!expanded);
+    });
+  }
+
   elements.closeDetailsBtn.addEventListener("click", () =>
   {
     elements.detailsModal.classList.add("hidden");
@@ -3439,10 +3488,12 @@ document.addEventListener("DOMContentLoaded", () =>
     if (!pointHistory || pointHistory.length < 1)
     {
       wrap.classList.add("hidden");
+      syncDetailsPanelAvailability();
       return;
     }
 
     wrap.classList.remove("hidden");
+    syncDetailsPanelAvailability();
 
     const CANVAS_FALLBACK_WIDTH = 320;
     const FILL_OPACITY = "55"; // ~34% opacity for the area fill
@@ -3633,6 +3684,7 @@ document.addEventListener("DOMContentLoaded", () =>
     if (!advancedStats || !advancedStats.teamStats || !advancedStats.matchStats)
     {
       elements.dmStatsWrap.classList.add("hidden");
+      syncDetailsPanelAvailability();
       return;
     }
 
@@ -3642,6 +3694,7 @@ document.addEventListener("DOMContentLoaded", () =>
     if (!sA || !sB)
     {
       elements.dmStatsWrap.classList.add("hidden");
+      syncDetailsPanelAvailability();
       return;
     }
 
@@ -3719,11 +3772,14 @@ document.addEventListener("DOMContentLoaded", () =>
       ),
       row("Streak",   sA.longestScoringStreak, sB.longestScoringStreak),
       row("BP Faced", bpFacedA, bpFacedB),
-      row("BP Won",   `${bpWonA}/${bpFacedA} · ${formatPct(sA.breakPointWinPct)}`,
+      row("BP Held",   `${bpWonA}/${bpFacedA} · ${formatPct(sA.breakPointWinPct)}`,
                       `${bpWonB}/${bpFacedB} · ${formatPct(sB.breakPointWinPct)}`),
       row("BP Opps",  bpOppsA, bpOppsB),
       row("BP Conv",  `${bpConvA}/${bpOppsA} · ${formatPct(sA.breakPointConversionPct)}`,
                       `${bpConvB}/${bpOppsB} · ${formatPct(sB.breakPointConversionPct)}`),
+      row("Closing",
+        `${formatPct(sA.closingEfficiencyPct)} (${gpConvA}/${gpGamesA})`,
+        `${formatPct(sB.closingEfficiencyPct)} (${gpConvB}/${gpGamesB})`),
       sectionRow("Deuce"),
       sharedRow("Games", deuceGames),
       barRow(
@@ -3742,12 +3798,6 @@ document.addEventListener("DOMContentLoaded", () =>
         `${sB.goldenPointsWon}/${goldenPointsPlayed} · ${formatPct(sB.goldenPointWinPct)}`
       ));
     }
-
-    rows.push(row(
-      "Closing",
-      `${formatPct(sA.closingEfficiencyPct)} (${gpConvA}/${gpGamesA})`,
-      `${formatPct(sB.closingEfficiencyPct)} (${gpConvB}/${gpGamesB})`
-    ));
 
     elements.dmStatsTeamA.innerHTML = `
       <table class="dm-stats-table">
@@ -3772,7 +3822,7 @@ document.addEventListener("DOMContentLoaded", () =>
       const finalA = Number(comeback.finalScore?.A) || 0;
       const finalB = Number(comeback.finalScore?.B) || 0;
       const setNumber = Number(comeback.setNumber) || 1;
-      comebackText = `${comebackTeamName} recovered from ${fromA}-${fromB} to win set ${setNumber} ${finalA}-${finalB}.`;
+      comebackText = `${comebackTeamName} recovered from ${fromA}-${fromB} to win set ${setNumber} , ${finalA}-${finalB}.`;
     }
 
     elements.dmStatsMeta.innerHTML = `
@@ -3783,6 +3833,7 @@ document.addEventListener("DOMContentLoaded", () =>
     `;
 
     elements.dmStatsWrap.classList.remove("hidden");
+    syncDetailsPanelAvailability();
   }
 
   async function showMatchDetails()
@@ -3816,6 +3867,8 @@ document.addEventListener("DOMContentLoaded", () =>
     elements.dmStatsWrap.classList.add("hidden");
     elements.dmStatsTeamA.innerHTML = "";
     elements.dmStatsMeta.innerHTML = "";
+    setDetailsPanelExpanded(false);
+    syncDetailsPanelAvailability();
 
     try
     {
@@ -3864,6 +3917,7 @@ document.addEventListener("DOMContentLoaded", () =>
         const colourB = getComputedStyle(document.body).getPropertyValue("--teamBcolour").trim();
         renderMomentumGraph(result.data.pointHistory, colourA, colourB, result.data.setPointMarkers || []);
         renderAdvancedStats(result.data.advancedStats, { A: nameA, B: nameB });
+        syncDetailsPanelAvailability();
         return;
       }
       
@@ -3941,6 +3995,7 @@ document.addEventListener("DOMContentLoaded", () =>
       const colourB = getComputedStyle(document.body).getPropertyValue("--teamBcolour").trim();
       renderMomentumGraph(result.data.pointHistory, colourA, colourB, result.data.setPointMarkers || []);
       renderAdvancedStats(result.data.advancedStats, { A: nameA, B: nameB });
+      syncDetailsPanelAvailability();
     }
     catch (err)
     {
