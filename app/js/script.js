@@ -44,6 +44,8 @@ document.addEventListener("DOMContentLoaded", () =>
   // CONFIG
   // =====================================================
 
+  const ALLOWED_COURT_ID_CHARS = "abcdefghjkmnpqrstuxyz";
+
   const POINTS = [0, 15, 30, 40];
   const DEFAULT_SCORING_OPTIONS = {
     scoringMode: "standard",
@@ -1853,10 +1855,23 @@ document.addEventListener("DOMContentLoaded", () =>
       return;
     }
 
-    // Generate specific alphanumeric courtId: NameSlug + Random(1-COURTID_UPPER_LIMIT)
-    const nameSlug = courtName.replace(/[^a-z0-9]/gi, '').toLowerCase();
-    const randomNum = Math.floor(Math.random() * COURTID_UPPER_LIMIT) + 1;
-    const courtId = nameSlug + randomNum;
+    const createRandomCourtId = () =>
+      Array.from({ length: 4 }, () =>
+        ALLOWED_COURT_ID_CHARS[Math.floor(Math.random() * ALLOWED_COURT_ID_CHARS.length)]
+      ).join("");
+
+    const existingCourtsSnapshot = await getDocs(collection(db, "courts"));
+    const existingCourtIdsLower = new Set(
+      existingCourtsSnapshot.docs.map((courtDoc) => courtDoc.id.toLowerCase())
+    );
+
+    let courtId = createRandomCourtId();
+    while (existingCourtIdsLower.has(courtId.toLowerCase()))
+    {
+      courtId = createRandomCourtId();
+    }
+
+    courtId = courtId.toLowerCase();
 
     const courtRef = doc(db, "courts", courtId);
 
@@ -1877,7 +1892,7 @@ document.addEventListener("DOMContentLoaded", () =>
       defaultScore(scoringOptions)
     );
 
-    showToast(`Court "${courtName}" created successfully.`, TOAST_TYPES.SUCCESS);
+    showToast(`Court "${courtName}" created successfully. ID: ${courtId.toUpperCase()}`, TOAST_TYPES.SUCCESS);
 
     elements.createPage.style.display = "none";
     if (isAdmin)
