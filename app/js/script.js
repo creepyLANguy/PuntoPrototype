@@ -733,6 +733,10 @@ document.addEventListener("DOMContentLoaded", () =>
     detailsLoading: $("detailsLoading"),
     dmMomentumWrap: $("dmMomentumWrap"),
     dmMomentumCanvas: $("dmMomentumCanvas"),
+    dmStatsWrap: $("dmStatsWrap"),
+    dmStatsTeamA: $("dmStatsTeamA"),
+    dmStatsTeamB: $("dmStatsTeamB"),
+    dmStatsMeta: $("dmStatsMeta"),
 
     confirmModal: $("confirmModal"),
     confirmMessage: $("confirmMessage"),
@@ -3614,6 +3618,99 @@ document.addEventListener("DOMContentLoaded", () =>
     });
   }
 
+  function formatPct(value)
+  {
+    const numeric = Number(value) || 0;
+    return `${Math.round(numeric)}%`;
+  }
+
+  function renderTeamStatsCard(teamCode, teamName, advancedStats)
+  {
+    const teamStats = advancedStats?.teamStats?.[teamCode];
+    const matchStats = advancedStats?.matchStats;
+    if (!teamStats || !matchStats) return "";
+
+    const totalPoints = Number(matchStats.totalPoints) || 0;
+    const breakFaced = Number(teamStats.breakPointsFaced) || 0;
+    const breakWon = Number(teamStats.breakPointsWon) || 0;
+    const breakOpps = Number(teamStats.breakPointConversionOpportunities) || 0;
+    const breakConv = Number(teamStats.breakPointConversions) || 0;
+    const gamePointGames = Number(teamStats.gamePointGames) || 0;
+    const gamePointConversions = Number(teamStats.gamePointConversions) || 0;
+    const goldenPointsPlayed = Number(matchStats.goldenPointsPlayed) || 0;
+    const isGoldenMode = advancedStats.deuceMode === "golden";
+
+    const statsLines = [
+      `<li><span class="dm-stats-key">Point win %:</span> <span class="dm-stats-value">${teamStats.pointsWon}/${totalPoints} - ${formatPct(teamStats.pointWinPct)}</span></li>`,
+      `<li><span class="dm-stats-key">Longest scoring streak:</span> <span class="dm-stats-value">${teamStats.longestScoringStreak}</span></li>`,
+      `<li><span class="dm-stats-key">Break points faced:</span> <span class="dm-stats-value">${breakFaced}</span></li>`,
+      `<li><span class="dm-stats-key">Break points won:</span> <span class="dm-stats-value">${breakWon}/${breakFaced} - ${formatPct(teamStats.breakPointWinPct)}</span></li>`,
+      `<li><span class="dm-stats-key">Break point opportunities:</span> <span class="dm-stats-value">${breakOpps}</span></li>`,
+      `<li><span class="dm-stats-key">Break point conversions:</span> <span class="dm-stats-value">${breakConv}/${breakOpps} - ${formatPct(teamStats.breakPointConversionPct)}</span></li>`,
+      `<li><span class="dm-stats-key">Games reaching deuce:</span> <span class="dm-stats-value">${matchStats.deuceGames}</span></li>`,
+      `<li><span class="dm-stats-key">Games won after deuce:</span> <span class="dm-stats-value">${teamStats.gamesWonAfterDeuce}</span></li>`,
+      `<li><span class="dm-stats-key">Games lost after deuce:</span> <span class="dm-stats-value">${teamStats.gamesLostAfterDeuce}</span></li>`
+    ];
+
+    if (isGoldenMode)
+    {
+      statsLines.push(
+        `<li><span class="dm-stats-key">Golden points:</span> <span class="dm-stats-value">${teamStats.goldenPointsWon}/${goldenPointsPlayed} - ${formatPct(teamStats.goldenPointWinPct)}</span></li>`
+      );
+    }
+
+    statsLines.push(
+      `<li><span class="dm-stats-key">Closing efficiency:</span> <span class="dm-stats-value">Converted ${formatPct(teamStats.closingEfficiencyPct)} of games after reaching game point (${gamePointConversions}/${gamePointGames}).</span></li>`
+    );
+
+    return `
+      <h3 class="dm-stats-team-title">${teamName}</h3>
+      <ul class="dm-stats-list">
+        ${statsLines.join("")}
+      </ul>
+    `;
+  }
+
+  function renderAdvancedStats(advancedStats, teamNames)
+  {
+    if (!elements.dmStatsWrap || !elements.dmStatsTeamA || !elements.dmStatsTeamB || !elements.dmStatsMeta)
+    {
+      return;
+    }
+
+    if (!advancedStats || !advancedStats.teamStats || !advancedStats.matchStats)
+    {
+      elements.dmStatsWrap.classList.add("hidden");
+      return;
+    }
+
+    const comeback = advancedStats.matchStats.largestComeback;
+    let comebackText = "No comeback set win recorded.";
+
+    if (comeback && (comeback.team === "A" || comeback.team === "B"))
+    {
+      const comebackTeamName = comeback.team === "A" ? teamNames.A : teamNames.B;
+      const fromA = Number(comeback.fromScore?.A) || 0;
+      const fromB = Number(comeback.fromScore?.B) || 0;
+      const finalA = Number(comeback.finalScore?.A) || 0;
+      const finalB = Number(comeback.finalScore?.B) || 0;
+      const setNumber = Number(comeback.setNumber) || 1;
+
+      comebackText = `${comebackTeamName} recovered from ${fromA}-${fromB} to win set ${setNumber} ${finalA}-${finalB}.`;
+    }
+
+    elements.dmStatsTeamA.innerHTML = renderTeamStatsCard("A", teamNames.A, advancedStats);
+    elements.dmStatsTeamB.innerHTML = renderTeamStatsCard("B", teamNames.B, advancedStats);
+    elements.dmStatsMeta.innerHTML = `
+      <ul class="dm-meta-list">
+        <li><span class="dm-meta-key">Match swings:</span> ${advancedStats.matchStats.leadChanges} lead changes.</li>
+        <li><span class="dm-meta-key">Largest comeback:</span> ${comebackText}</li>
+      </ul>
+    `;
+
+    elements.dmStatsWrap.classList.remove("hidden");
+  }
+
   async function showMatchDetails()
   {
     elements.detailsModal.classList.remove("hidden");
@@ -3642,6 +3739,10 @@ document.addEventListener("DOMContentLoaded", () =>
     headRow.innerHTML = "";
     elements.dmBody.innerHTML = "";
     elements.dmMomentumWrap.classList.add("hidden");
+    elements.dmStatsWrap.classList.add("hidden");
+    elements.dmStatsTeamA.innerHTML = "";
+    elements.dmStatsTeamB.innerHTML = "";
+    elements.dmStatsMeta.innerHTML = "";
 
     try
     {
@@ -3689,6 +3790,7 @@ document.addEventListener("DOMContentLoaded", () =>
         const colourA = getComputedStyle(document.body).getPropertyValue("--teamAcolour").trim();
         const colourB = getComputedStyle(document.body).getPropertyValue("--teamBcolour").trim();
         renderMomentumGraph(result.data.pointHistory, colourA, colourB, result.data.setPointMarkers || []);
+        renderAdvancedStats(result.data.advancedStats, { A: nameA, B: nameB });
         return;
       }
       
@@ -3765,6 +3867,7 @@ document.addEventListener("DOMContentLoaded", () =>
       const colourA = getComputedStyle(document.body).getPropertyValue("--teamAcolour").trim();
       const colourB = getComputedStyle(document.body).getPropertyValue("--teamBcolour").trim();
       renderMomentumGraph(result.data.pointHistory, colourA, colourB, result.data.setPointMarkers || []);
+      renderAdvancedStats(result.data.advancedStats, { A: nameA, B: nameB });
     }
     catch (err)
     {
