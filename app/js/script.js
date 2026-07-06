@@ -3845,7 +3845,7 @@ document.addEventListener("DOMContentLoaded", () =>
     elements.dmStatsMeta.innerHTML = `
       <ul class="dm-meta-list">
         <li><span class="dm-meta-key">Match swings:</span> ${matchStats.leadChanges} lead changes.</li>
-        <li><span class="dm-meta-key">Largest comeback:</span> ${comebackText}</li>
+        <li><span class="dm-meta-key">Largest comeback:<br/></span> ${comebackText}</li>
       </ul>
     `;
 
