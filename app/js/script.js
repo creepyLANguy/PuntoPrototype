@@ -3445,7 +3445,7 @@ document.addEventListener("DOMContentLoaded", () =>
         ctx.beginPath();
         ctx.moveTo(x, padY);
         ctx.lineTo(x, H - padY);
-        ctx.strokeStyle = "rgba(255,255,255,0.95)";
+        ctx.strokeStyle = document.body.classList.contains("light-mode") ? "rgba(0,0,0,0.5)" : "rgba(255,255,255,0.5)";
         ctx.lineWidth = 1;
         ctx.stroke();
       });
