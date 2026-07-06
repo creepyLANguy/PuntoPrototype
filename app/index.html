@@ -263,18 +263,26 @@
           </table>
         </div>
 
-        <!-- Momentum graph -->
-        <div class="dm-momentum-wrap hidden" id="dmMomentumWrap">
-          <div class="dm-momentum-label">Match Momentum</div>
-          <canvas id="dmMomentumCanvas" class="dm-momentum-canvas"></canvas>
-        </div>
+        <div class="dm-details-panel hidden" id="dmDetailsPanel">
+          <button type="button" class="dm-details-toggle" id="dmDetailsToggle" aria-expanded="false"
+            aria-controls="dmDetailsContent">
+            <span class="dm-details-toggle-title">Detailed Stats</span>
+            <span class="dm-details-toggle-hint">Tap to expand</span>
+            <span class="dm-details-toggle-icon" aria-hidden="true">▾</span>
+          </button>
 
-        <div class="dm-stats-wrap hidden" id="dmStatsWrap">
-          <div class="dm-stats-grid">
-            <section class="dm-stats-team dm-stats-team-a" id="dmStatsTeamA"></section>
-            <section class="dm-stats-team dm-stats-team-b" id="dmStatsTeamB"></section>
+          <div class="dm-details-content" id="dmDetailsContent" hidden>
+            <!-- Momentum graph -->
+            <div class="dm-momentum-wrap hidden" id="dmMomentumWrap">
+              <div class="dm-momentum-label">Match Momentum</div>
+              <canvas id="dmMomentumCanvas" class="dm-momentum-canvas"></canvas>
+            </div>
+
+            <div class="dm-stats-wrap hidden" id="dmStatsWrap">
+              <div id="dmStatsTeamA"></div>
+              <section class="dm-stats-meta" id="dmStatsMeta"></section>
+            </div>
           </div>
-          <section class="dm-stats-meta" id="dmStatsMeta"></section>
         </div>
 
         <div class="loading hidden" id="detailsLoading">Loading…</div>

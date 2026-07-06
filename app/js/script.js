@@ -733,9 +733,11 @@ document.addEventListener("DOMContentLoaded", () =>
     detailsLoading: $("detailsLoading"),
     dmMomentumWrap: $("dmMomentumWrap"),
     dmMomentumCanvas: $("dmMomentumCanvas"),
+    dmDetailsPanel: $("dmDetailsPanel"),
+    dmDetailsToggle: $("dmDetailsToggle"),
+    dmDetailsContent: $("dmDetailsContent"),
     dmStatsWrap: $("dmStatsWrap"),
     dmStatsTeamA: $("dmStatsTeamA"),
-    dmStatsTeamB: $("dmStatsTeamB"),
     dmStatsMeta: $("dmStatsMeta"),
 
     confirmModal: $("confirmModal"),
@@ -985,7 +987,7 @@ document.addEventListener("DOMContentLoaded", () =>
 
     if (isVisible(elements.playPage))
     {
-      elements.playPage.style.display = "none";
+      setPlayPageVisible(false);
       elements.menuPage.style.display = "flex";
       return;
     }
@@ -1620,7 +1622,7 @@ document.addEventListener("DOMContentLoaded", () =>
       if (action === "Play")
       {
         elements.menuPage.style.display = "none";
-        elements.playPage.style.display = "flex";
+        setPlayPageVisible(true);
         elements.playPasswordSection.style.display = "none";
         selectedPlayCourt = null;
         elements.playCourtSearch.value = "";
@@ -1779,6 +1781,12 @@ document.addEventListener("DOMContentLoaded", () =>
     }
   });
 
+  function setPlayPageVisible(isVisible)
+  {
+    elements.playPage.style.display = isVisible ? "flex" : "none";
+    document.body.classList.toggle("play-page-open", isVisible);
+  }
+
   async function openPlayerJoinPrompt(courtId)
   {
     playPageReturnToScoreboard = true;
@@ -1792,7 +1800,7 @@ document.addEventListener("DOMContentLoaded", () =>
     displayPlayCourtList(allCourts);
 
     const court = allCourts.find((item) => item.id === courtId);
-    elements.playPage.style.display = "flex";
+    setPlayPageVisible(true);
     elements.playPasswordSection.style.display = "block";
     elements.playCourtSearch.value = court?.name || currentCourtName || courtId;
     elements.playCourtNameError.textContent = "";
@@ -1811,7 +1819,7 @@ document.addEventListener("DOMContentLoaded", () =>
 
   function closePlayPage()
   {
-    elements.playPage.style.display = "none";
+    setPlayPageVisible(false);
 
     if (playPageReturnToScoreboard && currentCourtId)
     {
@@ -2082,7 +2090,7 @@ document.addEventListener("DOMContentLoaded", () =>
 
     elements.menuPage.style.display = "none";
     elements.createPage.style.display = "none";
-    elements.playPage.style.display = "none";
+    setPlayPageVisible(false);
     elements.spectatePage.style.display = "none";
 
     // Hide top-right buttons in court view
@@ -3420,6 +3428,46 @@ document.addEventListener("DOMContentLoaded", () =>
   // DETAILS MODAL logic
   elements.detailsBtn.addEventListener("click", showMatchDetails);
 
+  function setDetailsPanelExpanded(isExpanded)
+  {
+    if (!elements.dmDetailsToggle || !elements.dmDetailsContent)
+    {
+      return;
+    }
+
+    elements.dmDetailsToggle.setAttribute("aria-expanded", isExpanded ? "true" : "false");
+    elements.dmDetailsToggle.querySelector(".dm-details-toggle-hint").textContent = isExpanded ? "Tap to collapse" : "Tap to expand";
+    elements.dmDetailsContent.hidden = !isExpanded;
+  }
+
+  function syncDetailsPanelAvailability()
+  {
+    if (!elements.dmDetailsPanel || !elements.dmDetailsToggle)
+    {
+      return;
+    }
+
+    const hasMomentum = elements.dmMomentumWrap && !elements.dmMomentumWrap.classList.contains("hidden");
+    const hasStats = elements.dmStatsWrap && !elements.dmStatsWrap.classList.contains("hidden");
+    const hasDetails = hasMomentum || hasStats;
+
+    elements.dmDetailsPanel.classList.toggle("hidden", !hasDetails);
+
+    if (!hasDetails)
+    {
+      setDetailsPanelExpanded(false);
+    }
+  }
+
+  if (elements.dmDetailsToggle)
+  {
+    elements.dmDetailsToggle.addEventListener("click", () =>
+    {
+      const expanded = elements.dmDetailsToggle.getAttribute("aria-expanded") === "true";
+      setDetailsPanelExpanded(!expanded);
+    });
+  }
+
   elements.closeDetailsBtn.addEventListener("click", () =>
   {
     elements.detailsModal.classList.add("hidden");
@@ -3440,10 +3488,12 @@ document.addEventListener("DOMContentLoaded", () =>
     if (!pointHistory || pointHistory.length < 1)
     {
       wrap.classList.add("hidden");
+      syncDetailsPanelAvailability();
       return;
     }
 
     wrap.classList.remove("hidden");
+    syncDetailsPanelAvailability();
 
     const CANVAS_FALLBACK_WIDTH = 320;
     const FILL_OPACITY = "55"; // ~34% opacity for the area fill
@@ -3624,56 +3674,9 @@ document.addEventListener("DOMContentLoaded", () =>
     return `${Math.round(numeric)}%`;
   }
 
-  function renderTeamStatsCard(teamCode, teamName, advancedStats)
-  {
-    const teamStats = advancedStats?.teamStats?.[teamCode];
-    const matchStats = advancedStats?.matchStats;
-    if (!teamStats || !matchStats) return "";
-
-    const totalPoints = Number(matchStats.totalPoints) || 0;
-    const breakFaced = Number(teamStats.breakPointsFaced) || 0;
-    const breakWon = Number(teamStats.breakPointsWon) || 0;
-    const breakOpps = Number(teamStats.breakPointConversionOpportunities) || 0;
-    const breakConv = Number(teamStats.breakPointConversions) || 0;
-    const gamePointGames = Number(teamStats.gamePointGames) || 0;
-    const gamePointConversions = Number(teamStats.gamePointConversions) || 0;
-    const goldenPointsPlayed = Number(matchStats.goldenPointsPlayed) || 0;
-    const isGoldenMode = advancedStats.deuceMode === "golden";
-
-    const statsLines = [
-      `<li><span class="dm-stats-key">Point win %:</span> <span class="dm-stats-value">${teamStats.pointsWon}/${totalPoints} - ${formatPct(teamStats.pointWinPct)}</span></li>`,
-      `<li><span class="dm-stats-key">Longest scoring streak:</span> <span class="dm-stats-value">${teamStats.longestScoringStreak}</span></li>`,
-      `<li><span class="dm-stats-key">Break points faced:</span> <span class="dm-stats-value">${breakFaced}</span></li>`,
-      `<li><span class="dm-stats-key">Break points won:</span> <span class="dm-stats-value">${breakWon}/${breakFaced} - ${formatPct(teamStats.breakPointWinPct)}</span></li>`,
-      `<li><span class="dm-stats-key">Break point opportunities:</span> <span class="dm-stats-value">${breakOpps}</span></li>`,
-      `<li><span class="dm-stats-key">Break point conversions:</span> <span class="dm-stats-value">${breakConv}/${breakOpps} - ${formatPct(teamStats.breakPointConversionPct)}</span></li>`,
-      `<li><span class="dm-stats-key">Games reaching deuce:</span> <span class="dm-stats-value">${matchStats.deuceGames}</span></li>`,
-      `<li><span class="dm-stats-key">Games won after deuce:</span> <span class="dm-stats-value">${teamStats.gamesWonAfterDeuce}</span></li>`,
-      `<li><span class="dm-stats-key">Games lost after deuce:</span> <span class="dm-stats-value">${teamStats.gamesLostAfterDeuce}</span></li>`
-    ];
-
-    if (isGoldenMode)
-    {
-      statsLines.push(
-        `<li><span class="dm-stats-key">Golden points:</span> <span class="dm-stats-value">${teamStats.goldenPointsWon}/${goldenPointsPlayed} - ${formatPct(teamStats.goldenPointWinPct)}</span></li>`
-      );
-    }
-
-    statsLines.push(
-      `<li><span class="dm-stats-key">Closing efficiency:</span> <span class="dm-stats-value">Converted ${formatPct(teamStats.closingEfficiencyPct)} of games after reaching game point (${gamePointConversions}/${gamePointGames}).</span></li>`
-    );
-
-    return `
-      <h3 class="dm-stats-team-title">${teamName}</h3>
-      <ul class="dm-stats-list">
-        ${statsLines.join("")}
-      </ul>
-    `;
-  }
-
   function renderAdvancedStats(advancedStats, teamNames)
   {
-    if (!elements.dmStatsWrap || !elements.dmStatsTeamA || !elements.dmStatsTeamB || !elements.dmStatsMeta)
+    if (!elements.dmStatsWrap || !elements.dmStatsTeamA || !elements.dmStatsMeta)
     {
       return;
     }
@@ -3681,12 +3684,136 @@ document.addEventListener("DOMContentLoaded", () =>
     if (!advancedStats || !advancedStats.teamStats || !advancedStats.matchStats)
     {
       elements.dmStatsWrap.classList.add("hidden");
+      syncDetailsPanelAvailability();
       return;
     }
 
-    const comeback = advancedStats.matchStats.largestComeback;
-    let comebackText = "No comeback set win recorded.";
+    const { teamStats, matchStats } = advancedStats;
+    const sA = teamStats.A;
+    const sB = teamStats.B;
+    if (!sA || !sB)
+    {
+      elements.dmStatsWrap.classList.add("hidden");
+      syncDetailsPanelAvailability();
+      return;
+    }
 
+    const isGoldenMode = advancedStats.deuceMode === "golden";
+    const totalPoints = Number(matchStats.totalPoints) || 0;
+    const deuceGames = Number(matchStats.deuceGames) || 0;
+    const goldenPointsPlayed = Number(matchStats.goldenPointsPlayed) || 0;
+
+    const bpFacedA = Number(sA.breakPointsFaced) || 0;
+    const bpWonA   = Number(sA.breakPointsWon) || 0;
+    const bpOppsA  = Number(sA.breakPointConversionOpportunities) || 0;
+    const bpConvA  = Number(sA.breakPointConversions) || 0;
+    const gpGamesA = Number(sA.gamePointGames) || 0;
+    const gpConvA  = Number(sA.gamePointConversions) || 0;
+
+    const bpFacedB = Number(sB.breakPointsFaced) || 0;
+    const bpWonB   = Number(sB.breakPointsWon) || 0;
+    const bpOppsB  = Number(sB.breakPointConversionOpportunities) || 0;
+    const bpConvB  = Number(sB.breakPointConversions) || 0;
+    const gpGamesB = Number(sB.gamePointGames) || 0;
+    const gpConvB  = Number(sB.gamePointConversions) || 0;
+
+    const deuceWonA = Number(sA.gamesWonAfterDeuce) || 0;
+    const deuceWonB = Number(sB.gamesWonAfterDeuce) || 0;
+    const deucePctA = deuceGames > 0 ? (deuceWonA / deuceGames) * 100 : 0;
+    const deucePctB = deuceGames > 0 ? (deuceWonB / deuceGames) * 100 : 0;
+
+    function row(label, valA, valB)
+    {
+      return `<tr class="dm-st-row">
+        <td class="dm-st-label">${label}</td>
+        <td class="dm-st-val dm-st-a">${valA}</td>
+        <td class="dm-st-val dm-st-b">${valB}</td>
+      </tr>`;
+    }
+
+    function sharedRow(label, val)
+    {
+      return `<tr class="dm-st-row">
+        <td class="dm-st-label">${label}</td>
+        <td class="dm-st-shared" colspan="2">${val}</td>
+      </tr>`;
+    }
+
+    function sectionRow(label)
+    {
+      return `<tr class="dm-st-section-hdr"><td colspan="3">${label}</td></tr>`;
+    }
+
+    function barRow(label, pctA, pctB, lblA, lblB)
+    {
+      const safeA = Math.max(0, Math.min(100, Number(pctA) || 0));
+      const safeB = Math.max(0, Math.min(100, Number(pctB) || 0));
+      return `<tr class="dm-st-row dm-st-bar-row">
+        <td class="dm-st-label">${label}</td>
+        <td class="dm-st-bar-cell" colspan="2">
+          <div class="dm-split-bar">
+            <span class="dm-split-lbl-a">${lblA}</span>
+            <div class="dm-split-track">
+              <div class="dm-split-fill-a" style="width:${safeA}%"></div>
+              <div class="dm-split-fill-b"></div>
+            </div>
+            <span class="dm-split-lbl-b">${lblB}</span>
+          </div>
+        </td>
+      </tr>`;
+    }
+
+    const rows = [
+      barRow(
+        "Pts Won",
+        sA.pointWinPct, sB.pointWinPct,
+        `${sA.pointsWon}/${totalPoints} · ${formatPct(sA.pointWinPct)}`,
+        `${sB.pointsWon}/${totalPoints} · ${formatPct(sB.pointWinPct)}`
+      ),
+      row("Streak",   sA.longestScoringStreak, sB.longestScoringStreak),
+      row("BP Faced", bpFacedA, bpFacedB),
+      row("BP Held",   `${bpWonA}/${bpFacedA} · ${formatPct(sA.breakPointWinPct)}`,
+                      `${bpWonB}/${bpFacedB} · ${formatPct(sB.breakPointWinPct)}`),
+      row("BP Opps",  bpOppsA, bpOppsB),
+      row("BP Conv",  `${bpConvA}/${bpOppsA} · ${formatPct(sA.breakPointConversionPct)}`,
+                      `${bpConvB}/${bpOppsB} · ${formatPct(sB.breakPointConversionPct)}`),
+      row("Closing",
+        `${formatPct(sA.closingEfficiencyPct)} (${gpConvA}/${gpGamesA})`,
+        `${formatPct(sB.closingEfficiencyPct)} (${gpConvB}/${gpGamesB})`),
+      sectionRow("Deuce"),
+      sharedRow("Games", deuceGames),
+      barRow(
+        "Won",
+        deucePctA, deucePctB,
+        `${deuceWonA} · ${formatPct(deucePctA)}`,
+        `${deuceWonB} · ${formatPct(deucePctB)}`
+      )
+    ];
+
+    if (isGoldenMode)
+    {
+      rows.push(row(
+        "Golden Pts",
+        `${sA.goldenPointsWon}/${goldenPointsPlayed} · ${formatPct(sA.goldenPointWinPct)}`,
+        `${sB.goldenPointsWon}/${goldenPointsPlayed} · ${formatPct(sB.goldenPointWinPct)}`
+      ));
+    }
+
+    elements.dmStatsTeamA.innerHTML = `
+      <table class="dm-stats-table">
+        <thead>
+          <tr>
+            <th class="dm-st-col-label"></th>
+            <th class="dm-st-col-team dm-st-col-a">${teamNames.A}</th>
+            <th class="dm-st-col-team dm-st-col-b">${teamNames.B}</th>
+          </tr>
+        </thead>
+        <tbody>${rows.join("")}</tbody>
+      </table>
+    `;
+
+    const comeback = matchStats.largestComeback;
+    let comebackText = "No comeback set win recorded.";
     if (comeback && (comeback.team === "A" || comeback.team === "B"))
     {
       const comebackTeamName = comeback.team === "A" ? teamNames.A : teamNames.B;
@@ -3695,20 +3822,18 @@ document.addEventListener("DOMContentLoaded", () =>
       const finalA = Number(comeback.finalScore?.A) || 0;
       const finalB = Number(comeback.finalScore?.B) || 0;
       const setNumber = Number(comeback.setNumber) || 1;
-
-      comebackText = `${comebackTeamName} recovered from ${fromA}-${fromB} to win set ${setNumber} ${finalA}-${finalB}.`;
+      comebackText = `${comebackTeamName} recovered from ${fromA}-${fromB} to win set ${setNumber} , ${finalA}-${finalB}.`;
     }
 
-    elements.dmStatsTeamA.innerHTML = renderTeamStatsCard("A", teamNames.A, advancedStats);
-    elements.dmStatsTeamB.innerHTML = renderTeamStatsCard("B", teamNames.B, advancedStats);
     elements.dmStatsMeta.innerHTML = `
       <ul class="dm-meta-list">
-        <li><span class="dm-meta-key">Match swings:</span> ${advancedStats.matchStats.leadChanges} lead changes.</li>
+        <li><span class="dm-meta-key">Match swings:</span> ${matchStats.leadChanges} lead changes.</li>
         <li><span class="dm-meta-key">Largest comeback:</span> ${comebackText}</li>
       </ul>
     `;
 
     elements.dmStatsWrap.classList.remove("hidden");
+    syncDetailsPanelAvailability();
   }
 
   async function showMatchDetails()
@@ -3741,8 +3866,9 @@ document.addEventListener("DOMContentLoaded", () =>
     elements.dmMomentumWrap.classList.add("hidden");
     elements.dmStatsWrap.classList.add("hidden");
     elements.dmStatsTeamA.innerHTML = "";
-    elements.dmStatsTeamB.innerHTML = "";
     elements.dmStatsMeta.innerHTML = "";
+    setDetailsPanelExpanded(false);
+    syncDetailsPanelAvailability();
 
     try
     {
@@ -3791,6 +3917,7 @@ document.addEventListener("DOMContentLoaded", () =>
         const colourB = getComputedStyle(document.body).getPropertyValue("--teamBcolour").trim();
         renderMomentumGraph(result.data.pointHistory, colourA, colourB, result.data.setPointMarkers || []);
         renderAdvancedStats(result.data.advancedStats, { A: nameA, B: nameB });
+        syncDetailsPanelAvailability();
         return;
       }
       
@@ -3868,6 +3995,7 @@ document.addEventListener("DOMContentLoaded", () =>
       const colourB = getComputedStyle(document.body).getPropertyValue("--teamBcolour").trim();
       renderMomentumGraph(result.data.pointHistory, colourA, colourB, result.data.setPointMarkers || []);
       renderAdvancedStats(result.data.advancedStats, { A: nameA, B: nameB });
+      syncDetailsPanelAvailability();
     }
     catch (err)
     {
