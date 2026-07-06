@@ -715,6 +715,8 @@ document.addEventListener("DOMContentLoaded", () =>
     serverToggleTile: $("serverToggleTile"),
     resetSettingsBtn: $("resetSettingsBtn"),
     resetSettingsTile: $("resetSettingsTile"),
+    joinCourtBtn: $("joinCourtBtn"),
+    joinCourtTile: $("joinCourtTile"),
 
     sep1: $("sep1"),
     sep2: $("sep2"),
@@ -812,6 +814,8 @@ document.addEventListener("DOMContentLoaded", () =>
   let allCourts = [];
   let filteredCourts = [];
   let selectedPlayCourt = null;
+  let currentCourtName = null;
+  let playPageReturnToScoreboard = false;
 
   let allAdminCourts = [];
 
@@ -1250,6 +1254,7 @@ document.addEventListener("DOMContentLoaded", () =>
       const item = document.createElement("div");
       item.className = "court-item";
       item.dataset.courtName = court.name;
+      item.dataset.courtId = court.id;
 
       item.innerHTML = `
       <div class="court-item-name">${court.name}</div>
@@ -1290,6 +1295,7 @@ document.addEventListener("DOMContentLoaded", () =>
       const item = document.createElement("div");
       item.className = "court-item";
       item.dataset.courtName = court.name;
+      item.dataset.courtId = court.id;
 
       item.innerHTML = `
       <div class="court-item-name">${court.name}</div>
@@ -1683,8 +1689,7 @@ document.addEventListener("DOMContentLoaded", () =>
 
   elements.closePlayBtn.addEventListener("click", () =>
   {
-    elements.playPage.style.display = "none";
-    elements.menuPage.style.display = "flex";
+    closePlayPage();
   });
 
   elements.closeSpectateBtn.addEventListener("click", () =>
@@ -1760,10 +1765,54 @@ document.addEventListener("DOMContentLoaded", () =>
   {
     if (e.target === elements.playPage)
     {
-      elements.playPage.style.display = "none";
-      elements.menuPage.style.display = "flex";
+      closePlayPage();
     }
   });
+
+  async function openPlayerJoinPrompt(courtId)
+  {
+    playPageReturnToScoreboard = true;
+    selectedPlayCourt = courtId;
+
+    if (allCourts.length === 0)
+    {
+      await loadAllActiveCourts();
+    }
+
+    displayPlayCourtList(allCourts);
+
+    const court = allCourts.find((item) => item.id === courtId);
+    elements.playPage.style.display = "flex";
+    elements.playPasswordSection.style.display = "block";
+    elements.playCourtSearch.value = court?.name || currentCourtName || courtId;
+    elements.playCourtNameError.textContent = "";
+    elements.playCourtPasswordError.textContent = "";
+    elements.playCourtPassword.value = "";
+
+    const selectedItem = elements.playCourtList.querySelector(`[data-court-id="${courtId}"]`);
+    if (selectedItem)
+    {
+      elements.playCourtList.querySelectorAll(".court-item").forEach(el => el.classList.remove("active"));
+      selectedItem.classList.add("active");
+    }
+
+    elements.playCourtPassword.focus();
+  }
+
+  function closePlayPage()
+  {
+    elements.playPage.style.display = "none";
+
+    if (playPageReturnToScoreboard && currentCourtId)
+    {
+      elements.scoreboardPage.style.display = "flex";
+      playPageReturnToScoreboard = false;
+      return;
+    }
+
+    playPageReturnToScoreboard = false;
+    elements.menuPage.style.display = "flex";
+  }
 
   elements.spectatePage.addEventListener("click", (e) =>
   {
@@ -1954,6 +2003,7 @@ document.addEventListener("DOMContentLoaded", () =>
 
     currentCourtPassword = password;
     enterCourt(courtId, false);
+    playPageReturnToScoreboard = false;
 
     elements.playCourtPassword.value = "";
   });
@@ -1991,6 +2041,7 @@ document.addEventListener("DOMContentLoaded", () =>
 
     currentCourtId = courtId;
     const data = snap.data();
+    currentCourtName = data.name || courtId;
     currentCourtPassword = data.password;
     currentCourtStatus = data.status;
     currentScoringOptions = normalizeScoringOptions({
@@ -2071,6 +2122,7 @@ document.addEventListener("DOMContentLoaded", () =>
     }
 
     currentCourtId = null;
+    currentCourtName = null;
     currentCourtPassword = null;
     currentCourtStatus = null;
     currentScoringOptions = { ...DEFAULT_SCORING_OPTIONS };
@@ -2128,6 +2180,8 @@ document.addEventListener("DOMContentLoaded", () =>
     if (elements.serverToggleTile) elements.serverToggleTile.style.display = "none";
     if (elements.resetSettingsTile) elements.resetSettingsTile.style.display = "none";
 
+    if (elements.joinCourtTile) elements.joinCourtTile.style.display = "";
+
     syncScoringControls();
     showSpectatorBadges();
   }
@@ -2150,6 +2204,8 @@ document.addEventListener("DOMContentLoaded", () =>
     // Restore player-only tiles in the settings modal
     if (elements.serverToggleTile) elements.serverToggleTile.style.display = "";
     if (elements.resetSettingsTile) elements.resetSettingsTile.style.display = "";
+
+    if (elements.joinCourtTile) elements.joinCourtTile.style.display = "none";
 
     syncScoringControls();
     removeSpectatorBadges();
@@ -3267,6 +3323,21 @@ document.addEventListener("DOMContentLoaded", () =>
       // Close settings first, then open reset modal
       elements.settingsModal.classList.add("hidden");
       openResetModal();
+    });
+  }
+
+  if (elements.joinCourtBtn)
+  {
+    elements.joinCourtBtn.addEventListener("click", () =>
+    {
+      if (!currentCourtId)
+      {
+        showToast("No court is currently open.", TOAST_TYPES.ERROR);
+        return;
+      }
+
+      openPlayerJoinPrompt(currentCourtId);
+      elements.settingsModal.classList.add("hidden");
     });
   }
 
