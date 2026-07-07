@@ -3913,10 +3913,13 @@ document.addEventListener("DOMContentLoaded", () =>
 
     // Mirror the swapped layout state onto the details header container
     const dmOverall = document.querySelector(".dm-overall");
+    const dmTableWrap = document.querySelector(".dm-table-wrap");
     const dmMidSection = document.querySelector(".dm-mid-section");
     if (dmOverall)
     {
       dmOverall.classList.toggle("swapped", isSwapped);
+      dmOverall.classList.add("hidden");
+      dmTableWrap.classList.add("hidden");
     }
 
     // Populate team names immediately
@@ -3966,7 +3969,6 @@ document.addEventListener("DOMContentLoaded", () =>
       const result = await getDetailedScore({ courtId: currentCourtId });
       const { sets, currentGames, points, mode, scoringMode, matchComplete } = result.data;
       const resolvedMode = normalizeScoringOptions({ scoringMode: scoringMode || mode }).scoringMode;
-      const dmTableWrap = document.querySelector(".dm-table-wrap");
 
       const isStraight = resolvedMode === "straight";
       const isTiebreakTen = resolvedMode === "tiebreakTen";
