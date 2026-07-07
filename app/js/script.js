@@ -3894,10 +3894,20 @@ document.addEventListener("DOMContentLoaded", () =>
     }
 
     elements.dmStatsMeta.innerHTML = `
-      <ul class="dm-meta-list">
-        <li><span class="dm-meta-key">Match swings:<br/></span> ${matchStats.leadChanges} lead changes.</li>
-        <li><span class="dm-meta-key">Largest comeback:<br/></span> ${comebackText}</li>
-      </ul>
+      <div class="dm-meta-grid">
+        <div>
+          <div class="dm-meta-title">Match swings</div>
+          <div class="dm-meta-value">
+            <strong>${matchStats.leadChanges}</strong> lead changes
+          </div>
+        </div>
+        <div>
+          <div class="dm-meta-title">Largest comeback</div>
+          <div class="dm-meta-value">
+            ${comebackText}
+          </div>
+        </div>
+      </div>
     `;
 
     elements.dmStatsWrap.classList.remove("hidden");
