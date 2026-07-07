@@ -154,6 +154,7 @@ const MOMENTUM_CONFIG = Object.freeze({
     recentWindowSize: 10,
     recentWeights: [1.0, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1],
     recentScale: 12,
+    streakGrowthDivisor: 2,
     streakScale: 0.6,
     streakCap: 18,
     pressureScale: 1.2,
@@ -162,9 +163,20 @@ const MOMENTUM_CONFIG = Object.freeze({
     setCarryDecayPerPoint: 0.9
 });
 
-function clampNumber(value, min, max)
+function clamp(value, min, max)
 {
     return Math.min(max, Math.max(min, value));
+}
+
+function extractServingTeam(serverLabel)
+{
+    if (typeof serverLabel !== "string" || serverLabel.length === 0)
+    {
+        return null;
+    }
+
+    const team = serverLabel[0];
+    return team === "A" || team === "B" ? team : null;
 }
 
 function buildRecentComponent(recentWinners)
@@ -204,7 +216,9 @@ function buildStreakComponent(streakLength)
         return 0;
     }
 
-    const rawBonus = (streakLength * streakLength) / 2;
+    // Non-linear growth makes short streaks noticeable and long streaks feel decisive.
+    // Dividing by streakGrowthDivisor keeps the curve responsive without overwhelming other components too early.
+    const rawBonus = (streakLength * streakLength) / MOMENTUM_CONFIG.streakGrowthDivisor;
     return Math.min(MOMENTUM_CONFIG.streakCap, rawBonus) * MOMENTUM_CONFIG.streakScale;
 }
 
@@ -232,7 +246,7 @@ function classifyPressureBonus(beforeScore, scoringTeam, options)
     const gamePointB = isTeamOnGamePoint(beforeScore, "B", options, false);
 
     const serverLabel = getCurrentServerLabel(beforeScore);
-    const serverTeam = typeof serverLabel === "string" && serverLabel.length > 0 ? serverLabel[0] : null;
+    const serverTeam = extractServingTeam(serverLabel);
     const returnerTeam = serverTeam === "A" ? "B" : serverTeam === "B" ? "A" : null;
     const isBreakPoint = (returnerTeam === "A" && gamePointA) || (returnerTeam === "B" && gamePointB);
     const scoringTeamOnGamePoint = scoringTeam === "A" ? gamePointA : gamePointB;
@@ -289,6 +303,7 @@ function computeMomentumTimeline(pointHistory, scoringOptions)
             eventType: pointWinner === "A" ? "POINT_TEAM_A" : "POINT_TEAM_B"
         }, options);
 
+        // Decay first so this point is applied as fresh "current control" on top of prior state.
         momentum *= MOMENTUM_CONFIG.decayPerPoint;
 
         recentWinners.push(pointWinner);
@@ -310,7 +325,9 @@ function computeMomentumTimeline(pointHistory, scoringOptions)
         const pointSign = pointWinner === "A" ? 1 : -1;
         const recentComponent = buildRecentComponent(recentWinners);
         const streakComponent = buildStreakComponent(streakLength) * pointSign;
-        const pressureComponent = classifyPressureBonus(beforeScore, pointWinner, options) * MOMENTUM_CONFIG.pressureScale * pointSign;
+        const pressureMultiplier = classifyPressureBonus(beforeScore, pointWinner, options);
+        // pressureMultiplier is in [1..3], and pressureScale controls the final pressure contribution size.
+        const pressureComponent = pressureMultiplier * MOMENTUM_CONFIG.pressureScale * pointSign;
         const setCarryComponent = setCarry;
 
         const gameCompleted = score.A.games !== oldGamesA ||
@@ -334,7 +351,7 @@ function computeMomentumTimeline(pointHistory, scoringOptions)
         momentum += gameResultComponent;
         momentum += setResultComponent;
         momentum += setCarryComponent;
-        momentum = clampNumber(momentum, MOMENTUM_CONFIG.clampMin, MOMENTUM_CONFIG.clampMax);
+        momentum = clamp(momentum, MOMENTUM_CONFIG.clampMin, MOMENTUM_CONFIG.clampMax);
 
         timeline.push(momentum);
         breakdown.push({
@@ -347,7 +364,11 @@ function computeMomentumTimeline(pointHistory, scoringOptions)
             total: momentum
         });
 
-        setCarry *= MOMENTUM_CONFIG.setCarryDecayPerPoint;
+        if (!setCompleted)
+        {
+            setCarry *= MOMENTUM_CONFIG.setCarryDecayPerPoint;
+        }
+        // setCarry intentionally starts decaying from the next point after a set win for an immediate post-set carryover.
     }
 
     return {

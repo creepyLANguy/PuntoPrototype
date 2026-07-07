@@ -3526,13 +3526,19 @@ document.addEventListener("DOMContentLoaded", () =>
       const padX = 8;
       const padY = 10;
       const midY = H / 2;
+      const MOMENTUM_CLAMP_MIN = -100;
+      const MOMENTUM_CLAMP_MAX = 100;
 
-      const hasLiveMomentum = Array.isArray(momentumTimeline) && momentumTimeline.length === pointHistory.length;
+      const hasLiveMomentum = Array.isArray(momentumTimeline) &&
+        momentumTimeline.length > 0 &&
+        momentumTimeline.length === pointHistory.length;
       const values = hasLiveMomentum
         ? [0, ...momentumTimeline.map((value) =>
         {
-          const numeric = Number(value) || 0;
-          return Math.max(-100, Math.min(100, numeric));
+          const numeric = Number(value);
+          const safeNumeric = Number.isFinite(numeric) ? numeric : 0;
+          // Defensive clamp in case older clients/servers exchange out-of-range values.
+          return Math.max(MOMENTUM_CLAMP_MIN, Math.min(MOMENTUM_CLAMP_MAX, safeNumeric));
         })]
         : (() =>
         {
@@ -3549,7 +3555,7 @@ document.addEventListener("DOMContentLoaded", () =>
         return (arr[i - 1] + arr[i] * 2 + arr[i + 1]) / 4;
       });
 
-      const maxVal = hasLiveMomentum ? 100 : Math.max(...values.map(Math.abs), 1);
+      const maxVal = hasLiveMomentum ? MOMENTUM_CLAMP_MAX : Math.max(...values.map(Math.abs), 1);
 
       // Map index → x, value → y
       const toX = i => padX + (i / (values.length - 1)) * (W - padX * 2);
