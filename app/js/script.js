@@ -441,10 +441,12 @@ document.addEventListener("DOMContentLoaded", () =>
       const choiceTheme = button.dataset.themeChoice;
       const previewColours = getTeamColoursForTheme(choiceTheme);
       const isActive = button.dataset.themeChoice === activeTheme;
+      const readableTextColour = getReadableTextColour(previewColours);
 
       button.style.setProperty("--theme-choice-a", previewColours.A);
       button.style.setProperty("--theme-choice-b", previewColours.B);
-      button.style.setProperty("--theme-choice-text", getReadableTextColour(previewColours));
+      button.style.setProperty("--theme-choice-text", readableTextColour);
+      button.style.setProperty("--theme-choice-shadow", readableTextColour === "#000000" ? "#ffffff" : "#000000");
       button.classList.toggle("active", isActive);
       button.setAttribute("aria-pressed", isActive ? "true" : "false");
     });
