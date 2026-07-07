@@ -3729,8 +3729,10 @@ document.addEventListener("DOMContentLoaded", () =>
       return;
     }
 
-    const isGoldenMode = advancedStats.deuceMode === "golden";
-    const isSilverMode = advancedStats.deuceMode === "silver";
+    const resolvedScoringMode = normalizeScoringOptions({ scoringMode: advancedStats.scoringMode }).scoringMode;
+    const isGamesAndSetsMode = resolvedScoringMode === "standard";
+    const isGoldenMode = isGamesAndSetsMode && advancedStats.deuceMode === "golden";
+    const isSilverMode = isGamesAndSetsMode && advancedStats.deuceMode === "silver";
     const primaryTeamKey = isSwapped ? "B" : "A";
     const secondaryTeamKey = isSwapped ? "A" : "B";
     const primaryTeamName = teamNames[primaryTeamKey];
@@ -3818,25 +3820,31 @@ document.addEventListener("DOMContentLoaded", () =>
         `${primaryTeamStats.pointsWon}/${totalPoints} · ${formatPct(primaryTeamStats.pointWinPct)}`,
         `${secondaryTeamStats.pointsWon}/${totalPoints} · ${formatPct(secondaryTeamStats.pointWinPct)}`
       ),
-      row("Longest Streak", primaryTeamStats.longestScoringStreak, secondaryTeamStats.longestScoringStreak),
-      row("Breaks Faced", primaryTeamStats.breakPointsFaced, secondaryTeamStats.breakPointsFaced),
-      row("Breaks Held", `${primaryTeamStats.breakPointsWon}/${primaryTeamStats.breakPointsFaced} · ${formatPct(primaryTeamStats.breakPointWinPct)}`,
-                          `${secondaryTeamStats.breakPointsWon}/${secondaryTeamStats.breakPointsFaced} · ${formatPct(secondaryTeamStats.breakPointWinPct)}`),
-      row("Break Chances", primaryTeamStats.breakPointConversionOpportunities, secondaryTeamStats.breakPointConversionOpportunities),
-      row("Breaks Won", `${primaryTeamStats.breakPointConversions}/${primaryTeamStats.breakPointConversionOpportunities} · ${formatPct(primaryTeamStats.breakPointConversionPct)}`,
-                        `${secondaryTeamStats.breakPointConversions}/${secondaryTeamStats.breakPointConversionOpportunities} · ${formatPct(secondaryTeamStats.breakPointConversionPct)}`),
-      row("Closing Pts Won",
-        `${formatPct(primaryTeamStats.closingEfficiencyPct)} (${primaryTeamStats.gamePointConversions}/${primaryTeamStats.gamePointGames})`,
-        `${formatPct(secondaryTeamStats.closingEfficiencyPct)} (${secondaryTeamStats.gamePointConversions}/${secondaryTeamStats.gamePointGames})`),
-      sectionRow("Deuce"),
-      sharedRow(deuceGamesLabel, isGoldenMode ? goldenPointsPlayed : deuceGames),
-      barRow(
-        "Won",
-        primaryDeucePct,
-        secondaryDeucePct,
-        `${primaryDeuceWon}/${deuceGames} · ${formatPct(primaryDeucePct)}`,
-        `${secondaryDeuceWon}/${deuceGames} · ${formatPct(secondaryDeucePct)}`)
+      row("Longest Streak", primaryTeamStats.longestScoringStreak, secondaryTeamStats.longestScoringStreak)
     ];
+
+    if (isGamesAndSetsMode)
+    {
+      rows.push(
+        row("Breaks Faced", primaryTeamStats.breakPointsFaced, secondaryTeamStats.breakPointsFaced),
+        row("Breaks Held", `${primaryTeamStats.breakPointsWon}/${primaryTeamStats.breakPointsFaced} · ${formatPct(primaryTeamStats.breakPointWinPct)}`,
+          `${secondaryTeamStats.breakPointsWon}/${secondaryTeamStats.breakPointsFaced} · ${formatPct(secondaryTeamStats.breakPointWinPct)}`),
+        row("Break Chances", primaryTeamStats.breakPointConversionOpportunities, secondaryTeamStats.breakPointConversionOpportunities),
+        row("Breaks Won", `${primaryTeamStats.breakPointConversions}/${primaryTeamStats.breakPointConversionOpportunities} · ${formatPct(primaryTeamStats.breakPointConversionPct)}`,
+          `${secondaryTeamStats.breakPointConversions}/${secondaryTeamStats.breakPointConversionOpportunities} · ${formatPct(secondaryTeamStats.breakPointConversionPct)}`),
+        row("Closing Pts Won",
+          `${formatPct(primaryTeamStats.closingEfficiencyPct)} (${primaryTeamStats.gamePointConversions}/${primaryTeamStats.gamePointGames})`,
+          `${formatPct(secondaryTeamStats.closingEfficiencyPct)} (${secondaryTeamStats.gamePointConversions}/${secondaryTeamStats.gamePointGames})`),
+        sectionRow("Deuce"),
+        sharedRow(deuceGamesLabel, isGoldenMode ? goldenPointsPlayed : deuceGames),
+        barRow(
+          "Won",
+          primaryDeucePct,
+          secondaryDeucePct,
+          `${primaryDeuceWon}/${deuceGames} · ${formatPct(primaryDeucePct)}`,
+          `${secondaryDeuceWon}/${deuceGames} · ${formatPct(secondaryDeucePct)}`)
+      );
+    }
 
     if (isSilverMode)
     {
@@ -3864,7 +3872,9 @@ document.addEventListener("DOMContentLoaded", () =>
     `;
 
     const comeback = matchStats.largestComeback;
-    let comebackText = "No comeback set win recorded.";
+    let comebackText = isGamesAndSetsMode
+      ? "No comeback set win recorded."
+      : "No points comeback recorded.";
     if (comeback && (comeback.team === "A" || comeback.team === "B"))
     {
       const comebackTeamName = comeback.team === "A" ? teamNames.A : teamNames.B;
@@ -3872,8 +3882,15 @@ document.addEventListener("DOMContentLoaded", () =>
       const fromB = Number(comeback.fromScore?.B) || 0;
       const finalA = Number(comeback.finalScore?.A) || 0;
       const finalB = Number(comeback.finalScore?.B) || 0;
-      const setNumber = Number(comeback.setNumber) || 1;
-      comebackText = `${comebackTeamName} recovered from ${fromA}-${fromB} to win set ${setNumber} , ${finalA}-${finalB}.`;
+      if (isGamesAndSetsMode)
+      {
+        const setNumber = Number(comeback.setNumber) || 1;
+        comebackText = `${comebackTeamName} recovered from ${fromA}-${fromB} to win set ${setNumber}, ${finalA}-${finalB}.`;
+      }
+      else
+      {
+        comebackText = `${comebackTeamName} recovered from ${fromA}-${fromB} to win ${finalA}-${finalB}.`;
+      }
     }
 
     elements.dmStatsMeta.innerHTML = `
@@ -3950,10 +3967,15 @@ document.addEventListener("DOMContentLoaded", () =>
       const resolvedMode = normalizeScoringOptions({ scoringMode: scoringMode || mode }).scoringMode;
       const dmTableWrap = document.querySelector(".dm-table-wrap");
 
+      const isStraight = resolvedMode === "straight";
+      const isTiebreakTen = resolvedMode === "tiebreakTen";
+      const isGamesAndSetsMode = !isStraight && !isTiebreakTen;
       const hasCompletedSets = Array.isArray(sets) && sets.length > 0;
       const hasCurrentSetGames = (Number(currentGames?.A) || 0) > 0 || (Number(currentGames?.B) || 0) > 0;
       const hasAnyPoints = (Number(points?.A) || 0) > 0 || (Number(points?.B) || 0) > 0;
-      const hasAnyMatchDetails = hasCompletedSets || hasCurrentSetGames || hasAnyPoints;
+      const hasAnyMatchDetails = isGamesAndSetsMode
+        ? (hasCompletedSets || hasCurrentSetGames)
+        : (hasCompletedSets || hasCurrentSetGames || hasAnyPoints);
 
       if (elements.dmEmptyState)
       {
@@ -3993,9 +4015,6 @@ document.addEventListener("DOMContentLoaded", () =>
           });
         }
       }
-
-      const isStraight = resolvedMode === "straight";
-      const isTiebreakTen = resolvedMode === "tiebreakTen";
 
       if (dmOverall)
       {
