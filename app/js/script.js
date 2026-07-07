@@ -3489,7 +3489,7 @@ document.addEventListener("DOMContentLoaded", () =>
       elements.detailsModal.classList.add("hidden");
   });
 
-  function renderMomentumGraph(pointHistory, colourA, colourB, setPointMarkers = [])
+  function renderMomentumGraph(pointHistory, colourA, colourB, setPointMarkers = [], momentumTimeline = null)
   {
     const wrap = elements.dmMomentumWrap;
     const canvas = elements.dmMomentumCanvas;
@@ -3527,10 +3527,20 @@ document.addEventListener("DOMContentLoaded", () =>
       const padY = 10;
       const midY = H / 2;
 
-      // Build cumulative momentum: +1 per A point, -1 per B point
-      const values = [0];
-      for (const p of pointHistory)
-        values.push(values[values.length - 1] + (p === "A" ? 1 : -1));
+      const hasLiveMomentum = Array.isArray(momentumTimeline) && momentumTimeline.length === pointHistory.length;
+      const values = hasLiveMomentum
+        ? [0, ...momentumTimeline.map((value) =>
+        {
+          const numeric = Number(value) || 0;
+          return Math.max(-100, Math.min(100, numeric));
+        })]
+        : (() =>
+        {
+          const cumulative = [0];
+          for (const p of pointHistory)
+            cumulative.push(cumulative[cumulative.length - 1] + (p === "A" ? 1 : -1));
+          return cumulative;
+        })();
 
       // Smooth sharp directional changes so peaks/troughs render less jagged.
       const smoothedValues = values.map((v, i, arr) =>
@@ -3539,7 +3549,7 @@ document.addEventListener("DOMContentLoaded", () =>
         return (arr[i - 1] + arr[i] * 2 + arr[i + 1]) / 4;
       });
 
-      const maxVal = Math.max(...values.map(Math.abs), 1);
+      const maxVal = hasLiveMomentum ? 100 : Math.max(...values.map(Math.abs), 1);
 
       // Map index → x, value → y
       const toX = i => padX + (i / (values.length - 1)) * (W - padX * 2);
@@ -3998,7 +4008,13 @@ document.addEventListener("DOMContentLoaded", () =>
 
         const colourA = getComputedStyle(document.body).getPropertyValue("--teamAcolour").trim();
         const colourB = getComputedStyle(document.body).getPropertyValue("--teamBcolour").trim();
-        renderMomentumGraph(result.data.pointHistory, colourA, colourB, result.data.setPointMarkers || []);
+        renderMomentumGraph(
+          result.data.pointHistory,
+          colourA,
+          colourB,
+          result.data.setPointMarkers || [],
+          result.data.momentumTimeline || null
+        );
         renderAdvancedStats(result.data.advancedStats, { A: nameA, B: nameB }, isSwapped);
         syncDetailsPanelAvailability();
         return;
@@ -4075,7 +4091,13 @@ document.addEventListener("DOMContentLoaded", () =>
 
       const colourA = getComputedStyle(document.body).getPropertyValue("--teamAcolour").trim();
       const colourB = getComputedStyle(document.body).getPropertyValue("--teamBcolour").trim();
-      renderMomentumGraph(result.data.pointHistory, colourA, colourB, result.data.setPointMarkers || []);
+      renderMomentumGraph(
+        result.data.pointHistory,
+        colourA,
+        colourB,
+        result.data.setPointMarkers || [],
+        result.data.momentumTimeline || null
+      );
       renderAdvancedStats(result.data.advancedStats, { A: nameA, B: nameB }, isSwapped);
       syncDetailsPanelAvailability();
     }

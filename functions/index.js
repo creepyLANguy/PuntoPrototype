@@ -1,7 +1,7 @@
 const admin = require("firebase-admin");
 const { onDocumentCreated } = require("firebase-functions/v2/firestore");
 const { onCall } = require("firebase-functions/v2/https");
-const { defaultScore, applyEvent, normalizeScoringOptions, replayEvents } = require("./scoringEngine");
+const { defaultScore, applyEvent, normalizeScoringOptions, replayEvents, getCurrentServerLabel } = require("./scoringEngine");
 const { onRequest } = require("firebase-functions/v2/https");
 
 const REGION = "africa-south1";
@@ -145,6 +145,216 @@ function isTeamOnGamePoint(state, team, options, isTiebreakGame)
     if (ownPoints === 3 && oppPoints < 3) return true;
     if (ownPoints >= 4) return true;
     return false;
+}
+
+const MOMENTUM_CONFIG = Object.freeze({
+    decayPerPoint: 0.94,
+    clampMin: -100,
+    clampMax: 100,
+    recentWindowSize: 10,
+    recentWeights: [1.0, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1],
+    recentScale: 12,
+    streakScale: 0.6,
+    streakCap: 18,
+    pressureScale: 1.2,
+    gameWinBonus: 10,
+    setWinBonus: 20,
+    setCarryDecayPerPoint: 0.9
+});
+
+function clampNumber(value, min, max)
+{
+    return Math.min(max, Math.max(min, value));
+}
+
+function buildRecentComponent(recentWinners)
+{
+    if (!Array.isArray(recentWinners) || recentWinners.length === 0)
+    {
+        return 0;
+    }
+
+    const maxLen = Math.min(MOMENTUM_CONFIG.recentWindowSize, recentWinners.length);
+    const windowStart = recentWinners.length - maxLen;
+    let weightedSum = 0;
+    let totalWeight = 0;
+
+    for (let i = 0; i < maxLen; i++)
+    {
+        const winner = recentWinners[windowStart + i];
+        const sign = winner === "A" ? 1 : winner === "B" ? -1 : 0;
+        const ageIndex = maxLen - i - 1;
+        const weight = MOMENTUM_CONFIG.recentWeights[ageIndex] ?? 0;
+        weightedSum += sign * weight;
+        totalWeight += weight;
+    }
+
+    if (totalWeight <= 0)
+    {
+        return 0;
+    }
+
+    return (weightedSum / totalWeight) * MOMENTUM_CONFIG.recentScale;
+}
+
+function buildStreakComponent(streakLength)
+{
+    if (!Number.isFinite(streakLength) || streakLength <= 1)
+    {
+        return 0;
+    }
+
+    const rawBonus = (streakLength * streakLength) / 2;
+    return Math.min(MOMENTUM_CONFIG.streakCap, rawBonus) * MOMENTUM_CONFIG.streakScale;
+}
+
+function classifyPressureBonus(beforeScore, scoringTeam, options)
+{
+    if (!beforeScore || options.scoringMode !== "standard")
+    {
+        return 1;
+    }
+
+    const isTiebreakGame = beforeScore.inTiebreak ||
+        (options.tiebreakMode !== "off" && beforeScore.A.games === 6 && beforeScore.B.games === 6);
+    if (isTiebreakGame)
+    {
+        return 1;
+    }
+
+    const pointsA = Number(beforeScore.A?.points) || 0;
+    const pointsB = Number(beforeScore.B?.points) || 0;
+
+    const isAdvantage = (pointsA === 4 && pointsB === 3) || (pointsB === 4 && pointsA === 3);
+    const isDeuce = pointsA >= 3 && pointsB >= 3 && pointsA === pointsB;
+    const isThirtyAll = pointsA === 2 && pointsB === 2;
+    const gamePointA = isTeamOnGamePoint(beforeScore, "A", options, false);
+    const gamePointB = isTeamOnGamePoint(beforeScore, "B", options, false);
+
+    const serverLabel = getCurrentServerLabel(beforeScore);
+    const serverTeam = typeof serverLabel === "string" && serverLabel.length > 0 ? serverLabel[0] : null;
+    const returnerTeam = serverTeam === "A" ? "B" : serverTeam === "B" ? "A" : null;
+    const isBreakPoint = (returnerTeam === "A" && gamePointA) || (returnerTeam === "B" && gamePointB);
+    const scoringTeamOnGamePoint = scoringTeam === "A" ? gamePointA : gamePointB;
+
+    if (isBreakPoint || scoringTeamOnGamePoint || gamePointA || gamePointB)
+    {
+        return 3;
+    }
+
+    if (isAdvantage)
+    {
+        return 2.5;
+    }
+
+    if (isDeuce)
+    {
+        return 2;
+    }
+
+    if (isThirtyAll)
+    {
+        return 1.5;
+    }
+
+    return 1;
+}
+
+function computeMomentumTimeline(pointHistory, scoringOptions)
+{
+    const options = normalizeScoringOptions(scoringOptions);
+    const timeline = [];
+    const breakdown = [];
+    let score = defaultScore(options);
+    let momentum = 0;
+    let streakTeam = null;
+    let streakLength = 0;
+    let setCarry = 0;
+    const recentWinners = [];
+
+    for (const pointWinner of pointHistory)
+    {
+        if (pointWinner !== "A" && pointWinner !== "B")
+        {
+            continue;
+        }
+
+        const oldGamesA = score.A.games;
+        const oldGamesB = score.B.games;
+        const oldSetsA = score.A.sets;
+        const oldSetsB = score.B.sets;
+        const beforeScore = JSON.parse(JSON.stringify(score));
+
+        score = applyEvent(score, {
+            eventType: pointWinner === "A" ? "POINT_TEAM_A" : "POINT_TEAM_B"
+        }, options);
+
+        momentum *= MOMENTUM_CONFIG.decayPerPoint;
+
+        recentWinners.push(pointWinner);
+        if (recentWinners.length > MOMENTUM_CONFIG.recentWindowSize)
+        {
+            recentWinners.shift();
+        }
+
+        if (pointWinner === streakTeam)
+        {
+            streakLength++;
+        }
+        else
+        {
+            streakTeam = pointWinner;
+            streakLength = 1;
+        }
+
+        const pointSign = pointWinner === "A" ? 1 : -1;
+        const recentComponent = buildRecentComponent(recentWinners);
+        const streakComponent = buildStreakComponent(streakLength) * pointSign;
+        const pressureComponent = classifyPressureBonus(beforeScore, pointWinner, options) * MOMENTUM_CONFIG.pressureScale * pointSign;
+        const setCarryComponent = setCarry;
+
+        const gameCompleted = score.A.games !== oldGamesA ||
+            score.B.games !== oldGamesB ||
+            score.A.sets !== oldSetsA ||
+            score.B.sets !== oldSetsB;
+        const gameWinner = gameCompleted ? (score.lastGameTeam || pointWinner) : null;
+        const gameResultComponent = gameWinner ? (gameWinner === "A" ? 1 : -1) * MOMENTUM_CONFIG.gameWinBonus : 0;
+
+        const setCompleted = score.A.sets !== oldSetsA || score.B.sets !== oldSetsB;
+        const setWinner = setCompleted ? (score.lastSetTeam || pointWinner) : null;
+        const setResultComponent = setWinner ? (setWinner === "A" ? 1 : -1) * MOMENTUM_CONFIG.setWinBonus : 0;
+        if (setResultComponent !== 0)
+        {
+            setCarry += setResultComponent;
+        }
+
+        momentum += recentComponent;
+        momentum += streakComponent;
+        momentum += pressureComponent;
+        momentum += gameResultComponent;
+        momentum += setResultComponent;
+        momentum += setCarryComponent;
+        momentum = clampNumber(momentum, MOMENTUM_CONFIG.clampMin, MOMENTUM_CONFIG.clampMax);
+
+        timeline.push(momentum);
+        breakdown.push({
+            recentPoints: recentComponent,
+            currentStreak: streakComponent,
+            pressurePerformance: pressureComponent,
+            gameResultBonus: gameResultComponent,
+            setResultBonus: setResultComponent,
+            setCarryBonus: setCarryComponent,
+            total: momentum
+        });
+
+        setCarry *= MOMENTUM_CONFIG.setCarryDecayPerPoint;
+    }
+
+    return {
+        timeline,
+        breakdown,
+        config: MOMENTUM_CONFIG
+    };
 }
 
 function computeAdvancedStats(pointHistory, scoringOptions)
@@ -727,6 +937,8 @@ exports.getDetailedScore = onCall(
             currentSetGames.B = score.B.games;
         });
 
+        const momentumData = computeMomentumTimeline(pointHistory, normalizedOptions);
+
         return {
             sets: setScores,
             currentGames: currentSetGames,
@@ -739,6 +951,8 @@ exports.getDetailedScore = onCall(
             matchComplete: score.matchComplete,
             pointHistory,
             setPointMarkers,
+            momentumTimeline: momentumData.timeline,
+            momentumBreakdown: momentumData.breakdown,
             advancedStats: computeAdvancedStats(pointHistory, normalizedOptions)
         };
     }
