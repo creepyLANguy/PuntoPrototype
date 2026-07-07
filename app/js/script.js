@@ -3714,6 +3714,7 @@ document.addEventListener("DOMContentLoaded", () =>
     }
 
     const isGoldenMode = advancedStats.deuceMode === "golden";
+    const isSilverMode = advancedStats.deuceMode === "silver";
     const primaryTeamKey = isSwapped ? "B" : "A";
     const secondaryTeamKey = isSwapped ? "A" : "B";
     const primaryTeamName = teamNames[primaryTeamKey];
@@ -3728,6 +3729,7 @@ document.addEventListener("DOMContentLoaded", () =>
     const totalPoints = Number(matchStats.totalPoints) || 0;
     const deuceGames = Number(matchStats.deuceGames) || 0;
     const goldenPointsPlayed = Number(matchStats.goldenPointsPlayed) || 0;
+    const silverPointsPlayed = Number(matchStats.silverPointsPlayed) || 0;
 
     function row(label, valPrimary, valSecondary)
     {
@@ -3780,6 +3782,17 @@ document.addEventListener("DOMContentLoaded", () =>
     const secondaryDeucePct = Number.isFinite(secondaryDeucePctRaw)
       ? secondaryDeucePctRaw
       : (deuceGames > 0 ? (secondaryDeuceWon / deuceGames) * 100 : 0);
+    const primarySilverWon = Number(primaryTeamStats.silverPointsWon) || 0;
+    const secondarySilverWon = Number(secondaryTeamStats.silverPointsWon) || 0;
+    const primarySilverPctRaw = Number(primaryTeamStats.silverPointWinPct);
+    const secondarySilverPctRaw = Number(secondaryTeamStats.silverPointWinPct);
+    const primarySilverPct = Number.isFinite(primarySilverPctRaw)
+      ? primarySilverPctRaw
+      : (silverPointsPlayed > 0 ? (primarySilverWon / silverPointsPlayed) * 100 : 0);
+    const secondarySilverPct = Number.isFinite(secondarySilverPctRaw)
+      ? secondarySilverPctRaw
+      : (silverPointsPlayed > 0 ? (secondarySilverWon / silverPointsPlayed) * 100 : 0);
+    const deuceGamesLabel = isGoldenMode ? "Golden Pts" : "Games";
 
     const rows = [
       barRow(
@@ -3800,7 +3813,7 @@ document.addEventListener("DOMContentLoaded", () =>
         `${formatPct(primaryTeamStats.closingEfficiencyPct)} (${primaryTeamStats.gamePointConversions}/${primaryTeamStats.gamePointGames})`,
         `${formatPct(secondaryTeamStats.closingEfficiencyPct)} (${secondaryTeamStats.gamePointConversions}/${secondaryTeamStats.gamePointGames})`),
       sectionRow("Deuce"),
-      sharedRow("Games", deuceGames),
+      sharedRow(deuceGamesLabel, isGoldenMode ? goldenPointsPlayed : deuceGames),
       barRow(
         "Won",
         primaryDeucePct,
@@ -3809,12 +3822,15 @@ document.addEventListener("DOMContentLoaded", () =>
         `${secondaryDeuceWon}/${deuceGames} · ${formatPct(secondaryDeucePct)}`)
     ];
 
-    if (isGoldenMode)
+    if (isSilverMode)
     {
-      rows.push(row(
-        "Golden Pts",
-        `${primaryTeamStats.goldenPointsWon}/${goldenPointsPlayed} · ${formatPct(primaryTeamStats.goldenPointWinPct)}`,
-        `${secondaryTeamStats.goldenPointsWon}/${goldenPointsPlayed} · ${formatPct(secondaryTeamStats.goldenPointWinPct)}`
+      rows.push(sharedRow("Silver Pts", silverPointsPlayed));
+      rows.push(barRow(
+        "Won",
+        primarySilverPct,
+        secondarySilverPct,
+        `${primarySilverWon}/${silverPointsPlayed} · ${formatPct(primarySilverPct)}`,
+        `${secondarySilverWon}/${silverPointsPlayed} · ${formatPct(secondarySilverPct)}`
       ));
     }
 

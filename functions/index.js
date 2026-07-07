@@ -65,6 +65,8 @@ function createTeamStatsBucket()
         gamesLostAfterDeuce: 0,
         goldenPointsWon: 0,
         goldenPointWinPct: 0,
+        silverPointsWon: 0,
+        silverPointWinPct: 0,
         gamePointGames: 0,
         gamePointConversions: 0,
         closingEfficiencyPct: 0
@@ -156,6 +158,7 @@ function computeAdvancedStats(pointHistory, scoringOptions)
         totalPoints: pointHistory.length,
         deuceGames: 0,
         goldenPointsPlayed: 0,
+        silverPointsPlayed: 0,
         leadChanges: 0,
         largestComeback: null
     };
@@ -191,6 +194,7 @@ function computeAdvancedStats(pointHistory, scoringOptions)
         let breakPointServer = null;
         let breakPointReturner = null;
         let isGoldenPoint = false;
+        let isSilverPoint = false;
 
         if (standardMode && !oldIsTiebreak)
         {
@@ -206,6 +210,12 @@ function computeAdvancedStats(pointHistory, scoringOptions)
             {
                 isGoldenPoint = true;
                 matchStats.goldenPointsPlayed++;
+            }
+
+            if (options.deuceMode === "silver" && pointsA === 3 && pointsB === 3 && (Number(score.deuceCycles) || 0) > 0)
+            {
+                isSilverPoint = true;
+                matchStats.silverPointsPlayed++;
             }
 
             const gamePointA = isTeamOnGamePoint(score, "A", options, false);
@@ -233,6 +243,11 @@ function computeAdvancedStats(pointHistory, scoringOptions)
         if (isGoldenPoint)
         {
             teamStats[pointWinner].goldenPointsWon++;
+        }
+
+        if (isSilverPoint)
+        {
+            teamStats[pointWinner].silverPointsWon++;
         }
 
         if (isBreakPoint)
@@ -350,6 +365,9 @@ function computeAdvancedStats(pointHistory, scoringOptions)
             : 0;
         bucket.goldenPointWinPct = matchStats.goldenPointsPlayed > 0
             ? (bucket.goldenPointsWon / matchStats.goldenPointsPlayed) * 100
+            : 0;
+        bucket.silverPointWinPct = matchStats.silverPointsPlayed > 0
+            ? (bucket.silverPointsWon / matchStats.silverPointsPlayed) * 100
             : 0;
         bucket.closingEfficiencyPct = bucket.gamePointGames > 0
             ? (bucket.gamePointConversions / bucket.gamePointGames) * 100
