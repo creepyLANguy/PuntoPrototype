@@ -3913,6 +3913,7 @@ document.addEventListener("DOMContentLoaded", () =>
 
     // Mirror the swapped layout state onto the details header container
     const dmOverall = document.querySelector(".dm-overall");
+    const dmMidSection = document.querySelector(".dm-mid-section");
     if (dmOverall)
     {
       dmOverall.classList.toggle("swapped", isSwapped);
@@ -4025,7 +4026,6 @@ document.addEventListener("DOMContentLoaded", () =>
       {
         // 1) Hide the breakdown table completely since individual sets are not tracked
         if (dmTableWrap) dmTableWrap.classList.add("hidden");
-        if (dmOverall) dmOverall.classList.add("large-points-mode");
 
         // 2) Populate the main sets labels with the cumulative match points
         elements.detailsSetsA.textContent = (points && points.A !== undefined) ? points.A : 0;
@@ -4047,7 +4047,6 @@ document.addEventListener("DOMContentLoaded", () =>
       
       // Normal Scoring Mode remains perfectly untouched
       if (dmTableWrap) dmTableWrap.classList.remove("hidden");
-      if (dmOverall) dmOverall.classList.remove("large-points-mode");
 
       // Populate overall set scores normally (e.g. 0 and 2)
       elements.detailsSetsA.textContent = setsA;
