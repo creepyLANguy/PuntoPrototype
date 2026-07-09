@@ -12,3 +12,9 @@ firebug-*.log
 firestore-debug.log
 pubsub-debug.log
 ui-debug.log
+
+# Agents
+.agents/
+
+# Skills lock
+skills-lock.json
