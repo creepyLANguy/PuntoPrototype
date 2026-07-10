@@ -2454,12 +2454,12 @@ body.light-mode .court-list {
 .loading {
   padding: 20px;
   text-align: center;
-  color: rgba(255, 255, 255, 0.6);
-  font-size: 14px;
+  color: rgba(255, 255, 255, 0.8);
+  font-size:20px;
 }
 
 body.light-mode .loading {
-  color: #666;
+  color: #444;
 }
 
 /* =======================================================
