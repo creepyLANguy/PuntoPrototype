@@ -1,3 +1,5 @@
+const historyThreshold = 500;
+
 const SCORING_MODES = new Set(["standard", "straight", "tiebreakTen"]);
 const DEUCE_MODES = new Set(["standard", "golden", "silver"]);
 const TIEBREAK_MODES = new Set(["off", "sixAllSeven", "sixAllTen"]);
@@ -168,7 +170,7 @@ function applyEvent(score, event, scoringOptions)
   delete snapshot.history;
   newScore.history.push(snapshot);
 
-  if (newScore.history.length > 100)
+  if (newScore.history.length > historyThreshold)
   {
     newScore.history.shift();
   }
