@@ -2793,7 +2793,7 @@ document.addEventListener("DOMContentLoaded", () =>
     elements.serverBadgeA.classList.toggle("hidden", !teamAServing);
     elements.serverBadgeB.classList.toggle("hidden", !teamBServing);
 
-    const displayLabel = label.slice(1);
+    const displayLabel = label;//.slice(1);
 
     if (teamAServing)
     {
