@@ -775,10 +775,10 @@ body.light-mode .game-dot.filled {
 }
 
 .server-badge::after {
-  --size: clamp(6px, 2.25cqi, 28px);
+  --bounceHeight: clamp(12px, 5.5cqi, 56px);
+  --size: clamp(4px, 2.25cqi, 10px);
   flex-shrink: 0;
-  left: calc(50% - (var(--size) / 2));
-  bottom: calc(100% + (var(--size) * 2));
+  bottom: calc(var(--bounceHeight) + (var(--size) * 2.5));
   width: var(--size);
   height: var(--size);
   background: currentColor;
@@ -787,20 +787,49 @@ body.light-mode .game-dot.filled {
   position: absolute;
   border-radius: 50%;
   z-index: 1;
-  animation: animloader 1.5s cubic-bezier(.18, .85, .35, 1) infinite;
+  animation: animloader 2s linear infinite;
 }
 
 @keyframes animloader {
+  100%,
   0% {
-    transform: translateY(calc(2 * var(--size))) scaleY(1) scaleX(1.5);
-  }
-  
-  50% {
-    transform: scaleY(1) scaleX(1);
+    transform: translateY(0);
   }
 
-  100% {
-    transform: translateY(calc(2 * var(--size)));
+  10%,
+  90% {
+    transform: translateY(calc(var(--bounceHeight) * 0.02));
+  }
+
+  20%,
+  80% {
+    transform: translateY(calc(var(--bounceHeight) * 0.09));
+  }
+
+  30%
+  {
+    transform: translateY(calc(var(--bounceHeight) * 0.25));
+  }
+
+  40%
+  {
+    transform: translateY(calc(var(--bounceHeight) * 0.55));
+  }
+
+  50% {
+    transform: translateY(calc(var(--bounceHeight))) scaleX(1);
+  }
+
+  53% {
+    transform: translateY(var(--bounceHeight)) scaleX(1.5) scaleY(0.75); 
+  }
+
+  60% {
+    transform: translateY(calc(var(--bounceHeight) * 0.55)) scaleX(0.75) scaleY(1.2);
+  }
+
+  70% {
+    transform: translateY(calc(var(--bounceHeight) * 0.25));
   }
 }
 

@@ -2781,11 +2781,10 @@ document.addEventListener("DOMContentLoaded", () =>
       return;
     }
 
-    //AL.
     const teamAColour = getComputedStyle(document.body).getPropertyValue("--teamAcolour").trim();
     const teamBColour = getComputedStyle(document.body).getPropertyValue("--teamBcolour").trim();
-    elements.serverBadgeA.style.color = teamAColour;
-    elements.serverBadgeB.style.color = teamBColour;
+    //elements.serverBadgeA.style.color = teamAColour;
+    //elements.serverBadgeB.style.color = teamBColour;
 
     const label = getCurrentServerLabel(score);
     const teamAServing = isServerBadgeVisible && label?.startsWith("A");
@@ -2794,7 +2793,6 @@ document.addEventListener("DOMContentLoaded", () =>
     elements.serverBadgeA.classList.toggle("hidden", !teamAServing);
     elements.serverBadgeB.classList.toggle("hidden", !teamBServing);
 
-    //AL.
     const displayLabel = label.slice(1);
 
     if (teamAServing)
