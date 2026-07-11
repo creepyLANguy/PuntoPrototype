@@ -2585,7 +2585,9 @@ document.addEventListener("DOMContentLoaded", () =>
       return status;
     }
 
-    const options = resolveScoringOptions(currentScore);
+    // Use ONLY score document's scoring options (not overridden by court settings)
+    // This ensures critical points match what was calculated by the backend scoring engine
+    const options = normalizeScoringOptions(currentScore?.scoringOptions || {});
 
     if (options.scoringMode === "straight")
     {
