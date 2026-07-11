@@ -4790,9 +4790,6 @@ document.addEventListener("DOMContentLoaded", () =>
     );
     renderDeviceList(filtered);
   });
-
-  //AL.
-  enterCourt("hyne", false);
 });
 
 // =====================================================
