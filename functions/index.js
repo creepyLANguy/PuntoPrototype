@@ -49,6 +49,17 @@ function buildScoringOptions(source = {})
     return normalizeScoringOptions(options);
 }
 
+function toLiveScorePayload(score)
+{
+    if (!score || typeof score !== "object")
+    {
+        return score;
+    }
+
+    const { history, ...liveScore } = score;
+    return liveScore;
+}
+
 function createTeamStatsBucket()
 {
     return {
@@ -715,7 +726,34 @@ exports.onEventCreate = onDocumentCreated(
                     await deleteBatch.commit();
 
                     tx.set(scoreRef, {
-                        ...defaultScore(activeScoringOptions),
+                        ...toLiveScorePayload(defaultScore(activeScoringOptions)),
+                        lastEventId: eventId,
+                        updatedAt: admin.firestore.FieldValue.serverTimestamp()
+                    });
+
+                    return;
+                }
+
+                // Rebuild state for undo without persisting heavy history arrays in live score snapshots.
+                if (newEvent.eventType === "UNDO")
+                {
+                    const eventsQuery = db.collection(`courts/${courtId}/events`).orderBy("createdAt", "asc");
+                    const eventsSnap = await tx.get(eventsQuery);
+                    const scoringEvents = [];
+
+                    eventsSnap.forEach((docSnap) =>
+                    {
+                        const data = docSnap.data() || {};
+                        if (SCORING_EVENTS.has(data.eventType))
+                        {
+                            scoringEvents.push({ id: docSnap.id, ...data });
+                        }
+                    });
+
+                    const replayedScore = replayEvents(scoringEvents, activeScoringOptions);
+
+                    tx.set(scoreRef, {
+                        ...toLiveScorePayload(replayedScore),
                         lastEventId: eventId,
                         updatedAt: admin.firestore.FieldValue.serverTimestamp()
                     });
@@ -729,7 +767,7 @@ exports.onEventCreate = onDocumentCreated(
                 console.log(`Updating score for ${courtId}. New points: A:${updatedScore.A.points}, B:${updatedScore.B.points}`);
 
                 tx.set(scoreRef, {
-                    ...updatedScore,
+                    ...toLiveScorePayload(updatedScore),
                     lastEventId: eventId,
                     updatedAt: admin.firestore.FieldValue.serverTimestamp()
                 });
@@ -784,7 +822,7 @@ exports.resetCourt = onCall(
         await deleteBatch.commit();
 
         // Reset score
-        await db.doc(`courts/${courtId}/score/current`).set(defaultScore(scoringOptions));
+        await db.doc(`courts/${courtId}/score/current`).set(toLiveScorePayload(defaultScore(scoringOptions)));
 
         const courtUpdates = {
             scoringOptions,
@@ -839,7 +877,7 @@ exports.updateScoringOptions = onCall(
 
         const lastEventId = events.length > 0 ? events[events.length - 1].id : null;
         await scoreRef.set({
-            ...replayedScore,
+            ...toLiveScorePayload(replayedScore),
             lastEventId,
             updatedAt: admin.firestore.FieldValue.serverTimestamp()
         });
