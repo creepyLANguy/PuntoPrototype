@@ -768,6 +768,40 @@ body.light-mode .game-dot.filled {
   color: var(--white);
   font-weight: 900;
   font-size: clamp(0.75rem, 2vmin, 2.15rem);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3;
+}
+
+.server-badge::after {
+  --size: clamp(6px, 2.25cqi, 28px);
+  flex-shrink: 0;
+  left: calc(50% - (var(--size) / 2));
+  bottom: calc(100% + (var(--size) * 2));
+  width: var(--size);
+  height: var(--size);
+  background: currentColor;
+  
+  content: "";
+  position: absolute;
+  border-radius: 50%;
+  z-index: 1;
+  animation: animloader 1.5s cubic-bezier(.18, .85, .35, 1) infinite;
+}
+
+@keyframes animloader {
+  0% {
+    transform: translateY(calc(2 * var(--size))) scaleY(1) scaleX(1.5);
+  }
+  
+  50% {
+    transform: scaleY(1) scaleX(1);
+  }
+
+  100% {
+    transform: translateY(calc(2 * var(--size)));
+  }
 }
 
 /* =======================================================

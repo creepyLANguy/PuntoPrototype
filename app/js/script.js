@@ -2781,6 +2781,12 @@ document.addEventListener("DOMContentLoaded", () =>
       return;
     }
 
+    //AL.
+    const teamAColour = getComputedStyle(document.body).getPropertyValue("--teamAcolour").trim();
+    const teamBColour = getComputedStyle(document.body).getPropertyValue("--teamBcolour").trim();
+    elements.serverBadgeA.style.color = teamAColour;
+    elements.serverBadgeB.style.color = teamBColour;
+
     const label = getCurrentServerLabel(score);
     const teamAServing = isServerBadgeVisible && label?.startsWith("A");
     const teamBServing = isServerBadgeVisible && label?.startsWith("B");
@@ -2788,13 +2794,16 @@ document.addEventListener("DOMContentLoaded", () =>
     elements.serverBadgeA.classList.toggle("hidden", !teamAServing);
     elements.serverBadgeB.classList.toggle("hidden", !teamBServing);
 
+    //AL.
+    const displayLabel = label.slice(1);
+
     if (teamAServing)
     {
-      elements.serverBadgeA.textContent = `${label}`;
+      elements.serverBadgeA.textContent = `${displayLabel}`;
     }
     if (teamBServing)
     {
-      elements.serverBadgeB.textContent = `${label}`;
+      elements.serverBadgeB.textContent = `${displayLabel}`;
     }
   }
 
@@ -4783,6 +4792,9 @@ document.addEventListener("DOMContentLoaded", () =>
     );
     renderDeviceList(filtered);
   });
+
+  //AL.
+  enterCourt("hyne", false);
 });
 
 // =====================================================
