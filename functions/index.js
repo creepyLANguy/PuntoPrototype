@@ -1004,14 +1004,11 @@ exports.getDetailedScore = onCall(
             points: { A: score.A.points, B: score.B.points },
             setsA: score.A.sets,
             setsB: score.B.sets,
-            mode: normalizedOptions.scoringMode,
             scoringMode: normalizedOptions.scoringMode,
-            scoringOptions: normalizedOptions,
             matchComplete: score.matchComplete,
             pointHistory,
             setPointMarkers,
             momentumTimeline: momentumData.timeline,
-            momentumBreakdown: momentumData.breakdown,
             advancedStats: computeAdvancedStats(pointHistory, normalizedOptions)
         };
     }
