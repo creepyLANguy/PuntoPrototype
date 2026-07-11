@@ -183,6 +183,8 @@ document.addEventListener("DOMContentLoaded", () =>
   }
 
   let score = defaultScore();
+  let isMatchDetailsCacheValid = false;
+  let matchDetailsCache = null;
   let lastKnownSets = { A: 0, B: 0 };
   let sessionInitialized = false;
 
@@ -3982,11 +3984,17 @@ document.addEventListener("DOMContentLoaded", () =>
 
     try
     {
-      const getDetailedScore = httpsCallable(functions, "getDetailedScore");
-      const result = await getDetailedScore({ courtId: currentCourtId });
+      let result = matchDetailsCache;
+      if (isMatchDetailsCacheValid == false) 
+      {
+        let getDetailedScore = httpsCallable(functions, "getDetailedScore");
+        result = await getDetailedScore({ courtId: currentCourtId });
+        matchDetailsCache = result;
+        isMatchDetailsCacheValid = true;
+      }
+
       const { sets, currentGames, points, mode, scoringMode, matchComplete } = result.data;
       const resolvedMode = normalizeScoringOptions({ scoringMode: scoringMode || mode }).scoringMode;
-
       const isStraight = resolvedMode === "straight";
       const isTiebreakTen = resolvedMode === "tiebreakTen";
       const isGamesAndSetsMode = !isStraight && !isTiebreakTen;
@@ -4366,6 +4374,8 @@ document.addEventListener("DOMContentLoaded", () =>
 
 
       score = newData;
+      isMatchDetailsCacheValid = false;
+
       updateUI();
     });
 
