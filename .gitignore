@@ -18,3 +18,7 @@ ui-debug.log
 
 # Skills lock
 skills-lock.json
+
+.claude/
+
+agent/
