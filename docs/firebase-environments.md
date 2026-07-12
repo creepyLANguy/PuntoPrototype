@@ -57,9 +57,9 @@ This keeps production callable functions tied to `main` while allowing feature w
 
 Production and staging are separate Firebase projects, so Firestore, Auth, Storage, and Functions stay isolated by project boundary.
 
-Current function code does not contain outbound webhook, payment, or messaging integrations, so no extra staging redirection is required at this time. Re-check this whenever new external integrations are added.
+If outbound webhook, payment, messaging, or other third-party integrations are added later, make their routing environment-aware so staging traffic never reaches production services.
 
-The web app does not currently initialize Firebase Analytics, so staging deployments do not send analytics events unless analytics code is added later.
+If Firebase Analytics is added later, keep staging analytics disabled or send staging traffic to a separate analytics property so test activity does not pollute production reporting.
 
 ## Release flow
 
