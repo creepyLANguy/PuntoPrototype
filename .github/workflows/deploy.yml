@@ -101,7 +101,7 @@ jobs:
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             channel_id="pr-${{ github.event.pull_request.number }}"
           else
-            branch_hash=$(printf '%s' "${GITHUB_REF_NAME}" | sha256sum | cut -c1-16)
+            branch_hash=$(printf '%s' "${GITHUB_REF_NAME}" | sha256sum | cut -c1-32)
             channel_id="br-${branch_hash}"
           fi
 

@@ -22,7 +22,7 @@ const firebaseConfig = firebaseConfigs[activeFirebaseEnvironment];
 
 if (!firebaseConfig)
 {
-  throw new Error(`Missing Firebase config for environment: ${activeFirebaseEnvironment}`);
+  throw new Error(`Invalid Firebase environment '${activeFirebaseEnvironment}'. Expected 'production' or 'staging'.`);
 }
 
 export const app = initializeApp(firebaseConfig);
