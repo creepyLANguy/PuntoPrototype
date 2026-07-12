@@ -1,5 +1,5 @@
 # Firebase config
-js/firebase-config.js
+app/js/firebase-config.js
 
 # VS Code
 .vscode/

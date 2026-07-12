@@ -1,5 +1,7 @@
 {
   "projects": {
-    "default": "punto-8888"
+    "default": "punto-8888",
+    "production": "punto-8888",
+    "staging": "punto-8888-staging"
   }
 }
