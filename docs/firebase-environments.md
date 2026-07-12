@@ -57,7 +57,7 @@ This keeps production callable functions tied to `main` while allowing feature w
 
 Production and staging are separate Firebase projects, so Firestore, Auth, Storage, and Functions stay isolated by project boundary.
 
-If outbound webhook, payment, messaging, or other third-party integrations are added later, make their routing environment-aware so staging traffic never reaches production services.
+If outbound webhook, payment, messaging, or other third-party integrations are added later, make those integrations environment-aware so staging traffic never reaches production services.
 
 If Firebase Analytics is added later, keep staging analytics disabled or send staging traffic to a separate analytics property so test activity does not pollute production reporting.
 

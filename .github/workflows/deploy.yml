@@ -101,7 +101,7 @@ jobs:
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             channel_id="pr-${{ github.event.pull_request.number }}"
           else
-            branch_hash=$(printf '%s' "${GITHUB_REF_NAME}" | sha256sum | cut -c1-32)
+            branch_hash=$(printf '%s' "${GITHUB_REF_NAME}" | sha256sum | cut -c1-28)
             channel_id="br-${branch_hash}"
           fi
 
@@ -121,7 +121,7 @@ jobs:
           preview_url=$(printf '%s\n' "$output" | sed -n 's/.*Channel URL[^:]*: \(https:\/\/[^[:space:]]*\).*/\1/p' | tail -n 1)
 
           if [ -z "$preview_url" ]; then
-            preview_url=$(printf '%s\n' "$output" | grep -oE 'https://[^[:space:]]+' | tail -n 1)
+            preview_url=$(printf '%s\n' "$output" | grep -oE 'https://[^[:space:]]+' | grep -E '(firebaseapp\.com|web\.app)' | tail -n 1)
           fi
 
           if [ -z "$preview_url" ]; then
