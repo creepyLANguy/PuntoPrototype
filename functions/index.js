@@ -860,7 +860,7 @@ exports.updateScoringOptions = onCall(
         const courtSnap = await courtRef.get();
         if (!courtSnap.exists)
         {
-            throw new Error("Court not found");
+            throw new Error("Court not found.");
         }
 
         const courtData = courtSnap.data() || {};
