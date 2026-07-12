@@ -7,6 +7,9 @@ on:
       - 'firebase.json'
       - '.firebaserc'
 
+permissions:
+  contents: read
+
 concurrency:
   group: functions-${{ github.ref }}
   cancel-in-progress: true

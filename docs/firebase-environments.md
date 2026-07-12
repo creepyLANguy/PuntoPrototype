@@ -25,13 +25,13 @@ The config secrets must contain the full contents of `app/js/firebase-config.js`
 
 ## Local development
 
-1. Copy `/home/runner/work/PuntoPrototype/PuntoPrototype/app/js/firebase-config.template.js` to `/home/runner/work/PuntoPrototype/PuntoPrototype/app/js/firebase-config.js`.
+1. Copy `app/js/firebase-config.template.js` to `app/js/firebase-config.js`.
 2. Fill in both Firebase config objects.
 3. Set `activeFirebaseEnvironment` to:
    - `"staging"` for day-to-day feature testing
    - `"production"` only when you explicitly need live project access
 
-Because `/home/runner/work/PuntoPrototype/PuntoPrototype/app/js/firebase-config.js` is gitignored, local environment switches stay out of source control.
+Because `app/js/firebase-config.js` is gitignored, local environment switches stay out of source control.
 
 ## Hosting deployment flow
 
