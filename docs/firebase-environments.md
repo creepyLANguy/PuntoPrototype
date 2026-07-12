@@ -2,8 +2,8 @@
 
 This repository now supports two Firebase targets:
 
-- `production` -> `punto-8888`
-- `staging` -> `punto-8888-staging`
+- `production` -> value of `FIREBASE_PROJECT_ID_PRODUCTION`
+- `staging` -> value of `FIREBASE_PROJECT_ID_STAGING`
 
 `main` deploys to production. Anything not on `main` deploys to staging.
 
@@ -66,11 +66,11 @@ If Firebase Analytics is added later, keep staging analytics disabled or send st
 1. Develop on a feature branch.
 2. Validate against the staging preview URL and staging backend.
 3. Merge into `main`.
-4. Let the production Hosting and Functions workflows deploy the merged code to `punto-8888`.
+4. Let the production Hosting and Functions workflows deploy the merged code to the production Firebase project (`FIREBASE_PROJECT_ID_PRODUCTION`).
 
 ## Rollback
 
-- Hosting production rollback: use the Firebase Hosting release history in the `punto-8888` project and roll back to the previous release.
+- Hosting production rollback: use the Firebase Hosting release history in the production Firebase project (`FIREBASE_PROJECT_ID_PRODUCTION`) and roll back to the previous release.
 - Hosting staging rollback: redeploy the previous commit to the same preview channel or let the preview channel expire.
 - Functions rollback: redeploy the previous known-good commit to the correct Firebase project.
 

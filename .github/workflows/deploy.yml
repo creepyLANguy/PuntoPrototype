@@ -114,9 +114,16 @@ jobs:
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN_STAGING }}
         run: |
           set -euo pipefail
-          output=$(firebase hosting:channel:deploy "${{ steps.channel.outputs.channel_id }}" --project "$FIREBASE_PROJECT_ID" --token "$FIREBASE_TOKEN" --expires 7d 2>&1)
+
+          firebase_exit=0
+          output=$(firebase hosting:channel:deploy "${{ steps.channel.outputs.channel_id }}" --project "$FIREBASE_PROJECT_ID" --token "$FIREBASE_TOKEN" --expires 7d 2>&1) || firebase_exit=$?
 
           echo "$output"
+
+          if [ "$firebase_exit" -ne 0 ]; then
+            echo "Firebase deploy exited with code $firebase_exit"
+            exit "$firebase_exit"
+          fi
 
           preview_url=$(printf '%s\n' "$output" | sed -n 's/.*Channel URL[^:]*: \(https:\/\/[^[:space:]]*\).*/\1/p' | tail -n 1)
 
