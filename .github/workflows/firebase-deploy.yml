@@ -81,16 +81,6 @@ jobs:
         run: npm ci
         working-directory: ./functions
 
-      - name: Ensure Firestore database exists in staging
-        env:
-          FIREBASE_PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID_STAGING }}
-          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN_STAGING }}
-        run: |
-          firebase firestore:databases:create "(default)" \
-            --project "$FIREBASE_PROJECT_ID" \
-            --token "$FIREBASE_TOKEN" \
-            --location nam5 || true
-
       - name: Deploy staging Firebase Functions
         env:
           FIREBASE_PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID_STAGING }}
