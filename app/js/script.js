@@ -2787,10 +2787,8 @@ document.addEventListener("DOMContentLoaded", () =>
 
     const teamAColour = getComputedStyle(document.body).getPropertyValue("--teamAcolour").trim();
     const teamBColour = getComputedStyle(document.body).getPropertyValue("--teamBcolour").trim();
-    //AL.
-    //TODO - remove colour assignments.
-    elements.serverBadgeA.style.color = teamAColour;
-    elements.serverBadgeB.style.color = teamBColour;
+    //elements.serverBadgeA.style.color = teamAColour;
+    //elements.serverBadgeB.style.color = teamBColour;
 
     const label = getCurrentServerLabel(score);
     const teamAServing = isServerBadgeVisible && label?.startsWith("A");
