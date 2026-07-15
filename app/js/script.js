@@ -751,7 +751,9 @@ document.addEventListener("DOMContentLoaded", () =>
     confirmCancelBtn: $("confirmCancelBtn"),
 
     setWinOverlay: $("setWinOverlay"),
-    scoreboardLoading: $("scoreboardLoading")
+    scoreboardLoading: $("scoreboardLoading"),
+
+    joinAsPlayerBtn: $("joinAsPlayerBtn")
   };
 
   //CREATE COURT ELEMENTS
@@ -1192,6 +1194,14 @@ document.addEventListener("DOMContentLoaded", () =>
       {
         e.preventDefault();
         elements.detailsBtn.click();
+        return;
+      }
+
+      // J : Join as player (if available)
+      if (key === "j" || key === "J")
+      {
+        e.preventDefault();
+        if (isSpectating) elements.joinAsPlayerBtn.click();
         return;
       }
     }
@@ -2194,6 +2204,7 @@ document.addEventListener("DOMContentLoaded", () =>
     $("addPointA").style.pointerEvents = "none";
     $("addPointB").style.pointerEvents = "none";
 
+    elements.joinAsPlayerBtn.style.display = "";
     elements.undoBtn.style.display = "none";
     if (elements.muteBtn.parentElement) elements.muteBtn.parentElement.style.display = "none";
     if (elements.sep1) elements.sep1.style.display = "none";
@@ -2217,6 +2228,8 @@ document.addEventListener("DOMContentLoaded", () =>
 
     $("addPointA").style.pointerEvents = "auto";
     $("addPointB").style.pointerEvents = "auto";
+
+    elements.joinAsPlayerBtn.style.display = "none";
 
     // Use "" to let CSS (flex) decide display, not "inline-block"
     elements.undoBtn.style.display = "";
@@ -3444,6 +3457,17 @@ document.addEventListener("DOMContentLoaded", () =>
         btn.click();
       }
     });
+  });
+
+  elements.joinAsPlayerBtn.addEventListener("click", () =>
+  {
+    if (!currentCourtId)
+    {
+      showToast("No court selected", TOAST_TYPES.ERROR);
+      return;
+    }
+
+    openPlayerJoinPrompt(currentCourtId);
   });
 
   // DETAILS MODAL logic
