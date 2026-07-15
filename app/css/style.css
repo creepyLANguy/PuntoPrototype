@@ -5274,6 +5274,10 @@ body.light-mode .dm-meta-list li {
   color: #fff;
 }
 
+body.light-mode .dm-meta-value {
+  color: rgba(0, 0, 0, 0.75);
+}
+
 /* =======================================================*/
 
 .loader {

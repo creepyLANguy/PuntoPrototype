@@ -135,7 +135,7 @@
         <h2>Options</h2>
         <div class="settings-grid">
           <div class="setting-item">
-            <button id="muteBtn" class="floating-btn modal-btn" title="Mute">🔊</button>
+            <button id="muteBtn" class="floating-btn modal-btn" title="Mute">♫</button>
             <span>Mute</span>
           </div>
           <div class="setting-item">
@@ -152,7 +152,7 @@
             <span>Swap sides</span>
           </div>
           <div class="setting-item player-only-tile" id="serverToggleTile">
-            <button id="serverToggleBtn" class="floating-btn modal-btn" title="Toggle server indicator">🎾</button>
+            <button id="serverToggleBtn" class="floating-btn modal-btn" title="Toggle server indicator">⚾︎</button>
             <span>Server</span>
           </div>
           <div class="setting-item player-only-tile" id="resetSettingsTile">
@@ -160,8 +160,12 @@
             <span>Reset</span>
           </div>
           <div class="setting-item" id="joinCourtTile" style="display:none;">
-            <button id="joinCourtBtn" class="floating-btn modal-btn" title="Join as player">👤</button>
+            <button id="joinCourtBtn" class="floating-btn modal-btn" title="Join as player">🎾</button>
             <span>Join as a player</span>
+          </div>
+          <div class="setting-item" id="switchToSpectateTile" style="display:none;">
+            <button id="switchToSpectateBtn" class="floating-btn modal-btn" title="Switch to spectate mode">☕︎</button>
+            <span>Switch to spectate mode</span>
           </div>
         </div>
         <div class="settings-scoring">
@@ -686,21 +690,17 @@
           </section>
         </main><!-- APP -->
 
-        <!-- FLOATING CONTROLS -->
         <div class="floating-controls">
-          <!-- LONG PRESS GROUP -->
           <button id="backBtn" class="floating-btn" title="Back">✕</button>
 
           <div id="sep1" class="btn-separator type-sep"></div>
 
           <button id="undoBtn" class="floating-btn" title="Undo">↩</button>
-          <button id="detailsBtn" class="floating-btn" title="Match Details">📊</button>
-
+          <button id="settingsBtn" class="floating-btn" title="Options">⚙️</button>
           <div id="sep2" class="btn-separator type-sep"></div>
 
-          <!-- CLICK GROUP -->
-          <button id="settingsBtn" class="floating-btn" title="Options">⚙️</button>
-        </div><!-- FLOATING CONTROLS -->
+          <button id="detailsBtn" class="floating-btn" title="Match Details">📊</button>          
+        </div>
 
       </div><!-- SCOREBOARD BODY -->
 

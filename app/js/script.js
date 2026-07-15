@@ -721,6 +721,8 @@ document.addEventListener("DOMContentLoaded", () =>
     resetSettingsTile: $("resetSettingsTile"),
     joinCourtBtn: $("joinCourtBtn"),
     joinCourtTile: $("joinCourtTile"),
+    switchToSpectateBtn: $("switchToSpectateBtn"),
+    switchToSpectateTile: $("switchToSpectateTile"),
 
     sep1: $("sep1"),
     sep2: $("sep2"),
@@ -961,7 +963,7 @@ document.addEventListener("DOMContentLoaded", () =>
     const isVisible = (el) =>
       window.getComputedStyle(el).display !== "none";
 
-    if (playPageReturnToScoreboard) 
+    if (playPageReturnToScoreboard)
     {
       closePlayPage();
       return;
@@ -2076,7 +2078,7 @@ document.addEventListener("DOMContentLoaded", () =>
 
     if (muted)
     {
-      elements.muteBtn.textContent = "🔇";
+      elements.muteBtn.textContent = "♫⃠";
     }
 
     if (isWavesEnabled == false)
@@ -2203,6 +2205,7 @@ document.addEventListener("DOMContentLoaded", () =>
     // Hide player-only tiles in the settings modal
     if (elements.serverToggleTile) elements.serverToggleTile.style.display = "none";
     if (elements.resetSettingsTile) elements.resetSettingsTile.style.display = "none";
+    if (elements.switchToSpectateTile) elements.switchToSpectateTile.style.display = "none";
 
     if (elements.joinCourtTile) elements.joinCourtTile.style.display = "";
 
@@ -2228,6 +2231,7 @@ document.addEventListener("DOMContentLoaded", () =>
     // Restore player-only tiles in the settings modal
     if (elements.serverToggleTile) elements.serverToggleTile.style.display = "";
     if (elements.resetSettingsTile) elements.resetSettingsTile.style.display = "";
+    if (elements.switchToSpectateTile) elements.switchToSpectateTile.style.display = "";
 
     if (elements.joinCourtTile) elements.joinCourtTile.style.display = "none";
 
@@ -2816,7 +2820,7 @@ document.addEventListener("DOMContentLoaded", () =>
     if (isMenuVisible)
     {
       return;
-    } 
+    }
 
     const overlay = elements.setWinOverlay;
     if (!overlay) return;
@@ -2830,10 +2834,10 @@ document.addEventListener("DOMContentLoaded", () =>
 
     const isTiebreakTen = resolveScoringOptions(score).scoringMode === "tiebreakTen";
     overlay.querySelector(".set-win-label").textContent = isTiebreakTen ? "WINS THE MATCH!" : "WINS THE SET!";
-    
+
     overlay.querySelector(".sw-score-a").textContent = isTiebreakTen ? score.A.points : score.A.sets;
     overlay.querySelector(".sw-score-b").textContent = isTiebreakTen ? score.B.points : score.B.sets;
-  
+
     // Remove hidden immediately to start transition
     overlay.classList.remove("hidden");
 
@@ -3381,6 +3385,20 @@ document.addEventListener("DOMContentLoaded", () =>
     });
   }
 
+  if (elements.switchToSpectateBtn)
+  {
+    elements.switchToSpectateBtn.addEventListener("click", () =>
+    {
+      if (!currentCourtId)
+      {
+        showToast("No court is currently open.", TOAST_TYPES.ERROR);
+        return;
+      }
+
+      enterCourt(currentCourtId, true);
+    });
+  }
+
   // Server visibility toggle tile (player-only)
   if (elements.serverToggleBtn)
   {
@@ -3398,7 +3416,7 @@ document.addEventListener("DOMContentLoaded", () =>
   elements.muteBtn.addEventListener("click", () =>
   {
     muted = !muted;
-    elements.muteBtn.textContent = muted ? "🔇" : "🔊";
+    elements.muteBtn.textContent = muted ? "♫⃠" : "♫";
       syncSettingsTiles();
     if (!muted)
     {
@@ -3627,15 +3645,15 @@ document.addEventListener("DOMContentLoaded", () =>
       ctx.restore();
 
       // --- Centre balanced line ---
-      ctx.beginPath();
-      ctx.moveTo(padX, midY);
-      ctx.lineTo(W - padX, midY);
-      const isLight = document.body.classList.contains("light-mode");
-      ctx.strokeStyle = isLight ? "rgba(0,0,0,0.12)" : "rgba(255,255,255,0.15)";
-      ctx.lineWidth = 1;
-      ctx.setLineDash([4, 4]);
-      ctx.stroke();
-      ctx.setLineDash([]);
+      // ctx.beginPath();
+      // ctx.moveTo(padX, midY);
+      // ctx.lineTo(W - padX, midY);
+      // const isLight = document.body.classList.contains("light-mode");
+      // ctx.strokeStyle = isLight ? "rgba(0,0,0,0.12)" : "rgba(255,255,255,0.15)";
+      // ctx.lineWidth = 1;
+      // ctx.setLineDash([4, 4]);
+      // ctx.stroke();
+      // ctx.setLineDash([]);
 
       // --- Set point markers ---
       const markerIndices = Array.isArray(setPointMarkers)
@@ -3988,7 +4006,7 @@ document.addEventListener("DOMContentLoaded", () =>
     try
     {
       let result = matchDetailsCache;
-      if (isMatchDetailsCacheValid == false) 
+      if (isMatchDetailsCacheValid == false)
       {
         let getDetailedScore = httpsCallable(functions, "getDetailedScore");
         result = await getDetailedScore({ courtId: currentCourtId });
@@ -4074,7 +4092,7 @@ document.addEventListener("DOMContentLoaded", () =>
         syncDetailsPanelAvailability();
         return;
       }
-      
+
       // Normal Scoring Mode remains perfectly untouched
       if (dmTableWrap) dmTableWrap.classList.remove("hidden");
 
@@ -4660,7 +4678,7 @@ document.addEventListener("DOMContentLoaded", () =>
       <div class="aci-actions">
         <button class="edit-btn" data-id="${device.id}">Edit</button>
       </div>
-      
+
     `;
       item.querySelector('.edit-btn').addEventListener('click', () => openEditDeviceModal(device));
       elements.adminDeviceList.appendChild(item);
