@@ -2654,11 +2654,8 @@ body.light-mode .court-item:hover {
 .court-item.active {
   background: rgba(255, 255, 255, 0.0);
   border: 2px solid var(--teamAcolour);
-  padding-left: 15px;
-  padding-right: 15px;
-  margin-left: 5px;
-  margin-right: 5px;
-  border-radius: 12px;
+  margin: 4px;
+  border-radius: 4px;
   box-shadow: 0 0 12px var(--teamAcolour);
 }
 
