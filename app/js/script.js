@@ -882,6 +882,7 @@ document.addEventListener("DOMContentLoaded", () =>
   initializeTheme();
   initializeWaves();
   updateFullscreenButton();
+  void openCourtFromRoute();
 
   ["fullscreenchange", "webkitfullscreenchange", "MSFullscreenChange"].forEach(eventName =>
   {
@@ -1214,6 +1215,47 @@ document.addEventListener("DOMContentLoaded", () =>
   // =====================================================
   // COURT LOADING & FILTERING
   // =====================================================
+
+  function getCourtIdFromPathname()
+  {
+    const match = window.location.pathname.match(/^\/court\/([^/]+)\/?$/i);
+    if (!match) return null;
+
+    try
+    {
+      return decodeURIComponent(match[1]).trim().toLowerCase() || null;
+    }
+    catch
+    {
+      return match[1].trim().toLowerCase() || null;
+    }
+  }
+
+  async function openCourtFromRoute()
+  {
+    const courtId = getCourtIdFromPathname();
+    if (!courtId) return false;
+
+    const courtSnap = await getDoc(doc(db, "courts", courtId));
+    if (!courtSnap.exists())
+    {
+      showToast(`Court "${courtId}" not found.`, TOAST_TYPES.ERROR);
+      return false;
+    }
+
+    elements.menuPage.style.display = "none";
+    elements.spectatePage.style.display = "none";
+
+    await enterCourt(courtId, true);
+    if (!currentCourtId)
+    {
+      elements.menuPage.style.display = "flex";
+      showToast(`Court "${courtId}" not found.`, TOAST_TYPES.ERROR);
+      return false;
+    }
+
+    return currentCourtId !== null;
+  }
 
   async function loadAllActiveCourts(includePrivateCourts = true)
   {
