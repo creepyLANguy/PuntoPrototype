@@ -50,6 +50,11 @@ body {
   width: 100%;
   /* Do NOT set overflow: hidden globally — it blocks menu page scroll.
      Each page controls its own overflow. */
+  
+  user-select: none;
+  -webkit-user-select: none; /* Safari */
+  -moz-user-select: none;    /* Firefox */
+  -ms-user-select: none;     /* Older Edge */
 }
 
 body {
@@ -61,12 +66,28 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+input,
+textarea,
+[contenteditable="true"] {
+  user-select: text;
+}
+
 button {
   user-select: none;
   -webkit-user-select: none;
   -moz-user-select: none;
   -ms-user-select: none;
   touch-action: manipulation;
+}
+
+img {
+  -webkit-user-drag: none;
+}
+
+img,
+svg {
+  pointer-events: none;
+  /* only if they don't need clicks */
 }
 
 /* =======================================================
@@ -582,6 +603,7 @@ body.light-mode .straight-total-value {
 
 .team-name:hover {
   background: rgba(255, 255, 255, 0.25);
+  cursor: text;
 }
 
 .team-name-input {
