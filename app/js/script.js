@@ -4303,17 +4303,19 @@ document.addEventListener("DOMContentLoaded", () =>
     }
   }
 
-  document.querySelectorAll(".team-name .name-text").forEach(el =>
+  document.querySelectorAll(".team-name").forEach((nameEl) =>
   {
-    const team = el.closest(".team-name").dataset.team;
+    const team = nameEl.dataset.team;
+    const labelEl = nameEl.querySelector(".name-text");
+    if (!labelEl) return;
 
-    el.addEventListener("click", () =>
+    nameEl.addEventListener("click", () =>
     {
       if (isSpectating) return;
-      startEditing(el, team);
+      startEditing(labelEl, team);
     });
 
-    fitTextToContainer(el);
+    fitTextToContainer(labelEl);
   });
 
   window.addEventListener("resize", () =>
@@ -4920,3 +4922,23 @@ async function releaseWakeLock()
     }
   }
 }
+
+document.addEventListener("keydown", (e) =>
+{
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "a")
+  {
+    if (e.target.tagName !== "INPUT" && e.target.tagName !== "TEXTAREA"){
+      e.preventDefault();
+    }      
+  }
+});
+
+document.addEventListener("mouseup", () =>
+{
+  window.getSelection()?.removeAllRanges();
+});
+
+document.addEventListener("touchend", () =>
+{
+  window.getSelection()?.removeAllRanges();
+});
