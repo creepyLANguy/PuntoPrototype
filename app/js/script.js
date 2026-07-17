@@ -70,6 +70,8 @@ document.addEventListener("DOMContentLoaded", () =>
 
   const TOAST_DURATION_MS = 3000;
 
+  const LOADING_SPINNER_MIN_DURATION_MS = 0;
+
   const COURTID_UPPER_LIMIT = 999999999;
 
   const EVENT_TYPES = {
@@ -203,6 +205,8 @@ document.addEventListener("DOMContentLoaded", () =>
 
   let lastScannedCourtId = null;
   let lastScannedDeviceId = null;
+
+  let loadingSpinnerStartTime = 0;
 
   // =====================================================
   // NFC STATE
@@ -754,7 +758,6 @@ document.addEventListener("DOMContentLoaded", () =>
 
     setWinOverlay: $("setWinOverlay"),
     scoreboardLoading: $("scoreboardLoading"),
-
   };
 
   //CREATE COURT ELEMENTS
@@ -882,6 +885,7 @@ document.addEventListener("DOMContentLoaded", () =>
   initializeTheme();
   initializeWaves();
   updateFullscreenButton();
+  void openCourtFromRoute();
 
   ["fullscreenchange", "webkitfullscreenchange", "MSFullscreenChange"].forEach(eventName =>
   {
@@ -1214,6 +1218,47 @@ document.addEventListener("DOMContentLoaded", () =>
   // =====================================================
   // COURT LOADING & FILTERING
   // =====================================================
+
+  function getCourtIdFromPathname()
+  {
+    const match = window.location.pathname.match(/^\/(?:app\/)?(?:court|c)\/([^/]+)\/?$/i);
+    if (!match) return null;
+
+    try
+    {
+      return decodeURIComponent(match[1]).trim().toLowerCase() || null;
+    }
+    catch
+    {
+      return match[1].trim().toLowerCase() || null;
+    }
+  }
+
+  async function openCourtFromRoute()
+  {
+    const courtId = getCourtIdFromPathname();
+    if (!courtId) return false;
+
+    const courtSnap = await getDoc(doc(db, "courts", courtId));
+    if (!courtSnap.exists())
+    {
+      showToast(`Court "${courtId}" not found.`, TOAST_TYPES.ERROR);
+      return false;
+    }
+
+    elements.menuPage.style.display = "none";
+    elements.spectatePage.style.display = "none";
+
+    await enterCourt(courtId, true);
+    if (!currentCourtId)
+    {
+      elements.menuPage.style.display = "flex";
+      showToast(`Court "${courtId}" not found.`, TOAST_TYPES.ERROR);
+      return false;
+    }
+
+    return currentCourtId !== null;
+  }
 
   async function loadAllActiveCourts(includePrivateCourts = true)
   {
@@ -2122,6 +2167,7 @@ document.addEventListener("DOMContentLoaded", () =>
     if (elements.scoreboardLoading)
     {
       elements.scoreboardLoading.classList.remove("hidden");
+      loadingSpinnerStartTime = Date.now();
     }
 
     BlankOutScoreboard();
@@ -4257,17 +4303,19 @@ document.addEventListener("DOMContentLoaded", () =>
     }
   }
 
-  document.querySelectorAll(".team-name .name-text").forEach(el =>
+  document.querySelectorAll(".team-name").forEach((nameEl) =>
   {
-    const team = el.closest(".team-name").dataset.team;
+    const team = nameEl.dataset.team;
+    const labelEl = nameEl.querySelector(".name-text");
+    if (!labelEl) return;
 
-    el.addEventListener("click", () =>
+    nameEl.addEventListener("click", () =>
     {
       if (isSpectating) return;
-      startEditing(el, team);
+      startEditing(labelEl, team);
     });
 
-    fitTextToContainer(el);
+    fitTextToContainer(labelEl);
   });
 
   window.addEventListener("resize", () =>
@@ -4386,10 +4434,20 @@ document.addEventListener("DOMContentLoaded", () =>
         lastKnownSets = { A: newData.A.sets, B: newData.B.sets };
         sessionInitialized = true;
 
-        // Hide loading overlay on first real payload
+        // Hide loading overlay on first real payload, but ensure it is visible for at least LOADING_SPINNER_MIN_DURATION_MS
         if (elements.scoreboardLoading)
         {
-          elements.scoreboardLoading.classList.add("hidden");
+          let spinnerTimeRemaining = Date.now() - loadingSpinnerStartTime;
+          if (spinnerTimeRemaining >= LOADING_SPINNER_MIN_DURATION_MS)
+          {
+            elements.scoreboardLoading.classList.add("hidden");
+          }
+          else
+          {
+            setTimeout(() => {
+              elements.scoreboardLoading.classList.add("hidden");
+            }, LOADING_SPINNER_MIN_DURATION_MS - spinnerTimeRemaining);
+          }
         }
       }
 
@@ -4864,3 +4922,32 @@ async function releaseWakeLock()
     }
   }
 }
+
+const ADMIN_PORTAL_SELECTOR = "#adminAuthPage, #adminDashboardPage, #createPage, #editCourtPage, #addDevicePage, #editDevicePage";
+
+function isAdminPortalTarget(target)
+{
+  return !!target?.closest?.(ADMIN_PORTAL_SELECTOR);
+}
+
+document.addEventListener("keydown", (e) =>
+{
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "a")
+  {
+    if (!isAdminPortalTarget(e.target) && e.target.tagName !== "INPUT" && e.target.tagName !== "TEXTAREA"){
+      e.preventDefault();
+    }      
+  }
+});
+
+document.addEventListener("mouseup", (e) =>
+{
+  if (isAdminPortalTarget(e.target)) return;
+  window.getSelection()?.removeAllRanges();
+});
+
+document.addEventListener("touchend", (e) =>
+{
+  if (isAdminPortalTarget(e.target)) return;
+  window.getSelection()?.removeAllRanges();
+});

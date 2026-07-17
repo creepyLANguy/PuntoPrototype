@@ -4,6 +4,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <base href="/app/" />
   <title>Padel Push - Live Scoreboard</title>
   <meta name="description"
     content="Padel Push — Live padel scoring system. Track points, games, sets, and matches in real-time." />
@@ -135,7 +136,7 @@
         <h2>Options</h2>
         <div class="settings-grid">
           <div class="setting-item">
-            <button id="muteBtn" class="floating-btn modal-btn" title="Mute">♫</button>
+            <button id="muteBtn" class="floating-btn modal-btn" title="Mute">♫ </button>
             <span>Mute</span>
           </div>
           <div class="setting-item">
@@ -164,7 +165,7 @@
             <span>Join as a player</span>
           </div>
           <div class="setting-item" id="switchToSpectateTile" style="display:none;">
-            <button id="switchToSpectateBtn" class="floating-btn modal-btn" title="Switch to spectate mode">☕︎</button>
+            <button id="switchToSpectateBtn" class="floating-btn modal-btn" title="Switch to spectate mode">⛱</button>
             <span>Switch to spectate mode</span>
           </div>
         </div>
@@ -594,7 +595,6 @@
         </div>
       </div>
 
-
       <!-- ================= SCOREBOARD BODY ================= -->
       <div class="scoreboard-body">
 
@@ -630,7 +630,7 @@
             <!-- TEAM A -->
             <div class="team team-a" id="teamA">
               <button id="addPointA" class="ref-zone"></button>
-              <h2 class="team-name" data-team="A">
+              <h2 class="team-name" data-team="A" title="Click to edit team name">
                 <span class="name-text">Team A</span>
               </h2>
 
@@ -663,7 +663,7 @@
             <!-- TEAM B -->
             <div class="team team-b" id="teamB">
               <button id="addPointB" class="ref-zone"></button>
-              <h2 class="team-name" data-team="B">
+              <h2 class="team-name" data-team="B" title="Click to edit team name">
                 <span class="name-text">Team B</span>
               </h2>
 

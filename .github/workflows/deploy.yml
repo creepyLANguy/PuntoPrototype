@@ -10,26 +10,12 @@ on:
       - "media/**"
       - "firebase.json"
       - ".firebaserc"
-  pull_request:
-    types:
-      - opened
-      - reopened
-      - synchronize
-    paths:
-      - "index.html"
-      - "style.css"
-      - "app/**"
-      - "nfc/**"
-      - "media/**"
-      - "firebase.json"
-      - ".firebaserc"
 
 permissions:
   contents: read
-  pull-requests: write
 
 concurrency:
-  group: hosting-${{ github.event.pull_request.number || github.ref }}
+  group: hosting-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -76,8 +62,8 @@ jobs:
           echo "Deployment failed"
           exit $exit_code
 
-  deploy_staging_preview:
-    if: github.ref != 'refs/heads/main'
+  deploy_staging:
+    if: github.event_name == 'push' && github.ref != 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -95,94 +81,26 @@ jobs:
       - run: npm install -g firebase-tools@latest
       - run: firebase --version
 
-      - name: Determine preview channel
-        id: channel
-        run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            channel_id="pr-${{ github.event.pull_request.number }}"
-          else
-            branch_hash=$(printf '%s' "${GITHUB_REF_NAME}" | sha256sum | cut -c1-28)
-            channel_id="br-${branch_hash}"
-          fi
-
-          echo "channel_id=$channel_id" >> "$GITHUB_OUTPUT"
-
-      - name: Deploy staging preview
-        id: preview
+      - name: Deploy staging hosting
         env:
           FIREBASE_PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID_STAGING }}
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN_STAGING }}
         run: |
-          set -euo pipefail
-
-          firebase_exit=0
-          output=$(firebase hosting:channel:deploy "${{ steps.channel.outputs.channel_id }}" --project "$FIREBASE_PROJECT_ID" --token "$FIREBASE_TOKEN" --expires 7d 2>&1) || firebase_exit=$?
+          set +e
+          output=$(firebase deploy --only hosting --project "$FIREBASE_PROJECT_ID" --token "$FIREBASE_TOKEN" 2>&1)
+          exit_code=$?
 
           echo "$output"
 
-          if [ "$firebase_exit" -ne 0 ]; then
-            echo "Firebase deploy exited with code $firebase_exit"
-            exit "$firebase_exit"
+          if [ $exit_code -eq 0 ]; then
+            echo "Deployment successful"
+            exit 0
           fi
 
-          preview_url=$(printf '%s\n' "$output" | sed -n 's/.*Channel URL[^:]*: \(https:\/\/[^[:space:]]*\).*/\1/p' | tail -n 1)
-
-          if [ -z "$preview_url" ]; then
-            preview_url=$(printf '%s\n' "$output" | grep -oE 'https://[^[:space:]]+' | grep -E '(firebaseapp\.com|web\.app)' | tail -n 1)
+          if echo "$output" | grep -q "current active version"; then
+            echo "Already deployed - no changes to hosting"
+            exit 0
           fi
 
-          if [ -z "$preview_url" ]; then
-            echo "Unable to determine Firebase Hosting preview URL"
-            exit 1
-          fi
-
-          echo "preview_url=$preview_url" >> "$GITHUB_OUTPUT"
-
-      - name: Add workflow summary
-        run: |
-          {
-            echo "### Firebase staging preview"
-            echo ""
-            echo "- Project: \`${{ vars.FIREBASE_PROJECT_ID_STAGING }}\`"
-            echo "- Channel: \`${{ steps.channel.outputs.channel_id }}\`"
-            echo "- Preview URL: ${{ steps.preview.outputs.preview_url }}"
-          } >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Comment preview URL on PR
-        if: github.event_name == 'pull_request'
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const marker = '<!-- firebase-hosting-preview -->';
-            const body = `${marker}
-            Firebase staging preview is ready.
-
-            - Project: \`${{ vars.FIREBASE_PROJECT_ID_STAGING }}\`
-            - Channel: \`${{ steps.channel.outputs.channel_id }}\`
-            - Preview URL: ${{ steps.preview.outputs.preview_url }}`;
-
-            const { owner, repo } = context.repo;
-            const issue_number = context.payload.pull_request.number;
-            const comments = await github.paginate(github.rest.issues.listComments, {
-              owner,
-              repo,
-              issue_number
-            });
-
-            const existing = comments.find((comment) => comment.body.includes(marker));
-
-            if (existing) {
-              await github.rest.issues.updateComment({
-                owner,
-                repo,
-                comment_id: existing.id,
-                body
-              });
-            } else {
-              await github.rest.issues.createComment({
-                owner,
-                repo,
-                issue_number,
-                body
-              });
-            }
+          echo "Deployment failed"
+          exit $exit_code

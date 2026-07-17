@@ -8,6 +8,22 @@
     ],
     "rewrites": [
       {
+        "source": "/court",
+        "destination": "/app/index.html"
+      },
+      {
+        "source": "/court/**",
+        "destination": "/app/index.html"
+      },
+      {
+        "source": "/c",
+        "destination": "/app/index.html"
+      },
+      {
+        "source": "/c/**",
+        "destination": "/app/index.html"
+      },
+      {
         "source": "/app",
         "destination": "/app/index.html"
       },
