@@ -16,6 +16,14 @@
         "destination": "/app/index.html"
       },
       {
+        "source": "/c",
+        "destination": "/app/index.html"
+      },
+      {
+        "source": "/c/**",
+        "destination": "/app/index.html"
+      },
+      {
         "source": "/app",
         "destination": "/app/index.html"
       },
