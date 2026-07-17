@@ -15,7 +15,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: hosting-${{ github.event.pull_request.number || github.ref }}
+  group: hosting-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
