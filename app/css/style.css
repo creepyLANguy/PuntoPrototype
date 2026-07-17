@@ -2269,6 +2269,8 @@ body.light-mode .md-team-name {
   overflow: auto;
 }
 
+#adminAuthPage,
+#spectatePage,
 #playPage {
   position: fixed;
   inset: 0;
@@ -2539,7 +2541,6 @@ body.light-mode .loading {
   display: flex;
   justify-content: center;
   align-items: center;
-  transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.8s;
 }
 
 .scoreboard-loading.hidden {
@@ -2601,13 +2602,11 @@ body.light-mode .loading-logo {
 
   0%,
   100% {
-    transform: scale(1);
-    opacity: 0.8;
+    transform: scale(0.7);
   }
 
   50% {
-    transform: scale(1.1);
-    opacity: 1;
+    transform: scale(1.3);
   }
 }
 

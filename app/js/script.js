@@ -70,6 +70,8 @@ document.addEventListener("DOMContentLoaded", () =>
 
   const TOAST_DURATION_MS = 3000;
 
+  const LOADING_SPINNER_MIN_DURATION_MS = 0;
+
   const COURTID_UPPER_LIMIT = 999999999;
 
   const EVENT_TYPES = {
@@ -203,6 +205,8 @@ document.addEventListener("DOMContentLoaded", () =>
 
   let lastScannedCourtId = null;
   let lastScannedDeviceId = null;
+
+  let loadingSpinnerStartTime = 0;
 
   // =====================================================
   // NFC STATE
@@ -754,7 +758,6 @@ document.addEventListener("DOMContentLoaded", () =>
 
     setWinOverlay: $("setWinOverlay"),
     scoreboardLoading: $("scoreboardLoading"),
-
   };
 
   //CREATE COURT ELEMENTS
@@ -2164,6 +2167,7 @@ document.addEventListener("DOMContentLoaded", () =>
     if (elements.scoreboardLoading)
     {
       elements.scoreboardLoading.classList.remove("hidden");
+      loadingSpinnerStartTime = Date.now();
     }
 
     BlankOutScoreboard();
@@ -4428,10 +4432,20 @@ document.addEventListener("DOMContentLoaded", () =>
         lastKnownSets = { A: newData.A.sets, B: newData.B.sets };
         sessionInitialized = true;
 
-        // Hide loading overlay on first real payload
+        // Hide loading overlay on first real payload, but ensure it is visible for at least LOADING_SPINNER_MIN_DURATION_MS
         if (elements.scoreboardLoading)
         {
-          elements.scoreboardLoading.classList.add("hidden");
+          let spinnerTimeRemaining = Date.now() - loadingSpinnerStartTime;
+          if (spinnerTimeRemaining >= LOADING_SPINNER_MIN_DURATION_MS)
+          {
+            elements.scoreboardLoading.classList.add("hidden");
+          }
+          else
+          {
+            setTimeout(() => {
+              elements.scoreboardLoading.classList.add("hidden");
+            }, LOADING_SPINNER_MIN_DURATION_MS - spinnerTimeRemaining);
+          }
         }
       }
 
