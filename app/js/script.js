@@ -1221,8 +1221,7 @@ document.addEventListener("DOMContentLoaded", () =>
 
   function getCourtIdFromPathname()
   {
-    const courtSubdomainMarkers = ["court", "c"];
-    const match = window.location.pathname.match(new RegExp(`^\\/(${courtSubdomainMarkers.join("|")})\\/([^/]+)\\/?$`, "i"));
+    const match = window.location.pathname.match(/^\/(?:app\/)?(?:court|c)\/([^/]+)\/?$/i);
     if (!match) return null;
 
     try
