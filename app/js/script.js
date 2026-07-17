@@ -4923,22 +4923,31 @@ async function releaseWakeLock()
   }
 }
 
+const ADMIN_PORTAL_SELECTOR = "#adminAuthPage, #adminDashboardPage, #createPage, #editCourtPage, #addDevicePage, #editDevicePage";
+
+function isAdminPortalTarget(target)
+{
+  return !!target?.closest?.(ADMIN_PORTAL_SELECTOR);
+}
+
 document.addEventListener("keydown", (e) =>
 {
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "a")
   {
-    if (e.target.tagName !== "INPUT" && e.target.tagName !== "TEXTAREA"){
+    if (!isAdminPortalTarget(e.target) && e.target.tagName !== "INPUT" && e.target.tagName !== "TEXTAREA"){
       e.preventDefault();
     }      
   }
 });
 
-document.addEventListener("mouseup", () =>
+document.addEventListener("mouseup", (e) =>
 {
+  if (isAdminPortalTarget(e.target)) return;
   window.getSelection()?.removeAllRanges();
 });
 
-document.addEventListener("touchend", () =>
+document.addEventListener("touchend", (e) =>
 {
+  if (isAdminPortalTarget(e.target)) return;
   window.getSelection()?.removeAllRanges();
 });
