@@ -319,25 +319,32 @@ body.light-mode .menu-btn:hover {
 
 .court-qr-panel {
   position: absolute;
-  top: clamp(12px, 2vmin, 20px);
-  right: clamp(12px, 2vmin, 20px);
+  bottom: 0;
+  right: 0;
   z-index: 40;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
+  gap: calc(8px * var(--qr-panel-scale, 1));
   padding: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  width: 160px;
+  min-width: 130px;
+  aspect-ratio: 1 / 1.24;
+  --qr-panel-scale: 1;
   border-radius: 12px;
-  background: rgba(0, 0, 0, 0.68);
+  background: rgba(0, 0, 0, 0.50);
   backdrop-filter: blur(6px);
-  box-shadow: 0 12px 26px rgba(0, 0, 0, 0.35);
-  pointer-events: none;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.30);
+  overflow: hidden;
+  resize: both;
+  cursor: move;
+  user-select: none;
+  touch-action: none;
 }
 
 .court-qr-code {
-  width: 112px;
-  height: 112px;
+  width: 100%;
+  aspect-ratio: 1 / 1;
   padding: 6px;
   background: #ffffff;
   border-radius: 8px;
@@ -351,11 +358,21 @@ body.light-mode .menu-btn:hover {
 }
 
 .court-qr-label {
+  width: 100%;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   color: #ffffff;
   font-weight: 900;
-  font-size: 1rem;
-  letter-spacing: 0.8em;
+  font-size: calc(0.98rem * var(--qr-panel-scale, 1));
+  letter-spacing: calc(0.8em * var(--qr-panel-scale, 1));
+  line-height: 1.2;
   text-transform: uppercase;
+  text-align: center;
+  white-space: nowrap;
+  padding-left: calc(0.8em * var(--qr-panel-scale, 1));
+  text-shadow: 0 0 8px rgba(0, 0, 0, 1.0);
 }
 
 body.light-mode .court-qr-panel {
