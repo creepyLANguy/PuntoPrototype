@@ -107,6 +107,25 @@ document.addEventListener("DOMContentLoaded", () =>
     WARNING: "warning"
   };
 
+  const NAV_HISTORY_STATE_KEY = "__puntoViewState";
+  const NAV_PAGES = {
+    MENU: "menu",
+    PLAY: "play",
+    SPECTATE: "spectate",
+    SCOREBOARD: "scoreboard",
+    ADMIN_AUTH: "adminAuth",
+    ADMIN_DASHBOARD: "adminDashboard",
+    CREATE_COURT: "createCourt",
+    EDIT_COURT: "editCourt",
+    ADD_DEVICE: "addDevice",
+    EDIT_DEVICE: "editDevice"
+  };
+  const NAV_MODALS = {
+    SETTINGS: "settings",
+    DETAILS: "details",
+    RESET: "reset"
+  };
+
   // =====================================================
   // ACTION MAP
   // =====================================================
@@ -250,6 +269,102 @@ document.addEventListener("DOMContentLoaded", () =>
   let isWavesEnabled = localStorage.getItem("waves") !== "false";
   let isServerBadgeVisible = localStorage.getItem("serverBadge") !== "false";
   let teamColoursByTheme = loadStoredTeamColours();
+  let appNavigationStack = [];
+  let appNavigationIndex = -1;
+  let isRestoringNavigation = false;
+
+  function normalizeCourtId(value)
+  {
+    if (typeof value !== "string") return null;
+
+    const normalized = value.trim().toLowerCase();
+    return normalized || null;
+  }
+
+  function normalizeViewState(viewState = {})
+  {
+    const page = typeof viewState.page === "string" ? viewState.page : NAV_PAGES.MENU;
+    const normalized = {
+      page,
+      courtId: normalizeCourtId(viewState.courtId),
+      selectedCourtId: normalizeCourtId(viewState.selectedCourtId),
+      spectate: Boolean(viewState.spectate),
+      modal: typeof viewState.modal === "string" ? viewState.modal : null,
+      returnToScoreboard: Boolean(viewState.returnToScoreboard),
+      entityId: typeof viewState.entityId === "string" ? viewState.entityId : null
+    };
+
+    if (normalized.page !== NAV_PAGES.SCOREBOARD)
+    {
+      normalized.modal = null;
+    }
+
+    if (normalized.page !== NAV_PAGES.SCOREBOARD && !(normalized.page === NAV_PAGES.PLAY && normalized.returnToScoreboard))
+    {
+      normalized.courtId = null;
+      normalized.spectate = false;
+    }
+
+    return normalized;
+  }
+
+  function createViewState(overrides = {})
+  {
+    return normalizeViewState({ page: NAV_PAGES.MENU, ...overrides });
+  }
+
+  function viewStatesEqual(left, right)
+  {
+    const a = normalizeViewState(left);
+    const b = normalizeViewState(right);
+
+    return a.page === b.page &&
+      a.courtId === b.courtId &&
+      a.selectedCourtId === b.selectedCourtId &&
+      a.spectate === b.spectate &&
+      a.modal === b.modal &&
+      a.returnToScoreboard === b.returnToScoreboard &&
+      a.entityId === b.entityId;
+  }
+
+  function isElementVisible(el)
+  {
+    return Boolean(el) && window.getComputedStyle(el).display !== "none";
+  }
+
+  function isOverlayVisible(el)
+  {
+    return Boolean(el) && !el.classList.contains("hidden");
+  }
+
+  function getAppBasePath()
+  {
+    return window.location.pathname === "/app" || window.location.pathname.startsWith("/app/")
+      ? "/app"
+      : "";
+  }
+
+  function buildUrlForViewState(viewState)
+  {
+    const state = normalizeViewState(viewState);
+    const basePath = getAppBasePath();
+
+    if (state.page === NAV_PAGES.SCOREBOARD && state.courtId)
+    {
+      return `${basePath}/c/${encodeURIComponent(state.courtId)}`;
+    }
+
+    return basePath ? `${basePath}/` : "/";
+  }
+
+  function buildHistoryPayload(viewState, index)
+  {
+    return {
+      [NAV_HISTORY_STATE_KEY]: true,
+      index,
+      viewState: normalizeViewState(viewState)
+    };
+  }
 
   // =====================================================
   // THEME FUNCTIONS
@@ -841,6 +956,7 @@ document.addEventListener("DOMContentLoaded", () =>
   let selectedPlayCourt = null;
   let currentCourtName = null;
   let playPageReturnToScoreboard = false;
+  let isJoiningCourt = false;
 
   let allAdminCourts = [];
 
@@ -895,7 +1011,7 @@ document.addEventListener("DOMContentLoaded", () =>
   initializeTheme();
   initializeWaves();
   updateFullscreenButton();
-  void openCourtFromRoute();
+  void initializeAppNavigation();
 
   ["fullscreenchange", "webkitfullscreenchange", "MSFullscreenChange"].forEach(eventName =>
   {
@@ -979,25 +1095,37 @@ document.addEventListener("DOMContentLoaded", () =>
 
     if (playPageReturnToScoreboard)
     {
-      closePlayPage();
+      void closePlayPage();
       return;
     }
 
     if (isVisible(elements.resetModal))
     {
-      elements.resetModal.classList.add("hidden");
+      void stepBackInApp(createViewState({
+        page: NAV_PAGES.SCOREBOARD,
+        courtId: currentCourtId,
+        spectate: isSpectating
+      }));
       return;
     }
 
     if (isVisible(elements.settingsModal))
     {
-      elements.settingsModal.classList.add("hidden");
+      void stepBackInApp(createViewState({
+        page: NAV_PAGES.SCOREBOARD,
+        courtId: currentCourtId,
+        spectate: isSpectating
+      }));
       return;
     }
 
     if (isVisible(elements.detailsModal))
     {
-      elements.detailsModal.classList.add("hidden");
+      void stepBackInApp(createViewState({
+        page: NAV_PAGES.SCOREBOARD,
+        courtId: currentCourtId,
+        spectate: isSpectating
+      }));
       return;
     }
 
@@ -1009,66 +1137,60 @@ document.addEventListener("DOMContentLoaded", () =>
 
     if (isVisible(elements.playPage))
     {
-      setPlayPageVisible(false);
-      elements.menuPage.style.display = "flex";
+      void stepBackInApp(createViewState({
+        page: playPageReturnToScoreboard && currentCourtId ? NAV_PAGES.SCOREBOARD : NAV_PAGES.MENU,
+        courtId: currentCourtId,
+        spectate: isSpectating
+      }));
       return;
     }
 
     if (isVisible(elements.spectatePage))
     {
-      elements.spectatePage.style.display = "none";
-      elements.menuPage.style.display = "flex";
+      void stepBackInApp(createViewState({ page: NAV_PAGES.MENU }));
       return;
     }
 
     if (isVisible(elements.scoreboardPage))
     {
-      leaveCourt();
+      void stepBackInApp(createViewState({ page: NAV_PAGES.MENU }));
       return;
     }
 
     if (isVisible(elements.adminAuthPage))
     {
-      elements.adminAuthPage.style.display = "none";
-      elements.menuPage.style.display = "flex";
+      void stepBackInApp(createViewState({ page: NAV_PAGES.MENU }));
       return;
     }
 
     if (isVisible(elements.adminDashboardPage))
     {
       isAdmin = false;
-      elements.adminDashboardPage.style.display = "none";
-      elements.menuPage.style.display = "flex";
+      void stepBackInApp(createViewState({ page: NAV_PAGES.MENU }));
       return;
     }
 
     if (isVisible(elements.createPage))
     {
-      elements.createPage.style.display = "none";
-      elements.adminDashboardPage.style.display = "flex";
+      void stepBackInApp(createViewState({ page: NAV_PAGES.ADMIN_DASHBOARD }));
       return;
     }
 
     if (isVisible(elements.addDevicePage))
     {
-      elements.addDevicePage.style.display = "none";
-      elements.adminDashboardPage.style.display = "flex";
+      void stepBackInApp(createViewState({ page: NAV_PAGES.ADMIN_DASHBOARD }));
       return;
     }
 
     if (isVisible(elements.editCourtPage))
     {
-      elements.editCourtPage.style.display = "none";
-      elements.adminDashboardPage.style.display = "flex";
-      displayAdminCourtList();
+      void stepBackInApp(createViewState({ page: NAV_PAGES.ADMIN_DASHBOARD }));
       return;
     }
 
     if (isVisible(elements.editDevicePage))
     {
-      elements.editDevicePage.style.display = "none";
-      elements.adminDashboardPage.style.display = "flex";
-      loadDevices();
+      void stepBackInApp(createViewState({ page: NAV_PAGES.ADMIN_DASHBOARD }));
       return;
     }
   });
@@ -1244,7 +1366,478 @@ document.addEventListener("DOMContentLoaded", () =>
     }
   }
 
-  async function openCourtFromRoute()
+  function getCurrentViewState()
+  {
+    if (currentCourtId && isOverlayVisible(elements.resetModal))
+    {
+      return createViewState({
+        page: NAV_PAGES.SCOREBOARD,
+        courtId: currentCourtId,
+        spectate: isSpectating,
+        modal: NAV_MODALS.RESET
+      });
+    }
+
+    if (currentCourtId && isOverlayVisible(elements.detailsModal))
+    {
+      return createViewState({
+        page: NAV_PAGES.SCOREBOARD,
+        courtId: currentCourtId,
+        spectate: isSpectating,
+        modal: NAV_MODALS.DETAILS
+      });
+    }
+
+    if (currentCourtId && isOverlayVisible(elements.settingsModal))
+    {
+      return createViewState({
+        page: NAV_PAGES.SCOREBOARD,
+        courtId: currentCourtId,
+        spectate: isSpectating,
+        modal: NAV_MODALS.SETTINGS
+      });
+    }
+
+    if (isElementVisible(elements.editDevicePage))
+    {
+      return createViewState({
+        page: NAV_PAGES.EDIT_DEVICE,
+        entityId: currentDeviceToEdit?.id || null
+      });
+    }
+
+    if (isElementVisible(elements.addDevicePage))
+    {
+      return createViewState({ page: NAV_PAGES.ADD_DEVICE });
+    }
+
+    if (isElementVisible(elements.editCourtPage))
+    {
+      return createViewState({
+        page: NAV_PAGES.EDIT_COURT,
+        entityId: courtToEdit?.id || null
+      });
+    }
+
+    if (isElementVisible(elements.createPage))
+    {
+      return createViewState({ page: NAV_PAGES.CREATE_COURT });
+    }
+
+    if (isElementVisible(elements.adminDashboardPage))
+    {
+      return createViewState({ page: NAV_PAGES.ADMIN_DASHBOARD });
+    }
+
+    if (isElementVisible(elements.adminAuthPage))
+    {
+      return createViewState({ page: NAV_PAGES.ADMIN_AUTH });
+    }
+
+    if (currentCourtId && isElementVisible(elements.playPage) && playPageReturnToScoreboard)
+    {
+      return createViewState({
+        page: NAV_PAGES.PLAY,
+        courtId: currentCourtId,
+        selectedCourtId: selectedPlayCourt || currentCourtId,
+        returnToScoreboard: true
+      });
+    }
+
+    if (currentCourtId && isElementVisible(elements.scoreboardPage))
+    {
+      return createViewState({
+        page: NAV_PAGES.SCOREBOARD,
+        courtId: currentCourtId,
+        spectate: isSpectating
+      });
+    }
+
+    if (isElementVisible(elements.spectatePage))
+    {
+      return createViewState({ page: NAV_PAGES.SPECTATE });
+    }
+
+    if (isElementVisible(elements.playPage))
+    {
+      return createViewState({
+        page: NAV_PAGES.PLAY,
+        selectedCourtId: selectedPlayCourt
+      });
+    }
+
+    return createViewState({ page: NAV_PAGES.MENU });
+  }
+
+  function replaceNavigationState(viewState)
+  {
+    const normalized = normalizeViewState(viewState);
+
+    if (appNavigationIndex === -1)
+    {
+      appNavigationStack = [normalized];
+      appNavigationIndex = 0;
+    }
+    else
+    {
+      if (viewStatesEqual(appNavigationStack[appNavigationIndex], normalized))
+      {
+        return;
+      }
+
+      appNavigationStack[appNavigationIndex] = normalized;
+    }
+
+    window.history.replaceState(
+      buildHistoryPayload(normalized, appNavigationIndex),
+      "",
+      buildUrlForViewState(normalized)
+    );
+  }
+
+  function pushNavigationState(viewState)
+  {
+    const normalized = normalizeViewState(viewState);
+
+    if (appNavigationIndex >= 0 && viewStatesEqual(appNavigationStack[appNavigationIndex], normalized))
+    {
+      return;
+    }
+
+    if (appNavigationIndex < appNavigationStack.length - 1)
+    {
+      appNavigationStack = appNavigationStack.slice(0, appNavigationIndex + 1);
+    }
+
+    appNavigationStack.push(normalized);
+    appNavigationIndex = appNavigationStack.length - 1;
+
+    window.history.pushState(
+      buildHistoryPayload(normalized, appNavigationIndex),
+      "",
+      buildUrlForViewState(normalized)
+    );
+  }
+
+  function syncCurrentViewState(mode = "push")
+  {
+    if (isRestoringNavigation) return;
+
+    if (mode === "replace") replaceNavigationState(getCurrentViewState());
+    else pushNavigationState(getCurrentViewState());
+  }
+
+  function getViewStateFromLocation()
+  {
+    const courtId = getCourtIdFromPathname();
+
+    if (courtId)
+    {
+      return createViewState({
+        page: NAV_PAGES.SCOREBOARD,
+        courtId,
+        spectate: true
+      });
+    }
+
+    return createViewState({ page: NAV_PAGES.MENU });
+  }
+
+  function closeManagedModals()
+  {
+    elements.settingsModal.classList.add("hidden");
+    elements.detailsModal.classList.add("hidden");
+    elements.resetModal.classList.add("hidden");
+  }
+
+  function hideManagedPages()
+  {
+    elements.menuPage.style.display = "none";
+    elements.createPage.style.display = "none";
+    setPlayPageVisible(false);
+    elements.spectatePage.style.display = "none";
+    elements.adminAuthPage.style.display = "none";
+    elements.adminDashboardPage.style.display = "none";
+    elements.editCourtPage.style.display = "none";
+    elements.addDevicePage.style.display = "none";
+    elements.editDevicePage.style.display = "none";
+    elements.scoreboardPage.style.display = "none";
+  }
+
+  function syncPlaySelection(courtId)
+  {
+    selectedPlayCourt = normalizeCourtId(courtId);
+
+    elements.playCourtList.querySelectorAll(".court-item").forEach(item =>
+    {
+      item.classList.toggle("active", item.dataset.courtId === selectedPlayCourt);
+    });
+
+    elements.playPasswordSection.style.display = selectedPlayCourt ? "block" : "none";
+  }
+
+  function showCurrentScoreboardView()
+  {
+    elements.menuPage.style.display = "none";
+    elements.createPage.style.display = "none";
+    setPlayPageVisible(false);
+    elements.spectatePage.style.display = "none";
+    elements.adminAuthPage.style.display = "none";
+    elements.adminDashboardPage.style.display = "none";
+    elements.editCourtPage.style.display = "none";
+    elements.addDevicePage.style.display = "none";
+    elements.editDevicePage.style.display = "none";
+
+    if (elements.appearanceMenuBtn)
+    {
+      closeAppearanceMenu();
+      elements.appearanceMenuBtn.style.display = "none";
+    }
+
+    if (elements.adminLoginBtn)
+    {
+      elements.adminLoginBtn.style.display = "none";
+    }
+
+    if (elements.activateNfcBtn)
+    {
+      elements.activateNfcBtn.classList.add("hidden");
+    }
+
+    elements.scoreboardPage.style.display = "flex";
+    document.body.classList.add("scoreboard-active");
+  }
+
+  async function restoreViewState(viewState)
+  {
+    const state = normalizeViewState(viewState);
+    isRestoringNavigation = true;
+
+    try
+    {
+      closeManagedModals();
+
+      const shouldKeepCurrentCourt = (
+        state.page === NAV_PAGES.SCOREBOARD &&
+        state.courtId === currentCourtId &&
+        state.spectate === isSpectating
+      ) || (
+        state.page === NAV_PAGES.PLAY &&
+        state.returnToScoreboard &&
+        state.courtId === currentCourtId
+      );
+
+      if (currentCourtId && !shouldKeepCurrentCourt)
+      {
+        leaveCourt("skip");
+      }
+
+      hideManagedPages();
+
+      if (state.page === NAV_PAGES.SCOREBOARD)
+      {
+        if (!state.courtId)
+        {
+          elements.menuPage.style.display = "flex";
+          return;
+        }
+
+        if (currentCourtId !== state.courtId || isSpectating !== state.spectate)
+        {
+          await enterCourt(state.courtId, state.spectate, { historyMode: "skip" });
+        }
+        else
+        {
+          showCurrentScoreboardView();
+        }
+
+        if (state.modal === NAV_MODALS.SETTINGS)
+        {
+          updateFullscreenButton();
+          syncScoringControls();
+          elements.settingsModal.classList.remove("hidden");
+          syncSettingsTiles();
+        }
+        else if (state.modal === NAV_MODALS.DETAILS)
+        {
+          await showMatchDetails(false);
+        }
+        else if (state.modal === NAV_MODALS.RESET)
+        {
+          elements.resetModal.classList.remove("hidden");
+        }
+
+        return;
+      }
+
+      if (state.page === NAV_PAGES.PLAY)
+      {
+        playPageReturnToScoreboard = state.returnToScoreboard;
+
+        if (state.returnToScoreboard && currentCourtId === state.courtId)
+        {
+          showCurrentScoreboardView();
+        }
+
+        setPlayPageVisible(true);
+        elements.playCourtSearch.value = "";
+        elements.playCourtPassword.value = "";
+        elements.playCourtNameError.textContent = "";
+        elements.playCourtPasswordError.textContent = "";
+        await loadAllActiveCourts();
+        displayPlayCourtList(allCourts);
+        syncPlaySelection(state.selectedCourtId || state.courtId);
+        if (selectedPlayCourt)
+        {
+          const selectedCourt = allCourts.find((court) => court.id === selectedPlayCourt);
+          elements.playCourtSearch.value = selectedCourt?.name || selectedPlayCourt;
+        }
+        return;
+      }
+
+      playPageReturnToScoreboard = false;
+
+      if (state.page === NAV_PAGES.SPECTATE)
+      {
+        elements.spectatePage.style.display = "flex";
+        elements.spectateCourtSearch.value = "";
+        elements.spectateCourtNameError.textContent = "";
+        await loadAllActiveCourts(false);
+        displaySpectateCourtList(allCourts);
+        return;
+      }
+
+      if (state.page === NAV_PAGES.ADMIN_AUTH)
+      {
+        elements.adminAuthPage.style.display = "flex";
+        elements.adminAuthPassword.value = "";
+        elements.adminAuthError.textContent = "";
+        return;
+      }
+
+      if (state.page === NAV_PAGES.ADMIN_DASHBOARD)
+      {
+        elements.adminDashboardPage.style.display = "flex";
+        void displayAdminCourtList();
+        return;
+      }
+
+      if (state.page === NAV_PAGES.CREATE_COURT)
+      {
+        elements.createPage.style.display = "flex";
+        return;
+      }
+
+      if (state.page === NAV_PAGES.EDIT_COURT)
+      {
+        if (courtToEdit?.id === state.entityId)
+        {
+          elements.editCourtPage.style.display = "flex";
+          return;
+        }
+
+        if (state.entityId)
+        {
+          const snap = await getDoc(doc(db, "courts", state.entityId));
+          if (snap.exists())
+          {
+            openEditModal({ id: snap.id, ...snap.data() }, false);
+            return;
+          }
+        }
+
+        elements.adminDashboardPage.style.display = "flex";
+        void displayAdminCourtList();
+        return;
+      }
+
+      if (state.page === NAV_PAGES.ADD_DEVICE)
+      {
+        elements.addDevicePage.style.display = "flex";
+        return;
+      }
+
+      if (state.page === NAV_PAGES.EDIT_DEVICE)
+      {
+        if (currentDeviceToEdit?.id === state.entityId)
+        {
+          elements.editDevicePage.style.display = "flex";
+          return;
+        }
+
+        if (state.entityId)
+        {
+          const snap = await getDoc(doc(db, "devices", state.entityId));
+          if (snap.exists())
+          {
+            await openEditDeviceModal({ id: snap.id, ...snap.data() }, false);
+            return;
+          }
+        }
+
+        elements.adminDashboardPage.style.display = "flex";
+        void loadDevices();
+        return;
+      }
+
+      elements.menuPage.style.display = "flex";
+    }
+    finally
+    {
+      isRestoringNavigation = false;
+    }
+  }
+
+  async function stepBackInApp(fallbackViewState = createViewState({ page: NAV_PAGES.MENU }))
+  {
+    if (appNavigationIndex > 0)
+    {
+      window.history.back();
+      return;
+    }
+
+    await restoreViewState(fallbackViewState);
+    replaceNavigationState(fallbackViewState);
+  }
+
+  async function initializeAppNavigation()
+  {
+    const routeState = getViewStateFromLocation();
+    replaceNavigationState(createViewState({ page: NAV_PAGES.MENU }));
+
+    if (routeState.page === NAV_PAGES.SCOREBOARD && routeState.courtId)
+    {
+      const opened = await openCourtFromRoute("skip");
+      if (opened)
+      {
+        pushNavigationState(getCurrentViewState());
+        return;
+      }
+    }
+
+    await restoreViewState(createViewState({ page: NAV_PAGES.MENU }));
+    replaceNavigationState(getCurrentViewState());
+  }
+
+  window.addEventListener("popstate", (event) =>
+  {
+    const nextState = event.state?.[NAV_HISTORY_STATE_KEY]
+      ? event.state.viewState
+      : getViewStateFromLocation();
+
+    if (typeof event.state?.index === "number")
+    {
+      appNavigationIndex = event.state.index;
+    }
+    else if (appNavigationIndex > 0)
+    {
+      appNavigationIndex -= 1;
+    }
+
+    void restoreViewState(nextState);
+  });
+
+  async function openCourtFromRoute(historyMode = "replace")
   {
     const courtId = getCourtIdFromPathname();
     if (!courtId) return false;
@@ -1259,7 +1852,7 @@ document.addEventListener("DOMContentLoaded", () =>
     elements.menuPage.style.display = "none";
     elements.spectatePage.style.display = "none";
 
-    await enterCourt(courtId, true);
+    await enterCourt(courtId, true, { historyMode });
     if (!currentCourtId)
     {
       elements.menuPage.style.display = "flex";
@@ -1488,8 +2081,9 @@ document.addEventListener("DOMContentLoaded", () =>
   }
 
   let courtToEdit = null;
+  let currentDeviceToEdit = null;
 
-  function openEditModal(court)
+  function openEditModal(court, syncHistory = true)
   {
     courtToEdit = court;
     const scoringOptions = normalizeScoringOptions({
@@ -1507,6 +2101,11 @@ document.addEventListener("DOMContentLoaded", () =>
 
     elements.adminDashboardPage.style.display = "none";
     elements.editCourtPage.style.display = "flex";
+
+    if (syncHistory)
+    {
+      syncCurrentViewState();
+    }
   }
 
   elements.saveEditBtn.addEventListener("click", async () =>
@@ -1563,6 +2162,7 @@ document.addEventListener("DOMContentLoaded", () =>
       elements.editCourtPage.style.display = "none";
       elements.adminDashboardPage.style.display = "flex";
       displayAdminCourtList();
+      syncCurrentViewState("replace");
     }
     catch (err)
     {
@@ -1599,6 +2199,7 @@ document.addEventListener("DOMContentLoaded", () =>
       elements.editCourtPage.style.display = "none";
       elements.adminDashboardPage.style.display = "flex";
       displayAdminCourtList();
+      syncCurrentViewState("replace");
     }
     catch (err)
     {
@@ -1608,9 +2209,7 @@ document.addEventListener("DOMContentLoaded", () =>
 
   elements.closeEditBtn.addEventListener("click", () =>
   {
-    elements.editCourtPage.style.display = "none";
-    elements.adminDashboardPage.style.display = "flex";
-    displayAdminCourtList();
+    void stepBackInApp(createViewState({ page: NAV_PAGES.ADMIN_DASHBOARD }));
   });
 
   elements.adminLoginBtn.addEventListener("click", () =>
@@ -1620,12 +2219,12 @@ document.addEventListener("DOMContentLoaded", () =>
     elements.adminAuthPassword.value = "";
     elements.adminAuthError.textContent = "";
     elements.adminAuthPassword.focus();
+    syncCurrentViewState();
   });
 
   elements.closeAdminAuthBtn.addEventListener("click", () =>
   {
-    elements.adminAuthPage.style.display = "none";
-    elements.menuPage.style.display = "flex";
+    void stepBackInApp(createViewState({ page: NAV_PAGES.MENU }));
   });
 
   elements.submitAdminAuthBtn.addEventListener("click", async () =>
@@ -1639,6 +2238,7 @@ document.addEventListener("DOMContentLoaded", () =>
       elements.adminAuthPage.style.display = "none";
       elements.adminDashboardPage.style.display = "flex";
       displayAdminCourtList();
+      syncCurrentViewState("replace");
     }
     else
     {
@@ -1651,8 +2251,7 @@ document.addEventListener("DOMContentLoaded", () =>
   elements.closeAdminDashboardBtn.addEventListener("click", () =>
   {
     isAdmin = false;
-    elements.adminDashboardPage.style.display = "none";
-    elements.menuPage.style.display = "flex";
+    void stepBackInApp(createViewState({ page: NAV_PAGES.MENU }));
   });
 
   if (elements.nfcToolBtn)
@@ -1676,6 +2275,7 @@ document.addEventListener("DOMContentLoaded", () =>
     elements.courtPassword.value = "";
     elements.courtNameError.textContent = "";
     elements.courtPasswordError.textContent = "";
+    syncCurrentViewState();
   });
 
   document.querySelectorAll(".menu-btn").forEach(btn =>
@@ -1698,6 +2298,7 @@ document.addEventListener("DOMContentLoaded", () =>
         await loadAllActiveCourts();
         displayPlayCourtList(allCourts);
         elements.playCourtSearch.focus();
+        syncCurrentViewState();
         return;
       }
 
@@ -1711,6 +2312,7 @@ document.addEventListener("DOMContentLoaded", () =>
         await loadAllActiveCourts(false);
         displaySpectateCourtList(allCourts);
         elements.spectateCourtSearch.focus();
+        syncCurrentViewState();
         return;
       }
     });
@@ -1759,20 +2361,17 @@ document.addEventListener("DOMContentLoaded", () =>
 
   elements.closeCreateBtn.addEventListener("click", () =>
   {
-    elements.createPage.style.display = "none";
-    if (isAdmin) elements.adminDashboardPage.style.display = "flex";
-    else elements.menuPage.style.display = "flex";
+    void stepBackInApp(createViewState({ page: isAdmin ? NAV_PAGES.ADMIN_DASHBOARD : NAV_PAGES.MENU }));
   });
 
   elements.closePlayBtn.addEventListener("click", () =>
   {
-    closePlayPage();
+    void closePlayPage();
   });
 
   elements.closeSpectateBtn.addEventListener("click", () =>
   {
-    elements.spectatePage.style.display = "none";
-    elements.menuPage.style.display = "flex";
+    void stepBackInApp(createViewState({ page: NAV_PAGES.MENU }));
   });
 
   if (elements.appearanceMenuBtn)
@@ -1783,7 +2382,6 @@ document.addEventListener("DOMContentLoaded", () =>
       toggleAppearanceMenu();
     });
   }
-
   document.querySelectorAll("[data-theme-choice]").forEach((button) =>
   {
     button.addEventListener("click", () => setTheme(button.dataset.themeChoice));
@@ -1842,7 +2440,7 @@ document.addEventListener("DOMContentLoaded", () =>
   {
     if (e.target === elements.playPage)
     {
-      closePlayPage();
+      void closePlayPage();
     }
   });
 
@@ -1880,29 +2478,23 @@ document.addEventListener("DOMContentLoaded", () =>
     }
 
     elements.playCourtPassword.focus();
+    syncCurrentViewState();
   }
 
-  function closePlayPage()
+  async function closePlayPage()
   {
-    setPlayPageVisible(false);
-
-    if (playPageReturnToScoreboard && currentCourtId)
-    {
-      elements.scoreboardPage.style.display = "flex";
-      playPageReturnToScoreboard = false;
-      return;
-    }
-
-    playPageReturnToScoreboard = false;
-    elements.menuPage.style.display = "flex";
+    await stepBackInApp(createViewState({
+      page: playPageReturnToScoreboard && currentCourtId ? NAV_PAGES.SCOREBOARD : NAV_PAGES.MENU,
+      courtId: currentCourtId,
+      spectate: isSpectating
+    }));
   }
 
   elements.spectatePage.addEventListener("click", (e) =>
   {
     if (e.target === elements.spectatePage)
     {
-      elements.spectatePage.style.display = "none";
-      elements.menuPage.style.display = "flex";
+      void stepBackInApp(createViewState({ page: NAV_PAGES.MENU }));
     }
   });
 
@@ -1910,8 +2502,7 @@ document.addEventListener("DOMContentLoaded", () =>
   {
     if (e.target === elements.adminAuthPage)
     {
-      elements.adminAuthPage.style.display = "none";
-      elements.menuPage.style.display = "flex";
+      void stepBackInApp(createViewState({ page: NAV_PAGES.MENU }));
     }
   });
 
@@ -2040,58 +2631,69 @@ document.addEventListener("DOMContentLoaded", () =>
     elements.courtName.value = "";
     elements.courtPassword.value = "";
     if (elements.courtScoringMode) elements.courtScoringMode.value = DEFAULT_SCORING_OPTIONS.scoringMode;
+    syncCurrentViewState("replace");
   });
 
   elements.enterCourtBtn.addEventListener("click", async () =>
   {
-    const courtId = selectedPlayCourt;
-    const password = elements.playCourtPassword.value.trim();
+    if (isJoiningCourt) return;
+    isJoiningCourt = true;
 
-    elements.playCourtNameError.textContent = "";
-    elements.playCourtPasswordError.textContent = "";
-
-    if (!courtId)
+    try
     {
-      elements.playCourtNameError.textContent = "Court not selected.";
-      return;
-    }
+      const courtId = selectedPlayCourt;
+      const password = elements.playCourtPassword.value.trim();
 
-    if (!password)
+      elements.playCourtNameError.textContent = "";
+      elements.playCourtPasswordError.textContent = "";
+
+      if (!courtId)
+      {
+        elements.playCourtNameError.textContent = "Court not selected.";
+        return;
+      }
+
+      if (!password)
+      {
+        elements.playCourtPasswordError.textContent = "Password required.";
+        return;
+      }
+
+      const courtRef = doc(db, "courts", courtId);
+      const snap = await getDoc(courtRef);
+
+      if (!snap.exists())
+      {
+        elements.playCourtNameError.textContent = "Court not found.";
+        return;
+      }
+
+      var adminPassword = await getSkeleton();
+      if (password === adminPassword)
+      {
+        await enterCourt(courtId, false, { historyMode: "replace" });
+        return;
+      }
+
+      if (snap.data().password !== password)
+      {
+        elements.playCourtPasswordError.textContent = "Incorrect password.";
+        return;
+      }
+
+      currentCourtPassword = password;
+      await enterCourt(courtId, false, { historyMode: "replace" });
+      playPageReturnToScoreboard = false;
+
+      elements.playCourtPassword.value = "";
+    }
+    finally
     {
-      elements.playCourtPasswordError.textContent = "Password required.";
-      return;
+      isJoiningCourt = false;
     }
-
-    const courtRef = doc(db, "courts", courtId);
-    const snap = await getDoc(courtRef);
-
-    if (!snap.exists())
-    {
-      elements.playCourtNameError.textContent = "Court not found.";
-      return;
-    }
-
-    var adminPassword = await getSkeleton();
-    if (password === adminPassword)
-    {
-      enterCourt(courtId, false);
-      return;
-    }
-
-    if (snap.data().password !== password)
-    {
-      elements.playCourtPasswordError.textContent = "Incorrect password.";
-      return;
-    }
-
-    currentCourtPassword = password;
-    enterCourt(courtId, false);
-    playPageReturnToScoreboard = false;
-
-    elements.playCourtPassword.value = "";
   });
 
-  async function enterCourt(courtId, spectate)
+  async function enterCourt(courtId, spectate, { historyMode = "push" } = {})
   {
     console.log(`Entering court: ${courtId}, spectate: ${spectate}`);
 
@@ -2191,9 +2793,14 @@ document.addEventListener("DOMContentLoaded", () =>
     listenToCourt(courtId);
 
     requestWakeLock();
+
+    if (historyMode !== "skip")
+    {
+      syncCurrentViewState(historyMode);
+    }
   }
 
-  function leaveCourt()
+  function leaveCourt(historyMode = "push")
   {
     console.log("Leaving court: " + currentCourtId);
 
@@ -2225,6 +2832,11 @@ document.addEventListener("DOMContentLoaded", () =>
 
     elements.scoreboardPage.style.display = "none";
     elements.menuPage.style.display = "flex";
+
+    if (historyMode !== "skip")
+    {
+      syncCurrentViewState(historyMode);
+    }
   }
 
   function BlankOutScoreboard()
@@ -3469,6 +4081,7 @@ document.addEventListener("DOMContentLoaded", () =>
         }
       );
       elements.resetModal.classList.add("hidden");
+      syncCurrentViewState("replace");
       playSound(SOUND_IDS.START);
     }
     catch (err)
@@ -3519,6 +4132,7 @@ document.addEventListener("DOMContentLoaded", () =>
       );
 
       elements.resetModal.classList.add("hidden");
+      syncCurrentViewState("replace");
 
       playSound(SOUND_IDS.START);
     }
@@ -3530,7 +4144,6 @@ document.addEventListener("DOMContentLoaded", () =>
 
     elements.resetCourtPassword.value = "";
     elements.resetModal.classList.add("hidden");
-
     playSound(SOUND_IDS.START);
   });
 
@@ -3542,16 +4155,26 @@ document.addEventListener("DOMContentLoaded", () =>
     elements.resetPasswordError.textContent = "";
     elements.resetModal.classList.remove("hidden");
     elements.resetCourtPassword.focus();
+    syncCurrentViewState();
   }
 
   elements.cancelResetBtn.addEventListener("click", () =>
-    elements.resetModal.classList.add("hidden")
-  );
+  {
+    void stepBackInApp(createViewState({
+      page: NAV_PAGES.SCOREBOARD,
+      courtId: currentCourtId,
+      spectate: isSpectating
+    }));
+  });
 
   elements.resetModal.addEventListener("click", (e) =>
   {
     if (e.target === elements.resetModal)
-      elements.resetModal.classList.add("hidden");
+      void stepBackInApp(createViewState({
+        page: NAV_PAGES.SCOREBOARD,
+        courtId: currentCourtId,
+        spectate: isSpectating
+      }));
   });
 
   // =====================================================
@@ -3593,7 +4216,7 @@ document.addEventListener("DOMContentLoaded", () =>
     // Keep the details modal synchronized with the currently visible side orientation.
     if (!elements.detailsModal.classList.contains("hidden"))
     {
-      showMatchDetails();
+      showMatchDetails(false);
     }
 
     syncSettingsTiles();
@@ -3615,7 +4238,7 @@ document.addEventListener("DOMContentLoaded", () =>
   {
     if (await showConfirm("Exit to the main menu?"))
     {
-      leaveCourt();
+      await stepBackInApp(createViewState({ page: NAV_PAGES.MENU }));
     }
   });
 
@@ -3640,8 +4263,8 @@ document.addEventListener("DOMContentLoaded", () =>
         return;
       }
 
-      openPlayerJoinPrompt(currentCourtId);
       elements.settingsModal.classList.add("hidden");
+      openPlayerJoinPrompt(currentCourtId);
     });
   }
 
@@ -3655,7 +4278,8 @@ document.addEventListener("DOMContentLoaded", () =>
         return;
       }
 
-      enterCourt(currentCourtId, true);
+      elements.settingsModal.classList.add("hidden");
+      enterCourt(currentCourtId, true, { historyMode: "push" });
     });
   }
 
@@ -3693,17 +4317,26 @@ document.addEventListener("DOMContentLoaded", () =>
     syncScoringControls();
     elements.settingsModal.classList.remove("hidden");
     syncSettingsTiles();
+    syncCurrentViewState();
   });
 
   elements.closeSettingsBtn.addEventListener("click", () =>
   {
-    elements.settingsModal.classList.add("hidden");
+    void stepBackInApp(createViewState({
+      page: NAV_PAGES.SCOREBOARD,
+      courtId: currentCourtId,
+      spectate: isSpectating
+    }));
   });
 
   elements.settingsModal.addEventListener("click", (e) =>
   {
     if (e.target === elements.settingsModal)
-      elements.settingsModal.classList.add("hidden");
+      void stepBackInApp(createViewState({
+        page: NAV_PAGES.SCOREBOARD,
+        courtId: currentCourtId,
+        spectate: isSpectating
+      }));
   });
 
   [elements.scoringModeSelect, elements.deuceModeSelect, elements.tiebreakModeSelect].forEach(select =>
@@ -3726,7 +4359,10 @@ document.addEventListener("DOMContentLoaded", () =>
   });
 
   // DETAILS MODAL logic
-  elements.detailsBtn.addEventListener("click", showMatchDetails);
+  elements.detailsBtn.addEventListener("click", () =>
+  {
+    void showMatchDetails();
+  });
 
   function setDetailsPanelExpanded(isExpanded)
   {
@@ -3770,13 +4406,21 @@ document.addEventListener("DOMContentLoaded", () =>
 
   elements.closeDetailsBtn.addEventListener("click", () =>
   {
-    elements.detailsModal.classList.add("hidden");
+    void stepBackInApp(createViewState({
+      page: NAV_PAGES.SCOREBOARD,
+      courtId: currentCourtId,
+      spectate: isSpectating
+    }));
   });
 
   elements.detailsModal.addEventListener("click", (e) =>
   {
     if (e.target === elements.detailsModal)
-      elements.detailsModal.classList.add("hidden");
+      void stepBackInApp(createViewState({
+        page: NAV_PAGES.SCOREBOARD,
+        courtId: currentCourtId,
+        spectate: isSpectating
+      }));
   });
 
   function renderMomentumGraph(pointHistory, colourA, colourB, setPointMarkers = [], momentumTimeline = null)
@@ -4204,9 +4848,14 @@ document.addEventListener("DOMContentLoaded", () =>
     syncDetailsPanelAvailability();
   }
 
-  async function showMatchDetails()
+  async function showMatchDetails(syncHistory = true)
   {
     elements.detailsModal.classList.remove("hidden");
+
+    if (syncHistory)
+    {
+      syncCurrentViewState();
+    }
 
     // Check if the primary scoreboard is currently swapped
     const isSwapped = isScoreboardSwapped();
@@ -4681,7 +5330,7 @@ document.addEventListener("DOMContentLoaded", () =>
         if (currentCourtId !== courtId) return;
 
         showToast("This court no longer exists.", TOAST_TYPES.ERROR);
-        leaveCourt();
+        leaveCourt("replace");
         return;
       }
 
@@ -4697,7 +5346,7 @@ document.addEventListener("DOMContentLoaded", () =>
         if (unsubscribeCourt) unsubscribeCourt();
         unsubscribe = null;
         // Enter new court
-        enterCourt(data.redirect, wasSpectating);
+        enterCourt(data.redirect, wasSpectating, { historyMode: "replace" });
         return;
       }
 
@@ -4705,7 +5354,7 @@ document.addEventListener("DOMContentLoaded", () =>
       if (data.status === STATUS.PRIVATE && currentCourtStatus !== STATUS.PRIVATE)
       {
         showToast("This court has been made private by admin.", TOAST_TYPES.INFO);
-        leaveCourt();
+        leaveCourt("replace");
         return;
       }
 
@@ -4713,7 +5362,7 @@ document.addEventListener("DOMContentLoaded", () =>
       if (data.status === STATUS.CLOSED && !isAdmin)
       {
         showToast("The court has been closed by admin.", TOAST_TYPES.ERROR);
-        leaveCourt();
+        leaveCourt("replace");
         return;
       }
 
@@ -4975,6 +5624,7 @@ document.addEventListener("DOMContentLoaded", () =>
     elements.newDeviceCourtIdManual.value = "";
     elements.newDeviceCourtIdSelect.value = "";
     await populateCourtDropdown(elements.newDeviceCourtIdSelect);
+    syncCurrentViewState();
   });
 
   elements.saveNewDeviceBtn.addEventListener('click', async () =>
@@ -4994,6 +5644,7 @@ document.addEventListener("DOMContentLoaded", () =>
       elements.newDeviceCourtIdSelect.value = "";
       loadDevices();
       elements.adminDashboardPage.style.display = "flex";
+      syncCurrentViewState("replace");
     } catch (error)
     {
       showToast("Failed to add device", TOAST_TYPES.ERROR);
@@ -5001,8 +5652,9 @@ document.addEventListener("DOMContentLoaded", () =>
   });
 
   // Edit/Delete Device Logic
-  async function openEditDeviceModal(device)
+  async function openEditDeviceModal(device, syncHistory = true)
   {
+    currentDeviceToEdit = device;
     elements.adminDashboardPage.style.display = "none";
     elements.editDeviceIdTitle.textContent = device.id;
     elements.editDevicePage.style.display = 'flex';
@@ -5041,6 +5693,11 @@ document.addEventListener("DOMContentLoaded", () =>
       );
     }
 
+    if (syncHistory)
+    {
+      syncCurrentViewState();
+    }
+
     elements.saveEditDeviceBtn.onclick = async () =>
     {
       try
@@ -5051,6 +5708,7 @@ document.addEventListener("DOMContentLoaded", () =>
         elements.editDevicePage.style.display = 'none';
         loadDevices();
         elements.adminDashboardPage.style.display = "flex";
+        syncCurrentViewState("replace");
       } catch (e) { showToast("Update failed", TOAST_TYPES.ERROR); }
     };
 
@@ -5064,6 +5722,7 @@ document.addEventListener("DOMContentLoaded", () =>
         elements.editDevicePage.style.display = 'none';
         loadDevices();
         elements.adminDashboardPage.style.display = "flex";
+        syncCurrentViewState("replace");
       } catch (e) { showToast("Delete failed", TOAST_TYPES.ERROR); }
     };
   }
@@ -5071,16 +5730,12 @@ document.addEventListener("DOMContentLoaded", () =>
   // Close buttons
   elements.closeAddDeviceBtn.onclick = () =>
   {
-    elements.addDevicePage.style.display = 'none';
-    if (isAdmin) elements.adminDashboardPage.style.display = "flex";
-    else elements.menuPage.style.display = "flex";
+    void stepBackInApp(createViewState({ page: isAdmin ? NAV_PAGES.ADMIN_DASHBOARD : NAV_PAGES.MENU }));
   }
 
   elements.closeEditDeviceBtn.onclick = () =>
   {
-    elements.editDevicePage.style.display = 'none';
-    if (isAdmin) elements.adminDashboardPage.style.display = "flex";
-    else elements.menuPage.style.display = "flex";
+    void stepBackInApp(createViewState({ page: isAdmin ? NAV_PAGES.ADMIN_DASHBOARD : NAV_PAGES.MENU }));
   }
 
   // Search logic for devices
