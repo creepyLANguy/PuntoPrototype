@@ -2516,6 +2516,17 @@ document.addEventListener("DOMContentLoaded", () =>
     }
   }
 
+  function updatePageTitle(courtName = null, courtId = null)
+  {
+    if (!courtName || !courtId)
+    {
+      document.title = "Padel Push - Live Scoreboard";
+      return;
+    }
+
+    document.title = `${courtName} (${courtId.toUpperCase()}) | Padel Push`;
+  }
+
   function updateMarqueeScrolling()
   {
     const container = document.querySelector(".marquee-wrapper");
@@ -2798,6 +2809,9 @@ document.addEventListener("DOMContentLoaded", () =>
     {
       syncCurrentViewState(historyMode);
     }
+
+    updatePageTitle(currentCourtName, currentCourtId);
+
   }
 
   function leaveCourt(historyMode = "push")
@@ -2820,6 +2834,7 @@ document.addEventListener("DOMContentLoaded", () =>
     currentScoringOptions = { ...DEFAULT_SCORING_OPTIONS };
     syncScoringControls();
     clearCourtQr();
+    updatePageTitle();
 
     document.body.classList.remove("scoreboard-active");
     if (elements.appearanceMenuBtn) elements.appearanceMenuBtn.style.display = "";
@@ -2841,7 +2856,7 @@ document.addEventListener("DOMContentLoaded", () =>
 
   function BlankOutScoreboard()
   {
-    showCourtTitle(".");
+    showCourtTitle("Padel Push - Live Scoreboard");
     const nameA = $("teamA").querySelector(".name-text");
     const nameB = $("teamB").querySelector(".name-text");
     if (nameA)
@@ -5393,6 +5408,7 @@ document.addEventListener("DOMContentLoaded", () =>
 
       // Update UI title (Rename propagation for the display name)
       showCourtTitle(data.name || snap.id);
+      updatePageTitle(data.name || snap.id, snap.id);
 
       const teamNames = data.teamNames || { A: "Team A", B: "Team B" };
 
