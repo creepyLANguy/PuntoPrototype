@@ -311,9 +311,60 @@ body.light-mode .menu-btn:hover {
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  position: relative;
 
   /* Gentle arrival transition */
   animation: scoreboardFadeIn 0.8s ease forwards;
+}
+
+.court-qr-panel {
+  position: absolute;
+  top: clamp(12px, 2vmin, 20px);
+  right: clamp(12px, 2vmin, 20px);
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.68);
+  backdrop-filter: blur(6px);
+  box-shadow: 0 12px 26px rgba(0, 0, 0, 0.35);
+  pointer-events: none;
+}
+
+.court-qr-code {
+  width: 112px;
+  height: 112px;
+  padding: 6px;
+  background: #ffffff;
+  border-radius: 8px;
+}
+
+.court-qr-code img,
+.court-qr-code canvas {
+  width: 100% !important;
+  height: 100% !important;
+  display: block;
+}
+
+.court-qr-label {
+  color: #ffffff;
+  font-weight: 900;
+  font-size: 1rem;
+  letter-spacing: 0.8em;
+  text-transform: uppercase;
+}
+
+body.light-mode .court-qr-panel {
+  border-color: rgba(0, 0, 0, 0.2);
+  background: rgba(255, 255, 255, 0.85);
+}
+
+body.light-mode .court-qr-label {
+  color: #000;
 }
 
 @keyframes scoreboardFadeIn {
@@ -1870,6 +1921,10 @@ body.light-mode .dm-table thead th {
 
 /* Compact landscape (mobile landscape) */
 @media (orientation: landscape) and (max-height: 500px) {
+  .court-qr-panel {
+    display: none !important;
+  }
+  
   .dm-box {
     padding: 8px 12px 6px;
     gap: 0;
@@ -4593,6 +4648,10 @@ body.light-mode .set-win-label {
 @media (max-width: 768px) {
   .wave {
     height: 80%;
+  }
+
+  .court-qr-panel {
+    display: none !important;
   }
 }
 

@@ -750,6 +750,9 @@ document.addEventListener("DOMContentLoaded", () =>
     dmStatsWrap: $("dmStatsWrap"),
     dmStatsTeamA: $("dmStatsTeamA"),
     dmStatsMeta: $("dmStatsMeta"),
+    courtQrPanel: $("courtQrPanel"),
+    courtQrCode: $("courtQrCode"),
+    courtQrLabel: $("courtQrLabel"),
 
     confirmModal: $("confirmModal"),
     confirmMessage: $("confirmMessage"),
@@ -2122,6 +2125,7 @@ document.addEventListener("DOMContentLoaded", () =>
       scoringMode: data.scoringMode || data.scoringOptions?.scoringMode
     });
     syncScoringControls();
+    renderCourtQr(courtId);
 
     if (muted)
     {
@@ -2201,6 +2205,7 @@ document.addEventListener("DOMContentLoaded", () =>
     currentCourtStatus = null;
     currentScoringOptions = { ...DEFAULT_SCORING_OPTIONS };
     syncScoringControls();
+    clearCourtQr();
 
     document.body.classList.remove("scoreboard-active");
     if (elements.appearanceMenuBtn) elements.appearanceMenuBtn.style.display = "";
@@ -2234,6 +2239,53 @@ document.addEventListener("DOMContentLoaded", () =>
     lastKnownSets = { A: 0, B: 0 };
     sessionInitialized = false;
     updateUI();
+  }
+
+  function buildCourtQrUrl(courtId)
+  {
+    const baseUrl = window.location.origin.replace(/\/$/, "");
+    return `${baseUrl}/c/${encodeURIComponent(courtId)}`;
+  }
+
+  function clearCourtQr()
+  {
+    if (!elements.courtQrPanel || !elements.courtQrCode || !elements.courtQrLabel)
+    {
+      return;
+    }
+
+    elements.courtQrCode.innerHTML = "";
+    elements.courtQrLabel.textContent = "";
+    elements.courtQrPanel.classList.add("hidden");
+  }
+
+  function renderCourtQr(courtId)
+  {
+    if (!elements.courtQrPanel || !elements.courtQrCode || !elements.courtQrLabel)
+    {
+      return;
+    }
+
+    if (!window.QRCode || !courtId)
+    {
+      clearCourtQr();
+      return;
+    }
+
+    const qrUrl = buildCourtQrUrl(courtId);
+    elements.courtQrCode.innerHTML = "";
+
+    new window.QRCode(elements.courtQrCode, {
+      text: qrUrl,
+      width: 100,
+      height: 100,
+      colorDark: "#000000",
+      colorLight: "#ffffff",
+      correctLevel: window.QRCode.CorrectLevel.M
+    });
+
+    elements.courtQrLabel.textContent = courtId;
+    elements.courtQrPanel.classList.remove("hidden");
   }
 
   function enableSpectateMode()
