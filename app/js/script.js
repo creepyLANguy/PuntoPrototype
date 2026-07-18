@@ -2442,7 +2442,7 @@ document.addEventListener("DOMContentLoaded", () =>
       height: qrSize,
       colorDark: "#000000",
       colorLight: "#ffffff",
-      correctLevel: window.QRCode.CorrectLevel.M
+      correctLevel: window.QRCode.CorrectLevel.H
     });
 
     elements.courtQrLabel.textContent = courtId;

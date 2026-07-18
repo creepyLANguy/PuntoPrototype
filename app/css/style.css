@@ -343,11 +343,26 @@ body.light-mode .menu-btn:hover {
 }
 
 .court-qr-code {
+  position: relative;
   width: 100%;
   aspect-ratio: 1 / 1;
   padding: 6px;
   background: #ffffff;
   border-radius: 8px;
+}
+
+.court-qr-code::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 40%;
+  height: 40%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: #000 url("../media/img/logo.svg") center / 86% no-repeat;
+  z-index: 2;
+  pointer-events: none;
 }
 
 .court-qr-code img,
@@ -372,8 +387,10 @@ body.light-mode .menu-btn:hover {
   text-align: center;
   white-space: nowrap;
   padding-left: calc(0.8em * var(--qr-panel-scale, 1));
-  text-shadow: 0 0 8px rgba(0, 0, 0, 1.0);
-}
+  text-shadow: 0 0 16px #000;
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: 8px;
+  }
 
 body.light-mode .court-qr-panel {
   border-color: rgba(0, 0, 0, 0.2);
@@ -382,6 +399,9 @@ body.light-mode .court-qr-panel {
 
 body.light-mode .court-qr-label {
   color: #000;
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: 8px;
+  text-shadow: none;
 }
 
 @keyframes scoreboardFadeIn {
