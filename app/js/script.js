@@ -1323,6 +1323,7 @@ document.addEventListener("DOMContentLoaded", () =>
 
       item.innerHTML = `
       <div class="court-item-name">${court.name}</div>
+      <span class="court-item-id">${court.id}</span>
     `;
 
       item.addEventListener("click", () =>
@@ -1364,6 +1365,7 @@ document.addEventListener("DOMContentLoaded", () =>
 
       item.innerHTML = `
       <div class="court-item-name">${court.name}</div>
+      <span class="court-item-id">${court.id}</span>
     `;
 
       item.addEventListener("click", async () =>
