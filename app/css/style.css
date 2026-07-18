@@ -311,9 +311,97 @@ body.light-mode .menu-btn:hover {
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  position: relative;
 
   /* Gentle arrival transition */
   animation: scoreboardFadeIn 0.8s ease forwards;
+}
+
+.court-qr-panel {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: calc(8px * var(--qr-panel-scale, 1));
+  padding: 12px;
+  width: 160px;
+  min-width: 130px;
+  aspect-ratio: 1 / 1.24;
+  --qr-panel-scale: 1;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.50);
+  backdrop-filter: blur(6px);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.30);
+  overflow: hidden;
+  resize: both;
+  cursor: move;
+  user-select: none;
+  touch-action: none;
+}
+
+.court-qr-code {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  padding: 6px;
+  background: #ffffff;
+  border-radius: 8px;
+}
+
+.court-qr-code::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 40%;
+  height: 40%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: #000 url("../media/img/logo.svg") center / 86% no-repeat;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.court-qr-code img,
+.court-qr-code canvas {
+  width: 100% !important;
+  height: 100% !important;
+  display: block;
+}
+
+.court-qr-label {
+  width: 100%;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  font-weight: 900;
+  font-size: calc(0.98rem * var(--qr-panel-scale, 1));
+  letter-spacing: calc(0.8em * var(--qr-panel-scale, 1));
+  line-height: 1.2;
+  text-transform: uppercase;
+  text-align: center;
+  white-space: nowrap;
+  padding-left: calc(0.8em * var(--qr-panel-scale, 1));
+  text-shadow: 0 0 16px #000;
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: 8px;
+  }
+
+body.light-mode .court-qr-panel {
+  border-color: rgba(0, 0, 0, 0.2);
+  background: rgba(255, 255, 255, 0.85);
+}
+
+body.light-mode .court-qr-label {
+  color: #000;
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: 8px;
+  text-shadow: none;
 }
 
 @keyframes scoreboardFadeIn {
@@ -1870,6 +1958,10 @@ body.light-mode .dm-table thead th {
 
 /* Compact landscape (mobile landscape) */
 @media (orientation: landscape) and (max-height: 500px) {
+  .court-qr-panel {
+    display: none !important;
+  }
+  
   .dm-box {
     padding: 8px 12px 6px;
     gap: 0;
@@ -2666,6 +2758,10 @@ body.light-mode .loading-logo {
 }
 
 .court-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
   padding: 15px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   cursor: pointer;
@@ -2714,9 +2810,12 @@ body.light-mode .court-item.active .court-item-name {
 }
 
 .court-item-name {
+  flex: 1;
+  min-width: 0;
+  line-height: 1;
   font-weight: 600;
   color: white;
-  margin-bottom: 4px;
+  margin-bottom: 0;
 }
 
 body.light-mode .court-item-name {
@@ -2729,8 +2828,24 @@ body.light-mode .court-item-name {
   color: rgba(255, 255, 255, 0.6);
 }
 
+.court-item-id {
+  display: block;
+  width: auto;
+  flex-shrink: 0;
+  align-self: center;
+  line-height: 1;
+  text-align: right;
+  text-transform: uppercase;
+  font-size: 12px;
+  color: rgba(190, 190, 190, 0.8);
+}
+
 body.light-mode .court-item-info {
   color: rgba(0, 0, 0, 0.6);
+}
+
+body.light-mode .court-item-id {
+  color: rgba(90, 90, 90, 0.9);
 }
 
 /* =======================================================
@@ -4570,6 +4685,10 @@ body.light-mode .set-win-label {
 @media (max-width: 768px) {
   .wave {
     height: 80%;
+  }
+
+  .court-qr-panel {
+    display: none !important;
   }
 }
 

@@ -207,6 +207,11 @@ document.addEventListener("DOMContentLoaded", () =>
   let lastScannedDeviceId = null;
 
   let loadingSpinnerStartTime = 0;
+  let isDraggingQrPanel = false;
+  let qrPointerId = null;
+  let qrDragOffsetX = 0;
+  let qrDragOffsetY = 0;
+  let hasInitializedQrPanelInteractions = false;
 
   // =====================================================
   // NFC STATE
@@ -750,6 +755,9 @@ document.addEventListener("DOMContentLoaded", () =>
     dmStatsWrap: $("dmStatsWrap"),
     dmStatsTeamA: $("dmStatsTeamA"),
     dmStatsMeta: $("dmStatsMeta"),
+    courtQrPanel: $("courtQrPanel"),
+    courtQrCode: $("courtQrCode"),
+    courtQrLabel: $("courtQrLabel"),
 
     confirmModal: $("confirmModal"),
     confirmMessage: $("confirmMessage"),
@@ -839,6 +847,8 @@ document.addEventListener("DOMContentLoaded", () =>
   //RESET COURT ELEMENTS
   elements.resetCourtPassword = $("resetCourtPassword");
   elements.resetPasswordError = $("resetPasswordError");
+
+  initializeCourtQrPanelInteractions();
 
   //NFC ELEMENTS
   elements.nfcCooldownBanner = $("nfcCooldownBanner");
@@ -1323,6 +1333,7 @@ document.addEventListener("DOMContentLoaded", () =>
 
       item.innerHTML = `
       <div class="court-item-name">${court.name}</div>
+      <span class="court-item-id">${court.id}</span>
     `;
 
       item.addEventListener("click", () =>
@@ -1364,6 +1375,7 @@ document.addEventListener("DOMContentLoaded", () =>
 
       item.innerHTML = `
       <div class="court-item-name">${court.name}</div>
+      <span class="court-item-id">${court.id}</span>
     `;
 
       item.addEventListener("click", async () =>
@@ -2120,6 +2132,7 @@ document.addEventListener("DOMContentLoaded", () =>
       scoringMode: data.scoringMode || data.scoringOptions?.scoringMode
     });
     syncScoringControls();
+    renderCourtQr(courtId);
 
     if (muted)
     {
@@ -2199,6 +2212,7 @@ document.addEventListener("DOMContentLoaded", () =>
     currentCourtStatus = null;
     currentScoringOptions = { ...DEFAULT_SCORING_OPTIONS };
     syncScoringControls();
+    clearCourtQr();
 
     document.body.classList.remove("scoreboard-active");
     if (elements.appearanceMenuBtn) elements.appearanceMenuBtn.style.display = "";
@@ -2232,6 +2246,206 @@ document.addEventListener("DOMContentLoaded", () =>
     lastKnownSets = { A: 0, B: 0 };
     sessionInitialized = false;
     updateUI();
+  }
+
+  function buildCourtQrUrl(courtId)
+  {
+    const baseUrl = window.location.origin.replace(/\/$/, "");
+    return `${baseUrl}/c/${encodeURIComponent(courtId)}`;
+  }
+
+  function updateCourtQrPanelScale()
+  {
+    if (!elements.courtQrPanel)
+    {
+      return;
+    }
+
+    const panelWidth = Math.floor(elements.courtQrPanel.clientWidth);
+    const scale = panelWidth > 0
+      ? Math.max(0.78, Math.min(2.2, panelWidth / 160))
+      : 1;
+
+    elements.courtQrPanel.style.setProperty("--qr-panel-scale", scale.toFixed(3));
+  }
+
+  function resetCourtQrPanelPosition()
+  {
+    if (!elements.courtQrPanel)
+    {
+      return;
+    }
+
+    elements.courtQrPanel.style.left = "";
+    elements.courtQrPanel.style.top = "";
+    elements.courtQrPanel.style.bottom = "";
+    elements.courtQrPanel.style.right = "";
+    elements.courtQrPanel.style.width = "";
+    elements.courtQrPanel.style.height = "";
+    updateCourtQrPanelScale();
+  }
+
+  function getCourtQrSize()
+  {
+    if (!elements.courtQrPanel)
+    {
+      return 100;
+    }
+
+    const panelWidth = Math.floor(elements.courtQrPanel.clientWidth);
+    if (!panelWidth || panelWidth <= 0)
+    {
+      return 100;
+    }
+
+    return Math.max(72, panelWidth - 24);
+  }
+
+  function initializeCourtQrPanelInteractions()
+  {
+    if (hasInitializedQrPanelInteractions || !elements.courtQrPanel || !elements.scoreboardPage)
+    {
+      return;
+    }
+
+    const panel = elements.courtQrPanel;
+
+    const stopDragging = () =>
+    {
+      isDraggingQrPanel = false;
+      qrPointerId = null;
+      panel.classList.remove("dragging");
+    };
+
+    panel.addEventListener("pointerdown", (event) =>
+    {
+      if (event.button !== 0)
+      {
+        return;
+      }
+
+      const panelRect = panel.getBoundingClientRect();
+      const resizeHandleZone = 22;
+      const isResizeAction = event.clientX >= panelRect.right - resizeHandleZone &&
+        event.clientY >= panelRect.bottom - resizeHandleZone;
+
+      if (isResizeAction)
+      {
+        return;
+      }
+
+      isDraggingQrPanel = true;
+      qrPointerId = event.pointerId;
+      qrDragOffsetX = event.clientX - panelRect.left;
+      qrDragOffsetY = event.clientY - panelRect.top;
+
+      panel.style.bottom = "auto";
+      panel.style.right = "auto";
+      panel.style.left = `${panelRect.left - elements.scoreboardPage.getBoundingClientRect().left}px`;
+      panel.style.top = `${panelRect.top - elements.scoreboardPage.getBoundingClientRect().top}px`;
+      panel.classList.add("dragging");
+
+      panel.setPointerCapture(event.pointerId);
+      event.preventDefault();
+    });
+
+    panel.addEventListener("pointermove", (event) =>
+    {
+      if (!isDraggingQrPanel || qrPointerId !== event.pointerId)
+      {
+        return;
+      }
+
+      const parentRect = elements.scoreboardPage.getBoundingClientRect();
+      const panelRect = panel.getBoundingClientRect();
+
+      const maxLeft = Math.max(0, parentRect.width - panelRect.width);
+      const maxTop = Math.max(0, parentRect.height - panelRect.height);
+
+      const nextLeft = Math.min(
+        maxLeft,
+        Math.max(0, event.clientX - parentRect.left - qrDragOffsetX)
+      );
+      const nextTop = Math.min(
+        maxTop,
+        Math.max(0, event.clientY - parentRect.top - qrDragOffsetY)
+      );
+
+      panel.style.left = `${nextLeft}px`;
+      panel.style.top = `${nextTop}px`;
+    });
+
+    panel.addEventListener("pointerup", stopDragging);
+    panel.addEventListener("pointercancel", stopDragging);
+    panel.addEventListener("lostpointercapture", stopDragging);
+
+    if (window.ResizeObserver)
+    {
+      const observer = new ResizeObserver(() =>
+      {
+        if (panel.style.height)
+        {
+          panel.style.height = "";
+        }
+
+        updateCourtQrPanelScale();
+
+        if (!currentCourtId || panel.classList.contains("hidden"))
+        {
+          return;
+        }
+
+        renderCourtQr(currentCourtId);
+      });
+
+      observer.observe(panel);
+    }
+
+    hasInitializedQrPanelInteractions = true;
+  }
+
+  function clearCourtQr()
+  {
+    if (!elements.courtQrPanel || !elements.courtQrCode || !elements.courtQrLabel)
+    {
+      return;
+    }
+
+    elements.courtQrCode.innerHTML = "";
+    elements.courtQrLabel.textContent = "";
+    elements.courtQrPanel.classList.add("hidden");
+    resetCourtQrPanelPosition();
+  }
+
+  function renderCourtQr(courtId)
+  {
+    if (!elements.courtQrPanel || !elements.courtQrCode || !elements.courtQrLabel)
+    {
+      return;
+    }
+
+    if (!window.QRCode || !courtId)
+    {
+      clearCourtQr();
+      return;
+    }
+
+    const qrUrl = buildCourtQrUrl(courtId);
+    elements.courtQrPanel.classList.remove("hidden");
+  updateCourtQrPanelScale();
+    elements.courtQrCode.innerHTML = "";
+    const qrSize = getCourtQrSize();
+
+    new window.QRCode(elements.courtQrCode, {
+      text: qrUrl,
+      width: qrSize,
+      height: qrSize,
+      colorDark: "#000000",
+      colorLight: "#ffffff",
+      correctLevel: window.QRCode.CorrectLevel.H
+    });
+
+    elements.courtQrLabel.textContent = courtId;
   }
 
   function enableSpectateMode()

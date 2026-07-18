@@ -17,6 +17,7 @@
     rel="stylesheet" />
   <link rel="stylesheet" href="css/style.css" />
   <script src="js/jscolor.min.js"></script>
+  <script src="js/qrcode.min.js"></script>
   <script type="module" src="js/script.js"></script>
   <link rel="icon" type="image/svg+xml" href="media/img/favicon.svg">
 
@@ -594,6 +595,11 @@
           </div> -->
         </div>
       </div>
+
+      <aside id="courtQrPanel" class="court-qr-panel hidden" aria-live="polite">
+        <div id="courtQrCode" class="court-qr-code" aria-hidden="true"></div>
+        <div id="courtQrLabel" class="court-qr-label"></div>
+      </aside>
 
       <!-- ================= SCOREBOARD BODY ================= -->
       <div class="scoreboard-body">
