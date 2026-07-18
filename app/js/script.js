@@ -1807,7 +1807,7 @@ document.addEventListener("DOMContentLoaded", () =>
 
     if (routeState.page === NAV_PAGES.SCOREBOARD && routeState.courtId)
     {
-      const opened = await openCourtFromRoute("skip");
+      const opened = await openCourtFromRoute("skip", routeState.courtId);
       if (opened)
       {
         pushNavigationState(getCurrentViewState());
@@ -1837,26 +1837,26 @@ document.addEventListener("DOMContentLoaded", () =>
     void restoreViewState(nextState);
   });
 
-  async function openCourtFromRoute(historyMode = "replace")
+  async function openCourtFromRoute(historyMode = "replace", courtId = null)
   {
-    const courtId = getCourtIdFromPathname();
-    if (!courtId) return false;
+    const resolvedCourtId = courtId !== null ? courtId : getCourtIdFromPathname();
+    if (!resolvedCourtId) return false;
 
-    const courtSnap = await getDoc(doc(db, "courts", courtId));
+    const courtSnap = await getDoc(doc(db, "courts", resolvedCourtId));
     if (!courtSnap.exists())
     {
-      showToast(`Court "${courtId}" not found.`, TOAST_TYPES.ERROR);
+      showToast(`Court "${resolvedCourtId}" not found.`, TOAST_TYPES.ERROR);
       return false;
     }
 
     elements.menuPage.style.display = "none";
     elements.spectatePage.style.display = "none";
 
-    await enterCourt(courtId, true, { historyMode });
+    await enterCourt(resolvedCourtId, true, { historyMode });
     if (!currentCourtId)
     {
       elements.menuPage.style.display = "flex";
-      showToast(`Court "${courtId}" not found.`, TOAST_TYPES.ERROR);
+      showToast(`Court "${resolvedCourtId}" not found.`, TOAST_TYPES.ERROR);
       return false;
     }
 
