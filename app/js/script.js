@@ -1973,7 +1973,7 @@ document.addEventListener("DOMContentLoaded", () =>
 
       item.addEventListener("click", async () =>
       {
-        await enterCourt(court.id, true);
+        await enterCourt(court.id, true, { historyMode: "replace" });
       });
 
       listContainer.appendChild(item);
@@ -2301,8 +2301,7 @@ document.addEventListener("DOMContentLoaded", () =>
         syncCurrentViewState();
         return;
       }
-
-      if (action === "Spectate")
+      else if (action === "Spectate")
       {
         elements.menuPage.style.display = "none";
         elements.spectatePage.style.display = "flex";
