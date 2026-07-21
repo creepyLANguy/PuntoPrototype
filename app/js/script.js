@@ -1642,14 +1642,22 @@ document.addEventListener("DOMContentLoaded", () =>
           return;
         }
 
-        if (currentCourtId !== state.courtId || isSpectating !== state.spectate)
+        if (currentCourtId !== state.courtId)
         {
-          await enterCourt(state.courtId, state.spectate, { historyMode: "skip" });
+          if (state.spectate)
+          {
+            await enterCourt(state.courtId, true, { historyMode: "skip" });
+          }
+          else 
+          {
+            await restoreViewState(createViewState({ page: NAV_PAGES.PLAY }));
+            return;
+          }
         }
-        else
+        else 
         {
           showCurrentScoreboardView();
-        }
+        }              
 
         if (state.modal === NAV_MODALS.SETTINGS)
         {
@@ -2810,7 +2818,6 @@ document.addEventListener("DOMContentLoaded", () =>
     }
 
     updatePageTitle(currentCourtName, currentCourtId);
-
   }
 
   function leaveCourt(historyMode = "push")
