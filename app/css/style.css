@@ -318,6 +318,7 @@ body.light-mode .menu-btn:hover {
 }
 
 .court-qr-panel {
+  container-type: inline-size;
   position: absolute;
   bottom: 0;
   right: 0;
@@ -383,13 +384,15 @@ body.light-mode .menu-btn:hover {
   justify-content: center;
   color: #ffffff;
   font-weight: 900;
-  font-size: calc(0.98rem * var(--qr-panel-scale, 1));
-  letter-spacing: calc(0.8em * var(--qr-panel-scale, 1));
+  
+  font-size: clamp(0.72rem, 9.2cqi, 999rem);
+  letter-spacing: 1em;
+  padding-left: clamp(0.14em, 1.55cqi, 0.85em);
+  
   line-height: 1.2;
   text-transform: uppercase;
   text-align: center;
   white-space: nowrap;
-  padding-left: calc(0.8em * var(--qr-panel-scale, 1));
   text-shadow: 0 0 16px #000;
   background: rgba(0, 0, 0, 0.25);
   border-radius: 8px;

@@ -2894,12 +2894,7 @@ document.addEventListener("DOMContentLoaded", () =>
       return;
     }
 
-    const panelWidth = Math.floor(elements.courtQrPanel.clientWidth);
-    const scale = panelWidth > 0
-      ? Math.max(0.78, Math.min(2.2, panelWidth / 160))
-      : 1;
-
-    elements.courtQrPanel.style.setProperty("--qr-panel-scale", scale.toFixed(3));
+    const panelWidth = Math.floor(elements.courtQrPanel.clientWidth);    
   }
 
   function clampCourtQrPanelToViewport()
