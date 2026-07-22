@@ -337,6 +337,9 @@ body.light-mode .menu-btn:hover {
   box-shadow: 0 8px 18px rgba(0, 0, 0, 0.30);
   overflow: hidden;
   resize: both;
+  max-width: calc(100vw - 16px);
+  max-height: calc(100svh - 16px);
+  box-sizing: border-box;
   cursor: move;
   user-select: none;
   touch-action: none;

@@ -2902,6 +2902,68 @@ document.addEventListener("DOMContentLoaded", () =>
     elements.courtQrPanel.style.setProperty("--qr-panel-scale", scale.toFixed(3));
   }
 
+  function clampCourtQrPanelToViewport()
+  {
+    if (!elements.courtQrPanel || !elements.scoreboardPage)
+    {
+      return;
+    }
+
+    const panel = elements.courtQrPanel;
+    if (panel.classList.contains("hidden"))
+    {
+      return;
+    }
+
+    const parentRect = elements.scoreboardPage.getBoundingClientRect();
+    const safeGap = 8;
+    const minSize = 72;
+    const panelAspectRatio = 1.24;
+
+    const maxWidth = Math.max(minSize, parentRect.width - safeGap * 2);
+    const maxHeight = Math.max(minSize, parentRect.height - safeGap * 2);
+
+    const maxWidthByHeight = maxHeight / panelAspectRatio;
+    const maxAllowedWidth = Math.max(24, Math.min(maxWidth, maxWidthByHeight));
+    const minAllowedWidth = Math.min(minSize, maxAllowedWidth);
+
+    const panelRectNow = panel.getBoundingClientRect();
+    const nextWidth = Math.min(
+      maxAllowedWidth,
+      Math.max(minAllowedWidth, panelRectNow.width)
+    );
+    const nextHeight = nextWidth * panelAspectRatio;
+
+    panel.style.width = `${nextWidth}px`;
+    panel.style.height = `${nextHeight}px`;
+
+    const panelRect = panel.getBoundingClientRect();
+    const maxLeft = Math.max(safeGap, parentRect.width - panelRect.width - safeGap);
+    const maxTop = Math.max(safeGap, parentRect.height - panelRect.height - safeGap);
+
+    const currentLeft = Number.parseFloat(panel.style.left);
+    const currentTop = Number.parseFloat(panel.style.top);
+
+    const fallbackLeft = parentRect.width - panelRect.width - safeGap;
+    const fallbackTop = parentRect.height - panelRect.height - safeGap;
+
+    const nextLeft = Math.min(
+      maxLeft,
+      Math.max(safeGap, Number.isFinite(currentLeft) ? currentLeft : fallbackLeft)
+    );
+    const nextTop = Math.min(
+      maxTop,
+      Math.max(safeGap, Number.isFinite(currentTop) ? currentTop : fallbackTop)
+    );
+
+    panel.style.left = `${nextLeft}px`;
+    panel.style.top = `${nextTop}px`;
+    panel.style.right = "auto";
+    panel.style.bottom = "auto";
+
+    updateCourtQrPanelScale();
+  }
+
   function resetCourtQrPanelPosition()
   {
     if (!elements.courtQrPanel)
@@ -3016,12 +3078,7 @@ document.addEventListener("DOMContentLoaded", () =>
     {
       const observer = new ResizeObserver(() =>
       {
-        if (panel.style.height)
-        {
-          panel.style.height = "";
-        }
-
-        updateCourtQrPanelScale();
+        clampCourtQrPanelToViewport();
 
         if (!currentCourtId || panel.classList.contains("hidden"))
         {
@@ -3065,7 +3122,7 @@ document.addEventListener("DOMContentLoaded", () =>
 
     const qrUrl = buildCourtQrUrl(courtId);
     elements.courtQrPanel.classList.remove("hidden");
-  updateCourtQrPanelScale();
+    clampCourtQrPanelToViewport();
     elements.courtQrCode.innerHTML = "";
     const qrSize = getCourtQrSize();
 
@@ -5207,6 +5264,7 @@ document.addEventListener("DOMContentLoaded", () =>
     document.querySelectorAll(".team-name .name-text")
       .forEach(fitTextToContainer);
     updateMarqueeScrolling();
+    clampCourtQrPanelToViewport();
   });
 
 
