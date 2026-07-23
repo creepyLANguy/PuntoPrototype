@@ -660,6 +660,68 @@ body.light-mode .straight-total-value {
   order: 1;
 }
 
+/* Large portrait screens: cap the scoreboard width so the
+   container-query-based typography and dots scale down instead
+   of stretching to tablet-width proportions. */
+@media (orientation: portrait) and (min-width: 700px) and (min-height: 900px) {
+  .scoreboard {
+    width: min(100%, 660px);
+    margin-inline: auto;
+    gap: clamp(3px, 0.8vmin, 8px);
+    padding: clamp(4px, 1vmin, 10px);
+  }
+
+  .team {
+    padding: clamp(3px, 0.7vmin, 8px);
+    border-radius: clamp(10px, 1.5vmin, 18px);
+  }
+
+  .team-name {
+    padding: clamp(2px, 0.45vmin, 6px) clamp(6px, 1.1vmin, 12px);
+  }
+
+  .team-name .name-text,
+  .team-name-input {
+    font-size: clamp(0.8rem, 6cqi, 3rem);
+  }
+
+  .row {
+    font-size: clamp(0.55rem, 3.2cqi, 2rem);
+  }
+
+  .row span:last-child {
+    font-size: clamp(0.7rem, 5cqi, 2.7rem);
+  }
+
+  .set-dot,
+  .game-dot {
+    width: clamp(10px, 4.4cqi, 40px);
+    height: clamp(10px, 4.4cqi, 40px);
+  }
+
+  .game-dot {
+    border-width: clamp(2px, 0.5cqi, 4px);
+  }
+
+  .set-dot {
+    border-width: clamp(1px, 0.35cqi, 2px);
+  }
+
+  .points {
+    font-size: clamp(2.4rem, 48cqi, 28rem);
+  }
+
+  .server-badge {
+    font-size: clamp(0.65rem, 1.8vmin, 1.6rem);
+  }
+
+  .indicator {
+    width: clamp(12px, 2vmin, 20px);
+    height: clamp(12px, 2vmin, 20px);
+    border-width: clamp(2px, 0.35vmin, 3px);
+  }
+}
+
 /* =======================================================
    LANDSCAPE: restore side-by-side cards with square aspect ratio
 ======================================================= */
