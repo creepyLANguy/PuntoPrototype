@@ -52,6 +52,12 @@ document.addEventListener("DOMContentLoaded", () =>
     deuceMode: "standard",
     tiebreakMode: "sixAllSeven"
   };
+  const DEFAULT_PLAYER_NAMES = {
+    A1: "",
+    A2: "",
+    B1: "",
+    B2: ""
+  };
   const SCORING_LABELS = {
     standard: "Games and sets",
     straight: "Straight points",
@@ -203,6 +209,67 @@ document.addEventListener("DOMContentLoaded", () =>
     });
   }
 
+  function normalizePlayerNames(playerNames = {})
+  {
+    return {
+      A1: typeof playerNames?.A1 === "string" ? playerNames.A1 : "",
+      A2: typeof playerNames?.A2 === "string" ? playerNames.A2 : "",
+      B1: typeof playerNames?.B1 === "string" ? playerNames.B1 : "",
+      B2: typeof playerNames?.B2 === "string" ? playerNames.B2 : ""
+    };
+  }
+
+  function hasAnyPlayerNames(playerNames = {})
+  {
+    const normalized = normalizePlayerNames(playerNames);
+    return Object.values(normalized).some(name => name.trim().length > 0);
+  }
+
+  function buildTeamNameFromPlayers(primary, secondary, fallback, primarySlot, secondarySlot)
+  {
+    const first = (primary || "").trim();
+    const second = (secondary || "").trim();
+
+    if (!first && !second)
+    {
+      return fallback;
+    }
+
+    return `${first || primarySlot} / ${second || secondarySlot}`;
+  }
+
+  function resolveTeamNames(teamNames = {}, playerNames = {})
+  {
+    const normalizedPlayers = normalizePlayerNames(playerNames);
+    const fallbackA = typeof teamNames?.A === "string" && teamNames.A.trim() ? teamNames.A.trim() : "Team A";
+    const fallbackB = typeof teamNames?.B === "string" && teamNames.B.trim() ? teamNames.B.trim() : "Team B";
+
+    return {
+      A: buildTeamNameFromPlayers(normalizedPlayers.A1, normalizedPlayers.A2, fallbackA, "A1", "A2"),
+      B: buildTeamNameFromPlayers(normalizedPlayers.B1, normalizedPlayers.B2, fallbackB, "B1", "B2")
+    };
+  }
+
+  function getPlayerDisplayName(slot, playerNames = currentPlayerNames)
+  {
+    const normalized = normalizePlayerNames(playerNames);
+    const value = typeof normalized[slot] === "string" ? normalized[slot].trim() : "";
+    return value || slot;
+  }
+
+  function getServerDisplayLabel(serverLabel)
+  {
+    if (!serverLabel) return "";
+
+    const playerName = getPlayerDisplayName(serverLabel);
+    if (playerName === serverLabel)
+    {
+      return serverLabel;
+    }
+
+    return `${serverLabel} ${playerName}`;
+  }
+
   let score = defaultScore();
   let isMatchDetailsCacheValid = false;
   let matchDetailsCache = null;
@@ -215,6 +282,7 @@ document.addEventListener("DOMContentLoaded", () =>
   let currentCourtPassword = null;
   let currentCourtStatus = null;
   let currentScoringOptions = { ...DEFAULT_SCORING_OPTIONS };
+  let currentPlayerNames = { ...DEFAULT_PLAYER_NAMES };
 
   let isSpectating = false;
 
@@ -841,6 +909,8 @@ document.addEventListener("DOMContentLoaded", () =>
 
     serverToggleBtn: $("serverToggleBtn"),
     serverToggleTile: $("serverToggleTile"),
+    editPlayersBtn: $("editPlayersBtn"),
+    editPlayersTile: $("editPlayersTile"),
     resetSettingsBtn: $("resetSettingsBtn"),
     resetSettingsTile: $("resetSettingsTile"),
     joinCourtBtn: $("joinCourtBtn"),
@@ -921,6 +991,10 @@ document.addEventListener("DOMContentLoaded", () =>
   elements.editCourtName = $("editCourtName");
   elements.editTeamAName = $("editTeamAName");
   elements.editTeamBName = $("editTeamBName");
+  elements.editPlayerA1Name = $("editPlayerA1Name");
+  elements.editPlayerA2Name = $("editPlayerA2Name");
+  elements.editPlayerB1Name = $("editPlayerB1Name");
+  elements.editPlayerB2Name = $("editPlayerB2Name");
   elements.editCourtPassword = $("editCourtPassword");
   elements.editCourtStatus = $("editCourtStatus");
   elements.editCourtScoringMode = $("editCourtScoringMode");
@@ -2099,6 +2173,13 @@ document.addEventListener("DOMContentLoaded", () =>
           </div>
         `;
 
+      const resolvedTeamNames = resolveTeamNames(court.teamNames || {}, court.playerNames || {});
+      const teamsValue = item.querySelector(".teams-cell .aci-value");
+      if (teamsValue)
+      {
+        teamsValue.textContent = `${resolvedTeamNames.A} vs ${resolvedTeamNames.B}`;
+      }
+
       item.querySelector(".edit-btn").addEventListener("click", () =>
       {
         openEditModal(court);
@@ -2121,8 +2202,14 @@ document.addEventListener("DOMContentLoaded", () =>
 
     elements.editCourtNameTitle.textContent = court.name || court.id;
     elements.editCourtName.value = court.name || "";
-    elements.editTeamAName.value = court.teamNames?.A || "";
-    elements.editTeamBName.value = court.teamNames?.B || "";
+    const resolvedTeamNames = resolveTeamNames(court.teamNames || {}, court.playerNames || {});
+    const playerNames = normalizePlayerNames(court.playerNames || {});
+    elements.editTeamAName.value = resolvedTeamNames.A || "";
+    elements.editTeamBName.value = resolvedTeamNames.B || "";
+    elements.editPlayerA1Name.value = playerNames.A1;
+    elements.editPlayerA2Name.value = playerNames.A2;
+    elements.editPlayerB1Name.value = playerNames.B1;
+    elements.editPlayerB2Name.value = playerNames.B2;
     elements.editCourtPassword.value = court.password || "";
     elements.editCourtStatus.value = court.status || STATUS.CLOSED;
     elements.editCourtScoringMode.value = scoringOptions.scoringMode;
@@ -2151,14 +2238,23 @@ document.addEventListener("DOMContentLoaded", () =>
         ...(courtToEdit.scoringOptions || {}),
         scoringMode: elements.editCourtScoringMode.value
       });
+      const playerNames = normalizePlayerNames({
+        A1: elements.editPlayerA1Name.value.trim(),
+        A2: elements.editPlayerA2Name.value.trim(),
+        B1: elements.editPlayerB1Name.value.trim(),
+        B2: elements.editPlayerB2Name.value.trim()
+      });
+      const manualTeamNames = {
+        A: elements.editTeamAName.value.trim(),
+        B: elements.editTeamBName.value.trim()
+      };
+      const resolvedTeamNames = resolveTeamNames(manualTeamNames, playerNames);
       const courtRef = doc(db, "courts", courtId);
 
       await updateDoc(courtRef, {
         name: newName,
-        teamNames: {
-          A: elements.editTeamAName.value.trim(),
-          B: elements.editTeamBName.value.trim()
-        },
+        teamNames: resolvedTeamNames,
+        playerNames,
         password: elements.editCourtPassword.value.trim(),
         status: elements.editCourtStatus.value,
         scoringMode: scoringOptions.scoringMode,
@@ -2642,6 +2738,7 @@ document.addEventListener("DOMContentLoaded", () =>
       password: courtPass,
       createdAt: serverTimestamp(),
       teamNames: { A: "Team A", B: "Team B" },
+      playerNames: { ...DEFAULT_PLAYER_NAMES },
       status: elements.courtStatus.value,
       scoringMode: scoringOptions.scoringMode,
       scoringOptions
@@ -3169,6 +3266,7 @@ document.addEventListener("DOMContentLoaded", () =>
 
     // Hide player-only tiles in the settings modal
     if (elements.serverToggleTile) elements.serverToggleTile.style.display = "none";
+    if (elements.editPlayersTile) elements.editPlayersTile.style.display = "none";
     if (elements.resetSettingsTile) elements.resetSettingsTile.style.display = "none";
     if (elements.switchToSpectateTile) elements.switchToSpectateTile.style.display = "none";
 
@@ -3195,6 +3293,7 @@ document.addEventListener("DOMContentLoaded", () =>
 
     // Restore player-only tiles in the settings modal
     if (elements.serverToggleTile) elements.serverToggleTile.style.display = "";
+    if (elements.editPlayersTile) elements.editPlayersTile.style.display = "";
     if (elements.resetSettingsTile) elements.resetSettingsTile.style.display = "";
     if (elements.switchToSpectateTile) elements.switchToSpectateTile.style.display = "";
 
@@ -3767,7 +3866,7 @@ document.addEventListener("DOMContentLoaded", () =>
     elements.serverBadgeA.classList.toggle("hidden", !teamAServing);
     elements.serverBadgeB.classList.toggle("hidden", !teamBServing);
 
-    const displayLabel = label;//.slice(1);
+    const displayLabel = getServerDisplayLabel(label);
 
     if (teamAServing)
     {
@@ -4361,6 +4460,55 @@ document.addEventListener("DOMContentLoaded", () =>
     });
   }
 
+  if (elements.editPlayersBtn)
+  {
+    elements.editPlayersBtn.addEventListener("click", async () =>
+    {
+      if (!currentCourtId)
+      {
+        showToast("No court is currently open.", TOAST_TYPES.ERROR);
+        return;
+      }
+
+      const existing = normalizePlayerNames(currentPlayerNames);
+      const slots = ["A1", "A2", "B1", "B2"];
+      const nextPlayerNames = { ...existing };
+
+      for (const slot of slots)
+      {
+        const answer = window.prompt(`Player name for ${slot} (leave blank to clear):`, existing[slot] || "");
+        if (answer === null)
+        {
+          showToast("Player name update canceled.", TOAST_TYPES.INFO);
+          return;
+        }
+
+        nextPlayerNames[slot] = answer.trim();
+      }
+
+      const derivedTeamNames = resolveTeamNames(getCurrentTeamNamesFromDom(), nextPlayerNames);
+
+      try
+      {
+        await updateDoc(doc(db, "courts", currentCourtId), {
+          playerNames: nextPlayerNames,
+          teamNames: derivedTeamNames
+        });
+
+        currentPlayerNames = normalizePlayerNames(nextPlayerNames);
+        applyTeamNamesToScoreboard(derivedTeamNames);
+        updateServerIndicator();
+        elements.settingsModal.classList.add("hidden");
+        showToast("Player names updated.", TOAST_TYPES.SUCCESS);
+      }
+      catch (error)
+      {
+        console.error("Error updating player names:", error);
+        showToast("Failed to update player names.", TOAST_TYPES.ERROR);
+      }
+    });
+  }
+
   if (elements.switchToSpectateBtn)
   {
     elements.switchToSpectateBtn.addEventListener("click", () =>
@@ -4732,7 +4880,7 @@ document.addEventListener("DOMContentLoaded", () =>
     return document.querySelector(".scoreboard")?.classList.contains("swapped") || false;
   }
 
-  function renderAdvancedStats(advancedStats, teamNames, isSwapped = false)
+  function renderAdvancedStats(advancedStats, teamNames, isSwapped = false, playerNames = DEFAULT_PLAYER_NAMES)
   {
     if (!elements.dmStatsWrap || !elements.dmStatsTeamA || !elements.dmStatsMeta)
     {
@@ -4884,6 +5032,25 @@ document.addEventListener("DOMContentLoaded", () =>
         `${secondarySilverWon}/${silverPointsPlayed} · ${formatPct(secondarySilverPct)}`
       ));
     }
+
+    const servePlayerStats = advancedStats?.servePlayerStats || {};
+    rows.push(sectionRow("Serve Players"));
+    [1, 2].forEach(serverIndex =>
+    {
+      const primarySlot = `${primaryTeamKey}${serverIndex}`;
+      const secondarySlot = `${secondaryTeamKey}${serverIndex}`;
+      const primaryServerName = getPlayerDisplayName(primarySlot, playerNames);
+      const secondaryServerName = getPlayerDisplayName(secondarySlot, playerNames);
+
+      const primaryServeStat = servePlayerStats[primarySlot] || { pointsWonOnServe: 0, pointsServed: 0, serveWinPct: 0 };
+      const secondaryServeStat = servePlayerStats[secondarySlot] || { pointsWonOnServe: 0, pointsServed: 0, serveWinPct: 0 };
+
+      rows.push(row(
+        `Server ${serverIndex}`,
+        `${primaryServerName} · ${primaryServeStat.pointsWonOnServe}/${primaryServeStat.pointsServed} · ${formatPct(primaryServeStat.serveWinPct)}`,
+        `${secondaryServerName} · ${secondaryServeStat.pointsWonOnServe}/${secondaryServeStat.pointsServed} · ${formatPct(secondaryServeStat.serveWinPct)}`
+      ));
+    });
 
     elements.dmStatsTeamA.innerHTML = `
       <table class="dm-stats-table">
@@ -5090,7 +5257,8 @@ document.addEventListener("DOMContentLoaded", () =>
           result.data.setPointMarkers || [],
           result.data.momentumTimeline || null
         );
-        renderAdvancedStats(result.data.advancedStats, { A: nameA, B: nameB }, isSwapped);
+        const detailsPlayerNames = normalizePlayerNames(result?.data?.playerNames || currentPlayerNames || {});
+        renderAdvancedStats(result.data.advancedStats, { A: nameA, B: nameB }, isSwapped, detailsPlayerNames);
         syncDetailsPanelAvailability();
         return;
       }
@@ -5172,7 +5340,8 @@ document.addEventListener("DOMContentLoaded", () =>
         result.data.setPointMarkers || [],
         result.data.momentumTimeline || null
       );
-      renderAdvancedStats(result.data.advancedStats, { A: nameA, B: nameB }, isSwapped);
+      const detailsPlayerNames = normalizePlayerNames(result?.data?.playerNames || currentPlayerNames || {});
+      renderAdvancedStats(result.data.advancedStats, { A: nameA, B: nameB }, isSwapped, detailsPlayerNames);
       syncDetailsPanelAvailability();
     }
     catch (err)
@@ -5188,6 +5357,32 @@ document.addEventListener("DOMContentLoaded", () =>
   // =====================================================
   // TEAM NAME EDITING
   // =====================================================
+
+  function getCurrentTeamNamesFromDom()
+  {
+    const labelA = $("teamA")?.querySelector(".name-text")?.textContent?.trim() || "Team A";
+    const labelB = $("teamB")?.querySelector(".name-text")?.textContent?.trim() || "Team B";
+
+    return { A: labelA, B: labelB };
+  }
+
+  function applyTeamNamesToScoreboard(teamNames)
+  {
+    const nameA = $("teamA")?.querySelector(".name-text");
+    const nameB = $("teamB")?.querySelector(".name-text");
+
+    if (nameA)
+    {
+      nameA.textContent = teamNames.A || "Team A";
+      fitTextToContainer(nameA);
+    }
+
+    if (nameB)
+    {
+      nameB.textContent = teamNames.B || "Team B";
+      fitTextToContainer(nameB);
+    }
+  }
 
   function startEditing(labelEl, team)
   {
@@ -5268,6 +5463,11 @@ document.addEventListener("DOMContentLoaded", () =>
     nameEl.addEventListener("click", () =>
     {
       if (isSpectating) return;
+      if (hasAnyPlayerNames(currentPlayerNames))
+      {
+        showToast("Team names are derived from player names. Edit players in Options.", TOAST_TYPES.INFO);
+        return;
+      }
       startEditing(labelEl, team);
     });
 
@@ -5489,21 +5689,10 @@ document.addEventListener("DOMContentLoaded", () =>
       showCourtTitle(data.name || snap.id);
       updatePageTitle(data.name || snap.id, snap.id);
 
-      const teamNames = data.teamNames || { A: "Team A", B: "Team B" };
-
-      const nameA = $("teamA").querySelector(".name-text");
-      const nameB = $("teamB").querySelector(".name-text");
-
-      if (nameA)
-      {
-        nameA.textContent = teamNames.A;
-        fitTextToContainer(nameA);
-      }
-      if (nameB)
-      {
-        nameB.textContent = teamNames.B;
-        fitTextToContainer(nameB);
-      }
+      currentPlayerNames = normalizePlayerNames(data.playerNames || {});
+      const teamNames = resolveTeamNames(data.teamNames || {}, currentPlayerNames);
+      applyTeamNamesToScoreboard(teamNames);
+      updateServerIndicator();
     });
 
     // Combine both unsubscribes

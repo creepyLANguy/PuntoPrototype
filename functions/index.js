@@ -84,6 +84,15 @@ function createTeamStatsBucket()
     };
 }
 
+function createServePlayerStatsBucket()
+{
+    return {
+        pointsServed: 0,
+        pointsWonOnServe: 0,
+        serveWinPct: 0
+    };
+}
+
 function createSetComebackState(setNumber)
 {
     return {
@@ -404,6 +413,12 @@ function computeAdvancedStats(pointHistory, scoringOptions)
         leadChanges: 0,
         largestComeback: null
     };
+    const servePlayerStats = {
+        A1: createServePlayerStatsBucket(),
+        A2: createServePlayerStatsBucket(),
+        B1: createServePlayerStatsBucket(),
+        B2: createServePlayerStatsBucket()
+    };
 
     const standardMode = options.scoringMode === "standard";
     let score = defaultScore(options);
@@ -424,6 +439,16 @@ function computeAdvancedStats(pointHistory, scoringOptions)
     for (const pointWinner of pointHistory)
     {
         if (pointWinner !== "A" && pointWinner !== "B") continue;
+
+        const serverLabel = getCurrentServerLabel(score);
+        if (serverLabel && servePlayerStats[serverLabel])
+        {
+            servePlayerStats[serverLabel].pointsServed++;
+            if (pointWinner === serverLabel[0])
+            {
+                servePlayerStats[serverLabel].pointsWonOnServe++;
+            }
+        }
 
         const oldGamesA = score.A.games;
         const oldGamesB = score.B.games;
@@ -616,8 +641,17 @@ function computeAdvancedStats(pointHistory, scoringOptions)
             : 0;
     });
 
+    ["A1", "A2", "B1", "B2"].forEach((slot) =>
+    {
+        const bucket = servePlayerStats[slot];
+        bucket.serveWinPct = bucket.pointsServed > 0
+            ? (bucket.pointsWonOnServe / bucket.pointsServed) * 100
+            : 0;
+    });
+
     return {
         teamStats,
+        servePlayerStats,
         matchStats,
         scoringMode: options.scoringMode,
         deuceMode: options.deuceMode
@@ -909,6 +943,12 @@ exports.getDetailedScore = onCall(
             scoringMode: courtData.scoringMode || courtData.scoringOptions?.scoringMode
         });
         const normalizedOptions = normalizeScoringOptions(scoringOptions);
+        const playerNames = {
+            A1: typeof courtData?.playerNames?.A1 === "string" ? courtData.playerNames.A1 : "",
+            A2: typeof courtData?.playerNames?.A2 === "string" ? courtData.playerNames.A2 : "",
+            B1: typeof courtData?.playerNames?.B1 === "string" ? courtData.playerNames.B1 : "",
+            B2: typeof courtData?.playerNames?.B2 === "string" ? courtData.playerNames.B2 : ""
+        };
 
         const eventsRef = db.collection(`courts/${courtId}/events`).orderBy("createdAt", "asc");
         const eventsSnap = await eventsRef.get();
@@ -1006,6 +1046,7 @@ exports.getDetailedScore = onCall(
             setsB: score.B.sets,
             scoringMode: normalizedOptions.scoringMode,
             matchComplete: score.matchComplete,
+            playerNames,
             pointHistory,
             setPointMarkers,
             momentumTimeline: momentumData.timeline,
