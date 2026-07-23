@@ -1078,6 +1078,26 @@ document.addEventListener("DOMContentLoaded", () =>
   submitOnEnter(elements.resetCourtPassword, elements.confirmResetBtn);
   submitFormOnEnter(elements.resetModal);
 
+  // ADD DEVICE PAGE
+  submitOnEnter(elements.newDeviceId, elements.saveNewDeviceBtn);
+  submitOnEnter(elements.newDeviceCourtIdManual, elements.saveNewDeviceBtn);
+  submitOnEnter(elements.newDeviceCourtIdSelect, elements.saveNewDeviceBtn);
+  submitFormOnEnter(elements.addDevicePage);
+
+  // EDIT DEVICE PAGE
+  submitOnEnter(elements.editDeviceCourtIdManual, elements.saveEditDeviceBtn);
+  submitOnEnter(elements.editDeviceCourtIdSelect, elements.saveEditDeviceBtn);
+  submitFormOnEnter(elements.editDevicePage);
+
+  // EDIT COURT PAGE
+  submitOnEnter(elements.editCourtName, elements.saveEditBtn);
+  submitOnEnter(elements.editTeamAName, elements.saveEditBtn);
+  submitOnEnter(elements.editTeamBName, elements.saveEditBtn);
+  submitOnEnter(elements.editCourtPassword, elements.saveEditBtn);
+  submitOnEnter(elements.editCourtStatus, elements.saveEditBtn);
+  submitOnEnter(elements.editCourtScoringMode, elements.saveEditBtn);
+  submitFormOnEnter(elements.editCourtPage);
+
   // ADMIN DASHBOARD SEARCH & FILTER
   elements.adminCourtSearch.addEventListener("input", filterAndDisplayAdminCourts);
   elements.adminStatusFilter.addEventListener("change", filterAndDisplayAdminCourts);
