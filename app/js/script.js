@@ -265,6 +265,11 @@ document.addEventListener("DOMContentLoaded", () =>
     const [slot1, slot2] = getTeamSlots(team);
     const first = normalizedPlayers[slot1].trim() || slot1;
     const second = normalizedPlayers[slot2].trim() || slot2;
+    
+    if (first === slot1 && second === slot2) {
+      return "";
+    }
+    
     return `${first} / ${second}`;
   }
 
@@ -289,7 +294,9 @@ document.addEventListener("DOMContentLoaded", () =>
       return DEFAULT_TEAM_NAMES[normalizedTeam];
     }
 
-    return `${baseName} [${getTeamPlayerDisplayPair(normalizedTeam, playerNames)}]`;
+    var playerDisplayPair = getTeamPlayerDisplayPair(normalizedTeam, playerNames);
+    playerDisplayPair = playerDisplayPair === "" ? "" : `[${playerDisplayPair}]`;
+    return `${baseName} ${playerDisplayPair}`.trim();
   }
 
   function resolveTeamNames(teamNames = {}, playerNames = {})
@@ -302,25 +309,16 @@ document.addEventListener("DOMContentLoaded", () =>
     };
   }
 
-  function getPlayerDisplayName(slot, playerNames = currentPlayerNames)
+  function getPlayerDisplayName(slot, playerNames = currentPlayerNames, defaultToSlot = false)
   {
     const normalized = normalizePlayerNames(playerNames);
     const value = typeof normalized[slot] === "string" ? normalized[slot].trim() : "";
-    return value || slot;
+    return value || (defaultToSlot ? slot : "");
   }
 
   function getServerDisplayLabel(serverLabel)
   {
-    if (!serverLabel) return "";
-
-    const playerName = getPlayerDisplayName(serverLabel);
-    if (playerName === serverLabel)
-    {
-      return serverLabel;
-    }
-
-    //return `${serverLabel} ${playerName}`;
-    return playerName;
+    return getPlayerDisplayName(serverLabel, currentPlayerNames, true); 
   }
 
   let score = defaultScore();
@@ -5113,8 +5111,8 @@ document.addEventListener("DOMContentLoaded", () =>
         "Pts Won",
         primaryTeamStats.pointWinPct,
         secondaryTeamStats.pointWinPct,
-        `${primaryTeamStats.pointsWon}/${totalPoints} · ${formatPct(primaryTeamStats.pointWinPct)}`,
-        `${secondaryTeamStats.pointsWon}/${totalPoints} · ${formatPct(secondaryTeamStats.pointWinPct)}`
+        `${primaryTeamStats.pointsWon}/${totalPoints} (${formatPct(primaryTeamStats.pointWinPct)})`,
+        `${secondaryTeamStats.pointsWon}/${totalPoints} (${formatPct(secondaryTeamStats.pointWinPct)})`
       ),
       row("Longest Streak", primaryTeamStats.longestScoringStreak, secondaryTeamStats.longestScoringStreak)
     ];
@@ -5137,8 +5135,8 @@ document.addEventListener("DOMContentLoaded", () =>
           "Won",
           primaryDeucePct,
           secondaryDeucePct,
-          `${primaryDeuceWon}/${deuceGames} · ${formatPct(primaryDeucePct)}`,
-          `${secondaryDeuceWon}/${deuceGames} · ${formatPct(secondaryDeucePct)}`)
+          `${primaryDeuceWon}/${deuceGames} (${formatPct(primaryDeucePct)})`,
+          `${secondaryDeuceWon}/${deuceGames} (${formatPct(secondaryDeucePct)})`)
       );
     }
 
@@ -5149,8 +5147,8 @@ document.addEventListener("DOMContentLoaded", () =>
         "Won",
         primarySilverPct,
         secondarySilverPct,
-        `${primarySilverWon}/${silverPointsPlayed} · ${formatPct(primarySilverPct)}`,
-        `${secondarySilverWon}/${silverPointsPlayed} · ${formatPct(secondarySilverPct)}`
+        `${primarySilverWon}/${silverPointsPlayed} (${formatPct(primarySilverPct)})`,
+        `${secondarySilverWon}/${silverPointsPlayed} (${formatPct(secondarySilverPct)})`
       ));
     }
 
@@ -5160,16 +5158,18 @@ document.addEventListener("DOMContentLoaded", () =>
     {
       const primarySlot = `${primaryTeamKey}${serverIndex}`;
       const secondarySlot = `${secondaryTeamKey}${serverIndex}`;
-      const primaryServerName = getPlayerDisplayName(primarySlot, playerNames);
-      const secondaryServerName = getPlayerDisplayName(secondarySlot, playerNames);
+      var primaryServerName = getPlayerDisplayName(primarySlot, playerNames);
+      var secondaryServerName = getPlayerDisplayName(secondarySlot, playerNames);
+      primaryServerName = primaryServerName + (primaryServerName == "" ? "" : " - ");
+      secondaryServerName = secondaryServerName + (secondaryServerName == "" ? "" : " - ");
 
       const primaryServeStat = servePlayerStats[primarySlot] || { pointsWonOnServe: 0, pointsServed: 0, serveWinPct: 0 };
       const secondaryServeStat = servePlayerStats[secondarySlot] || { pointsWonOnServe: 0, pointsServed: 0, serveWinPct: 0 };
 
       rows.push(row(
         `Player ${serverIndex}`,
-        `${primaryServerName} - ${primaryServeStat.pointsWonOnServe}/${primaryServeStat.pointsServed} (${formatPct(primaryServeStat.serveWinPct)})`,
-        `${secondaryServerName} - ${secondaryServeStat.pointsWonOnServe}/${secondaryServeStat.pointsServed} (${formatPct(secondaryServeStat.serveWinPct)})`
+        `${primaryServerName}${primaryServeStat.pointsWonOnServe}/${primaryServeStat.pointsServed} (${formatPct(primaryServeStat.serveWinPct)})`,
+        `${secondaryServerName}${secondaryServeStat.pointsWonOnServe}/${secondaryServeStat.pointsServed} (${formatPct(secondaryServeStat.serveWinPct)})`
       ));
     });
 
