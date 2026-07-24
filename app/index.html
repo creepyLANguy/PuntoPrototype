@@ -227,6 +227,40 @@
       </div>
     </div>
 
+    <!-- ================= PLAYER NAMES MODAL ================= -->
+    <div id="playerNamesModal" class="reset-modal hidden">
+      <div class="player-names-box">
+        <button id="closePlayerNamesBtn" class="close-btn">✕</button>
+        <h2>Player Names</h2>
+        <p class="player-names-copy">Update the four player labels shown on the scoreboard.</p>
+        <form id="playerNamesForm" class="player-names-form">
+          <div class="player-names-grid">
+            <label class="form-group player-names-field">
+              <span>Player A1</span>
+              <input type="text" id="playerNameA1" autocomplete="off" spellcheck="false" />
+            </label>
+            <label class="form-group player-names-field">
+              <span>Player A2</span>
+              <input type="text" id="playerNameA2" autocomplete="off" spellcheck="false" />
+            </label>
+            <label class="form-group player-names-field">
+              <span>Player B1</span>
+              <input type="text" id="playerNameB1" autocomplete="off" spellcheck="false" />
+            </label>
+            <label class="form-group player-names-field">
+              <span>Player B2</span>
+              <input type="text" id="playerNameB2" autocomplete="off" spellcheck="false" />
+            </label>
+          </div>
+          <p class="player-names-hint">Leave a field blank to clear it.</p>
+          <div class="player-names-actions">
+            <button type="button" id="cancelPlayerNamesBtn" class="secondary-btn">Cancel</button>
+            <button type="submit" class="primary-btn">Save Names</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
     <!-- ================= DETAILS MODAL ================= -->
     <div id="detailsModal" class="reset-modal hidden">
       <div class="dm-box">

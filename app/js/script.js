@@ -949,6 +949,14 @@ document.addEventListener("DOMContentLoaded", () =>
     settingsBtn: $("settingsBtn"),
     settingsModal: $("settingsModal"),
     closeSettingsBtn: $("closeSettingsBtn"),
+    playerNamesModal: $("playerNamesModal"),
+    closePlayerNamesBtn: $("closePlayerNamesBtn"),
+    playerNamesForm: $("playerNamesForm"),
+    cancelPlayerNamesBtn: $("cancelPlayerNamesBtn"),
+    playerNameA1: $("playerNameA1"),
+    playerNameA2: $("playerNameA2"),
+    playerNameB1: $("playerNameB1"),
+    playerNameB2: $("playerNameB2"),
     scoringModeSelect: $("scoringModeSelect"),
     deuceModeSelect: $("deuceModeSelect"),
     tiebreakModeSelect: $("tiebreakModeSelect"),
@@ -2661,6 +2669,65 @@ document.addEventListener("DOMContentLoaded", () =>
 
     elements.playCourtPassword.focus();
     syncCurrentViewState();
+  }
+
+  function openPlayerNamesModal()
+  {
+    const existing = normalizePlayerNames(currentPlayerNames);
+
+    elements.playerNameA1.value = existing.A1;
+    elements.playerNameA2.value = existing.A2;
+    elements.playerNameB1.value = existing.B1;
+    elements.playerNameB2.value = existing.B2;
+    elements.settingsModal.classList.add("hidden");
+    elements.playerNamesModal.classList.remove("hidden");
+    elements.playerNameA1.focus();
+    syncCurrentViewState();
+  }
+
+  function closePlayerNamesModal()
+  {
+    elements.playerNamesModal.classList.add("hidden");
+    elements.settingsModal.classList.remove("hidden");
+    syncCurrentViewState();
+  }
+
+  async function savePlayerNamesFromModal()
+  {
+    if (!currentCourtId)
+    {
+      showToast("No court is currently open.", TOAST_TYPES.ERROR);
+      return;
+    }
+
+    const nextPlayerNames = normalizePlayerNames({
+      A1: elements.playerNameA1.value.trim(),
+      A2: elements.playerNameA2.value.trim(),
+      B1: elements.playerNameB1.value.trim(),
+      B2: elements.playerNameB2.value.trim()
+    });
+    const derivedTeamNames = resolvePersistedTeamNames(currentRawTeamNames, nextPlayerNames);
+
+    try
+    {
+      await updateDoc(doc(db, "courts", currentCourtId), {
+        playerNames: nextPlayerNames,
+        teamNames: derivedTeamNames
+      });
+
+      currentPlayerNames = normalizePlayerNames(nextPlayerNames);
+      currentRawTeamNames = normalizeTeamNames(derivedTeamNames);
+      applyTeamNamesToScoreboard(resolveTeamNames(currentRawTeamNames, currentPlayerNames));
+      updateServerIndicator();
+      elements.playerNamesModal.classList.add("hidden");
+      elements.settingsModal.classList.remove("hidden");
+      showToast("Player names updated.", TOAST_TYPES.SUCCESS);
+    }
+    catch (error)
+    {
+      console.error("Error updating player names:", error);
+      showToast("Failed to update player names.", TOAST_TYPES.ERROR);
+    }
   }
 
   async function closePlayPage()
@@ -4580,7 +4647,7 @@ document.addEventListener("DOMContentLoaded", () =>
 
   if (elements.editPlayersBtn)
   {
-    elements.editPlayersBtn.addEventListener("click", async () =>
+    elements.editPlayersBtn.addEventListener("click", () =>
     {
       if (!currentCourtId)
       {
@@ -4588,42 +4655,36 @@ document.addEventListener("DOMContentLoaded", () =>
         return;
       }
 
-      const existing = normalizePlayerNames(currentPlayerNames);
-      const slots = ["A1", "A2", "B1", "B2"];
-      const nextPlayerNames = { ...existing };
+      openPlayerNamesModal();
+    });
+  }
 
-      for (const slot of slots)
+  if (elements.playerNamesForm)
+  {
+    elements.playerNamesForm.addEventListener("submit", (e) =>
+    {
+      e.preventDefault();
+      void savePlayerNamesFromModal();
+    });
+  }
+
+  if (elements.closePlayerNamesBtn)
+  {
+    elements.closePlayerNamesBtn.addEventListener("click", closePlayerNamesModal);
+  }
+
+  if (elements.cancelPlayerNamesBtn)
+  {
+    elements.cancelPlayerNamesBtn.addEventListener("click", closePlayerNamesModal);
+  }
+
+  if (elements.playerNamesModal)
+  {
+    elements.playerNamesModal.addEventListener("click", (e) =>
+    {
+      if (e.target === elements.playerNamesModal)
       {
-        const answer = window.prompt(`Player name for ${slot} (leave blank to clear):`, existing[slot] || "");
-        if (answer === null)
-        {
-          showToast("Player name update canceled.", TOAST_TYPES.INFO);
-          return;
-        }
-
-        nextPlayerNames[slot] = answer.trim();
-      }
-
-      const derivedTeamNames = resolvePersistedTeamNames(currentRawTeamNames, nextPlayerNames);
-
-      try
-      {
-        await updateDoc(doc(db, "courts", currentCourtId), {
-          playerNames: nextPlayerNames,
-          teamNames: derivedTeamNames
-        });
-
-        currentPlayerNames = normalizePlayerNames(nextPlayerNames);
-        currentRawTeamNames = normalizeTeamNames(derivedTeamNames);
-        applyTeamNamesToScoreboard(resolveTeamNames(currentRawTeamNames, currentPlayerNames));
-        updateServerIndicator();
-        elements.settingsModal.classList.add("hidden");
-        showToast("Player names updated.", TOAST_TYPES.SUCCESS);
-      }
-      catch (error)
-      {
-        console.error("Error updating player names:", error);
-        showToast("Failed to update player names.", TOAST_TYPES.ERROR);
+        closePlayerNamesModal();
       }
     });
   }
