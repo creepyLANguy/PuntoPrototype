@@ -5,6 +5,16 @@ const { defaultScore, applyEvent, normalizeScoringOptions, replayEvents, getCurr
 const { onRequest } = require("firebase-functions/v2/https");
 
 const REGION = "africa-south1";
+const DEFAULT_TEAM_NAMES = {
+    A: "Team A",
+    B: "Team B"
+};
+const DEFAULT_PLAYER_NAMES = {
+    A1: "",
+    A2: "",
+    B1: "",
+    B2: ""
+};
 const SCORING_EVENTS = new Set(["POINT_TEAM_A", "POINT_TEAM_B", "UNDO", "RESET"]);
 const OPERATIONAL_EVENTS = new Set(["SPECTATE", "REGISTER"]);
 const SUPPORTED_EVENTS = new Set([...SCORING_EVENTS, ...OPERATIONAL_EVENTS]);
@@ -820,12 +830,39 @@ exports.resetCourt = onCall(
     { region: REGION },
     async (request) =>
     {
-        const { courtId, deepReset, newPassword, scoringMode, scoringOptions: incomingScoringOptions } = request.data;
+        const {
+            courtId,
+            deepReset,
+            newPassword,
+            requirePassword,
+            scoringMode,
+            scoringOptions: incomingScoringOptions
+        } = request.data;
         if (!courtId) throw new Error("Missing courtId");
 
         const courtRef = db.doc(`courts/${courtId}`);
         const courtDoc = await courtRef.get();
         const courtData = courtDoc.exists ? courtDoc.data() : {};
+        const trimmedPassword = typeof newPassword === "string" ? newPassword.trim() : "";
+
+        if (requirePassword)
+        {
+            if (trimmedPassword.length < 4)
+            {
+                throw new Error("Password must be at least 4 characters.");
+            }
+
+            if (trimmedPassword === courtId)
+            {
+                throw new Error("Password must be different from court name.");
+            }
+
+            if (trimmedPassword === (courtData?.password || ""))
+            {
+                throw new Error("New password must be different from the current one.");
+            }
+        }
+
         const scoringOptions = buildScoringOptions({
             ...(courtData.scoringOptions || {}),
             ...(incomingScoringOptions || {}),
@@ -863,9 +900,15 @@ exports.resetCourt = onCall(
             scoringMode: scoringOptions.scoringMode
         };
 
-        if (deepReset && newPassword)
+        if (trimmedPassword)
         {
-            courtUpdates.password = newPassword;
+            courtUpdates.password = trimmedPassword;
+        }
+
+        if (deepReset)
+        {
+            courtUpdates.teamNames = { ...DEFAULT_TEAM_NAMES };
+            courtUpdates.playerNames = { ...DEFAULT_PLAYER_NAMES };
         }
 
         if (Object.keys(courtUpdates).length > 0)

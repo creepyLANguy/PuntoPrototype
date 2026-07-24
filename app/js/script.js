@@ -22,19 +22,11 @@ import
 
 const functions = getFunctions(app, "africa-south1");
 
-export async function resetCourt(courtId, deepReset = false, newPassword = null)
+export async function resetCourt(courtId, deepReset = false, newPassword = null, requirePassword = false)
 {
   const resetFn = httpsCallable(functions, "resetCourt");
-
-  try
-  {
-    await resetFn({ courtId, deepReset, newPassword });
-    showToast("Court reset successful", TOAST_TYPES.SUCCESS);
-  }
-  catch (err)
-  {
-    showToast("Reset failed: " + err.message, TOAST_TYPES.ERROR);
-  }
+  const result = await resetFn({ courtId, deepReset, newPassword, requirePassword });
+  return result;
 }
 
 document.addEventListener("DOMContentLoaded", () =>
@@ -4454,24 +4446,49 @@ document.addEventListener("DOMContentLoaded", () =>
   // CONTROLS
   // =====================================================
 
-  elements.shallowResetBtn.addEventListener("click", performShallowReset);
+  function validateResetPassword()
+  {
+    const newPassword = elements.resetCourtPassword.value.trim();
+    elements.resetPasswordError.textContent = "";
 
-  async function performShallowReset()
+    if (newPassword.length < 4)
+    {
+      elements.resetPasswordError.textContent = "Password must be at least 4 characters.";
+      return null;
+    }
+    else if (newPassword === currentCourtId)
+    {
+      elements.resetPasswordError.textContent = "Password must be different from court name.";
+      return null;
+    }
+    else if (newPassword === currentCourtPassword)
+    {
+      elements.resetPasswordError.textContent = "New password must be different from the current one.";
+      return null;
+    }
+
+    return newPassword;
+  }
+
+  async function performShallowReset(requirePassword = false)
   {
     if (!currentCourtId) return;
+    const newPassword = requirePassword ? validateResetPassword() : null;
+    if (requirePassword && !newPassword) return;
+
     try
     {
-      await addDoc(
-        collection(db, "courts", currentCourtId, "events"),
-        {
-          eventType: EVENT_TYPES.RESET,
-          createdAt: serverTimestamp(),
-          createdBy: thisDeviceId
-        }
-      );
+      await resetCourt(currentCourtId, false, newPassword, requirePassword);
+      if (newPassword)
+      {
+        currentCourtPassword = newPassword;
+      }
+
+      elements.resetCourtPassword.value = "";
       elements.resetModal.classList.add("hidden");
       syncCurrentViewState("replace");
       playSound(SOUND_IDS.START);
+      showToast("Score reset. Team and player names kept.", TOAST_TYPES.SUCCESS);
     }
     catch (err)
     {
@@ -4480,60 +4497,33 @@ document.addEventListener("DOMContentLoaded", () =>
     }
   }
 
+  elements.shallowResetBtn.addEventListener("click", async () =>
+  {
+    await performShallowReset(true);
+  });
+
   elements.confirmResetBtn.addEventListener("click", async () =>
   {
-    const newPassword = elements.resetCourtPassword.value.trim();
-    elements.resetPasswordError.textContent = "";
-
-    if (newPassword.length < 4)
-    {
-      elements.resetPasswordError.textContent = "Password must be at least 4 characters.";
-      return;
-    }
-    else if (newPassword === currentCourtId)
-    {
-      elements.resetPasswordError.textContent = "Password must be different from court name.";
-      return;
-    }
-    else if (newPassword === currentCourtPassword)
-    {
-      elements.resetPasswordError.textContent = "New password must be different from the current one.";
-      return;
-    }
-
-    currentCourtPassword = newPassword;
+    if (!currentCourtId) return;
+    const newPassword = validateResetPassword();
+    if (!newPassword) return;
 
     try
     {
-      await addDoc(
-        collection(db, "courts", currentCourtId, "events"),
-        {
-          eventType: EVENT_TYPES.RESET,
-          createdAt: serverTimestamp(),
-          createdBy: thisDeviceId
-        }
-      );
+      await resetCourt(currentCourtId, true, newPassword, true);
+      currentCourtPassword = newPassword;
 
-      await setDoc(
-        doc(db, "courts", currentCourtId),
-        { password: newPassword },
-        { merge: true }
-      );
-
+      elements.resetCourtPassword.value = "";
       elements.resetModal.classList.add("hidden");
       syncCurrentViewState("replace");
-
       playSound(SOUND_IDS.START);
+      showToast("Full reset complete. Team and player names restored.", TOAST_TYPES.SUCCESS);
     }
     catch (err)
     {
       console.error("Reset failed:", err);
       showToast("Reset Failed: " + (err.message || "Unknown error"), TOAST_TYPES.ERROR);
     }
-
-    elements.resetCourtPassword.value = "";
-    elements.resetModal.classList.add("hidden");
-    playSound(SOUND_IDS.START);
   });
 
 
