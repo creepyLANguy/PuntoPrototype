@@ -52,6 +52,16 @@ document.addEventListener("DOMContentLoaded", () =>
     deuceMode: "standard",
     tiebreakMode: "sixAllSeven"
   };
+  const DEFAULT_TEAM_NAMES = {
+    A: "Team A",
+    B: "Team B"
+  };
+  const DEFAULT_PLAYER_NAMES = {
+    A1: "",
+    A2: "",
+    B1: "",
+    B2: ""
+  };
   const SCORING_LABELS = {
     standard: "Games and sets",
     straight: "Straight points",
@@ -203,6 +213,114 @@ document.addEventListener("DOMContentLoaded", () =>
     });
   }
 
+  function normalizePlayerNames(playerNames = {})
+  {
+    return {
+      A1: typeof playerNames?.A1 === "string" ? playerNames.A1 : "",
+      A2: typeof playerNames?.A2 === "string" ? playerNames.A2 : "",
+      B1: typeof playerNames?.B1 === "string" ? playerNames.B1 : "",
+      B2: typeof playerNames?.B2 === "string" ? playerNames.B2 : ""
+    };
+  }
+
+  function hasAnyPlayerNames(playerNames = {})
+  {
+    const normalized = normalizePlayerNames(playerNames);
+    return Object.values(normalized).some(name => name.trim().length > 0);
+  }
+
+  function normalizeTeamNames(teamNames = {})
+  {
+    const normalizedA = typeof teamNames?.A === "string" ? teamNames.A.trim() : "";
+    const normalizedB = typeof teamNames?.B === "string" ? teamNames.B.trim() : "";
+
+    return {
+      A: normalizedA || DEFAULT_TEAM_NAMES.A,
+      B: normalizedB || DEFAULT_TEAM_NAMES.B
+    };
+  }
+
+  function isDefaultTeamName(team, name)
+  {
+    const normalizedTeam = team === "B" ? "B" : "A";
+    const normalizedName = typeof name === "string" ? name.trim() : "";
+    return !normalizedName || normalizedName === DEFAULT_TEAM_NAMES[normalizedTeam];
+  }
+
+  function getTeamSlots(team)
+  {
+    return team === "B" ? ["B1", "B2"] : ["A1", "A2"];
+  }
+
+  function hasPlayersForTeam(team, playerNames = {})
+  {
+    const normalizedPlayers = normalizePlayerNames(playerNames);
+    const [slot1, slot2] = getTeamSlots(team);
+    return Boolean(normalizedPlayers[slot1].trim() || normalizedPlayers[slot2].trim());
+  }
+
+  function getTeamPlayerDisplayPair(team, playerNames = {})
+  {
+    const normalizedPlayers = normalizePlayerNames(playerNames);
+    const [slot1, slot2] = getTeamSlots(team);
+    const first = normalizedPlayers[slot1].trim() || slot1;
+    const second = normalizedPlayers[slot2].trim() || slot2;
+    
+    if (first === slot1 && second === slot2) {
+      return "";
+    }
+    
+    return `${first} / ${second}`;
+  }
+
+  function resolvePersistedTeamNames(teamNames = {}, playerNames = {})
+  {
+    return normalizeTeamNames(teamNames);
+  }
+
+  function formatTeamDisplayName(team, persistedTeamName, playerNames = {})
+  {
+    const normalizedTeam = team === "B" ? "B" : "A";
+    const baseName = typeof persistedTeamName === "string" && persistedTeamName.trim()
+      ? persistedTeamName.trim()
+      : DEFAULT_TEAM_NAMES[normalizedTeam];
+
+    if (isDefaultTeamName(normalizedTeam, baseName))
+    {
+      if (hasPlayersForTeam(normalizedTeam, playerNames))
+      {
+        return getTeamPlayerDisplayPair(normalizedTeam, playerNames);
+      }
+      return DEFAULT_TEAM_NAMES[normalizedTeam];
+    }
+
+    var playerDisplayPair = getTeamPlayerDisplayPair(normalizedTeam, playerNames);
+    playerDisplayPair = playerDisplayPair === "" ? "" : `- ${playerDisplayPair}`;
+    return `${baseName} ${playerDisplayPair}`.trim();
+  }
+
+  function resolveTeamNames(teamNames = {}, playerNames = {})
+  {
+    const normalizedTeams = normalizeTeamNames(teamNames);
+
+    return {
+      A: formatTeamDisplayName("A", normalizedTeams.A, playerNames),
+      B: formatTeamDisplayName("B", normalizedTeams.B, playerNames)
+    };
+  }
+
+  function getPlayerDisplayName(slot, playerNames = currentPlayerNames, defaultToSlot = false)
+  {
+    const normalized = normalizePlayerNames(playerNames);
+    const value = typeof normalized[slot] === "string" ? normalized[slot].trim() : "";
+    return value || (defaultToSlot ? slot : "");
+  }
+
+  function getServerDisplayLabel(serverLabel)
+  {
+    return getPlayerDisplayName(serverLabel, currentPlayerNames, true); 
+  }
+
   let score = defaultScore();
   let isMatchDetailsCacheValid = false;
   let matchDetailsCache = null;
@@ -215,6 +333,8 @@ document.addEventListener("DOMContentLoaded", () =>
   let currentCourtPassword = null;
   let currentCourtStatus = null;
   let currentScoringOptions = { ...DEFAULT_SCORING_OPTIONS };
+  let currentRawTeamNames = { ...DEFAULT_TEAM_NAMES };
+  let currentPlayerNames = { ...DEFAULT_PLAYER_NAMES };
 
   let isSpectating = false;
 
@@ -829,6 +949,16 @@ document.addEventListener("DOMContentLoaded", () =>
     settingsBtn: $("settingsBtn"),
     settingsModal: $("settingsModal"),
     closeSettingsBtn: $("closeSettingsBtn"),
+    playerNamesModal: $("playerNamesModal"),
+    closePlayerNamesBtn: $("closePlayerNamesBtn"),
+    playerNamesForm: $("playerNamesForm"),
+    cancelPlayerNamesBtn: $("cancelPlayerNamesBtn"),
+    playerTeamAName: $("playerTeamAName"),
+    playerTeamBName: $("playerTeamBName"),
+    playerNameA1: $("playerNameA1"),
+    playerNameA2: $("playerNameA2"),
+    playerNameB1: $("playerNameB1"),
+    playerNameB2: $("playerNameB2"),
     scoringModeSelect: $("scoringModeSelect"),
     deuceModeSelect: $("deuceModeSelect"),
     tiebreakModeSelect: $("tiebreakModeSelect"),
@@ -841,6 +971,8 @@ document.addEventListener("DOMContentLoaded", () =>
 
     serverToggleBtn: $("serverToggleBtn"),
     serverToggleTile: $("serverToggleTile"),
+    editPlayersBtn: $("editPlayersBtn"),
+    editPlayersTile: $("editPlayersTile"),
     resetSettingsBtn: $("resetSettingsBtn"),
     resetSettingsTile: $("resetSettingsTile"),
     joinCourtBtn: $("joinCourtBtn"),
@@ -921,6 +1053,10 @@ document.addEventListener("DOMContentLoaded", () =>
   elements.editCourtName = $("editCourtName");
   elements.editTeamAName = $("editTeamAName");
   elements.editTeamBName = $("editTeamBName");
+  elements.editPlayerA1Name = $("editPlayerA1Name");
+  elements.editPlayerA2Name = $("editPlayerA2Name");
+  elements.editPlayerB1Name = $("editPlayerB1Name");
+  elements.editPlayerB2Name = $("editPlayerB2Name");
   elements.editCourtPassword = $("editCourtPassword");
   elements.editCourtStatus = $("editCourtStatus");
   elements.editCourtScoringMode = $("editCourtScoringMode");
@@ -2099,6 +2235,13 @@ document.addEventListener("DOMContentLoaded", () =>
           </div>
         `;
 
+      const resolvedTeamNames = resolveTeamNames(court.teamNames || {}, court.playerNames || {});
+      const teamsValue = item.querySelector(".teams-cell .aci-value");
+      if (teamsValue)
+      {
+        teamsValue.textContent = `${resolvedTeamNames.A} vs ${resolvedTeamNames.B}`;
+      }
+
       item.querySelector(".edit-btn").addEventListener("click", () =>
       {
         openEditModal(court);
@@ -2119,10 +2262,16 @@ document.addEventListener("DOMContentLoaded", () =>
       scoringMode: court.scoringMode || court.scoringOptions?.scoringMode
     });
 
-    elements.editCourtNameTitle.textContent = court.name || court.id;
+    elements.editCourtNameTitle.innerHTML = `${court.name}<br/>ID: ${court.id}`;
     elements.editCourtName.value = court.name || "";
-    elements.editTeamAName.value = court.teamNames?.A || "";
-    elements.editTeamBName.value = court.teamNames?.B || "";
+    const rawTeamNames = normalizeTeamNames(court.teamNames || {});
+    const playerNames = normalizePlayerNames(court.playerNames || {});
+    elements.editTeamAName.value = rawTeamNames.A || "";
+    elements.editTeamBName.value = rawTeamNames.B || "";
+    elements.editPlayerA1Name.value = playerNames.A1;
+    elements.editPlayerA2Name.value = playerNames.A2;
+    elements.editPlayerB1Name.value = playerNames.B1;
+    elements.editPlayerB2Name.value = playerNames.B2;
     elements.editCourtPassword.value = court.password || "";
     elements.editCourtStatus.value = court.status || STATUS.CLOSED;
     elements.editCourtScoringMode.value = scoringOptions.scoringMode;
@@ -2140,6 +2289,8 @@ document.addEventListener("DOMContentLoaded", () =>
   {
     if (!courtToEdit) return;
 
+    showspinner(elements.editCourtPage, "Saving changes...");
+
     try
     {
       const courtId = courtToEdit.id;
@@ -2151,14 +2302,24 @@ document.addEventListener("DOMContentLoaded", () =>
         ...(courtToEdit.scoringOptions || {}),
         scoringMode: elements.editCourtScoringMode.value
       });
+      const playerNames = normalizePlayerNames({
+        A1: elements.editPlayerA1Name.value.trim(),
+        A2: elements.editPlayerA2Name.value.trim(),
+        B1: elements.editPlayerB1Name.value.trim(),
+        B2: elements.editPlayerB2Name.value.trim()
+      });
+      const manualTeamNames = {
+        A: elements.editTeamAName.value.trim(),
+        B: elements.editTeamBName.value.trim()
+      };
+      const normalizedTeamNames = normalizeTeamNames(manualTeamNames);
+      const resolvedTeamNames = resolvePersistedTeamNames(normalizedTeamNames, playerNames);
       const courtRef = doc(db, "courts", courtId);
 
       await updateDoc(courtRef, {
         name: newName,
-        teamNames: {
-          A: elements.editTeamAName.value.trim(),
-          B: elements.editTeamBName.value.trim()
-        },
+        teamNames: resolvedTeamNames,
+        playerNames,
         password: elements.editCourtPassword.value.trim(),
         status: elements.editCourtStatus.value,
         scoringMode: scoringOptions.scoringMode,
@@ -2195,6 +2356,10 @@ document.addEventListener("DOMContentLoaded", () =>
     catch (err)
     {
       showToast("Failed to update: " + err.message, TOAST_TYPES.ERROR);
+    }
+    finally
+    {
+      hideSpinner(elements.editCourtPage);
     }
   });
 
@@ -2508,6 +2673,72 @@ document.addEventListener("DOMContentLoaded", () =>
     syncCurrentViewState();
   }
 
+  function openPlayerNamesModal()
+  {
+    const existingPlayers = normalizePlayerNames(currentPlayerNames);
+    const existingTeams = normalizeTeamNames(currentRawTeamNames);
+
+    elements.playerTeamAName.value = existingTeams.A;
+    elements.playerTeamBName.value = existingTeams.B;
+    elements.playerNameA1.value = existingPlayers.A1;
+    elements.playerNameA2.value = existingPlayers.A2;
+    elements.playerNameB1.value = existingPlayers.B1;
+    elements.playerNameB2.value = existingPlayers.B2;
+    elements.settingsModal.classList.add("hidden");
+    elements.playerNamesModal.classList.remove("hidden");
+    elements.playerTeamAName.focus();
+    syncCurrentViewState();
+  }
+
+  function closePlayerNamesModal()
+  {
+    elements.playerNamesModal.classList.add("hidden");
+    elements.settingsModal.classList.remove("hidden");
+    syncCurrentViewState();
+  }
+
+  async function savePlayerNamesFromModal()
+  {
+    if (!currentCourtId)
+    {
+      showToast("No court is currently open.", TOAST_TYPES.ERROR);
+      return;
+    }
+
+    const nextTeamNames = normalizeTeamNames({
+      A: elements.playerTeamAName.value.trim(),
+      B: elements.playerTeamBName.value.trim()
+    });
+    const nextPlayerNames = normalizePlayerNames({
+      A1: elements.playerNameA1.value.trim(),
+      A2: elements.playerNameA2.value.trim(),
+      B1: elements.playerNameB1.value.trim(),
+      B2: elements.playerNameB2.value.trim()
+    });
+    const derivedTeamNames = resolvePersistedTeamNames(nextTeamNames, nextPlayerNames);
+
+    try
+    {
+      await updateDoc(doc(db, "courts", currentCourtId), {
+        playerNames: nextPlayerNames,
+        teamNames: derivedTeamNames
+      });
+
+      currentPlayerNames = normalizePlayerNames(nextPlayerNames);
+      currentRawTeamNames = normalizeTeamNames(derivedTeamNames);
+      applyTeamNamesToScoreboard(resolveTeamNames(currentRawTeamNames, currentPlayerNames));
+      updateServerIndicator();
+      elements.playerNamesModal.classList.add("hidden");
+      elements.settingsModal.classList.remove("hidden");
+      showToast("Player names updated.", TOAST_TYPES.SUCCESS);
+    }
+    catch (error)
+    {
+      console.error("Error updating player names:", error);
+      showToast("Failed to update player names.", TOAST_TYPES.ERROR);
+    }
+  }
+
   async function closePlayPage()
   {
     await stepBackInApp(createViewState({
@@ -2642,6 +2873,7 @@ document.addEventListener("DOMContentLoaded", () =>
       password: courtPass,
       createdAt: serverTimestamp(),
       teamNames: { A: "Team A", B: "Team B" },
+      playerNames: { ...DEFAULT_PLAYER_NAMES },
       status: elements.courtStatus.value,
       scoringMode: scoringOptions.scoringMode,
       scoringOptions
@@ -2767,10 +2999,14 @@ document.addEventListener("DOMContentLoaded", () =>
     currentCourtName = data.name || courtId;
     currentCourtPassword = data.password;
     currentCourtStatus = data.status;
+    currentRawTeamNames = normalizeTeamNames(data.teamNames || {});
+    currentPlayerNames = normalizePlayerNames(data.playerNames || {});
     currentScoringOptions = normalizeScoringOptions({
       ...(data.scoringOptions || {}),
       scoringMode: data.scoringMode || data.scoringOptions?.scoringMode
     });
+    applyTeamNamesToScoreboard(resolveTeamNames(currentRawTeamNames, currentPlayerNames));
+    updateServerIndicator();
     syncScoringControls();
     renderCourtQr(courtId);
 
@@ -3169,6 +3405,7 @@ document.addEventListener("DOMContentLoaded", () =>
 
     // Hide player-only tiles in the settings modal
     if (elements.serverToggleTile) elements.serverToggleTile.style.display = "none";
+    if (elements.editPlayersTile) elements.editPlayersTile.style.display = "none";
     if (elements.resetSettingsTile) elements.resetSettingsTile.style.display = "none";
     if (elements.switchToSpectateTile) elements.switchToSpectateTile.style.display = "none";
 
@@ -3195,6 +3432,7 @@ document.addEventListener("DOMContentLoaded", () =>
 
     // Restore player-only tiles in the settings modal
     if (elements.serverToggleTile) elements.serverToggleTile.style.display = "";
+    if (elements.editPlayersTile) elements.editPlayersTile.style.display = "";
     if (elements.resetSettingsTile) elements.resetSettingsTile.style.display = "";
     if (elements.switchToSpectateTile) elements.switchToSpectateTile.style.display = "";
 
@@ -3767,7 +4005,7 @@ document.addEventListener("DOMContentLoaded", () =>
     elements.serverBadgeA.classList.toggle("hidden", !teamAServing);
     elements.serverBadgeB.classList.toggle("hidden", !teamBServing);
 
-    const displayLabel = label;//.slice(1);
+    const displayLabel = getServerDisplayLabel(label);
 
     if (teamAServing)
     {
@@ -3910,6 +4148,64 @@ document.addEventListener("DOMContentLoaded", () =>
     {
       toast.remove();
     }, TOAST_DURATION_MS);
+  }
+
+  function showspinner(containerEl, label = "Loading...")
+  {
+    if (!containerEl) return;
+
+    let overlay = containerEl.querySelector(":scope > .inline-loading-overlay");
+
+    if (!overlay)
+    {
+      overlay = document.createElement("div");
+      overlay.className = "inline-loading-overlay";
+      overlay.innerHTML = `
+        <div class="loading-content">
+          <div class="spinner-wrapper">
+            <div class="spinner"></div>
+          </div>
+          <div class="loading">${label}</div>
+        </div>
+      `;
+
+      overlay.style.position = "absolute";
+      overlay.style.inset = "0";
+      overlay.style.zIndex = "1000";
+      overlay.style.display = "flex";
+      overlay.style.alignItems = "center";
+      overlay.style.justifyContent = "center";
+      overlay.style.background = isLightMode ? "rgba(255, 255, 255, 0.8)" : "rgba(0, 0, 0, 0.55)";
+      overlay.style.backdropFilter = "blur(6px)";
+      overlay.style.webkitBackdropFilter = "blur(6px)";
+
+      const computedPosition = window.getComputedStyle(containerEl).position;
+      if (computedPosition === "static")
+      {
+        containerEl.dataset.spinnerOriginalPosition = "static";
+        containerEl.style.position = "relative";
+      }
+
+      containerEl.appendChild(overlay);
+    }
+
+    if (!overlay) return;
+
+    //Make sure we do this for existing overlay as well, in case the theme changed
+    overlay.style.background = isLightMode ? "rgba(255, 255, 255, 0.8)" : "rgba(0, 0, 0, 0.55)";
+
+    overlay.style.display = "flex";
+  }
+
+  function hideSpinner(containerEl)
+  {
+    if (!containerEl) return;
+
+    const overlay = containerEl.querySelector(":scope > .inline-loading-overlay");
+    if (overlay)
+    {
+      overlay.style.display = "none";
+    }
   }
 
   // =====================================================
@@ -4361,6 +4657,50 @@ document.addEventListener("DOMContentLoaded", () =>
     });
   }
 
+  if (elements.editPlayersBtn)
+  {
+    elements.editPlayersBtn.addEventListener("click", () =>
+    {
+      if (!currentCourtId)
+      {
+        showToast("No court is currently open.", TOAST_TYPES.ERROR);
+        return;
+      }
+
+      openPlayerNamesModal();
+    });
+  }
+
+  if (elements.playerNamesForm)
+  {
+    elements.playerNamesForm.addEventListener("submit", (e) =>
+    {
+      e.preventDefault();
+      void savePlayerNamesFromModal();
+    });
+  }
+
+  if (elements.closePlayerNamesBtn)
+  {
+    elements.closePlayerNamesBtn.addEventListener("click", closePlayerNamesModal);
+  }
+
+  if (elements.cancelPlayerNamesBtn)
+  {
+    elements.cancelPlayerNamesBtn.addEventListener("click", closePlayerNamesModal);
+  }
+
+  if (elements.playerNamesModal)
+  {
+    elements.playerNamesModal.addEventListener("click", (e) =>
+    {
+      if (e.target === elements.playerNamesModal)
+      {
+        closePlayerNamesModal();
+      }
+    });
+  }
+
   if (elements.switchToSpectateBtn)
   {
     elements.switchToSpectateBtn.addEventListener("click", () =>
@@ -4732,7 +5072,7 @@ document.addEventListener("DOMContentLoaded", () =>
     return document.querySelector(".scoreboard")?.classList.contains("swapped") || false;
   }
 
-  function renderAdvancedStats(advancedStats, teamNames, isSwapped = false)
+  function renderAdvancedStats(advancedStats, teamNames, isSwapped = false, playerNames = DEFAULT_PLAYER_NAMES)
   {
     if (!elements.dmStatsWrap || !elements.dmStatsTeamA || !elements.dmStatsMeta)
     {
@@ -4844,8 +5184,8 @@ document.addEventListener("DOMContentLoaded", () =>
         "Pts Won",
         primaryTeamStats.pointWinPct,
         secondaryTeamStats.pointWinPct,
-        `${primaryTeamStats.pointsWon}/${totalPoints} · ${formatPct(primaryTeamStats.pointWinPct)}`,
-        `${secondaryTeamStats.pointsWon}/${totalPoints} · ${formatPct(secondaryTeamStats.pointWinPct)}`
+        `${primaryTeamStats.pointsWon}/${totalPoints} (${formatPct(primaryTeamStats.pointWinPct)})`,
+        `${secondaryTeamStats.pointsWon}/${totalPoints} (${formatPct(secondaryTeamStats.pointWinPct)})`
       ),
       row("Longest Streak", primaryTeamStats.longestScoringStreak, secondaryTeamStats.longestScoringStreak)
     ];
@@ -4854,22 +5194,22 @@ document.addEventListener("DOMContentLoaded", () =>
     {
       rows.push(
         row("Breaks Faced", primaryTeamStats.breakPointsFaced, secondaryTeamStats.breakPointsFaced),
-        row("Breaks Held", `${primaryTeamStats.breakPointsWon}/${primaryTeamStats.breakPointsFaced} · ${formatPct(primaryTeamStats.breakPointWinPct)}`,
-          `${secondaryTeamStats.breakPointsWon}/${secondaryTeamStats.breakPointsFaced} · ${formatPct(secondaryTeamStats.breakPointWinPct)}`),
+        row("Breaks Held", `${primaryTeamStats.breakPointsWon}/${primaryTeamStats.breakPointsFaced} (${formatPct(primaryTeamStats.breakPointWinPct)})`,
+          `${secondaryTeamStats.breakPointsWon}/${secondaryTeamStats.breakPointsFaced} (${formatPct(secondaryTeamStats.breakPointWinPct)})`),
         row("Break Chances", primaryTeamStats.breakPointConversionOpportunities, secondaryTeamStats.breakPointConversionOpportunities),
-        row("Breaks Won", `${primaryTeamStats.breakPointConversions}/${primaryTeamStats.breakPointConversionOpportunities} · ${formatPct(primaryTeamStats.breakPointConversionPct)}`,
-          `${secondaryTeamStats.breakPointConversions}/${secondaryTeamStats.breakPointConversionOpportunities} · ${formatPct(secondaryTeamStats.breakPointConversionPct)}`),
+        row("Breaks Won", `${primaryTeamStats.breakPointConversions}/${primaryTeamStats.breakPointConversionOpportunities} (${formatPct(primaryTeamStats.breakPointConversionPct)})`,
+          `${secondaryTeamStats.breakPointConversions}/${secondaryTeamStats.breakPointConversionOpportunities} (${formatPct(secondaryTeamStats.breakPointConversionPct)})`),
         row("Closing Pts Won",
-          `${formatPct(primaryTeamStats.closingEfficiencyPct)} (${primaryTeamStats.gamePointConversions}/${primaryTeamStats.gamePointGames})`,
-          `${formatPct(secondaryTeamStats.closingEfficiencyPct)} (${secondaryTeamStats.gamePointConversions}/${secondaryTeamStats.gamePointGames})`),
+          `${primaryTeamStats.gamePointConversions}/${primaryTeamStats.gamePointGames} (${formatPct(primaryTeamStats.closingEfficiencyPct)})`,
+          `${secondaryTeamStats.gamePointConversions}/${secondaryTeamStats.gamePointGames} (${formatPct(secondaryTeamStats.closingEfficiencyPct)})`),
         sectionRow("Deuce"),
         sharedRow(deuceGamesLabel, isGoldenMode ? goldenPointsPlayed : deuceGames),
         barRow(
           "Won",
           primaryDeucePct,
           secondaryDeucePct,
-          `${primaryDeuceWon}/${deuceGames} · ${formatPct(primaryDeucePct)}`,
-          `${secondaryDeuceWon}/${deuceGames} · ${formatPct(secondaryDeucePct)}`)
+          `${primaryDeuceWon}/${deuceGames} (${formatPct(primaryDeucePct)})`,
+          `${secondaryDeuceWon}/${deuceGames} (${formatPct(secondaryDeucePct)})`)
       );
     }
 
@@ -4880,10 +5220,31 @@ document.addEventListener("DOMContentLoaded", () =>
         "Won",
         primarySilverPct,
         secondarySilverPct,
-        `${primarySilverWon}/${silverPointsPlayed} · ${formatPct(primarySilverPct)}`,
-        `${secondarySilverWon}/${silverPointsPlayed} · ${formatPct(secondarySilverPct)}`
+        `${primarySilverWon}/${silverPointsPlayed} (${formatPct(primarySilverPct)})`,
+        `${secondarySilverWon}/${silverPointsPlayed} (${formatPct(secondarySilverPct)})`
       ));
     }
+
+    const servePlayerStats = advancedStats?.servePlayerStats || {};
+    rows.push(sectionRow("On Serve"));
+    [1, 2].forEach(serverIndex =>
+    {
+      const primarySlot = `${primaryTeamKey}${serverIndex}`;
+      const secondarySlot = `${secondaryTeamKey}${serverIndex}`;
+      var primaryServerName = getPlayerDisplayName(primarySlot, playerNames);
+      var secondaryServerName = getPlayerDisplayName(secondarySlot, playerNames);
+      primaryServerName = primaryServerName + (primaryServerName == "" ? "" : " - ");
+      secondaryServerName = secondaryServerName + (secondaryServerName == "" ? "" : " - ");
+
+      const primaryServeStat = servePlayerStats[primarySlot] || { pointsWonOnServe: 0, pointsServed: 0, serveWinPct: 0 };
+      const secondaryServeStat = servePlayerStats[secondarySlot] || { pointsWonOnServe: 0, pointsServed: 0, serveWinPct: 0 };
+
+      rows.push(row(
+        `Player ${serverIndex}`,
+        `${primaryServerName}${primaryServeStat.pointsWonOnServe}/${primaryServeStat.pointsServed} (${formatPct(primaryServeStat.serveWinPct)})`,
+        `${secondaryServerName}${secondaryServeStat.pointsWonOnServe}/${secondaryServeStat.pointsServed} (${formatPct(secondaryServeStat.serveWinPct)})`
+      ));
+    });
 
     elements.dmStatsTeamA.innerHTML = `
       <table class="dm-stats-table">
@@ -5090,7 +5451,8 @@ document.addEventListener("DOMContentLoaded", () =>
           result.data.setPointMarkers || [],
           result.data.momentumTimeline || null
         );
-        renderAdvancedStats(result.data.advancedStats, { A: nameA, B: nameB }, isSwapped);
+        const detailsPlayerNames = normalizePlayerNames(result?.data?.playerNames || currentPlayerNames || {});
+        renderAdvancedStats(result.data.advancedStats, { A: nameA, B: nameB }, isSwapped, detailsPlayerNames);
         syncDetailsPanelAvailability();
         return;
       }
@@ -5172,7 +5534,8 @@ document.addEventListener("DOMContentLoaded", () =>
         result.data.setPointMarkers || [],
         result.data.momentumTimeline || null
       );
-      renderAdvancedStats(result.data.advancedStats, { A: nameA, B: nameB }, isSwapped);
+      const detailsPlayerNames = normalizePlayerNames(result?.data?.playerNames || currentPlayerNames || {});
+      renderAdvancedStats(result.data.advancedStats, { A: nameA, B: nameB }, isSwapped, detailsPlayerNames);
       syncDetailsPanelAvailability();
     }
     catch (err)
@@ -5189,58 +5552,22 @@ document.addEventListener("DOMContentLoaded", () =>
   // TEAM NAME EDITING
   // =====================================================
 
-  function startEditing(labelEl, team)
+  function applyTeamNamesToScoreboard(teamNames)
   {
-    const input = document.createElement("input");
-    input.className = "team-name-input";
-    input.value = labelEl.textContent;
+    const nameA = $("teamA")?.querySelector(".name-text");
+    const nameB = $("teamB")?.querySelector(".name-text");
 
-    labelEl.replaceWith(input);
-    input.focus();
-    input.select();
-
-    let isSaving = false;
-
-    async function save()
+    if (nameA)
     {
-      if (isSaving) return;
-      isSaving = true;
-
-      const name = input.value.trim() || `Team ${team}`;
-
-      try
-      {
-        await updateDoc(doc(db, "courts", currentCourtId), {
-          [`teamNames.${team}`]: name
-        });
-      }
-      catch (error)
-      {
-        console.error("Error updating team name:", error);
-      }
-
-      labelEl.textContent = name;
-      input.replaceWith(labelEl);
-
-      fitTextToContainer(labelEl);
+      nameA.textContent = teamNames.A || "Team A";
+      fitTextToContainer(nameA);
     }
 
-    function cancel()
+    if (nameB)
     {
-      if (isSaving) return;
-      input.replaceWith(labelEl);
+      nameB.textContent = teamNames.B || "Team B";
+      fitTextToContainer(nameB);
     }
-
-    input.addEventListener("blur", save);
-    input.addEventListener("keydown", (e) =>
-    {
-      if (e.key === "Enter")
-      {
-        e.preventDefault();
-        input.blur(); // Triggers blur event, which calls save()
-      }
-      if (e.key === "Escape") cancel();
-    });
   }
 
   function fitTextToContainer(textEl)
@@ -5261,15 +5588,8 @@ document.addEventListener("DOMContentLoaded", () =>
 
   document.querySelectorAll(".team-name").forEach((nameEl) =>
   {
-    const team = nameEl.dataset.team;
     const labelEl = nameEl.querySelector(".name-text");
     if (!labelEl) return;
-
-    nameEl.addEventListener("click", () =>
-    {
-      if (isSpectating) return;
-      startEditing(labelEl, team);
-    });
 
     fitTextToContainer(labelEl);
   });
@@ -5489,21 +5809,11 @@ document.addEventListener("DOMContentLoaded", () =>
       showCourtTitle(data.name || snap.id);
       updatePageTitle(data.name || snap.id, snap.id);
 
-      const teamNames = data.teamNames || { A: "Team A", B: "Team B" };
-
-      const nameA = $("teamA").querySelector(".name-text");
-      const nameB = $("teamB").querySelector(".name-text");
-
-      if (nameA)
-      {
-        nameA.textContent = teamNames.A;
-        fitTextToContainer(nameA);
-      }
-      if (nameB)
-      {
-        nameB.textContent = teamNames.B;
-        fitTextToContainer(nameB);
-      }
+      currentRawTeamNames = normalizeTeamNames(data.teamNames || {});
+      currentPlayerNames = normalizePlayerNames(data.playerNames || {});
+      const teamNames = resolveTeamNames(currentRawTeamNames, currentPlayerNames);
+      applyTeamNamesToScoreboard(teamNames);
+      updateServerIndicator();
     });
 
     // Combine both unsubscribes

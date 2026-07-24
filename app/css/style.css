@@ -680,8 +680,7 @@ body.light-mode .straight-total-value {
     padding: clamp(2px, 0.45vmin, 6px) clamp(6px, 1.1vmin, 12px);
   }
 
-  .team-name .name-text,
-  .team-name-input {
+  .team-name .name-text {
     font-size: clamp(0.8rem, 6cqi, 3rem);
   }
 
@@ -774,24 +773,6 @@ body.light-mode .straight-total-value {
 
   transform-origin: center center;
   transition: transform 0.15s ease;
-}
-
-.team-name:hover {
-  background: rgba(255, 255, 255, 0.25);
-  cursor: text;
-}
-
-.team-name-input {
-  width: 100%;
-  text-align: center;
-  font-size: clamp(0.9rem, 8cqi, 4rem);
-  font-weight: 700;
-  background: transparent;
-  border: 2px solid currentColor;
-  border-radius: 10px;
-  padding: 4px 8px;
-  color: inherit;
-  outline: none;
 }
 
 body.spectating-mode .team-name {
@@ -1438,6 +1419,114 @@ body.light-mode .modal-btn {
 
 body.light-mode .settings-box .close-btn:hover {
   background: rgba(0, 0, 0, 0.05);
+}
+
+.player-names-box {
+  background: #111;
+  padding: 30px;
+  border-radius: 24px;
+  text-align: left;
+  width: clamp(320px, 92vw, 560px);
+  max-height: calc(100svh - 32px);
+  overflow-y: auto;
+  color: white;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+  position: relative;
+  backdrop-filter: blur(20px);
+}
+
+body.light-mode .player-names-box {
+  background: #fdfdfd;
+  color: black;
+}
+
+.player-names-box h2 {
+  margin: 0 0 10px 0;
+  font-weight: 800;
+  font-size: 1.5rem;
+  letter-spacing: -0.5px;
+  padding-right: 45px;
+}
+
+.player-names-copy,
+.player-names-hint {
+  margin: 0;
+  opacity: 0.8;
+  line-height: 1.45;
+}
+
+.player-names-form {
+  margin-top: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.player-names-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.player-names-field {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 16px;
+  padding: 14px;
+}
+
+body.light-mode .player-names-field {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.player-names-field span {
+  font-size: 0.84rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  opacity: 0.8;
+}
+
+.player-names-field input {
+  width: 100%;
+  margin-top: 8px;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(0, 0, 0, 0.35);
+  color: white;
+  font-size: 1rem;
+  font-family: inherit;
+}
+
+body.light-mode .player-names-field input {
+  border: 1px solid var(--input-border);
+  background: var(--input-bg);
+  color: black;
+}
+
+.player-names-field input:focus {
+  outline: 2px solid var(--teamAcolour);
+  outline-offset: 1px;
+}
+
+.player-names-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.player-names-actions .primary-btn,
+.player-names-actions .secondary-btn {
+  flex: 1 1 180px;
+}
+
+@media (max-width: 640px) {
+  .player-names-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .player-names-box {
+    padding: 24px;
+  }
 }
 
 .settings-appearance {
@@ -2720,12 +2809,8 @@ body.light-mode .court-list {
 .loading {
   padding: 20px;
   text-align: center;
-  color: rgba(255, 255, 255, 0.8);
+  color: var(--text-color); 
   font-size:20px;
-}
-
-body.light-mode .loading {
-  color: #444;
 }
 
 /* =======================================================
