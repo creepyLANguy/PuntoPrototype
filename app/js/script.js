@@ -267,7 +267,8 @@ document.addEventListener("DOMContentLoaded", () =>
       return serverLabel;
     }
 
-    return `${serverLabel} ${playerName}`;
+    //return `${serverLabel} ${playerName}`;
+    return playerName;
   }
 
   let score = defaultScore();
