@@ -52,6 +52,10 @@ document.addEventListener("DOMContentLoaded", () =>
     deuceMode: "standard",
     tiebreakMode: "sixAllSeven"
   };
+  const DEFAULT_TEAM_NAMES = {
+    A: "Team A",
+    B: "Team B"
+  };
   const DEFAULT_PLAYER_NAMES = {
     A1: "",
     A2: "",
@@ -225,28 +229,95 @@ document.addEventListener("DOMContentLoaded", () =>
     return Object.values(normalized).some(name => name.trim().length > 0);
   }
 
-  function buildTeamNameFromPlayers(primary, secondary, fallback, primarySlot, secondarySlot)
+  function normalizeTeamNames(teamNames = {})
   {
-    const first = (primary || "").trim();
-    const second = (secondary || "").trim();
+    const normalizedA = typeof teamNames?.A === "string" ? teamNames.A.trim() : "";
+    const normalizedB = typeof teamNames?.B === "string" ? teamNames.B.trim() : "";
 
-    if (!first && !second)
+    return {
+      A: normalizedA || DEFAULT_TEAM_NAMES.A,
+      B: normalizedB || DEFAULT_TEAM_NAMES.B
+    };
+  }
+
+  function isDefaultTeamName(team, name)
+  {
+    const normalizedTeam = team === "B" ? "B" : "A";
+    const normalizedName = typeof name === "string" ? name.trim() : "";
+    return !normalizedName || normalizedName === DEFAULT_TEAM_NAMES[normalizedTeam];
+  }
+
+  function getTeamSlots(team)
+  {
+    return team === "B" ? ["B1", "B2"] : ["A1", "A2"];
+  }
+
+  function hasPlayersForTeam(team, playerNames = {})
+  {
+    const normalizedPlayers = normalizePlayerNames(playerNames);
+    const [slot1, slot2] = getTeamSlots(team);
+    return Boolean(normalizedPlayers[slot1].trim() || normalizedPlayers[slot2].trim());
+  }
+
+  function getTeamPlayerDisplayPair(team, playerNames = {})
+  {
+    const normalizedPlayers = normalizePlayerNames(playerNames);
+    const [slot1, slot2] = getTeamSlots(team);
+    const first = normalizedPlayers[slot1].trim() || slot1;
+    const second = normalizedPlayers[slot2].trim() || slot2;
+    return `${first} / ${second}`;
+  }
+
+  function deriveTeamNameIfDefault(team, rawTeamName, playerNames = {})
+  {
+    if (!isDefaultTeamName(team, rawTeamName))
     {
-      return fallback;
+      return rawTeamName;
     }
 
-    return `${first || primarySlot} / ${second || secondarySlot}`;
+    if (!hasPlayersForTeam(team, playerNames))
+    {
+      return DEFAULT_TEAM_NAMES[team === "B" ? "B" : "A"];
+    }
+
+    return getTeamPlayerDisplayPair(team, playerNames);
+  }
+
+  function resolvePersistedTeamNames(teamNames = {}, playerNames = {})
+  {
+    const normalizedTeams = normalizeTeamNames(teamNames);
+    return {
+      A: deriveTeamNameIfDefault("A", normalizedTeams.A, playerNames),
+      B: deriveTeamNameIfDefault("B", normalizedTeams.B, playerNames)
+    };
+  }
+
+  function formatTeamDisplayName(team, persistedTeamName, playerNames = {})
+  {
+    const normalizedTeam = team === "B" ? "B" : "A";
+    const baseName = typeof persistedTeamName === "string" && persistedTeamName.trim()
+      ? persistedTeamName.trim()
+      : DEFAULT_TEAM_NAMES[normalizedTeam];
+
+    if (isDefaultTeamName(normalizedTeam, baseName))
+    {
+      if (hasPlayersForTeam(normalizedTeam, playerNames))
+      {
+        return getTeamPlayerDisplayPair(normalizedTeam, playerNames);
+      }
+      return DEFAULT_TEAM_NAMES[normalizedTeam];
+    }
+
+    return `${baseName} [${getTeamPlayerDisplayPair(normalizedTeam, playerNames)}]`;
   }
 
   function resolveTeamNames(teamNames = {}, playerNames = {})
   {
-    const normalizedPlayers = normalizePlayerNames(playerNames);
-    const fallbackA = typeof teamNames?.A === "string" && teamNames.A.trim() ? teamNames.A.trim() : "Team A";
-    const fallbackB = typeof teamNames?.B === "string" && teamNames.B.trim() ? teamNames.B.trim() : "Team B";
+    const normalizedTeams = normalizeTeamNames(teamNames);
 
     return {
-      A: buildTeamNameFromPlayers(normalizedPlayers.A1, normalizedPlayers.A2, fallbackA, "A1", "A2"),
-      B: buildTeamNameFromPlayers(normalizedPlayers.B1, normalizedPlayers.B2, fallbackB, "B1", "B2")
+      A: formatTeamDisplayName("A", normalizedTeams.A, playerNames),
+      B: formatTeamDisplayName("B", normalizedTeams.B, playerNames)
     };
   }
 
@@ -283,6 +354,7 @@ document.addEventListener("DOMContentLoaded", () =>
   let currentCourtPassword = null;
   let currentCourtStatus = null;
   let currentScoringOptions = { ...DEFAULT_SCORING_OPTIONS };
+  let currentRawTeamNames = { ...DEFAULT_TEAM_NAMES };
   let currentPlayerNames = { ...DEFAULT_PLAYER_NAMES };
 
   let isSpectating = false;
@@ -2201,12 +2273,12 @@ document.addEventListener("DOMContentLoaded", () =>
       scoringMode: court.scoringMode || court.scoringOptions?.scoringMode
     });
 
-    elements.editCourtNameTitle.textContent = court.name || court.id;
+    elements.editCourtNameTitle.innerHTML = `${court.name}<br/>ID: ${court.id}`;
     elements.editCourtName.value = court.name || "";
-    const resolvedTeamNames = resolveTeamNames(court.teamNames || {}, court.playerNames || {});
+    const rawTeamNames = normalizeTeamNames(court.teamNames || {});
     const playerNames = normalizePlayerNames(court.playerNames || {});
-    elements.editTeamAName.value = resolvedTeamNames.A || "";
-    elements.editTeamBName.value = resolvedTeamNames.B || "";
+    elements.editTeamAName.value = rawTeamNames.A || "";
+    elements.editTeamBName.value = rawTeamNames.B || "";
     elements.editPlayerA1Name.value = playerNames.A1;
     elements.editPlayerA2Name.value = playerNames.A2;
     elements.editPlayerB1Name.value = playerNames.B1;
@@ -2249,7 +2321,8 @@ document.addEventListener("DOMContentLoaded", () =>
         A: elements.editTeamAName.value.trim(),
         B: elements.editTeamBName.value.trim()
       };
-      const resolvedTeamNames = resolveTeamNames(manualTeamNames, playerNames);
+      const normalizedTeamNames = normalizeTeamNames(manualTeamNames);
+      const resolvedTeamNames = resolvePersistedTeamNames(normalizedTeamNames, playerNames);
       const courtRef = doc(db, "courts", courtId);
 
       await updateDoc(courtRef, {
@@ -2865,10 +2938,14 @@ document.addEventListener("DOMContentLoaded", () =>
     currentCourtName = data.name || courtId;
     currentCourtPassword = data.password;
     currentCourtStatus = data.status;
+    currentRawTeamNames = normalizeTeamNames(data.teamNames || {});
+    currentPlayerNames = normalizePlayerNames(data.playerNames || {});
     currentScoringOptions = normalizeScoringOptions({
       ...(data.scoringOptions || {}),
       scoringMode: data.scoringMode || data.scoringOptions?.scoringMode
     });
+    applyTeamNamesToScoreboard(resolveTeamNames(currentRawTeamNames, currentPlayerNames));
+    updateServerIndicator();
     syncScoringControls();
     renderCourtQr(courtId);
 
@@ -4487,7 +4564,7 @@ document.addEventListener("DOMContentLoaded", () =>
         nextPlayerNames[slot] = answer.trim();
       }
 
-      const derivedTeamNames = resolveTeamNames(getCurrentTeamNamesFromDom(), nextPlayerNames);
+      const derivedTeamNames = resolvePersistedTeamNames(currentRawTeamNames, nextPlayerNames);
 
       try
       {
@@ -4497,7 +4574,8 @@ document.addEventListener("DOMContentLoaded", () =>
         });
 
         currentPlayerNames = normalizePlayerNames(nextPlayerNames);
-        applyTeamNamesToScoreboard(derivedTeamNames);
+        currentRawTeamNames = normalizeTeamNames(derivedTeamNames);
+        applyTeamNamesToScoreboard(resolveTeamNames(currentRawTeamNames, currentPlayerNames));
         updateServerIndicator();
         elements.settingsModal.classList.add("hidden");
         showToast("Player names updated.", TOAST_TYPES.SUCCESS);
@@ -5359,14 +5437,6 @@ document.addEventListener("DOMContentLoaded", () =>
   // TEAM NAME EDITING
   // =====================================================
 
-  function getCurrentTeamNamesFromDom()
-  {
-    const labelA = $("teamA")?.querySelector(".name-text")?.textContent?.trim() || "Team A";
-    const labelB = $("teamB")?.querySelector(".name-text")?.textContent?.trim() || "Team B";
-
-    return { A: labelA, B: labelB };
-  }
-
   function applyTeamNamesToScoreboard(teamNames)
   {
     const nameA = $("teamA")?.querySelector(".name-text");
@@ -5389,7 +5459,7 @@ document.addEventListener("DOMContentLoaded", () =>
   {
     const input = document.createElement("input");
     input.className = "team-name-input";
-    input.value = labelEl.textContent;
+    input.value = currentRawTeamNames?.[team] || DEFAULT_TEAM_NAMES[team] || "";
 
     labelEl.replaceWith(input);
     input.focus();
@@ -5402,20 +5472,25 @@ document.addEventListener("DOMContentLoaded", () =>
       if (isSaving) return;
       isSaving = true;
 
-      const name = input.value.trim() || `Team ${team}`;
+      const name = input.value.trim() || DEFAULT_TEAM_NAMES[team];
 
       try
       {
         await updateDoc(doc(db, "courts", currentCourtId), {
           [`teamNames.${team}`]: name
         });
+        currentRawTeamNames = {
+          ...currentRawTeamNames,
+          [team]: name
+        };
       }
       catch (error)
       {
         console.error("Error updating team name:", error);
       }
 
-      labelEl.textContent = name;
+      const displayNames = resolveTeamNames(currentRawTeamNames, currentPlayerNames);
+      labelEl.textContent = displayNames[team] || name;
       input.replaceWith(labelEl);
 
       fitTextToContainer(labelEl);
@@ -5464,11 +5539,6 @@ document.addEventListener("DOMContentLoaded", () =>
     nameEl.addEventListener("click", () =>
     {
       if (isSpectating) return;
-      if (hasAnyPlayerNames(currentPlayerNames))
-      {
-        showToast("Team names are derived from player names. Edit players in Options.", TOAST_TYPES.INFO);
-        return;
-      }
       startEditing(labelEl, team);
     });
 
@@ -5690,8 +5760,9 @@ document.addEventListener("DOMContentLoaded", () =>
       showCourtTitle(data.name || snap.id);
       updatePageTitle(data.name || snap.id, snap.id);
 
+      currentRawTeamNames = normalizeTeamNames(data.teamNames || {});
       currentPlayerNames = normalizePlayerNames(data.playerNames || {});
-      const teamNames = resolveTeamNames(data.teamNames || {}, currentPlayerNames);
+      const teamNames = resolveTeamNames(currentRawTeamNames, currentPlayerNames);
       applyTeamNamesToScoreboard(teamNames);
       updateServerIndicator();
     });
