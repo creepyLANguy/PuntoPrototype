@@ -323,6 +323,7 @@ document.addEventListener("DOMContentLoaded", () =>
 
   let currentCourtId = null;
   let currentCourtPassword = null;
+  let pendingLocalPasswordUpdate = null;
   let currentCourtStatus = null;
   let currentScoringOptions = { ...DEFAULT_SCORING_OPTIONS };
   let currentRawTeamNames = { ...DEFAULT_TEAM_NAMES };
@@ -2958,6 +2959,7 @@ document.addEventListener("DOMContentLoaded", () =>
   async function enterCourt(courtId, spectate, { historyMode = "push" } = {})
   {
     console.log(`Entering court: ${courtId}, spectate: ${spectate}`);
+    pendingLocalPasswordUpdate = null;
 
     // Warm Firestore connection
     await getDoc(doc(db, "courts", courtId, "score", "current"));
@@ -3071,6 +3073,7 @@ document.addEventListener("DOMContentLoaded", () =>
   function leaveCourt(historyMode = "push")
   {
     console.log("Leaving court: " + currentCourtId);
+    pendingLocalPasswordUpdate = null;
 
     disableSpectateMode();
     releaseWakeLock();
@@ -4478,6 +4481,11 @@ document.addEventListener("DOMContentLoaded", () =>
 
     try
     {
+      if (newPassword)
+      {
+        pendingLocalPasswordUpdate = newPassword;
+      }
+
       await resetCourt(currentCourtId, false, newPassword, requirePassword);
       if (newPassword)
       {
@@ -4492,6 +4500,7 @@ document.addEventListener("DOMContentLoaded", () =>
     }
     catch (err)
     {
+      pendingLocalPasswordUpdate = null;
       console.error("Reset failed:", err);
       showToast("Reset Failed: " + (err.message || "Unknown error"), TOAST_TYPES.ERROR);
     }
@@ -4510,6 +4519,7 @@ document.addEventListener("DOMContentLoaded", () =>
 
     try
     {
+      pendingLocalPasswordUpdate = newPassword;
       await resetCourt(currentCourtId, true, newPassword, true);
       currentCourtPassword = newPassword;
 
@@ -4521,6 +4531,7 @@ document.addEventListener("DOMContentLoaded", () =>
     }
     catch (err)
     {
+      pendingLocalPasswordUpdate = null;
       console.error("Reset failed:", err);
       showToast("Reset Failed: " + (err.message || "Unknown error"), TOAST_TYPES.ERROR);
     }
@@ -5771,13 +5782,24 @@ document.addEventListener("DOMContentLoaded", () =>
       }
 
       // 🚨 Password change detection
+      const expectedLocalPassword = pendingLocalPasswordUpdate;
+      const isExpectedLocalPasswordChange = Boolean(
+        expectedLocalPassword && data.password === expectedLocalPassword
+      );
+
       if (
         currentCourtPassword !== data.password &&
-        !isSpectating
+        !isSpectating &&
+        !isExpectedLocalPasswordChange
       )
       {
         showToast("Security notice: Court password changed. You are now a spectator.", TOAST_TYPES.ERROR);
         enableSpectateMode();
+      }
+
+      if (isExpectedLocalPasswordChange)
+      {
+        pendingLocalPasswordUpdate = null;
       }
 
       // Ensure local state tracks newest password
