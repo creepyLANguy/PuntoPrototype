@@ -268,28 +268,9 @@ document.addEventListener("DOMContentLoaded", () =>
     return `${first} / ${second}`;
   }
 
-  function deriveTeamNameIfDefault(team, rawTeamName, playerNames = {})
-  {
-    if (!isDefaultTeamName(team, rawTeamName))
-    {
-      return rawTeamName;
-    }
-
-    if (!hasPlayersForTeam(team, playerNames))
-    {
-      return DEFAULT_TEAM_NAMES[team === "B" ? "B" : "A"];
-    }
-
-    return getTeamPlayerDisplayPair(team, playerNames);
-  }
-
   function resolvePersistedTeamNames(teamNames = {}, playerNames = {})
   {
-    const normalizedTeams = normalizeTeamNames(teamNames);
-    return {
-      A: deriveTeamNameIfDefault("A", normalizedTeams.A, playerNames),
-      B: deriveTeamNameIfDefault("B", normalizedTeams.B, playerNames)
-    };
+    return normalizeTeamNames(teamNames);
   }
 
   function formatTeamDisplayName(team, persistedTeamName, playerNames = {})
@@ -2300,6 +2281,8 @@ document.addEventListener("DOMContentLoaded", () =>
   {
     if (!courtToEdit) return;
 
+    showspinner(elements.editCourtPage, "Saving changes...");
+
     try
     {
       const courtId = courtToEdit.id;
@@ -2365,6 +2348,10 @@ document.addEventListener("DOMContentLoaded", () =>
     catch (err)
     {
       showToast("Failed to update: " + err.message, TOAST_TYPES.ERROR);
+    }
+    finally
+    {
+      hideSpinner(elements.editCourtPage);
     }
   });
 
@@ -4087,6 +4074,61 @@ document.addEventListener("DOMContentLoaded", () =>
     {
       toast.remove();
     }, TOAST_DURATION_MS);
+  }
+
+  function showspinner(containerEl, label = "Loading...")
+  {
+    if (!containerEl) return;
+
+    let overlay = containerEl.querySelector(":scope > .inline-loading-overlay");
+
+    if (!overlay)
+    {
+      overlay = document.createElement("div");
+      overlay.className = "inline-loading-overlay";
+      overlay.innerHTML = `
+        <div class="loading-content">
+          <div class="spinner-wrapper">
+            <div class="spinner"></div>
+          </div>
+          <div class="loading">${label}</div>
+        </div>
+      `;
+
+      overlay.style.position = "absolute";
+      overlay.style.inset = "0";
+      overlay.style.zIndex = "1000";
+      overlay.style.display = "flex";
+      overlay.style.alignItems = "center";
+      overlay.style.justifyContent = "center";
+      overlay.style.background = "rgba(0, 0, 0, 0.55)";
+      overlay.style.backdropFilter = "blur(6px)";
+      overlay.style.webkitBackdropFilter = "blur(6px)";
+
+      const computedPosition = window.getComputedStyle(containerEl).position;
+      if (computedPosition === "static")
+      {
+        containerEl.dataset.spinnerOriginalPosition = "static";
+        containerEl.style.position = "relative";
+      }
+
+      containerEl.appendChild(overlay);
+    }
+
+    if (!overlay) return;
+
+    overlay.style.display = "flex";
+  }
+
+  function hideSpinner(containerEl)
+  {
+    if (!containerEl) return;
+
+    const overlay = containerEl.querySelector(":scope > .inline-loading-overlay");
+    if (overlay)
+    {
+      overlay.style.display = "none";
+    }
   }
 
   // =====================================================
