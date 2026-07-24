@@ -4175,7 +4175,7 @@ document.addEventListener("DOMContentLoaded", () =>
       overlay.style.display = "flex";
       overlay.style.alignItems = "center";
       overlay.style.justifyContent = "center";
-      overlay.style.background = "rgba(0, 0, 0, 0.55)";
+      overlay.style.background = isLightMode ? "rgba(255, 255, 255, 0.8)" : "rgba(0, 0, 0, 0.55)";
       overlay.style.backdropFilter = "blur(6px)";
       overlay.style.webkitBackdropFilter = "blur(6px)";
 
@@ -4190,6 +4190,9 @@ document.addEventListener("DOMContentLoaded", () =>
     }
 
     if (!overlay) return;
+
+    //Make sure we do this for existing overlay as well, in case the theme changed
+    overlay.style.background = isLightMode ? "rgba(255, 255, 255, 0.8)" : "rgba(0, 0, 0, 0.55)";
 
     overlay.style.display = "flex";
   }
