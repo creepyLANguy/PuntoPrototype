@@ -295,7 +295,7 @@ document.addEventListener("DOMContentLoaded", () =>
     }
 
     var playerDisplayPair = getTeamPlayerDisplayPair(normalizedTeam, playerNames);
-    playerDisplayPair = playerDisplayPair === "" ? "" : `[${playerDisplayPair}]`;
+    playerDisplayPair = playerDisplayPair === "" ? "" : `- ${playerDisplayPair}`;
     return `${baseName} ${playerDisplayPair}`.trim();
   }
 
@@ -953,6 +953,8 @@ document.addEventListener("DOMContentLoaded", () =>
     closePlayerNamesBtn: $("closePlayerNamesBtn"),
     playerNamesForm: $("playerNamesForm"),
     cancelPlayerNamesBtn: $("cancelPlayerNamesBtn"),
+    playerTeamAName: $("playerTeamAName"),
+    playerTeamBName: $("playerTeamBName"),
     playerNameA1: $("playerNameA1"),
     playerNameA2: $("playerNameA2"),
     playerNameB1: $("playerNameB1"),
@@ -2673,15 +2675,18 @@ document.addEventListener("DOMContentLoaded", () =>
 
   function openPlayerNamesModal()
   {
-    const existing = normalizePlayerNames(currentPlayerNames);
+    const existingPlayers = normalizePlayerNames(currentPlayerNames);
+    const existingTeams = normalizeTeamNames(currentRawTeamNames);
 
-    elements.playerNameA1.value = existing.A1;
-    elements.playerNameA2.value = existing.A2;
-    elements.playerNameB1.value = existing.B1;
-    elements.playerNameB2.value = existing.B2;
+    elements.playerTeamAName.value = existingTeams.A;
+    elements.playerTeamBName.value = existingTeams.B;
+    elements.playerNameA1.value = existingPlayers.A1;
+    elements.playerNameA2.value = existingPlayers.A2;
+    elements.playerNameB1.value = existingPlayers.B1;
+    elements.playerNameB2.value = existingPlayers.B2;
     elements.settingsModal.classList.add("hidden");
     elements.playerNamesModal.classList.remove("hidden");
-    elements.playerNameA1.focus();
+    elements.playerTeamAName.focus();
     syncCurrentViewState();
   }
 
@@ -2700,13 +2705,17 @@ document.addEventListener("DOMContentLoaded", () =>
       return;
     }
 
+    const nextTeamNames = normalizeTeamNames({
+      A: elements.playerTeamAName.value.trim(),
+      B: elements.playerTeamBName.value.trim()
+    });
     const nextPlayerNames = normalizePlayerNames({
       A1: elements.playerNameA1.value.trim(),
       A2: elements.playerNameA2.value.trim(),
       B1: elements.playerNameB1.value.trim(),
       B2: elements.playerNameB2.value.trim()
     });
-    const derivedTeamNames = resolvePersistedTeamNames(currentRawTeamNames, nextPlayerNames);
+    const derivedTeamNames = resolvePersistedTeamNames(nextTeamNames, nextPlayerNames);
 
     try
     {
@@ -5558,65 +5567,6 @@ document.addEventListener("DOMContentLoaded", () =>
     }
   }
 
-  function startEditing(labelEl, team)
-  {
-    const input = document.createElement("input");
-    input.className = "team-name-input";
-    input.value = currentRawTeamNames?.[team] || DEFAULT_TEAM_NAMES[team] || "";
-
-    labelEl.replaceWith(input);
-    input.focus();
-    input.select();
-
-    let isSaving = false;
-
-    async function save()
-    {
-      if (isSaving) return;
-      isSaving = true;
-
-      const name = input.value.trim() || DEFAULT_TEAM_NAMES[team];
-
-      try
-      {
-        await updateDoc(doc(db, "courts", currentCourtId), {
-          [`teamNames.${team}`]: name
-        });
-        currentRawTeamNames = {
-          ...currentRawTeamNames,
-          [team]: name
-        };
-      }
-      catch (error)
-      {
-        console.error("Error updating team name:", error);
-      }
-
-      const displayNames = resolveTeamNames(currentRawTeamNames, currentPlayerNames);
-      labelEl.textContent = displayNames[team] || name;
-      input.replaceWith(labelEl);
-
-      fitTextToContainer(labelEl);
-    }
-
-    function cancel()
-    {
-      if (isSaving) return;
-      input.replaceWith(labelEl);
-    }
-
-    input.addEventListener("blur", save);
-    input.addEventListener("keydown", (e) =>
-    {
-      if (e.key === "Enter")
-      {
-        e.preventDefault();
-        input.blur(); // Triggers blur event, which calls save()
-      }
-      if (e.key === "Escape") cancel();
-    });
-  }
-
   function fitTextToContainer(textEl)
   {
     const container = textEl.parentElement;
@@ -5635,15 +5585,8 @@ document.addEventListener("DOMContentLoaded", () =>
 
   document.querySelectorAll(".team-name").forEach((nameEl) =>
   {
-    const team = nameEl.dataset.team;
     const labelEl = nameEl.querySelector(".name-text");
     if (!labelEl) return;
-
-    nameEl.addEventListener("click", () =>
-    {
-      if (isSpectating) return;
-      startEditing(labelEl, team);
-    });
 
     fitTextToContainer(labelEl);
   });

@@ -231,21 +231,31 @@
     <div id="playerNamesModal" class="reset-modal hidden">
       <div class="player-names-box">
         <button id="closePlayerNamesBtn" class="close-btn">✕</button>
-        <h2>Player Names</h2>
-        <p class="player-names-copy">Update the four player labels shown on the scoreboard.</p>
+        <h2>Team Names & Players</h2>
+        <p class="player-names-copy">Update the team labels and the four player names shown on the scoreboard.</p>
         <form id="playerNamesForm" class="player-names-form">
+          <div class="player-names-grid">
+            <label class="form-group player-names-field">
+              <span>Team A</span>
+              <input type="text" id="playerTeamAName" autocomplete="off" spellcheck="false" />
+            </label>
+            <label class="form-group player-names-field">
+              <span>Team B</span>
+              <input type="text" id="playerTeamBName" autocomplete="off" spellcheck="false" />
+            </label>
+          </div>
           <div class="player-names-grid">
             <label class="form-group player-names-field">
               <span>Player A1</span>
               <input type="text" id="playerNameA1" autocomplete="off" spellcheck="false" />
             </label>
             <label class="form-group player-names-field">
-              <span>Player A2</span>
-              <input type="text" id="playerNameA2" autocomplete="off" spellcheck="false" />
-            </label>
-            <label class="form-group player-names-field">
               <span>Player B1</span>
               <input type="text" id="playerNameB1" autocomplete="off" spellcheck="false" />
+            </label>
+            <label class="form-group player-names-field">
+              <span>Player A2</span>
+              <input type="text" id="playerNameA2" autocomplete="off" spellcheck="false" />
             </label>
             <label class="form-group player-names-field">
               <span>Player B2</span>
@@ -690,7 +700,7 @@
             <!-- TEAM A -->
             <div class="team team-a" id="teamA">
               <button id="addPointA" class="ref-zone"></button>
-              <h2 class="team-name" data-team="A" title="Click to edit team name">
+              <h2 class="team-name" data-team="A">
                 <span class="name-text">Team A</span>
               </h2>
 
@@ -723,7 +733,7 @@
             <!-- TEAM B -->
             <div class="team team-b" id="teamB">
               <button id="addPointB" class="ref-zone"></button>
-              <h2 class="team-name" data-team="B" title="Click to edit team name">
+              <h2 class="team-name" data-team="B">
                 <span class="name-text">Team B</span>
               </h2>
 
