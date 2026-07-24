@@ -5002,14 +5002,14 @@ document.addEventListener("DOMContentLoaded", () =>
     {
       rows.push(
         row("Breaks Faced", primaryTeamStats.breakPointsFaced, secondaryTeamStats.breakPointsFaced),
-        row("Breaks Held", `${primaryTeamStats.breakPointsWon}/${primaryTeamStats.breakPointsFaced} · ${formatPct(primaryTeamStats.breakPointWinPct)}`,
-          `${secondaryTeamStats.breakPointsWon}/${secondaryTeamStats.breakPointsFaced} · ${formatPct(secondaryTeamStats.breakPointWinPct)}`),
+        row("Breaks Held", `${primaryTeamStats.breakPointsWon}/${primaryTeamStats.breakPointsFaced} (${formatPct(primaryTeamStats.breakPointWinPct)})`,
+          `${secondaryTeamStats.breakPointsWon}/${secondaryTeamStats.breakPointsFaced} (${formatPct(secondaryTeamStats.breakPointWinPct)})`),
         row("Break Chances", primaryTeamStats.breakPointConversionOpportunities, secondaryTeamStats.breakPointConversionOpportunities),
-        row("Breaks Won", `${primaryTeamStats.breakPointConversions}/${primaryTeamStats.breakPointConversionOpportunities} · ${formatPct(primaryTeamStats.breakPointConversionPct)}`,
-          `${secondaryTeamStats.breakPointConversions}/${secondaryTeamStats.breakPointConversionOpportunities} · ${formatPct(secondaryTeamStats.breakPointConversionPct)}`),
+        row("Breaks Won", `${primaryTeamStats.breakPointConversions}/${primaryTeamStats.breakPointConversionOpportunities} (${formatPct(primaryTeamStats.breakPointConversionPct)})`,
+          `${secondaryTeamStats.breakPointConversions}/${secondaryTeamStats.breakPointConversionOpportunities} (${formatPct(secondaryTeamStats.breakPointConversionPct)})`),
         row("Closing Pts Won",
-          `${formatPct(primaryTeamStats.closingEfficiencyPct)} (${primaryTeamStats.gamePointConversions}/${primaryTeamStats.gamePointGames})`,
-          `${formatPct(secondaryTeamStats.closingEfficiencyPct)} (${secondaryTeamStats.gamePointConversions}/${secondaryTeamStats.gamePointGames})`),
+          `${primaryTeamStats.gamePointConversions}/${primaryTeamStats.gamePointGames} (${formatPct(primaryTeamStats.closingEfficiencyPct)})`,
+          `${secondaryTeamStats.gamePointConversions}/${secondaryTeamStats.gamePointGames} (${formatPct(secondaryTeamStats.closingEfficiencyPct)})`),
         sectionRow("Deuce"),
         sharedRow(deuceGamesLabel, isGoldenMode ? goldenPointsPlayed : deuceGames),
         barRow(
@@ -5034,7 +5034,7 @@ document.addEventListener("DOMContentLoaded", () =>
     }
 
     const servePlayerStats = advancedStats?.servePlayerStats || {};
-    rows.push(sectionRow("Serve Players"));
+    rows.push(sectionRow("On Serve"));
     [1, 2].forEach(serverIndex =>
     {
       const primarySlot = `${primaryTeamKey}${serverIndex}`;
@@ -5046,9 +5046,9 @@ document.addEventListener("DOMContentLoaded", () =>
       const secondaryServeStat = servePlayerStats[secondarySlot] || { pointsWonOnServe: 0, pointsServed: 0, serveWinPct: 0 };
 
       rows.push(row(
-        `Server ${serverIndex}`,
-        `${primaryServerName} · ${primaryServeStat.pointsWonOnServe}/${primaryServeStat.pointsServed} · ${formatPct(primaryServeStat.serveWinPct)}`,
-        `${secondaryServerName} · ${secondaryServeStat.pointsWonOnServe}/${secondaryServeStat.pointsServed} · ${formatPct(secondaryServeStat.serveWinPct)}`
+        `Player ${serverIndex}`,
+        `${primaryServerName} - ${primaryServeStat.pointsWonOnServe}/${primaryServeStat.pointsServed} (${formatPct(primaryServeStat.serveWinPct)})`,
+        `${secondaryServerName} - ${secondaryServeStat.pointsWonOnServe}/${secondaryServeStat.pointsServed} (${formatPct(secondaryServeStat.serveWinPct)})`
       ));
     });
 
