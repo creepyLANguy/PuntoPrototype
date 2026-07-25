@@ -1435,6 +1435,37 @@ body.light-mode .settings-box .close-btn:hover {
   backdrop-filter: blur(20px);
 }
 
+.player-names-box .close-btn {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.04);
+  color: inherit;
+  font-size: 1.35rem;
+  line-height: 1;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  opacity: 0.9;
+}
+
+.player-names-box .close-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+body.light-mode .player-names-box .close-btn {
+  border-color: rgba(0, 0, 0, 0.2);
+  background: rgba(0, 0, 0, 0.03);
+}
+
+body.light-mode .player-names-box .close-btn:hover {
+  background: rgba(0, 0, 0, 0.1);
+}
+
 body.light-mode .player-names-box {
   background: #fdfdfd;
   color: black;
@@ -1466,6 +1497,33 @@ body.light-mode .player-names-box {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 14px;
+}
+
+.player-team-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.player-team-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+body.light-mode .player-team-panel {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.player-team-panel h4 {
+  margin: 0;
+  font-size: 0.86rem;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  opacity: 0.82;
 }
 
 .player-names-field {
@@ -1510,17 +1568,18 @@ body.light-mode .player-names-field input {
 
 .player-names-actions {
   display: flex;
+  flex-direction: column;
   gap: 12px;
-  flex-wrap: wrap;
 }
 
 .player-names-actions .primary-btn,
 .player-names-actions .secondary-btn {
-  flex: 1 1 180px;
+  width: 100%;
 }
 
 @media (max-width: 640px) {
-  .player-names-grid {
+  .player-names-grid,
+  .player-team-grid {
     grid-template-columns: 1fr;
   }
 
@@ -1533,6 +1592,32 @@ body.light-mode .player-names-field input {
   margin-top: 18px;
   padding-top: 18px;
   border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.appearance-layout {
+  display: grid;
+  gap: 12px;
+}
+
+.appearance-panel {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 14px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+body.light-mode .appearance-panel {
+  border-color: rgba(0, 0, 0, 0.1);
+  background: rgba(0, 0, 0, 0.02);
+}
+
+.appearance-panel-title {
+  margin: 0 0 10px;
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  opacity: 0.74;
 }
 
 .settings-scoring {
@@ -1585,9 +1670,30 @@ body.light-mode .settings-scoring {
   padding: 0 10px;
 }
 
+.scoring-field select:hover:not(:disabled) {
+  border-color: rgba(255, 255, 255, 0.55);
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.scoring-field select:focus-visible {
+  outline: none;
+  border-color: rgba(255, 255, 255, 0.78);
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.12);
+}
+
 body.light-mode .scoring-field select {
   border-color: rgba(0, 0, 0, 0.18);
   background: rgba(0, 0, 0, 0.04);
+}
+
+body.light-mode .scoring-field select:hover:not(:disabled) {
+  border-color: rgba(0, 0, 0, 0.35);
+  background: rgba(0, 0, 0, 0.1);
+}
+
+body.light-mode .scoring-field select:focus-visible {
+  border-color: rgba(0, 0, 0, 0.6);
+  box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.08);
 }
 
 .scoring-field select:disabled {
@@ -1607,7 +1713,7 @@ body.light-mode .scoring-field select {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
-  margin-bottom: 14px;
+  margin-bottom: 0;
 }
 
 .theme-choice-btn,
@@ -1624,26 +1730,32 @@ body.light-mode .scoring-field select {
 .theme-choice-btn {
   --theme-choice-a: var(--teamAcolour);
   --theme-choice-b: var(--teamBcolour);
-  --theme-choice-text: #000000;
-  --theme-choice-shadow: #ffffff;
   position: relative;
   overflow: hidden;
-  border: 0;
-  background: linear-gradient(10deg, var(--theme-choice-a) 0%, var(--theme-choice-a) 49.5%, var(--theme-choice-b) 51.5%, var(--theme-choice-b) 100%);
-  color: var(--theme-choice-text);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.28);
-  text-shadow:
-    0 1px 8px var(--theme-choice-shadow);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.04);
+  color: inherit;
+  text-shadow: none;
+  padding-bottom: 10px;
+}
+
+.theme-choice-btn::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 9px;
+  background: linear-gradient(90deg, var(--theme-choice-a) 0 49.5%, var(--theme-choice-b) 50.5% 100%);
 }
 
 .theme-choice-btn:hover {
-  filter: brightness(1.08) saturate(1.08);
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .theme-choice-btn.active {
-  box-shadow:
-    inset 0 0 0 2px rgba(255, 255, 255, 0.78),
-    0 0 0 2px rgba(255, 255, 255, 0.16);
+  border-color: rgba(255, 255, 255, 0.75);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.16);
 }
 
 .reset-theme-colours-btn {
@@ -1661,13 +1773,13 @@ body.light-mode .reset-theme-colours-btn {
 }
 
 body.light-mode .theme-choice-btn {
-  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.18);
+  border-color: rgba(0, 0, 0, 0.18);
+  background: rgba(0, 0, 0, 0.04);
 }
 
 body.light-mode .theme-choice-btn.active {
-  box-shadow:
-    inset 0 0 0 2px rgba(0, 0, 0, 0.58),
-    0 0 0 2px rgba(0, 0, 0, 0.08);
+  border-color: rgba(0, 0, 0, 0.6);
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.08);
 }
 
 body.light-mode .reset-theme-colours-btn:hover {
@@ -1681,9 +1793,9 @@ body.light-mode .reset-theme-colours-btn:hover {
 }
 
 .colour-field {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
-  justify-content: space-between;
   gap: 12px;
   padding: 10px 12px;
   border-radius: 12px;
@@ -1696,29 +1808,46 @@ body.light-mode .colour-field {
   background: rgba(0, 0, 0, 0.04);
 }
 
+.team-colour-control {
+  position: relative;
+  display: block;
+  width: 100%;
+}
+
 .team-colour-input {
   --picker-colour: #ffffff;
-  width: 108px;
-  min-width: 108px;
-  height: 36px;
-  padding: 0 10px 0 44px;
+  width: 100%;
+  min-width: 0;
+  height: 38px;
+  padding: 0 34px 0 0;
   border: 1px solid rgba(255, 255, 255, 0.24);
   border-radius: 8px;
-  background:
-    linear-gradient(90deg,
-      var(--picker-colour) 0 34px,
-      rgba(255, 255, 255, 0.1) 34px 100%);
-  color: inherit;
+  background: var(--picker-colour);
+  color: transparent;
+  text-shadow: none;
   font: inherit;
-  font-size: 0.78rem;
-  font-weight: 800;
-  line-height: 36px;
-  letter-spacing: 0;
-  text-transform: lowercase;
+  font-size: 0;
+  line-height: 38px;
   cursor: pointer;
   outline: none;
   box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.2);
   -webkit-tap-highlight-color: transparent;
+}
+
+.colour-edit-icon {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 34px;
+  height: 100%;
+  border-left: 1px solid rgba(255, 255, 255, 0.24);
+  background: rgba(255, 255, 255, 0.14);
+  border-radius: 0 8px 8px 0;
+  display: grid;
+  place-items: center;
+  font-size: 14px;
+  line-height: 1;
+  pointer-events: none;
 }
 
 .team-colour-input:focus-visible,
@@ -1735,10 +1864,22 @@ body.light-mode .colour-field {
 
 body.light-mode .team-colour-input {
   border-color: rgba(0, 0, 0, 0.16);
-  background:
-    linear-gradient(90deg,
-      var(--picker-colour) 0 34px,
-      rgba(0, 0, 0, 0.06) 34px 100%);
+  background: var(--picker-colour);
+}
+
+body.light-mode .colour-edit-icon {
+  border-left-color: rgba(0, 0, 0, 0.16);
+  background: rgba(0, 0, 0, 0.09);
+}
+
+#playerTeamAName:focus {
+  outline: 2px solid var(--teamAcolour);
+  outline-offset: 1px;
+}
+
+#playerTeamBName:focus {
+  outline: 2px solid var(--teamBcolour);
+  outline-offset: 1px;
 }
 
 body.light-mode .team-colour-input:focus-visible,
@@ -1756,16 +1897,11 @@ body.light-mode .team-colour-input.jscolor-active {
   .colour-field {
     gap: 8px;
   }
-
-  .team-colour-input {
-    width: 104px;
-    min-width: 104px;
-  }
 }
 
 .reset-theme-colours-btn {
   width: 100%;
-  margin-top: 12px;
+  margin-top: 10px;
 }
 
 /* =======================================================
