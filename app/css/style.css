@@ -1468,6 +1468,33 @@ body.light-mode .player-names-box {
   gap: 14px;
 }
 
+.player-team-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.player-team-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+body.light-mode .player-team-panel {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.player-team-panel h4 {
+  margin: 0;
+  font-size: 0.86rem;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  opacity: 0.82;
+}
+
 .player-names-field {
   background: rgba(255, 255, 255, 0.05);
   border-radius: 16px;
@@ -1520,7 +1547,8 @@ body.light-mode .player-names-field input {
 }
 
 @media (max-width: 640px) {
-  .player-names-grid {
+  .player-names-grid,
+  .player-team-grid {
     grid-template-columns: 1fr;
   }
 
@@ -1533,6 +1561,32 @@ body.light-mode .player-names-field input {
   margin-top: 18px;
   padding-top: 18px;
   border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.appearance-layout {
+  display: grid;
+  gap: 12px;
+}
+
+.appearance-panel {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 14px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+body.light-mode .appearance-panel {
+  border-color: rgba(0, 0, 0, 0.1);
+  background: rgba(0, 0, 0, 0.02);
+}
+
+.appearance-panel-title {
+  margin: 0 0 10px;
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  opacity: 0.74;
 }
 
 .settings-scoring {
@@ -1607,7 +1661,7 @@ body.light-mode .scoring-field select {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
-  margin-bottom: 14px;
+  margin-bottom: 0;
 }
 
 .theme-choice-btn,
@@ -1765,7 +1819,7 @@ body.light-mode .team-colour-input.jscolor-active {
 
 .reset-theme-colours-btn {
   width: 100%;
-  margin-top: 12px;
+  margin-top: 10px;
 }
 
 /* =======================================================

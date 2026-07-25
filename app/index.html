@@ -203,26 +203,34 @@
           <div id="scoringStatus" class="scoring-status"></div>
         </div>
         <div class="settings-appearance">
-          <h3>Appearance</h3>
-          <div class="theme-choice-group" aria-label="Theme">
-            <button type="button" class="theme-choice-btn" data-theme-choice="dark">Dark</button>
-            <button type="button" class="theme-choice-btn" data-theme-choice="light">Light</button>
+          <div class="appearance-layout">
+            <section class="appearance-panel">
+              <div class="appearance-panel-title">Theme mode</div>
+              <div class="theme-choice-group" aria-label="Theme">
+                <button type="button" class="theme-choice-btn" data-theme-choice="dark">Dark</button>
+                <button type="button" class="theme-choice-btn" data-theme-choice="light">Light</button>
+              </div>
+            </section>
+
+            <section class="appearance-panel">
+              <div class="appearance-panel-title">Team colours</div>
+              <div class="colour-grid">
+                <label class="colour-field">
+                  <span>Team A</span>
+                  <input type="text" class="team-colour-input" data-team-colour="A" aria-label="Team A colour"
+                    aria-haspopup="dialog" inputmode="none" autocomplete="off" autocapitalize="off" spellcheck="false"
+                    readonly />
+                </label>
+                <label class="colour-field">
+                  <span>Team B</span>
+                  <input type="text" class="team-colour-input" data-team-colour="B" aria-label="Team B colour"
+                    aria-haspopup="dialog" inputmode="none" autocomplete="off" autocapitalize="off" spellcheck="false"
+                    readonly />
+                </label>
+              </div>
+              <button type="button" class="reset-theme-colours-btn">Reset colours</button>
+            </section>
           </div>
-          <div class="colour-grid">
-            <label class="colour-field">
-              <span>Team A</span>
-              <input type="text" class="team-colour-input" data-team-colour="A" aria-label="Team A colour"
-                aria-haspopup="dialog" inputmode="none" autocomplete="off" autocapitalize="off" spellcheck="false"
-                readonly />
-            </label>
-            <label class="colour-field">
-              <span>Team B</span>
-              <input type="text" class="team-colour-input" data-team-colour="B" aria-label="Team B colour"
-                aria-haspopup="dialog" inputmode="none" autocomplete="off" autocapitalize="off" spellcheck="false"
-                readonly />
-            </label>
-          </div>
-          <button type="button" class="reset-theme-colours-btn">Reset colours</button>
         </div>
       </div>
     </div>
@@ -244,23 +252,29 @@
               <input type="text" id="playerTeamBName" autocomplete="off" spellcheck="false" />
             </label>
           </div>
-          <div class="player-names-grid">
-            <label class="form-group player-names-field">
-              <span>Player A1</span>
-              <input type="text" id="playerNameA1" autocomplete="off" spellcheck="false" />
-            </label>
-            <label class="form-group player-names-field">
-              <span>Player B1</span>
-              <input type="text" id="playerNameB1" autocomplete="off" spellcheck="false" />
-            </label>
-            <label class="form-group player-names-field">
-              <span>Player A2</span>
-              <input type="text" id="playerNameA2" autocomplete="off" spellcheck="false" />
-            </label>
-            <label class="form-group player-names-field">
-              <span>Player B2</span>
-              <input type="text" id="playerNameB2" autocomplete="off" spellcheck="false" />
-            </label>
+          <div class="player-team-grid">
+            <section class="player-team-panel">
+              <h4>Team A players</h4>
+              <label class="form-group player-names-field">
+                <span>Player A1</span>
+                <input type="text" id="playerNameA1" autocomplete="off" spellcheck="false" />
+              </label>
+              <label class="form-group player-names-field">
+                <span>Player A2</span>
+                <input type="text" id="playerNameA2" autocomplete="off" spellcheck="false" />
+              </label>
+            </section>
+            <section class="player-team-panel">
+              <h4>Team B players</h4>
+              <label class="form-group player-names-field">
+                <span>Player B1</span>
+                <input type="text" id="playerNameB1" autocomplete="off" spellcheck="false" />
+              </label>
+              <label class="form-group player-names-field">
+                <span>Player B2</span>
+                <input type="text" id="playerNameB2" autocomplete="off" spellcheck="false" />
+              </label>
+            </section>
           </div>
           <p class="player-names-hint">Leave a field blank to reset it to its default.</p>
           <div class="player-names-actions">
