@@ -5753,3 +5753,7 @@ body.light-mode .dm-meta-value {
     transform: translateY(calc(-24 * var(--size)));
   }
 }
+
+.games-row {
+  align-items: center;
+}
