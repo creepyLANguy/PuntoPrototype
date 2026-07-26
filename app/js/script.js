@@ -368,14 +368,14 @@ document.addEventListener("DOMContentLoaded", () =>
     hash: true,
     uppercase: false,
     required: true,
-    width: 176,
-    height: 112,
-    sliderSize: 18,
-    padding: 12,
-    borderRadius: 8,
+    width: 180,
+    height: 180,
+    sliderSize: 24,
+    padding: 8,
+    borderRadius: 4,
     smartPosition: true,
     zIndex: 20000,
-    forceStyle: false
+    forceStyle: false,
   };
 
   let isLightMode = localStorage.getItem("theme") === "light";

@@ -1823,10 +1823,10 @@ body.light-mode .reset-theme-colours-btn:hover {
 .team-colour-btn {
   width: 100%;
   min-width: 0;
-  height: 34px;
+  height: 36px;
   padding: 0 34px 0 0;
   border: 1px solid rgba(255, 255, 255, 0.22);
-  border-radius: 10px;
+  border-radius: 18px;
   color: transparent;
   text-shadow: none;
   font: inherit;
