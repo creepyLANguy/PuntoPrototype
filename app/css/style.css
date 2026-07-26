@@ -3059,6 +3059,17 @@ body.light-mode .court-item:hover {
   background: rgba(0, 0, 0, 0.08);
 }
 
+.court-item:focus-visible {
+  outline: 2px solid var(--teamAcolour);
+  outline-offset: -2px;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+body.light-mode .court-item:focus-visible {
+  outline: 2px solid var(--teamBcolour);
+  background: rgba(0, 0, 0, 0.04);
+}
+
 .court-item.active {
   background: rgba(255, 255, 255, 0.0);
   border: 2px solid var(--teamAcolour);

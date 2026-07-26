@@ -2096,19 +2096,22 @@ document.addEventListener("DOMContentLoaded", () =>
       return;
     }
 
-    courts.forEach(court =>
+    courts.forEach((court, index) =>
     {
       const item = document.createElement("div");
       item.className = "court-item";
       item.dataset.courtName = court.name;
       item.dataset.courtId = court.id;
+      item.tabIndex = 0;
+      item.role = "button";
+      item.setAttribute("aria-label", `${court.name} - ${court.id}`);
 
       item.innerHTML = `
       <div class="court-item-name">${court.name}</div>
       <span class="court-item-id">${court.id}</span>
     `;
 
-      item.addEventListener("click", () =>
+      const selectCourt = () =>
       {
         selectedPlayCourt = court.id;
         elements.playCourtSearch.value = court.name;
@@ -2121,6 +2124,35 @@ document.addEventListener("DOMContentLoaded", () =>
         elements.playCourtPassword.focus();
         elements.playCourtNameError.textContent = "";
         elements.playCourtPasswordError.textContent = "";
+      };
+
+      item.addEventListener("click", selectCourt);
+      
+      item.addEventListener("keydown", (e) =>
+      {
+        if (e.key === "Enter" || e.key === " ")
+        {
+          e.preventDefault();
+          selectCourt();
+        }
+        else if (e.key === "ArrowDown")
+        {
+          e.preventDefault();
+          const nextItem = item.nextElementSibling;
+          if (nextItem && nextItem.classList.contains("court-item"))
+          {
+            nextItem.focus();
+          }
+        }
+        else if (e.key === "ArrowUp")
+        {
+          e.preventDefault();
+          const prevItem = item.previousElementSibling;
+          if (prevItem && prevItem.classList.contains("court-item"))
+          {
+            prevItem.focus();
+          }
+        }
       });
 
       listContainer.appendChild(item);
@@ -2144,15 +2176,47 @@ document.addEventListener("DOMContentLoaded", () =>
       item.className = "court-item";
       item.dataset.courtName = court.name;
       item.dataset.courtId = court.id;
+      item.tabIndex = 0;
+      item.role = "button";
+      item.setAttribute("aria-label", `${court.name} - ${court.id}`);
 
       item.innerHTML = `
       <div class="court-item-name">${court.name}</div>
       <span class="court-item-id">${court.id}</span>
     `;
 
-      item.addEventListener("click", async () =>
+      const selectCourt = async () =>
       {
         await enterCourt(court.id, true, { historyMode: "replace" });
+      };
+
+      item.addEventListener("click", selectCourt);
+      
+      item.addEventListener("keydown", (e) =>
+      {
+        if (e.key === "Enter" || e.key === " ")
+        {
+          e.preventDefault();
+          void selectCourt();
+        }
+        else if (e.key === "ArrowDown")
+        {
+          e.preventDefault();
+          const nextItem = item.nextElementSibling;
+          if (nextItem && nextItem.classList.contains("court-item"))
+          {
+            nextItem.focus();
+          }
+        }
+        else if (e.key === "ArrowUp")
+        {
+          e.preventDefault();
+          const prevItem = item.previousElementSibling;
+          if (prevItem && prevItem.classList.contains("court-item"))
+          {
+            prevItem.focus();
+          }
+        }
       });
 
       listContainer.appendChild(item);
@@ -2296,7 +2360,7 @@ document.addEventListener("DOMContentLoaded", () =>
 
     if (syncHistory)
     {
-      syncCurrentViewState();
+      syncCurrentViewState("replace");
     }
   }
 
@@ -5963,6 +6027,41 @@ document.addEventListener("DOMContentLoaded", () =>
     );
   });
 
+  // Add keyboard support (Tab, arrow keys) to court dropdowns
+  const addDropdownKeyboardSupport = (selectEl, manualEl, manualToggle, dropdownToggle) =>
+  {
+    if (!selectEl) return;
+
+    selectEl.addEventListener("keydown", (e) =>
+    {
+      if (e.key === "Tab")
+      {
+        // Tab naturally moves focus, just let it happen
+        return;
+      }
+
+      if (e.key === "ArrowUp" || e.key === "ArrowDown")
+      {
+        // Native select handles arrow keys for navigation
+        return;
+      }
+
+      // Allow Enter to confirm selection
+      if (e.key === "Enter")
+      {
+        e.preventDefault();
+        return;
+      }
+    });
+  };
+
+  addDropdownKeyboardSupport(
+    elements.newDeviceCourtIdSelect,
+    elements.newDeviceCourtIdManual,
+    elements.newDeviceManualToggle,
+    elements.newDeviceDropdownToggle
+  );
+
   elements.newDeviceDropdownToggle.addEventListener("click", (e) =>
   {
     e.preventDefault();
@@ -5985,6 +6084,13 @@ document.addEventListener("DOMContentLoaded", () =>
       elements.editDeviceDropdownToggleRow
     );
   });
+
+  addDropdownKeyboardSupport(
+    elements.editDeviceCourtIdSelect,
+    elements.editDeviceCourtIdManual,
+    elements.editDeviceManualToggle,
+    elements.editDeviceDropdownToggle
+  );
 
   elements.editDeviceDropdownToggle.addEventListener("click", (e) =>
   {
