@@ -1798,13 +1798,8 @@ body.light-mode .reset-theme-colours-btn:hover {
   gap: 12px;
   padding: 10px 12px;
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.05);
   font-size: 0.9rem;
   font-weight: 700;
-}
-
-body.light-mode .colour-field {
-  background: rgba(0, 0, 0, 0.04);
 }
 
 .team-colour-control {
@@ -1842,13 +1837,19 @@ body.light-mode .colour-field {
   right: 0;
   width: 34px;
   height: 100%;
-  background: rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.75);
   border-radius: 0 10px 10px 0;
   display: grid;
   place-items: center;
   font-size: 14px;
   line-height: 1;
   pointer-events: none;
+  color: rgba(0, 0, 0, 0.8);
+}
+
+body.light-mode .colour-edit-icon {
+  background: rgba(255, 255, 255, 0.25);
+  color: rgba(255, 255, 255, 0.8);
 }
 
 #playerTeamAName:focus {
