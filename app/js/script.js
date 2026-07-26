@@ -4736,9 +4736,9 @@ document.addEventListener("DOMContentLoaded", () =>
         return;
       }
 
-      //todo - make the transition to the new spectate view of this court smoother, but a quick fade out and fade in 
       elements.settingsModal.classList.add("hidden");
       enterCourt(currentCourtId, true, { historyMode: "replace" });
+      showToast("Switched to Spectator view.", TOAST_TYPES.INFO);
     });
   }
 
