@@ -385,6 +385,7 @@ document.addEventListener("DOMContentLoaded", () =>
   let appNavigationStack = [];
   let appNavigationIndex = -1;
   let isRestoringNavigation = false;
+  let currentCourtHistorySessionId = 0;
 
   function normalizeCourtId(value)
   {
@@ -475,7 +476,8 @@ document.addEventListener("DOMContentLoaded", () =>
     return {
       [NAV_HISTORY_STATE_KEY]: true,
       index,
-      viewState: normalizeViewState(viewState)
+      viewState: normalizeViewState(viewState),
+      courtSessionId: currentCourtHistorySessionId
     };
   }
 
@@ -1681,8 +1683,8 @@ document.addEventListener("DOMContentLoaded", () =>
   {
     if (isRestoringNavigation) return;
 
-    if (mode === "replace") replaceNavigationState(getCurrentViewState());
-    else pushNavigationState(getCurrentViewState());
+    let f = mode === "replace" ? replaceNavigationState : pushNavigationState;
+    f(getCurrentViewState());
   }
 
   function getViewStateFromLocation()
@@ -1706,6 +1708,11 @@ document.addEventListener("DOMContentLoaded", () =>
     elements.settingsModal.classList.add("hidden");
     elements.detailsModal.classList.add("hidden");
     elements.resetModal.classList.add("hidden");
+  }
+
+  function bumpCourtHistorySessionId()
+  {
+    currentCourtHistorySessionId += 1;
   }
 
   function hideManagedPages()
@@ -1990,6 +1997,12 @@ document.addEventListener("DOMContentLoaded", () =>
     const nextState = event.state?.[NAV_HISTORY_STATE_KEY]
       ? event.state.viewState
       : getViewStateFromLocation();
+
+    if (nextState.modal && event.state?.courtSessionId !== currentCourtHistorySessionId)
+    {
+      window.history.back();
+      return;
+    }
 
     if (typeof event.state?.index === "number")
     {
@@ -2969,6 +2982,7 @@ document.addEventListener("DOMContentLoaded", () =>
   {
     console.log(`Entering court: ${courtId}, spectate: ${spectate}`);
     pendingLocalPasswordUpdate = null;
+    bumpCourtHistorySessionId();
 
     // Warm Firestore connection
     await getDoc(doc(db, "courts", courtId, "score", "current"));
@@ -3083,6 +3097,7 @@ document.addEventListener("DOMContentLoaded", () =>
   {
     console.log("Leaving court: " + currentCourtId);
     pendingLocalPasswordUpdate = null;
+    bumpCourtHistorySessionId();
 
     disableSpectateMode();
     releaseWakeLock();
@@ -4721,8 +4736,9 @@ document.addEventListener("DOMContentLoaded", () =>
         return;
       }
 
+      //todo - make the transition to the new spectate view of this court smoother, but a quick fade out and fade in 
       elements.settingsModal.classList.add("hidden");
-      enterCourt(currentCourtId, true, { historyMode: "push" });
+      enterCourt(currentCourtId, true, { historyMode: "replace" });
     });
   }
 
