@@ -623,39 +623,48 @@ document.addEventListener("DOMContentLoaded", () =>
 
   function initializeTeamColourPickers()
   {
-    const inputs = document.querySelectorAll("[data-team-colour]");
+    const pickers = document.querySelectorAll("[data-team-colour]");
     const JsColor = window.JSColor || window.jscolor;
 
     if (!JsColor)
     {
-      inputs.forEach((input) =>
-      {
-        input.readOnly = false;
-        input.inputMode = "text";
-      });
       return;
     }
 
-    inputs.forEach((input) =>
+    pickers.forEach((picker) =>
     {
-      if (!input.jscolor)
+      if (!picker.jscolor)
       {
-        new JsColor(input, TEAM_COLOUR_PICKER_OPTIONS);
+        new JsColor(picker, {
+          ...TEAM_COLOUR_PICKER_OPTIONS,
+          onInput()
+          {
+            const pickedColour = normalizeHexColour(this.toHEXString());
+            if (!pickedColour) return;
+            setTeamColour(picker.dataset.teamColour, pickedColour);
+          },
+          onChange()
+          {
+            const pickedColour = normalizeHexColour(this.toHEXString());
+            if (!pickedColour) return;
+            setTeamColour(picker.dataset.teamColour, pickedColour);
+          }
+        });
       }
     });
   }
 
-  function updateTeamColourInput(input, colour)
+  function updateTeamColourInput(picker, colour)
   {
-    input.value = colour;
-    input.style.setProperty("--picker-colour", colour);
+    picker.value = colour;
+    picker.style.setProperty("--picker-colour", colour);
 
-    if (!input.jscolor) return;
+    if (!picker.jscolor) return;
 
-    const pickerColour = normalizeHexColour(input.jscolor.toHEXString());
+    const pickerColour = normalizeHexColour(picker.jscolor.toHEXString());
     if (pickerColour !== colour)
     {
-      input.jscolor.fromString(colour);
+      picker.jscolor.fromString(colour);
     }
   }
 
@@ -2587,7 +2596,7 @@ document.addEventListener("DOMContentLoaded", () =>
   {
     if (!elements.appearanceMenu || elements.appearanceMenu.classList.contains("hidden")) return;
     if (elements.appearanceMenu.contains(e.target) || elements.appearanceMenuBtn?.contains(e.target)) return;
-    if (document.querySelector(".team-colour-input.jscolor-active")) return;
+    if (document.querySelector("[data-team-colour].jscolor-active")) return;
 
     closeAppearanceMenu();
   });

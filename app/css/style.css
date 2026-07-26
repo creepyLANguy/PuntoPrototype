@@ -1794,7 +1794,6 @@ body.light-mode .reset-theme-colours-btn:hover {
 
 .colour-field {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
   gap: 12px;
   padding: 10px 12px;
@@ -1812,25 +1811,28 @@ body.light-mode .colour-field {
   position: relative;
   display: block;
   width: 100%;
+  border-radius: 10px;
+  transition: box-shadow 0.18s ease, background 0.18s ease;
 }
 
-.team-colour-input {
-  --picker-colour: #ffffff;
+.team-colour-btn {
   width: 100%;
   min-width: 0;
-  height: 38px;
+  height: 34px;
   padding: 0 34px 0 0;
-  border: 1px solid rgba(255, 255, 255, 0.24);
-  border-radius: 8px;
-  background: var(--picker-colour);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 10px;
   color: transparent;
   text-shadow: none;
   font: inherit;
   font-size: 0;
-  line-height: 38px;
+  line-height: 34px;
   cursor: pointer;
   outline: none;
-  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.2);
+  appearance: none;
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 0, 0, 0.24),
+    0 2px 8px rgba(0, 0, 0, 0.22);
   -webkit-tap-highlight-color: transparent;
 }
 
@@ -1840,36 +1842,13 @@ body.light-mode .colour-field {
   right: 0;
   width: 34px;
   height: 100%;
-  border-left: 1px solid rgba(255, 255, 255, 0.24);
-  background: rgba(255, 255, 255, 0.14);
-  border-radius: 0 8px 8px 0;
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: 0 10px 10px 0;
   display: grid;
   place-items: center;
   font-size: 14px;
   line-height: 1;
   pointer-events: none;
-}
-
-.team-colour-input:focus-visible,
-.team-colour-input.jscolor-active {
-  border-color: currentColor;
-  box-shadow:
-    inset 0 0 0 1px rgba(0, 0, 0, 0.2),
-    0 0 0 3px rgba(255, 255, 255, 0.18);
-}
-
-.team-colour-input[readonly] {
-  caret-color: transparent;
-}
-
-body.light-mode .team-colour-input {
-  border-color: rgba(0, 0, 0, 0.16);
-  background: var(--picker-colour);
-}
-
-body.light-mode .colour-edit-icon {
-  border-left-color: rgba(0, 0, 0, 0.16);
-  background: rgba(0, 0, 0, 0.09);
 }
 
 #playerTeamAName:focus {
@@ -1880,13 +1859,6 @@ body.light-mode .colour-edit-icon {
 #playerTeamBName:focus {
   outline: 2px solid var(--teamBcolour);
   outline-offset: 1px;
-}
-
-body.light-mode .team-colour-input:focus-visible,
-body.light-mode .team-colour-input.jscolor-active {
-  box-shadow:
-    inset 0 0 0 1px rgba(255, 255, 255, 0.35),
-    0 0 0 3px rgba(0, 0, 0, 0.1);
 }
 
 @media (max-width: 420px) {
