@@ -1562,7 +1562,17 @@ body.light-mode .player-names-field input {
 }
 
 .player-names-field input:focus {
+  outline: 2px solid var(--teamAcolour); /*todo - make this coinditional, based on which team the input is for*/
+  outline-offset: 1px;
+}
+
+.player-names-field-a input:focus {
   outline: 2px solid var(--teamAcolour);
+  outline-offset: 1px;
+}
+
+.player-names-field-b input:focus{
+  outline: 2px solid var(--teamBcolour);
   outline-offset: 1px;
 }
 
