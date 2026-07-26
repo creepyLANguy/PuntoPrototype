@@ -78,19 +78,17 @@
         <label class="colour-field">
           <span>Team A</span>
           <span class="team-colour-control">
-            <input type="text" class="team-colour-input" data-team-colour="A" aria-label="Team A colour"
-              aria-haspopup="dialog" inputmode="none" autocomplete="off" autocapitalize="off" spellcheck="false"
-              readonly />
-            <span class="colour-edit-icon" aria-hidden="true">🖍</span>
+            <button type="button" class="team-colour-btn" data-team-colour="A" aria-label="Team A colour"
+              aria-haspopup="dialog"></button>
+            <span class="colour-edit-icon">⋮</span>
           </span>
         </label>
         <label class="colour-field">
           <span>Team B</span>
           <span class="team-colour-control">
-            <input type="text" class="team-colour-input" data-team-colour="B" aria-label="Team B colour"
-              aria-haspopup="dialog" inputmode="none" autocomplete="off" autocapitalize="off" spellcheck="false"
-              readonly />
-            <span class="colour-edit-icon" aria-hidden="true">🖍</span>
+            <button type="button" class="team-colour-btn" data-team-colour="B" aria-label="Team B colour"
+              aria-haspopup="dialog"></button>
+            <span class="colour-edit-icon">⋮</span>
           </span>
         </label>
         <button type="button" class="reset-theme-colours-btn">Reset colours</button>
@@ -164,7 +162,7 @@
             <span>Server</span>
           </div>
           <div class="setting-item player-only-tile" id="editPlayersTile">
-            <button id="editPlayersBtn" class="floating-btn modal-btn" title="Edit player names">👥</button>
+            <button id="editPlayersBtn" class="floating-btn modal-btn" title="Edit player names">𓀠𓀠</button>
             <span>Players</span>
           </div>
           <div class="setting-item player-only-tile" id="resetSettingsTile">
@@ -224,19 +222,17 @@
                 <label class="colour-field">
                   <span>Team A</span>
                   <span class="team-colour-control">
-                    <input type="text" class="team-colour-input" data-team-colour="A" aria-label="Team A colour"
-                      aria-haspopup="dialog" inputmode="none" autocomplete="off" autocapitalize="off" spellcheck="false"
-                      readonly />
-                    <span class="colour-edit-icon" aria-hidden="true">🖍</span>
+                    <button type="button" class="team-colour-btn" data-team-colour="A" aria-label="Team A colour"
+                      aria-haspopup="dialog"></button>
+                    <span class="colour-edit-icon">⋮</span>
                   </span>
                 </label>
                 <label class="colour-field">
                   <span>Team B</span>
                   <span class="team-colour-control">
-                    <input type="text" class="team-colour-input" data-team-colour="B" aria-label="Team B colour"
-                      aria-haspopup="dialog" inputmode="none" autocomplete="off" autocapitalize="off" spellcheck="false"
-                      readonly />
-                    <span class="colour-edit-icon" aria-hidden="true">🖍</span>
+                    <button type="button" class="team-colour-btn" data-team-colour="B" aria-label="Team B colour"
+                      aria-haspopup="dialog"></button>
+                    <span class="colour-edit-icon">⋮</span>
                   </span>
                 </label>
               </div>
@@ -267,22 +263,22 @@
           <div class="player-team-grid">
             <section class="player-team-panel">
               <h4>Team A players</h4>
-              <label class="form-group player-names-field">
+              <label class="form-group player-names-field-a">
                 <span>Player A1</span>
                 <input type="text" id="playerNameA1" autocomplete="off" spellcheck="false" />
               </label>
-              <label class="form-group player-names-field">
+              <label class="form-group player-names-field-a">
                 <span>Player A2</span>
                 <input type="text" id="playerNameA2" autocomplete="off" spellcheck="false" />
               </label>
             </section>
             <section class="player-team-panel">
               <h4>Team B players</h4>
-              <label class="form-group player-names-field">
+              <label class="form-group player-names-field-b">
                 <span>Player B1</span>
                 <input type="text" id="playerNameB1" autocomplete="off" spellcheck="false" />
               </label>
-              <label class="form-group player-names-field">
+              <label class="form-group player-names-field-b">
                 <span>Player B2</span>
                 <input type="text" id="playerNameB2" autocomplete="off" spellcheck="false" />
               </label>
