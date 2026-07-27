@@ -50,11 +50,14 @@ body {
   width: 100%;
   /* Do NOT set overflow: hidden globally — it blocks menu page scroll.
      Each page controls its own overflow. */
-  
+
   user-select: none;
-  -webkit-user-select: none; /* Safari */
-  -moz-user-select: none;    /* Firefox */
-  -ms-user-select: none;     /* Older Edge */
+  -webkit-user-select: none;
+  /* Safari */
+  -moz-user-select: none;
+  /* Firefox */
+  -ms-user-select: none;
+  /* Older Edge */
 }
 
 body {
@@ -70,6 +73,9 @@ input,
 textarea,
 [contenteditable="true"] {
   user-select: text;
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
 }
 
 button {
@@ -384,11 +390,11 @@ body.light-mode .menu-btn:hover {
   justify-content: center;
   color: #ffffff;
   font-weight: 900;
-  
+
   font-size: clamp(0.72rem, 9.2cqi, 999rem);
   letter-spacing: 1em;
   padding-left: clamp(0.14em, 1.55cqi, 0.85em);
-  
+
   line-height: 1.2;
   text-transform: uppercase;
   text-align: center;
@@ -396,7 +402,7 @@ body.light-mode .menu-btn:hover {
   text-shadow: 0 0 16px #000;
   background: rgba(0, 0, 0, 0.25);
   border-radius: 8px;
-  }
+}
 
 body.light-mode .court-qr-panel {
   border-color: rgba(0, 0, 0, 0.2);
@@ -960,7 +966,7 @@ body.light-mode .game-dot.filled {
   width: var(--size);
   height: var(--size);
   background: currentColor;
-  
+
   content: "";
   position: absolute;
   border-radius: 50%;
@@ -969,6 +975,7 @@ body.light-mode .game-dot.filled {
 }
 
 @keyframes animloader {
+
   100%,
   0% {
     transform: translateY(0);
@@ -984,13 +991,11 @@ body.light-mode .game-dot.filled {
     transform: translateY(calc(var(--bounceHeight) * 0.09));
   }
 
-  30%
-  {
+  30% {
     transform: translateY(calc(var(--bounceHeight) * 0.25));
   }
 
-  40%
-  {
+  40% {
     transform: translateY(calc(var(--bounceHeight) * 0.55));
   }
 
@@ -999,7 +1004,7 @@ body.light-mode .game-dot.filled {
   }
 
   53% {
-    transform: translateY(var(--bounceHeight)) scaleX(1.5) scaleY(0.75); 
+    transform: translateY(var(--bounceHeight)) scaleX(1.5) scaleY(0.75);
   }
 
   60% {
@@ -1562,7 +1567,7 @@ body.light-mode .player-names-field input {
 }
 
 .player-names-field input:focus {
-  outline: 2px solid var(--teamAcolour); /*todo - make this coinditional, based on which team the input is for*/
+  outline: 2px solid var(--teamAcolour);
   outline-offset: 1px;
 }
 
@@ -1571,7 +1576,7 @@ body.light-mode .player-names-field input {
   outline-offset: 1px;
 }
 
-.player-names-field-b input:focus{
+.player-names-field-b input:focus {
   outline: 2px solid var(--teamBcolour);
   outline-offset: 1px;
 }
@@ -1588,6 +1593,7 @@ body.light-mode .player-names-field input {
 }
 
 @media (max-width: 640px) {
+
   .player-names-grid,
   .player-team-grid {
     grid-template-columns: 1fr;
@@ -2237,7 +2243,7 @@ body.light-mode .dm-table thead th {
   .court-qr-panel {
     display: none !important;
   }
-  
+
   .dm-box {
     padding: 8px 12px 6px;
     gap: 0;
@@ -2928,8 +2934,8 @@ body.light-mode .court-list {
 .loading {
   padding: 20px;
   text-align: center;
-  color: var(--text-color); 
-  font-size:20px;
+  color: var(--text-color);
+  font-size: 20px;
 }
 
 /* =======================================================
@@ -5406,6 +5412,7 @@ body.light-mode .dm-empty-state {
   background: rgba(0, 0, 0, 0.02);
   color: rgba(0, 0, 0, 0.7);
 }
+
 /* =======================================================
    MOMENTUM GRAPH  (dm-momentum-* namespace)
 ======================================================= */
