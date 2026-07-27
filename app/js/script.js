@@ -6409,3 +6409,119 @@ document.addEventListener("touchend", (e) =>
   if (isAdminPortalTarget(e.target) || e.target?.tagName === "INPUT" || e.target?.tagName === "TEXTAREA") return;
   window.getSelection()?.removeAllRanges();
 });
+
+// =====================================================
+// MOBILE OBSCURED INPUT AUTO-SCROLL
+// =====================================================
+
+function isTextInputElement(el)
+{
+  if (!el || !(el instanceof HTMLElement)) return false;
+  const tagName = el.tagName.toLowerCase();
+  if (tagName === "textarea" || el.isContentEditable) return true;
+  if (tagName === "input")
+  {
+    const type = (el.getAttribute("type") || "text").toLowerCase();
+    const nonTextTypes = [
+      "button", "checkbox", "color", "file", "hidden",
+      "image", "radio", "range", "reset", "submit"
+    ];
+    return !nonTextTypes.includes(type);
+  }
+  return false;
+}
+
+function isInputObscured(el)
+{
+  if (!isTextInputElement(el)) return false;
+  const rect = el.getBoundingClientRect();
+  if (rect.width === 0 && rect.height === 0) return false;
+
+  const vv = window.visualViewport;
+  const viewportHeight = vv ? vv.height : window.innerHeight;
+
+  // Safety margins:
+  // Top margin to clear fixed headers/bars (50px)
+  // Bottom margin to clear virtual keyboard and footers (20px)
+  const minTop = 50;
+  const maxBottom = viewportHeight - 20;
+
+  return rect.bottom > maxBottom || rect.top < minTop;
+}
+
+function scrollInputIntoViewIfNeeded(el)
+{
+  if (!isTextInputElement(el)) return;
+  if (isInputObscured(el))
+  {
+    try
+    {
+      el.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+        inline: "nearest"
+      });
+    }
+    catch (e)
+    {
+      el.scrollIntoView(false);
+    }
+  }
+}
+
+function handleInputFocusOrResize(targetEl)
+{
+  const el = targetEl || document.activeElement;
+  if (!isTextInputElement(el)) return;
+
+  // Check immediately
+  scrollInputIntoViewIfNeeded(el);
+
+  // Check at intervals to account for virtual keyboard animation on mobile
+  const delays = [100, 250, 400, 600];
+  delays.forEach(delay =>
+  {
+    setTimeout(() =>
+    {
+      if (document.activeElement === el)
+      {
+        scrollInputIntoViewIfNeeded(el);
+      }
+    }, delay);
+  });
+}
+
+document.addEventListener("focusin", (e) =>
+{
+  if (isTextInputElement(e.target))
+  {
+    handleInputFocusOrResize(e.target);
+  }
+}, { capture: true, passive: true });
+
+if (window.visualViewport)
+{
+  window.visualViewport.addEventListener("resize", () =>
+  {
+    if (document.activeElement && isTextInputElement(document.activeElement))
+    {
+      scrollInputIntoViewIfNeeded(document.activeElement);
+    }
+  }, { passive: true });
+
+  window.visualViewport.addEventListener("scroll", () =>
+  {
+    if (document.activeElement && isTextInputElement(document.activeElement))
+    {
+      scrollInputIntoViewIfNeeded(document.activeElement);
+    }
+  }, { passive: true });
+}
+
+window.addEventListener("resize", () =>
+{
+  if (document.activeElement && isTextInputElement(document.activeElement))
+  {
+    scrollInputIntoViewIfNeeded(document.activeElement);
+  }
+}, { passive: true });
