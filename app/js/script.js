@@ -2669,6 +2669,47 @@ document.addEventListener("DOMContentLoaded", () =>
     button.addEventListener("click", resetTeamColours);
   });
 
+  // Fix for mobile soft keyboard not re-opening when tapping an input box that remained activeElement
+  let lastInputTapTime = 0;
+  let lastInputTapTarget = null;
+
+  function handleInputTap(e)
+  {
+    const target = e.target?.closest?.("input, textarea, [contenteditable='true']");
+    if (!target) return;
+    if (target.readOnly || target.disabled) return;
+
+    const now = Date.now();
+    if (lastInputTapTarget === target && (now - lastInputTapTime < 300))
+    {
+      return;
+    }
+    lastInputTapTime = now;
+    lastInputTapTarget = target;
+
+    if (document.activeElement === target)
+    {
+      target.blur();
+      target.focus();
+    }
+  }
+
+  document.addEventListener("pointerdown", handleInputTap, { capture: true });
+  document.addEventListener("touchstart", handleInputTap, { capture: true, passive: true });
+
+  document.addEventListener("pointerdown", (e) =>
+  {
+    const active = document.activeElement;
+    if (active && (active.tagName === "INPUT" || active.tagName === "TEXTAREA" || active.isContentEditable))
+    {
+      const isInteractive = e.target?.closest?.("input, textarea, [contenteditable='true'], label, button, .court-item, .admin-court-item, select, option, a");
+      if (!isInteractive)
+      {
+        active.blur();
+      }
+    }
+  }, { capture: true });
+
   document.addEventListener("click", (e) =>
   {
     if (!elements.appearanceMenu || elements.appearanceMenu.classList.contains("hidden")) return;
@@ -6359,12 +6400,12 @@ document.addEventListener("keydown", (e) =>
 
 document.addEventListener("mouseup", (e) =>
 {
-  if (isAdminPortalTarget(e.target)) return;
+  if (isAdminPortalTarget(e.target) || e.target?.tagName === "INPUT" || e.target?.tagName === "TEXTAREA") return;
   window.getSelection()?.removeAllRanges();
 });
 
 document.addEventListener("touchend", (e) =>
 {
-  if (isAdminPortalTarget(e.target)) return;
+  if (isAdminPortalTarget(e.target) || e.target?.tagName === "INPUT" || e.target?.tagName === "TEXTAREA") return;
   window.getSelection()?.removeAllRanges();
 });
