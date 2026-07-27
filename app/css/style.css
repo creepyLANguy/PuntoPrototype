@@ -48,6 +48,7 @@ body {
   margin: 0;
   padding: 0;
   width: 100%;
+  scroll-behavior: smooth;
   /* Do NOT set overflow: hidden globally — it blocks menu page scroll.
      Each page controls its own overflow. */
 
@@ -58,6 +59,15 @@ body {
   /* Firefox */
   -ms-user-select: none;
   /* Older Edge */
+}
+
+.create-page,
+.create-card,
+.reset-modal,
+.reset-card,
+.admin-court-list,
+.scrollable-modal {
+  scroll-behavior: smooth;
 }
 
 body {
@@ -1822,7 +1832,7 @@ body.light-mode .reset-theme-colours-btn:hover {
   position: relative;
   display: block;
   width: 100%;
-  border-radius: 10px;
+  border-radius: 18px;
   transition: box-shadow 0.18s ease, background 0.18s ease;
 }
 
@@ -1853,19 +1863,20 @@ body.light-mode .reset-theme-colours-btn:hover {
   right: 0;
   width: 34px;
   height: 100%;
-  background: rgba(255, 255, 255, 0.75);
-  border-radius: 0 10px 10px 0;
+  border-radius: 0 18px 18px 0;
   display: grid;
   place-items: center;
   font-size: 14px;
   line-height: 1;
   pointer-events: none;
-  color: rgba(0, 0, 0, 0.8);
+  box-shadow: -1px 0px 1px rgba(0, 0, 0, 0.3);
+  background: rgba(255, 255, 255, 0.75);
+  color: rgba(0, 0, 0, 1);
 }
 
 body.light-mode .colour-edit-icon {
   background: rgba(255, 255, 255, 0.25);
-  color: rgba(255, 255, 255, 0.8);
+  color: rgba(255, 255, 255, 1);
 }
 
 #playerTeamAName:focus {
