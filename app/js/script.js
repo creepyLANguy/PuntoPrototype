@@ -125,7 +125,9 @@ document.addEventListener("DOMContentLoaded", () =>
   const NAV_MODALS = {
     SETTINGS: "settings",
     DETAILS: "details",
-    RESET: "reset"
+    RESET: "reset",
+    CONFIRM: "confirm",    
+    PLAYER_NAMES: "playerNames"
   };
 
   // =====================================================
@@ -1528,34 +1530,28 @@ document.addEventListener("DOMContentLoaded", () =>
 
   function getCurrentViewState()
   {
-    if (currentCourtId && isOverlayVisible(elements.resetModal))
+    if (currentCourtId)
     {
-      return createViewState({
-        page: NAV_PAGES.SCOREBOARD,
-        courtId: currentCourtId,
-        spectate: isSpectating,
-        modal: NAV_MODALS.RESET
-      });
-    }
+      const modalMap = [
+        [elements.resetModal, NAV_MODALS.RESET],
+        [elements.detailsModal, NAV_MODALS.DETAILS],
+        [elements.settingsModal, NAV_MODALS.SETTINGS],
+        [elements.confirmModal, NAV_MODALS.CONFIRM],
+        [elements.playerNamesModal, NAV_MODALS.PLAYER_NAMES]
+      ];
 
-    if (currentCourtId && isOverlayVisible(elements.detailsModal))
-    {
-      return createViewState({
-        page: NAV_PAGES.SCOREBOARD,
-        courtId: currentCourtId,
-        spectate: isSpectating,
-        modal: NAV_MODALS.DETAILS
-      });
-    }
-
-    if (currentCourtId && isOverlayVisible(elements.settingsModal))
-    {
-      return createViewState({
-        page: NAV_PAGES.SCOREBOARD,
-        courtId: currentCourtId,
-        spectate: isSpectating,
-        modal: NAV_MODALS.SETTINGS
-      });
+      for (const [element, modal] of modalMap)
+      {
+        if (isOverlayVisible(element))
+        {
+          return createViewState({
+            page: NAV_PAGES.SCOREBOARD,
+            courtId: currentCourtId,
+            spectate: isSpectating,
+            modal
+          });
+        }
+      }
     }
 
     if (isElementVisible(elements.editDevicePage))
@@ -1708,6 +1704,8 @@ document.addEventListener("DOMContentLoaded", () =>
     elements.settingsModal.classList.add("hidden");
     elements.detailsModal.classList.add("hidden");
     elements.resetModal.classList.add("hidden");
+    elements.confirmModal.classList.add("hidden");
+    elements.playerNamesModal.classList.add("hidden");
   }
 
   function bumpCourtHistorySessionId()
@@ -1834,11 +1832,7 @@ document.addEventListener("DOMContentLoaded", () =>
         else if (state.modal === NAV_MODALS.DETAILS)
         {
           await showMatchDetails(false);
-        }
-        else if (state.modal === NAV_MODALS.RESET)
-        {
-          elements.resetModal.classList.remove("hidden");
-        }
+        }      
 
         return;
       }
@@ -6409,3 +6403,119 @@ document.addEventListener("touchend", (e) =>
   if (isAdminPortalTarget(e.target) || e.target?.tagName === "INPUT" || e.target?.tagName === "TEXTAREA") return;
   window.getSelection()?.removeAllRanges();
 });
+
+// =====================================================
+// MOBILE OBSCURED INPUT AUTO-SCROLL
+// =====================================================
+
+function isTextInputElement(el)
+{
+  if (!el || !(el instanceof HTMLElement)) return false;
+  const tagName = el.tagName.toLowerCase();
+  if (tagName === "textarea" || el.isContentEditable) return true;
+  if (tagName === "input")
+  {
+    const type = (el.getAttribute("type") || "text").toLowerCase();
+    const nonTextTypes = [
+      "button", "checkbox", "color", "file", "hidden",
+      "image", "radio", "range", "reset", "submit"
+    ];
+    return !nonTextTypes.includes(type);
+  }
+  return false;
+}
+
+function isInputObscured(el)
+{
+  if (!isTextInputElement(el)) return false;
+  const rect = el.getBoundingClientRect();
+  if (rect.width === 0 && rect.height === 0) return false;
+
+  const vv = window.visualViewport;
+  const viewportHeight = vv ? vv.height : window.innerHeight;
+
+  // Safety margins:
+  // Top margin to clear fixed headers/bars (50px)
+  // Bottom margin to clear virtual keyboard and footers (20px)
+  const minTop = 50;
+  const maxBottom = viewportHeight - 20;
+
+  return rect.bottom > maxBottom || rect.top < minTop;
+}
+
+function scrollInputIntoViewIfNeeded(el)
+{
+  if (!isTextInputElement(el)) return;
+  if (isInputObscured(el))
+  {
+    try
+    {
+      el.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+        inline: "nearest"
+      });
+    }
+    catch (e)
+    {
+      el.scrollIntoView(false);
+    }
+  }
+}
+
+function handleInputFocusOrResize(targetEl)
+{
+  const el = targetEl || document.activeElement;
+  if (!isTextInputElement(el)) return;
+
+  // Check immediately
+  scrollInputIntoViewIfNeeded(el);
+
+  // Check at intervals to account for virtual keyboard animation on mobile
+  const delays = [100, 250, 400, 600];
+  delays.forEach(delay =>
+  {
+    setTimeout(() =>
+    {
+      if (document.activeElement === el)
+      {
+        scrollInputIntoViewIfNeeded(el);
+      }
+    }, delay);
+  });
+}
+
+document.addEventListener("focusin", (e) =>
+{
+  if (isTextInputElement(e.target))
+  {
+    handleInputFocusOrResize(e.target);
+  }
+}, { capture: true, passive: true });
+
+if (window.visualViewport)
+{
+  window.visualViewport.addEventListener("resize", () =>
+  {
+    if (document.activeElement && isTextInputElement(document.activeElement))
+    {
+      scrollInputIntoViewIfNeeded(document.activeElement);
+    }
+  }, { passive: true });
+
+  window.visualViewport.addEventListener("scroll", () =>
+  {
+    if (document.activeElement && isTextInputElement(document.activeElement))
+    {
+      scrollInputIntoViewIfNeeded(document.activeElement);
+    }
+  }, { passive: true });
+}
+
+window.addEventListener("resize", () =>
+{
+  if (document.activeElement && isTextInputElement(document.activeElement))
+  {
+    scrollInputIntoViewIfNeeded(document.activeElement);
+  }
+}, { passive: true });
