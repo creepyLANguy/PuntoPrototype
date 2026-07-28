@@ -125,7 +125,9 @@ document.addEventListener("DOMContentLoaded", () =>
   const NAV_MODALS = {
     SETTINGS: "settings",
     DETAILS: "details",
-    RESET: "reset"
+    RESET: "reset",
+    CONFIRM: "confirm",    
+    PLAYER_NAMES: "playerNames"
   };
 
   // =====================================================
@@ -1528,34 +1530,28 @@ document.addEventListener("DOMContentLoaded", () =>
 
   function getCurrentViewState()
   {
-    if (currentCourtId && isOverlayVisible(elements.resetModal))
+    if (currentCourtId)
     {
-      return createViewState({
-        page: NAV_PAGES.SCOREBOARD,
-        courtId: currentCourtId,
-        spectate: isSpectating,
-        modal: NAV_MODALS.RESET
-      });
-    }
+      const modalMap = [
+        [elements.resetModal, NAV_MODALS.RESET],
+        [elements.detailsModal, NAV_MODALS.DETAILS],
+        [elements.settingsModal, NAV_MODALS.SETTINGS],
+        [elements.confirmModal, NAV_MODALS.CONFIRM],
+        [elements.playerNamesModal, NAV_MODALS.PLAYER_NAMES]
+      ];
 
-    if (currentCourtId && isOverlayVisible(elements.detailsModal))
-    {
-      return createViewState({
-        page: NAV_PAGES.SCOREBOARD,
-        courtId: currentCourtId,
-        spectate: isSpectating,
-        modal: NAV_MODALS.DETAILS
-      });
-    }
-
-    if (currentCourtId && isOverlayVisible(elements.settingsModal))
-    {
-      return createViewState({
-        page: NAV_PAGES.SCOREBOARD,
-        courtId: currentCourtId,
-        spectate: isSpectating,
-        modal: NAV_MODALS.SETTINGS
-      });
+      for (const [element, modal] of modalMap)
+      {
+        if (isOverlayVisible(element))
+        {
+          return createViewState({
+            page: NAV_PAGES.SCOREBOARD,
+            courtId: currentCourtId,
+            spectate: isSpectating,
+            modal
+          });
+        }
+      }
     }
 
     if (isElementVisible(elements.editDevicePage))
@@ -1708,6 +1704,8 @@ document.addEventListener("DOMContentLoaded", () =>
     elements.settingsModal.classList.add("hidden");
     elements.detailsModal.classList.add("hidden");
     elements.resetModal.classList.add("hidden");
+    elements.confirmModal.classList.add("hidden");
+    elements.playerNamesModal.classList.add("hidden");
   }
 
   function bumpCourtHistorySessionId()
@@ -1834,11 +1832,7 @@ document.addEventListener("DOMContentLoaded", () =>
         else if (state.modal === NAV_MODALS.DETAILS)
         {
           await showMatchDetails(false);
-        }
-        else if (state.modal === NAV_MODALS.RESET)
-        {
-          elements.resetModal.classList.remove("hidden");
-        }
+        }      
 
         return;
       }
