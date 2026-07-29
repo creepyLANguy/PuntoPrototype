@@ -359,8 +359,13 @@ document.addEventListener("DOMContentLoaded", () =>
   // =====================================================
   // THEME STATE
   // =====================================================
-
   const TEAM_COLOUR_STORAGE_KEY = "punto_team_colours";
+
+  let isLightMode = localStorage.getItem("theme") === "light";
+  let isWavesEnabled = localStorage.getItem("waves") !== "false";
+  let isServerBadgeVisible = localStorage.getItem("serverBadge") !== "false";
+  let teamColoursByTheme = loadStoredTeamColours();
+
   const DEFAULT_TEAM_COLOURS = {
     dark: { A: "#ffff00", B: "#00ffff" },
     light: { A: "#ad7535", B: "#0a91ac" }
@@ -378,12 +383,15 @@ document.addEventListener("DOMContentLoaded", () =>
     smartPosition: true,
     zIndex: 20000,
     forceStyle: false,
+    backgroundColor: isLightMode ? "#ffffff" : "#000000",
+    borderColor: isLightMode ? "#00000030" : "#ffffff3a",
+    controlBorderColor: isLightMode ? "#ffffff" : "#000000",
+    pointerBorderColor: isLightMode ? "#ffffff" : "#000000",
+    pointerColor: isLightMode ? "#000000" : "#ffffff",
+
   };
 
-  let isLightMode = localStorage.getItem("theme") === "light";
-  let isWavesEnabled = localStorage.getItem("waves") !== "false";
-  let isServerBadgeVisible = localStorage.getItem("serverBadge") !== "false";
-  let teamColoursByTheme = loadStoredTeamColours();
+
   let appNavigationStack = [];
   let appNavigationIndex = -1;
   let isRestoringNavigation = false;
@@ -670,6 +678,12 @@ document.addEventListener("DOMContentLoaded", () =>
     {
       picker.jscolor.fromString(colour);
     }
+
+    picker.jscolor.backgroundColor = isLightMode ? "#ffffff" : "#000000";
+    picker.jscolor.borderColor = isLightMode ? "#00000030" : "#ffffff3a";
+    picker.jscolor.controlBorderColor = isLightMode ? "#ffffff" : "#000000";
+    picker.jscolor.pointerBorderColor = isLightMode ? "#ffffff" : "#000000";
+    picker.jscolor.pointerColor = isLightMode ? "#000000" : "#ffffff";
   }
 
   function resetTeamColours()
