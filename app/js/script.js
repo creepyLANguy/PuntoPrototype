@@ -4995,6 +4995,10 @@ document.addEventListener("DOMContentLoaded", () =>
       }));
   });
 
+  /*
+  //AL. //TODO: Fix issue with line colour values being offset due to smoothing. 
+  Possible soln: Draw full momentum curve, clip above x axis to one colour stroke, and bottom to another colour stroke. 
+  */
   function renderMomentumGraph(pointHistory, colourA, colourB, setPointMarkers = [], momentumTimeline = null)
   {
     const wrap = elements.dmMomentumWrap;
@@ -5148,47 +5152,31 @@ document.addEventListener("DOMContentLoaded", () =>
         ctx.stroke();
       });
 
-      // --- Momentum line (segment colours by active momentum) ---
-      ctx.lineWidth = 2;
-      ctx.lineJoin = "round";
-      ctx.lineCap = "round";
+    //AL. //TODO - I thiiiiink this is where we need to take the new approach. 
 
-      // Group contiguous segments by colour, then draw each group as a smooth curve.
-      const lineGroups = [];
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(0, 0, W, midY);
+      ctx.clip();
 
-      for (let i = 0; i < values.length - 1; i++)
-      {
-        const segmentEndValue = values[i + 1];
-        const segmentColour =
-          segmentEndValue > 0 ? colourA :
-            segmentEndValue < 0 ? colourB :
-              "#ffffff";
+      ctx.beginPath();
+      traceQuadraticPath(ctx, points);
+      ctx.strokeStyle = colourA;
+      ctx.stroke();
 
-        const previousGroup = lineGroups[lineGroups.length - 1];
-        if (!previousGroup || previousGroup.colour !== segmentColour)
-        {
-          lineGroups.push({ start: i, end: i + 1, colour: segmentColour });
-        }
-        else
-        {
-          previousGroup.end = i + 1;
-        }
-      }
+      ctx.restore();
 
-      lineGroups.forEach(group =>
-      {
-        const groupPoints = points.slice(group.start, group.end + 1);
-        ctx.beginPath();
-        traceQuadraticPath(ctx, groupPoints, true);
-        ctx.strokeStyle = group.colour;
-        ctx.stroke();
-      });
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(0, midY, W, H - midY);
+      ctx.clip();
 
-      const finalMomentum = values[values.length - 1];
-      const finalMomentumColour =
-        finalMomentum > 0 ? colourA :
-          finalMomentum < 0 ? colourB :
-            "#ffffff";
+      ctx.beginPath();
+      traceQuadraticPath(ctx, points);
+      ctx.strokeStyle = colourB;
+      ctx.stroke();
+
+      ctx.restore();
 
       // --- End dot ---
       const lastX = points[points.length - 1].x;
