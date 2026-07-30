@@ -5152,7 +5152,7 @@ document.addEventListener("DOMContentLoaded", () =>
         ctx.stroke();
       });
 
-    //AL. //TODO - I thiiiiink this is where we need to take the new approach. 
+      ctx.lineWidth = 2; 
 
       ctx.save();
       ctx.beginPath();
@@ -5179,6 +5179,12 @@ document.addEventListener("DOMContentLoaded", () =>
       ctx.restore();
 
       // --- End dot ---
+      const finalMomentum = values[values.length - 1];
+      const finalMomentumColour =
+        finalMomentum > 0 ? colourA :
+          finalMomentum < 0 ? colourB :
+            "#ffffff"; 
+            
       const lastX = points[points.length - 1].x;
       const lastY = points[points.length - 1].y;
       ctx.beginPath();
