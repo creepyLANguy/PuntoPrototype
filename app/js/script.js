@@ -347,6 +347,8 @@ document.addEventListener("DOMContentLoaded", () =>
   let qrDragOffsetY = 0;
   let hasInitializedQrPanelInteractions = false;
 
+  let isPickingColour = false;
+
   // =====================================================
   // NFC STATE
   // =====================================================
@@ -651,16 +653,26 @@ document.addEventListener("DOMContentLoaded", () =>
           ...TEAM_COLOUR_PICKER_OPTIONS,
           onInput()
           {
+            isPickingColour = true;
+            elements.settingsModal.classList.add("hidden");
+            
             const pickedColour = normalizeHexColour(this.toHEXString());
             if (!pickedColour) return;
             setTeamColour(picker.dataset.teamColour, pickedColour);
           },
           onChange()
           {
+            isPickingColour = false;
+            if (currentCourtId)
+            {
+              elements.settingsModal.classList.remove("hidden");
+            }
+            
             const pickedColour = normalizeHexColour(this.toHEXString());
             if (!pickedColour) return;
             setTeamColour(picker.dataset.teamColour, pickedColour);
-          }
+          },
+
         });
       }
     });
