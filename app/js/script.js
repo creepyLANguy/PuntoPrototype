@@ -4995,10 +4995,6 @@ document.addEventListener("DOMContentLoaded", () =>
       }));
   });
 
-  /*
-  //AL. //TODO: Fix issue with line colour values being offset due to smoothing. 
-  Possible soln: Draw full momentum curve, clip above x axis to one colour stroke, and bottom to another colour stroke. 
-  */
   function renderMomentumGraph(pointHistory, colourA, colourB, setPointMarkers = [], momentumTimeline = null)
   {
     const wrap = elements.dmMomentumWrap;
@@ -5184,7 +5180,7 @@ document.addEventListener("DOMContentLoaded", () =>
         finalMomentum > 0 ? colourA :
           finalMomentum < 0 ? colourB :
             "#ffffff"; 
-            
+
       const lastX = points[points.length - 1].x;
       const lastY = points[points.length - 1].y;
       ctx.beginPath();
