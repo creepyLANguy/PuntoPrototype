@@ -72,7 +72,7 @@ document.addEventListener("DOMContentLoaded", () =>
 
   const TOAST_DURATION_MS = 3000;
 
-  const LOAD_SPINNER_DELAY_MS = 750;
+  const LOAD_SPINNER_DELAY_MS = 1000;
 
   const LOADING_SPINNER_MIN_DURATION_MS = 750;
 
