@@ -72,7 +72,7 @@ document.addEventListener("DOMContentLoaded", () =>
 
   const TOAST_DURATION_MS = 3000;
 
-  const LOAD_SPINNER_DELAY_MS = 1000;
+  const LOAD_SPINNER_DELAY_MS = 750;
 
   const LOADING_SPINNER_MIN_DURATION_MS = 750;
 
@@ -4447,7 +4447,7 @@ document.addEventListener("DOMContentLoaded", () =>
     }, TOAST_DURATION_MS);
   }
 
-  function showspinner(containerEl, label = "Loading...")
+  function showspinner(containerEl)
   {
     if (!containerEl) return;
 
@@ -4462,7 +4462,7 @@ document.addEventListener("DOMContentLoaded", () =>
           <div class="spinner-wrapper">
             <div class="spinner"></div>
           </div>
-          <div class="loading">${label}</div>
+          <div class="loading"></div>
         </div>
       `;
 
