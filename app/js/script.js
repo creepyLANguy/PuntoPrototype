@@ -749,7 +749,6 @@ document.addEventListener("DOMContentLoaded", () =>
     const linearChannels = channels.map((channel) =>
       channel <= 0.03928 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4
     );
-
     return (linearChannels[0] * 0.2126) + (linearChannels[1] * 0.7152) + (linearChannels[2] * 0.0722);
   }
 
@@ -2230,6 +2229,32 @@ document.addEventListener("DOMContentLoaded", () =>
     listContainer.innerHTML = `
       <div class="loading"><span class="loader"></span></div>
     `;
+
+    syncCourtListFadeState(listContainer);
+  }
+
+  function syncCourtListFadeState(listContainer)
+  {
+    if (!listContainer) return;
+
+    const hasOverflow = listContainer.scrollHeight > listContainer.clientHeight + 1;
+    const atTop = listContainer.scrollTop <= 1;
+    const atBottom = listContainer.scrollTop + listContainer.clientHeight >= listContainer.scrollHeight - 1;
+
+    listContainer.classList.toggle("has-overflow", hasOverflow);
+    listContainer.classList.toggle("fade-top", hasOverflow && !atTop);
+    listContainer.classList.toggle("fade-bottom", hasOverflow && !atBottom);
+  }
+
+  function ensureCourtListFadeBinding(listContainer)
+  {
+    if (!listContainer || listContainer.dataset.fadeBound === "true") return;
+
+    listContainer.dataset.fadeBound = "true";
+    listContainer.addEventListener("scroll", () =>
+    {
+      syncCourtListFadeState(listContainer);
+    }, { passive: true });
   }
 
   async function ensureMinimumLoadingDuration(startedAt)
@@ -2255,11 +2280,13 @@ document.addEventListener("DOMContentLoaded", () =>
   function displayPlayCourtList(courts)
   {
     const listContainer = elements.playCourtList;
+    ensureCourtListFadeBinding(listContainer);
     listContainer.innerHTML = "";
 
     if (courts.length === 0)
     {
       listContainer.innerHTML = '<div class="no-courts">No courts found</div>';
+      syncCourtListFadeState(listContainer);
       return;
     }
 
@@ -2325,16 +2352,20 @@ document.addEventListener("DOMContentLoaded", () =>
 
       listContainer.appendChild(item);
     });
+
+    syncCourtListFadeState(listContainer);
   }
 
   function displaySpectateCourtList(courts)
   {
     const listContainer = elements.spectateCourtList;
+    ensureCourtListFadeBinding(listContainer);
     listContainer.innerHTML = "";
 
     if (courts.length === 0)
     {
       listContainer.innerHTML = '<div class="no-courts">No courts found</div>';
+      syncCourtListFadeState(listContainer);
       return;
     }
 
@@ -2389,6 +2420,8 @@ document.addEventListener("DOMContentLoaded", () =>
 
       listContainer.appendChild(item);
     });
+
+    syncCourtListFadeState(listContainer);
   }
 
   async function displayAdminCourtList()
@@ -3696,12 +3729,10 @@ document.addEventListener("DOMContentLoaded", () =>
     $("addPointB").style.pointerEvents = "none";
 
     elements.undoBtn.style.display = "none";
-    if (elements.muteBtn.parentElement) elements.muteBtn.parentElement.style.display = "none";
     if (elements.sep1) elements.sep1.style.display = "none";
     if (elements.sep2) elements.sep2.style.display = "none";
 
     // Hide player-only tiles in the settings modal
-    if (elements.serverToggleTile) elements.serverToggleTile.style.display = "none";
     if (elements.editPlayersTile) elements.editPlayersTile.style.display = "none";
     if (elements.resetSettingsTile) elements.resetSettingsTile.style.display = "none";
     if (elements.switchToSpectateTile) elements.switchToSpectateTile.style.display = "none";
@@ -3723,12 +3754,10 @@ document.addEventListener("DOMContentLoaded", () =>
 
     // Use "" to let CSS (flex) decide display, not "inline-block"
     elements.undoBtn.style.display = "";
-    if (elements.muteBtn.parentElement) elements.muteBtn.parentElement.style.display = "";
     if (elements.sep1) elements.sep1.style.display = "";
     if (elements.sep2) elements.sep2.style.display = "";
 
     // Restore player-only tiles in the settings modal
-    if (elements.serverToggleTile) elements.serverToggleTile.style.display = "";
     if (elements.editPlayersTile) elements.editPlayersTile.style.display = "";
     if (elements.resetSettingsTile) elements.resetSettingsTile.style.display = "";
     if (elements.switchToSpectateTile) elements.switchToSpectateTile.style.display = "";
@@ -5894,6 +5923,8 @@ document.addEventListener("DOMContentLoaded", () =>
       .forEach(fitTextToContainer);
     updateMarqueeScrolling();
     clampCourtQrPanelToViewport();
+    syncCourtListFadeState(elements.playCourtList);
+    syncCourtListFadeState(elements.spectateCourtList);
   });
 
 
