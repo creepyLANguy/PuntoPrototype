@@ -1984,6 +1984,7 @@ document.addEventListener("DOMContentLoaded", () =>
         setPlayPageVisible(true);
         elements.playCourtSearch.value = "";
         elements.playCourtPassword.value = "";
+        elements.playCourtNameError.style.display = "none";
         elements.playCourtNameError.textContent = "";
         elements.playCourtPasswordError.textContent = "";
         await loadCourtsWithInlineLoader(elements.playCourtList, true);
@@ -2003,6 +2004,7 @@ document.addEventListener("DOMContentLoaded", () =>
       {
         elements.spectatePage.style.display = "flex";
         elements.spectateCourtSearch.value = "";
+        elements.spectateCourtNameError.style.display = "none";
         elements.spectateCourtNameError.textContent = "";
         await loadCourtsWithInlineLoader(elements.spectateCourtList, false);
         displaySpectateCourtList(allCourts);
@@ -2221,12 +2223,12 @@ document.addEventListener("DOMContentLoaded", () =>
     );
   }
 
-  function showCourtListLoading(listContainer, label = "Loading courts...")
+  function showCourtListLoading(listContainer)
   {
     if (!listContainer) return;
 
     listContainer.innerHTML = `
-      <div class="loading">${label}<span class="loader"></span></div>
+      <div class="loading"><span class="loader"></span></div>
     `;
   }
 
@@ -2241,9 +2243,9 @@ document.addEventListener("DOMContentLoaded", () =>
     await new Promise(resolve => window.setTimeout(resolve, remaining));
   }
 
-  async function loadCourtsWithInlineLoader(listContainer, includePrivateCourts = true, label = "Loading courts...")
+  async function loadCourtsWithInlineLoader(listContainer, includePrivateCourts = true)
   {
-    showCourtListLoading(listContainer, label);
+    showCourtListLoading(listContainer);
     const startedAt = Date.now();
 
     await loadAllActiveCourts(includePrivateCourts);
@@ -2287,6 +2289,7 @@ document.addEventListener("DOMContentLoaded", () =>
         item.classList.add("active");
         elements.playPasswordSection.style.display = "block";
         elements.playCourtPassword.focus();
+        elements.playCourtNameError.style.display = "none";
         elements.playCourtNameError.textContent = "";
         elements.playCourtPasswordError.textContent = "";
       };
@@ -2729,6 +2732,7 @@ document.addEventListener("DOMContentLoaded", () =>
         selectedPlayCourt = null;
         elements.playCourtSearch.value = "";
         elements.playCourtPassword.value = "";
+        elements.playCourtNameError.style.display = "none";
         elements.playCourtNameError.textContent = "";
         elements.playCourtPasswordError.textContent = "";
 
@@ -2743,6 +2747,7 @@ document.addEventListener("DOMContentLoaded", () =>
         elements.menuPage.style.display = "none";
         elements.spectatePage.style.display = "flex";
         elements.spectateCourtSearch.value = "";
+        elements.spectateCourtNameError.style.display = "none";
         elements.spectateCourtNameError.textContent = "";
 
         await loadCourtsWithInlineLoader(elements.spectateCourtList, false);
@@ -2943,6 +2948,7 @@ document.addEventListener("DOMContentLoaded", () =>
     setPlayPageVisible(true);
     elements.playPasswordSection.style.display = "block";
     elements.playCourtSearch.value = court?.name || currentCourtName || courtId;
+    elements.courtNameError.style.display = "none";
     elements.playCourtNameError.textContent = "";
     elements.playCourtPasswordError.textContent = "";
     elements.playCourtPassword.value = "";
@@ -3199,11 +3205,14 @@ document.addEventListener("DOMContentLoaded", () =>
       const courtId = selectedPlayCourt;
       const password = elements.playCourtPassword.value.trim();
 
+
+      elements.playCourtNameError.style.display = "none";
       elements.playCourtNameError.textContent = "";
       elements.playCourtPasswordError.textContent = "";
 
       if (!courtId)
       {
+        elements.playCourtNameError.style.display = "block";
         elements.playCourtNameError.textContent = "Court not selected.";
         return;
       }
@@ -3219,6 +3228,7 @@ document.addEventListener("DOMContentLoaded", () =>
 
       if (!snap.exists())
       {
+        elements.playCourtNameError.style.display = "block";
         elements.playCourtNameError.textContent = "Court not found.";
         return;
       }
@@ -3272,6 +3282,7 @@ document.addEventListener("DOMContentLoaded", () =>
     {
       const errorEl = spectate ? elements.spectateCourtNameError : elements.playCourtNameError;
       errorEl.textContent = "Court not found.";
+      errorEl.style.display = "block";
       const listContainer = spectate ? elements.spectateCourtList : elements.playCourtList;
       const selectedItem = listContainer.querySelector(`[data-court-name="${courtId}"]`);
       if (selectedItem)
