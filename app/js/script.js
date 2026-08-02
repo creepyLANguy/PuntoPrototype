@@ -1986,7 +1986,7 @@ document.addEventListener("DOMContentLoaded", () =>
         elements.playCourtPassword.value = "";
         elements.playCourtNameError.textContent = "";
         elements.playCourtPasswordError.textContent = "";
-        await loadAllActiveCourts();
+        await loadCourtsWithInlineLoader(elements.playCourtList, true);
         displayPlayCourtList(allCourts);
         syncPlaySelection(state.selectedCourtId || state.courtId);
         if (selectedPlayCourt)
@@ -2004,7 +2004,7 @@ document.addEventListener("DOMContentLoaded", () =>
         elements.spectatePage.style.display = "flex";
         elements.spectateCourtSearch.value = "";
         elements.spectateCourtNameError.textContent = "";
-        await loadAllActiveCourts(false);
+        await loadCourtsWithInlineLoader(elements.spectateCourtList, false);
         displaySpectateCourtList(allCourts);
         return;
       }
@@ -2219,6 +2219,35 @@ document.addEventListener("DOMContentLoaded", () =>
       court.name.toLowerCase().includes(term) ||
       court.id.toLowerCase().includes(term)
     );
+  }
+
+  function showCourtListLoading(listContainer, label = "Loading courts...")
+  {
+    if (!listContainer) return;
+
+    listContainer.innerHTML = `
+      <div class="loading">${label}<span class="loader"></span></div>
+    `;
+  }
+
+  async function ensureMinimumLoadingDuration(startedAt)
+  {
+    if (!Number.isFinite(startedAt)) return;
+
+    const elapsed = Date.now() - startedAt;
+    const remaining = LOADING_SPINNER_MIN_DURATION_MS - elapsed;
+    if (remaining <= 0) return;
+
+    await new Promise(resolve => window.setTimeout(resolve, remaining));
+  }
+
+  async function loadCourtsWithInlineLoader(listContainer, includePrivateCourts = true, label = "Loading courts...")
+  {
+    showCourtListLoading(listContainer, label);
+    const startedAt = Date.now();
+
+    await loadAllActiveCourts(includePrivateCourts);
+    await ensureMinimumLoadingDuration(startedAt);
   }
 
   function displayPlayCourtList(courts)
@@ -2703,7 +2732,7 @@ document.addEventListener("DOMContentLoaded", () =>
         elements.playCourtNameError.textContent = "";
         elements.playCourtPasswordError.textContent = "";
 
-        await loadAllActiveCourts();
+        await loadCourtsWithInlineLoader(elements.playCourtList, true);
         displayPlayCourtList(allCourts);
         elements.playCourtSearch.focus();
         syncCurrentViewState();
@@ -2716,7 +2745,7 @@ document.addEventListener("DOMContentLoaded", () =>
         elements.spectateCourtSearch.value = "";
         elements.spectateCourtNameError.textContent = "";
 
-        await loadAllActiveCourts(false);
+        await loadCourtsWithInlineLoader(elements.spectateCourtList, false);
         displaySpectateCourtList(allCourts);
         elements.spectateCourtSearch.focus();
         syncCurrentViewState();
@@ -2905,7 +2934,7 @@ document.addEventListener("DOMContentLoaded", () =>
 
     if (allCourts.length === 0)
     {
-      await loadAllActiveCourts();
+      await loadCourtsWithInlineLoader(elements.playCourtList, true);
     }
 
     displayPlayCourtList(allCourts);
