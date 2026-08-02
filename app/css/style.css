@@ -2839,14 +2839,54 @@ body.light-mode .primary-btn {
 
 .court-list {
   /* Scale with viewport height so it's usable on short landscape screens */
+  height: clamp(80px, 28vh, 300px);
   max-height: clamp(80px, 28vh, 300px);
   overflow-y: auto;
+  overflow-x: hidden;
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 8px;
   background: rgba(0, 0, 0, 0.3);
   margin-bottom: 8px;
+  scrollbar-gutter: stable both-edges;
   scrollbar-color: #ffffff rgba(0, 0, 0, 0.3);
   scrollbar-width: thin;
+  position: relative;
+}
+
+.court-list.has-overflow::before,
+.court-list.has-overflow::after {
+  content: "";
+  position: sticky;
+  left: 0;
+  right: 0;
+  height: 18px;
+  display: block;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.court-list.has-overflow::before {
+  top: 0;
+  margin-bottom: -18px;
+  opacity: 0;
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.85), rgba(0, 0, 0, 0));
+  transition: opacity 150ms ease;
+}
+
+.court-list.has-overflow::after {
+  bottom: 0;
+  margin-top: -18px;
+  opacity: 0;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.85), rgba(0, 0, 0, 0));
+  transition: opacity 150ms ease;
+}
+
+.court-list.has-overflow.fade-top::before {
+  opacity: 1;
+}
+
+.court-list.has-overflow.fade-bottom::after {
+  opacity: 1;
 }
 
 /*
@@ -2922,6 +2962,14 @@ body.light-mode .court-list {
   scrollbar-color: #333 rgba(255, 255, 255, 0.8);
 }
 
+body.light-mode .court-list.has-overflow::before {
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0));
+}
+
+body.light-mode .court-list.has-overflow::after {
+  background: linear-gradient(to top, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0));
+}
+
 .court-list::-webkit-scrollbar {
   width: 10px;
 }
@@ -2949,12 +2997,21 @@ body.light-mode .court-list {
   font-size: 20px;
 }
 
+.court-list > .loading,
+.court-list > .no-courts {
+  min-height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 /* =======================================================
    SCOREBOARD LOADING OVERLAY
 ========================================================== */
 
+.app-loading-overlay,
 .scoreboard-loading {
-  position: absolute;
+  position: fixed;
   inset: 0;
   z-index: 9999;
   background: var(--bg);
@@ -2965,6 +3022,11 @@ body.light-mode .court-list {
   align-items: center;
 }
 
+.app-loading-overlay {
+  z-index: 10000;
+}
+
+.app-loading-overlay.hidden,
 .scoreboard-loading.hidden {
   opacity: 0;
   visibility: hidden;
@@ -2974,6 +3036,16 @@ body.light-mode .court-list {
 .loading-content {
   text-align: center;
   perspective: 1000px;
+}
+
+.loading-indicator {
+  opacity: 0;
+  transition: opacity 180ms ease;
+}
+
+.app-loading-overlay.show-spinner .loading-indicator,
+.scoreboard-loading.show-spinner .loading-indicator {
+  opacity: 1;
 }
 
 .spinner-wrapper {
@@ -3062,10 +3134,6 @@ body.light-mode .loading-logo {
 
 body.light-mode .court-item {
   border-bottom: 1px solid rgba(0, 0, 0, 0.1);
-}
-
-.court-item:last-child {
-  border-bottom: none;
 }
 
 .court-item:hover {

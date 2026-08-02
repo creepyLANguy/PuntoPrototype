@@ -72,7 +72,9 @@ document.addEventListener("DOMContentLoaded", () =>
 
   const TOAST_DURATION_MS = 3000;
 
-  const LOADING_SPINNER_MIN_DURATION_MS = 0;
+  const LOAD_SPINNER_DELAY_MS = 750;
+
+  const LOADING_SPINNER_MIN_DURATION_MS = 750;
 
   const COURTID_UPPER_LIMIT = 999999999;
 
@@ -747,7 +749,6 @@ document.addEventListener("DOMContentLoaded", () =>
     const linearChannels = channels.map((channel) =>
       channel <= 0.03928 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4
     );
-
     return (linearChannels[0] * 0.2126) + (linearChannels[1] * 0.7152) + (linearChannels[2] * 0.0722);
   }
 
@@ -930,6 +931,7 @@ document.addEventListener("DOMContentLoaded", () =>
   const $ = (id) => document.getElementById(id);
 
   const elements = {
+    startupLoading: $("startupLoading"),
     homeLinkBtn: $("homeLinkBtn"),
     menuPage: $("menuPage"),
     scoreboardPage: $("scoreboardPage"),
@@ -1171,14 +1173,120 @@ document.addEventListener("DOMContentLoaded", () =>
   elements.closeEditDeviceBtn = $("closeEditDeviceBtn");
 
   let allDevices = [];
+  let startupLoadingDelayTimer = null;
+  let scoreboardLoadingDelayTimer = null;
 
   // =====================================================
   // INITIALIZE THEME
   // =====================================================
 
+  function scheduleLoadingIndicator(overlayEl, onSpinnerShown = null)
+  {
+    if (!overlayEl) return null;
+
+    overlayEl.classList.remove("show-spinner");
+
+    const revealSpinner = () =>
+    {
+      overlayEl.classList.add("show-spinner");
+      if (typeof onSpinnerShown === "function")
+      {
+        onSpinnerShown();
+      }
+    };
+
+    if (LOAD_SPINNER_DELAY_MS <= 0)
+    {
+      revealSpinner();
+      return null;
+    }
+
+    return window.setTimeout(revealSpinner, LOAD_SPINNER_DELAY_MS);
+  }
+
+  function beginStartupLoading()
+  {
+    if (!elements.startupLoading) return;
+
+    if (startupLoadingDelayTimer)
+    {
+      window.clearTimeout(startupLoadingDelayTimer);
+      startupLoadingDelayTimer = null;
+    }
+
+    elements.startupLoading.classList.remove("hidden");
+    startupLoadingDelayTimer = scheduleLoadingIndicator(elements.startupLoading);
+  }
+
+  function finishStartupLoading()
+  {
+    if (!elements.startupLoading) return;
+
+    if (startupLoadingDelayTimer)
+    {
+      window.clearTimeout(startupLoadingDelayTimer);
+      startupLoadingDelayTimer = null;
+    }
+
+    elements.startupLoading.classList.remove("show-spinner");
+    elements.startupLoading.classList.add("hidden");
+  }
+
+  function beginScoreboardLoading()
+  {
+    if (!elements.scoreboardLoading) return;
+
+    if (scoreboardLoadingDelayTimer)
+    {
+      window.clearTimeout(scoreboardLoadingDelayTimer);
+      scoreboardLoadingDelayTimer = null;
+    }
+
+    loadingSpinnerStartTime = 0;
+    elements.scoreboardLoading.classList.remove("hidden");
+    scoreboardLoadingDelayTimer = scheduleLoadingIndicator(elements.scoreboardLoading, () =>
+    {
+      loadingSpinnerStartTime = Date.now();
+    });
+  }
+
+  function finishScoreboardLoading()
+  {
+    if (!elements.scoreboardLoading) return;
+
+    if (scoreboardLoadingDelayTimer)
+    {
+      window.clearTimeout(scoreboardLoadingDelayTimer);
+      scoreboardLoadingDelayTimer = null;
+    }
+
+    const hideOverlay = () =>
+    {
+      elements.scoreboardLoading.classList.remove("show-spinner");
+      elements.scoreboardLoading.classList.add("hidden");
+      loadingSpinnerStartTime = 0;
+    };
+
+    if (!loadingSpinnerStartTime)
+    {
+      hideOverlay();
+      return;
+    }
+
+    const spinnerTimeElapsed = Date.now() - loadingSpinnerStartTime;
+    if (spinnerTimeElapsed >= LOADING_SPINNER_MIN_DURATION_MS)
+    {
+      hideOverlay();
+      return;
+    }
+
+    window.setTimeout(hideOverlay, LOADING_SPINNER_MIN_DURATION_MS - spinnerTimeElapsed);
+  }
+
   initializeTheme();
   initializeWaves();
   updateFullscreenButton();
+  beginStartupLoading();
   void initializeAppNavigation();
 
   ["fullscreenchange", "webkitfullscreenchange", "MSFullscreenChange"].forEach(eventName =>
@@ -1875,9 +1983,10 @@ document.addEventListener("DOMContentLoaded", () =>
         setPlayPageVisible(true);
         elements.playCourtSearch.value = "";
         elements.playCourtPassword.value = "";
+        elements.playCourtNameError.style.display = "none";
         elements.playCourtNameError.textContent = "";
         elements.playCourtPasswordError.textContent = "";
-        await loadAllActiveCourts();
+        await loadCourtsWithInlineLoader(elements.playCourtList, true);
         displayPlayCourtList(allCourts);
         syncPlaySelection(state.selectedCourtId || state.courtId);
         if (selectedPlayCourt)
@@ -1894,8 +2003,9 @@ document.addEventListener("DOMContentLoaded", () =>
       {
         elements.spectatePage.style.display = "flex";
         elements.spectateCourtSearch.value = "";
+        elements.spectateCourtNameError.style.display = "none";
         elements.spectateCourtNameError.textContent = "";
-        await loadAllActiveCourts(false);
+        await loadCourtsWithInlineLoader(elements.spectateCourtList, false);
         displaySpectateCourtList(allCourts);
         return;
       }
@@ -1995,21 +2105,28 @@ document.addEventListener("DOMContentLoaded", () =>
 
   async function initializeAppNavigation()
   {
-    const routeState = getViewStateFromLocation();
-    replaceNavigationState(createViewState({ page: NAV_PAGES.MENU }));
-
-    if (routeState.page === NAV_PAGES.SCOREBOARD && routeState.courtId)
+    try
     {
-      const opened = await openCourtFromRoute("skip", routeState.courtId);
-      if (opened)
-      {
-        pushNavigationState(getCurrentViewState());
-        return;
-      }
-    }
+      const routeState = getViewStateFromLocation();
+      replaceNavigationState(createViewState({ page: NAV_PAGES.MENU }));
 
-    await restoreViewState(createViewState({ page: NAV_PAGES.MENU }));
-    replaceNavigationState(getCurrentViewState());
+      if (routeState.page === NAV_PAGES.SCOREBOARD && routeState.courtId)
+      {
+        const opened = await openCourtFromRoute("skip", routeState.courtId);
+        if (opened)
+        {
+          pushNavigationState(getCurrentViewState());
+          return;
+        }
+      }
+
+      await restoreViewState(createViewState({ page: NAV_PAGES.MENU }));
+      replaceNavigationState(getCurrentViewState());
+    }
+    finally
+    {
+      finishStartupLoading();
+    }
   }
 
   window.addEventListener("popstate", (event) =>
@@ -2105,14 +2222,71 @@ document.addEventListener("DOMContentLoaded", () =>
     );
   }
 
+  function showCourtListLoading(listContainer)
+  {
+    if (!listContainer) return;
+
+    listContainer.innerHTML = `
+      <div class="loading"><span class="loader"></span></div>
+    `;
+
+    syncCourtListFadeState(listContainer);
+  }
+
+  function syncCourtListFadeState(listContainer)
+  {
+    if (!listContainer) return;
+
+    const hasOverflow = listContainer.scrollHeight > listContainer.clientHeight + 1;
+    const atTop = listContainer.scrollTop <= 1;
+    const atBottom = listContainer.scrollTop + listContainer.clientHeight >= listContainer.scrollHeight - 1;
+
+    listContainer.classList.toggle("has-overflow", hasOverflow);
+    listContainer.classList.toggle("fade-top", hasOverflow && !atTop);
+    listContainer.classList.toggle("fade-bottom", hasOverflow && !atBottom);
+  }
+
+  function ensureCourtListFadeBinding(listContainer)
+  {
+    if (!listContainer || listContainer.dataset.fadeBound === "true") return;
+
+    listContainer.dataset.fadeBound = "true";
+    listContainer.addEventListener("scroll", () =>
+    {
+      syncCourtListFadeState(listContainer);
+    }, { passive: true });
+  }
+
+  async function ensureMinimumLoadingDuration(startedAt)
+  {
+    if (!Number.isFinite(startedAt)) return;
+
+    const elapsed = Date.now() - startedAt;
+    const remaining = LOADING_SPINNER_MIN_DURATION_MS - elapsed;
+    if (remaining <= 0) return;
+
+    await new Promise(resolve => window.setTimeout(resolve, remaining));
+  }
+
+  async function loadCourtsWithInlineLoader(listContainer, includePrivateCourts = true)
+  {
+    showCourtListLoading(listContainer);
+    const startedAt = Date.now();
+
+    await loadAllActiveCourts(includePrivateCourts);
+    await ensureMinimumLoadingDuration(startedAt);
+  }
+
   function displayPlayCourtList(courts)
   {
     const listContainer = elements.playCourtList;
+    ensureCourtListFadeBinding(listContainer);
     listContainer.innerHTML = "";
 
     if (courts.length === 0)
     {
       listContainer.innerHTML = '<div class="no-courts">No courts found</div>';
+      syncCourtListFadeState(listContainer);
       return;
     }
 
@@ -2142,6 +2316,7 @@ document.addEventListener("DOMContentLoaded", () =>
         item.classList.add("active");
         elements.playPasswordSection.style.display = "block";
         elements.playCourtPassword.focus();
+        elements.playCourtNameError.style.display = "none";
         elements.playCourtNameError.textContent = "";
         elements.playCourtPasswordError.textContent = "";
       };
@@ -2177,16 +2352,20 @@ document.addEventListener("DOMContentLoaded", () =>
 
       listContainer.appendChild(item);
     });
+
+    syncCourtListFadeState(listContainer);
   }
 
   function displaySpectateCourtList(courts)
   {
     const listContainer = elements.spectateCourtList;
+    ensureCourtListFadeBinding(listContainer);
     listContainer.innerHTML = "";
 
     if (courts.length === 0)
     {
       listContainer.innerHTML = '<div class="no-courts">No courts found</div>';
+      syncCourtListFadeState(listContainer);
       return;
     }
 
@@ -2241,6 +2420,8 @@ document.addEventListener("DOMContentLoaded", () =>
 
       listContainer.appendChild(item);
     });
+
+    syncCourtListFadeState(listContainer);
   }
 
   async function displayAdminCourtList()
@@ -2584,10 +2765,11 @@ document.addEventListener("DOMContentLoaded", () =>
         selectedPlayCourt = null;
         elements.playCourtSearch.value = "";
         elements.playCourtPassword.value = "";
+        elements.playCourtNameError.style.display = "none";
         elements.playCourtNameError.textContent = "";
         elements.playCourtPasswordError.textContent = "";
 
-        await loadAllActiveCourts();
+        await loadCourtsWithInlineLoader(elements.playCourtList, true);
         displayPlayCourtList(allCourts);
         elements.playCourtSearch.focus();
         syncCurrentViewState();
@@ -2598,9 +2780,10 @@ document.addEventListener("DOMContentLoaded", () =>
         elements.menuPage.style.display = "none";
         elements.spectatePage.style.display = "flex";
         elements.spectateCourtSearch.value = "";
+        elements.spectateCourtNameError.style.display = "none";
         elements.spectateCourtNameError.textContent = "";
 
-        await loadAllActiveCourts(false);
+        await loadCourtsWithInlineLoader(elements.spectateCourtList, false);
         displaySpectateCourtList(allCourts);
         elements.spectateCourtSearch.focus();
         syncCurrentViewState();
@@ -2789,7 +2972,7 @@ document.addEventListener("DOMContentLoaded", () =>
 
     if (allCourts.length === 0)
     {
-      await loadAllActiveCourts();
+      await loadCourtsWithInlineLoader(elements.playCourtList, true);
     }
 
     displayPlayCourtList(allCourts);
@@ -2798,6 +2981,7 @@ document.addEventListener("DOMContentLoaded", () =>
     setPlayPageVisible(true);
     elements.playPasswordSection.style.display = "block";
     elements.playCourtSearch.value = court?.name || currentCourtName || courtId;
+    elements.courtNameError.style.display = "none";
     elements.playCourtNameError.textContent = "";
     elements.playCourtPasswordError.textContent = "";
     elements.playCourtPassword.value = "";
@@ -3054,11 +3238,14 @@ document.addEventListener("DOMContentLoaded", () =>
       const courtId = selectedPlayCourt;
       const password = elements.playCourtPassword.value.trim();
 
+
+      elements.playCourtNameError.style.display = "none";
       elements.playCourtNameError.textContent = "";
       elements.playCourtPasswordError.textContent = "";
 
       if (!courtId)
       {
+        elements.playCourtNameError.style.display = "block";
         elements.playCourtNameError.textContent = "Court not selected.";
         return;
       }
@@ -3074,6 +3261,7 @@ document.addEventListener("DOMContentLoaded", () =>
 
       if (!snap.exists())
       {
+        elements.playCourtNameError.style.display = "block";
         elements.playCourtNameError.textContent = "Court not found.";
         return;
       }
@@ -3127,6 +3315,7 @@ document.addEventListener("DOMContentLoaded", () =>
     {
       const errorEl = spectate ? elements.spectateCourtNameError : elements.playCourtNameError;
       errorEl.textContent = "Court not found.";
+      errorEl.style.display = "block";
       const listContainer = spectate ? elements.spectateCourtList : elements.playCourtList;
       const selectedItem = listContainer.querySelector(`[data-court-name="${courtId}"]`);
       if (selectedItem)
@@ -3195,11 +3384,7 @@ document.addEventListener("DOMContentLoaded", () =>
     elements.scoreboardPage.style.display = "flex";
     document.body.classList.add("scoreboard-active");
 
-    if (elements.scoreboardLoading)
-    {
-      elements.scoreboardLoading.classList.remove("hidden");
-      loadingSpinnerStartTime = Date.now();
-    }
+    beginScoreboardLoading();
 
     BlankOutScoreboard();
 
@@ -3240,6 +3425,7 @@ document.addEventListener("DOMContentLoaded", () =>
     currentScoringOptions = { ...DEFAULT_SCORING_OPTIONS };
     syncScoringControls();
     clearCourtQr();
+    finishScoreboardLoading();
     updatePageTitle();
 
     document.body.classList.remove("scoreboard-active");
@@ -3543,12 +3729,10 @@ document.addEventListener("DOMContentLoaded", () =>
     $("addPointB").style.pointerEvents = "none";
 
     elements.undoBtn.style.display = "none";
-    if (elements.muteBtn.parentElement) elements.muteBtn.parentElement.style.display = "none";
     if (elements.sep1) elements.sep1.style.display = "none";
     if (elements.sep2) elements.sep2.style.display = "none";
 
     // Hide player-only tiles in the settings modal
-    if (elements.serverToggleTile) elements.serverToggleTile.style.display = "none";
     if (elements.editPlayersTile) elements.editPlayersTile.style.display = "none";
     if (elements.resetSettingsTile) elements.resetSettingsTile.style.display = "none";
     if (elements.switchToSpectateTile) elements.switchToSpectateTile.style.display = "none";
@@ -3570,12 +3754,10 @@ document.addEventListener("DOMContentLoaded", () =>
 
     // Use "" to let CSS (flex) decide display, not "inline-block"
     elements.undoBtn.style.display = "";
-    if (elements.muteBtn.parentElement) elements.muteBtn.parentElement.style.display = "";
     if (elements.sep1) elements.sep1.style.display = "";
     if (elements.sep2) elements.sep2.style.display = "";
 
     // Restore player-only tiles in the settings modal
-    if (elements.serverToggleTile) elements.serverToggleTile.style.display = "";
     if (elements.editPlayersTile) elements.editPlayersTile.style.display = "";
     if (elements.resetSettingsTile) elements.resetSettingsTile.style.display = "";
     if (elements.switchToSpectateTile) elements.switchToSpectateTile.style.display = "";
@@ -4294,7 +4476,7 @@ document.addEventListener("DOMContentLoaded", () =>
     }, TOAST_DURATION_MS);
   }
 
-  function showspinner(containerEl, label = "Loading...")
+  function showspinner(containerEl)
   {
     if (!containerEl) return;
 
@@ -4309,7 +4491,7 @@ document.addEventListener("DOMContentLoaded", () =>
           <div class="spinner-wrapper">
             <div class="spinner"></div>
           </div>
-          <div class="loading">${label}</div>
+          <div class="loading"></div>
         </div>
       `;
 
@@ -5741,6 +5923,8 @@ document.addEventListener("DOMContentLoaded", () =>
       .forEach(fitTextToContainer);
     updateMarqueeScrolling();
     clampCourtQrPanelToViewport();
+    syncCourtListFadeState(elements.playCourtList);
+    syncCourtListFadeState(elements.spectateCourtList);
   });
 
 
@@ -5852,21 +6036,8 @@ document.addEventListener("DOMContentLoaded", () =>
         lastKnownSets = { A: newData.A.sets, B: newData.B.sets };
         sessionInitialized = true;
 
-        // Hide loading overlay on first real payload, but ensure it is visible for at least LOADING_SPINNER_MIN_DURATION_MS
-        if (elements.scoreboardLoading)
-        {
-          let spinnerTimeRemaining = Date.now() - loadingSpinnerStartTime;
-          if (spinnerTimeRemaining >= LOADING_SPINNER_MIN_DURATION_MS)
-          {
-            elements.scoreboardLoading.classList.add("hidden");
-          }
-          else
-          {
-            setTimeout(() => {
-              elements.scoreboardLoading.classList.add("hidden");
-            }, LOADING_SPINNER_MIN_DURATION_MS - spinnerTimeRemaining);
-          }
-        }
+        finishScoreboardLoading();
+        finishStartupLoading();
       }
 
 

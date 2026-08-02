@@ -369,6 +369,14 @@
       </div>
     </div>
 
+    <div id="startupLoading" class="app-loading-overlay" aria-live="polite">
+      <div class="loading-content">
+        <div class="loading-indicator">
+          <div class="loading"><span class="loader"></span></div>
+        </div>
+      </div>
+    </div>
+
     <!-- ================= MENU ================= -->
     <main id="menuPage" class="menu-page">
 
@@ -627,7 +635,7 @@
 
         <!-- Court List -->
         <div id="playCourtList" class="court-list">
-          <div class="loading">Loading courts...</div>
+          <div class="loading">Loading...</div>
         </div>
 
         <!-- Password Section (Hidden by default) -->
@@ -641,7 +649,7 @@
           <button id="enterCourtBtn" class="primary-btn">Enter Court</button>
         </div>
 
-        <div class="error" id="playCourtNameError"></div>
+        <div class="error" id="playCourtNameError" style="display:none;"></div>
 
       </div>
     </div>
@@ -663,10 +671,10 @@
 
         <!-- Court List -->
         <div id="spectateCourtList" class="court-list">
-          <div class="loading">Loading courts...</div>
+          <div class="loading">Loading...</div>
         </div>
 
-        <div class="error" id="spectateCourtNameError"></div>
+        <div class="error" id="spectateCourtNameError" style="display:none;"></div>
       </div>
     </div>
 
@@ -675,10 +683,9 @@
       <!-- Scoreboard Loading Overlay -->
       <div id="scoreboardLoading" class="scoreboard-loading">
         <div class="loading-content">
-          <!-- <div class="spinner-wrapper">
-            <img src="media/img/logo.svg" class="loading-logo" alt="Padel Push Logo" />
-            <div class="spinner"></div>
-          </div> -->
+          <div class="loading-indicator">
+            <div class="loading"><span class="loader"></span></div>
+          </div>
         </div>
       </div>
 
