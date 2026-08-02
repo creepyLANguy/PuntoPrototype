@@ -71,9 +71,10 @@ document.addEventListener("DOMContentLoaded", () =>
   const LONG_PRESS_VIBRATION_MS = 200;
 
   const TOAST_DURATION_MS = 3000;
-  const COURT_LOAD_SPINNER_DELAY_MS = 0;//1000; //AL. //TODO - set a non-zero timeout ms value. 
 
-  const LOADING_SPINNER_MIN_DURATION_MS = 0;
+  const LOAD_SPINNER_DELAY_MS = 0;//1000; //AL. //TODO - set a non-zero timeout ms value. 
+
+  const LOADING_SPINNER_MIN_DURATION_MS = 1000;
 
   const COURTID_UPPER_LIMIT = 999999999;
 
@@ -931,6 +932,7 @@ document.addEventListener("DOMContentLoaded", () =>
   const $ = (id) => document.getElementById(id);
 
   const elements = {
+    startupLoading: $("startupLoading"),
     homeLinkBtn: $("homeLinkBtn"),
     menuPage: $("menuPage"),
     scoreboardPage: $("scoreboardPage"),
@@ -1172,14 +1174,120 @@ document.addEventListener("DOMContentLoaded", () =>
   elements.closeEditDeviceBtn = $("closeEditDeviceBtn");
 
   let allDevices = [];
+  let startupLoadingDelayTimer = null;
+  let scoreboardLoadingDelayTimer = null;
 
   // =====================================================
   // INITIALIZE THEME
   // =====================================================
 
+  function scheduleLoadingIndicator(overlayEl, onSpinnerShown = null)
+  {
+    if (!overlayEl) return null;
+
+    overlayEl.classList.remove("show-spinner");
+
+    const revealSpinner = () =>
+    {
+      overlayEl.classList.add("show-spinner");
+      if (typeof onSpinnerShown === "function")
+      {
+        onSpinnerShown();
+      }
+    };
+
+    if (LOAD_SPINNER_DELAY_MS <= 0)
+    {
+      revealSpinner();
+      return null;
+    }
+
+    return window.setTimeout(revealSpinner, LOAD_SPINNER_DELAY_MS);
+  }
+
+  function beginStartupLoading()
+  {
+    if (!elements.startupLoading) return;
+
+    if (startupLoadingDelayTimer)
+    {
+      window.clearTimeout(startupLoadingDelayTimer);
+      startupLoadingDelayTimer = null;
+    }
+
+    elements.startupLoading.classList.remove("hidden");
+    startupLoadingDelayTimer = scheduleLoadingIndicator(elements.startupLoading);
+  }
+
+  function finishStartupLoading()
+  {
+    if (!elements.startupLoading) return;
+
+    if (startupLoadingDelayTimer)
+    {
+      window.clearTimeout(startupLoadingDelayTimer);
+      startupLoadingDelayTimer = null;
+    }
+
+    elements.startupLoading.classList.remove("show-spinner");
+    elements.startupLoading.classList.add("hidden");
+  }
+
+  function beginScoreboardLoading()
+  {
+    if (!elements.scoreboardLoading) return;
+
+    if (scoreboardLoadingDelayTimer)
+    {
+      window.clearTimeout(scoreboardLoadingDelayTimer);
+      scoreboardLoadingDelayTimer = null;
+    }
+
+    loadingSpinnerStartTime = 0;
+    elements.scoreboardLoading.classList.remove("hidden");
+    scoreboardLoadingDelayTimer = scheduleLoadingIndicator(elements.scoreboardLoading, () =>
+    {
+      loadingSpinnerStartTime = Date.now();
+    });
+  }
+
+  function finishScoreboardLoading()
+  {
+    if (!elements.scoreboardLoading) return;
+
+    if (scoreboardLoadingDelayTimer)
+    {
+      window.clearTimeout(scoreboardLoadingDelayTimer);
+      scoreboardLoadingDelayTimer = null;
+    }
+
+    const hideOverlay = () =>
+    {
+      elements.scoreboardLoading.classList.remove("show-spinner");
+      elements.scoreboardLoading.classList.add("hidden");
+      loadingSpinnerStartTime = 0;
+    };
+
+    if (!loadingSpinnerStartTime)
+    {
+      hideOverlay();
+      return;
+    }
+
+    const spinnerTimeElapsed = Date.now() - loadingSpinnerStartTime;
+    if (spinnerTimeElapsed >= LOADING_SPINNER_MIN_DURATION_MS)
+    {
+      hideOverlay();
+      return;
+    }
+
+    window.setTimeout(hideOverlay, LOADING_SPINNER_MIN_DURATION_MS - spinnerTimeElapsed);
+  }
+
   initializeTheme();
   initializeWaves();
   updateFullscreenButton();
+  beginStartupLoading();
   void initializeAppNavigation();
 
   ["fullscreenchange", "webkitfullscreenchange", "MSFullscreenChange"].forEach(eventName =>
@@ -1996,21 +2104,28 @@ document.addEventListener("DOMContentLoaded", () =>
 
   async function initializeAppNavigation()
   {
-    const routeState = getViewStateFromLocation();
-    replaceNavigationState(createViewState({ page: NAV_PAGES.MENU }));
-
-    if (routeState.page === NAV_PAGES.SCOREBOARD && routeState.courtId)
+    try
     {
-      const opened = await openCourtFromRoute("skip", routeState.courtId);
-      if (opened)
-      {
-        pushNavigationState(getCurrentViewState());
-        return;
-      }
-    }
+      const routeState = getViewStateFromLocation();
+      replaceNavigationState(createViewState({ page: NAV_PAGES.MENU }));
 
-    await restoreViewState(createViewState({ page: NAV_PAGES.MENU }));
-    replaceNavigationState(getCurrentViewState());
+      if (routeState.page === NAV_PAGES.SCOREBOARD && routeState.courtId)
+      {
+        const opened = await openCourtFromRoute("skip", routeState.courtId);
+        if (opened)
+        {
+          pushNavigationState(getCurrentViewState());
+          return;
+        }
+      }
+
+      await restoreViewState(createViewState({ page: NAV_PAGES.MENU }));
+      replaceNavigationState(getCurrentViewState());
+    }
+    finally
+    {
+      finishStartupLoading();
+    }
   }
 
   window.addEventListener("popstate", (event) =>
@@ -3196,11 +3311,7 @@ document.addEventListener("DOMContentLoaded", () =>
     elements.scoreboardPage.style.display = "flex";
     document.body.classList.add("scoreboard-active");
 
-    if (elements.scoreboardLoading)
-    {
-      elements.scoreboardLoading.classList.remove("hidden");
-      loadingSpinnerStartTime = Date.now();
-    }
+    beginScoreboardLoading();
 
     BlankOutScoreboard();
 
@@ -3241,6 +3352,7 @@ document.addEventListener("DOMContentLoaded", () =>
     currentScoringOptions = { ...DEFAULT_SCORING_OPTIONS };
     syncScoringControls();
     clearCourtQr();
+    finishScoreboardLoading();
     updatePageTitle();
 
     document.body.classList.remove("scoreboard-active");
@@ -5853,21 +5965,8 @@ document.addEventListener("DOMContentLoaded", () =>
         lastKnownSets = { A: newData.A.sets, B: newData.B.sets };
         sessionInitialized = true;
 
-        // Hide loading overlay on first real payload, but ensure it is visible for at least LOADING_SPINNER_MIN_DURATION_MS
-        if (elements.scoreboardLoading)
-        {
-          let spinnerTimeRemaining = Date.now() - loadingSpinnerStartTime;
-          if (spinnerTimeRemaining >= LOADING_SPINNER_MIN_DURATION_MS)
-          {
-            elements.scoreboardLoading.classList.add("hidden");
-          }
-          else
-          {
-            setTimeout(() => {
-              elements.scoreboardLoading.classList.add("hidden");
-            }, LOADING_SPINNER_MIN_DURATION_MS - spinnerTimeRemaining);
-          }
-        }
+        finishScoreboardLoading();
+        finishStartupLoading();
       }
 
 

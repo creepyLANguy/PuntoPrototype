@@ -2953,8 +2953,9 @@ body.light-mode .court-list {
    SCOREBOARD LOADING OVERLAY
 ========================================================== */
 
+.app-loading-overlay,
 .scoreboard-loading {
-  position: absolute;
+  position: fixed;
   inset: 0;
   z-index: 9999;
   background: var(--bg);
@@ -2965,6 +2966,11 @@ body.light-mode .court-list {
   align-items: center;
 }
 
+.app-loading-overlay {
+  z-index: 10000;
+}
+
+.app-loading-overlay.hidden,
 .scoreboard-loading.hidden {
   opacity: 0;
   visibility: hidden;
@@ -2974,6 +2980,16 @@ body.light-mode .court-list {
 .loading-content {
   text-align: center;
   perspective: 1000px;
+}
+
+.loading-indicator {
+  opacity: 0;
+  transition: opacity 180ms ease;
+}
+
+.app-loading-overlay.show-spinner .loading-indicator,
+.scoreboard-loading.show-spinner .loading-indicator {
+  opacity: 1;
 }
 
 .spinner-wrapper {
