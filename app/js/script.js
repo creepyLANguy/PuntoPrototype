@@ -71,6 +71,7 @@ document.addEventListener("DOMContentLoaded", () =>
   const LONG_PRESS_VIBRATION_MS = 200;
 
   const TOAST_DURATION_MS = 3000;
+  const COURT_LOAD_SPINNER_DELAY_MS = 0;//1000; //AL. //TODO - set a non-zero timeout ms value. 
 
   const LOADING_SPINNER_MIN_DURATION_MS = 0;
 
