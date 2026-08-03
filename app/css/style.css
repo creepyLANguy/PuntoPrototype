@@ -2838,9 +2838,6 @@ body.light-mode .primary-btn {
 ======================================================= */
 
 .court-list {
-  /* Scale with viewport height so it's usable on short landscape screens */
-  height: clamp(80px, 28vh, 300px);
-  max-height: clamp(80px, 28vh, 300px);
   overflow-y: auto;
   overflow-x: hidden;
   border: 1px solid rgba(255, 255, 255, 0.2);
