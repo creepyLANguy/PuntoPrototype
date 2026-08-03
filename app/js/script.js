@@ -441,6 +441,26 @@ document.addEventListener("DOMContentLoaded", () =>
     return normalizeViewState({ page: NAV_PAGES.MENU, ...overrides });
   }
 
+  function isAdminProtectedPage(page)
+  {
+    return [
+      NAV_PAGES.ADMIN_DASHBOARD,
+      NAV_PAGES.CREATE_COURT,
+      NAV_PAGES.EDIT_COURT,
+      NAV_PAGES.ADD_DEVICE,
+      NAV_PAGES.EDIT_DEVICE
+    ].includes(page);
+  }
+
+  function isAdminProtectedViewVisible()
+  {
+    return isElementVisible(elements.adminDashboardPage) ||
+      isElementVisible(elements.createPage) ||
+      isElementVisible(elements.editCourtPage) ||
+      isElementVisible(elements.addDevicePage) ||
+      isElementVisible(elements.editDevicePage);
+  }
+
   function viewStatesEqual(left, right)
   {
     const a = normalizeViewState(left);
@@ -1908,6 +1928,20 @@ document.addEventListener("DOMContentLoaded", () =>
   async function restoreViewState(viewState)
   {
     const state = normalizeViewState(viewState);
+    const wasOnAdminProtectedView = isAdminProtectedViewVisible();
+    const navigatingToAdminProtectedView = isAdminProtectedPage(state.page);
+
+    if (wasOnAdminProtectedView && !navigatingToAdminProtectedView)
+    {
+      isAdmin = false;
+    }
+
+    if (navigatingToAdminProtectedView && !isAdmin)
+    {
+      state.page = NAV_PAGES.ADMIN_AUTH;
+      state.entityId = null;
+    }
+
     isRestoringNavigation = true;
 
     try
@@ -2561,7 +2595,7 @@ document.addEventListener("DOMContentLoaded", () =>
 
     if (syncHistory)
     {
-      syncCurrentViewState("replace");
+      syncCurrentViewState();
     }
   }
 
@@ -2682,7 +2716,7 @@ document.addEventListener("DOMContentLoaded", () =>
 
   elements.closeEditBtn.addEventListener("click", () =>
   {
-    void stepBackInApp(createViewState({ page: NAV_PAGES.ADMIN_DASHBOARD }));
+    void stepBackInApp(createViewState({ page: isAdmin ? NAV_PAGES.ADMIN_DASHBOARD : NAV_PAGES.MENU }));
   });
 
   elements.adminLoginBtn.addEventListener("click", () =>
@@ -6506,6 +6540,11 @@ document.addEventListener("DOMContentLoaded", () =>
   elements.closeEditDeviceBtn.onclick = () =>
   {
     void stepBackInApp(createViewState({ page: isAdmin ? NAV_PAGES.ADMIN_DASHBOARD : NAV_PAGES.MENU }));
+  }
+
+  elements.closeEditBtn.onclick = () =>
+  {
+    void replaceNavigationState(createViewState({ page: isAdmin ? NAV_PAGES.ADMIN_DASHBOARD : NAV_PAGES.MENU }));
   }
 
   // Search logic for devices
