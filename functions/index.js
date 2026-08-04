@@ -992,6 +992,7 @@ exports.getDetailedScore = onCall(
             scoringMode: courtData.scoringMode || courtData.scoringOptions?.scoringMode
         });
         const normalizedOptions = normalizeScoringOptions(scoringOptions);
+
         const playerNames = {
             A1: typeof courtData?.playerNames?.A1 === "string" ? courtData.playerNames.A1 : "",
             A2: typeof courtData?.playerNames?.A2 === "string" ? courtData.playerNames.A2 : "",
@@ -999,102 +1000,101 @@ exports.getDetailedScore = onCall(
             B2: typeof courtData?.playerNames?.B2 === "string" ? courtData.playerNames.B2 : ""
         };
 
-        const eventsRef = db.collection(`courts/${courtId}/events`).orderBy("createdAt", "asc");
-        const eventsSnap = await eventsRef.get();
+        const eventsSnap = await db
+            .collection(`courts/${courtId}/events`)
+            .orderBy("createdAt", "asc")
+            .get();
+
+        // Use only scoring events so details replay mirrors score/current logic.
+        const events = eventsSnap.docs
+            .map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }))
+            .filter((event) => SCORING_EVENTS.has(event.eventType));
 
         let score = defaultScore(normalizedOptions);
-        let setScores = [];
-        let currentSetGames = { A: 0, B: 0 };
-        let pointHistory = []; // "A" or "B" for each point scored, in order
-        let setPointMarkers = []; // 1-based point index where a set is won
 
-        eventsSnap.forEach(docSnap =>
+        // Derived analytics streams (for momentum/stats UI)
+        let pointHistory = [];     // ["A", "B", ...]
+        let setPointMarkers = [];  // 1-based point index where a set is completed
+
+        for (const event of events)
         {
-            const event = docSnap.data();
             const oldSetsA = score.A.sets;
             const oldSetsB = score.B.sets;
+            const oldTotalPoints = (Number(score.A.totalPoints) || 0) + (Number(score.B.totalPoints) || 0);
+
+            score = applyEvent(score, event, normalizedOptions);
+
+            const newTotalPoints = (Number(score.A.totalPoints) || 0) + (Number(score.B.totalPoints) || 0);
+            const pointApplied = newTotalPoints > oldTotalPoints;
+
+            if (event.eventType === "RESET")
+            {
+                pointHistory = [];
+                setPointMarkers = [];
+                continue;
+            }
 
             if (event.eventType === "UNDO")
             {
-                if (score.history && score.history.length > 0)
+                // Undo in scoringEngine rewinds one scoring state using score.history.
+                if (pointHistory.length > 0)
                 {
-                    // Restore state BEFORE the point was added
-                    score = { ...score.history.pop(), history: score.history };
-
-                    // If we just undid a point that had finished a set, remove that set result
-                    if (score.A.sets < oldSetsA || score.B.sets < oldSetsB)
-                    {
-                        setScores.pop();
-                    }
-
-                    // Remove the last recorded point from history
                     pointHistory.pop();
-
-                    while (setPointMarkers.length > 0 && setPointMarkers[setPointMarkers.length - 1] > pointHistory.length)
-                    {
-                        setPointMarkers.pop();
-                    }
                 }
-            }
-            else if (event.eventType === "RESET")
-            {
-                score = defaultScore(normalizedOptions);
-                setScores = [];
-                pointHistory = [];
-                setPointMarkers = [];
-            }
-            else
-            {
-                const previousTotalPoints = (Number(score.A.totalPoints) || 0) + (Number(score.B.totalPoints) || 0);
-                // Normal point awarding
-                score = applyEvent(score, event, normalizedOptions);
-                const nextTotalPoints = (Number(score.A.totalPoints) || 0) + (Number(score.B.totalPoints) || 0);
-                const pointApplied = nextTotalPoints > previousTotalPoints;
-
-                // Track who scored this point (only POINT_TEAM_A/B contribute to momentum)
-                if (event.eventType === "POINT_TEAM_A" && pointApplied)
-                    pointHistory.push("A");
-                else if (event.eventType === "POINT_TEAM_B" && pointApplied)
-                    pointHistory.push("B");
-                // Other non-reset scoring events (e.g. WARMUP) are intentionally ignored
-
-                if (pointApplied && (event.eventType === "POINT_TEAM_A" || event.eventType === "POINT_TEAM_B") &&
-                    (score.A.sets > oldSetsA || score.B.sets > oldSetsB))
+                while (
+                    setPointMarkers.length > 0 &&
+                    setPointMarkers[setPointMarkers.length - 1] > pointHistory.length
+                )
                 {
-                    setPointMarkers.push(pointHistory.length);
+                    setPointMarkers.pop();
                 }
-
-                // Did this point finish a set? (Only track this actively in standard format)
-                if (normalizedOptions.scoringMode === "standard") {
-                    if (score.A.sets > oldSetsA || score.B.sets > oldSetsB)
-                    {
-                        const lastHistory = score.history[score.history.length - 1];
-                        if (lastHistory)
-                        {
-                            setScores.push({
-                                A: lastHistory.A.games + (score.A.sets > oldSetsA ? 1 : 0),
-                                B: lastHistory.B.games + (score.B.sets > oldSetsB ? 1 : 0)
-                            });
-                        }
-                    }
-                }
+                continue;
             }
 
-            // Always keep currentSetGames in sync with the current (replayed) score
-            currentSetGames.A = score.A.games;
-            currentSetGames.B = score.B.games;
-        });
+            if (pointApplied && event.eventType === "POINT_TEAM_A")
+            {
+                pointHistory.push("A");
+            }
+            else if (pointApplied && event.eventType === "POINT_TEAM_B")
+            {
+                pointHistory.push("B");
+            }
+
+            const setCompleted = score.A.sets > oldSetsA || score.B.sets > oldSetsB;
+            if (pointApplied && setCompleted)
+            {
+                setPointMarkers.push(pointHistory.length);
+            }
+        }
+
+        // Canonical source for per-set rows: completedSets from scorer state.
+        // This guarantees details table aligns with score/current.
+        const setScores = Array.isArray(score.completedSets)
+            ? score.completedSets.map((set) => ({
+                A: Number(set?.A) || 0,
+                B: Number(set?.B) || 0,
+                tiebreakPoints: set?.tiebreakPoints || null
+            }))
+            : [];
+
+        const currentSetGames = {
+            A: Number(score.A.games) || 0,
+            B: Number(score.B.games) || 0
+        };
 
         const momentumData = computeMomentumTimeline(pointHistory, normalizedOptions);
 
         return {
             sets: setScores,
             currentGames: currentSetGames,
-            points: { A: score.A.points, B: score.B.points },
-            setsA: score.A.sets,
-            setsB: score.B.sets,
+            points: {
+                A: Number(score.A.points) || 0,
+                B: Number(score.B.points) || 0
+            },
+            setsA: Number(score.A.sets) || 0,
+            setsB: Number(score.B.sets) || 0,
             scoringMode: normalizedOptions.scoringMode,
-            matchComplete: score.matchComplete,
+            matchComplete: Boolean(score.matchComplete),
             playerNames,
             pointHistory,
             setPointMarkers,
