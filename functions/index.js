@@ -147,7 +147,8 @@ async function getLatestCheckpoint(tx, courtId, options)
 {
     const checkpointsQuery = db
         .collection(`courts/${courtId}/${SCORE_CHECKPOINTS_COLLECTION}`)
-        .orderBy("totalPoints", "desc")
+        .orderBy("lastCreatedAt", "desc")
+        .orderBy("lastEventId", "desc")
         .limit(10);
 
     const checkpointsSnap = await tx.get(checkpointsQuery);
@@ -157,7 +158,8 @@ async function getLatestCheckpoint(tx, courtId, options)
     {
         const data = docSnap.data() || {};
         const checkpointOptions = normalizeScoringOptions(data.scoringOptions || {});
-        const sameOptions = checkpointOptions.scoringMode === targetOptions.scoringMode &&
+        const sameOptions =
+            checkpointOptions.scoringMode === targetOptions.scoringMode &&
             checkpointOptions.deuceMode === targetOptions.deuceMode &&
             checkpointOptions.tiebreakMode === targetOptions.tiebreakMode;
 
@@ -1037,7 +1039,7 @@ async (event) =>
 
             // Reconcile every N points using full replay, then auto-heal if drift appears.
             const totalPoints = (Number(updatedScore.A?.totalPoints) || 0) + (Number(updatedScore.B?.totalPoints) || 0);
-            const shouldReconcile = totalPoints > 0 && totalPoints % RECONCILE_INTERVAL_POINTS === 0;
+            const shouldReconcile = RECONCILE_INTERVAL_POINTS  > 0 && totalPoints > 0 && totalPoints % RECONCILE_INTERVAL_POINTS === 0;
 
             if (shouldReconcile)
             {
