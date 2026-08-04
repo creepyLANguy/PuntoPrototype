@@ -873,202 +873,207 @@ async function appendCourtEvent(courtId, event)
 // -----------------------------
 // Event processor
 // -----------------------------
+function shouldApplyIncomingEventAfterReplay(eventId, replayResult)
+{
+    return replayResult.lastEventId !== eventId;
+}
+
 exports.onEventCreate = onDocumentCreated(
+{
+    document: "courts/{courtId}/events/{eventId}",
+    region: REGION
+},
+async (event) =>
+{
+    const { courtId, eventId } = event.params;
+    const newEvent = event.data?.data();
+    const incomingEvent = { id: eventId, ...(newEvent || {}) };
+
+    console.log(`Processing event ${eventId} for court ${courtId}:`, newEvent?.eventType);
+
+    if (!newEvent) return;
+
+    if (!SCORING_EVENTS.has(newEvent.eventType))
     {
-        document: "courts/{courtId}/events/{eventId}",
-        region: REGION
-    },
-    async (event) =>
+        console.log(`Ignoring non-scoring event ${eventId} (${newEvent.eventType}) for score processing.`);
+        return;
+    }
+
+    const scoreRef = db.doc(`courts/${courtId}/score/current`);
+
+    try
     {
-        const { courtId, eventId } = event.params;
-        const newEvent = event.data?.data();
-        const incomingEvent = { id: eventId, ...(newEvent || {}) };
-
-        console.log(`Processing event ${eventId} for court ${courtId}:`, newEvent?.eventType);
-
-        if (!newEvent) return;
-
-        if (!SCORING_EVENTS.has(newEvent.eventType))
+        await db.runTransaction(async (tx) =>
         {
-            console.log(`Ignoring non-scoring event ${eventId} (${newEvent.eventType}) for score processing.`);
-            return;
-        }
+            const courtRef = db.doc(`courts/${courtId}`);
+            const courtSnap = await tx.get(courtRef);
+            const courtData = courtSnap.exists ? courtSnap.data() : {};
+            const scoreSnap = await tx.get(scoreRef);
+            const activeScoringOptions = buildScoringOptions({
+                ...(courtData.scoringOptions || {}),
+                scoringMode: courtData.scoringMode || courtData.scoringOptions?.scoringMode
+            });
+            let score = scoreSnap.exists ? scoreSnap.data() : defaultScore(activeScoringOptions);
+            const incomingOrder = getEventOrderingTuple(incomingEvent);
 
-        const scoreRef = db.doc(`courts/${courtId}/score/current`);
-
-        try
-        {
-            await db.runTransaction(async (tx) =>
+            if (score.lastEventId === eventId)
             {
-                const courtRef = db.doc(`courts/${courtId}`);
-                const courtSnap = await tx.get(courtRef);
-                const courtData = courtSnap.exists ? courtSnap.data() : {};
-                const scoreSnap = await tx.get(scoreRef);
-                const activeScoringOptions = buildScoringOptions({
-                    ...(courtData.scoringOptions || {}),
-                    scoringMode: courtData.scoringMode || courtData.scoringOptions?.scoringMode
-                });
-                let score = scoreSnap.exists ? scoreSnap.data() : defaultScore(activeScoringOptions);
-                const incomingOrder = getEventOrderingTuple(incomingEvent);
+                console.log(`Event ${eventId} already processed, skipping.`);
+                return;
+            }
 
-                if (score.lastEventId === eventId)
+            const lastProcessedCreatedAt = score.lastProcessedCreatedAt || null;
+            const lastProcessedEventId = typeof score.lastProcessedEventId === "string"
+                ? score.lastProcessedEventId
+                : null;
+            const orderComparison = compareEventOrder(
+                incomingOrder.createdAt,
+                incomingOrder.id,
+                lastProcessedCreatedAt,
+                lastProcessedEventId
+            );
+
+            if (orderComparison !== null && orderComparison <= 0)
+            {
+                const replayResult = await replayScoreFromEvents(tx, courtId, activeScoringOptions, true);
+                let rebuiltScore = replayResult.score;
+
+                if (shouldApplyIncomingEventAfterReplay(eventId, replayResult))
                 {
-                    console.log(`Event ${eventId} already processed, skipping.`);
-                    return;
-                }
-
-                const lastProcessedCreatedAt = score.lastProcessedCreatedAt || null;
-                const lastProcessedEventId = typeof score.lastProcessedEventId === "string"
-                    ? score.lastProcessedEventId
-                    : null;
-                const orderComparison = compareEventOrder(
-                    incomingOrder.createdAt,
-                    incomingOrder.id,
-                    lastProcessedCreatedAt,
-                    lastProcessedEventId
-                );
-
-                if (orderComparison !== null && orderComparison <= 0)
-                {
-                    const replayResult = await replayScoreFromEvents(tx, courtId, activeScoringOptions, true);
-                    let rebuiltScore = replayResult.score;
-
-                    if (shouldApplyIncomingEventAfterReplay(eventId, replayResult))
-                    {
-                        rebuiltScore = applyEvent(rebuiltScore, newEvent, activeScoringOptions);
-                    }
-
-                    tx.set(scoreRef, {
-                        ...toLiveScorePayload(rebuiltScore),
-                        lastEventId: eventId,
-                        lastProcessedEventId: eventId,
-                        lastProcessedCreatedAt: incomingOrder.createdAt,
-                        updatedAt: admin.firestore.FieldValue.serverTimestamp()
-                    });
-
-                    return;
-                }
-
-                // -----------------------------
-                // Handle RESET event
-                // -----------------------------
-                if (newEvent.eventType === "RESET")
-                {
-                    console.log(`Resetting court ${courtId}`);
-                    const eventsRef = db.collection(`courts/${courtId}/events`);
-                    const eventsSnap = await eventsRef.get();
-                    const checkpointsRef = db.collection(`courts/${courtId}/${SCORE_CHECKPOINTS_COLLECTION}`);
-                    const checkpointsSnap = await checkpointsRef.get();
-                    const archiveId = new Date().toISOString();
-
-                    const archiveBatch = db.batch();
-                    eventsSnap.forEach(doc =>
-                    {
-                        const archiveRef = db.doc(
-                            `courts/${courtId}/archive/${archiveId}/events/${doc.id}`
-                        );
-                        archiveBatch.set(archiveRef, {
-                            ...doc.data(),
-                            archivedAt: admin.firestore.FieldValue.serverTimestamp(),
-                            resetBy: newEvent.createdBy || "system"
-                        });
-                    });
-                    await archiveBatch.commit();
-
-                    const deleteBatch = db.batch();
-                    eventsSnap.forEach(doc => deleteBatch.delete(doc.ref));
-                    await deleteBatch.commit();
-
-                    checkpointsSnap.forEach((docSnap) =>
-                    {
-                        tx.delete(docSnap.ref);
-                    });
-
-                    tx.set(scoreRef, {
-                        ...toLiveScorePayload(defaultScore(activeScoringOptions)),
-                        lastEventId: eventId,
-                        lastProcessedEventId: eventId,
-                        lastProcessedCreatedAt: incomingOrder.createdAt,
-                        updatedAt: admin.firestore.FieldValue.serverTimestamp()
-                    });
-
-                    return;
-                }
-
-                // Rebuild state for undo from latest checkpoint, then replay tail events.
-                if (newEvent.eventType === "UNDO")
-                {
-                    const replayResult = await replayScoreFromEvents(tx, courtId, activeScoringOptions, true);
-                    const replayedScore = replayResult.score;
-
-                    tx.set(scoreRef, {
-                        ...toLiveScorePayload(replayedScore),
-                        lastEventId: replayResult.lastEventId,
-                        lastProcessedEventId: replayResult.lastEventId,
-                        lastProcessedCreatedAt: replayResult.lastCreatedAt,
-                        updatedAt: admin.firestore.FieldValue.serverTimestamp()
-                    });
-
-                    return;
-                }
-
-                // Normal point event stays incremental.
-                const previousScore = {
-                    ...defaultScore(activeScoringOptions),
-                    ...(score || {}),
-                    A: { ...defaultScore(activeScoringOptions).A, ...(score?.A || {}) },
-                    B: { ...defaultScore(activeScoringOptions).B, ...(score?.B || {}) },
-                    completedSets: Array.isArray(score?.completedSets)
-                        ? score.completedSets.map((set) => ({ ...set }))
-                        : []
-                };
-                const updatedScore = applyEvent(score, newEvent, activeScoringOptions);
-
-                console.log(`Updating score for ${courtId}. New points: A:${updatedScore.A.points}, B:${updatedScore.B.points}`);
-
-                let nextScore = updatedScore;
-                let nextLastEventId = eventId;
-                let nextLastProcessedCreatedAt = incomingOrder.createdAt;
-
-                // Reconcile every N points using full replay, then auto-heal if drift appears.
-                const totalPoints = (Number(updatedScore.A?.totalPoints) || 0) + (Number(updatedScore.B?.totalPoints) || 0);
-                const shouldReconcile = totalPoints > 0 && totalPoints % RECONCILE_INTERVAL_POINTS === 0;
-
-                if (shouldReconcile)
-                {
-                    const fullReplay = await replayScoreFromEvents(tx, courtId, activeScoringOptions, false);
-                    if (!scoreEquivalent(updatedScore, fullReplay.score))
-                    {
-                        console.warn(`Drift detected at ${totalPoints} points on ${courtId}. Auto-healing from full replay.`);
-                        nextScore = fullReplay.score;
-                        nextLastEventId = fullReplay.lastEventId || eventId;
-                        nextLastProcessedCreatedAt = fullReplay.lastCreatedAt || incomingOrder.createdAt;
-                    }
+                    rebuiltScore = applyEvent(rebuiltScore, newEvent, activeScoringOptions);
                 }
 
                 tx.set(scoreRef, {
-                    ...toLiveScorePayload(nextScore),
-                    lastEventId: nextLastEventId,
-                    lastProcessedEventId: nextLastEventId,
-                    lastProcessedCreatedAt: nextLastProcessedCreatedAt,
+                    ...toLiveScorePayload(rebuiltScore),
+                    lastEventId: eventId,
+                    lastProcessedEventId: eventId,
+                    lastProcessedCreatedAt: incomingOrder.createdAt,
                     updatedAt: admin.firestore.FieldValue.serverTimestamp()
                 });
 
-                // Persist checkpoint whenever set total increases under active scoring mode.
-                if (didSetCountIncrease(previousScore, nextScore))
+                return;
+            }
+
+            // -----------------------------
+            // Handle RESET event
+            // -----------------------------
+            if (newEvent.eventType === "RESET")
+            {
+                console.log(`Resetting court ${courtId}`);
+                const eventsRef = db.collection(`courts/${courtId}/events`);
+                const eventsSnap = await eventsRef.get();
+                const checkpointsRef = db.collection(`courts/${courtId}/${SCORE_CHECKPOINTS_COLLECTION}`);
+                const checkpointsSnap = await checkpointsRef.get();
+                const archiveId = new Date().toISOString();
+
+                const archiveBatch = db.batch();
+                eventsSnap.forEach(doc =>
                 {
-                    const checkpointRef = db.collection(`courts/${courtId}/${SCORE_CHECKPOINTS_COLLECTION}`).doc();
-                    tx.set(
-                        checkpointRef,
-                        buildCheckpointPayload(nextScore, activeScoringOptions, nextLastEventId, nextLastProcessedCreatedAt)
+                    const archiveRef = db.doc(
+                        `courts/${courtId}/archive/${archiveId}/events/${doc.id}`
                     );
+                    archiveBatch.set(archiveRef, {
+                        ...doc.data(),
+                        archivedAt: admin.firestore.FieldValue.serverTimestamp(),
+                        resetBy: newEvent.createdBy || "system"
+                    });
+                });
+                await archiveBatch.commit();
+
+                const deleteBatch = db.batch();
+                eventsSnap.forEach(doc => deleteBatch.delete(doc.ref));
+                await deleteBatch.commit();
+
+                checkpointsSnap.forEach((docSnap) =>
+                {
+                    tx.delete(docSnap.ref);
+                });
+
+                tx.set(scoreRef, {
+                    ...toLiveScorePayload(defaultScore(activeScoringOptions)),
+                    lastEventId: eventId,
+                    lastProcessedEventId: eventId,
+                    lastProcessedCreatedAt: incomingOrder.createdAt,
+                    updatedAt: admin.firestore.FieldValue.serverTimestamp()
+                });
+
+                return;
+            }
+
+            // Rebuild state for undo from latest checkpoint, then replay tail events.
+            if (newEvent.eventType === "UNDO")
+            {
+                const replayResult = await replayScoreFromEvents(tx, courtId, activeScoringOptions, true);
+                const replayedScore = replayResult.score;
+
+                tx.set(scoreRef, {
+                    ...toLiveScorePayload(replayedScore),
+                    lastEventId: replayResult.lastEventId,
+                    lastProcessedEventId: replayResult.lastEventId,
+                    lastProcessedCreatedAt: replayResult.lastCreatedAt,
+                    updatedAt: admin.firestore.FieldValue.serverTimestamp()
+                });
+
+                return;
+            }
+
+            // Normal point event stays incremental.
+            const previousScore = {
+                ...defaultScore(activeScoringOptions),
+                ...(score || {}),
+                A: { ...defaultScore(activeScoringOptions).A, ...(score?.A || {}) },
+                B: { ...defaultScore(activeScoringOptions).B, ...(score?.B || {}) },
+                completedSets: Array.isArray(score?.completedSets)
+                    ? score.completedSets.map((set) => ({ ...set }))
+                    : []
+            };
+            const updatedScore = applyEvent(score, newEvent, activeScoringOptions);
+
+            console.log(`Updating score for ${courtId}. New points: A:${updatedScore.A.points}, B:${updatedScore.B.points}`);
+
+            let nextScore = updatedScore;
+            let nextLastEventId = eventId;
+            let nextLastProcessedCreatedAt = incomingOrder.createdAt;
+
+            // Reconcile every N points using full replay, then auto-heal if drift appears.
+            const totalPoints = (Number(updatedScore.A?.totalPoints) || 0) + (Number(updatedScore.B?.totalPoints) || 0);
+            const shouldReconcile = totalPoints > 0 && totalPoints % RECONCILE_INTERVAL_POINTS === 0;
+
+            if (shouldReconcile)
+            {
+                const fullReplay = await replayScoreFromEvents(tx, courtId, activeScoringOptions, false);
+                if (!scoreEquivalent(updatedScore, fullReplay.score))
+                {
+                    console.warn(`Drift detected at ${totalPoints} points on ${courtId}. Auto-healing from full replay.`);
+                    nextScore = fullReplay.score;
+                    nextLastEventId = fullReplay.lastEventId || eventId;
+                    nextLastProcessedCreatedAt = fullReplay.lastCreatedAt || incomingOrder.createdAt;
                 }
+            }
+
+            tx.set(scoreRef, {
+                ...toLiveScorePayload(nextScore),
+                lastEventId: nextLastEventId,
+                lastProcessedEventId: nextLastEventId,
+                lastProcessedCreatedAt: nextLastProcessedCreatedAt,
+                updatedAt: admin.firestore.FieldValue.serverTimestamp()
             });
-        } catch (err)
-        {
-            console.error(`Transaction failed for event ${eventId}:`, err);
-        }
+
+            // Persist checkpoint whenever set total increases under active scoring mode.
+            if (didSetCountIncrease(previousScore, nextScore))
+            {
+                const checkpointRef = db.collection(`courts/${courtId}/${SCORE_CHECKPOINTS_COLLECTION}`).doc();
+                tx.set(
+                    checkpointRef,
+                    buildCheckpointPayload(nextScore, activeScoringOptions, nextLastEventId, nextLastProcessedCreatedAt)
+                );
+            }
+        });
+    } catch (err)
+    {
+        console.error(`Transaction failed for event ${eventId}:`, err);
     }
+}
 );
 
 // -----------------------------
