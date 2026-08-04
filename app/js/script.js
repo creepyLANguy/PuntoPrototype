@@ -5223,6 +5223,8 @@ document.addEventListener("DOMContentLoaded", () =>
       }));
   });
 
+  let momentumPulseAnimationFrame = null;
+
   function renderMomentumGraph(pointHistory, colourA, colourB, setPointMarkers = [], momentumTimeline = null)
   {
     const wrap = elements.dmMomentumWrap;
@@ -5242,8 +5244,14 @@ document.addEventListener("DOMContentLoaded", () =>
     const CANVAS_FALLBACK_WIDTH = 320;
     const FILL_OPACITY = "55"; // ~34% opacity for the area fill
 
+    if (momentumPulseAnimationFrame)
+    {
+      cancelAnimationFrame(momentumPulseAnimationFrame);
+      momentumPulseAnimationFrame = null;
+    }
+
     // Defer drawing so the canvas has a settled layout width
-    requestAnimationFrame(() =>
+    const drawGraphFrame = (timestamp) =>
     {
       const dpr = window.devicePixelRatio || 1;
       const cssW = canvas.offsetWidth || canvas.parentElement.offsetWidth || CANVAS_FALLBACK_WIDTH;
@@ -5253,7 +5261,9 @@ document.addEventListener("DOMContentLoaded", () =>
       canvas.style.height = cssH + "px";
 
       const ctx = canvas.getContext("2d");
-      ctx.scale(dpr, dpr);
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
       const W = cssW;
       const H = cssH;
@@ -5411,11 +5421,34 @@ document.addEventListener("DOMContentLoaded", () =>
 
       const lastX = points[points.length - 1].x;
       const lastY = points[points.length - 1].y;
+      const pulseWave = (Math.sin((timestamp || performance.now()) / 320) + 1) / 2;
+      const pulseRadius = 4.5 + pulseWave * 3.2;
+      const pulseAlpha = 0.18 + pulseWave * 0.22;
+
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(lastX, lastY, pulseRadius, 0, Math.PI * 2);
+      ctx.strokeStyle = finalMomentumColour;
+      ctx.lineWidth = 1.2;
+      ctx.globalAlpha = pulseAlpha;
+      ctx.stroke();
+      ctx.restore();
+
       ctx.beginPath();
       ctx.arc(lastX, lastY, 3.5, 0, Math.PI * 2);
       ctx.fillStyle = finalMomentumColour;
+      ctx.shadowBlur = 10 + pulseWave * 8;
+      ctx.shadowColor = finalMomentumColour;
       ctx.fill();
-    });
+      ctx.shadowBlur = 0;
+
+      if (canvas.isConnected && !wrap.classList.contains("hidden"))
+      {
+        momentumPulseAnimationFrame = requestAnimationFrame(drawGraphFrame);
+      }
+    };
+
+    momentumPulseAnimationFrame = requestAnimationFrame(drawGraphFrame);
   }
 
   function formatPct(value)
