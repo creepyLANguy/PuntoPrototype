@@ -1048,6 +1048,7 @@ document.addEventListener("DOMContentLoaded", () =>
     detailsBtn: $("detailsBtn"),
     detailsModal: $("detailsModal"),
     closeDetailsBtn: $("closeDetailsBtn"),
+    matchDetailsCourtName: $("matchDetailsCourtName"),
     detailsSetsA: $("detailsSetsA"),
     detailsSetsB: $("detailsSetsB"),
     detailsTeamAName: $("detailsTeamAName"),
@@ -5787,6 +5788,8 @@ document.addEventListener("DOMContentLoaded", () =>
       dmOverall.classList.add("hidden");
       dmTableWrap.classList.add("hidden");
     }
+
+    elements.matchDetailsCourtName.textContent = currentCourtName || currentCourtId || "Match Details";
 
     // Populate team names immediately
     const nameA = $("teamA").querySelector(".name-text").textContent;
