@@ -5494,8 +5494,6 @@ document.addEventListener("DOMContentLoaded", () =>
       ctx.beginPath();
       ctx.arc(lastX, lastY, 3.5, 0, Math.PI * 2);
       ctx.fillStyle = finalMomentumColour;
-      ctx.shadowBlur = 10 + pulseWave * 8;
-      ctx.shadowColor = finalMomentumColour;
       ctx.fill();
       ctx.shadowBlur = 0;
 
