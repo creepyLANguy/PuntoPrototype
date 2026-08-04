@@ -438,9 +438,7 @@ function computeAdvancedStats(pointHistory, scoringOptions)
     let momentum = 0;
     let previousLeader = 0;
     let currentServerTeam = "A";
-    let currentSetBreaks = { A: 0, B: 0 };
     const gameMarkers = [];
-    const breakPointMarkers = [];
     let gameContext = {
         reachedDeuce: false,
         hadGamePoint: { A: false, B: false }
@@ -449,9 +447,11 @@ function computeAdvancedStats(pointHistory, scoringOptions)
     let setState = createSetComebackState(1);
     updateSetComebackState(setState, 0, 0);
 
+    let pointIndex = 0;
     for (const pointWinner of pointHistory)
     {
         if (pointWinner !== "A" && pointWinner !== "B") continue;
+        pointIndex++;
 
         const serverLabel = getCurrentServerLabel(score);
         if (serverLabel && servePlayerStats[serverLabel])
@@ -539,23 +539,6 @@ function computeAdvancedStats(pointHistory, scoringOptions)
             else
             {
                 teamStats[breakPointReturner].breakPointConversions++;
-                const breakTeam = breakPointReturner;
-                currentSetBreaks[breakTeam]++;
-                const isRebreak = currentSetBreaks[breakTeam] > 1;
-                const setScoreAfterPoint = {
-                    A: score.A.games,
-                    B: score.B.games
-                };
-                const isCrucialBreak =
-                    (setScoreAfterPoint.A === 5 && setScoreAfterPoint.B === 5) ||
-                    (setScoreAfterPoint.A === 6 && setScoreAfterPoint.B === 5) ||
-                    (setScoreAfterPoint.A === 5 && setScoreAfterPoint.B === 6) ||
-                    (Math.abs(setScoreAfterPoint.A - setScoreAfterPoint.B) >= 2 && setScoreAfterPoint.A >= 5 && setScoreAfterPoint.B >= 5);
-
-                breakPointMarkers.push({
-                    index: pointHistory.length,
-                    type: isRebreak ? "rebreak" : (isCrucialBreak ? "crucial" : "break")
-                });
             }
         }
 
@@ -616,7 +599,7 @@ function computeAdvancedStats(pointHistory, scoringOptions)
                 teamStats[gameLoser].gamesLostAfterDeuce++;
             }
 
-            gameMarkers.push(pointHistory.length);
+            gameMarkers.push(pointIndex);
 
             const setCompleted = score.A.sets !== oldSetsA || score.B.sets !== oldSetsB;
             if (setCompleted)
@@ -640,11 +623,6 @@ function computeAdvancedStats(pointHistory, scoringOptions)
             else
             {
                 updateSetComebackState(setState, score.A.games, score.B.games);
-            }
-
-            if (setCompleted)
-            {
-                currentSetBreaks = { A: 0, B: 0 };
             }
 
             gameContext = {
@@ -692,8 +670,7 @@ function computeAdvancedStats(pointHistory, scoringOptions)
         matchStats,
         scoringMode: options.scoringMode,
         deuceMode: options.deuceMode,
-        gameMarkers,
-        breakPointMarkers
+        gameMarkers
     };
 }
 

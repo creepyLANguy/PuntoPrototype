@@ -5225,7 +5225,7 @@ document.addEventListener("DOMContentLoaded", () =>
 
   let momentumPulseAnimationFrame = null;
 
-  function renderMomentumGraph(pointHistory, colourA, colourB, setPointMarkers = [], momentumTimeline = null, gameMarkers = [], breakPointMarkers = [])
+  function renderMomentumGraph(pointHistory, colourA, colourB, setPointMarkers = [], momentumTimeline = null, gameMarkers = [])
   {
     const wrap = elements.dmMomentumWrap;
     const canvas = elements.dmMomentumCanvas;
@@ -5399,22 +5399,6 @@ document.addEventListener("DOMContentLoaded", () =>
         ctx.strokeStyle = document.body.classList.contains("light-mode") ? "rgba(0,0,0,0.6)" : "rgba(255,255,255,0.7)";
         ctx.lineWidth = 1.2;
         ctx.stroke();
-      });
-
-      const breakMarkers = Array.isArray(breakPointMarkers)
-        ? breakPointMarkers.filter((marker) => marker && Number.isInteger(marker.index) && marker.index > 0 && marker.index < values.length)
-        : [];
-
-      breakMarkers.forEach((marker) =>
-      {
-        const x = toX(marker.index);
-        const icon = marker.type === "rebreak" ? "🔄" : marker.type === "crucial" ? "★" : "●";
-        ctx.font = marker.type === "crucial" ? "13px sans-serif" : "11px sans-serif";
-        ctx.textAlign = "center";
-        ctx.fillStyle = marker.type === "crucial"
-          ? "rgba(255,255,255,0.95)"
-          : (document.body.classList.contains("light-mode") ? "rgba(0,0,0,0.75)" : "rgba(255,255,255,0.8)");
-        ctx.fillText(icon, x, H - 22);
       });
 
       ctx.lineWidth = 2; 
@@ -5681,9 +5665,7 @@ document.addEventListener("DOMContentLoaded", () =>
       rows.push(row(
         `Player ${serverIndex}`,
         `${primaryServerName}${primaryServeStat.pointsWonOnServe}/${primaryServeStat.pointsServed} (${formatPct(primaryServeStat.serveWinPct)})`,
-        `${secondaryServerName}${secondaryServeStat.pointsWonOnServe}/${secondaryServeStat.pointsServed} (${formatPct(secondaryServeStat.serveWinPct)})`,
-        (Number(primaryServeStat.serveWinPct) || 0) > (Number(secondaryServeStat.serveWinPct) || 0),
-        (Number(secondaryServeStat.serveWinPct) || 0) > (Number(primaryServeStat.serveWinPct) || 0)
+        `${secondaryServerName}${secondaryServeStat.pointsWonOnServe}/${secondaryServeStat.pointsServed} (${formatPct(secondaryServeStat.serveWinPct)})`
       ));
     });
 
@@ -5891,8 +5873,7 @@ document.addEventListener("DOMContentLoaded", () =>
           colourB,
           result.data.setPointMarkers || [],
           result.data.momentumTimeline || null,
-          result.data.advancedStats?.gameMarkers || [],
-          result.data.advancedStats?.breakPointMarkers || []
+          result.data.advancedStats?.gameMarkers || []
         );
         const detailsPlayerNames = normalizePlayerNames(result?.data?.playerNames || currentPlayerNames || {});
         renderAdvancedStats(result.data.advancedStats, { A: nameA, B: nameB }, isSwapped, detailsPlayerNames);
@@ -5976,8 +5957,7 @@ document.addEventListener("DOMContentLoaded", () =>
         colourB,
         result.data.setPointMarkers || [],
         result.data.momentumTimeline || null,
-        result.data.advancedStats?.gameMarkers || [],
-        result.data.advancedStats?.breakPointMarkers || []
+        result.data.advancedStats?.gameMarkers || []
       );
       const detailsPlayerNames = normalizePlayerNames(result?.data?.playerNames || currentPlayerNames || {});
       renderAdvancedStats(result.data.advancedStats, { A: nameA, B: nameB }, isSwapped, detailsPlayerNames);
