@@ -5225,7 +5225,7 @@ document.addEventListener("DOMContentLoaded", () =>
 
   let momentumPulseAnimationFrame = null;
 
-  function renderMomentumGraph(pointHistory, colourA, colourB, setPointMarkers = [], momentumTimeline = null)
+  function renderMomentumGraph(pointHistory, colourA, colourB, setPointMarkers = [], momentumTimeline = null, gameMarkers = [])
   {
     const wrap = elements.dmMomentumWrap;
     const canvas = elements.dmMomentumCanvas;
@@ -5272,6 +5272,13 @@ document.addEventListener("DOMContentLoaded", () =>
       const midY = H / 2;
       const MOMENTUM_CLAMP_MIN = -100;
       const MOMENTUM_CLAMP_MAX = 100;
+      
+      //const axisColour = document.body.classList.contains("light-mode") ? "rgba(0,0,0,0.5)" : "rgba(255,255,255,0.5)";
+      const axisColour = document.body.classList.contains("light-mode") ? "rgba(185,185,185,1)" : "rgba(125,125,125,1)";
+
+      // Map index → x, value → y
+      const toX = i => padX + (i / (values.length - 1)) * (W - padX * 2);
+      const toY = v => midY - (v / maxVal) * (midY - padY);
 
       const hasLiveMomentum = Array.isArray(momentumTimeline) &&
         momentumTimeline.length > 0 &&
@@ -5292,6 +5299,50 @@ document.addEventListener("DOMContentLoaded", () =>
           return cumulative;
         })();
 
+      const completedGameMarkers = Array.isArray(gameMarkers)
+        ? [...new Set(gameMarkers.filter((index) => Number.isInteger(index) && index > 0 && index < values.length))]
+        : [];
+
+
+      // --- Centre balanced line ---
+      // ctx.beginPath();
+      // ctx.moveTo(padX, midY);
+      // ctx.lineTo(W - padX, midY);
+      // ctx.strokeStyle = axisColour;
+      // ctx.lineWidth = 1;
+      // //ctx.setLineDash([4, 4]);
+      // ctx.stroke();
+      // //ctx.setLineDash([]);
+
+      // --- Set point markers ---
+      const markerIndices = Array.isArray(setPointMarkers)
+        ? [...new Set(setPointMarkers
+          .filter((index) => Number.isInteger(index) && index > 0 && index < values.length))]
+        : [];
+
+      markerIndices.forEach((index) =>
+      {
+        const x = toX(index);
+        ctx.beginPath();
+        ctx.moveTo(x, padY - 4);
+        ctx.lineTo(x, H - padY + 4);
+        ctx.strokeStyle = axisColour;
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      });
+
+      // --- Game point markers ---
+      completedGameMarkers.forEach((index) =>
+      {
+        const x = toX(index);
+        ctx.beginPath();
+        ctx.moveTo(x, H / 2 - padY / 3);
+        ctx.lineTo(x, H / 2 + padY / 3);
+        ctx.strokeStyle = axisColour;
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      });
+
       // Smooth sharp directional changes so peaks/troughs render less jagged.
       const smoothedValues = values.map((v, i, arr) =>
       {
@@ -5300,10 +5351,6 @@ document.addEventListener("DOMContentLoaded", () =>
       });
 
       const maxVal = hasLiveMomentum ? MOMENTUM_CLAMP_MAX : Math.max(...values.map(Math.abs), 1);
-
-      // Map index → x, value → y
-      const toX = i => padX + (i / (values.length - 1)) * (W - padX * 2);
-      const toY = v => midY - (v / maxVal) * (midY - padY);
 
       const points = smoothedValues.map((v, i) => ({ x: toX(i), y: toY(v) }));
 
@@ -5357,34 +5404,6 @@ document.addEventListener("DOMContentLoaded", () =>
       ctx.fillStyle = colourB + FILL_OPACITY;
       ctx.fill(fillAbove);
       ctx.restore();
-
-      // --- Centre balanced line ---
-      // ctx.beginPath();
-      // ctx.moveTo(padX, midY);
-      // ctx.lineTo(W - padX, midY);
-      // const isLight = document.body.classList.contains("light-mode");
-      // ctx.strokeStyle = isLight ? "rgba(0,0,0,0.12)" : "rgba(255,255,255,0.15)";
-      // ctx.lineWidth = 1;
-      // ctx.setLineDash([4, 4]);
-      // ctx.stroke();
-      // ctx.setLineDash([]);
-
-      // --- Set point markers ---
-      const markerIndices = Array.isArray(setPointMarkers)
-        ? [...new Set(setPointMarkers
-          .filter((index) => Number.isInteger(index) && index > 0 && index < values.length))]
-        : [];
-
-      markerIndices.forEach((index) =>
-      {
-        const x = toX(index);
-        ctx.beginPath();
-        ctx.moveTo(x, padY);
-        ctx.lineTo(x, H - padY);
-        ctx.strokeStyle = document.body.classList.contains("light-mode") ? "rgba(0,0,0,0.5)" : "rgba(255,255,255,0.5)";
-        ctx.lineWidth = 1;
-        ctx.stroke();
-      });
 
       ctx.lineWidth = 2; 
 
@@ -5506,12 +5525,12 @@ document.addEventListener("DOMContentLoaded", () =>
     const goldenPointsPlayed = Number(matchStats.goldenPointsPlayed) || 0;
     const silverPointsPlayed = Number(matchStats.silverPointsPlayed) || 0;
 
-    function row(label, valPrimary, valSecondary)
+    function row(label, valPrimary, valSecondary, primaryLeader = false, secondaryLeader = false)
     {
       return `<tr class="dm-st-row">
         <td class="dm-st-label">${label}</td>
-        <td class="dm-st-val dm-st-${primaryClassSuffix}">${valPrimary}</td>
-        <td class="dm-st-val dm-st-${secondaryClassSuffix}">${valSecondary}</td>
+        <td class="dm-st-val dm-st-${primaryClassSuffix} ${primaryLeader ? "is-leader" : ""} ${secondaryLeader ? "is-loser" : ""}">${valPrimary}</td>
+        <td class="dm-st-val dm-st-${secondaryClassSuffix} ${secondaryLeader ? "is-leader" : ""} ${primaryLeader ? "is-loser" : ""}">${valSecondary}</td>
       </tr>`;
     }
 
@@ -5528,7 +5547,7 @@ document.addEventListener("DOMContentLoaded", () =>
       return `<tr class="dm-st-section-hdr"><td colspan="3">${label}</td></tr>`;
     }
 
-    function barRow(label, pctPrimary, pctSecondary, lblPrimary, lblSecondary)
+    function barRow(label, pctPrimary, pctSecondary, lblPrimary, lblSecondary, primaryLeader = false, secondaryLeader = false)
     {
       const safePrimary = Math.max(0, Math.min(100, Number(pctPrimary) || 0));
       const safeSecondary = Math.max(0, Math.min(100, Number(pctSecondary) || 0));
@@ -5536,12 +5555,12 @@ document.addEventListener("DOMContentLoaded", () =>
         <td class="dm-st-label">${label}</td>
         <td class="dm-st-bar-cell" colspan="2">
           <div class="dm-split-bar">
-            <span class="dm-split-lbl-a" style="color:${primaryColour};">${lblPrimary}</span>
+            <span class="dm-split-lbl-a ${primaryLeader ? "is-leader" : ""} ${secondaryLeader ? "is-loser" : ""}" style="color:${primaryColour};">${lblPrimary}</span>
             <div class="dm-split-track">
               <div class="dm-split-fill-a" style="width:${safePrimary}%; background:${primaryColour};"></div>
               <div class="dm-split-fill-b" style="flex:0 0 ${safeSecondary}%; background:${secondaryColour};"></div>
             </div>
-            <span class="dm-split-lbl-b" style="color:${secondaryColour};">${lblSecondary}</span>
+            <span class="dm-split-lbl-b ${secondaryLeader ? "is-leader" : ""} ${primaryLeader ? "is-loser" : ""}" style="color:${secondaryColour};">${lblSecondary}</span>
           </div>
         </td>
       </tr>`;
@@ -5575,23 +5594,37 @@ document.addEventListener("DOMContentLoaded", () =>
         primaryTeamStats.pointWinPct,
         secondaryTeamStats.pointWinPct,
         `${primaryTeamStats.pointsWon}/${totalPoints} (${formatPct(primaryTeamStats.pointWinPct)})`,
-        `${secondaryTeamStats.pointsWon}/${totalPoints} (${formatPct(secondaryTeamStats.pointWinPct)})`
+        `${secondaryTeamStats.pointsWon}/${totalPoints} (${formatPct(secondaryTeamStats.pointWinPct)})`,
+        (Number(primaryTeamStats.pointsWon) || 0) > (Number(secondaryTeamStats.pointsWon) || 0),
+        (Number(secondaryTeamStats.pointsWon) || 0) > (Number(primaryTeamStats.pointsWon) || 0)
       ),
-      row("Longest Streak", primaryTeamStats.longestScoringStreak, secondaryTeamStats.longestScoringStreak)
+      row("Longest Streak", primaryTeamStats.longestScoringStreak, secondaryTeamStats.longestScoringStreak,
+        (Number(primaryTeamStats.longestScoringStreak) || 0) > (Number(secondaryTeamStats.longestScoringStreak) || 0),
+        (Number(secondaryTeamStats.longestScoringStreak) || 0) > (Number(primaryTeamStats.longestScoringStreak) || 0))
     ];
 
     if (isGamesAndSetsMode)
     {
       rows.push(
-        row("Breaks Faced", primaryTeamStats.breakPointsFaced, secondaryTeamStats.breakPointsFaced),
+        row("Breaks Faced", primaryTeamStats.breakPointsFaced, secondaryTeamStats.breakPointsFaced,
+          (Number(primaryTeamStats.breakPointsFaced) || 0) > (Number(secondaryTeamStats.breakPointsFaced) || 0),
+          (Number(secondaryTeamStats.breakPointsFaced) || 0) > (Number(primaryTeamStats.breakPointsFaced) || 0)),
         row("Breaks Held", `${primaryTeamStats.breakPointsWon}/${primaryTeamStats.breakPointsFaced} (${formatPct(primaryTeamStats.breakPointWinPct)})`,
-          `${secondaryTeamStats.breakPointsWon}/${secondaryTeamStats.breakPointsFaced} (${formatPct(secondaryTeamStats.breakPointWinPct)})`),
-        row("Break Chances", primaryTeamStats.breakPointConversionOpportunities, secondaryTeamStats.breakPointConversionOpportunities),
+          `${secondaryTeamStats.breakPointsWon}/${secondaryTeamStats.breakPointsFaced} (${formatPct(secondaryTeamStats.breakPointWinPct)})`,
+          (Number(primaryTeamStats.breakPointWinPct) || 0) > (Number(secondaryTeamStats.breakPointWinPct) || 0),
+          (Number(secondaryTeamStats.breakPointWinPct) || 0) > (Number(primaryTeamStats.breakPointWinPct) || 0)),
+        row("Break Chances", primaryTeamStats.breakPointConversionOpportunities, secondaryTeamStats.breakPointConversionOpportunities,
+          (Number(primaryTeamStats.breakPointConversionOpportunities) || 0) > (Number(secondaryTeamStats.breakPointConversionOpportunities) || 0),
+          (Number(secondaryTeamStats.breakPointConversionOpportunities) || 0) > (Number(primaryTeamStats.breakPointConversionOpportunities) || 0)),
         row("Breaks Won", `${primaryTeamStats.breakPointConversions}/${primaryTeamStats.breakPointConversionOpportunities} (${formatPct(primaryTeamStats.breakPointConversionPct)})`,
-          `${secondaryTeamStats.breakPointConversions}/${secondaryTeamStats.breakPointConversionOpportunities} (${formatPct(secondaryTeamStats.breakPointConversionPct)})`),
+          `${secondaryTeamStats.breakPointConversions}/${secondaryTeamStats.breakPointConversionOpportunities} (${formatPct(secondaryTeamStats.breakPointConversionPct)})`,
+          (Number(primaryTeamStats.breakPointConversionPct) || 0) > (Number(secondaryTeamStats.breakPointConversionPct) || 0),
+          (Number(secondaryTeamStats.breakPointConversionPct) || 0) > (Number(primaryTeamStats.breakPointConversionPct) || 0)),
         row("Closing Pts Won",
           `${primaryTeamStats.gamePointConversions}/${primaryTeamStats.gamePointGames} (${formatPct(primaryTeamStats.closingEfficiencyPct)})`,
-          `${secondaryTeamStats.gamePointConversions}/${secondaryTeamStats.gamePointGames} (${formatPct(secondaryTeamStats.closingEfficiencyPct)})`),
+          `${secondaryTeamStats.gamePointConversions}/${secondaryTeamStats.gamePointGames} (${formatPct(secondaryTeamStats.closingEfficiencyPct)})`,
+          (Number(primaryTeamStats.closingEfficiencyPct) || 0) > (Number(secondaryTeamStats.closingEfficiencyPct) || 0),
+          (Number(secondaryTeamStats.closingEfficiencyPct) || 0) > (Number(primaryTeamStats.closingEfficiencyPct) || 0)),
         sectionRow("Deuce"),
         sharedRow(deuceGamesLabel, isGoldenMode ? goldenPointsPlayed : deuceGames),
         barRow(
@@ -5599,7 +5632,9 @@ document.addEventListener("DOMContentLoaded", () =>
           primaryDeucePct,
           secondaryDeucePct,
           `${primaryDeuceWon}/${deuceGames} (${formatPct(primaryDeucePct)})`,
-          `${secondaryDeuceWon}/${deuceGames} (${formatPct(secondaryDeucePct)})`)
+          `${secondaryDeuceWon}/${deuceGames} (${formatPct(secondaryDeucePct)})`,
+          primaryDeucePct > secondaryDeucePct,
+          secondaryDeucePct > primaryDeucePct)
       );
     }
 
@@ -5611,7 +5646,9 @@ document.addEventListener("DOMContentLoaded", () =>
         primarySilverPct,
         secondarySilverPct,
         `${primarySilverWon}/${silverPointsPlayed} (${formatPct(primarySilverPct)})`,
-        `${secondarySilverWon}/${silverPointsPlayed} (${formatPct(secondarySilverPct)})`
+        `${secondarySilverWon}/${silverPointsPlayed} (${formatPct(secondarySilverPct)})`,
+        primarySilverPct > secondarySilverPct,
+        secondarySilverPct > primarySilverPct
       ));
     }
 
@@ -5839,7 +5876,8 @@ document.addEventListener("DOMContentLoaded", () =>
           colourA,
           colourB,
           result.data.setPointMarkers || [],
-          result.data.momentumTimeline || null
+          result.data.momentumTimeline || null,
+          result.data.advancedStats?.gameMarkers || []
         );
         const detailsPlayerNames = normalizePlayerNames(result?.data?.playerNames || currentPlayerNames || {});
         renderAdvancedStats(result.data.advancedStats, { A: nameA, B: nameB }, isSwapped, detailsPlayerNames);
@@ -5922,7 +5960,8 @@ document.addEventListener("DOMContentLoaded", () =>
         colourA,
         colourB,
         result.data.setPointMarkers || [],
-        result.data.momentumTimeline || null
+        result.data.momentumTimeline || null,
+        result.data.advancedStats?.gameMarkers || []
       );
       const detailsPlayerNames = normalizePlayerNames(result?.data?.playerNames || currentPlayerNames || {});
       renderAdvancedStats(result.data.advancedStats, { A: nameA, B: nameB }, isSwapped, detailsPlayerNames);

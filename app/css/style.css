@@ -5613,6 +5613,17 @@ body.light-mode .dm-st-label {
   font-weight: 700;
   font-size: 0.75rem;
   white-space: nowrap;
+  transition: opacity 180ms ease, filter 180ms ease, transform 180ms ease;
+}
+
+.dm-st-val.is-leader {
+  filter: brightness(1.18);
+  font-weight: 800;
+  transform: translateY(-1px);
+}
+
+.dm-st-val.is-loser {
+  opacity: 0.62;
 }
 
 .dm-st-a {
@@ -5686,6 +5697,7 @@ body.light-mode .dm-split-track {
   white-space: nowrap;
   text-align: right;
   min-width: 0;
+  transition: opacity 180ms ease, filter 180ms ease;
 }
 
 .dm-split-lbl-b {
@@ -5694,6 +5706,18 @@ body.light-mode .dm-split-track {
   color: var(--teamBcolour);
   white-space: nowrap;
   min-width: 0;
+  transition: opacity 180ms ease, filter 180ms ease;
+}
+
+.dm-split-lbl-a.is-leader,
+.dm-split-lbl-b.is-leader {
+  filter: brightness(1.16);
+  font-weight: 800;
+}
+
+.dm-split-lbl-a.is-loser,
+.dm-split-lbl-b.is-loser {
+  opacity: 0.65;
 }
 
 .dm-stats-meta {

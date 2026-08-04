@@ -438,6 +438,7 @@ function computeAdvancedStats(pointHistory, scoringOptions)
     let momentum = 0;
     let previousLeader = 0;
     let currentServerTeam = "A";
+    const gameMarkers = [];
     let gameContext = {
         reachedDeuce: false,
         hadGamePoint: { A: false, B: false }
@@ -446,9 +447,11 @@ function computeAdvancedStats(pointHistory, scoringOptions)
     let setState = createSetComebackState(1);
     updateSetComebackState(setState, 0, 0);
 
+    let pointIndex = 0;
     for (const pointWinner of pointHistory)
     {
         if (pointWinner !== "A" && pointWinner !== "B") continue;
+        pointIndex++;
 
         const serverLabel = getCurrentServerLabel(score);
         if (serverLabel && servePlayerStats[serverLabel])
@@ -596,6 +599,8 @@ function computeAdvancedStats(pointHistory, scoringOptions)
                 teamStats[gameLoser].gamesLostAfterDeuce++;
             }
 
+            gameMarkers.push(pointIndex);
+
             const setCompleted = score.A.sets !== oldSetsA || score.B.sets !== oldSetsB;
             if (setCompleted)
             {
@@ -664,7 +669,8 @@ function computeAdvancedStats(pointHistory, scoringOptions)
         servePlayerStats,
         matchStats,
         scoringMode: options.scoringMode,
-        deuceMode: options.deuceMode
+        deuceMode: options.deuceMode,
+        gameMarkers
     };
 }
 
