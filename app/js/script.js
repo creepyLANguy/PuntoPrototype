@@ -5272,6 +5272,13 @@ document.addEventListener("DOMContentLoaded", () =>
       const midY = H / 2;
       const MOMENTUM_CLAMP_MIN = -100;
       const MOMENTUM_CLAMP_MAX = 100;
+      
+      //const axisColour = document.body.classList.contains("light-mode") ? "rgba(0,0,0,0.5)" : "rgba(255,255,255,0.5)";
+      const axisColour = document.body.classList.contains("light-mode") ? "rgba(185,185,185,1)" : "rgba(125,125,125,1)";
+
+      // Map index → x, value → y
+      const toX = i => padX + (i / (values.length - 1)) * (W - padX * 2);
+      const toY = v => midY - (v / maxVal) * (midY - padY);
 
       const hasLiveMomentum = Array.isArray(momentumTimeline) &&
         momentumTimeline.length > 0 &&
@@ -5292,6 +5299,50 @@ document.addEventListener("DOMContentLoaded", () =>
           return cumulative;
         })();
 
+      const completedGameMarkers = Array.isArray(gameMarkers)
+        ? [...new Set(gameMarkers.filter((index) => Number.isInteger(index) && index > 0 && index < values.length))]
+        : [];
+
+
+      // --- Centre balanced line ---
+      // ctx.beginPath();
+      // ctx.moveTo(padX, midY);
+      // ctx.lineTo(W - padX, midY);
+      // ctx.strokeStyle = axisColour;
+      // ctx.lineWidth = 1;
+      // //ctx.setLineDash([4, 4]);
+      // ctx.stroke();
+      // //ctx.setLineDash([]);
+
+      // --- Set point markers ---
+      const markerIndices = Array.isArray(setPointMarkers)
+        ? [...new Set(setPointMarkers
+          .filter((index) => Number.isInteger(index) && index > 0 && index < values.length))]
+        : [];
+
+      markerIndices.forEach((index) =>
+      {
+        const x = toX(index);
+        ctx.beginPath();
+        ctx.moveTo(x, padY - 4);
+        ctx.lineTo(x, H - padY + 4);
+        ctx.strokeStyle = axisColour;
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      });
+
+      // --- Game point markers ---
+      completedGameMarkers.forEach((index) =>
+      {
+        const x = toX(index);
+        ctx.beginPath();
+        ctx.moveTo(x, H / 2 - padY / 3);
+        ctx.lineTo(x, H / 2 + padY / 3);
+        ctx.strokeStyle = axisColour;
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      });
+
       // Smooth sharp directional changes so peaks/troughs render less jagged.
       const smoothedValues = values.map((v, i, arr) =>
       {
@@ -5300,10 +5351,6 @@ document.addEventListener("DOMContentLoaded", () =>
       });
 
       const maxVal = hasLiveMomentum ? MOMENTUM_CLAMP_MAX : Math.max(...values.map(Math.abs), 1);
-
-      // Map index → x, value → y
-      const toX = i => padX + (i / (values.length - 1)) * (W - padX * 2);
-      const toY = v => midY - (v / maxVal) * (midY - padY);
 
       const points = smoothedValues.map((v, i) => ({ x: toX(i), y: toY(v) }));
 
@@ -5357,49 +5404,6 @@ document.addEventListener("DOMContentLoaded", () =>
       ctx.fillStyle = colourB + FILL_OPACITY;
       ctx.fill(fillAbove);
       ctx.restore();
-
-      // --- Centre balanced line ---
-      // ctx.beginPath();
-      // ctx.moveTo(padX, midY);
-      // ctx.lineTo(W - padX, midY);
-      // const isLight = document.body.classList.contains("light-mode");
-      // ctx.strokeStyle = isLight ? "rgba(0,0,0,0.12)" : "rgba(255,255,255,0.15)";
-      // ctx.lineWidth = 1;
-      // ctx.setLineDash([4, 4]);
-      // ctx.stroke();
-      // ctx.setLineDash([]);
-
-      // --- Set point markers ---
-      const markerIndices = Array.isArray(setPointMarkers)
-        ? [...new Set(setPointMarkers
-          .filter((index) => Number.isInteger(index) && index > 0 && index < values.length))]
-        : [];
-
-      markerIndices.forEach((index) =>
-      {
-        const x = toX(index);
-        ctx.beginPath();
-        ctx.moveTo(x, padY);
-        ctx.lineTo(x, H - padY);
-        ctx.strokeStyle = document.body.classList.contains("light-mode") ? "rgba(0,0,0,0.5)" : "rgba(255,255,255,0.5)";
-        ctx.lineWidth = 1;
-        ctx.stroke();
-      });
-
-      const completedGameMarkers = Array.isArray(gameMarkers)
-        ? [...new Set(gameMarkers.filter((index) => Number.isInteger(index) && index > 0 && index < values.length))]
-        : [];
-
-      completedGameMarkers.forEach((index) =>
-      {
-        const x = toX(index);
-        ctx.beginPath();
-        ctx.moveTo(x, H - 8);
-        ctx.lineTo(x, H - 1);
-        ctx.strokeStyle = document.body.classList.contains("light-mode") ? "rgba(0,0,0,0.6)" : "rgba(255,255,255,0.7)";
-        ctx.lineWidth = 1.2;
-        ctx.stroke();
-      });
 
       ctx.lineWidth = 2; 
 
