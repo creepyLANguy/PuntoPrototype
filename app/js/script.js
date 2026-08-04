@@ -320,8 +320,16 @@ document.addEventListener("DOMContentLoaded", () =>
   let score = defaultScore();
   let isMatchDetailsCacheValid = false;
   let matchDetailsCache = null;
+  let matchDetailsCacheCourtId = null;
   let lastKnownSets = { A: 0, B: 0 };
   let sessionInitialized = false;
+
+  function invalidateMatchDetailsCache()
+  {
+    isMatchDetailsCacheValid = false;
+    matchDetailsCache = null;
+    matchDetailsCacheCourtId = null;
+  }
 
   let muted = false;
 
@@ -3330,6 +3338,7 @@ document.addEventListener("DOMContentLoaded", () =>
     console.log(`Entering court: ${courtId}, spectate: ${spectate}`);
     pendingLocalPasswordUpdate = null;
     bumpCourtHistorySessionId();
+    invalidateMatchDetailsCache();
 
     // Warm Firestore connection
     await getDoc(doc(db, "courts", courtId, "score", "current"));
@@ -3442,6 +3451,7 @@ document.addEventListener("DOMContentLoaded", () =>
     console.log("Leaving court: " + currentCourtId);
     pendingLocalPasswordUpdate = null;
     bumpCourtHistorySessionId();
+    invalidateMatchDetailsCache();
 
     disableSpectateMode();
     releaseWakeLock();
@@ -5796,12 +5806,18 @@ document.addEventListener("DOMContentLoaded", () =>
     try
     {
       let result = matchDetailsCache;
-      if (isMatchDetailsCacheValid == false)
+      const canUseDetailsCache =
+        isMatchDetailsCacheValid &&
+        matchDetailsCache &&
+        matchDetailsCacheCourtId === currentCourtId;
+
+      if (canUseDetailsCache == false)
       {
         let getDetailedScore = httpsCallable(functions, "getDetailedScore");
         result = await getDetailedScore({ courtId: currentCourtId });
         matchDetailsCache = result;
         isMatchDetailsCacheValid = true;
+        matchDetailsCacheCourtId = currentCourtId;
       }
 
       const { sets, currentGames, points, mode, scoringMode, matchComplete } = result.data;
@@ -6148,7 +6164,7 @@ document.addEventListener("DOMContentLoaded", () =>
 
 
       score = newData;
-      isMatchDetailsCacheValid = false;
+      invalidateMatchDetailsCache();
 
       updateUI();
     });
