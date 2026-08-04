@@ -930,17 +930,22 @@ exports.onEventCreate = onDocumentCreated(
 
                 if (orderComparison !== null && orderComparison <= 0)
                 {
-                    console.log(`Out-of-order event ${eventId} detected. Replaying from checkpoint.`);
                     const replayResult = await replayScoreFromEvents(tx, courtId, activeScoringOptions, true);
-                    const replayedPayload = {
-                        ...toLiveScorePayload(replayResult.score),
-                        lastEventId: replayResult.lastEventId,
-                        lastProcessedEventId: replayResult.lastEventId,
-                        lastProcessedCreatedAt: replayResult.lastCreatedAt,
-                        updatedAt: admin.firestore.FieldValue.serverTimestamp()
-                    };
+                    let rebuiltScore = replayResult.score;
 
-                    tx.set(scoreRef, replayedPayload);
+                    if (shouldApplyIncomingEventAfterReplay(eventId, replayResult))
+                    {
+                        rebuiltScore = applyEvent(rebuiltScore, newEvent, activeScoringOptions);
+                    }
+
+                    tx.set(scoreRef, {
+                        ...toLiveScorePayload(rebuiltScore),
+                        lastEventId: eventId,
+                        lastProcessedEventId: eventId,
+                        lastProcessedCreatedAt: incomingOrder.createdAt,
+                        updatedAt: admin.firestore.FieldValue.serverTimestamp()
+                    });
+
                     return;
                 }
 
