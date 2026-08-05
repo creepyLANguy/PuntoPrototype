@@ -2714,7 +2714,7 @@ document.addEventListener("DOMContentLoaded", () =>
   {
     if (!courtToEdit) return;
 
-    showSpinner(elements.editCourtPage, "Saving changes...");
+    showSpinner(elements.editCourtPage);
 
     try
     {
@@ -2848,6 +2848,14 @@ document.addEventListener("DOMContentLoaded", () =>
   elements.submitAdminAuthBtn.addEventListener("click", async () =>
   {
     const pass = elements.adminAuthPassword.value.trim();
+    if (!pass)
+    {
+      elements.adminAuthError.textContent = "Admin password cannot be empty.";
+      return;
+    }
+
+    showSpinner(elements.adminAuthPage);
+
     const skeleton = await getSkeleton();
 
     if (pass === skeleton)
@@ -2864,6 +2872,8 @@ document.addEventListener("DOMContentLoaded", () =>
       elements.adminAuthPassword.value = "";
       elements.adminAuthPassword.focus();
     }
+
+    hideSpinner(elements.adminAuthPage);
   });
 
   elements.closeAdminDashboardBtn.addEventListener("click", () =>
@@ -4623,7 +4633,7 @@ document.addEventListener("DOMContentLoaded", () =>
     }, TOAST_DURATION_MS);
   }
 
-  function showSpinner(containerEl)
+  function showSpinner(containerEl, message = "")
   {
     if (!containerEl) return;
 
@@ -4638,7 +4648,7 @@ document.addEventListener("DOMContentLoaded", () =>
           <div class="spinner-wrapper">
             <div class="spinner"></div>
           </div>
-          <div class="loading"></div>
+          <div class="loading">${message}</div>
         </div>
       `;
 
