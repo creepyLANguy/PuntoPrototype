@@ -1132,6 +1132,10 @@ body.light-mode .game-dot.filled {
   opacity: 1;
 }
 
+body.light-mode .floating-btn {
+  color: #666;
+}
+
 body.light-mode .floating-btn:hover {
   color: black;
   border: 2px solid black;
@@ -1418,7 +1422,7 @@ body.light-mode .setting-item:hover {
 }
 
 body.light-mode .modal-btn {
-  border-color: rgba(0, 0, 0, 0.2) !important;
+  border-color: rgba(0, 0, 0, 0.35) !important;
 }
 
 .settings-box .close-btn {
