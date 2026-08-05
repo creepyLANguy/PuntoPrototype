@@ -5108,6 +5108,7 @@ document.addEventListener("DOMContentLoaded", () =>
     elements.serverToggleBtn.addEventListener("click", () =>
     {
       isServerBadgeVisible = !isServerBadgeVisible;
+      elements.serverToggleBtn.textContent = isServerBadgeVisible ? "⚾︎" : "⭘";
       localStorage.setItem("serverBadge", isServerBadgeVisible);
       updateServerIndicator();
       syncSettingsTiles();
