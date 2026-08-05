@@ -6907,16 +6907,27 @@ function isInputObscured(el)
   return rect.bottom > maxBottom || rect.top < minTop;
 }
 
+// Single in-flight scroll, re-armed via rAF instead of stacked timeouts, so the
+// keyboard's continuous resize/scroll events nudge the input rather than
+// re-triggering competing "smooth" animations (which caused visible snapping).
+let obscuredScrollFrame = null;
+
 function scrollInputIntoViewIfNeeded(el)
 {
   if (!isTextInputElement(el)) return;
-  if (isInputObscured(el))
+  if (obscuredScrollFrame !== null) return;
+
+  obscuredScrollFrame = requestAnimationFrame(() =>
   {
+    obscuredScrollFrame = null;
+    if (document.activeElement !== el) return;
+    if (!isInputObscured(el)) return;
+
     try
     {
       el.scrollIntoView({
         behavior: "smooth",
-        block: "center",
+        block: "nearest",
         inline: "nearest"
       });
     }
@@ -6924,28 +6935,6 @@ function scrollInputIntoViewIfNeeded(el)
     {
       el.scrollIntoView(false);
     }
-  }
-}
-
-function handleInputFocusOrResize(targetEl)
-{
-  const el = targetEl || document.activeElement;
-  if (!isTextInputElement(el)) return;
-
-  // Check immediately
-  scrollInputIntoViewIfNeeded(el);
-
-  // Check at intervals to account for virtual keyboard animation on mobile
-  const delays = [100, 250, 400, 600];
-  delays.forEach(delay =>
-  {
-    setTimeout(() =>
-    {
-      if (document.activeElement === el)
-      {
-        scrollInputIntoViewIfNeeded(el);
-      }
-    }, delay);
   });
 }
 
@@ -6953,7 +6942,7 @@ document.addEventListener("focusin", (e) =>
 {
   if (isTextInputElement(e.target))
   {
-    handleInputFocusOrResize(e.target);
+    scrollInputIntoViewIfNeeded(e.target);
   }
 }, { capture: true, passive: true });
 
