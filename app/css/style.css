@@ -1157,7 +1157,7 @@ body.light-mode .floating-btn:hover {
   flex-direction: row;
   align-items: center;
   justify-content: center;
-  gap: clamp(6px, 2vw, 18px);
+  gap: clamp(12px, 3vw, 32px);
   padding: clamp(8px, 1.5vh, 16px) clamp(8px, 2vw, 16px);
 }
 
@@ -1166,7 +1166,7 @@ body.light-mode .floating-btn:hover {
   .floating-controls {
     flex-direction: column;
     justify-content: flex-start;
-    gap: clamp(6px, 2vh, 18px);
+    gap: clamp(6px, 1.5vh, 18px);
     padding: clamp(8px, 1.5vw, 16px) clamp(8px, 1.5vw, 14px);
   }
 }
