@@ -984,8 +984,9 @@ body.light-mode .game-dot.filled {
 .server-badge::after {
   --bounceHeight: clamp(12px, 5.5cqi, 56px);
   --size: clamp(4px, 2.25cqi, 10px);
+  --labelHeight: calc(1.1em + 2px);
   flex-shrink: 0;
-  bottom: calc(var(--bounceHeight) + (var(--size) * 2.5));
+  bottom: calc(var(--bounceHeight) + var(--labelHeight));
   width: var(--size);
   height: var(--size);
   background: currentColor;
