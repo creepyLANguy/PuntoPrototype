@@ -2612,7 +2612,7 @@ document.addEventListener("DOMContentLoaded", () =>
   {
     if (!courtToEdit) return;
 
-    showspinner(elements.editCourtPage, "Saving changes...");
+    showSpinner(elements.editCourtPage, "Saving changes...");
 
     try
     {
@@ -4521,7 +4521,7 @@ document.addEventListener("DOMContentLoaded", () =>
     }, TOAST_DURATION_MS);
   }
 
-  function showspinner(containerEl)
+  function showSpinner(containerEl)
   {
     if (!containerEl) return;
 
@@ -4884,7 +4884,9 @@ document.addEventListener("DOMContentLoaded", () =>
 
   elements.shallowResetBtn.addEventListener("click", async () =>
   {
+    showSpinner(elements.resetModal);
     await performShallowReset(true);
+    hideSpinner(elements.resetModal);
   });
 
   elements.confirmResetBtn.addEventListener("click", async () =>
@@ -4895,6 +4897,8 @@ document.addEventListener("DOMContentLoaded", () =>
 
     try
     {
+      showSpinner(elements.resetModal);
+      
       pendingLocalPasswordUpdate = newPassword;
       await resetCourt(currentCourtId, true, newPassword, true);
       currentCourtPassword = newPassword;
@@ -4910,6 +4914,10 @@ document.addEventListener("DOMContentLoaded", () =>
       pendingLocalPasswordUpdate = null;
       console.error("Reset failed:", err);
       showToast("Reset Failed: " + (err.message || "Unknown error"), TOAST_TYPES.ERROR);
+    }
+    finally
+    {
+      hideSpinner(elements.resetModal);
     }
   });
 
