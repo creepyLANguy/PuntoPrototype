@@ -1157,8 +1157,8 @@ body.light-mode .floating-btn:hover {
   flex-direction: row;
   align-items: center;
   justify-content: center;
+  padding: clamp(8px, 1.5vw, 16px);
   gap: clamp(12px, 3vw, 32px);
-  padding: clamp(8px, 1.5vh, 16px) clamp(8px, 2vw, 16px);
 }
 
 /* --- Landscape --- */
@@ -1166,8 +1166,8 @@ body.light-mode .floating-btn:hover {
   .floating-controls {
     flex-direction: column;
     justify-content: flex-start;
-    gap: clamp(6px, 1.5vh, 18px);
-    padding: clamp(8px, 1.5vw, 16px) clamp(8px, 1.5vw, 14px);
+    padding: clamp(8px, 1.5vw, 16px);
+    gap: clamp(10px, 2vh, 24px);
   }
 }
 
