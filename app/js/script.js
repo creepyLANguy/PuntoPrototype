@@ -320,8 +320,16 @@ document.addEventListener("DOMContentLoaded", () =>
   let score = defaultScore();
   let isMatchDetailsCacheValid = false;
   let matchDetailsCache = null;
+  let matchDetailsCacheCourtId = null;
   let lastKnownSets = { A: 0, B: 0 };
   let sessionInitialized = false;
+
+  function invalidateMatchDetailsCache()
+  {
+    isMatchDetailsCacheValid = false;
+    matchDetailsCache = null;
+    matchDetailsCacheCourtId = null;
+  }
 
   let muted = false;
 
@@ -1040,6 +1048,7 @@ document.addEventListener("DOMContentLoaded", () =>
     detailsBtn: $("detailsBtn"),
     detailsModal: $("detailsModal"),
     closeDetailsBtn: $("closeDetailsBtn"),
+    matchDetailsCourtName: $("matchDetailsCourtName"),
     detailsSetsA: $("detailsSetsA"),
     detailsSetsB: $("detailsSetsB"),
     detailsTeamAName: $("detailsTeamAName"),
@@ -3330,6 +3339,7 @@ document.addEventListener("DOMContentLoaded", () =>
     console.log(`Entering court: ${courtId}, spectate: ${spectate}`);
     pendingLocalPasswordUpdate = null;
     bumpCourtHistorySessionId();
+    invalidateMatchDetailsCache();
 
     // Warm Firestore connection
     await getDoc(doc(db, "courts", courtId, "score", "current"));
@@ -3442,6 +3452,7 @@ document.addEventListener("DOMContentLoaded", () =>
     console.log("Leaving court: " + currentCourtId);
     pendingLocalPasswordUpdate = null;
     bumpCourtHistorySessionId();
+    invalidateMatchDetailsCache();
 
     disableSpectateMode();
     releaseWakeLock();
@@ -5299,20 +5310,19 @@ document.addEventListener("DOMContentLoaded", () =>
           return cumulative;
         })();
 
-      const completedGameMarkers = Array.isArray(gameMarkers)
-        ? [...new Set(gameMarkers.filter((index) => Number.isInteger(index) && index > 0 && index < values.length))]
-        : [];
-
-
       // --- Centre balanced line ---
-      // ctx.beginPath();
-      // ctx.moveTo(padX, midY);
-      // ctx.lineTo(W - padX, midY);
-      // ctx.strokeStyle = axisColour;
-      // ctx.lineWidth = 1;
-      // //ctx.setLineDash([4, 4]);
-      // ctx.stroke();
-      // //ctx.setLineDash([]);
+      const drawCentreLine = false;
+      if (drawCentreLine)
+      {
+        ctx.beginPath();
+        ctx.moveTo(padX, midY);
+        ctx.lineTo(W - padX, midY);
+        ctx.strokeStyle = axisColour;
+        ctx.lineWidth = 1;
+        //ctx.setLineDash([4, 4]);
+        ctx.stroke();
+        //ctx.setLineDash([]);
+      }
 
       // --- Set point markers ---
       const markerIndices = Array.isArray(setPointMarkers)
@@ -5332,15 +5342,44 @@ document.addEventListener("DOMContentLoaded", () =>
       });
 
       // --- Game point markers ---
+      const completedGameMarkers = Array.isArray(gameMarkers)
+        ? [...new Set(gameMarkers
+          .filter((index) => Number.isInteger(index) && index > 0 && index < values.length))]
+          .filter((index) => !markerIndices.includes(index))
+        : [];
+
       completedGameMarkers.forEach((index) =>
       {
         const x = toX(index);
+        const radius = 1;
+        const shouldClipGameMarkers = false; // Set to false to show full circle for game markers;
+        const momentum = values[index];
+
+        ctx.save();
+
+        if (shouldClipGameMarkers) 
+        {
+          if (momentum === 0) 
+          {
+            return;
+          }
+
+          ctx.beginPath();
+          momentum > 0 ? 
+          ctx.rect(x - radius - 1, midY, radius * 2 + 2, radius + 2) : 
+          ctx.rect(x - radius - 1, midY - radius - 2, radius * 2 + 2, radius + 2);
+          ctx.clip();
+        }
+        
         ctx.beginPath();
-        ctx.moveTo(x, H / 2 - padY / 3);
-        ctx.lineTo(x, H / 2 + padY / 3);
+        ctx.arc(x, midY, radius, 0, Math.PI * 2);
+        ctx.fillStyle = axisColour;
         ctx.strokeStyle = axisColour;
         ctx.lineWidth = 1;
+        ctx.fill();
         ctx.stroke();
+
+        ctx.restore();
       });
 
       // Smooth sharp directional changes so peaks/troughs render less jagged.
@@ -5456,8 +5495,6 @@ document.addEventListener("DOMContentLoaded", () =>
       ctx.beginPath();
       ctx.arc(lastX, lastY, 3.5, 0, Math.PI * 2);
       ctx.fillStyle = finalMomentumColour;
-      ctx.shadowBlur = 10 + pulseWave * 8;
-      ctx.shadowColor = finalMomentumColour;
       ctx.fill();
       ctx.shadowBlur = 0;
 
@@ -5752,6 +5789,8 @@ document.addEventListener("DOMContentLoaded", () =>
       dmTableWrap.classList.add("hidden");
     }
 
+    elements.matchDetailsCourtName.textContent = currentCourtName || currentCourtId || "Match Details";
+
     // Populate team names immediately
     const nameA = $("teamA").querySelector(".name-text").textContent;
     const nameB = $("teamB").querySelector(".name-text").textContent;
@@ -5796,12 +5835,18 @@ document.addEventListener("DOMContentLoaded", () =>
     try
     {
       let result = matchDetailsCache;
-      if (isMatchDetailsCacheValid == false)
+      const canUseDetailsCache =
+        isMatchDetailsCacheValid &&
+        matchDetailsCache &&
+        matchDetailsCacheCourtId === currentCourtId;
+
+      if (canUseDetailsCache == false)
       {
         let getDetailedScore = httpsCallable(functions, "getDetailedScore");
         result = await getDetailedScore({ courtId: currentCourtId });
         matchDetailsCache = result;
         isMatchDetailsCacheValid = true;
+        matchDetailsCacheCourtId = currentCourtId;
       }
 
       const { sets, currentGames, points, mode, scoringMode, matchComplete } = result.data;
@@ -6148,7 +6193,7 @@ document.addEventListener("DOMContentLoaded", () =>
 
 
       score = newData;
-      isMatchDetailsCacheValid = false;
+      invalidateMatchDetailsCache();
 
       updateUI();
     });
