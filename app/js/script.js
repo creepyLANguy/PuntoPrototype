@@ -6927,7 +6927,7 @@ function scrollInputIntoViewIfNeeded(el)
     {
       el.scrollIntoView({
         behavior: "smooth",
-        block: "nearest",
+        block: "center",
         inline: "nearest"
       });
     }
