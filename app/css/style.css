@@ -1772,10 +1772,25 @@ body.light-mode .scoring-field select:focus-visible {
   position: relative;
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.22);
-  background: rgba(255, 255, 255, 0.04);
-  color: inherit;
-  text-shadow: none;
+  background: rgba(255, 255, 255, 0.06);
+  color: #f3f4f6;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.55);
+  letter-spacing: 0.01em;
   padding-bottom: 10px;
+}
+
+.theme-choice-btn[data-theme-choice="dark"] {
+  border-color: rgba(255, 255, 255, 0.24);
+  background: linear-gradient(180deg, rgba(17, 24, 39, 0.92) 0%, rgba(3, 7, 18, 0.94) 100%);
+  color: #e5ebf8;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.7);
+}
+
+.theme-choice-btn[data-theme-choice="light"] {
+  border-color: rgba(0, 0, 0, 0.18);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(244, 247, 252, 0.98) 100%);
+  color: #1f2937;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.7);
 }
 
 .theme-choice-btn::after {
@@ -1789,12 +1804,21 @@ body.light-mode .scoring-field select:focus-visible {
 }
 
 .theme-choice-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
+  filter: brightness(1.03);
 }
 
 .theme-choice-btn.active {
-  border-color: rgba(255, 255, 255, 0.75);
-  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.16);
+  transform: translateY(-1px);
+}
+
+.theme-choice-btn[data-theme-choice="dark"].active {
+  border-color: rgba(255, 255, 255, 0.78);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.18);
+}
+
+.theme-choice-btn[data-theme-choice="light"].active {
+  border-color: rgba(0, 0, 0, 0.6);
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.1);
 }
 
 .reset-theme-colours-btn {
@@ -1809,16 +1833,6 @@ body.light-mode .scoring-field select:focus-visible {
 body.light-mode .reset-theme-colours-btn {
   border-color: rgba(0, 0, 0, 0.14);
   background: rgba(0, 0, 0, 0.04);
-}
-
-body.light-mode .theme-choice-btn {
-  border-color: rgba(0, 0, 0, 0.18);
-  background: rgba(0, 0, 0, 0.04);
-}
-
-body.light-mode .theme-choice-btn.active {
-  border-color: rgba(0, 0, 0, 0.6);
-  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.08);
 }
 
 body.light-mode .reset-theme-colours-btn:hover {
@@ -5888,3 +5902,4 @@ body.light-mode .dm-meta-value {
 .games-row {
   align-items: center;
 }
+
