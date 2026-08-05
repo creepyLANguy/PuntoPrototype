@@ -382,6 +382,8 @@ document.addEventListener("DOMContentLoaded", () =>
     dark: { A: "#ffff00", B: "#00ffff" },
     light: { A: "#ad7535", B: "#0a91ac" }
   };
+  let activeTeamColourPickerPanel = null;
+  let activeTeamColourPickerId = 0;
   const TEAM_COLOUR_PICKER_OPTIONS = {
     format: "hex",
     hash: true,
@@ -408,6 +410,104 @@ document.addEventListener("DOMContentLoaded", () =>
   let appNavigationIndex = -1;
   let isRestoringNavigation = false;
   let currentCourtHistorySessionId = 0;
+
+  function getTeamColourPickerPanel()
+  {
+    const pickerZIndex = String(TEAM_COLOUR_PICKER_OPTIONS.zIndex);
+    const bodyChildren = Array.from(document.body.children);
+
+    for (let index = bodyChildren.length - 1; index >= 0; index -= 1)
+    {
+      const candidate = bodyChildren[index];
+      if (!(candidate instanceof HTMLElement)) continue;
+      if (candidate.id === "content-container") continue;
+
+      const computedStyle = window.getComputedStyle(candidate);
+      if (computedStyle.zIndex !== pickerZIndex) continue;
+      if (computedStyle.position !== "absolute" && computedStyle.position !== "fixed") continue;
+
+      return candidate;
+    }
+
+    return null;
+  }
+
+  function clearTeamColourPickerReveal()
+  {
+    if (!activeTeamColourPickerPanel) return;
+
+    activeTeamColourPickerPanel.classList.remove("is-revealing");
+    activeTeamColourPickerPanel.style.removeProperty("--picker-reveal-x");
+    activeTeamColourPickerPanel.style.removeProperty("--picker-reveal-y");
+  }
+
+  function bindTeamColourPickerPanel()
+  {
+    const panel = getTeamColourPickerPanel();
+    if (!panel || panel === activeTeamColourPickerPanel) return;
+
+    activeTeamColourPickerPanel = panel;
+    activeTeamColourPickerId += 1;
+    panel.dataset.teamColourPickerId = String(activeTeamColourPickerId);
+    panel.classList.add("team-colour-picker-panel");
+    clearTeamColourPickerReveal();
+  }
+
+  function updateTeamColourPickerReveal(clientX, clientY)
+  {
+    const panel = getTeamColourPickerPanel();
+    if (!panel) return;
+
+    if (panel !== activeTeamColourPickerPanel)
+    {
+      bindTeamColourPickerPanel();
+    }
+
+    const panelRect = panel.getBoundingClientRect();
+    const revealX = Math.max(0, Math.min(clientX - panelRect.left, panelRect.width));
+    const revealY = Math.max(0, Math.min(clientY - panelRect.top, panelRect.height));
+
+    panel.style.setProperty("--picker-reveal-x", `${revealX}px`);
+    panel.style.setProperty("--picker-reveal-y", `${revealY}px`);
+    panel.classList.add("is-revealing");
+  }
+
+  const teamColourPickerObserver = new MutationObserver(() =>
+  {
+    bindTeamColourPickerPanel();
+
+    if (!getTeamColourPickerPanel())
+    {
+      activeTeamColourPickerPanel = null;
+    }
+  });
+
+  teamColourPickerObserver.observe(document.body, { childList: true });
+
+  document.addEventListener("pointerdown", (event) =>
+  {
+    const panel = getTeamColourPickerPanel();
+    if (!panel || !panel.contains(event.target)) return;
+
+    isPickingColour = true;
+    updateTeamColourPickerReveal(event.clientX, event.clientY);
+  });
+
+  document.addEventListener("pointermove", (event) =>
+  {
+    if (!isPickingColour) return;
+    updateTeamColourPickerReveal(event.clientX, event.clientY);
+  });
+
+  document.addEventListener("pointerup", () =>
+  {
+    clearTeamColourPickerReveal();
+  });
+
+  document.addEventListener("pointercancel", () =>
+  {
+    clearTeamColourPickerReveal();
+  });
 
   function normalizeCourtId(value)
   {
@@ -684,6 +784,7 @@ document.addEventListener("DOMContentLoaded", () =>
           onInput()
           {
             isPickingColour = true;
+            bindTeamColourPickerPanel();
             elements.settingsModal.classList.add("hidden");
             
             const pickedColour = normalizeHexColour(this.toHEXString());
@@ -693,6 +794,7 @@ document.addEventListener("DOMContentLoaded", () =>
           onChange()
           {
             isPickingColour = false;
+            clearTeamColourPickerReveal();
             if (currentCourtId)
             {
               elements.settingsModal.classList.remove("hidden");

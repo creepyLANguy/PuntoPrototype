@@ -1867,6 +1867,31 @@ body.light-mode .reset-theme-colours-btn:hover {
   transition: box-shadow 0.18s ease, background 0.18s ease;
 }
 
+.team-colour-picker-panel {
+  --picker-reveal-x: 50%;
+  --picker-reveal-y: 50%;
+  --picker-reveal-inner: 24px;
+  --picker-reveal-middle: 84px;
+  --picker-reveal-outer: 170px;
+}
+
+.team-colour-picker-panel.is-revealing {
+  -webkit-mask-image: radial-gradient(
+    circle at var(--picker-reveal-x) var(--picker-reveal-y),
+    #000000 0,
+    rgba(0, 0, 0, 0.92) var(--picker-reveal-inner),
+    rgba(0, 0, 0, 0.5) var(--picker-reveal-middle),
+    transparent var(--picker-reveal-outer)
+  );
+  mask-image: radial-gradient(
+    circle at var(--picker-reveal-x) var(--picker-reveal-y),
+    #000000 0,
+    rgba(0, 0, 0, 0.92) var(--picker-reveal-inner),
+    rgba(0, 0, 0, 0.5) var(--picker-reveal-middle),
+    transparent var(--picker-reveal-outer)
+  );
+}
+
 .team-colour-btn {
   width: 100%;
   min-width: 0;
