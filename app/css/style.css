@@ -353,13 +353,24 @@ body.light-mode .menu-btn:hover {
   backdrop-filter: blur(6px);
   box-shadow: 0 8px 18px rgba(0, 0, 0, 0.30);
   overflow: hidden;
-  resize: both;
+  resize: horizontal;
+  height: auto;
   max-width: calc(100vw - 16px);
-  max-height: calc(100svh - 16px);
+  max-height: min(calc((100vw - 16px) * 1.24), calc(100svh - 16px));
+  min-height: calc(130px * 1.24);
   box-sizing: border-box;
-  cursor: move;
+  cursor: grab;
   user-select: none;
   touch-action: none;
+}
+
+.court-qr-panel:active {
+  cursor: grabbing;
+}
+
+.court-qr-panel::-webkit-resizer {
+  cursor: grab;
+  background: transparent;
 }
 
 .court-qr-code {
