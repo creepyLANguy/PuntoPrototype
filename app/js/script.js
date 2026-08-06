@@ -5847,8 +5847,8 @@ document.addEventListener("DOMContentLoaded", () =>
     syncDetailsPanelAvailability();
   }
 
-  async function showMatchDetails(syncHistory = true)
-  { 
+  async function showMatchDetails(syncHistory = true, expanded = false, refreshing = false)
+  {     
     elements.detailsModal.classList.remove("hidden");
 
     if (syncHistory)
@@ -5856,20 +5856,22 @@ document.addEventListener("DOMContentLoaded", () =>
       syncCurrentViewState();
     }
 
-    // Check if the primary scoreboard is currently swapped
-    const isSwapped = isScoreboardSwapped();
-
-    // Mirror the swapped layout state onto the details header container
     const dmOverall = document.querySelector(".dm-overall");
     const dmTableWrap = document.querySelector(".dm-table-wrap");
     const dmMidSection = document.querySelector(".dm-mid-section");
-    if (dmOverall)
-    {
-      dmOverall.classList.toggle("swapped", isSwapped);
-      dmOverall.classList.add("hidden");
-      dmTableWrap.classList.add("hidden");
-    }
 
+    const isSwapped = isScoreboardSwapped();
+
+    if (!refreshing)
+    {
+      if (dmOverall)
+      {
+        dmOverall.classList.toggle("swapped", isSwapped);
+        dmOverall.classList.add("hidden");
+        dmTableWrap.classList.add("hidden");
+      }
+    }
+    
     elements.matchDetailsCourtName.textContent = currentCourtName || currentCourtId || "Match Details";
 
     // Populate team names immediately
@@ -5877,40 +5879,35 @@ document.addEventListener("DOMContentLoaded", () =>
     const nameB = $("teamB").querySelector(".name-text").textContent;
     const teamAColour = getComputedStyle(document.body).getPropertyValue("--teamAcolour").trim();
     const teamBColour = getComputedStyle(document.body).getPropertyValue("--teamBcolour").trim();
-    if (isSwapped)
-    {
-      elements.detailsTeamAName.textContent = nameB;
-      elements.detailsTeamBName.textContent = nameA;
-      elements.detailsTeamAName.style.color = teamBColour;
-      elements.detailsTeamBName.style.color = teamAColour;
-      elements.detailsSetsA.style.color = teamAColour;
-      elements.detailsSetsB.style.color = teamBColour;
-    }
-    else
-    {
-      elements.detailsTeamAName.textContent = nameA;
-      elements.detailsTeamBName.textContent = nameB;
-      elements.detailsTeamAName.style.color = teamAColour;
-      elements.detailsTeamBName.style.color = teamBColour;
-      elements.detailsSetsA.style.color = teamAColour;
-      elements.detailsSetsB.style.color = teamBColour;
-    }
+    elements.detailsTeamAName.textContent = isSwapped ? nameB : nameA;
+    elements.detailsTeamBName.textContent = isSwapped ? nameA : nameB;
+    elements.detailsTeamAName.style.color = isSwapped ? teamBColour : teamAColour;
+    elements.detailsTeamBName.style.color = isSwapped ? teamAColour : teamBColour;
+    elements.detailsSetsA.style.color = isSwapped ? teamBColour : teamAColour;
+    elements.detailsSetsB.style.color = isSwapped ? teamAColour : teamBColour;
 
-    elements.detailsLoading.classList.remove("hidden");
-
-    // Clear table rows, columns, and momentum graph safely
     const headRow = elements.dmHead.querySelector("tr");
-    headRow.innerHTML = "";
-    elements.dmBody.innerHTML = "";
-    elements.dmMomentumWrap.classList.add("hidden");
-    elements.dmStatsWrap.classList.add("hidden");
-    elements.dmStatsTeam.innerHTML = "";
-    if (elements.dmEmptyState)
-    {
-      elements.dmEmptyState.classList.add("hidden");
+
+    //showSpinner(elements.detailsModal, refreshing === true ? "Refreshing match details..." : "Loading match details... Please wait.");
+    //elements.detailsLoading.innerHTML = elements.detailsLoading.innerHTML.replace(/(Refreshing...|Loading...)/, "").trim();
+    //elements.detailsLoading.innerHTML = elements.detailsLoading.innerHTML + (refreshing ? "Refreshing..." : "Loading...");
+    if (!refreshing) {
+      elements.detailsLoading.classList.remove("hidden");
+
+      // Clear table rows, columns, and momentum graph safely
+      headRow.innerHTML = "";
+      elements.dmBody.innerHTML = "";
+      elements.dmMomentumWrap.classList.add("hidden");
+      elements.dmStatsWrap.classList.add("hidden");
+      elements.dmStatsTeam.innerHTML = "";
+      if (elements.dmEmptyState)
+      {
+        elements.dmEmptyState.classList.add("hidden");
+      }
     }
-    setDetailsPanelExpanded(false);
+
     syncDetailsPanelAvailability();
+    setDetailsPanelExpanded(expanded);
 
     try
     {
@@ -6029,6 +6026,7 @@ document.addEventListener("DOMContentLoaded", () =>
         return th;
       };
 
+      headRow.innerHTML = "";
       headRow.appendChild(mkTh(""));
       allSets.forEach((_, i) =>
       {
@@ -6067,16 +6065,9 @@ document.addEventListener("DOMContentLoaded", () =>
         return tr;
       };
 
-      // Render rows adhering to the visual swapped rotation state
-      if (isSwapped)
-      {
-        elements.dmBody.appendChild(mkRow("b", allSets));
-        elements.dmBody.appendChild(mkRow("a", allSets));
-      } else
-      {
-        elements.dmBody.appendChild(mkRow("a", allSets));
-        elements.dmBody.appendChild(mkRow("b", allSets));
-      }
+      elements.dmBody.innerHTML = "";
+      isSwapped ? elements.dmBody.appendChild(mkRow("b", allSets)) : elements.dmBody.appendChild(mkRow("a", allSets));
+      isSwapped ? elements.dmBody.appendChild(mkRow("a", allSets)) : elements.dmBody.appendChild(mkRow("b", allSets));
 
       const colourA = getComputedStyle(document.body).getPropertyValue("--teamAcolour").trim();
       const colourB = getComputedStyle(document.body).getPropertyValue("--teamBcolour").trim();
@@ -6099,6 +6090,7 @@ document.addEventListener("DOMContentLoaded", () =>
     finally
     {
       elements.detailsLoading.classList.add("hidden");
+      //hideSpinner(elements.detailsModal);
     }
   }
 
@@ -6278,7 +6270,7 @@ document.addEventListener("DOMContentLoaded", () =>
 
       if (!elements.detailsModal.classList.contains("hidden"))
       {
-        showMatchDetails(false);
+        showMatchDetails(false, elements.dmDetailsContent.hidden === false, true);
       }
     });
 
@@ -6375,7 +6367,7 @@ document.addEventListener("DOMContentLoaded", () =>
 
       if (!elements.detailsModal.classList.contains("hidden"))
       {
-        showMatchDetails(false);
+        showMatchDetails(false, elements.dmDetailsContent.hidden === false, true);
       }
     });
 
