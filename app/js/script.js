@@ -5849,15 +5849,6 @@ document.addEventListener("DOMContentLoaded", () =>
 
   async function showMatchDetails(syncHistory = true)
   { 
-    if (elements.detailsModal.classList.contains("hidden") === false) 
-    {
-      elements.dmHead.querySelector("tr").innerHTML = "";
-      elements.dmBody.innerHTML = "";
-      elements.dmMomentumWrap.classList.add("hidden");
-      elements.dmStatsWrap.classList.add("hidden");
-      elements.dmStatsTeam.innerHTML = "";
-    }
-
     elements.detailsModal.classList.remove("hidden");
 
     if (syncHistory)
@@ -6280,11 +6271,15 @@ document.addEventListener("DOMContentLoaded", () =>
         finishStartupLoading();
       }
 
-
       score = newData;
       invalidateMatchDetailsCache();
 
       updateUI();
+
+      if (!elements.detailsModal.classList.contains("hidden"))
+      {
+        showMatchDetails(false);
+      }
     });
 
     // 🔥 Listen to court metadata changes (password + teamNames)
@@ -6377,6 +6372,11 @@ document.addEventListener("DOMContentLoaded", () =>
       const teamNames = resolveTeamNames(currentRawTeamNames, currentPlayerNames);
       applyTeamNamesToScoreboard(teamNames);
       updateServerIndicator();
+
+      if (!elements.detailsModal.classList.contains("hidden"))
+      {
+        showMatchDetails(false);
+      }
     });
 
     // Combine both unsubscribes
