@@ -5848,7 +5848,16 @@ document.addEventListener("DOMContentLoaded", () =>
   }
 
   async function showMatchDetails(syncHistory = true)
-  {
+  { 
+    if (elements.detailsModal.classList.contains("hidden") === false) 
+    {
+      elements.dmHead.querySelector("tr").innerHTML = "";
+      elements.dmBody.innerHTML = "";
+      elements.dmMomentumWrap.classList.add("hidden");
+      elements.dmStatsWrap.classList.add("hidden");
+      elements.dmStatsTeam.innerHTML = "";
+    }
+
     elements.detailsModal.classList.remove("hidden");
 
     if (syncHistory)
