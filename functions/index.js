@@ -273,57 +273,6 @@ function createServePlayerStatsBucket()
     };
 }
 
-function createSetComebackState(setNumber)
-{
-    return {
-        setNumber,
-        minDiffForA: 0,
-        minScoreForA: { A: 0, B: 0 },
-        minDiffForB: 0,
-        minScoreForB: { A: 0, B: 0 }
-    };
-}
-
-function updateSetComebackState(setState, gamesA, gamesB)
-{
-    const diffForA = gamesA - gamesB;
-    const diffForB = gamesB - gamesA;
-
-    if (diffForA < setState.minDiffForA)
-    {
-        setState.minDiffForA = diffForA;
-        setState.minScoreForA = { A: gamesA, B: gamesB };
-    }
-
-    if (diffForB < setState.minDiffForB)
-    {
-        setState.minDiffForB = diffForB;
-        setState.minScoreForB = { A: gamesA, B: gamesB };
-    }
-}
-
-function maybeRecordLargestComeback(insights, setState, winner, finalSetScore)
-{
-    if (winner !== "A" && winner !== "B") return;
-
-    const deficit = winner === "A"
-        ? Math.max(0, -setState.minDiffForA)
-        : Math.max(0, -setState.minDiffForB);
-
-    if (deficit < 1) return;
-
-    if (!insights.largestComeback || deficit > insights.largestComeback.deficit)
-    {
-        insights.largestComeback = {
-            team: winner,
-            deficit,
-            fromScore: winner === "A" ? setState.minScoreForA : setState.minScoreForB,
-            finalScore: finalSetScore,
-            setNumber: setState.setNumber
-        };
-    }
-}
-
 function isTeamOnGamePoint(state, team, options, isTiebreakGame)
 {
     if (options.scoringMode !== "standard" || isTiebreakGame)
@@ -590,8 +539,6 @@ function computeAdvancedStats(pointHistory, scoringOptions)
         deuceGames: 0,
         goldenPointsPlayed: 0,
         silverPointsPlayed: 0,
-        leadChanges: 0,
-        largestComeback: null
     };
     const servePlayerStats = {
         A1: createServePlayerStatsBucket(),
@@ -605,17 +552,12 @@ function computeAdvancedStats(pointHistory, scoringOptions)
 
     let streakTeam = null;
     let streakLength = 0;
-    let momentum = 0;
-    let previousLeader = 0;
     let currentServerTeam = "A";
     const gameMarkers = [];
     let gameContext = {
         reachedDeuce: false,
         hadGamePoint: { A: false, B: false }
     };
-
-    let setState = createSetComebackState(1);
-    updateSetComebackState(setState, 0, 0);
 
     let pointIndex = 0;
     for (const pointWinner of pointHistory)
@@ -727,17 +669,6 @@ function computeAdvancedStats(pointHistory, scoringOptions)
             streakLength
         );
 
-        momentum += pointWinner === "A" ? 1 : -1;
-        const currentLeader = momentum > 0 ? 1 : momentum < 0 ? -1 : 0;
-        if (currentLeader !== 0)
-        {
-            if (previousLeader !== 0 && currentLeader !== previousLeader)
-            {
-                matchStats.leadChanges++;
-            }
-            previousLeader = currentLeader;
-        }
-
         const gameCompleted = standardMode && (
             score.A.games !== oldGamesA ||
             score.B.games !== oldGamesB ||
@@ -783,16 +714,6 @@ function computeAdvancedStats(pointHistory, scoringOptions)
                         A: gameWinner === "A" ? oldGamesA + 1 : oldGamesA,
                         B: gameWinner === "B" ? oldGamesB + 1 : oldGamesB
                     };
-
-                updateSetComebackState(setState, finalSetScore.A, finalSetScore.B);
-                maybeRecordLargestComeback(matchStats, setState, gameWinner, finalSetScore);
-
-                setState = createSetComebackState(setState.setNumber + 1);
-                updateSetComebackState(setState, 0, 0);
-            }
-            else
-            {
-                updateSetComebackState(setState, score.A.games, score.B.games);
             }
 
             gameContext = {

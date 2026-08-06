@@ -1165,8 +1165,7 @@ document.addEventListener("DOMContentLoaded", () =>
     dmDetailsContent: $("dmDetailsContent"),
     dmEmptyState: $("dmEmptyState"),
     dmStatsWrap: $("dmStatsWrap"),
-    dmStatsTeamA: $("dmStatsTeamA"),
-    dmStatsMeta: $("dmStatsMeta"),
+    dmStatsTeam: $("dmStatsTeam"),
     courtQrPanel: $("courtQrPanel"),
     courtQrCode: $("courtQrCode"),
     courtQrLabel: $("courtQrLabel"),
@@ -5641,7 +5640,7 @@ document.addEventListener("DOMContentLoaded", () =>
 
   function renderAdvancedStats(advancedStats, teamNames, isSwapped = false, playerNames = DEFAULT_PLAYER_NAMES)
   {
-    if (!elements.dmStatsWrap || !elements.dmStatsTeamA || !elements.dmStatsMeta)
+    if (!elements.dmStatsWrap || !elements.dmStatsTeam)
     {
       return;
     }
@@ -5831,7 +5830,7 @@ document.addEventListener("DOMContentLoaded", () =>
       ));
     });
 
-    elements.dmStatsTeamA.innerHTML = `
+    elements.dmStatsTeam.innerHTML = `
       <table class="dm-stats-table">
         <thead>
           <tr>
@@ -5842,45 +5841,6 @@ document.addEventListener("DOMContentLoaded", () =>
         </thead>
         <tbody>${rows.join("")}</tbody>
       </table>
-    `;
-
-    const comeback = matchStats.largestComeback;
-    let comebackText = isGamesAndSetsMode
-      ? "No comeback set win recorded."
-      : "No points comeback recorded.";
-    if (comeback && (comeback.team === "A" || comeback.team === "B"))
-    {
-      const comebackTeamName = comeback.team === "A" ? teamNames.A : teamNames.B;
-      const fromA = Number(comeback.fromScore?.A) || 0;
-      const fromB = Number(comeback.fromScore?.B) || 0;
-      const finalA = Number(comeback.finalScore?.A) || 0;
-      const finalB = Number(comeback.finalScore?.B) || 0;
-      if (isGamesAndSetsMode)
-      {
-        const setNumber = Number(comeback.setNumber) || 1;
-        comebackText = `${comebackTeamName} recovered from ${fromA}-${fromB} to win set ${setNumber}, ${finalA}-${finalB}.`;
-      }
-      else
-      {
-        comebackText = `${comebackTeamName} recovered from ${fromA}-${fromB} to win ${finalA}-${finalB}.`;
-      }
-    }
-
-    elements.dmStatsMeta.innerHTML = `
-      <div class="dm-meta-grid">
-        <div>
-          <div class="dm-meta-title">Match swings</div>
-          <div class="dm-meta-value">
-            <strong>${matchStats.leadChanges}</strong> lead changes
-          </div>
-        </div>
-        <div>
-          <div class="dm-meta-title">Largest comeback</div>
-          <div class="dm-meta-value">
-            ${comebackText}
-          </div>
-        </div>
-      </div>
     `;
 
     elements.dmStatsWrap.classList.remove("hidden");
@@ -5944,8 +5904,7 @@ document.addEventListener("DOMContentLoaded", () =>
     elements.dmBody.innerHTML = "";
     elements.dmMomentumWrap.classList.add("hidden");
     elements.dmStatsWrap.classList.add("hidden");
-    elements.dmStatsTeamA.innerHTML = "";
-    elements.dmStatsMeta.innerHTML = "";
+    elements.dmStatsTeam.innerHTML = "";
     if (elements.dmEmptyState)
     {
       elements.dmEmptyState.classList.add("hidden");
