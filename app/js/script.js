@@ -5747,7 +5747,7 @@ document.addEventListener("DOMContentLoaded", () =>
 
     const rows = [
       barRow(
-        "Pts Won",
+        "Points Won",
         primaryTeamStats.pointWinPct,
         secondaryTeamStats.pointWinPct,
         `${primaryTeamStats.pointsWon}/${totalPoints} (${formatPct(primaryTeamStats.pointWinPct)})`,
