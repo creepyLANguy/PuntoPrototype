@@ -1277,7 +1277,6 @@ document.addEventListener("DOMContentLoaded", () =>
   const elements = {
     startupLoading: $("startupLoading"),
     homeLinkBtn: $("homeLinkBtn"),
-    menuShareBtn: $("menuShareBtn"),
     menuPage: $("menuPage"),
     scoreboardPage: $("scoreboardPage"),
 
@@ -2664,13 +2663,8 @@ document.addEventListener("DOMContentLoaded", () =>
       const shareLabel = getShareActionLabel();
 
       item.innerHTML = `
-      <div class="court-item-main">
         <div class="court-item-name">${court.name}</div>
-      </div>
-      <div class="court-item-actions">
-        <button type="button" class="court-item-share-btn" aria-label="${shareLabel}" title="${shareLabel}">⤴</button>
         <span class="court-item-id">${court.id}</span>
-      </div>
     `;
 
       const selectCourt = () =>
@@ -2690,22 +2684,6 @@ document.addEventListener("DOMContentLoaded", () =>
       };
 
       item.addEventListener("click", selectCourt);
-
-      const shareBtn = item.querySelector(".court-item-share-btn");
-      if (shareBtn)
-      {
-        shareBtn.addEventListener("click", (event) =>
-        {
-          event.preventDefault();
-          event.stopPropagation();
-          void shareFromContext("court", {
-            courtId: court.id,
-            courtName: court.name,
-            teamNames: court.teamNames || {},
-            playerNames: court.playerNames || {}
-          });
-        });
-      }
       
       item.addEventListener("keydown", (e) =>
       {
@@ -2762,16 +2740,10 @@ document.addEventListener("DOMContentLoaded", () =>
       item.tabIndex = 0;
       item.role = "button";
       item.setAttribute("aria-label", `${court.name} - ${court.id}`);
-      const shareLabel = getShareActionLabel();
 
       item.innerHTML = `
-      <div class="court-item-main">
         <div class="court-item-name">${court.name}</div>
-      </div>
-      <div class="court-item-actions">
-        <button type="button" class="court-item-share-btn" aria-label="${shareLabel}" title="${shareLabel}">⤴</button>
         <span class="court-item-id">${court.id}</span>
-      </div>
     `;
 
       const selectCourt = async () =>
@@ -2781,22 +2753,6 @@ document.addEventListener("DOMContentLoaded", () =>
 
       item.addEventListener("click", selectCourt);
 
-      const shareBtn = item.querySelector(".court-item-share-btn");
-      if (shareBtn)
-      {
-        shareBtn.addEventListener("click", (event) =>
-        {
-          event.preventDefault();
-          event.stopPropagation();
-          void shareFromContext("court", {
-            courtId: court.id,
-            courtName: court.name,
-            teamNames: court.teamNames || {},
-            playerNames: court.playerNames || {}
-          });
-        });
-      }
-      
       item.addEventListener("keydown", (e) =>
       {
         if (e.key === "Enter" || e.key === " ")
@@ -3167,7 +3123,7 @@ document.addEventListener("DOMContentLoaded", () =>
     syncCurrentViewState();
   });
 
-  document.querySelectorAll(".menu-btn[data-action='start']").forEach(btn =>
+  document.querySelectorAll(".menu-btn").forEach(btn =>
   {
     btn.addEventListener("click", async () =>
     {
@@ -3207,18 +3163,6 @@ document.addEventListener("DOMContentLoaded", () =>
       }
     });
   });
-
-  if (elements.menuShareBtn)
-  {
-    const menuShareLabel = navigator.share ? "Share app" : "Copy app link";
-    elements.menuShareBtn.textContent = menuShareLabel;
-    elements.menuShareBtn.setAttribute("aria-label", menuShareLabel);
-    elements.menuShareBtn.title = menuShareLabel;
-    elements.menuShareBtn.addEventListener("click", () =>
-    {
-      void shareFromContext("menu");
-    });
-  }
 
   function updateAdminButtonVisibility()
   {
