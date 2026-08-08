@@ -152,6 +152,12 @@ a {
     padding: 12px;
 }
 
+.icon-link.share-action {
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+}
+
 .icon-link.contact {
     background-color: var(--brand);
 }

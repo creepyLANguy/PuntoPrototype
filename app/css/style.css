@@ -2033,6 +2033,34 @@ body.light-mode .dm-close:hover {
   background: rgba(0, 0, 0, 0.07);
 }
 
+.dm-share-btn {
+  position: absolute;
+  top: 10px;
+  right: 48px;
+  background: none;
+  border: none;
+  color: inherit;
+  font-size: 1rem;
+  cursor: pointer;
+  opacity: 0.65;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: background 0.15s, opacity 0.15s;
+}
+
+.dm-share-btn:hover {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+body.light-mode .dm-share-btn:hover {
+  background: rgba(0, 0, 0, 0.07);
+}
+
 /* Watermark — faded logo behind all content */
 .dm-watermark {
   position: absolute;
@@ -3184,6 +3212,53 @@ body.light-mode .loading-logo {
   user-select: none;
   -webkit-user-select: none;
   touch-action: manipulation;
+}
+
+.court-item-main {
+  min-width: 0;
+  flex: 1;
+}
+
+.court-item-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.court-item-share-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  background: transparent;
+  color: rgba(255, 255, 255, 0.9);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.court-item-share-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.court-item-share-btn:focus-visible {
+  outline: 2px solid var(--teamAcolour);
+  outline-offset: 1px;
+}
+
+body.light-mode .court-item-share-btn {
+  border-color: rgba(0, 0, 0, 0.25);
+  color: rgba(0, 0, 0, 0.8);
+}
+
+body.light-mode .court-item-share-btn:hover {
+  background: rgba(0, 0, 0, 0.08);
+}
+
+body.light-mode .court-item-share-btn:focus-visible {
+  outline: 2px solid var(--teamBcolour);
 }
 
 body.light-mode .court-item {
@@ -5932,4 +6007,3 @@ body.light-mode .dm-meta-value {
 .games-row {
   align-items: center;
 }
-

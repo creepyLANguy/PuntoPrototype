@@ -317,6 +317,220 @@ document.addEventListener("DOMContentLoaded", () =>
     return getPlayerDisplayName(serverLabel, currentPlayerNames, true); 
   }
 
+  function getPlayerLineForTeam(team, playerNames = {})
+  {
+    const normalizedTeam = team === "B" ? "B" : "A";
+    const normalizedPlayers = normalizePlayerNames(playerNames);
+    const slots = normalizedTeam === "A" ? ["A1", "A2"] : ["B1", "B2"];
+    const playerValues = slots
+      .map(slot => (typeof normalizedPlayers[slot] === "string" ? normalizedPlayers[slot].trim() : ""))
+      .filter(Boolean);
+
+    return playerValues.length > 0 ? playerValues.join(" / ") : "";
+  }
+
+  function buildTeamsShareLines(teamNames = {}, playerNames = {})
+  {
+    const normalizedTeams = normalizeTeamNames(teamNames);
+    const lines = [];
+
+    if (!isDefaultTeamName("A", normalizedTeams.A) || !isDefaultTeamName("B", normalizedTeams.B))
+    {
+      lines.push(`Teams: ${normalizedTeams.A} vs ${normalizedTeams.B}`);
+    }
+
+    const playersA = getPlayerLineForTeam("A", playerNames);
+    const playersB = getPlayerLineForTeam("B", playerNames);
+
+    if (playersA)
+    {
+      lines.push(`Players A: ${playersA}`);
+    }
+
+    if (playersB)
+    {
+      lines.push(`Players B: ${playersB}`);
+    }
+
+    return lines;
+  }
+
+  function buildCurrentScoreSummary()
+  {
+    if (!score || !score.A || !score.B)
+    {
+      return "";
+    }
+
+    const setsA = Number(score.A.sets) || 0;
+    const setsB = Number(score.B.sets) || 0;
+    const gamesA = Number(score.A.games) || 0;
+    const gamesB = Number(score.B.games) || 0;
+    const options = resolveScoringOptions(score);
+
+    if (options.scoringMode === "straight" || options.scoringMode === "tiebreakTen")
+    {
+      const pointsA = Number(score.A.totalPoints ?? score.A.points) || 0;
+      const pointsB = Number(score.B.totalPoints ?? score.B.points) || 0;
+      return `Score: ${pointsA}-${pointsB} points`;
+    }
+
+    const pointsA = pointLabel(Number(score.A.points) || 0);
+    const pointsB = pointLabel(Number(score.B.points) || 0);
+    return `Score: Sets ${setsA}-${setsB}, Games ${gamesA}-${gamesB}, Points ${pointsA}-${pointsB}`;
+  }
+
+  function buildAppEntryUrl()
+  {
+    return `${window.location.origin.replace(/\/$/, "")}/app/`;
+  }
+
+  function buildHomeUrl()
+  {
+    return `${window.location.origin.replace(/\/$/, "")}/`;
+  }
+
+  function createSharePayload(context, options = {})
+  {
+    const courtId = typeof options.courtId === "string" ? options.courtId.trim().toLowerCase() : "";
+    const courtName = typeof options.courtName === "string" ? options.courtName.trim() : "";
+    const payload = { title: "Padel Push", text: "", url: buildAppEntryUrl() };
+
+    if (context === "menu")
+    {
+      payload.text = "Padel Push — Live padel scoring. Open the app and join a court.";
+      return payload;
+    }
+
+    if (context === "home")
+    {
+      payload.url = buildHomeUrl();
+      payload.text = "Padel Push — Smart devices, live scoring, and connected padel courts.";
+      return payload;
+    }
+
+    if (!courtId)
+    {
+      payload.text = "Padel Push — Live court scoring.";
+      return payload;
+    }
+
+    payload.url = buildCourtQrUrl(courtId);
+
+    const lines = [];
+    lines.push(`Court: ${courtName || courtId.toUpperCase()} (${courtId.toUpperCase()})`);
+
+    lines.push(...buildTeamsShareLines(options.teamNames || {}, options.playerNames || {}));
+
+    if (context === "details")
+    {
+      const scoreSummary = buildCurrentScoreSummary();
+      if (scoreSummary)
+      {
+        lines.push(scoreSummary);
+      }
+      if (score.matchComplete)
+      {
+        lines.push("Match status: Complete");
+      }
+    }
+
+    payload.text = lines.join("\n");
+    return payload;
+  }
+
+  async function shareWithProgressiveEnhancement(payload, fallbackPromptLabel = "Copy this share text:")
+  {
+    const safePayload = {
+      title: String(payload?.title || "Padel Push"),
+      text: String(payload?.text || ""),
+      url: String(payload?.url || "")
+    };
+
+    try
+    {
+      if (navigator.share)
+      {
+        const canSharePayload = !navigator.canShare || navigator.canShare(safePayload);
+        if (canSharePayload)
+        {
+          await navigator.share(safePayload);
+          return { method: "native" };
+        }
+      }
+    }
+    catch (error)
+    {
+      if (error?.name === "AbortError")
+      {
+        return { method: "cancelled" };
+      }
+      console.warn("Native share failed:", error);
+    }
+
+    const fallbackText = [safePayload.text, safePayload.url].filter(Boolean).join("\n");
+
+    if (navigator.clipboard?.writeText)
+    {
+      try
+      {
+        await navigator.clipboard.writeText(fallbackText);
+        return { method: "clipboard" };
+      }
+      catch (error)
+      {
+        console.warn("Clipboard share fallback failed:", error);
+      }
+    }
+
+    const promptResult = window.prompt(fallbackPromptLabel, fallbackText);
+    if (promptResult !== null)
+    {
+      return { method: "prompt" };
+    }
+
+    return { method: "unavailable" };
+  }
+
+  async function shareFromContext(context, options = {})
+  {
+    const payload = createSharePayload(context, options);
+
+    try
+    {
+      const result = await shareWithProgressiveEnhancement(payload);
+      if (result.method === "native")
+      {
+        showToast("Shared.", TOAST_TYPES.SUCCESS);
+        return;
+      }
+      if (result.method === "clipboard")
+      {
+        showToast("Share text copied.", TOAST_TYPES.SUCCESS);
+        return;
+      }
+      if (result.method === "prompt")
+      {
+        showToast("Share text ready to copy.", TOAST_TYPES.INFO);
+        return;
+      }
+      if (result.method !== "cancelled")
+      {
+        showToast("Sharing is unavailable on this device.", TOAST_TYPES.ERROR);
+      }
+    }
+
+    function getShareActionLabel()
+    {
+      return navigator.share ? "Share" : "Copy link";
+    }
+    catch (error)
+    {
+      console.warn("Share failed:", error);
+      showToast("Sharing failed.", TOAST_TYPES.ERROR);
+    }
+  }
+
   let score = defaultScore();
   let isMatchDetailsCacheValid = false;
   let matchDetailsCache = null;
@@ -1063,6 +1277,7 @@ document.addEventListener("DOMContentLoaded", () =>
   const elements = {
     startupLoading: $("startupLoading"),
     homeLinkBtn: $("homeLinkBtn"),
+    menuShareBtn: $("menuShareBtn"),
     menuPage: $("menuPage"),
     scoreboardPage: $("scoreboardPage"),
 
@@ -1150,6 +1365,7 @@ document.addEventListener("DOMContentLoaded", () =>
     detailsBtn: $("detailsBtn"),
     detailsModal: $("detailsModal"),
     closeDetailsBtn: $("closeDetailsBtn"),
+    shareDetailsBtn: $("shareDetailsBtn"),
     matchDetailsCourtName: $("matchDetailsCourtName"),
     detailsSetsA: $("detailsSetsA"),
     detailsSetsB: $("detailsSetsB"),
@@ -2340,7 +2556,9 @@ document.addEventListener("DOMContentLoaded", () =>
             name: data.name || doc.id,
             password: data.password,
             createdAt: data.createdAt,
-            status: data.status
+            status: data.status,
+            teamNames: normalizeTeamNames(data.teamNames || {}),
+            playerNames: normalizePlayerNames(data.playerNames || {})
           });
         }
       });
@@ -2443,10 +2661,16 @@ document.addEventListener("DOMContentLoaded", () =>
       item.tabIndex = 0;
       item.role = "button";
       item.setAttribute("aria-label", `${court.name} - ${court.id}`);
+      const shareLabel = getShareActionLabel();
 
       item.innerHTML = `
-      <div class="court-item-name">${court.name}</div>
-      <span class="court-item-id">${court.id}</span>
+      <div class="court-item-main">
+        <div class="court-item-name">${court.name}</div>
+      </div>
+      <div class="court-item-actions">
+        <button type="button" class="court-item-share-btn" aria-label="${shareLabel}" title="${shareLabel}">⤴</button>
+        <span class="court-item-id">${court.id}</span>
+      </div>
     `;
 
       const selectCourt = () =>
@@ -2466,6 +2690,22 @@ document.addEventListener("DOMContentLoaded", () =>
       };
 
       item.addEventListener("click", selectCourt);
+
+      const shareBtn = item.querySelector(".court-item-share-btn");
+      if (shareBtn)
+      {
+        shareBtn.addEventListener("click", (event) =>
+        {
+          event.preventDefault();
+          event.stopPropagation();
+          void shareFromContext("court", {
+            courtId: court.id,
+            courtName: court.name,
+            teamNames: court.teamNames || {},
+            playerNames: court.playerNames || {}
+          });
+        });
+      }
       
       item.addEventListener("keydown", (e) =>
       {
@@ -2522,10 +2762,16 @@ document.addEventListener("DOMContentLoaded", () =>
       item.tabIndex = 0;
       item.role = "button";
       item.setAttribute("aria-label", `${court.name} - ${court.id}`);
+      const shareLabel = getShareActionLabel();
 
       item.innerHTML = `
-      <div class="court-item-name">${court.name}</div>
-      <span class="court-item-id">${court.id}</span>
+      <div class="court-item-main">
+        <div class="court-item-name">${court.name}</div>
+      </div>
+      <div class="court-item-actions">
+        <button type="button" class="court-item-share-btn" aria-label="${shareLabel}" title="${shareLabel}">⤴</button>
+        <span class="court-item-id">${court.id}</span>
+      </div>
     `;
 
       const selectCourt = async () =>
@@ -2534,6 +2780,22 @@ document.addEventListener("DOMContentLoaded", () =>
       };
 
       item.addEventListener("click", selectCourt);
+
+      const shareBtn = item.querySelector(".court-item-share-btn");
+      if (shareBtn)
+      {
+        shareBtn.addEventListener("click", (event) =>
+        {
+          event.preventDefault();
+          event.stopPropagation();
+          void shareFromContext("court", {
+            courtId: court.id,
+            courtName: court.name,
+            teamNames: court.teamNames || {},
+            playerNames: court.playerNames || {}
+          });
+        });
+      }
       
       item.addEventListener("keydown", (e) =>
       {
@@ -2905,7 +3167,7 @@ document.addEventListener("DOMContentLoaded", () =>
     syncCurrentViewState();
   });
 
-  document.querySelectorAll(".menu-btn").forEach(btn =>
+  document.querySelectorAll(".menu-btn[data-action='start']").forEach(btn =>
   {
     btn.addEventListener("click", async () =>
     {
@@ -2945,6 +3207,18 @@ document.addEventListener("DOMContentLoaded", () =>
       }
     });
   });
+
+  if (elements.menuShareBtn)
+  {
+    const menuShareLabel = navigator.share ? "Share app" : "Copy app link";
+    elements.menuShareBtn.textContent = menuShareLabel;
+    elements.menuShareBtn.setAttribute("aria-label", menuShareLabel);
+    elements.menuShareBtn.title = menuShareLabel;
+    elements.menuShareBtn.addEventListener("click", () =>
+    {
+      void shareFromContext("menu");
+    });
+  }
 
   function updateAdminButtonVisibility()
   {
@@ -5294,6 +5568,28 @@ document.addEventListener("DOMContentLoaded", () =>
   {
     void showMatchDetails();
   });
+
+  if (elements.shareDetailsBtn)
+  {
+    const detailsShareLabel = navigator.share ? "Share match details" : "Copy match details link";
+    elements.shareDetailsBtn.setAttribute("aria-label", detailsShareLabel);
+    elements.shareDetailsBtn.title = detailsShareLabel;
+    elements.shareDetailsBtn.addEventListener("click", () =>
+    {
+      if (!currentCourtId)
+      {
+        showToast("No court is currently open.", TOAST_TYPES.ERROR);
+        return;
+      }
+
+      void shareFromContext("details", {
+        courtId: currentCourtId,
+        courtName: currentCourtName,
+        teamNames: currentRawTeamNames,
+        playerNames: currentPlayerNames
+      });
+    });
+  }
 
   function setDetailsPanelExpanded(isExpanded)
   {

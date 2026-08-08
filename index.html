@@ -19,18 +19,18 @@
   <meta name="theme-color" content="#111827" />
   <meta name="color-scheme" content="dark light" />
   
-  <link rel="canonical" href="https://www.padelpush.co.za/app/" />
+  <link rel="canonical" href="https://www.padelpush.co.za/" />
 
-  <meta property="og:title" content="Padel Push - Live Scoreboard" />
+  <meta property="og:title" content="Padel Push | Smart Scoring for Modern Padel Clubs" />
   <meta property="og:description"
-    content="Live padel scoring system. Track points, games, sets and matches in real time." />
+    content="Smart devices, live scoring, and connected tools for modern padel clubs." />
   <meta property="og:type" content="website" />
-  <meta property="og:url" content="https://www.padelpush.co.za/app/" />
+  <meta property="og:url" content="https://www.padelpush.co.za/" />
   <meta property="og:image" content="https://www.padelpush.co.za/media/img/social-preview.png" />
 
   <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="Padel Push - Live Scoreboard" />
-  <meta name="twitter:description" content="Live padel scoring system." />
+  <meta name="twitter:title" content="Padel Push | Smart Scoring for Modern Padel Clubs" />
+  <meta name="twitter:description" content="Smart devices, live scoring, and connected tools for modern padel clubs." />
   <meta name="twitter:image" content="https://www.padelpush.co.za/media/img/social-preview.png" />
 </head>
 
@@ -59,6 +59,8 @@
               stroke-linejoin="round" />
           </svg>
         </a>
+        <button id="homeShareHeaderBtn" class="icon-link share-action" type="button" title="Share Padel Push"
+          aria-label="Share Padel Push">⤴</button>
         <a class="button primary" href="app/">Open App</a>
       </div>
     </div>
@@ -77,6 +79,7 @@
             <a class="button primary hero-cta glow"
               href="mailto:info.padelpush@gmail.com?subject=Padel%20Push%20-%20Request%20for%20Demo">Book a free demo
               &RightArrow;</a>
+            <button id="homeShareHeroBtn" class="button hero-cta" type="button" aria-label="Share Padel Push">Share</button>
           </div>
           <div class="feature-list hero-features">
             <div class="feature">
@@ -280,6 +283,77 @@
   </footer>
 
   <script>
+    const HOME_SHARE_TEXT = "Padel Push — Smart devices, live scoring, and connected padel courts.";
+    const HOME_SHARE_TITLE = "Padel Push";
+
+    const copyShareText = async (payload) =>
+    {
+      const shareText = [payload.text, payload.url].filter(Boolean).join("\n");
+
+      if (navigator.clipboard?.writeText)
+      {
+        try
+        {
+          await navigator.clipboard.writeText(shareText);
+          return true;
+        }
+        catch (_error)
+        {
+        }
+      }
+
+      const manual = window.prompt("Copy this link:", shareText);
+      return manual !== null;
+    };
+
+    const shareHome = async () =>
+    {
+      const payload = {
+        title: HOME_SHARE_TITLE,
+        text: HOME_SHARE_TEXT,
+        url: window.location.origin.replace(/\/$/, "") + "/"
+      };
+
+      try
+      {
+        if (navigator.share)
+        {
+          await navigator.share(payload);
+          return;
+        }
+      }
+      catch (error)
+      {
+        if (error?.name === "AbortError") return;
+      }
+
+      try
+      {
+        await copyShareText(payload);
+      }
+      catch (_error)
+      {
+        window.alert("Sharing is unavailable on this device.");
+      }
+    };
+
+    const homeShareLabel = navigator.share ? "Share" : "Copy link";
+    const homeShareButtons = [
+      document.getElementById("homeShareHeaderBtn"),
+      document.getElementById("homeShareHeroBtn")
+    ].filter(Boolean);
+
+    homeShareButtons.forEach((button) =>
+    {
+      button.textContent = button.id === "homeShareHeaderBtn" ? "⤴" : homeShareLabel;
+      button.setAttribute("aria-label", homeShareLabel);
+      button.title = homeShareLabel;
+      button.addEventListener("click", () =>
+      {
+        void shareHome();
+      });
+    });
+
     const initCarouselDots = (trackSelector, itemSelector, dotSelector) =>
     {
       const track = document.querySelector(trackSelector);
