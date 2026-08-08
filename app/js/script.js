@@ -519,16 +519,16 @@ document.addEventListener("DOMContentLoaded", () =>
         showToast("Sharing is unavailable on this device.", TOAST_TYPES.ERROR);
       }
     }
-
-    function getShareActionLabel()
-    {
-      return navigator.share ? "Share" : "Copy link";
-    }
     catch (error)
     {
       console.warn("Share failed:", error);
       showToast("Sharing failed.", TOAST_TYPES.ERROR);
     }
+  }
+
+  function getShareActionLabel()
+  {
+    return navigator.share ? "Share" : "Copy link";
   }
 
   let score = defaultScore();
