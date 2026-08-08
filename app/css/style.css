@@ -1148,6 +1148,10 @@ body.light-mode .floating-btn:hover {
     background 0.2s ease;
 }
 
+.share-court-btn {
+  padding: clamp(6px, 1.5vmin, 12px);
+}
+
 /* =======================================================
    FLOATING CONTROLS CONTAINER
    Portrait  → horizontal row at the bottom of .scoreboard-body

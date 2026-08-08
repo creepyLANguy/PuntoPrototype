@@ -1374,6 +1374,7 @@ document.addEventListener("DOMContentLoaded", () =>
 
     sep1: $("sep1"),
     sep2: $("sep2"),
+    sep3: $("sep3"),
 
     detailsBtn: $("detailsBtn"),
     detailsModal: $("detailsModal"),
@@ -4120,6 +4121,7 @@ document.addEventListener("DOMContentLoaded", () =>
     elements.undoBtn.style.display = "none";
     if (elements.sep1) elements.sep1.style.display = "none";
     if (elements.sep2) elements.sep2.style.display = "none";
+    if (elements.sep3) elements.sep3.style.display = "none";
 
     // Hide player-only tiles in the settings modal
     if (elements.editPlayersTile) elements.editPlayersTile.style.display = "none";
@@ -4145,6 +4147,7 @@ document.addEventListener("DOMContentLoaded", () =>
     elements.undoBtn.style.display = "";
     if (elements.sep1) elements.sep1.style.display = "";
     if (elements.sep2) elements.sep2.style.display = "";
+    if (elements.sep3) elements.sep3.style.display = "";
 
     // Restore player-only tiles in the settings modal
     if (elements.editPlayersTile) elements.editPlayersTile.style.display = "";
