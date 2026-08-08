@@ -377,7 +377,7 @@ document.addEventListener("DOMContentLoaded", () =>
 
     const pointsA = pointLabel(Number(score.A.points) || 0);
     const pointsB = pointLabel(Number(score.B.points) || 0);
-    return `Score: Sets ${setsA}-${setsB}, Games ${gamesA}-${gamesB}, Points ${pointsA}-${pointsB}`;
+    return `Score: Sets ${setsA}-${setsB}, Games ${gamesA}-${gamesB}`;
   }
 
   function buildAppEntryUrl()
@@ -418,12 +418,16 @@ document.addEventListener("DOMContentLoaded", () =>
     payload.url = buildCourtQrUrl(courtId);
 
     const lines = [];
+    lines.push(`Padel Push`);
     lines.push(`Court: ${courtName ? `${courtName} (${courtId.toUpperCase()})` : courtId.toUpperCase()}`);
 
     lines.push(...buildTeamsShareLines(options.teamNames || {}, options.playerNames || {}));
 
     if (context === "details")
     {
+      //AL.
+      //TODO - capture match details as image and share in payload. 
+      
       const scoreSummary = buildCurrentScoreSummary();
       if (scoreSummary)
       {
@@ -433,6 +437,16 @@ document.addEventListener("DOMContentLoaded", () =>
       {
         lines.push("Match status: Complete");
       }
+      lines.push(`View full match details:`);
+    }
+    else if (context === "scoreboard")
+    {
+      const scoreSummary = buildCurrentScoreSummary();
+      if (scoreSummary)
+      {
+        lines.push(scoreSummary);
+      }
+      lines.push(`View live scoreboard here:`);
     }
 
     payload.text = lines.join("\n");
@@ -1365,6 +1379,7 @@ document.addEventListener("DOMContentLoaded", () =>
     detailsModal: $("detailsModal"),
     closeDetailsBtn: $("closeDetailsBtn"),
     shareDetailsBtn: $("shareDetailsBtn"),
+    shareCourtBtn: $("shareCourtBtn"),
     matchDetailsCourtName: $("matchDetailsCourtName"),
     detailsSetsA: $("detailsSetsA"),
     detailsSetsB: $("detailsSetsB"),
@@ -5527,6 +5542,28 @@ document.addEventListener("DOMContentLoaded", () =>
       }
 
       void shareFromContext("details", {
+        courtId: currentCourtId,
+        courtName: currentCourtName,
+        teamNames: currentRawTeamNames,
+        playerNames: currentPlayerNames
+      });
+    });
+  }
+
+  if (elements.shareCourtBtn)
+  {
+    const courtShareLabel = navigator.share ? "Share court" : "Copy court link";
+    elements.shareCourtBtn.setAttribute("aria-label", courtShareLabel);
+    elements.shareCourtBtn.title = courtShareLabel;
+    elements.shareCourtBtn.addEventListener("click", () =>
+    {
+      if (!currentCourtId)
+      {
+        showToast("No court is currently open.", TOAST_TYPES.ERROR);
+        return;
+      }
+
+      void shareFromContext("scoreboard", {
         courtId: currentCourtId,
         courtName: currentCourtName,
         teamNames: currentRawTeamNames,
