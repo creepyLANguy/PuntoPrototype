@@ -418,7 +418,7 @@ document.addEventListener("DOMContentLoaded", () =>
     payload.url = buildCourtQrUrl(courtId);
 
     const lines = [];
-    lines.push(`Court: ${courtName || courtId.toUpperCase()} (${courtId.toUpperCase()})`);
+    lines.push(`Court: ${courtName ? `${courtName} (${courtId.toUpperCase()})` : courtId.toUpperCase()}`);
 
     lines.push(...buildTeamsShareLines(options.teamNames || {}, options.playerNames || {}));
 
