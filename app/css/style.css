@@ -360,7 +360,7 @@ body.light-mode .menu-btn:hover {
   --qr-panel-scale: 1;
   border-radius: 12px;
   border-bottom-right-radius: 0%;
-  background: rgba(0, 0, 0, 0.50);
+  background: color-mix(in srgb, var(--waveColour), transparent 90%);
   backdrop-filter: blur(6px);
   box-shadow: 0 8px 18px rgba(0, 0, 0, 0.30);
   overflow: hidden;
@@ -1152,6 +1152,10 @@ body.light-mode .floating-btn:hover {
   padding: clamp(7px, 1.5vmin, 14px);
 }
 
+.match-details-btn {
+  padding: clamp(7px, 1.5vmin, 14px);
+}
+
 /* =======================================================
    FLOATING CONTROLS CONTAINER
    Portrait  → horizontal row at the bottom of .scoreboard-body
@@ -1415,16 +1419,22 @@ body.light-mode .setting-item:hover {
   opacity: 0.8;
 }
 
-.modal-btn {
-  --btn-size: 50px;
-  opacity: 1 !important;
-  border-color: rgba(255, 255, 255, 0.3) !important;
-}
-
 .setting-item:hover .reset-tile-btn {
   background: rgba(255, 107, 107, 0.15) !important;
   border-color: #ff6b6b !important;
   color: #ff6b6b !important;
+}
+
+.join-as-player-btn {
+  padding-left: clamp(2%, 5vw, 6%);
+  padding-top: 10%;
+  padding-right: 3%;
+  padding-bottom: 1%;
+}
+
+.modal-btn {  
+  opacity: 1 !important;
+  border-color: rgba(255, 255, 255, 0.3) !important;
 }
 
 body.light-mode .modal-btn {
@@ -2926,6 +2936,20 @@ body.light-mode .primary-btn {
 
 .secondary-btn:hover {
   background: rgba(255, 255, 255, 0.1);
+}
+
+body.light-mode .secondary-btn {
+  border: 2px solid black;
+  background: transparent;
+  color: black;
+}
+
+.secondary-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+body.light-mode .secondary-btn:hover {
+  background: rgba(0, 0, 0, 0.1);
 }
 
 /* =======================================================
@@ -5981,4 +6005,8 @@ body.light-mode .dm-meta-value {
 
 .games-row {
   align-items: center;
+}
+
+.player-names {
+  filter: invert(10%) saturate(0%) brightness(225%) contrast(85%);
 }

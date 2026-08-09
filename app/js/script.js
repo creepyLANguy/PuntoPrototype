@@ -1230,7 +1230,7 @@ document.addEventListener("DOMContentLoaded", () =>
     const isActive = Boolean(getFullscreenElement());
     const label = isActive ? "Exit fullscreen" : "Enter fullscreen";
 
-    elements.fullscreenBtn.textContent = isActive ? "⬚" : "\u26F6";
+    elements.fullscreenBtn.textContent = isActive ? "⬚" : "⛶";
     elements.fullscreenBtn.title = label;
     elements.fullscreenBtn.setAttribute("aria-label", label);
 
@@ -5334,7 +5334,7 @@ document.addEventListener("DOMContentLoaded", () =>
 
     document.querySelector(".scoreboard").classList.toggle("swapped");
 
-    elements.swapBtn.textContent = document.querySelector(".scoreboard").classList.contains("swapped") ? "⇌" : "⇋";
+    elements.swapBtn.textContent = document.querySelector(".scoreboard").classList.contains("swapped") ? "⇄" : "⇆";
 
     // Keep the details modal synchronized with the currently visible side orientation.
     if (!elements.detailsModal.classList.contains("hidden"))
