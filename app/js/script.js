@@ -1171,7 +1171,7 @@ document.addEventListener("DOMContentLoaded", () =>
   {
     isWavesEnabled = !isWavesEnabled;
     localStorage.setItem("waves", isWavesEnabled);
-    elements.waveToggleScoreboardBtn.textContent = isWavesEnabled ? "🌊" : "♒︎";
+    elements.waveToggleScoreboardBtn.textContent = isWavesEnabled ? "♒︎" : "═";
 
     updateWavesVisibility();
     syncSettingsTiles();
@@ -3737,7 +3737,7 @@ document.addEventListener("DOMContentLoaded", () =>
 
     if (isWavesEnabled == false)
     {
-      elements.waveToggleScoreboardBtn.textContent = "♒︎";
+      elements.waveToggleScoreboardBtn.textContent = "═";
     }
 
     try
@@ -5333,6 +5333,8 @@ document.addEventListener("DOMContentLoaded", () =>
     playSound(SOUND_IDS.SWOOSH);
 
     document.querySelector(".scoreboard").classList.toggle("swapped");
+
+    elements.swapBtn.textContent = document.querySelector(".scoreboard").classList.contains("swapped") ? "⇌" : "⇋";
 
     // Keep the details modal synchronized with the currently visible side orientation.
     if (!elements.detailsModal.classList.contains("hidden"))

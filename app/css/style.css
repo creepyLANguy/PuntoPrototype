@@ -333,6 +333,16 @@ body.light-mode .menu-btn:hover {
   animation: scoreboardFadeIn 0.8s ease forwards;
 }
 
+.pull-tab {
+  right: 0%;
+  bottom: 0%;
+  border-top: 20px solid transparent;
+  border-right: 20px double var(--white);
+  opacity: 0.1;
+  position: inherit;
+  pointer-events: none;
+}
+
 .court-qr-panel {
   container-type: inline-size;
   position: absolute;
@@ -349,37 +359,27 @@ body.light-mode .menu-btn:hover {
   aspect-ratio: 1 / 1.24;
   --qr-panel-scale: 1;
   border-radius: 12px;
+  border-bottom-right-radius: 0%;
   background: rgba(0, 0, 0, 0.50);
   backdrop-filter: blur(6px);
   box-shadow: 0 8px 18px rgba(0, 0, 0, 0.30);
   overflow: hidden;
-  resize: horizontal;
   height: auto;
   max-width: calc(100vw - 16px);
   max-height: min(calc((100vw - 16px) * 1.24), calc(100svh - 16px));
   min-height: calc(130px * 1.24);
   box-sizing: border-box;
-  cursor: grab;
   user-select: none;
   touch-action: none;
-}
-
-.court-qr-panel:active {
-  cursor: grabbing;
-}
-
-.court-qr-panel::-webkit-resizer {
+  resize: horizontal;
   cursor: grab;
-  background: transparent;
 }
 
 .court-qr-code {
   position: relative;
   width: 100%;
   aspect-ratio: 1 / 1;
-  padding: 6px;
-  background: #ffffff;
-  border-radius: 8px;
+  padding: 1%;
 }
 
 .court-qr-code::after {
@@ -1149,7 +1149,7 @@ body.light-mode .floating-btn:hover {
 }
 
 .share-court-btn {
-  padding: clamp(6px, 1.5vmin, 12px);
+  padding: clamp(7px, 1.5vmin, 14px);
 }
 
 /* =======================================================
@@ -2046,7 +2046,7 @@ body.light-mode .dm-close:hover {
   border: none;
   color: inherit;
   cursor: pointer;
-  opacity: 0.65;
+  opacity: 0.75;
   width: 40px;
   height: 40px;
   display: flex;
@@ -2646,6 +2646,10 @@ body.light-mode .md-cell {
 
 /* Portrait: make team names fit narrower width */
 @media (orientation: portrait) {
+  .floating-btn {
+    font-size: clamp(1.5rem, 4vmin, 2rem);
+  }
+
   .settings-box {
     width: clamp(280px, 92vw, 450px);
     margin: 0 4vw;
@@ -3042,6 +3046,10 @@ body.light-mode .primary-btn {
   .form-group input {
     padding: 8px;
   }
+
+  .floating-btn {
+    font-size: 1.5rem;
+  }
 }
 
 body.light-mode .court-list {
@@ -3085,7 +3093,14 @@ body.light-mode .court-list.has-overflow::after {
   font-size: 20px;
 }
 
-.court-list > .loading,
+.court-list > .loading
+{
+    min-height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
 .court-list > .no-courts {
   min-height: 100%;
   display: flex;
@@ -5432,6 +5447,7 @@ body.light-mode .scoring-field select {
   .straight-total-value {
     font-size: clamp(0.9rem, 2.5vmin, 1.5rem);
   }
+  
 }
 
 .straight-total {
