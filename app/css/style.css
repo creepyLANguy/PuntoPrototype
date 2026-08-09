@@ -1114,7 +1114,6 @@ body.light-mode .game-dot.filled {
   background: transparent;
   color: #ccc;
   font-weight: 600;
-  font-size: clamp(1rem, 2.5vmin, 1.4rem);
   backdrop-filter: blur(6px);
   opacity: 0.6;
   position: relative;
@@ -1125,6 +1124,7 @@ body.light-mode .game-dot.filled {
   -webkit-user-select: none;
   touch-action: manipulation;
   cursor: pointer;
+  font-size: clamp(2rem, 2vmin, 2rem);
 }
 
 .floating-btn:hover {
@@ -2046,7 +2046,7 @@ body.light-mode .dm-close:hover {
   border: none;
   color: inherit;
   cursor: pointer;
-  opacity: 0.7;
+  opacity: 0.65;
   width: 40px;
   height: 40px;
   display: flex;
