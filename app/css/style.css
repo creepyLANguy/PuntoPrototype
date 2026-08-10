@@ -1154,6 +1154,9 @@ body.light-mode .floating-btn:hover {
 
 .match-details-btn {
   padding: clamp(7px, 1.5vmin, 14px);
+  fill: currentColor;
+  stroke: currentColor;
+  stroke-width: 10;
 }
 
 /* =======================================================
