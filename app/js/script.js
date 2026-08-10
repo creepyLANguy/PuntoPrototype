@@ -1,4 +1,5 @@
 import { app, db } from "./firebase.js";
+import { toBlob } from 'html-to-image';
 
 import
 {
@@ -390,11 +391,11 @@ document.addEventListener("DOMContentLoaded", () =>
     return `${window.location.origin.replace(/\/$/, "")}/`;
   }
 
-  function createSharePayload(context, options = {})
+  async function createSharePayload(context, options = {})
   {
     const courtId = typeof options.courtId === "string" ? options.courtId.trim().toLowerCase() : "";
     const courtName = typeof options.courtName === "string" ? options.courtName.trim() : "";
-    const payload = { title: "Padel Push", text: "", url: buildAppEntryUrl() };
+    const payload = { title: "Padel Push", text: "", url: buildAppEntryUrl(), files: [] };
 
     if (context === "menu")
     {
@@ -425,9 +426,25 @@ document.addEventListener("DOMContentLoaded", () =>
 
     if (context === "details")
     {
-      //AL.
-      //TODO - capture match details as image and share in payload. 
-      
+      try 
+      {
+        const shareableScoreCard = await getSharableScoreCard();
+        if (shareableScoreCard)
+        {
+          payload.files.push(shareableScoreCard);
+          //AL.
+          //save shareableScoreCard to disk as "scorecard_[timestamp].png" for testing
+          const blob = await shareableScoreCard.arrayBuffer();
+          const file = new File([blob], "scorecard.png", { type: "image/png" });
+          file.saveAs("scorecard_" + Date.now() + ".png");
+          //
+        }
+      } 
+      catch (error) 
+      {
+        console.warn("Failed to get shareable score card:", error);
+      }
+
       const scoreSummary = buildCurrentScoreSummary();
       if (scoreSummary)
       {
@@ -508,7 +525,7 @@ document.addEventListener("DOMContentLoaded", () =>
 
   async function shareFromContext(context, options = {})
   {
-    const payload = createSharePayload(context, options);
+    const payload = await createSharePayload(context, options);
 
     try
     {
@@ -7214,3 +7231,32 @@ window.addEventListener("resize", () =>
     scrollInputIntoViewIfNeeded(document.activeElement);
   }
 }, { passive: true });
+
+async function getSharableScoreCard()
+{
+  const element = document.getElementById('dmBox');
+
+  if (!element)
+  {
+    throw new Error('Share element not found');
+  }
+
+  // Render the DOM element to a PNG Blob
+  const blob = await toBlob(element, {
+    pixelRatio: 2, // Higher quality
+    backgroundColor: isLightMode ? '#ffffff' : '#000000',
+  });
+
+  if (!blob)
+  {
+    throw new Error('Failed to generate image');
+  }
+
+  const file = new File(
+    [blob],
+    'share-image.png',
+    { type: 'image/png' }
+  );
+
+  return file;
+}
