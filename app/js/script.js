@@ -437,6 +437,7 @@ document.addEventListener("DOMContentLoaded", () =>
           //open file in new tab for preview
           const fileUrl = URL.createObjectURL(shareableScoreCard);
           window.open(fileUrl, "_blank");
+          //
         }
       } 
       catch (error) 
@@ -7252,18 +7253,142 @@ window.addEventListener("resize", () =>
 async function getSharableScoreCard()
 {
   const element = document.getElementById('dmBox');
-  const isLightTheme = document.body.classList.contains('light-mode');
 
   if (!element)
   {
     throw new Error('Share element not found');
   }
 
-  // Render the DOM element to a PNG Blob
-  const blob = await toBlob(element, {
-    pixelRatio: 2, // Higher quality
-    backgroundColor: getComputedStyle(document.body).backgroundColor   
-  });
+  const courtLabelElement = document.getElementById('courtQrLabel');
+  const rawCourtId = typeof courtLabelElement?.textContent === 'string'
+    ? courtLabelElement.textContent.trim()
+    : '';
+  const fallbackMatch = window.location.pathname.match(/^\/(?:app\/)?(?:court|c)\/([^/]+)\/?$/i);
+  const fallbackCourtId = fallbackMatch ? decodeURIComponent(fallbackMatch[1]).trim() : '';
+  const courtId = (rawCourtId || fallbackCourtId || '').toLowerCase();
+  const courtIdDisplay = courtId ? courtId.toUpperCase() : 'UNKNOWN';
+  const appOrigin = window.location.origin.replace(/\/$/, '');
+  const qrUrl = courtId ? `${appOrigin}/c/${encodeURIComponent(courtId)}` : `${appOrigin}/app/`;
+
+  const sourcePanel = element.querySelector('#dmDetailsPanel, .dm-details-panel');
+  const sourcePanelHeight = Math.max(0, Math.round(sourcePanel?.getBoundingClientRect().height || 0));
+  const footerHeight = Math.min(120, Math.max(60, sourcePanelHeight));
+
+  const clone = element.cloneNode(true);
+  clone.querySelectorAll('.dm-close, .dm-share-btn').forEach(node => node.remove());
+
+  const footerPanel = clone.querySelector('#dmDetailsPanel, .dm-details-panel');
+  if (footerPanel)
+  {
+    footerPanel.classList.remove('hidden');
+    footerPanel.hidden = false;
+    footerPanel.innerHTML = '';
+    footerPanel.style.display = 'flex';
+    footerPanel.style.alignItems = 'center';
+    footerPanel.style.justifyContent = 'space-between';
+    footerPanel.style.gap = '16px';
+    footerPanel.style.padding = '12px 16px';
+    footerPanel.style.minHeight = `${footerHeight}px`;
+    footerPanel.style.boxSizing = 'border-box';
+
+    const qrWrap = document.createElement('div');
+    qrWrap.style.display = 'inline-flex';
+    qrWrap.style.alignItems = 'center';
+    qrWrap.style.justifyContent = 'center';
+    qrWrap.style.padding = '8px';
+    qrWrap.style.background = '#ffffff';
+    qrWrap.style.borderRadius = '10px';
+    qrWrap.style.flex = '0 0 auto';
+
+    const qrMount = document.createElement('div');
+    qrWrap.appendChild(qrMount);
+
+    const footerText = document.createElement('div');
+    footerText.style.display = 'flex';
+    footerText.style.flexDirection = 'column';
+    footerText.style.gap = '6px';
+    footerText.style.flex = '1 1 auto';
+    footerText.style.minWidth = '0';
+
+    const footerTitle = document.createElement('div');
+    footerTitle.textContent = 'Scan for match details';
+    footerTitle.style.fontSize = '14px';
+    footerTitle.style.fontWeight = '700';
+    footerTitle.style.letterSpacing = '0.02em';
+
+    const footerCourtId = document.createElement('div');
+    footerCourtId.textContent = `Court ID: ${courtIdDisplay}`;
+    footerCourtId.style.fontSize = '16px';
+    footerCourtId.style.fontWeight = '800';
+    footerCourtId.style.letterSpacing = '0.06em';
+
+    const footerUrl = document.createElement('div');
+    footerUrl.textContent = qrUrl;
+    footerUrl.style.fontSize = '11px';
+    footerUrl.style.opacity = '0.85';
+    footerUrl.style.overflow = 'hidden';
+    footerUrl.style.textOverflow = 'ellipsis';
+    footerUrl.style.whiteSpace = 'nowrap';
+
+    footerText.appendChild(footerTitle);
+    footerText.appendChild(footerCourtId);
+    footerText.appendChild(footerUrl);
+
+    footerPanel.appendChild(qrWrap);
+    footerPanel.appendChild(footerText);
+
+    if (window.QRCode)
+    {
+      const qrSize = Math.max(84, Math.min(120, footerHeight - 24));
+      new window.QRCode(qrMount, {
+        text: qrUrl,
+        width: qrSize,
+        height: qrSize,
+        colorDark: '#000000',
+        colorLight: '#ffffff',
+        correctLevel: window.QRCode.CorrectLevel.H
+      });
+    }
+  }
+
+  const inclusions = (node) =>
+  {
+    const excludedClasses = ['dm-close', 'dm-share-btn'];
+    if (node.nodeType === Node.ELEMENT_NODE)
+    {
+      const el = node;
+      if (excludedClasses.some(cls => el.classList.contains(cls)))
+      {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  const staging = document.createElement('div');
+  staging.style.position = 'fixed';
+  staging.style.left = '-10000px';
+  staging.style.top = '0';
+  staging.style.pointerEvents = 'none';
+  staging.style.zIndex = '-1';
+  staging.appendChild(clone);
+  document.body.appendChild(staging);
+
+  await new Promise(resolve => requestAnimationFrame(() => resolve()));
+
+  let blob = null;
+  try
+  {
+    blob = await toBlob(clone, {
+      pixelRatio: 2, // Higher quality
+      backgroundColor: getComputedStyle(document.body).backgroundColor,
+      filter: (node) => inclusions(node),
+    });
+  }
+  finally
+  {
+    staging.remove();
+  }
 
   if (!blob)
   {
