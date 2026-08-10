@@ -432,6 +432,11 @@ document.addEventListener("DOMContentLoaded", () =>
         if (shareableScoreCard)
         {
           payload.files.push(shareableScoreCard);
+
+          //AL.
+          //open file in new tab for preview
+          const fileUrl = URL.createObjectURL(shareableScoreCard);
+          window.open(fileUrl, "_blank");
         }
       } 
       catch (error) 
@@ -7257,7 +7262,7 @@ async function getSharableScoreCard()
   // Render the DOM element to a PNG Blob
   const blob = await toBlob(element, {
     pixelRatio: 2, // Higher quality
-    backgroundColor: isLightTheme ? '#ffffff' : '#000000',
+    backgroundColor: getComputedStyle(document.body).backgroundColor   
   });
 
   if (!blob)
