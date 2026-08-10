@@ -1,5 +1,5 @@
 import { app, db } from "./firebase.js";
-import { toBlob } from 'html-to-image';
+import { toBlob } from "https://esm.sh/html-to-image@1.11.13";
 
 import
 {
@@ -432,12 +432,6 @@ document.addEventListener("DOMContentLoaded", () =>
         if (shareableScoreCard)
         {
           payload.files.push(shareableScoreCard);
-          //AL.
-          //save shareableScoreCard to disk as "scorecard_[timestamp].png" for testing
-          const blob = await shareableScoreCard.arrayBuffer();
-          const file = new File([blob], "scorecard.png", { type: "image/png" });
-          file.saveAs("scorecard_" + Date.now() + ".png");
-          //
         }
       } 
       catch (error) 
@@ -472,6 +466,10 @@ document.addEventListener("DOMContentLoaded", () =>
 
   async function shareWithProgressiveEnhancement(payload, fallbackPromptLabel = "Copy this share text:")
   {
+    const shareableFiles = Array.isArray(payload?.files)
+      ? payload.files.filter(file => file instanceof File)
+      : [];
+
     const safePayload = {
       title: String(payload?.title || "Padel Push"),
       text: String(payload?.text || ""),
@@ -482,8 +480,22 @@ document.addEventListener("DOMContentLoaded", () =>
     {
       if (navigator.share)
       {
-        const canSharePayload = !navigator.canShare || navigator.canShare(safePayload);
-        if (canSharePayload)
+        const payloadWithFiles = shareableFiles.length > 0
+          ? {
+            ...safePayload,
+            files: shareableFiles
+          }
+          : safePayload;
+        const canShareWithFiles = !navigator.canShare || navigator.canShare(payloadWithFiles);
+
+        if (canShareWithFiles)
+        {
+          await navigator.share(payloadWithFiles);
+          return { method: "native", includedFiles: shareableFiles.length > 0 };
+        }
+
+        const canShareTextOnly = !navigator.canShare || navigator.canShare(safePayload);
+        if (canShareTextOnly)
         {
           await navigator.share(safePayload);
           return { method: "native" };
@@ -7235,6 +7247,7 @@ window.addEventListener("resize", () =>
 async function getSharableScoreCard()
 {
   const element = document.getElementById('dmBox');
+  const isLightTheme = document.body.classList.contains('light-mode');
 
   if (!element)
   {
@@ -7244,7 +7257,7 @@ async function getSharableScoreCard()
   // Render the DOM element to a PNG Blob
   const blob = await toBlob(element, {
     pixelRatio: 2, // Higher quality
-    backgroundColor: isLightMode ? '#ffffff' : '#000000',
+    backgroundColor: isLightTheme ? '#ffffff' : '#000000',
   });
 
   if (!blob)
