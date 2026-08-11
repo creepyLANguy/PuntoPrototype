@@ -1432,6 +1432,7 @@ document.addEventListener("DOMContentLoaded", () =>
     dmDetailsToggle: $("dmDetailsToggle"),
     dmDetailsContent: $("dmDetailsContent"),
     dmEmptyState: $("dmEmptyState"),
+    dmErrorState: $("dmErrorState"),
     dmStatsWrap: $("dmStatsWrap"),
     dmStatsTeam: $("dmStatsTeam"),
     courtQrPanel: $("courtQrPanel"),
@@ -6227,6 +6228,10 @@ document.addEventListener("DOMContentLoaded", () =>
       {
         elements.dmEmptyState.classList.add("hidden");
       }
+      if (elements.dmErrorState)
+      {
+        elements.dmErrorState.classList.add("hidden");
+      }
     }
 
     syncDetailsPanelAvailability();
@@ -6244,6 +6249,7 @@ document.addEventListener("DOMContentLoaded", () =>
       {
         let getDetailedScore = httpsCallable(functions, "getDetailedScore");
         result = await getDetailedScore({ courtId: currentCourtId });
+        
         matchDetailsCache = result;
         isMatchDetailsCacheValid = true;
         matchDetailsCacheCourtId = currentCourtId;
@@ -6408,6 +6414,7 @@ document.addEventListener("DOMContentLoaded", () =>
     }
     catch (err)
     {
+      elements.dmErrorState.classList.remove("hidden");
       console.error("Match details initialization error:", err);
     }
     finally
@@ -7359,7 +7366,7 @@ async function getShareableScoreCard()
 
   const inclusions = (node) =>
   {
-    const excludedClasses = ['dm-close', 'dm-share-btn'];
+    const excludedClasses = ['dm-close', 'dm-share-btn', 'dm-empty-state', 'dm-error-state', 'hidden', 'invisible', 'sr-only', 'no-print'];
     if (node.nodeType === Node.ELEMENT_NODE)
     {
       const el = node;

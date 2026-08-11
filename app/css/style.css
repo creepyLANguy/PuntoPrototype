@@ -5623,6 +5623,25 @@ body.light-mode .dm-empty-state {
   color: rgba(0, 0, 0, 0.7);
 }
 
+.dm-error-state {
+  width: 100%;
+  margin-top: 14px;
+  border-radius: 14px;
+  border: 1px dashed rgba(255, 255, 255, 0.2);
+  background: rgba(255, 0, 0, 0.1);
+  padding: 14px 16px;
+  text-align: center;
+  font-size: 0.8rem;
+  font-weight: 700;
+  line-height: 1.4;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+body.light-mode .dm-error-state {
+  border-color: rgba(0, 0, 0, 0.2);
+  color: rgba(0, 0, 0, 0.7);
+}
+
 /* =======================================================
    MOMENTUM GRAPH  (dm-momentum-* namespace)
 ======================================================= */
