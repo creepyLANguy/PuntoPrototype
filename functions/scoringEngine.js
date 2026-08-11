@@ -156,12 +156,17 @@ function applyEvent(score, event, scoringOptions)
 
   if (event.eventType === "UNDO")
   {
-    return undo(score, options);
+    const undoneScore = undo(score, options);
+    if (event.id || event.eventId)
+    {
+      undoneScore.lastEventId = event.id || event.eventId;
+    }
+    return undoneScore;
   }
 
   const newScore = normalizeScore(clone(score), options);
 
-  if (newScore.matchComplete && options.scoringMode === "tiebreakTen")
+  if (newScore.matchComplete)
   {
     return newScore;
   }
