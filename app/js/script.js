@@ -397,26 +397,13 @@ document.addEventListener("DOMContentLoaded", () =>
     const courtName = typeof options.courtName === "string" ? options.courtName.trim() : "";
     const payload = { title: "Padel Push", text: "", url: buildAppEntryUrl(), files: [] };
 
-    if (context === "menu")
-    {
-      payload.text = "Padel Push — Live padel scoring. Open the app and join a court.";
-      return payload;
-    }
-
-    if (context === "home")
-    {
-      payload.url = buildHomeUrl();
-      payload.text = "Padel Push — Smart devices, live scoring, and connected padel courts.";
-      return payload;
-    }
+    payload.url = buildCourtQrUrl(courtId);
 
     if (!courtId)
     {
       payload.text = "Padel Push — Live court scoring.";
       return payload;
     }
-
-    payload.url = buildCourtQrUrl(courtId);
 
     const lines = [];
     lines.push(`Padel Push`);
@@ -428,14 +415,13 @@ document.addEventListener("DOMContentLoaded", () =>
     {
       try 
       {
-        const shareableScoreCard = await getSharableScoreCard();
+        const shareableScoreCard = await getShareableScoreCard();
         if (shareableScoreCard)
         {
           payload.files.push(shareableScoreCard);
 
           //AL.
           //TODO - remove once done testing.
-          //open file in new tab for preview
           //const fileUrl = URL.createObjectURL(shareableScoreCard);
           //window.open(fileUrl, "_blank");
           //
@@ -471,59 +457,65 @@ document.addEventListener("DOMContentLoaded", () =>
     return payload;
   }
 
-  async function shareWithProgressiveEnhancement(payload, fallbackPromptLabel = "Copy this share text:")
+  async function shareWithProgressiveEnhancement(
+    payload,
+    fallbackPromptLabel = "Copy this share text:"
+  )
   {
-    const shareableFiles = Array.isArray(payload?.files)
-      ? payload.files.filter(file => file instanceof File)
-      : [];
+    const fallbackText = [payload.text, payload.url]
+      .filter(Boolean)
+      .join("\n");
 
-    const safePayload = {
-      title: String(payload?.title || "Padel Push"),
-      text: String(payload?.text || ""),
-      url: String(payload?.url || "")
-    };
-
-    try
+    // 1. Try native sharing with files
+    if (navigator.share)
     {
-      if (navigator.share)
+      if (navigator.canShare && navigator.canShare(payload))
       {
-        // The Web Share API spec disallows mixing `files` and `url` in the
-        // same payload — canShare() returns false when both are present.
-        // When files are included, fold the url into text so it is still shared.
-        const payloadWithFiles = shareableFiles.length > 0
-          ? {
-            title: safePayload.title,
-            text: [safePayload.text, safePayload.url].filter(Boolean).join("\n"),
-            files: shareableFiles
+        try
+        {
+          await navigator.share(payload);
+          return { method: "native", files: true };
+        }
+        catch (error)
+        {
+          if (error?.name === "AbortError")
+          {
+            return { method: "cancelled" };
           }
-          : safePayload;
-        const canShareWithFiles = !navigator.canShare || navigator.canShare(payloadWithFiles);
 
-        if (canShareWithFiles)
-        {
-          await navigator.share(payloadWithFiles);
-          return { method: "native", includedFiles: shareableFiles.length > 0 };
-        }
-
-        const canShareTextOnly = !navigator.canShare || navigator.canShare(safePayload);
-        if (canShareTextOnly)
-        {
-          await navigator.share(safePayload);
-          return { method: "native" };
+          console.warn("Native file share failed:", error);
         }
       }
-    }
-    catch (error)
-    {
-      if (error?.name === "AbortError")
+
+      // 2. Try native text/URL sharing
+      const textOnlyPayload = {
+        title: payload.title,
+        text: payload.text,
+        url: payload.url
+      };
+
+      try
       {
-        return { method: "cancelled" };
+        if (
+          (!navigator.canShare || navigator.canShare(textOnlyPayload))
+        )
+        {
+          await navigator.share(textOnlyPayload);
+          return { method: "native", files: false };
+        }
       }
-      console.warn("Native share failed:", error);
+      catch (error)
+      {
+        if (error?.name === "AbortError")
+        {
+          return { method: "cancelled" };
+        }
+
+        console.warn("Native text share failed:", error);
+      }
     }
 
-    const fallbackText = [safePayload.text, safePayload.url].filter(Boolean).join("\n");
-
+    // 3. Clipboard fallback
     if (navigator.clipboard?.writeText)
     {
       try
@@ -537,7 +529,12 @@ document.addEventListener("DOMContentLoaded", () =>
       }
     }
 
-    const promptResult = window.prompt(fallbackPromptLabel, fallbackText);
+    // 4. Last-resort prompt
+    const promptResult = window.prompt(
+      fallbackPromptLabel,
+      fallbackText
+    );
+
     if (promptResult !== null)
     {
       return { method: "prompt" };
@@ -3900,6 +3897,12 @@ document.addEventListener("DOMContentLoaded", () =>
   function buildCourtQrUrl(courtId)
   {
     const baseUrl = window.location.origin.replace(/\/$/, "");
+
+    if (!courtId)
+    {
+      return baseUrl;
+    }
+
     return `${baseUrl}/c/${encodeURIComponent(courtId)}`;
   }
 
@@ -6210,11 +6213,9 @@ document.addEventListener("DOMContentLoaded", () =>
 
     const headRow = elements.dmHead.querySelector("tr");
 
-    //showSpinner(elements.detailsModal, refreshing === true ? "Refreshing match details..." : "Loading match details... Please wait.");
-    //elements.detailsLoading.innerHTML = elements.detailsLoading.innerHTML.replace(/(Refreshing...|Loading...)/, "").trim();
-    //elements.detailsLoading.innerHTML = elements.detailsLoading.innerHTML + (refreshing ? "Refreshing..." : "Loading...");
     if (!refreshing) {
       elements.detailsLoading.classList.remove("hidden");
+      elements.shareDetailsBtn.classList.add("hidden");
 
       // Clear table rows, columns, and momentum graph safely
       headRow.innerHTML = "";
@@ -6412,7 +6413,7 @@ document.addEventListener("DOMContentLoaded", () =>
     finally
     {
       elements.detailsLoading.classList.add("hidden");
-      //hideSpinner(elements.detailsModal);
+      elements.shareDetailsBtn.classList.remove("hidden");
     }
   }
 
@@ -7255,7 +7256,7 @@ window.addEventListener("resize", () =>
   }
 }, { passive: true });
 
-async function getSharableScoreCard()
+async function getShareableScoreCard()
 {
   const element = document.getElementById('dmBox');
 
