@@ -7392,11 +7392,13 @@ async function getShareableScoreCard()
   let blob = null;
   try
   {
-    blob = await toBlob(clone, {
-      pixelRatio: 2, // Higher quality
-      backgroundColor: getComputedStyle(document.body).backgroundColor,
-      filter: (node) => inclusions(node),
-    });
+    //AL.
+    //TODO - uncomment and test
+    // blob = await toBlob(clone, {
+    //   pixelRatio: 2, // Higher quality
+    //   backgroundColor: getComputedStyle(document.body).backgroundColor,
+    //   filter: (node) => inclusions(node),
+    // });
   }
   finally
   {
