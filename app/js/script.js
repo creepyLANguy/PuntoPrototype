@@ -1,4 +1,5 @@
 import { app, db } from "./firebase.js";
+import { toBlob } from "https://esm.sh/html-to-image@1.11.13";
 
 import
 {
@@ -315,6 +316,270 @@ document.addEventListener("DOMContentLoaded", () =>
   function getServerDisplayLabel(serverLabel)
   {
     return getPlayerDisplayName(serverLabel, currentPlayerNames, true); 
+  }
+
+  function getPlayerLineForTeam(team, playerNames = {})
+  {
+    const normalizedTeam = team === "B" ? "B" : "A";
+    const normalizedPlayers = normalizePlayerNames(playerNames);
+    const slots = normalizedTeam === "A" ? ["A1", "A2"] : ["B1", "B2"];
+    const playerValues = slots
+      .map(slot => (typeof normalizedPlayers[slot] === "string" ? normalizedPlayers[slot].trim() : ""))
+      .filter(Boolean);
+
+    return playerValues.length > 0 ? playerValues.join(" / ") : "";
+  }
+
+  function buildTeamsShareLines(teamNames = {}, playerNames = {})
+  {
+    const normalizedTeams = normalizeTeamNames(teamNames);
+    const lines = [];
+
+    if (!isDefaultTeamName("A", normalizedTeams.A) || !isDefaultTeamName("B", normalizedTeams.B))
+    {
+      lines.push(`Teams: ${normalizedTeams.A} vs ${normalizedTeams.B}`);
+    }
+
+    const playersA = getPlayerLineForTeam("A", playerNames);
+    const playersB = getPlayerLineForTeam("B", playerNames);
+
+    if (playersA)
+    {
+      lines.push(`Players A: ${playersA}`);
+    }
+
+    if (playersB)
+    {
+      lines.push(`Players B: ${playersB}`);
+    }
+
+    return lines;
+  }
+
+  function buildCurrentScoreSummary()
+  {
+    if (!score || !score.A || !score.B)
+    {
+      return "";
+    }
+
+    const setsA = Number(score.A.sets) || 0;
+    const setsB = Number(score.B.sets) || 0;
+    const gamesA = Number(score.A.games) || 0;
+    const gamesB = Number(score.B.games) || 0;
+    const options = resolveScoringOptions(score);
+
+    if (options.scoringMode === "straight" || options.scoringMode === "tiebreakTen")
+    {
+      const pointsA = Number(score.A.totalPoints ?? score.A.points) || 0;
+      const pointsB = Number(score.B.totalPoints ?? score.B.points) || 0;
+      return `Score: ${pointsA}-${pointsB} points`;
+    }
+
+    const pointsA = pointLabel(Number(score.A.points) || 0);
+    const pointsB = pointLabel(Number(score.B.points) || 0);
+    return `Score: Sets ${setsA}-${setsB}, Games ${gamesA}-${gamesB}`;
+  }
+
+  function buildAppEntryUrl()
+  {
+    return `${window.location.origin.replace(/\/$/, "")}/app/`;
+  }
+
+  function buildHomeUrl()
+  {
+    return `${window.location.origin.replace(/\/$/, "")}/`;
+  }
+
+  async function createSharePayload(context, options = {})
+  {
+    const courtId = typeof options.courtId === "string" ? options.courtId.trim().toLowerCase() : "";
+    const courtName = typeof options.courtName === "string" ? options.courtName.trim() : "";
+    const payload = { title: "Padel Push", text: "", url: buildAppEntryUrl(), files: [] };
+
+    payload.url = buildCourtQrUrl(courtId);
+
+    if (!courtId)
+    {
+      payload.text = "Padel Push — Live court scoring.";
+      return payload;
+    }
+
+    const lines = [];
+    lines.push(`Padel Push`);
+    lines.push(`Court: ${courtName ? `${courtName} (${courtId.toUpperCase()})` : courtId.toUpperCase()}`);
+
+    lines.push(...buildTeamsShareLines(options.teamNames || {}, options.playerNames || {}));
+
+    if (context === "details")
+    {
+      try 
+      {
+        const shareableScoreCard = await getShareableScoreCard();
+        if (shareableScoreCard)
+        {
+          payload.files.push(shareableScoreCard);
+
+          //AL.
+          //TODO - remove once done testing.
+          //const fileUrl = URL.createObjectURL(shareableScoreCard);
+          //window.open(fileUrl, "_blank");
+          //
+        }
+      } 
+      catch (error) 
+      {
+        console.warn("Failed to get shareable score card:", error);
+      }
+
+      const scoreSummary = buildCurrentScoreSummary();
+      if (scoreSummary)
+      {
+        lines.push(scoreSummary);
+      }
+      if (score.matchComplete)
+      {
+        lines.push("Match status: Complete");
+      }
+      lines.push(`View full match details:`);
+    }
+    else if (context === "scoreboard")
+    {
+      const scoreSummary = buildCurrentScoreSummary();
+      if (scoreSummary)
+      {
+        lines.push(scoreSummary);
+      }
+      lines.push(`View live scoreboard here:`);
+    }
+
+    payload.text = lines.join("\n");
+    return payload;
+  }
+
+  async function shareWithProgressiveEnhancement(
+    payload,
+    fallbackPromptLabel = "Copy this share text:"
+  )
+  {
+    const fallbackText = [payload.text, payload.url]
+      .filter(Boolean)
+      .join("\n");
+
+    // 1. Try native sharing with files
+    if (navigator.share)
+    {
+      if (navigator.canShare && navigator.canShare(payload))
+      {
+        try
+        {
+          await navigator.share(payload);
+          return { method: "native", files: true };
+        }
+        catch (error)
+        {
+          if (error?.name === "AbortError")
+          {
+            return { method: "cancelled" };
+          }
+
+          console.warn("Native file share failed:", error);
+        }
+      }
+
+      // 2. Try native text/URL sharing
+      const textOnlyPayload = {
+        title: payload.title,
+        text: payload.text,
+        url: payload.url
+      };
+
+      try
+      {
+        if (
+          (!navigator.canShare || navigator.canShare(textOnlyPayload))
+        )
+        {
+          await navigator.share(textOnlyPayload);
+          return { method: "native", files: false };
+        }
+      }
+      catch (error)
+      {
+        if (error?.name === "AbortError")
+        {
+          return { method: "cancelled" };
+        }
+
+        console.warn("Native text share failed:", error);
+      }
+    }
+
+    // 3. Clipboard fallback
+    if (navigator.clipboard?.writeText)
+    {
+      try
+      {
+        await navigator.clipboard.writeText(fallbackText);
+        return { method: "clipboard" };
+      }
+      catch (error)
+      {
+        console.warn("Clipboard share fallback failed:", error);
+      }
+    }
+
+    // 4. Last-resort prompt
+    const promptResult = window.prompt(
+      fallbackPromptLabel,
+      fallbackText
+    );
+
+    if (promptResult !== null)
+    {
+      return { method: "prompt" };
+    }
+
+    return { method: "unavailable" };
+  }
+
+  async function shareFromContext(context, options = {})
+  {
+    const payload = await createSharePayload(context, options);
+
+    try
+    {
+      const result = await shareWithProgressiveEnhancement(payload);
+      if (result.method === "native")
+      {
+        showToast("Shared.", TOAST_TYPES.SUCCESS);
+        return;
+      }
+      if (result.method === "clipboard")
+      {
+        showToast("Share text copied.", TOAST_TYPES.SUCCESS);
+        return;
+      }
+      if (result.method === "prompt")
+      {
+        showToast("Share text ready to copy.", TOAST_TYPES.INFO);
+        return;
+      }
+      if (result.method !== "cancelled")
+      {
+        showToast("Sharing is unavailable on this device.", TOAST_TYPES.ERROR);
+      }
+    }
+    catch (error)
+    {
+      console.warn("Share failed:", error);
+      showToast("Sharing failed.", TOAST_TYPES.ERROR);
+    }
+  }
+
+  function getShareActionLabel()
+  {
+    return navigator.share ? "Share" : "Copy link";
   }
 
   let score = defaultScore();
@@ -943,7 +1208,7 @@ document.addEventListener("DOMContentLoaded", () =>
   {
     isWavesEnabled = !isWavesEnabled;
     localStorage.setItem("waves", isWavesEnabled);
-    elements.waveToggleScoreboardBtn.textContent = isWavesEnabled ? "🌊" : "♒︎";
+    elements.waveToggleScoreboardBtn.textContent = isWavesEnabled ? "♒︎" : "═";
 
     updateWavesVisibility();
     syncSettingsTiles();
@@ -1002,7 +1267,7 @@ document.addEventListener("DOMContentLoaded", () =>
     const isActive = Boolean(getFullscreenElement());
     const label = isActive ? "Exit fullscreen" : "Enter fullscreen";
 
-    elements.fullscreenBtn.textContent = isActive ? "⬚" : "\u26F6";
+    elements.fullscreenBtn.textContent = isActive ? "⬚" : "⛶";
     elements.fullscreenBtn.title = label;
     elements.fullscreenBtn.setAttribute("aria-label", label);
 
@@ -1146,10 +1411,13 @@ document.addEventListener("DOMContentLoaded", () =>
 
     sep1: $("sep1"),
     sep2: $("sep2"),
+    sep3: $("sep3"),
 
     detailsBtn: $("detailsBtn"),
     detailsModal: $("detailsModal"),
     closeDetailsBtn: $("closeDetailsBtn"),
+    shareDetailsBtn: $("shareDetailsBtn"),
+    shareCourtBtn: $("shareCourtBtn"),
     matchDetailsCourtName: $("matchDetailsCourtName"),
     detailsSetsA: $("detailsSetsA"),
     detailsSetsB: $("detailsSetsB"),
@@ -1164,6 +1432,7 @@ document.addEventListener("DOMContentLoaded", () =>
     dmDetailsToggle: $("dmDetailsToggle"),
     dmDetailsContent: $("dmDetailsContent"),
     dmEmptyState: $("dmEmptyState"),
+    dmErrorState: $("dmErrorState"),
     dmStatsWrap: $("dmStatsWrap"),
     dmStatsTeam: $("dmStatsTeam"),
     courtQrPanel: $("courtQrPanel"),
@@ -2340,7 +2609,9 @@ document.addEventListener("DOMContentLoaded", () =>
             name: data.name || doc.id,
             password: data.password,
             createdAt: data.createdAt,
-            status: data.status
+            status: data.status,
+            teamNames: normalizeTeamNames(data.teamNames || {}),
+            playerNames: normalizePlayerNames(data.playerNames || {})
           });
         }
       });
@@ -2443,10 +2714,11 @@ document.addEventListener("DOMContentLoaded", () =>
       item.tabIndex = 0;
       item.role = "button";
       item.setAttribute("aria-label", `${court.name} - ${court.id}`);
+      const shareLabel = getShareActionLabel();
 
       item.innerHTML = `
-      <div class="court-item-name">${court.name}</div>
-      <span class="court-item-id">${court.id}</span>
+        <div class="court-item-name">${court.name}</div>
+        <span class="court-item-id">${court.id}</span>
     `;
 
       const selectCourt = () =>
@@ -2524,8 +2796,8 @@ document.addEventListener("DOMContentLoaded", () =>
       item.setAttribute("aria-label", `${court.name} - ${court.id}`);
 
       item.innerHTML = `
-      <div class="court-item-name">${court.name}</div>
-      <span class="court-item-id">${court.id}</span>
+        <div class="court-item-name">${court.name}</div>
+        <span class="court-item-id">${court.id}</span>
     `;
 
       const selectCourt = async () =>
@@ -2534,7 +2806,7 @@ document.addEventListener("DOMContentLoaded", () =>
       };
 
       item.addEventListener("click", selectCourt);
-      
+
       item.addEventListener("keydown", (e) =>
       {
         if (e.key === "Enter" || e.key === " ")
@@ -3503,7 +3775,7 @@ document.addEventListener("DOMContentLoaded", () =>
 
     if (isWavesEnabled == false)
     {
-      elements.waveToggleScoreboardBtn.textContent = "♒︎";
+      elements.waveToggleScoreboardBtn.textContent = "═";
     }
 
     try
@@ -3626,6 +3898,12 @@ document.addEventListener("DOMContentLoaded", () =>
   function buildCourtQrUrl(courtId)
   {
     const baseUrl = window.location.origin.replace(/\/$/, "");
+
+    if (!courtId)
+    {
+      return baseUrl;
+    }
+
     return `${baseUrl}/c/${encodeURIComponent(courtId)}`;
   }
 
@@ -3887,6 +4165,7 @@ document.addEventListener("DOMContentLoaded", () =>
     elements.undoBtn.style.display = "none";
     if (elements.sep1) elements.sep1.style.display = "none";
     if (elements.sep2) elements.sep2.style.display = "none";
+    if (elements.sep3) elements.sep3.style.display = "none";
 
     // Hide player-only tiles in the settings modal
     if (elements.editPlayersTile) elements.editPlayersTile.style.display = "none";
@@ -3912,6 +4191,7 @@ document.addEventListener("DOMContentLoaded", () =>
     elements.undoBtn.style.display = "";
     if (elements.sep1) elements.sep1.style.display = "";
     if (elements.sep2) elements.sep2.style.display = "";
+    if (elements.sep3) elements.sep3.style.display = "";
 
     // Restore player-only tiles in the settings modal
     if (elements.editPlayersTile) elements.editPlayersTile.style.display = "";
@@ -5098,6 +5378,8 @@ document.addEventListener("DOMContentLoaded", () =>
 
     document.querySelector(".scoreboard").classList.toggle("swapped");
 
+    elements.swapBtn.textContent = document.querySelector(".scoreboard").classList.contains("swapped") ? "⇄" : "⇆";
+
     // Keep the details modal synchronized with the currently visible side orientation.
     if (!elements.detailsModal.classList.contains("hidden"))
     {
@@ -5294,6 +5576,50 @@ document.addEventListener("DOMContentLoaded", () =>
   {
     void showMatchDetails();
   });
+
+  if (elements.shareDetailsBtn)
+  {
+    const detailsShareLabel = navigator.share ? "Share match details" : "Copy match details link";
+    elements.shareDetailsBtn.setAttribute("aria-label", detailsShareLabel);
+    elements.shareDetailsBtn.title = detailsShareLabel;
+    elements.shareDetailsBtn.addEventListener("click", () =>
+    {
+      if (!currentCourtId)
+      {
+        showToast("No court is currently open.", TOAST_TYPES.ERROR);
+        return;
+      }
+
+      void shareFromContext("details", {
+        courtId: currentCourtId,
+        courtName: currentCourtName,
+        teamNames: currentRawTeamNames,
+        playerNames: currentPlayerNames
+      });
+    });
+  }
+
+  if (elements.shareCourtBtn)
+  {
+    const courtShareLabel = navigator.share ? "Share court" : "Copy court link";
+    elements.shareCourtBtn.setAttribute("aria-label", courtShareLabel);
+    elements.shareCourtBtn.title = courtShareLabel;
+    elements.shareCourtBtn.addEventListener("click", () =>
+    {
+      if (!currentCourtId)
+      {
+        showToast("No court is currently open.", TOAST_TYPES.ERROR);
+        return;
+      }
+
+      void shareFromContext("scoreboard", {
+        courtId: currentCourtId,
+        courtName: currentCourtName,
+        teamNames: currentRawTeamNames,
+        playerNames: currentPlayerNames
+      });
+    });
+  }
 
   function setDetailsPanelExpanded(isExpanded)
   {
@@ -5888,11 +6214,9 @@ document.addEventListener("DOMContentLoaded", () =>
 
     const headRow = elements.dmHead.querySelector("tr");
 
-    //showSpinner(elements.detailsModal, refreshing === true ? "Refreshing match details..." : "Loading match details... Please wait.");
-    //elements.detailsLoading.innerHTML = elements.detailsLoading.innerHTML.replace(/(Refreshing...|Loading...)/, "").trim();
-    //elements.detailsLoading.innerHTML = elements.detailsLoading.innerHTML + (refreshing ? "Refreshing..." : "Loading...");
     if (!refreshing) {
       elements.detailsLoading.classList.remove("hidden");
+      elements.shareDetailsBtn.classList.add("hidden");
 
       // Clear table rows, columns, and momentum graph safely
       headRow.innerHTML = "";
@@ -5903,6 +6227,10 @@ document.addEventListener("DOMContentLoaded", () =>
       if (elements.dmEmptyState)
       {
         elements.dmEmptyState.classList.add("hidden");
+      }
+      if (elements.dmErrorState)
+      {
+        elements.dmErrorState.classList.add("hidden");
       }
     }
 
@@ -5921,6 +6249,7 @@ document.addEventListener("DOMContentLoaded", () =>
       {
         let getDetailedScore = httpsCallable(functions, "getDetailedScore");
         result = await getDetailedScore({ courtId: currentCourtId });
+        
         matchDetailsCache = result;
         isMatchDetailsCacheValid = true;
         matchDetailsCacheCourtId = currentCourtId;
@@ -6085,12 +6414,13 @@ document.addEventListener("DOMContentLoaded", () =>
     }
     catch (err)
     {
+      elements.dmErrorState.classList.remove("hidden");
       console.error("Match details initialization error:", err);
     }
     finally
     {
       elements.detailsLoading.classList.add("hidden");
-      //hideSpinner(elements.detailsModal);
+      elements.shareDetailsBtn.classList.remove("hidden");
     }
   }
 
@@ -6932,3 +7262,157 @@ window.addEventListener("resize", () =>
     scrollInputIntoViewIfNeeded(document.activeElement);
   }
 }, { passive: true });
+
+async function getShareableScoreCard()
+{
+  const element = document.getElementById('dmBox');
+
+  if (!element)
+  {
+    throw new Error('Share element not found');
+  }
+
+  const courtLabelElement = document.getElementById('courtQrLabel');
+  const rawCourtId = typeof courtLabelElement?.textContent === 'string'
+    ? courtLabelElement.textContent.trim()
+    : '';
+  const fallbackMatch = window.location.pathname.match(/^\/(?:app\/)?(?:court|c)\/([^/]+)\/?$/i);
+  const fallbackCourtId = fallbackMatch ? decodeURIComponent(fallbackMatch[1]).trim() : '';
+  const courtId = (rawCourtId || fallbackCourtId || '').toLowerCase();
+  const courtIdDisplay = courtId ? courtId.toUpperCase() : 'UNKNOWN';
+  const appOrigin = window.location.origin.replace(/\/$/, '');
+  const qrUrl = courtId ? `${appOrigin}/c/${encodeURIComponent(courtId)}` : `${appOrigin}/app/`;
+
+  const sourcePanel = element.querySelector('#dmDetailsPanel, .dm-details-panel');
+  const sourcePanelHeight = Math.max(0, Math.round(sourcePanel?.getBoundingClientRect().height || 0));
+  const footerHeight = Math.min(120, Math.max(60, sourcePanelHeight));
+
+  const clone = element.cloneNode(true);
+  clone.querySelectorAll('.dm-close, .dm-share-btn').forEach(node => node.remove());
+
+  const footerPanel = clone.querySelector('#dmDetailsPanel, .dm-details-panel');
+  if (footerPanel)
+  {
+    footerPanel.classList.remove('hidden');
+    footerPanel.hidden = false;
+    footerPanel.innerHTML = '';
+    footerPanel.style.display = 'flex';
+    footerPanel.style.alignItems = 'center';
+    footerPanel.style.justifyContent = 'space-between';
+    footerPanel.style.gap = '16px';
+    footerPanel.style.padding = '12px 16px';
+    footerPanel.style.minHeight = `${footerHeight}px`;
+    footerPanel.style.boxSizing = 'border-box';
+
+    const qrWrap = document.createElement('div');
+    qrWrap.style.display = 'inline-flex';
+    qrWrap.style.alignItems = 'center';
+    qrWrap.style.justifyContent = 'center';
+    qrWrap.style.padding = '8px';
+    qrWrap.style.background = '#ffffff';
+    qrWrap.style.borderRadius = '10px';
+    qrWrap.style.flex = '0 0 auto';
+
+    const qrMount = document.createElement('div');
+    qrWrap.appendChild(qrMount);
+
+    const footerText = document.createElement('div');
+    footerText.style.display = 'flex';
+    footerText.style.flexDirection = 'column';
+    footerText.style.gap = '6px';
+    footerText.style.flex = '1 1 auto';
+    footerText.style.minWidth = '0';
+
+    const footerTitle = document.createElement('div');
+    footerTitle.textContent = 'Scan for match details';
+    footerTitle.style.fontSize = '14px';
+    footerTitle.style.fontWeight = '700';
+    footerTitle.style.letterSpacing = '0.02em';
+
+    const footerCourtId = document.createElement('div');
+    footerCourtId.textContent = `Court ID: ${courtIdDisplay}`;
+    footerCourtId.style.fontSize = '16px';
+    footerCourtId.style.fontWeight = '800';
+    footerCourtId.style.letterSpacing = '0.06em';
+
+    const footerUrl = document.createElement('div');
+    footerUrl.textContent = qrUrl;
+    footerUrl.style.fontSize = '11px';
+    footerUrl.style.opacity = '0.85';
+    footerUrl.style.overflow = 'hidden';
+    footerUrl.style.textOverflow = 'ellipsis';
+    footerUrl.style.whiteSpace = 'nowrap';
+
+    footerText.appendChild(footerTitle);
+    footerText.appendChild(footerCourtId);
+    footerText.appendChild(footerUrl);
+
+    footerPanel.appendChild(qrWrap);
+    footerPanel.appendChild(footerText);
+
+    if (window.QRCode)
+    {
+      const qrSize = Math.max(84, Math.min(120, footerHeight - 24));
+      new window.QRCode(qrMount, {
+        text: qrUrl,
+        width: qrSize,
+        height: qrSize,
+        colorDark: '#000000',
+        colorLight: '#ffffff',
+        correctLevel: window.QRCode.CorrectLevel.H
+      });
+    }
+  }
+
+  const inclusions = (node) =>
+  {
+    const excludedClasses = ['dm-close', 'dm-share-btn', 'dm-empty-state', 'dm-error-state', 'hidden', 'invisible', 'sr-only', 'no-print'];
+    if (node.nodeType === Node.ELEMENT_NODE)
+    {
+      const el = node;
+      if (excludedClasses.some(cls => el.classList.contains(cls)))
+      {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  const staging = document.createElement('div');
+  staging.style.position = 'fixed';
+  staging.style.left = '-10000px';
+  staging.style.top = '0';
+  staging.style.pointerEvents = 'none';
+  staging.style.zIndex = '-1';
+  staging.appendChild(clone);
+  document.body.appendChild(staging);
+
+  await new Promise(resolve => requestAnimationFrame(() => resolve()));
+
+  let blob = null;
+  try
+  {
+    blob = await toBlob(clone, {
+      pixelRatio: 2, // Higher quality
+      backgroundColor: getComputedStyle(document.body).backgroundColor,
+      filter: (node) => inclusions(node),
+    });
+  }
+  finally
+  {
+    staging.remove();
+  }
+
+  if (!blob)
+  {
+    throw new Error('Failed to generate image');
+  }
+
+  const file = new File(
+    [blob],
+    'share-image.png',
+    { type: 'image/png' }
+  );
+
+  return file;
+}

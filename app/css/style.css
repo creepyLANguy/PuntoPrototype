@@ -333,6 +333,16 @@ body.light-mode .menu-btn:hover {
   animation: scoreboardFadeIn 0.8s ease forwards;
 }
 
+.pull-tab {
+  right: 0%;
+  bottom: 0%;
+  border-top: 20px solid transparent;
+  border-right: 20px double var(--white);
+  opacity: 0.1;
+  position: inherit;
+  pointer-events: none;
+}
+
 .court-qr-panel {
   container-type: inline-size;
   position: absolute;
@@ -349,37 +359,27 @@ body.light-mode .menu-btn:hover {
   aspect-ratio: 1 / 1.24;
   --qr-panel-scale: 1;
   border-radius: 12px;
-  background: rgba(0, 0, 0, 0.50);
+  border-bottom-right-radius: 0%;
+  background: color-mix(in srgb, var(--waveColour), transparent 90%);
   backdrop-filter: blur(6px);
   box-shadow: 0 8px 18px rgba(0, 0, 0, 0.30);
   overflow: hidden;
-  resize: horizontal;
   height: auto;
   max-width: calc(100vw - 16px);
   max-height: min(calc((100vw - 16px) * 1.24), calc(100svh - 16px));
   min-height: calc(130px * 1.24);
   box-sizing: border-box;
-  cursor: grab;
   user-select: none;
   touch-action: none;
-}
-
-.court-qr-panel:active {
-  cursor: grabbing;
-}
-
-.court-qr-panel::-webkit-resizer {
+  resize: horizontal;
   cursor: grab;
-  background: transparent;
 }
 
 .court-qr-code {
   position: relative;
   width: 100%;
   aspect-ratio: 1 / 1;
-  padding: 6px;
-  background: #ffffff;
-  border-radius: 8px;
+  padding: 1%;
 }
 
 .court-qr-code::after {
@@ -1101,7 +1101,7 @@ body.light-mode .game-dot.filled {
 
 .floating-btn {
   /* Perfect circle */
-  --btn-size: clamp(40px, 7vmin, 58px);
+  --btn-size: clamp(48px, 9vmin, 68px);
   width: var(--btn-size);
   height: var(--btn-size);
   border-radius: 50%;
@@ -1114,7 +1114,6 @@ body.light-mode .game-dot.filled {
   background: transparent;
   color: #ccc;
   font-weight: 600;
-  font-size: clamp(1rem, 2.5vmin, 1.4rem);
   backdrop-filter: blur(6px);
   opacity: 0.6;
   position: relative;
@@ -1125,6 +1124,7 @@ body.light-mode .game-dot.filled {
   -webkit-user-select: none;
   touch-action: manipulation;
   cursor: pointer;
+  font-size: clamp(2rem, 2vmin, 2rem);
 }
 
 .floating-btn:hover {
@@ -1146,6 +1146,17 @@ body.light-mode .floating-btn:hover {
 #resetBtn {
   transition: opacity 0.2s ease,
     background 0.2s ease;
+}
+
+.share-court-btn {
+  padding: clamp(7px, 1.5vmin, 14px);
+}
+
+.match-details-btn {
+  padding: clamp(7px, 1.5vmin, 14px);
+  fill: currentColor;
+  stroke: currentColor;
+  stroke-width: 10;
 }
 
 /* =======================================================
@@ -1172,7 +1183,8 @@ body.light-mode .floating-btn:hover {
     flex-direction: column;
     justify-content: flex-start;
     padding: clamp(8px, 1.5vw, 16px);
-    gap: clamp(10px, 2vh, 24px);
+    gap: clamp(12px, 2vh, 24px);
+    padding-left: 0%;
   }
 }
 
@@ -1410,16 +1422,22 @@ body.light-mode .setting-item:hover {
   opacity: 0.8;
 }
 
-.modal-btn {
-  --btn-size: 50px;
-  opacity: 1 !important;
-  border-color: rgba(255, 255, 255, 0.3) !important;
-}
-
 .setting-item:hover .reset-tile-btn {
   background: rgba(255, 107, 107, 0.15) !important;
   border-color: #ff6b6b !important;
   color: #ff6b6b !important;
+}
+
+.join-as-player-btn {
+  padding-left: clamp(2%, 5vw, 6%);
+  padding-top: 10%;
+  padding-right: 3%;
+  padding-bottom: 1%;
+}
+
+.modal-btn {  
+  opacity: 1 !important;
+  border-color: rgba(255, 255, 255, 0.3) !important;
 }
 
 body.light-mode .modal-btn {
@@ -2008,15 +2026,15 @@ body.light-mode .dm-close {
 .dm-close {
   position: absolute;
   top: 10px;
-  right: 10px;
+  left: 10px;
   background: none;
   border: none;
   color: inherit;
-  font-size: 1.2rem;
+  font-size: 1.5rem;
   cursor: pointer;
-  opacity: 0.5;
-  width: 32px;
-  height: 32px;
+  opacity: 0.25;
+  width: 40px;
+  height: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2030,6 +2048,34 @@ body.light-mode .dm-close {
 }
 
 body.light-mode .dm-close:hover {
+  background: rgba(0, 0, 0, 0.07);
+}
+
+.dm-share-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: none;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  opacity: 0.75;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  padding: 1%;
+  transition: background 0.15s, opacity 0.15s;
+}
+
+.dm-share-btn:hover {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.1);  
+}
+
+body.light-mode .dm-share-btn:hover {
   background: rgba(0, 0, 0, 0.07);
 }
 
@@ -2071,8 +2117,9 @@ body.light-mode .dm-watermark {
 
 /* Inline logo above title */
 .dm-logo {
-  width: 36px;
-  height: 36px;
+  width: 48px;
+  height: 48px;
+  aspect-ratio: 1;
   object-fit: contain;
   opacity: 0.9;
 }
@@ -2612,6 +2659,10 @@ body.light-mode .md-cell {
 
 /* Portrait: make team names fit narrower width */
 @media (orientation: portrait) {
+  .floating-btn {
+    font-size: clamp(1.5rem, 4vmin, 2rem);
+  }
+
   .settings-box {
     width: clamp(280px, 92vw, 450px);
     margin: 0 4vw;
@@ -2890,6 +2941,20 @@ body.light-mode .primary-btn {
   background: rgba(255, 255, 255, 0.1);
 }
 
+body.light-mode .secondary-btn {
+  border: 2px solid black;
+  background: transparent;
+  color: black;
+}
+
+.secondary-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+body.light-mode .secondary-btn:hover {
+  background: rgba(0, 0, 0, 0.1);
+}
+
 /* =======================================================
    COURT LIST
 ======================================================= */
@@ -3008,6 +3073,10 @@ body.light-mode .primary-btn {
   .form-group input {
     padding: 8px;
   }
+
+  .floating-btn {
+    font-size: 1.5rem;
+  }
 }
 
 body.light-mode .court-list {
@@ -3051,7 +3120,14 @@ body.light-mode .court-list.has-overflow::after {
   font-size: 20px;
 }
 
-.court-list > .loading,
+.court-list > .loading
+{
+    min-height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
 .court-list > .no-courts {
   min-height: 100%;
   display: flex;
@@ -5398,6 +5474,7 @@ body.light-mode .scoring-field select {
   .straight-total-value {
     font-size: clamp(0.9rem, 2.5vmin, 1.5rem);
   }
+  
 }
 
 .straight-total {
@@ -5543,6 +5620,25 @@ body.light-mode .dm-details-content {
 body.light-mode .dm-empty-state {
   border-color: rgba(0, 0, 0, 0.2);
   background: rgba(0, 0, 0, 0.02);
+  color: rgba(0, 0, 0, 0.7);
+}
+
+.dm-error-state {
+  width: 100%;
+  margin-top: 14px;
+  border-radius: 14px;
+  border: 1px dashed rgba(255, 255, 255, 0.2);
+  background: rgba(255, 0, 0, 0.1);
+  padding: 14px 16px;
+  text-align: center;
+  font-size: 0.8rem;
+  font-weight: 700;
+  line-height: 1.4;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+body.light-mode .dm-error-state {
+  border-color: rgba(0, 0, 0, 0.2);
   color: rgba(0, 0, 0, 0.7);
 }
 
@@ -5933,3 +6029,6 @@ body.light-mode .dm-meta-value {
   align-items: center;
 }
 
+.player-names {
+  filter: invert(10%) saturate(0%) brightness(225%) contrast(85%);
+}
