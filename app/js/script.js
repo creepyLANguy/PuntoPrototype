@@ -432,6 +432,13 @@ document.addEventListener("DOMContentLoaded", () =>
         if (shareableScoreCard)
         {
           payload.files.push(shareableScoreCard);
+
+          //AL.
+          //TODO - remove once done testing.
+          //open file in new tab for preview
+          //const fileUrl = URL.createObjectURL(shareableScoreCard);
+          //window.open(fileUrl, "_blank");
+          //
         }
       } 
       catch (error) 
