@@ -432,12 +432,6 @@ document.addEventListener("DOMContentLoaded", () =>
         if (shareableScoreCard)
         {
           payload.files.push(shareableScoreCard);
-
-          //AL.
-          //open file in new tab for preview
-          const fileUrl = URL.createObjectURL(shareableScoreCard);
-          window.open(fileUrl, "_blank");
-          //
         }
       } 
       catch (error) 
@@ -486,9 +480,13 @@ document.addEventListener("DOMContentLoaded", () =>
     {
       if (navigator.share)
       {
+        // The Web Share API spec disallows mixing `files` and `url` in the
+        // same payload — canShare() returns false when both are present.
+        // When files are included, fold the url into text so it is still shared.
         const payloadWithFiles = shareableFiles.length > 0
           ? {
-            ...safePayload,
+            title: safePayload.title,
+            text: [safePayload.text, safePayload.url].filter(Boolean).join("\n"),
             files: shareableFiles
           }
           : safePayload;
