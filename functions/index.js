@@ -227,6 +227,42 @@ async function replayScoreFromEvents(tx, courtId, options, useCheckpoint)
     };
 }
 
+async function replayScoreFromEventsExcluding(tx, courtId, options, excludedEventId)
+{
+    // Rebuild without excluded event so caller can apply it in a deterministic position.
+    // Use full replay here because a checkpoint might already include excluded event.
+    const activeOptions = normalizeScoringOptions(options);
+    const eventsSnap = await tx.get(buildScoringEventsQuery(courtId));
+    let replayedScore = defaultScore(activeOptions);
+    let lastEventId = null;
+    let lastCreatedAt = null;
+
+    eventsSnap.forEach((docSnap) =>
+    {
+        const data = docSnap.data() || {};
+        if (!SCORING_EVENTS.has(data.eventType))
+        {
+            return;
+        }
+
+        if (docSnap.id === excludedEventId)
+        {
+            return;
+        }
+
+        const event = { id: docSnap.id, ...data };
+        replayedScore = applyEvent(replayedScore, event, activeOptions);
+        lastEventId = docSnap.id;
+        lastCreatedAt = data.createdAt || lastCreatedAt;
+    });
+
+    return {
+        score: replayedScore,
+        lastEventId,
+        lastCreatedAt
+    };
+}
+
 function buildCheckpointPayload(score, options, lastEventId, lastCreatedAt)
 {
     return {
@@ -926,14 +962,19 @@ async (event) =>
             // Rebuild state for undo from latest checkpoint, then replay tail events.
             if (newEvent.eventType === "UNDO")
             {
-                const replayResult = await replayScoreFromEvents(tx, courtId, activeScoringOptions, true);
-                const replayedScore = replayResult.score;
+                const replayResult = await replayScoreFromEventsExcluding(
+                    tx,
+                    courtId,
+                    activeScoringOptions,
+                    eventId
+                );
+                const replayedScore = applyEvent(replayResult.score, incomingEvent, activeScoringOptions);
 
                 tx.set(scoreRef, {
                     ...toLiveScorePayload(replayedScore),
-                    lastEventId: replayResult.lastEventId,
-                    lastProcessedEventId: replayResult.lastEventId,
-                    lastProcessedCreatedAt: replayResult.lastCreatedAt,
+                    lastEventId: eventId,
+                    lastProcessedEventId: eventId,
+                    lastProcessedCreatedAt: incomingOrder.createdAt,
                     updatedAt: admin.firestore.FieldValue.serverTimestamp()
                 });
 
@@ -1111,7 +1152,10 @@ exports.updateScoringOptions = onCall(
 
         const courtRef = db.doc(`courts/${courtId}`);
         const scoreRef = db.doc(`courts/${courtId}/score/current`);
-        const eventsRef = db.collection(`courts/${courtId}/events`).orderBy("createdAt", "asc");
+        const eventsRef = db
+            .collection(`courts/${courtId}/events`)
+            .orderBy("createdAt", "asc")
+            .orderBy(admin.firestore.FieldPath.documentId(), "asc");
 
         const courtSnap = await courtRef.get();
         if (!courtSnap.exists)
@@ -1194,6 +1238,7 @@ exports.getDetailedScore = onCall(
         const eventsSnap = await db
             .collection(`courts/${courtId}/events`)
             .orderBy("createdAt", "asc")
+            .orderBy(admin.firestore.FieldPath.documentId(), "asc")
             .get();
 
         // Use only scoring events so details replay mirrors score/current logic.
