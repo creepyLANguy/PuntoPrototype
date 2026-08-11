@@ -8,6 +8,10 @@
     --brand-strong: #a8db00;
     --cyan: #06b6d4;
     --court: #0f172a;
+    --primary_bg: #0a1765;
+    --primary_text: #ffffff;
+    --secondary_bg: #cdff2a;
+    --secondary_text: #0a0e14;
     --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
     --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
     --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
@@ -197,9 +201,15 @@ a {
 }
 
 .button.primary {
-    background: var(--brand);
-    border-color: var(--brand);
-    color: var(--ink);
+    background: var(--primary_bg);
+    border-color: var(--primary_bg);
+    color: var(--primary_text);
+}
+
+.button.secondary {
+    background: var(--secondary_bg);
+    border-color: var(--secondary_bg);
+    color: var(--secondary_text);
 }
 
 .button.hero-cta {
