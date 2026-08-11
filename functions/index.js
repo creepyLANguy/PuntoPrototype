@@ -230,10 +230,32 @@ async function replayScoreFromEvents(tx, courtId, options, useCheckpoint)
 async function replayScoreFromEventsExcluding(tx, courtId, options, excludedEventId)
 {
     // Rebuild without excluded event so caller can apply it in a deterministic position.
-    // Use full replay here because a checkpoint might already include excluded event.
+    // Checkpoints are only written on set-completing point events, never on UNDO events,
+    // so a checkpoint's lastEventId can never equal the UNDO event being excluded.
+    // It is therefore safe to start from the latest matching checkpoint and replay only
+    // the tail, which avoids a full collection scan on every UNDO.
     const activeOptions = normalizeScoringOptions(options);
-    const eventsSnap = await tx.get(buildScoringEventsQuery(courtId));
     let replayedScore = defaultScore(activeOptions);
+    let query = buildScoringEventsQuery(courtId);
+
+    const checkpoint = await getLatestCheckpoint(tx, courtId, activeOptions);
+    if (checkpoint && checkpoint.data.lastEventId !== excludedEventId)
+    {
+        replayedScore = {
+            ...defaultScore(activeOptions),
+            ...(checkpoint.data.score || {}),
+            A: { ...defaultScore(activeOptions).A, ...(checkpoint.data.score?.A || {}) },
+            B: { ...defaultScore(activeOptions).B, ...(checkpoint.data.score?.B || {}) },
+            completedSets: Array.isArray(checkpoint.data.score?.completedSets)
+                ? checkpoint.data.score.completedSets.map((set) => ({ ...set }))
+                : [],
+            history: [],
+            scoringOptions: activeOptions
+        };
+        query = query.startAfter(checkpoint.data.lastCreatedAt, checkpoint.data.lastEventId);
+    }
+
+    const eventsSnap = await tx.get(query);
     let lastEventId = null;
     let lastCreatedAt = null;
 
@@ -894,12 +916,30 @@ async (event) =>
 
             if (orderComparison !== null && orderComparison <= 0)
             {
-                const replayResult = await replayScoreFromEvents(tx, courtId, activeScoringOptions, true);
-                let rebuiltScore = replayResult.score;
+                let rebuiltScore;
 
-                if (shouldApplyIncomingEventAfterReplay(eventId, replayResult))
+                if (newEvent.eventType === "UNDO")
                 {
-                    rebuiltScore = applyEvent(rebuiltScore, newEvent, activeScoringOptions);
+                    // Use the excluding-replay path so the UNDO is not applied twice:
+                    // replayScoreFromEventsExcluding replays all prior events (excluding
+                    // this UNDO event), then we apply the UNDO once below.
+                    const replayResult = await replayScoreFromEventsExcluding(
+                        tx,
+                        courtId,
+                        activeScoringOptions,
+                        eventId
+                    );
+                    rebuiltScore = applyEvent(replayResult.score, incomingEvent, activeScoringOptions);
+                }
+                else
+                {
+                    const replayResult = await replayScoreFromEvents(tx, courtId, activeScoringOptions, true);
+                    rebuiltScore = replayResult.score;
+
+                    if (shouldApplyIncomingEventAfterReplay(eventId, replayResult))
+                    {
+                        rebuiltScore = applyEvent(rebuiltScore, newEvent, activeScoringOptions);
+                    }
                 }
 
                 tx.set(scoreRef, {
@@ -1272,8 +1312,11 @@ exports.getDetailedScore = onCall(
 
             if (event.eventType === "UNDO")
             {
-                // Undo in scoringEngine rewinds one scoring state using score.history.
-                if (pointHistory.length > 0)
+                // Only pop pointHistory if the undo actually reversed a point.
+                // If history was empty, the engine returns the score unchanged
+                // (totalPoints stays the same), so we must not pop a real entry.
+                const pointActuallyUndone = newTotalPoints < oldTotalPoints;
+                if (pointActuallyUndone && pointHistory.length > 0)
                 {
                     pointHistory.pop();
                 }
