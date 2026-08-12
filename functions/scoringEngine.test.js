@@ -6,7 +6,6 @@ const {
   replayEvents,
   getCompletedMatchGames,
   getGameServerLabel,
-  getTiebreakServerLabel,
   getCurrentServerLabel
 } = require("./scoringEngine");
 
