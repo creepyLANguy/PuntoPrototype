@@ -368,47 +368,40 @@ describe("Standard scoring - tiebreak at 6-6", () =>
   });
 });
 
-describe("Standard scoring - match completion (best of 3 sets)", () =>
+describe("Standard scoring - no match completion (sets continue indefinitely)", () =>
 {
-  test("winning 2 sets completes the match", () =>
+  test("winning 2 sets does NOT complete the match", () =>
   {
     let s = defaultScore();
     s = winSet60(s, "A");
-    expect(s.matchComplete).toBe(false);
     s = winSet60(s, "A");
-    expect(s.matchComplete).toBe(true);
+    expect(s.matchComplete).toBe(false);
     expect(s.A.sets).toBe(2);
   });
 
-  test("match is not complete after 1 set each", () =>
+  test("can play beyond 2 sets", () =>
   {
     let s = defaultScore();
     s = winSet60(s, "A");
     s = winSet60(s, "B");
+    s = winSet60(s, "A");
+    s = winSet60(s, "B");
+    s = winSet60(s, "A");
     expect(s.matchComplete).toBe(false);
-    expect(s.A.sets).toBe(1);
-    expect(s.B.sets).toBe(1);
-  });
-
-  test("team B can win the match", () =>
-  {
-    let s = defaultScore();
-    s = winSet60(s, "B");
-    s = winSet60(s, "B");
-    expect(s.matchComplete).toBe(true);
+    expect(s.A.sets).toBe(3);
     expect(s.B.sets).toBe(2);
+    expect(s.completedSets.length).toBe(5);
   });
 
-  test("no more points can be added after match completion", () =>
+  test("points can still be added after many sets", () =>
   {
     let s = defaultScore();
     s = winSet60(s, "A");
     s = winSet60(s, "A");
-    expect(s.matchComplete).toBe(true);
-    const before = { ...s.A };
-    s = applyEvent(s, { eventType: "POINT_TEAM_A", id: "extra" });
-    expect(s.A.points).toBe(before.points);
-    expect(s.A.games).toBe(before.games);
+    s = winSet60(s, "A");
+    s = applyEvent(s, { eventType: "POINT_TEAM_B", id: "extra" });
+    expect(s.B.points).toBe(1);
+    expect(s.matchComplete).toBe(false);
   });
 });
 
@@ -545,14 +538,15 @@ describe("Undo functionality", () =>
     expect(s.A.points).toBe(1);
   });
 
-  test("undo reverts match completion", () =>
+  test("undo reverts tiebreakTen match completion", () =>
   {
-    let s = defaultScore();
-    s = winSet60(s, "A");
-    s = winSet60(s, "A");
+    const options = { scoringMode: "tiebreakTen", deuceMode: "standard", tiebreakMode: "sixAllSeven" };
+    let s = defaultScore(options);
+    s = awardPoints(s, "A", 10, options);
     expect(s.matchComplete).toBe(true);
-    s = applyEvent(s, { eventType: "UNDO", id: "u1" });
+    s = applyEvent(s, { eventType: "UNDO", id: "u1" }, options);
     expect(s.matchComplete).toBe(false);
+    expect(s.A.points).toBe(9);
   });
 });
 
@@ -653,5 +647,192 @@ describe("lastEventId tracking", () =>
     let s = defaultScore();
     s = applyEvent(s, { eventType: "POINT_TEAM_A", eventId: "myevent456" });
     expect(s.lastEventId).toBe("myevent456");
+  });
+});
+
+describe("Concurrent/rapid events - timestamp ordering", () =>
+{
+  test("many rapid events from same team resolve correctly in order", () =>
+  {
+    const events = [];
+    const baseTime = Date.now();
+    for (let i = 0; i < 8; i++)
+    {
+      events.push({ eventType: "POINT_TEAM_A", id: `rapid-${i}`, createdAt: baseTime + i });
+    }
+    const s = replayEvents(events);
+    // 4 points = 1 game, next 4 = another game
+    expect(s.A.games).toBe(2);
+    expect(s.A.points).toBe(0);
+  });
+
+  test("interleaved rapid events from both teams resolve correctly", () =>
+  {
+    const events = [];
+    const baseTime = Date.now();
+    for (let i = 0; i < 8; i++)
+    {
+      events.push({
+        eventType: i % 2 === 0 ? "POINT_TEAM_A" : "POINT_TEAM_B",
+        id: `alt-${i}`,
+        createdAt: baseTime + i
+      });
+    }
+    const s = replayEvents(events);
+    // Alternating: A=1,B=1,A=2,B=2,A=3,B=3 (deuce), A gets ad (4), B scores -> back to deuce (3-3)
+    expect(s.A.points).toBe(3);
+    expect(s.B.points).toBe(3);
+  });
+
+  test("burst of identical timestamps with unique IDs all process", () =>
+  {
+    const events = [
+      { eventType: "POINT_TEAM_A", id: "burst-1", createdAt: 1000 },
+      { eventType: "POINT_TEAM_A", id: "burst-2", createdAt: 1000 },
+      { eventType: "POINT_TEAM_A", id: "burst-3", createdAt: 1000 }
+    ];
+    const s = replayEvents(events);
+    expect(s.A.points).toBe(3);
+    expect(s.A.totalPoints).toBe(3);
+  });
+
+  test("undo in rapid sequence correctly reverts last point only", () =>
+  {
+    const events = [
+      { eventType: "POINT_TEAM_A", id: "r1", createdAt: 100 },
+      { eventType: "POINT_TEAM_A", id: "r2", createdAt: 101 },
+      { eventType: "POINT_TEAM_B", id: "r3", createdAt: 102 },
+      { eventType: "UNDO", id: "r4", createdAt: 103 }
+    ];
+    const s = replayEvents(events);
+    expect(s.A.points).toBe(2);
+    expect(s.B.points).toBe(0);
+  });
+
+  test("multiple undos in rapid succession revert multiple points", () =>
+  {
+    const events = [
+      { eventType: "POINT_TEAM_A", id: "m1", createdAt: 100 },
+      { eventType: "POINT_TEAM_A", id: "m2", createdAt: 101 },
+      { eventType: "POINT_TEAM_A", id: "m3", createdAt: 102 },
+      { eventType: "UNDO", id: "m4", createdAt: 103 },
+      { eventType: "UNDO", id: "m5", createdAt: 104 },
+      { eventType: "UNDO", id: "m6", createdAt: 105 }
+    ];
+    const s = replayEvents(events);
+    expect(s.A.points).toBe(0);
+    expect(s.A.totalPoints).toBe(0);
+  });
+
+  test("undo after game win in rapid sequence reverts game", () =>
+  {
+    const events = [
+      { eventType: "POINT_TEAM_A", id: "g1", createdAt: 100 },
+      { eventType: "POINT_TEAM_A", id: "g2", createdAt: 101 },
+      { eventType: "POINT_TEAM_A", id: "g3", createdAt: 102 },
+      { eventType: "POINT_TEAM_A", id: "g4", createdAt: 103 },
+      { eventType: "UNDO", id: "g5", createdAt: 104 }
+    ];
+    const s = replayEvents(events);
+    expect(s.A.games).toBe(0);
+    expect(s.A.points).toBe(3);
+  });
+
+  test("events sorted by timestamp produce deterministic result", () =>
+  {
+    const events = [
+      { eventType: "POINT_TEAM_B", id: "t2", createdAt: 200 },
+      { eventType: "POINT_TEAM_A", id: "t1", createdAt: 100 },
+      { eventType: "POINT_TEAM_A", id: "t3", createdAt: 300 }
+    ];
+    events.sort((a, b) => a.createdAt - b.createdAt);
+    const s = replayEvents(events);
+    expect(s.A.points).toBe(2);
+    expect(s.B.points).toBe(1);
+    expect(s.lastPointTeam).toBe("A");
+  });
+});
+
+describe("Edge cases", () =>
+{
+  test("unknown event types are ignored gracefully", () =>
+  {
+    let s = defaultScore();
+    s = applyEvent(s, { eventType: "POINT_TEAM_A", id: "e1" });
+    s = applyEvent(s, { eventType: "UNKNOWN_EVENT", id: "e2" });
+    expect(s.A.points).toBe(1);
+    expect(s.history.length).toBe(1);
+  });
+
+  test("undo more times than points scored is safe", () =>
+  {
+    let s = defaultScore();
+    s = applyEvent(s, { eventType: "POINT_TEAM_A", id: "e1" });
+    s = applyEvent(s, { eventType: "UNDO", id: "u1" });
+    s = applyEvent(s, { eventType: "UNDO", id: "u2" });
+    s = applyEvent(s, { eventType: "UNDO", id: "u3" });
+    expect(s.A.points).toBe(0);
+    expect(s.B.points).toBe(0);
+    expect(s.matchComplete).toBe(false);
+  });
+
+  test("reset followed by undo does nothing (no history after reset)", () =>
+  {
+    let s = defaultScore();
+    s = awardPoints(s, "A", 5);
+    s = applyEvent(s, { eventType: "RESET", id: "r1" });
+    s = applyEvent(s, { eventType: "UNDO", id: "u1" });
+    expect(s.A.points).toBe(0);
+  });
+
+  test("tiebreakTen: no more points after match completion", () =>
+  {
+    const options = { scoringMode: "tiebreakTen", deuceMode: "standard", tiebreakMode: "sixAllSeven" };
+    let s = defaultScore(options);
+    s = awardPoints(s, "A", 10, options);
+    expect(s.matchComplete).toBe(true);
+    const before = s.A.points;
+    s = applyEvent(s, { eventType: "POINT_TEAM_A", id: "extra" }, options);
+    expect(s.A.points).toBe(before);
+  });
+
+  test("straight points: never completes match regardless of score", () =>
+  {
+    const options = { scoringMode: "straight", deuceMode: "standard", tiebreakMode: "sixAllSeven" };
+    let s = defaultScore(options);
+    s = awardPoints(s, "A", 200, options);
+    expect(s.matchComplete).toBe(false);
+    expect(s.A.points).toBe(200);
+  });
+
+  test("standard scoring after tiebreak set continues to next set", () =>
+  {
+    let s = defaultScore();
+    for (let i = 0; i < 6; i++)
+    {
+      s = winGame(s, "A");
+      s = winGame(s, "B");
+    }
+    s = awardPoints(s, "A", 7);
+    expect(s.A.sets).toBe(1);
+    expect(s.matchComplete).toBe(false);
+    s = applyEvent(s, { eventType: "POINT_TEAM_B", id: "next" });
+    expect(s.B.points).toBe(1);
+  });
+
+  test("undo during tiebreak reverts tiebreak point", () =>
+  {
+    let s = defaultScore();
+    for (let i = 0; i < 6; i++)
+    {
+      s = winGame(s, "A");
+      s = winGame(s, "B");
+    }
+    s = applyEvent(s, { eventType: "POINT_TEAM_A", id: "tb1" });
+    expect(s.inTiebreak).toBe(true);
+    expect(s.A.points).toBe(1);
+    s = applyEvent(s, { eventType: "UNDO", id: "u1" });
+    expect(s.A.points).toBe(0);
+    expect(s.A.games).toBe(6);
   });
 });

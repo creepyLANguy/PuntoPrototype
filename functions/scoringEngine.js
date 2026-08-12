@@ -324,11 +324,6 @@ function completeSet(score, scoringTeam, tiebreakPoints = null)
   score.B.points = 0;
   score.deuceCycles = 0;
   score.inTiebreak = false;
-
-  if (score[scoringTeam].sets >= 2)
-  {
-    score.matchComplete = true;
-  }
 }
 
 function isTiebreakGame(score, options)
