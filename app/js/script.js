@@ -381,24 +381,12 @@ document.addEventListener("DOMContentLoaded", () =>
     return `Score: Sets ${setsA}-${setsB}, Games ${gamesA}-${gamesB}`;
   }
 
-  function buildAppEntryUrl()
-  {
-    return `${window.location.origin.replace(/\/$/, "")}/app/`;
-  }
+  async function getSharePayload(context, options = {})
+  {  
+    const payload = { title: "Padel Push", text: "", url: "", files: [] };
 
-  function buildHomeUrl()
-  {
-    return `${window.location.origin.replace(/\/$/, "")}/`;
-  }
-
-  async function createSharePayload(context, options = {})
-  {
     const courtId = typeof options.courtId === "string" ? options.courtId.trim().toLowerCase() : "";
-    const courtName = typeof options.courtName === "string" ? options.courtName.trim() : "";
-    const payload = { title: "Padel Push", text: "", url: buildAppEntryUrl(), files: [] };
-
-    payload.url = buildCourtQrUrl(courtId);
-
+    
     if (!courtId)
     {
       payload.text = "Padel Push — Live court scoring.";
@@ -407,149 +395,122 @@ document.addEventListener("DOMContentLoaded", () =>
 
     const lines = [];
     lines.push(`Padel Push`);
+
+    const courtName = typeof options.courtName === "string" ? options.courtName.trim() : "";
     lines.push(`Court: ${courtName ? `${courtName} (${courtId.toUpperCase()})` : courtId.toUpperCase()}`);
 
     lines.push(...buildTeamsShareLines(options.teamNames || {}, options.playerNames || {}));
 
-    if (context === "details")
+    const scoreSummary = buildCurrentScoreSummary();
+    if (scoreSummary)
     {
-      try 
-      {
-        const shareableScoreCard = await getShareableScoreCard();
-        if (shareableScoreCard)
-        {
-          payload.files.push(shareableScoreCard);
-
-          //AL.
-          //TODO - remove once done testing.
-          //const fileUrl = URL.createObjectURL(shareableScoreCard);
-          //window.open(fileUrl, "_blank");
-          //
-        }
-      } 
-      catch (error) 
-      {
-        console.warn("Failed to get shareable score card:", error);
-      }
-
-      const scoreSummary = buildCurrentScoreSummary();
-      if (scoreSummary)
-      {
-        lines.push(scoreSummary);
-      }
-      if (score.matchComplete)
-      {
-        lines.push("Match status: Complete");
-      }
-      lines.push(`View full match details:`);
+      lines.push(scoreSummary);
     }
-    else if (context === "scoreboard")
-    {
-      const scoreSummary = buildCurrentScoreSummary();
-      if (scoreSummary)
-      {
-        lines.push(scoreSummary);
-      }
-      lines.push(`View live scoreboard here:`);
-    }
+
+    lines.push( context === "details" ? `View full match details:` : `View live scoreboard:`);
+    lines.push(buildCourtQrUrl(courtId));
 
     payload.text = lines.join("\n");
+
+    if (context === "details" && shareableScoreCardImage)
+    {        
+      payload.files.push(shareableScoreCardImage);
+    }
+    
     return payload;
   }
 
-  async function shareWithProgressiveEnhancement(
-    payload,
-    fallbackPromptLabel = "Copy this share text:"
-  )
+  async function share(context, options = {})
   {
-    const fallbackText = [payload.text, payload.url]
-      .filter(Boolean)
-      .join("\n");
+    const share_payload = getSharePayload(context, options);
 
-    // 1. Try native sharing with files
-    if (navigator.share)
-    {
-      if (navigator.canShare && navigator.canShare(payload))
+    let result = { done: false, method: "unavailable" };
+
+    try
+    {      
+      // 1. Try native sharing with files
+      if (navigator.share)
+      {
+        if
+          (
+          result.done === false &&
+          share_payload.files?.length > 0 &&
+          navigator.canShare &&
+          navigator.canShare(share_payload)
+        )
+        {
+          try
+          {
+            await navigator.share({
+              title: share_payload.title,
+              text: share_payload.text,
+              url: share_payload.url,
+              files: share_payload.files
+            });
+            result = { done: true, method: "native", files: true };
+          }
+          catch (error)
+          {
+            if (error?.name === "AbortError")
+            {
+              result = { done: true, method: "cancelled" };              
+            }
+
+            console.warn("Native file share failed:", error);
+          }
+        }
+
+        // 2. Try native text/URL sharing
+        if (result.done === false)
+        {
+          try
+          {
+            await navigator.share({
+              title: share_payload.title,
+              text: share_payload.text,
+              url: share_payload.url
+            });
+
+            result = { done: true, method: "native", files: false };
+          }
+          catch (error)
+          {
+            if (error?.name === "AbortError")
+            {
+              result = { done: true, method: "cancelled" };
+            }
+
+            console.warn("Native text share failed:", error);
+          }
+        }        
+      }
+
+      // 3. Clipboard fallback
+      if (result.done === false && navigator.clipboard?.writeText)
       {
         try
         {
-          await navigator.share(payload);
-          return { method: "native", files: true };
+          await navigator.clipboard.writeText(share_payload.text);
+          result = { done: true, method: "clipboard" };
         }
         catch (error)
         {
-          if (error?.name === "AbortError")
-          {
-            return { method: "cancelled" };
-          }
-
-          console.warn("Native file share failed:", error);
+          console.warn("Clipboard share fallback failed:", error);
         }
       }
 
-      // 2. Try native text/URL sharing
-      const textOnlyPayload = {
-        title: payload.title,
-        text: payload.text,
-        url: payload.url
-      };
+      // 4. Last-resort prompt
+      const promptResult = window.prompt(
+        "Copy this share text:",
+        share_payload.text
+      );
 
-      try
+      if (promptResult !== null)
       {
-        if (
-          (!navigator.canShare || navigator.canShare(textOnlyPayload))
-        )
-        {
-          await navigator.share(textOnlyPayload);
-          return { method: "native", files: false };
-        }
+        result = { done: true, method: "prompt" };
       }
-      catch (error)
-      {
-        if (error?.name === "AbortError")
-        {
-          return { method: "cancelled" };
-        }
 
-        console.warn("Native text share failed:", error);
-      }
-    }
-
-    // 3. Clipboard fallback
-    if (navigator.clipboard?.writeText)
-    {
-      try
-      {
-        await navigator.clipboard.writeText(fallbackText);
-        return { method: "clipboard" };
-      }
-      catch (error)
-      {
-        console.warn("Clipboard share fallback failed:", error);
-      }
-    }
-
-    // 4. Last-resort prompt
-    const promptResult = window.prompt(
-      fallbackPromptLabel,
-      fallbackText
-    );
-
-    if (promptResult !== null)
-    {
-      return { method: "prompt" };
-    }
-
-    return { method: "unavailable" };
-  }
-
-  async function shareFromContext(context, options = {})
-  {
-    const payload = await createSharePayload(context, options);
-
-    try
-    {
-      const result = await shareWithProgressiveEnhancement(payload);
+      //Toast based on the result of the share attempts
       if (result.method === "native")
       {
         showToast("Shared.", TOAST_TYPES.SUCCESS);
@@ -567,6 +528,10 @@ document.addEventListener("DOMContentLoaded", () =>
       }
       if (result.method !== "cancelled")
       {
+        showToast("Sharing was cancelled.", TOAST_TYPES.ERROR);
+      }
+      if (result.method === "unavailable")
+      {
         showToast("Sharing is unavailable on this device.", TOAST_TYPES.ERROR);
       }
     }
@@ -577,17 +542,14 @@ document.addEventListener("DOMContentLoaded", () =>
     }
   }
 
-  function getShareActionLabel()
-  {
-    return navigator.share ? "Share" : "Copy link";
-  }
-
   let score = defaultScore();
   let isMatchDetailsCacheValid = false;
   let matchDetailsCache = null;
   let matchDetailsCacheCourtId = null;
   let lastKnownSets = { A: 0, B: 0 };
   let sessionInitialized = false;
+
+  let shareableScoreCardImage = null;
 
   function invalidateMatchDetailsCache()
   {
@@ -2714,7 +2676,6 @@ document.addEventListener("DOMContentLoaded", () =>
       item.tabIndex = 0;
       item.role = "button";
       item.setAttribute("aria-label", `${court.name} - ${court.id}`);
-      const shareLabel = getShareActionLabel();
 
       item.innerHTML = `
         <div class="court-item-name">${court.name}</div>
@@ -5607,7 +5568,7 @@ document.addEventListener("DOMContentLoaded", () =>
         return;
       }
 
-      void shareFromContext("details", {
+      void share("details", {
         courtId: currentCourtId,
         courtName: currentCourtName,
         teamNames: currentRawTeamNames,
@@ -5629,7 +5590,7 @@ document.addEventListener("DOMContentLoaded", () =>
         return;
       }
 
-      void shareFromContext("scoreboard", {
+      void share("scoreboard", {
         courtId: currentCourtId,
         courtName: currentCourtName,
         teamNames: currentRawTeamNames,
@@ -6191,7 +6152,7 @@ document.addEventListener("DOMContentLoaded", () =>
   }
 
   async function showMatchDetails(syncHistory = true, expanded = false, refreshing = false)
-  {     
+  {
     elements.detailsModal.classList.remove("hidden");
 
     if (syncHistory)
@@ -6270,6 +6231,19 @@ document.addEventListener("DOMContentLoaded", () =>
         matchDetailsCache = result;
         isMatchDetailsCacheValid = true;
         matchDetailsCacheCourtId = currentCourtId;
+
+        //AL.
+        //TODO - test this. Make sure it runs in the background, not block the UI.  
+        const dummyFile = new File(
+          [],
+          'share-image.png',
+          { type: 'image/png' }
+        );
+        if (navigator.canShare && navigator.canShare({ files: [dummyFile] }))
+        {
+          cacheShareableScoreCard();
+        }        
+        //
       }
 
       const { sets, currentGames, points, mode, scoringMode, matchComplete } = result.data;
@@ -7282,7 +7256,7 @@ window.addEventListener("resize", () =>
   }
 }, { passive: true });
 
-async function getShareableScoreCard()
+async function cacheShareableScoreCard()
 {
   const element = document.getElementById('dmBox');
 
@@ -7385,7 +7359,17 @@ async function getShareableScoreCard()
 
   const inclusions = (node) =>
   {
-    const excludedClasses = ['dm-close', 'dm-share-btn', 'dm-empty-state', 'dm-error-state', 'hidden', 'invisible', 'sr-only', 'no-print'];
+    const excludedClasses = [
+      'dm-close', 
+      'dm-share-btn', 
+      'dm-empty-state', 
+      'dm-error-state', 
+      'hidden', 
+      'invisible', 
+      'sr-only', 
+      'no-print'
+    ];
+    
     if (node.nodeType === Node.ELEMENT_NODE)
     {
       const el = node;
@@ -7411,13 +7395,11 @@ async function getShareableScoreCard()
   let blob = null;
   try
   {
-    //AL.
-    //TODO - uncomment and test
-    // blob = await toBlob(clone, {
-    //   pixelRatio: 2, // Higher quality
-    //   backgroundColor: getComputedStyle(document.body).backgroundColor,
-    //   filter: (node) => inclusions(node),
-    // });
+    blob = await toBlob(clone, {
+      pixelRatio: 2, // Higher quality
+      backgroundColor: getComputedStyle(document.body).backgroundColor,
+      filter: (node) => inclusions(node),
+    });
   }
   finally
   {
@@ -7435,5 +7417,8 @@ async function getShareableScoreCard()
     { type: 'image/png' }
   );
 
-  return file;
+  //AL. 
+  //TODO - this breaks. Fix it. 
+  shareableScoreCardImage = file;
+  //
 }
