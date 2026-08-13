@@ -3677,7 +3677,7 @@ document.addEventListener("DOMContentLoaded", () =>
 
   async function enterCourt(courtId, spectate, { historyMode = "push" } = {})
   {
-    console.log(`Entering court: ${courtId}, spectate: ${spectate}`);
+    //console.log(`Entering court: ${courtId}, spectate: ${spectate}`);
     pendingLocalPasswordUpdate = null;
     bumpCourtHistorySessionId();
     invalidateMatchDetailsCache();
@@ -3790,7 +3790,7 @@ document.addEventListener("DOMContentLoaded", () =>
 
   function leaveCourt(historyMode = "push")
   {
-    console.log("Leaving court: " + currentCourtId);
+    //console.log("Leaving court: " + currentCourtId);
     pendingLocalPasswordUpdate = null;
     bumpCourtHistorySessionId();
     invalidateMatchDetailsCache();
@@ -6537,7 +6537,7 @@ document.addEventListener("DOMContentLoaded", () =>
 
   async function listenToCourt(courtId)
   {
-    console.log(`Setting up real-time sync for court: ${courtId}`);
+    //console.log(`Setting up real-time sync for court: ${courtId}`);
     if (unsubscribe) unsubscribe();
 
     const scoreRef = doc(db, "courts", courtId, "score", "current");
@@ -7071,12 +7071,12 @@ async function requestWakeLock()
   try
   {
     wakeLock = await navigator.wakeLock.request("screen");
-    console.log("Wake lock acquired - device will stay awake.");
+    //console.log("Wake lock acquired - device will stay awake.");
 
     // Re-acquire lock if user interacts with device
     wakeLock.addEventListener("release", () =>
     {
-      console.warn("Wake lock released.");
+      //console.warn("Wake lock released.");
     });
   }
   catch (error)
@@ -7093,7 +7093,7 @@ async function releaseWakeLock()
     {
       await wakeLock.release();
       wakeLock = null;
-      console.log("Wake lock released.");
+      //console.log("Wake lock released.");
     }
     catch (error)
     {
@@ -7238,7 +7238,10 @@ window.addEventListener("resize", () =>
 
 async function cacheShareableScoreCard()
 {
+  //AL.
   console.log("cacheShareableScoreCard() called");
+  showToast("Generating shareable scoreboard image...", TOAST_TYPES.INFO, 3000);
+  //
 
   const element = document.getElementById('dmBox');
 
@@ -7405,4 +7408,8 @@ async function cacheShareableScoreCard()
   //
 
   console.log("cacheShareableScoreCard() completed successfully");
+  
+  //AL.
+  showToast("Shareable scoreboard image generated!", TOAST_TYPES.SUCCESS, 3000);
+  //
 }

@@ -161,7 +161,7 @@ function setMode(mode, el) {
     playBeep(500, 0.05);
     
     // Logic can branching here based on currentMode
-    console.log("System Mode changed to:", currentMode);
+    //console.log("System Mode changed to:", currentMode);
 
     // Auto-close sidebar on mobile
     if (window.innerWidth <= 768) {
