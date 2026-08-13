@@ -49,7 +49,7 @@ jobs:
         env:
           FIREBASE_PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID_PRODUCTION }}
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN_PRODUCTION }}
-        run: firebase deploy --only functions --project "$FIREBASE_PROJECT_ID" --token "$FIREBASE_TOKEN"
+        run: firebase deploy --only functions --project "$FIREBASE_PROJECT_ID" --token "$FIREBASE_TOKEN" --force
 
   deploy_staging:
     if: github.ref != 'refs/heads/main'
@@ -85,4 +85,4 @@ jobs:
         env:
           FIREBASE_PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID_STAGING }}
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN_STAGING }}
-        run: firebase deploy --only functions --project "$FIREBASE_PROJECT_ID" --token "$FIREBASE_TOKEN"
+        run: firebase deploy --only functions --project "$FIREBASE_PROJECT_ID" --token "$FIREBASE_TOKEN" --force  
