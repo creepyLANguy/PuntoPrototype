@@ -332,25 +332,19 @@ document.addEventListener("DOMContentLoaded", () =>
 
   function buildTeamsShareLines(teamNames = {}, playerNames = {})
   {
-    const normalizedTeams = normalizeTeamNames(teamNames);
     const lines = [];
 
-    if (!isDefaultTeamName("A", normalizedTeams.A) || !isDefaultTeamName("B", normalizedTeams.B))
+    const normalizedTeams = normalizeTeamNames(teamNames);
+    if (!isDefaultTeamName("A", normalizedTeams.A) && !isDefaultTeamName("B", normalizedTeams.B))
     {
       lines.push(`Teams: ${normalizedTeams.A} vs ${normalizedTeams.B}`);
     }
 
     const playersA = getPlayerLineForTeam("A", playerNames);
     const playersB = getPlayerLineForTeam("B", playerNames);
-
-    if (playersA)
+    if (playersA && playersB)
     {
-      lines.push(`Players A: ${playersA}`);
-    }
-
-    if (playersB)
-    {
-      lines.push(`Players B: ${playersB}`);
+      lines.push(`${playersA} vs ${playersB}`);
     }
 
     return lines;
@@ -363,12 +357,7 @@ document.addEventListener("DOMContentLoaded", () =>
       return "";
     }
 
-    const setsA = Number(score.A.sets) || 0;
-    const setsB = Number(score.B.sets) || 0;
-    const gamesA = Number(score.A.games) || 0;
-    const gamesB = Number(score.B.games) || 0;
     const options = resolveScoringOptions(score);
-
     if (options.scoringMode === "straight" || options.scoringMode === "tiebreakTen")
     {
       const pointsA = Number(score.A.totalPoints ?? score.A.points) || 0;
@@ -376,36 +365,40 @@ document.addEventListener("DOMContentLoaded", () =>
       return `Score: ${pointsA}-${pointsB} points`;
     }
 
-    const pointsA = pointLabel(Number(score.A.points) || 0);
-    const pointsB = pointLabel(Number(score.B.points) || 0);
-    return `Score: Sets ${setsA}-${setsB}, Games ${gamesA}-${gamesB}`;
+    let buff = "";
+    score.completedSets.forEach((set, index) => {
+      const gamesA = set.A || 0;
+      const gamesB = set.B || 0;
+      buff += `${gamesA}-${gamesB}, `;
+    });
+
+    if (score.A.games > 0 || score.B.games > 0) 
+    {
+      const gamesA = score.A.games || 0;
+      const gamesB = score.B.games || 0;
+      buff += `${gamesA}-${gamesB}`;
+    }
+
+    return buff;
   }
 
-  async function getSharePayload(context, options = {})
+  function getSharePayload(context)
   {  
     const payload = { title: "Padel Push", text: "", url: "", files: [] };
 
-    const courtId = typeof options.courtId === "string" ? options.courtId.trim().toLowerCase() : "";
-    
-    if (!courtId)
-    {
-      payload.text = "Padel Push — Live court scoring.";
-      return payload;
-    }
-
     const lines = [];
-    lines.push(`Padel Push`);
+    lines.push("Padel Push");
 
-    const courtName = typeof options.courtName === "string" ? options.courtName.trim() : "";
-    lines.push(`Court: ${courtName ? `${courtName} (${courtId.toUpperCase()})` : courtId.toUpperCase()}`);
-
-    lines.push(...buildTeamsShareLines(options.teamNames || {}, options.playerNames || {}));
-
+    lines.push(...buildTeamsShareLines(currentRawTeamNames || {}, currentPlayerNames || {}));
     const scoreSummary = buildCurrentScoreSummary();
     if (scoreSummary)
     {
       lines.push(scoreSummary);
     }
+
+    const courtId = typeof currentCourtId === "string" ? currentCourtId.trim().toLowerCase() : "";
+    const courtName = typeof currentCourtName === "string" ? currentCourtName.trim() : "";
+    lines.push(`Court: ${courtName ? `${courtName} (${courtId.toUpperCase()})` : courtId.toUpperCase()}`);
 
     lines.push( context === "details" ? `View full match details:` : `View live scoreboard:`);
     lines.push(buildCourtQrUrl(courtId));
@@ -422,9 +415,9 @@ document.addEventListener("DOMContentLoaded", () =>
 
   //AL.
   //TODO - test all branches. 
-  async function share(context, options = {})
+  async function share(context)
   {
-    const share_payload = getSharePayload(context, options);
+    const share_payload = getSharePayload(context);
 
     let result = { done: false, method: "unavailable" };
 
@@ -502,15 +495,11 @@ document.addEventListener("DOMContentLoaded", () =>
       }
 
       // 4. Last-resort prompt
-      const promptResult = window.prompt(
-        "Copy this share text:",
-        share_payload.text
-      );
-
-      if (promptResult !== null)
+      if (result.done === false && window.prompt("Copy this share text:", share_payload.text) !== null) 
       {
         result = { done: true, method: "prompt" };
       }
+      
 
       //Toast based on the result of the share attempts
       if (result.method === "native")
@@ -525,7 +514,6 @@ document.addEventListener("DOMContentLoaded", () =>
       }
       if (result.method === "prompt")
       {
-        showToast("Share text ready to copy.", TOAST_TYPES.INFO);
         return;
       }
       if (result.method !== "cancelled")
@@ -3450,7 +3438,7 @@ document.addEventListener("DOMContentLoaded", () =>
       updateServerIndicator();
       elements.playerNamesModal.classList.add("hidden");
       elements.settingsModal.classList.remove("hidden");
-      showToast("Player names updated.", TOAST_TYPES.SUCCESS);
+      showToast("Player/Team names updated.", TOAST_TYPES.SUCCESS);
     }
     catch (error)
     {
@@ -5570,12 +5558,7 @@ document.addEventListener("DOMContentLoaded", () =>
         return;
       }
 
-      void share("details", {
-        courtId: currentCourtId,
-        courtName: currentCourtName,
-        teamNames: currentRawTeamNames,
-        playerNames: currentPlayerNames
-      });
+      void share("details");
     });
   }
 
@@ -5592,12 +5575,7 @@ document.addEventListener("DOMContentLoaded", () =>
         return;
       }
 
-      void share("scoreboard", {
-        courtId: currentCourtId,
-        courtName: currentCourtName,
-        teamNames: currentRawTeamNames,
-        playerNames: currentPlayerNames
-      });
+      void share("scoreboard");
     });
   }
 

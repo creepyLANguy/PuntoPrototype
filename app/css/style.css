@@ -3332,8 +3332,9 @@ body.light-mode .court-item-name {
   flex-shrink: 0;
   align-self: center;
   line-height: 1;
-  text-align: right;
+  text-align: right;  
   text-transform: uppercase;
+  letter-spacing: 10%;
   font-size: 12px;
   color: rgba(190, 190, 190, 0.8);
 }
