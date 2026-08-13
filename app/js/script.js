@@ -2899,6 +2899,13 @@ document.addEventListener("DOMContentLoaded", () =>
       return;
     }
 
+    //sort courts by name, then by id
+    courts.sort((a, b) => {
+      const nameComparison = (a.name || "").localeCompare(b.name || "");
+      if (nameComparison !== 0) return nameComparison;
+      return a.id.localeCompare(b.id);
+    });
+
     courts.forEach(court =>
     {
       const item = document.createElement("div");
@@ -6910,6 +6917,8 @@ document.addEventListener("DOMContentLoaded", () =>
       elements.adminDeviceList.innerHTML = '<div class="no-courts">No devices registered.</div>';
       return;
     }
+
+    devices.sort((a, b) => a.id.localeCompare(b.id));
 
     devices.forEach(device =>
     {
