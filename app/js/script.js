@@ -4422,17 +4422,27 @@ document.addEventListener("DOMContentLoaded", () =>
 
   async function addPoint(addpointevent)
   {
-    await addDoc(
-      collection(db, "courts", currentCourtId, "events"),
-      {
-        eventType: addpointevent,
-        createdAt: serverTimestamp(),
-        createdBy: thisDeviceId
-      }
-    );
-
+    // Fire-and-forget animation/sound immediately so the UI stays snappy even
+    // while the write is in flight; only surface an error if it actually fails.
     animate(addpointevent === EVENT_TYPES.POINT_TEAM_A ? "A" : "B");
     playSound(SOUND_IDS.POINT);
+
+    try
+    {
+      await addDoc(
+        collection(db, "courts", currentCourtId, "events"),
+        {
+          eventType: addpointevent,
+          createdAt: serverTimestamp(),
+          createdBy: thisDeviceId
+        }
+      );
+    }
+    catch (err)
+    {
+      console.error("Add point failed:", err);
+      showToast("Point failed to save: " + (err.message || "Unknown error"), TOAST_TYPES.ERROR);
+    }
   }
 
   async function undoLastPoint()
@@ -4456,11 +4466,11 @@ document.addEventListener("DOMContentLoaded", () =>
       }
 
       playSound(SOUND_IDS.UNDO);
-      animateUndo(score.lastPointTeam);
     }
     catch (err)
     {
       console.error("Undo failed:", err);
+      showToast("Undo failed to save: " + (err.message || "Unknown error"), TOAST_TYPES.ERROR);
     }
   }
 

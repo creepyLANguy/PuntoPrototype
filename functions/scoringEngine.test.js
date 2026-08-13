@@ -6,7 +6,11 @@ const {
   replayEvents,
   getCompletedMatchGames,
   getGameServerLabel,
-  getCurrentServerLabel
+  getCurrentServerLabel,
+  toLiveScorePayload,
+  compareEventOrder,
+  scoreEquivalent,
+  didSetCountIncrease
 } = require("./scoringEngine");
 
 // Helper: apply N points to a team
@@ -833,5 +837,178 @@ describe("Edge cases", () =>
     s = applyEvent(s, { eventType: "UNDO", id: "u1" });
     expect(s.A.points).toBe(0);
     expect(s.A.games).toBe(6);
+  });
+});
+
+// -----------------------------------------------------------------------
+// Regression: undo must still work for the very point that just completed
+// a set. The backend previously restarted replay from a set-completion
+// checkpoint whose history was stripped (see toLiveScorePayload), which
+// left the undo stack empty right at that boundary and silently broke
+// undo. The fix always replays from the full event log so history is
+// intact, which is what these tests simulate.
+// -----------------------------------------------------------------------
+describe("Undo immediately after a set-completing point (checkpoint boundary)", () =>
+{
+  test("undo right after the point that wins a set reverts that point", () =>
+  {
+    let s = defaultScore();
+    // Win 5 games for A, 0 for B, then win the 6th game with the final point
+    // being the one that completes the set - this mirrors the checkpoint
+    // write boundary in functions/index.js.
+    for (let i = 0; i < 5; i++)
+    {
+      s = winGame(s, "A");
+    }
+    expect(s.A.games).toBe(5);
+    expect(s.A.sets).toBe(0);
+
+    // Three points to reach game point, then the set-winning point.
+    s = awardPoints(s, "A", 3);
+    s = applyEvent(s, { eventType: "POINT_TEAM_A", id: "set-winning-point" });
+    expect(s.A.sets).toBe(1);
+    expect(s.A.games).toBe(0); // games reset after set completion
+
+    s = applyEvent(s, { eventType: "UNDO", id: "undo-set-win" });
+
+    // Undo restores the exact pre-point state: the game hadn't been won yet.
+    expect(s.A.sets).toBe(0);
+    expect(s.A.games).toBe(5);
+    expect(s.A.points).toBe(3);
+  });
+
+  test("full replay (as used by the backend's excluding-replay path) preserves history across a set boundary", () =>
+  {
+    const events = [];
+    let s = defaultScore();
+    let idx = 0;
+
+    for (let g = 0; g < 5; g++)
+    {
+      for (let p = 0; p < 4; p++)
+      {
+        events.push({ eventType: "POINT_TEAM_A", id: `e${idx++}` });
+      }
+    }
+    for (let p = 0; p < 4; p++)
+    {
+      events.push({ eventType: "POINT_TEAM_A", id: `e${idx++}` });
+    }
+
+    // Replay everything (mirrors replayScoreFromEventsExcluding with no checkpoint shortcut).
+    s = replayEvents(events);
+    expect(s.A.sets).toBe(1);
+
+    // The next event is an UNDO of the last (set-winning) point - history must not be empty.
+    const undone = applyEvent(s, { eventType: "UNDO", id: "u-final" });
+    expect(undone.A.sets).toBe(0);
+    expect(undone.A.games).toBe(5);
+  });
+});
+
+describe("toLiveScorePayload", () =>
+{
+  test("strips history but keeps all other fields", () =>
+  {
+    let s = defaultScore();
+    s = applyEvent(s, { eventType: "POINT_TEAM_A", id: "e1" });
+    expect(s.history.length).toBeGreaterThan(0);
+
+    const payload = toLiveScorePayload(s);
+    expect(payload.history).toBeUndefined();
+    expect(payload.A.points).toBe(s.A.points);
+    expect(payload.lastPointTeam).toBe(s.lastPointTeam);
+  });
+
+  test("passes through non-object values unchanged", () =>
+  {
+    expect(toLiveScorePayload(null)).toBeNull();
+    expect(toLiveScorePayload(undefined)).toBeUndefined();
+  });
+});
+
+describe("compareEventOrder", () =>
+{
+  test("returns null when either side is missing ordering info", () =>
+  {
+    expect(compareEventOrder(null, "a", { seconds: 1, nanoseconds: 0 }, "b")).toBeNull();
+    expect(compareEventOrder({ seconds: 1, nanoseconds: 0 }, "a", null, "b")).toBeNull();
+    expect(compareEventOrder({ seconds: 1, nanoseconds: 0 }, null, { seconds: 1, nanoseconds: 0 }, "b")).toBeNull();
+  });
+
+  test("orders by seconds first", () =>
+  {
+    const earlier = { seconds: 100, nanoseconds: 0 };
+    const later = { seconds: 200, nanoseconds: 0 };
+    expect(compareEventOrder(earlier, "a", later, "b")).toBeLessThan(0);
+    expect(compareEventOrder(later, "a", earlier, "b")).toBeGreaterThan(0);
+  });
+
+  test("falls back to nanoseconds when seconds tie", () =>
+  {
+    const earlier = { seconds: 100, nanoseconds: 10 };
+    const later = { seconds: 100, nanoseconds: 20 };
+    expect(compareEventOrder(earlier, "a", later, "b")).toBeLessThan(0);
+  });
+
+  test("falls back to document id when timestamps tie exactly", () =>
+  {
+    const ts = { seconds: 100, nanoseconds: 10 };
+    expect(compareEventOrder(ts, "a", ts, "b")).toBeLessThan(0);
+    expect(compareEventOrder(ts, "b", ts, "a")).toBeGreaterThan(0);
+    expect(compareEventOrder(ts, "a", ts, "a")).toBe(0);
+  });
+});
+
+describe("scoreEquivalent", () =>
+{
+  test("returns false when either score is missing", () =>
+  {
+    expect(scoreEquivalent(null, defaultScore())).toBe(false);
+    expect(scoreEquivalent(defaultScore(), null)).toBe(false);
+  });
+
+  test("returns true for two independently built but identical scores", () =>
+  {
+    const a = awardPoints(defaultScore(), "A", 3);
+    const b = awardPoints(defaultScore(), "A", 3);
+    expect(scoreEquivalent(a, b)).toBe(true);
+  });
+
+  test("returns false when completed set counts differ", () =>
+  {
+    const a = winSet60(defaultScore(), "A");
+    const b = defaultScore();
+    expect(scoreEquivalent(a, b)).toBe(false);
+  });
+
+  test("returns false when points differ", () =>
+  {
+    const a = awardPoints(defaultScore(), "A", 2);
+    const b = awardPoints(defaultScore(), "A", 1);
+    expect(scoreEquivalent(a, b)).toBe(false);
+  });
+});
+
+describe("didSetCountIncrease", () =>
+{
+  test("false when no set was completed", () =>
+  {
+    const before = defaultScore();
+    const after = awardPoints(defaultScore(), "A", 2);
+    expect(didSetCountIncrease(before, after)).toBe(false);
+  });
+
+  test("true when a set was completed", () =>
+  {
+    const before = defaultScore();
+    const after = winSet60(defaultScore(), "A");
+    expect(didSetCountIncrease(before, after)).toBe(true);
+  });
+
+  test("handles missing/undefined scores safely", () =>
+  {
+    expect(didSetCountIncrease(undefined, undefined)).toBe(false);
+    expect(didSetCountIncrease(null, defaultScore())).toBe(false);
   });
 });

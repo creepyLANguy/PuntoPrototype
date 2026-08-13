@@ -1,7 +1,18 @@
 const admin = require("firebase-admin");
 const { onDocumentCreated } = require("firebase-functions/v2/firestore");
 const { onCall } = require("firebase-functions/v2/https");
-const { defaultScore, applyEvent, normalizeScoringOptions, replayEvents, getCurrentServerLabel } = require("./scoringEngine");
+const {
+    defaultScore,
+    applyEvent,
+    normalizeScoringOptions,
+    replayEvents,
+    getCurrentServerLabel,
+    toLiveScorePayload,
+    getEventOrderingTuple,
+    compareEventOrder,
+    scoreEquivalent,
+    didSetCountIncrease
+} = require("./scoringEngine");
 const { onRequest } = require("firebase-functions/v2/https");
 
 const REGION = "africa-south1";
@@ -59,80 +70,6 @@ function buildScoringOptions(source = {})
     }
 
     return normalizeScoringOptions(options);
-}
-
-function toLiveScorePayload(score)
-{
-    if (!score || typeof score !== "object")
-    {
-        return score;
-    }
-
-    const { history, ...liveScore } = score;
-    return liveScore;
-}
-
-function getEventOrderingTuple(event)
-{
-    const createdAt = event?.createdAt || null;
-    const id = typeof event?.id === "string" ? event.id : null;
-    return { createdAt, id };
-}
-
-function compareEventOrder(leftCreatedAt, leftId, rightCreatedAt, rightId)
-{
-    if (!leftCreatedAt || !rightCreatedAt || !leftId || !rightId)
-    {
-        return null;
-    }
-
-    const secondsDiff = leftCreatedAt.seconds - rightCreatedAt.seconds;
-    if (secondsDiff !== 0) return secondsDiff;
-
-    const nanosDiff = leftCreatedAt.nanoseconds - rightCreatedAt.nanoseconds;
-    if (nanosDiff !== 0) return nanosDiff;
-
-    return leftId.localeCompare(rightId);
-}
-
-function scoreEquivalent(leftScore, rightScore)
-{
-    if (!leftScore || !rightScore) return false;
-
-    const leftCompletedSets = Array.isArray(leftScore.completedSets) ? leftScore.completedSets : [];
-    const rightCompletedSets = Array.isArray(rightScore.completedSets) ? rightScore.completedSets : [];
-
-    if (leftCompletedSets.length !== rightCompletedSets.length)
-    {
-        return false;
-    }
-
-    for (let i = 0; i < leftCompletedSets.length; i++)
-    {
-        const leftSet = leftCompletedSets[i] || {};
-        const rightSet = rightCompletedSets[i] || {};
-        if ((Number(leftSet.A) || 0) !== (Number(rightSet.A) || 0)) return false;
-        if ((Number(leftSet.B) || 0) !== (Number(rightSet.B) || 0)) return false;
-    }
-
-    return (Number(leftScore.A?.points) || 0) === (Number(rightScore.A?.points) || 0) &&
-        (Number(leftScore.B?.points) || 0) === (Number(rightScore.B?.points) || 0) &&
-        (Number(leftScore.A?.games) || 0) === (Number(rightScore.A?.games) || 0) &&
-        (Number(leftScore.B?.games) || 0) === (Number(rightScore.B?.games) || 0) &&
-        (Number(leftScore.A?.sets) || 0) === (Number(rightScore.A?.sets) || 0) &&
-        (Number(leftScore.B?.sets) || 0) === (Number(rightScore.B?.sets) || 0) &&
-        (Number(leftScore.A?.totalPoints) || 0) === (Number(rightScore.A?.totalPoints) || 0) &&
-        (Number(leftScore.B?.totalPoints) || 0) === (Number(rightScore.B?.totalPoints) || 0) &&
-        Boolean(leftScore.inTiebreak) === Boolean(rightScore.inTiebreak) &&
-        (Number(leftScore.deuceCycles) || 0) === (Number(rightScore.deuceCycles) || 0) &&
-        Boolean(leftScore.matchComplete) === Boolean(rightScore.matchComplete);
-}
-
-function didSetCountIncrease(previousScore, nextScore)
-{
-    const previousSets = (Number(previousScore?.A?.sets) || 0) + (Number(previousScore?.B?.sets) || 0);
-    const nextSets = (Number(nextScore?.A?.sets) || 0) + (Number(nextScore?.B?.sets) || 0);
-    return nextSets > previousSets;
 }
 
 function buildScoringEventsQuery(courtId)
@@ -230,30 +167,14 @@ async function replayScoreFromEvents(tx, courtId, options, useCheckpoint)
 async function replayScoreFromEventsExcluding(tx, courtId, options, excludedEventId)
 {
     // Rebuild without excluded event so caller can apply it in a deterministic position.
-    // Checkpoints are only written on set-completing point events, never on UNDO events,
-    // so a checkpoint's lastEventId can never equal the UNDO event being excluded.
-    // It is therefore safe to start from the latest matching checkpoint and replay only
-    // the tail, which avoids a full collection scan on every UNDO.
+    // Always replays from the very first event (no checkpoint shortcut here): a checkpoint
+    // snapshot has its history stripped, so resuming from one leaves the undo stack empty
+    // right at the checkpoint boundary and silently breaks "undo" for the point that just
+    // completed a set. Undo is infrequent enough that a full replay is an acceptable cost
+    // for guaranteeing the history stack is always correct.
     const activeOptions = normalizeScoringOptions(options);
     let replayedScore = defaultScore(activeOptions);
-    let query = buildScoringEventsQuery(courtId);
-
-    const checkpoint = await getLatestCheckpoint(tx, courtId, activeOptions);
-    if (checkpoint && checkpoint.data.lastEventId !== excludedEventId)
-    {
-        replayedScore = {
-            ...defaultScore(activeOptions),
-            ...(checkpoint.data.score || {}),
-            A: { ...defaultScore(activeOptions).A, ...(checkpoint.data.score?.A || {}) },
-            B: { ...defaultScore(activeOptions).B, ...(checkpoint.data.score?.B || {}) },
-            completedSets: Array.isArray(checkpoint.data.score?.completedSets)
-                ? checkpoint.data.score.completedSets.map((set) => ({ ...set }))
-                : [],
-            history: [],
-            scoringOptions: activeOptions
-        };
-        query = query.startAfter(checkpoint.data.lastCreatedAt, checkpoint.data.lastEventId);
-    }
+    const query = buildScoringEventsQuery(courtId);
 
     const eventsSnap = await tx.get(query);
     let lastEventId = null;
@@ -862,7 +783,11 @@ function shouldApplyIncomingEventAfterReplay(eventId, replayResult)
 exports.onEventCreate = onDocumentCreated(
 {
     document: "courts/{courtId}/events/{eventId}",
-    region: REGION
+    region: REGION,
+    // Rapid clicks fire many concurrent invocations that all contend for the same
+    // score/current document. Retry lets Cloud Functions redeliver this event if the
+    // transaction below ever exhausts its attempts, so a point/undo is never dropped.
+    retry: true
 },
 async (event) =>
 {
@@ -1072,10 +997,13 @@ async (event) =>
                     buildCheckpointPayload(nextScore, activeScoringOptions, nextLastEventId, nextLastProcessedCreatedAt)
                 );
             }
-        });
+        }, { maxAttempts: 20 });
     } catch (err)
     {
         console.error(`Transaction failed for event ${eventId}:`, err);
+        // Rethrow so Cloud Functions retries delivery (see retry:true above) instead of
+        // silently dropping this point/undo when the score doc is under heavy contention.
+        throw err;
     }
 }
 );

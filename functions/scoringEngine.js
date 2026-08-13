@@ -379,6 +379,82 @@ function replayEvents(events, scoringOptions = DEFAULT_SCORING_OPTIONS)
   return score;
 }
 
+// Strips the (potentially large, replay-only) undo stack before a score is persisted.
+function toLiveScorePayload(score)
+{
+  if (!score || typeof score !== "object")
+  {
+    return score;
+  }
+
+  const { history, ...liveScore } = score;
+  return liveScore;
+}
+
+function getEventOrderingTuple(event)
+{
+  const createdAt = event?.createdAt || null;
+  const id = typeof event?.id === "string" ? event.id : null;
+  return { createdAt, id };
+}
+
+// Returns <0/0/>0 like a comparator, or null when either side lacks ordering info.
+function compareEventOrder(leftCreatedAt, leftId, rightCreatedAt, rightId)
+{
+  if (!leftCreatedAt || !rightCreatedAt || !leftId || !rightId)
+  {
+    return null;
+  }
+
+  const secondsDiff = leftCreatedAt.seconds - rightCreatedAt.seconds;
+  if (secondsDiff !== 0) return secondsDiff;
+
+  const nanosDiff = leftCreatedAt.nanoseconds - rightCreatedAt.nanoseconds;
+  if (nanosDiff !== 0) return nanosDiff;
+
+  return leftId.localeCompare(rightId);
+}
+
+function scoreEquivalent(leftScore, rightScore)
+{
+  if (!leftScore || !rightScore) return false;
+
+  const leftCompletedSets = Array.isArray(leftScore.completedSets) ? leftScore.completedSets : [];
+  const rightCompletedSets = Array.isArray(rightScore.completedSets) ? rightScore.completedSets : [];
+
+  if (leftCompletedSets.length !== rightCompletedSets.length)
+  {
+    return false;
+  }
+
+  for (let i = 0; i < leftCompletedSets.length; i++)
+  {
+    const leftSet = leftCompletedSets[i] || {};
+    const rightSet = rightCompletedSets[i] || {};
+    if ((Number(leftSet.A) || 0) !== (Number(rightSet.A) || 0)) return false;
+    if ((Number(leftSet.B) || 0) !== (Number(rightSet.B) || 0)) return false;
+  }
+
+  return (Number(leftScore.A?.points) || 0) === (Number(rightScore.A?.points) || 0) &&
+    (Number(leftScore.B?.points) || 0) === (Number(rightScore.B?.points) || 0) &&
+    (Number(leftScore.A?.games) || 0) === (Number(rightScore.A?.games) || 0) &&
+    (Number(leftScore.B?.games) || 0) === (Number(rightScore.B?.games) || 0) &&
+    (Number(leftScore.A?.sets) || 0) === (Number(rightScore.A?.sets) || 0) &&
+    (Number(leftScore.B?.sets) || 0) === (Number(rightScore.B?.sets) || 0) &&
+    (Number(leftScore.A?.totalPoints) || 0) === (Number(rightScore.A?.totalPoints) || 0) &&
+    (Number(leftScore.B?.totalPoints) || 0) === (Number(rightScore.B?.totalPoints) || 0) &&
+    Boolean(leftScore.inTiebreak) === Boolean(rightScore.inTiebreak) &&
+    (Number(leftScore.deuceCycles) || 0) === (Number(rightScore.deuceCycles) || 0) &&
+    Boolean(leftScore.matchComplete) === Boolean(rightScore.matchComplete);
+}
+
+function didSetCountIncrease(previousScore, nextScore)
+{
+  const previousSets = (Number(previousScore?.A?.sets) || 0) + (Number(previousScore?.B?.sets) || 0);
+  const nextSets = (Number(nextScore?.A?.sets) || 0) + (Number(nextScore?.B?.sets) || 0);
+  return nextSets > previousSets;
+}
+
 module.exports = {
   DEFAULT_SCORING_OPTIONS,
   defaultScore,
@@ -388,5 +464,10 @@ module.exports = {
   getCompletedMatchGames,
   getGameServerLabel,
   getTiebreakServerLabel,
-  getCurrentServerLabel
+  getCurrentServerLabel,
+  toLiveScorePayload,
+  getEventOrderingTuple,
+  compareEventOrder,
+  scoreEquivalent,
+  didSetCountIncrease
 };
