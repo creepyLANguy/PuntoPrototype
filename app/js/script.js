@@ -420,6 +420,8 @@ document.addEventListener("DOMContentLoaded", () =>
     return payload;
   }
 
+  //AL.
+  //TODO - test all branches. 
   async function share(context, options = {})
   {
     const share_payload = getSharePayload(context, options);
@@ -7258,6 +7260,8 @@ window.addEventListener("resize", () =>
 
 async function cacheShareableScoreCard()
 {
+  console.log("cacheShareableScoreCard() called");
+
   const element = document.getElementById('dmBox');
 
   if (!element)
@@ -7421,4 +7425,6 @@ async function cacheShareableScoreCard()
   //TODO - this breaks. Fix it. 
   shareableScoreCardImage = file;
   //
+
+  console.log("cacheShareableScoreCard() completed successfully");
 }
