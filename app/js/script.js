@@ -539,6 +539,7 @@ document.addEventListener("DOMContentLoaded", () =>
   let score = defaultScore();
   let latestAppliedScoreOrder = null;
   let pendingScoreRenderData = null;
+  let pendingScoreRenderToken = null;
   let pendingScoreRenderId = null;
   let activeCourtListenerToken = 0;
   let isMatchDetailsCacheValid = false;
@@ -604,21 +605,20 @@ document.addEventListener("DOMContentLoaded", () =>
   {
     if (!pendingScoreRenderData) return;
 
+    const renderToken = pendingScoreRenderToken;
     const nextScore = pendingScoreRenderData;
     pendingScoreRenderData = null;
+    pendingScoreRenderToken = null;
+
+    if (renderToken !== activeCourtListenerToken)
+    {
+      return;
+    }
 
     const candidateOrder = getScoreOrderTuple(nextScore);
     const orderComparison = compareScoreOrder(candidateOrder, latestAppliedScoreOrder);
     if (orderComparison !== null && orderComparison < 0)
     {
-      if (pendingScoreRenderData && pendingScoreRenderId === null)
-      {
-        pendingScoreRenderId = window.requestAnimationFrame(() =>
-        {
-          pendingScoreRenderId = null;
-          flushPendingScoreRender();
-        });
-      }
       return;
     }
 
@@ -642,9 +642,10 @@ document.addEventListener("DOMContentLoaded", () =>
     }
   }
 
-  function queueLatestScoreRender(newData)
+  function queueLatestScoreRender(newData, listenerToken = activeCourtListenerToken)
   {
     if (!newData) return;
+    if (listenerToken !== activeCourtListenerToken) return;
 
     const candidateOrder = getScoreOrderTuple(newData);
     const appliedComparison = compareScoreOrder(candidateOrder, latestAppliedScoreOrder);
@@ -664,6 +665,7 @@ document.addEventListener("DOMContentLoaded", () =>
     }
 
     pendingScoreRenderData = newData;
+    pendingScoreRenderToken = listenerToken;
 
     if (pendingScoreRenderId !== null) return;
     pendingScoreRenderId = window.requestAnimationFrame(() =>
@@ -676,6 +678,7 @@ document.addEventListener("DOMContentLoaded", () =>
   function clearQueuedScoreRender()
   {
     pendingScoreRenderData = null;
+    pendingScoreRenderToken = null;
     latestAppliedScoreOrder = null;
     if (pendingScoreRenderId !== null)
     {
@@ -6342,7 +6345,7 @@ document.addEventListener("DOMContentLoaded", () =>
         if (navigator.canShare && navigator.canShare({ files: [dummyFile] }))
         {
           cacheShareableScoreCard();
-        }        
+        }
         //
       }
 
@@ -6692,7 +6695,7 @@ document.addEventListener("DOMContentLoaded", () =>
         finishStartupLoading();
       }
 
-      queueLatestScoreRender(newData);
+      queueLatestScoreRender(newData, listenerToken);
     });
 
     // 🔥 Listen to court metadata changes (password + teamNames)
