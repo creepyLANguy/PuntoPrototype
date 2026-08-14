@@ -873,9 +873,9 @@ async (event) =>
 
                 tx.set(scoreRef, {
                     ...toLiveScorePayload(replayResult.score),
-                    lastEventId: replayResult.lastEventId || eventId,
-                    lastProcessedEventId: replayResult.lastEventId || eventId,
-                    lastProcessedCreatedAt: replayResult.lastCreatedAt || incomingOrder.createdAt,
+                    lastEventId: replayResult.lastEventId ?? eventId,
+                    lastProcessedEventId: replayResult.lastEventId ?? eventId,
+                    lastProcessedCreatedAt: replayResult.lastCreatedAt ?? incomingOrder.createdAt,
                     updatedAt: admin.firestore.FieldValue.serverTimestamp()
                 });
 
