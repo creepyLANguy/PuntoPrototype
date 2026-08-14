@@ -537,6 +537,10 @@ document.addEventListener("DOMContentLoaded", () =>
   }
 
   let score = defaultScore();
+  let latestAppliedScoreOrder = null;
+  let pendingScoreRenderData = null;
+  let pendingScoreRenderId = null;
+  let activeCourtListenerToken = 0;
   let isMatchDetailsCacheValid = false;
   let matchDetailsCache = null;
   let matchDetailsCacheCourtId = null;
@@ -550,6 +554,134 @@ document.addEventListener("DOMContentLoaded", () =>
     isMatchDetailsCacheValid = false;
     matchDetailsCache = null;
     matchDetailsCacheCourtId = null;
+  }
+
+  function normalizeOrderEventId(value)
+  {
+    return typeof value === "string" && value.trim() ? value : null;
+  }
+
+  function normalizeOrderTimestamp(value)
+  {
+    if (!value) return null;
+    if (typeof value.seconds === "number" && typeof value.nanoseconds === "number")
+    {
+      return value;
+    }
+    return null;
+  }
+
+  function getScoreOrderTuple(scoreData)
+  {
+    return {
+      createdAt: normalizeOrderTimestamp(scoreData?.lastProcessedCreatedAt || scoreData?.updatedAt),
+      eventId: normalizeOrderEventId(scoreData?.lastProcessedEventId || scoreData?.lastEventId)
+    };
+  }
+
+  function compareScoreOrder(leftOrder, rightOrder)
+  {
+    if (
+      !leftOrder?.createdAt ||
+      !rightOrder?.createdAt ||
+      !leftOrder?.eventId ||
+      !rightOrder?.eventId
+    )
+    {
+      return null;
+    }
+
+    const secondsDiff = leftOrder.createdAt.seconds - rightOrder.createdAt.seconds;
+    if (secondsDiff !== 0) return secondsDiff;
+
+    const nanosDiff = leftOrder.createdAt.nanoseconds - rightOrder.createdAt.nanoseconds;
+    if (nanosDiff !== 0) return nanosDiff;
+
+    return leftOrder.eventId.localeCompare(rightOrder.eventId);
+  }
+
+  function flushPendingScoreRender()
+  {
+    if (!pendingScoreRenderData) return;
+
+    const nextScore = pendingScoreRenderData;
+    pendingScoreRenderData = null;
+
+    const candidateOrder = getScoreOrderTuple(nextScore);
+    const orderComparison = compareScoreOrder(candidateOrder, latestAppliedScoreOrder);
+    if (orderComparison !== null && orderComparison < 0)
+    {
+      if (pendingScoreRenderData && pendingScoreRenderId === null)
+      {
+        pendingScoreRenderId = window.requestAnimationFrame(() =>
+        {
+          pendingScoreRenderId = null;
+          flushPendingScoreRender();
+        });
+      }
+      return;
+    }
+
+    score = nextScore;
+    latestAppliedScoreOrder = candidateOrder;
+    invalidateMatchDetailsCache();
+    updateUI();
+
+    if (!elements.detailsModal.classList.contains("hidden"))
+    {
+      showMatchDetails(false, elements.dmDetailsContent.hidden === false, true);
+    }
+
+    if (pendingScoreRenderData && pendingScoreRenderId === null)
+    {
+      pendingScoreRenderId = window.requestAnimationFrame(() =>
+      {
+        pendingScoreRenderId = null;
+        flushPendingScoreRender();
+      });
+    }
+  }
+
+  function queueLatestScoreRender(newData)
+  {
+    if (!newData) return;
+
+    const candidateOrder = getScoreOrderTuple(newData);
+    const appliedComparison = compareScoreOrder(candidateOrder, latestAppliedScoreOrder);
+    if (appliedComparison !== null && appliedComparison < 0)
+    {
+      return;
+    }
+
+    if (pendingScoreRenderData)
+    {
+      const pendingOrder = getScoreOrderTuple(pendingScoreRenderData);
+      const pendingComparison = compareScoreOrder(candidateOrder, pendingOrder);
+      if (pendingComparison !== null && pendingComparison <= 0)
+      {
+        return;
+      }
+    }
+
+    pendingScoreRenderData = newData;
+
+    if (pendingScoreRenderId !== null) return;
+    pendingScoreRenderId = window.requestAnimationFrame(() =>
+    {
+      pendingScoreRenderId = null;
+      flushPendingScoreRender();
+    });
+  }
+
+  function clearQueuedScoreRender()
+  {
+    pendingScoreRenderData = null;
+    latestAppliedScoreOrder = null;
+    if (pendingScoreRenderId !== null)
+    {
+      window.cancelAnimationFrame(pendingScoreRenderId);
+      pendingScoreRenderId = null;
+    }
   }
 
   let muted = false;
@@ -2991,17 +3123,7 @@ document.addEventListener("DOMContentLoaded", () =>
         scoringOptions
       });
       const serverOptions = normalizeScoringOptions(result?.data?.scoringOptions || scoringOptions);
-      const replayedScore = result?.data?.score;
       currentScoringOptions = serverOptions;
-      score = replayedScore
-        ? {
-            ...replayedScore,
-            scoringOptions: serverOptions
-          }
-        : {
-            ...score,
-            scoringOptions: serverOptions
-          };
       syncScoringControls();
       updateUI();
 
@@ -3795,6 +3917,8 @@ document.addEventListener("DOMContentLoaded", () =>
   function leaveCourt(historyMode = "push")
   {
     //console.log("Leaving court: " + currentCourtId);
+    activeCourtListenerToken++;
+    clearQueuedScoreRender();
     pendingLocalPasswordUpdate = null;
     bumpCourtHistorySessionId();
     invalidateMatchDetailsCache();
@@ -3838,6 +3962,7 @@ document.addEventListener("DOMContentLoaded", () =>
 
   function BlankOutScoreboard()
   {
+    clearQueuedScoreRender();
     showCourtTitle("Padel Push - Live Scoreboard");
     const nameA = $("teamA").querySelector(".name-text");
     const nameB = $("teamB").querySelector(".name-text");
@@ -4352,17 +4477,7 @@ document.addEventListener("DOMContentLoaded", () =>
       });
 
       const serverOptions = normalizeScoringOptions(result?.data?.scoringOptions || nextOptions);
-      const replayedScore = result?.data?.score;
       currentScoringOptions = serverOptions;
-      score = replayedScore
-        ? {
-            ...replayedScore,
-            scoringOptions: serverOptions
-          }
-        : {
-            ...score,
-            scoringOptions: serverOptions
-          };
       syncScoringControls();
       updateUI();
       showToast("Scoring updated", TOAST_TYPES.SUCCESS);
@@ -6544,6 +6659,8 @@ document.addEventListener("DOMContentLoaded", () =>
   {
     //console.log(`Setting up real-time sync for court: ${courtId}`);
     if (unsubscribe) unsubscribe();
+    clearQueuedScoreRender();
+    const listenerToken = ++activeCourtListenerToken;
 
     const scoreRef = doc(db, "courts", courtId, "score", "current");
     const courtRef = doc(db, "courts", courtId);
@@ -6552,9 +6669,15 @@ document.addEventListener("DOMContentLoaded", () =>
     await getDoc(scoreRef);
     await getDoc(courtRef);
 
+    if (listenerToken !== activeCourtListenerToken)
+    {
+      return;
+    }
+
     // 🔥 Listen to score changes
     const unsubscribeScore = onSnapshot(scoreRef, (snap) =>
     {
+      if (listenerToken !== activeCourtListenerToken) return;
       if (!snap.exists()) return;
 
       const newData = snap.data();
@@ -6569,20 +6692,13 @@ document.addEventListener("DOMContentLoaded", () =>
         finishStartupLoading();
       }
 
-      score = newData;
-      invalidateMatchDetailsCache();
-
-      updateUI();
-
-      if (!elements.detailsModal.classList.contains("hidden"))
-      {
-        showMatchDetails(false, elements.dmDetailsContent.hidden === false, true);
-      }
+      queueLatestScoreRender(newData);
     });
 
     // 🔥 Listen to court metadata changes (password + teamNames)
     const unsubscribeCourt = onSnapshot(courtRef, (snap) =>
     {
+      if (listenerToken !== activeCourtListenerToken) return;
       if (!snap.exists())
       {
         // If we are already on a new court (redirected), ignore
@@ -6604,6 +6720,11 @@ document.addEventListener("DOMContentLoaded", () =>
         if (unsubscribeScore) unsubscribeScore();
         if (unsubscribeCourt) unsubscribeCourt();
         unsubscribe = null;
+        if (listenerToken === activeCourtListenerToken)
+        {
+          activeCourtListenerToken++;
+        }
+        clearQueuedScoreRender();
         // Enter new court
         enterCourt(data.redirect, wasSpectating, { historyMode: "replace" });
         return;
@@ -6680,6 +6801,11 @@ document.addEventListener("DOMContentLoaded", () =>
     // Combine both unsubscribes
     unsubscribe = () =>
     {
+      if (listenerToken === activeCourtListenerToken)
+      {
+        activeCourtListenerToken++;
+      }
+      clearQueuedScoreRender();
       unsubscribeScore();
       unsubscribeCourt();
     };
