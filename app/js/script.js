@@ -622,7 +622,10 @@ document.addEventListener("DOMContentLoaded", () =>
     }
 
     score = nextScore;
-    latestAppliedScoreOrder = candidateOrder;
+    if (candidateOrder.createdAt && candidateOrder.eventId)
+    {
+      latestAppliedScoreOrder = candidateOrder;
+    }
     invalidateMatchDetailsCache();
     updateUI();
 
@@ -5353,7 +5356,10 @@ document.addEventListener("DOMContentLoaded", () =>
       {
         currentCourtPassword = newPassword;
       }
-      currentScoreVersion = Number(result?.data?.scoreVersion) || (currentScoreVersion + 1);
+      if (Number.isInteger(result?.data?.scoreVersion))
+      {
+        currentScoreVersion = result.data.scoreVersion;
+      }
 
       elements.resetCourtPassword.value = "";
       elements.resetModal.classList.add("hidden");
@@ -5389,7 +5395,10 @@ document.addEventListener("DOMContentLoaded", () =>
       pendingLocalPasswordUpdate = newPassword;
       const result = await resetCourt(currentCourtId, true, newPassword, true);
       currentCourtPassword = newPassword;
-      currentScoreVersion = Number(result?.data?.scoreVersion) || (currentScoreVersion + 1);
+      if (Number.isInteger(result?.data?.scoreVersion))
+      {
+        currentScoreVersion = result.data.scoreVersion;
+      }
 
       elements.resetCourtPassword.value = "";
       elements.resetModal.classList.add("hidden");
