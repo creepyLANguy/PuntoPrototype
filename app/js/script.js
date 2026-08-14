@@ -337,7 +337,7 @@ document.addEventListener("DOMContentLoaded", () =>
     const normalizedTeams = normalizeTeamNames(teamNames);
     if (!isDefaultTeamName("A", normalizedTeams.A) && !isDefaultTeamName("B", normalizedTeams.B))
     {
-      lines.push(`Teams: ${normalizedTeams.A} vs ${normalizedTeams.B}`);
+      lines.push(`${normalizedTeams.A} vs ${normalizedTeams.B}`);
     }
 
     const playersA = getPlayerLineForTeam("A", playerNames);
@@ -371,6 +371,7 @@ document.addEventListener("DOMContentLoaded", () =>
       const gamesB = set.B || 0;
       buff += `${gamesA}-${gamesB}, `;
     });
+    buff.at(-2) === "," ? buff = buff.slice(0, -2) : null;
 
     if (score.A.games > 0 || score.B.games > 0) 
     {
@@ -388,6 +389,7 @@ document.addEventListener("DOMContentLoaded", () =>
 
     const lines = [];
     lines.push("Padel Push");
+    lines.push("\n");
 
     lines.push(...buildTeamsShareLines(currentRawTeamNames || {}, currentPlayerNames || {}));
     const scoreSummary = buildCurrentScoreSummary();
@@ -395,11 +397,13 @@ document.addEventListener("DOMContentLoaded", () =>
     {
       lines.push(scoreSummary);
     }
+    lines.push("\n");
 
     const courtId = typeof currentCourtId === "string" ? currentCourtId.trim().toLowerCase() : "";
     const courtName = typeof currentCourtName === "string" ? currentCourtName.trim() : "";
     lines.push(`Court: ${courtName ? `${courtName} (${courtId.toUpperCase()})` : courtId.toUpperCase()}`);
-
+    lines.push("\n");
+    
     lines.push( context === "details" ? `View full match details:` : `View live scoreboard:`);
     lines.push(buildCourtQrUrl(courtId));
 
