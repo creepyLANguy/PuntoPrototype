@@ -818,13 +818,13 @@ async (event) =>
     const newEvent = event.data?.data();
     const incomingEvent = { id: eventId, ...(newEvent || {}) };
 
-    console.log(`Processing event ${eventId} for court ${courtId}:`, newEvent?.eventType);
+    console.debug(`Processing event ${eventId} for court ${courtId}:`, newEvent?.eventType);
 
     if (!newEvent) return;
 
     if (!SCORING_EVENTS.has(newEvent.eventType))
     {
-        console.log(`Ignoring non-scoring event ${eventId} (${newEvent.eventType}) for score processing.`);
+        console.debug(`Ignoring non-scoring event ${eventId} (${newEvent.eventType}) for score processing.`);
         return;
     }
 
@@ -860,13 +860,13 @@ async (event) =>
 
             if (score.lastEventId === eventId)
             {
-                console.log(`Event ${eventId} already processed, skipping.`);
+                console.debug(`Event ${eventId} already processed, skipping.`);
                 return;
             }
 
             if (eventScoreVersion !== activeScoreVersion)
             {
-                console.log(
+                console.debug(
                     `Skipping stale event ${eventId} for court ${courtId}: event version ${eventScoreVersion}, active version ${activeScoreVersion}.`
                 );
                 return;
@@ -918,7 +918,7 @@ async (event) =>
             // -----------------------------
             if (newEvent.eventType === "RESET")
             {
-                console.log(`Resetting court ${courtId}`);
+                console.debug(`Resetting court ${courtId}`);
                 const eventsRef = db.collection(`courts/${courtId}/events`);
                 const eventsSnap = await eventsRef.get();
                 const checkpointsRef = db.collection(`courts/${courtId}/${SCORE_CHECKPOINTS_COLLECTION}`);
@@ -996,7 +996,7 @@ async (event) =>
             const nextScore = replayResult.score;
             const replayOrdering = resolveReplayOrdering(replayResult, score, incomingOrder);
 
-            console.log(`Updating score for ${courtId}. New points: A:${nextScore.A.points}, B:${nextScore.B.points}`);
+            console.debug(`Updating score for ${courtId}. New points: A:${nextScore.A.points}, B:${nextScore.B.points}`);
 
             tx.set(scoreRef, {
                 ...toLiveScorePayload(nextScore),
@@ -1136,13 +1136,15 @@ exports.resetCourt = onCall(
         if (Object.keys(courtUpdates).length > 0)
         {
             await courtRef.set(courtUpdates, { merge: true });
-            return {
-                scoreVersion: nextScoreVersion,
-                scoringOptions
-            };
         }
 
-        return { success: true, archivedId: archiveId, scoringMode: scoringOptions.scoringMode, scoringOptions };
+        return {
+            success: true,
+            archivedId: archiveId,
+            scoreVersion: nextScoreVersion,
+            scoringMode: scoringOptions.scoringMode,
+            scoringOptions
+        };
     }
 );
 
