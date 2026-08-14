@@ -929,11 +929,10 @@ describe("toLiveScorePayload", () =>
 
 describe("compareEventOrder", () =>
 {
-  test("returns null when either side is missing ordering info", () =>
+  test("returns null when either side is missing timestamp ordering info", () =>
   {
     expect(compareEventOrder(null, "a", { seconds: 1, nanoseconds: 0 }, "b")).toBeNull();
     expect(compareEventOrder({ seconds: 1, nanoseconds: 0 }, "a", null, "b")).toBeNull();
-    expect(compareEventOrder({ seconds: 1, nanoseconds: 0 }, null, { seconds: 1, nanoseconds: 0 }, "b")).toBeNull();
   });
 
   test("orders by seconds first", () =>
@@ -957,6 +956,21 @@ describe("compareEventOrder", () =>
     expect(compareEventOrder(ts, "a", ts, "b")).toBeLessThan(0);
     expect(compareEventOrder(ts, "b", ts, "a")).toBeGreaterThan(0);
     expect(compareEventOrder(ts, "a", ts, "a")).toBe(0);
+  });
+
+  test("still orders by timestamp when one side is missing a document id", () =>
+  {
+    const earlier = { seconds: 100, nanoseconds: 0 };
+    const later = { seconds: 101, nanoseconds: 0 };
+    expect(compareEventOrder(earlier, null, later, "b")).toBeLessThan(0);
+    expect(compareEventOrder(later, "a", earlier, null)).toBeGreaterThan(0);
+  });
+
+  test("returns null when exact timestamp ties cannot be broken without ids", () =>
+  {
+    const ts = { seconds: 100, nanoseconds: 10 };
+    expect(compareEventOrder(ts, null, ts, "b")).toBeNull();
+    expect(compareEventOrder(ts, "a", ts, null)).toBeNull();
   });
 });
 

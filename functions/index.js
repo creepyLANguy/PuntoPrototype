@@ -10,7 +10,6 @@ const {
     toLiveScorePayload,
     getEventOrderingTuple,
     compareEventOrder,
-    scoreEquivalent,
     didSetCountIncrease
 } = require("./scoringEngine");
 const { onRequest } = require("firebase-functions/v2/https");
@@ -30,7 +29,6 @@ const SCORING_EVENTS = new Set(["POINT_TEAM_A", "POINT_TEAM_B", "UNDO", "RESET"]
 const OPERATIONAL_EVENTS = new Set(["SPECTATE", "REGISTER"]);
 const SUPPORTED_EVENTS = new Set([...SCORING_EVENTS, ...OPERATIONAL_EVENTS]);
 const SCORE_CHECKPOINTS_COLLECTION = "scoreCheckpoints";
-const RECONCILE_INTERVAL_POINTS = 25;
 
 admin.initializeApp();
 const db = admin.firestore();
@@ -70,6 +68,31 @@ function buildScoringOptions(source = {})
     }
 
     return normalizeScoringOptions(options);
+}
+
+function getPersistedScoreOrder(score = {})
+{
+    const createdAt = score?.lastProcessedCreatedAt || score?.updatedAt || null;
+    const eventId = typeof score?.lastProcessedEventId === "string"
+        ? score.lastProcessedEventId
+        : (typeof score?.lastEventId === "string" ? score.lastEventId : null);
+
+    return { createdAt, eventId };
+}
+
+function resolveReplayOrdering(replayResult, existingScore = {}, fallbackOrder = {})
+{
+    const persistedOrder = getPersistedScoreOrder(existingScore);
+
+    return {
+        eventId: replayResult?.lastEventId ?? persistedOrder.eventId ?? fallbackOrder.id ?? null,
+        createdAt: replayResult?.lastCreatedAt ?? persistedOrder.createdAt ?? fallbackOrder.createdAt ?? null
+    };
+}
+
+function normalizeScoreVersion(value)
+{
+    return Number.isInteger(value) && value >= 0 ? value : 0;
 }
 
 function buildScoringEventsQuery(courtId)
@@ -829,8 +852,11 @@ async (event) =>
                 ...(courtData.scoringOptions || {}),
                 scoringMode: courtData.scoringMode || courtData.scoringOptions?.scoringMode
             });
+            const activeScoreVersion = normalizeScoreVersion(courtData.scoreVersion);
             let score = scoreSnap.exists ? scoreSnap.data() : defaultScore(activeScoringOptions);
             const incomingOrder = getEventOrderingTuple(incomingEvent);
+            const persistedOrder = getPersistedScoreOrder(score);
+            const eventScoreVersion = normalizeScoreVersion(newEvent.scoreVersion);
 
             if (score.lastEventId === eventId)
             {
@@ -838,15 +864,19 @@ async (event) =>
                 return;
             }
 
-            const lastProcessedCreatedAt = score.lastProcessedCreatedAt || null;
-            const lastProcessedEventId = typeof score.lastProcessedEventId === "string"
-                ? score.lastProcessedEventId
-                : null;
+            if (eventScoreVersion !== activeScoreVersion)
+            {
+                console.log(
+                    `Skipping stale event ${eventId} for court ${courtId}: event version ${eventScoreVersion}, active version ${activeScoreVersion}.`
+                );
+                return;
+            }
+
             const orderComparison = compareEventOrder(
                 incomingOrder.createdAt,
                 incomingOrder.id,
-                lastProcessedCreatedAt,
-                lastProcessedEventId
+                persistedOrder.createdAt,
+                persistedOrder.eventId
             );
 
             if (orderComparison !== null && orderComparison <= 0)
@@ -870,12 +900,13 @@ async (event) =>
                     activeScoringOptions,
                     useCheckpoint
                 );
+                const replayOrdering = resolveReplayOrdering(replayResult, score, incomingOrder);
 
                 tx.set(scoreRef, {
                     ...toLiveScorePayload(replayResult.score),
-                    lastEventId: replayResult.lastEventId ?? eventId,
-                    lastProcessedEventId: replayResult.lastEventId ?? eventId,
-                    lastProcessedCreatedAt: replayResult.lastCreatedAt ?? incomingOrder.createdAt,
+                    lastEventId: replayOrdering.eventId,
+                    lastProcessedEventId: replayOrdering.eventId,
+                    lastProcessedCreatedAt: replayOrdering.createdAt,
                     updatedAt: admin.firestore.FieldValue.serverTimestamp()
                 });
 
@@ -950,7 +981,8 @@ async (event) =>
                 return;
             }
 
-            // Normal point event stays incremental.
+            // Normal point events are rebuilt from the authoritative event log so
+            // rapid concurrent writes cannot drop points by racing on score/current.
             const previousScore = {
                 ...defaultScore(activeScoringOptions),
                 ...(score || {}),
@@ -960,35 +992,17 @@ async (event) =>
                     ? score.completedSets.map((set) => ({ ...set }))
                     : []
             };
-            const updatedScore = applyEvent(score, newEvent, activeScoringOptions);
+            const replayResult = await replayScoreFromEvents(tx, courtId, activeScoringOptions, true);
+            const nextScore = replayResult.score;
+            const replayOrdering = resolveReplayOrdering(replayResult, score, incomingOrder);
 
-            console.log(`Updating score for ${courtId}. New points: A:${updatedScore.A.points}, B:${updatedScore.B.points}`);
-
-            let nextScore = updatedScore;
-            let nextLastEventId = eventId;
-            let nextLastProcessedCreatedAt = incomingOrder.createdAt;
-
-            // Reconcile every N points using full replay, then auto-heal if drift appears.
-            const totalPoints = (Number(updatedScore.A?.totalPoints) || 0) + (Number(updatedScore.B?.totalPoints) || 0);
-            const shouldReconcile = RECONCILE_INTERVAL_POINTS  > 0 && totalPoints > 0 && totalPoints % RECONCILE_INTERVAL_POINTS === 0;
-
-            if (shouldReconcile)
-            {
-                const fullReplay = await replayScoreFromEvents(tx, courtId, activeScoringOptions, false);
-                if (!scoreEquivalent(updatedScore, fullReplay.score))
-                {
-                    console.warn(`Drift detected at ${totalPoints} points on ${courtId}. Auto-healing from full replay.`);
-                    nextScore = fullReplay.score;
-                    nextLastEventId = fullReplay.lastEventId || eventId;
-                    nextLastProcessedCreatedAt = fullReplay.lastCreatedAt || incomingOrder.createdAt;
-                }
-            }
+            console.log(`Updating score for ${courtId}. New points: A:${nextScore.A.points}, B:${nextScore.B.points}`);
 
             tx.set(scoreRef, {
                 ...toLiveScorePayload(nextScore),
-                lastEventId: nextLastEventId,
-                lastProcessedEventId: nextLastEventId,
-                lastProcessedCreatedAt: nextLastProcessedCreatedAt,
+                lastEventId: replayOrdering.eventId,
+                lastProcessedEventId: replayOrdering.eventId,
+                lastProcessedCreatedAt: replayOrdering.createdAt,
                 updatedAt: admin.firestore.FieldValue.serverTimestamp()
             });
 
@@ -998,7 +1012,12 @@ async (event) =>
                 const checkpointRef = db.collection(`courts/${courtId}/${SCORE_CHECKPOINTS_COLLECTION}`).doc();
                 tx.set(
                     checkpointRef,
-                    buildCheckpointPayload(nextScore, activeScoringOptions, nextLastEventId, nextLastProcessedCreatedAt)
+                    buildCheckpointPayload(
+                        nextScore,
+                        activeScoringOptions,
+                        replayOrdering.eventId,
+                        replayOrdering.createdAt
+                    )
                 );
             }
         }, { maxAttempts: 20 });
@@ -1057,6 +1076,7 @@ exports.resetCourt = onCall(
             ...(incomingScoringOptions || {}),
             scoringMode: scoringMode || courtData.scoringMode || courtData.scoringOptions?.scoringMode
         });
+        const nextScoreVersion = normalizeScoreVersion(courtData.scoreVersion) + 1;
 
         const eventsRef = db.collection(`courts/${courtId}/events`);
         const eventsSnap = await eventsRef.get();
@@ -1097,6 +1117,7 @@ exports.resetCourt = onCall(
         });
 
         const courtUpdates = {
+            scoreVersion: nextScoreVersion,
             scoringOptions,
             scoringMode: scoringOptions.scoringMode
         };
@@ -1115,6 +1136,10 @@ exports.resetCourt = onCall(
         if (Object.keys(courtUpdates).length > 0)
         {
             await courtRef.set(courtUpdates, { merge: true });
+            return {
+                scoreVersion: nextScoreVersion,
+                scoringOptions
+            };
         }
 
         return { success: true, archivedId: archiveId, scoringMode: scoringOptions.scoringMode, scoringOptions };

@@ -689,6 +689,7 @@ document.addEventListener("DOMContentLoaded", () =>
   let currentCourtPassword = null;
   let pendingLocalPasswordUpdate = null;
   let currentCourtStatus = null;
+  let currentScoreVersion = 0;
   let currentScoringOptions = { ...DEFAULT_SCORING_OPTIONS };
   let currentRawTeamNames = { ...DEFAULT_TEAM_NAMES };
   let currentPlayerNames = { ...DEFAULT_PLAYER_NAMES };
@@ -3705,6 +3706,7 @@ document.addEventListener("DOMContentLoaded", () =>
       name: courtName,
       password: courtPass,
       createdAt: serverTimestamp(),
+      scoreVersion: 0,
       teamNames: { A: "Team A", B: "Team B" },
       playerNames: { ...DEFAULT_PLAYER_NAMES },
       status: elements.courtStatus.value,
@@ -3840,6 +3842,7 @@ document.addEventListener("DOMContentLoaded", () =>
     currentCourtName = data.name || courtId;
     currentCourtPassword = data.password;
     currentCourtStatus = data.status;
+    currentScoreVersion = Number(data.scoreVersion) || 0;
     currentRawTeamNames = normalizeTeamNames(data.teamNames || {});
     currentPlayerNames = normalizePlayerNames(data.playerNames || {});
     currentScoringOptions = normalizeScoringOptions({
@@ -3935,6 +3938,7 @@ document.addEventListener("DOMContentLoaded", () =>
     currentCourtName = null;
     currentCourtPassword = null;
     currentCourtStatus = null;
+    currentScoreVersion = 0;
     currentScoringOptions = { ...DEFAULT_SCORING_OPTIONS };
     syncScoringControls();
     clearCourtQr();
@@ -4503,7 +4507,8 @@ document.addEventListener("DOMContentLoaded", () =>
         {
           eventType: addpointevent,
           createdAt: serverTimestamp(),
-          createdBy: thisDeviceId
+          createdBy: thisDeviceId,
+          scoreVersion: Number(currentScoreVersion) || 0
         }
       );
     }
@@ -4525,7 +4530,8 @@ document.addEventListener("DOMContentLoaded", () =>
         {
           eventType: EVENT_TYPES.UNDO,
           createdAt: serverTimestamp(),
-          createdBy: thisDeviceId
+          createdBy: thisDeviceId,
+          scoreVersion: Number(currentScoreVersion) || 0
         }
       );
 
@@ -5339,11 +5345,12 @@ document.addEventListener("DOMContentLoaded", () =>
         pendingLocalPasswordUpdate = newPassword;
       }
 
-      await resetCourt(currentCourtId, false, newPassword, requirePassword);
+      const result = await resetCourt(currentCourtId, false, newPassword, requirePassword);
       if (newPassword)
       {
         currentCourtPassword = newPassword;
       }
+      currentScoreVersion = Number(result?.data?.scoreVersion) || (currentScoreVersion + 1);
 
       elements.resetCourtPassword.value = "";
       elements.resetModal.classList.add("hidden");
@@ -5377,8 +5384,9 @@ document.addEventListener("DOMContentLoaded", () =>
       showSpinner(elements.resetModal);
       
       pendingLocalPasswordUpdate = newPassword;
-      await resetCourt(currentCourtId, true, newPassword, true);
+      const result = await resetCourt(currentCourtId, true, newPassword, true);
       currentCourtPassword = newPassword;
+      currentScoreVersion = Number(result?.data?.scoreVersion) || (currentScoreVersion + 1);
 
       elements.resetCourtPassword.value = "";
       elements.resetModal.classList.add("hidden");
@@ -6769,6 +6777,7 @@ document.addEventListener("DOMContentLoaded", () =>
       // Ensure local state tracks newest password
       currentCourtPassword = data.password;
       currentCourtStatus = data.status;
+      currentScoreVersion = Number(data.scoreVersion) || 0;
 
       const nextScoringOptions = normalizeScoringOptions({
         ...(data.scoringOptions || {}),
