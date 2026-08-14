@@ -6198,6 +6198,7 @@ document.addEventListener("DOMContentLoaded", () =>
     try
     {
       let result = matchDetailsCache;
+      
       const canUseDetailsCache =
         isMatchDetailsCacheValid &&
         matchDetailsCache &&

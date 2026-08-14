@@ -207,7 +207,7 @@ function undo(score, scoringOptions)
 {
   if (!score.history || score.history.length === 0)
   {
-    //("Nothing to undo");
+    console.log("Nothing to undo");
     return normalizeScore(score, scoringOptions);
   }
 
