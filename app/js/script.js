@@ -580,9 +580,7 @@ document.addEventListener("DOMContentLoaded", () =>
   {
     if (
       !leftOrder?.createdAt ||
-      !rightOrder?.createdAt ||
-      !leftOrder?.eventId ||
-      !rightOrder?.eventId
+      !rightOrder?.createdAt
     )
     {
       return null;
@@ -593,6 +591,11 @@ document.addEventListener("DOMContentLoaded", () =>
 
     const nanosDiff = leftOrder.createdAt.nanoseconds - rightOrder.createdAt.nanoseconds;
     if (nanosDiff !== 0) return nanosDiff;
+
+    if (!leftOrder?.eventId || !rightOrder?.eventId)
+    {
+      return null;
+    }
 
     return leftOrder.eventId.localeCompare(rightOrder.eventId);
   }
