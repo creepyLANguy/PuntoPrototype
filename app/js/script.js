@@ -371,7 +371,6 @@ document.addEventListener("DOMContentLoaded", () =>
       const gamesB = set.B || 0;
       buff += `${gamesA}-${gamesB}, `;
     });
-    buff.at(-2) === "," ? buff = buff.slice(0, -2) : null;
 
     if (score.A.games > 0 || score.B.games > 0) 
     {
@@ -380,32 +379,29 @@ document.addEventListener("DOMContentLoaded", () =>
       buff += `${gamesA}-${gamesB}`;
     }
 
+    buff.at(-2) === "," ? buff = buff.slice(0, -2) : null;
+
     return buff;
   }
 
   function getSharePayload(context)
   {  
-    const payload = { title: "Padel Push", text: "", url: "", files: [] };
+    const payload = { title: "", text: "", url: "", files: [] };
 
     const lines = [];
-    lines.push("Padel Push");
-    lines.push("\n");
+    lines.push("Padel Push\n");
 
     lines.push(...buildTeamsShareLines(currentRawTeamNames || {}, currentPlayerNames || {}));
     const scoreSummary = buildCurrentScoreSummary();
     if (scoreSummary)
     {
-      lines.push(scoreSummary);
+      lines.push(scoreSummary + "\n");
     }
-    lines.push("\n");
 
-    const courtId = typeof currentCourtId === "string" ? currentCourtId.trim().toLowerCase() : "";
-    const courtName = typeof currentCourtName === "string" ? currentCourtName.trim() : "";
-    lines.push(`Court: ${courtName ? `${courtName} (${courtId.toUpperCase()})` : courtId.toUpperCase()}`);
-    lines.push("\n");
-    
+    lines.push(`${currentCourtName} (${currentCourtId.toUpperCase()})\n`);
+
     lines.push( context === "details" ? `View full match details:` : `View live scoreboard:`);
-    lines.push(buildCourtQrUrl(courtId));
+    lines.push(buildCourtQrUrl(currentCourtId));
 
     payload.text = lines.join("\n");
 
