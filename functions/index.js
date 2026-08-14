@@ -811,6 +811,16 @@ async (event) =>
     {
         await db.runTransaction(async (tx) =>
         {
+            // Guard against reset races: if the event document was deleted by a
+            // concurrent reset before this CF ran its transaction, skip processing
+            // so a pre-reset point cannot corrupt the newly-zeroed score.
+            const eventRef = db.doc(`courts/${courtId}/events/${eventId}`);
+            const eventSnap = await tx.get(eventRef);
+            if (!eventSnap.exists)
+            {
+                return;
+            }
+
             const courtRef = db.doc(`courts/${courtId}`);
             const courtSnap = await tx.get(courtRef);
             const courtData = courtSnap.exists ? courtSnap.data() : {};
@@ -841,37 +851,31 @@ async (event) =>
 
             if (orderComparison !== null && orderComparison <= 0)
             {
-                let rebuiltScore;
-
-                if (newEvent.eventType === "UNDO")
-                {
-                    // Use the excluding-replay path so the UNDO is not applied twice:
-                    // replayScoreFromEventsExcluding replays all prior events (excluding
-                    // this UNDO event), then we apply the UNDO once below.
-                    const replayResult = await replayScoreFromEventsExcluding(
-                        tx,
-                        courtId,
-                        activeScoringOptions,
-                        eventId
-                    );
-                    rebuiltScore = applyEvent(replayResult.score, incomingEvent, activeScoringOptions);
-                }
-                else
-                {
-                    const replayResult = await replayScoreFromEvents(tx, courtId, activeScoringOptions, true);
-                    rebuiltScore = replayResult.score;
-
-                    if (shouldApplyIncomingEventAfterReplay(eventId, replayResult))
-                    {
-                        rebuiltScore = applyEvent(rebuiltScore, newEvent, activeScoringOptions);
-                    }
-                }
+                // The incoming event arrived out-of-order relative to what the score
+                // document has already processed.  Rebuild from the full event log so
+                // the event is applied in its correct chronological position.
+                //
+                // For UNDO: useCheckpoint must be false to preserve the in-memory
+                // history stack that undo() depends on (checkpoints strip history).
+                // replayScoreFromEvents processes every event in (createdAt, docId)
+                // order, including this UNDO, so it lands in the right slot.
+                //
+                // For POINT: the event already sits in the collection in its correct
+                // slot, so the replay score is the authoritative result — no second
+                // applyEvent call is needed.
+                const useCheckpoint = newEvent.eventType !== "UNDO";
+                const replayResult = await replayScoreFromEvents(
+                    tx,
+                    courtId,
+                    activeScoringOptions,
+                    useCheckpoint
+                );
 
                 tx.set(scoreRef, {
-                    ...toLiveScorePayload(rebuiltScore),
-                    lastEventId: eventId,
-                    lastProcessedEventId: eventId,
-                    lastProcessedCreatedAt: incomingOrder.createdAt,
+                    ...toLiveScorePayload(replayResult.score),
+                    lastEventId: replayResult.lastEventId || eventId,
+                    lastProcessedEventId: replayResult.lastEventId || eventId,
+                    lastProcessedCreatedAt: replayResult.lastCreatedAt || incomingOrder.createdAt,
                     updatedAt: admin.firestore.FieldValue.serverTimestamp()
                 });
 
@@ -1080,8 +1084,17 @@ exports.resetCourt = onCall(
         checkpointsSnap.forEach(doc => deleteBatch.delete(doc.ref));
         await deleteBatch.commit();
 
-        // Reset score
-        await db.doc(`courts/${courtId}/score/current`).set(toLiveScorePayload(defaultScore(scoringOptions)));
+        // Reset score. Include explicit null sentinels for the ordering fields so
+        // that any in-flight Cloud Function invocation for a pre-reset event — whose
+        // event document has already been deleted — cannot corrupt the fresh score
+        // (the tx.get(eventRef) existence check in onEventCreate will bail early,
+        // but writing nulls here also clears any stale baseline timestamp that would
+        // make a late CF fall through the orderComparison guard).
+        await db.doc(`courts/${courtId}/score/current`).set({
+            ...toLiveScorePayload(defaultScore(scoringOptions)),
+            lastProcessedEventId: null,
+            lastProcessedCreatedAt: null
+        });
 
         const courtUpdates = {
             scoringOptions,
