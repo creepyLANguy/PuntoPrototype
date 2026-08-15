@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Padel Push — Score Overlay</title>
+  <link rel="icon" href="/app/media/img/favicon.svg" />
+  <style>
+    :root {
+      --ov-bg: transparent;
+      --ov-panel: rgba(0, 0, 0, 0.82);
+      --ov-text: #ffffff;
+      --ov-teamA: #ffff00;
+      --ov-teamB: #00ffff;
+      --ov-accent: #2b60bc;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html,
+    body {
+      background: var(--ov-bg);
+      font-family: "Inter", "Outfit", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      color: var(--ov-text);
+      min-height: 100vh;
+    }
+
+    .overlay {
+      position: fixed;
+      top: 16px;
+      left: 16px;
+      min-width: 340px;
+      max-width: 480px;
+      background: var(--ov-panel);
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 18px rgba(0, 0, 0, 0.45);
+      border-left: 4px solid var(--ov-accent);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 12px 4px;
+      opacity: 0.92;
+    }
+
+    .brand img {
+      width: 18px;
+      height: 18px;
+      object-fit: contain;
+    }
+
+    .brand-name {
+      font-size: 0.72rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 1.4px;
+    }
+
+    .brand-court {
+      margin-left: auto;
+      font-size: 0.68rem;
+      font-weight: 600;
+      opacity: 0.75;
+      max-width: 45%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .team-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 12px;
+    }
+
+    .team-row+.team-row {
+      border-top: 1px solid rgba(255, 255, 255, 0.12);
+    }
+
+    .team-id {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+    }
+
+    .team-logo {
+      width: 26px;
+      height: 26px;
+      object-fit: contain;
+      border-radius: 4px;
+      display: none;
+    }
+
+    .team-logo.visible {
+      display: block;
+    }
+
+    .team-names {
+      min-width: 0;
+    }
+
+    .team-name {
+      font-size: 1rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: -0.3px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .team-row[data-team="A"] .team-name {
+      color: var(--ov-teamA);
+    }
+
+    .team-row[data-team="B"] .team-name {
+      color: var(--ov-teamB);
+    }
+
+    .team-players {
+      font-size: 0.72rem;
+      opacity: 0.8;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .serve-dot {
+      display: inline-block;
+      visibility: hidden;
+    }
+
+    .serve-dot.serving {
+      visibility: visible;
+    }
+
+    .score-cells {
+      display: flex;
+      align-items: stretch;
+      gap: 4px;
+    }
+
+    .cell {
+      min-width: 30px;
+      padding: 3px 6px;
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.1);
+      text-align: center;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .cell .cell-label {
+      display: block;
+      font-size: 0.5rem;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      opacity: 0.6;
+    }
+
+    .cell .cell-value {
+      display: block;
+      font-size: 1.05rem;
+      font-weight: 800;
+      line-height: 1.2;
+    }
+
+    .cell.points {
+      background: var(--ov-accent);
+    }
+
+    .status-line {
+      padding: 3px 12px 6px;
+      font-size: 0.66rem;
+      opacity: 0.75;
+      display: none;
+    }
+
+    .status-line.visible {
+      display: block;
+    }
+
+    /* ---------- Settings UI ---------- */
+    .gear-btn {
+      position: fixed;
+      bottom: 12px;
+      right: 12px;
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      border: none;
+      background: rgba(0, 0, 0, 0.65);
+      color: #fff;
+      font-size: 1.1rem;
+      cursor: pointer;
+      opacity: 0.25;
+      transition: opacity 0.2s;
+    }
+
+    .gear-btn:hover,
+    .gear-btn:focus {
+      opacity: 1;
+    }
+
+    .settings-panel {
+      position: fixed;
+      bottom: 60px;
+      right: 12px;
+      width: 320px;
+      max-height: calc(100vh - 90px);
+      overflow-y: auto;
+      background: rgba(10, 10, 10, 0.96);
+      color: #fff;
+      border-radius: 12px;
+      padding: 14px;
+      box-shadow: 0 6px 24px rgba(0, 0, 0, 0.6);
+      display: none;
+    }
+
+    .settings-panel.open {
+      display: block;
+    }
+
+    .settings-panel h2 {
+      font-size: 0.9rem;
+      margin-bottom: 10px;
+      letter-spacing: 0.5px;
+    }
+
+    .settings-panel label {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      font-size: 0.72rem;
+      margin-bottom: 7px;
+    }
+
+    .settings-panel input[type="text"],
+    .settings-panel input[type="url"] {
+      flex: 1;
+      max-width: 190px;
+      background: #1a1a1a;
+      border: 1px solid #444;
+      border-radius: 6px;
+      color: #fff;
+      padding: 4px 6px;
+      font-size: 0.72rem;
+    }
+
+    .settings-panel input[type="color"] {
+      width: 34px;
+      height: 24px;
+      border: none;
+      background: none;
+      padding: 0;
+      cursor: pointer;
+    }
+
+    .settings-panel .section {
+      margin: 10px 0 6px;
+      font-size: 0.66rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      opacity: 0.6;
+    }
+
+    .settings-panel .row-btns {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .settings-panel button {
+      flex: 1;
+      border: none;
+      border-radius: 6px;
+      padding: 7px 0;
+      font-size: 0.72rem;
+      font-weight: 700;
+      cursor: pointer;
+      background: #2b60bc;
+      color: #fff;
+    }
+
+    .settings-panel button.secondary {
+      background: #333;
+    }
+
+    .transparent-note {
+      font-size: 0.62rem;
+      opacity: 0.55;
+      margin-bottom: 8px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="overlay" id="overlayBox">
+    <div class="brand">
+      <img src="/app/media/img/logo.svg" alt="Padel Push logo" />
+      <span class="brand-name">Padel Push</span>
+      <span class="brand-court" id="courtLabel"></span>
+    </div>
+
+    <div class="team-row" data-team="A">
+      <div class="team-id">
+        <img class="team-logo" id="logoA" alt="" />
+        <div class="team-names">
+          <div class="team-name" id="nameA">Team A</div>
+          <div class="team-players" id="playersA"></div>
+        </div>
+      </div>
+      <div class="score-cells" id="cellsA"></div>
+    </div>
+
+    <div class="team-row" data-team="B">
+      <div class="team-id">
+        <img class="team-logo" id="logoB" alt="" />
+        <div class="team-names">
+          <div class="team-name" id="nameB">Team B</div>
+          <div class="team-players" id="playersB"></div>
+        </div>
+      </div>
+      <div class="score-cells" id="cellsB"></div>
+    </div>
+
+    <div class="status-line" id="statusLine"></div>
+  </div>
+
+  <button class="gear-btn" id="gearBtn" title="Customise overlay" aria-label="Customise overlay">⚙</button>
+
+  <div class="settings-panel" id="settingsPanel">
+    <h2>Customise Overlay</h2>
+    <p class="transparent-note">The page background is transparent by default — ideal for an OBS browser source.</p>
+
+    <div class="section">Colours</div>
+    <label><span>Panel background</span><input type="color" id="setPanel" /></label>
+    <label><span>Text</span><input type="color" id="setText" /></label>
+    <label><span>Team A</span><input type="color" id="setTeamA" /></label>
+    <label><span>Team B</span><input type="color" id="setTeamB" /></label>
+    <label><span>Accent</span><input type="color" id="setAccent" /></label>
+
+    <div class="section">Team names</div>
+    <label><span>Team A</span><input type="text" id="setNameA" placeholder="From scoreboard" /></label>
+    <label><span>Team B</span><input type="text" id="setNameB" placeholder="From scoreboard" /></label>
+
+    <div class="section">Player names</div>
+    <label><span>Player A1</span><input type="text" id="setPlayerA1" placeholder="From scoreboard" /></label>
+    <label><span>Player A2</span><input type="text" id="setPlayerA2" placeholder="From scoreboard" /></label>
+    <label><span>Player B1</span><input type="text" id="setPlayerB1" placeholder="From scoreboard" /></label>
+    <label><span>Player B2</span><input type="text" id="setPlayerB2" placeholder="From scoreboard" /></label>
+
+    <div class="section">Team logos (image URLs)</div>
+    <label><span>Team A logo</span><input type="url" id="setLogoA" placeholder="https://…" /></label>
+    <label><span>Team B logo</span><input type="url" id="setLogoB" placeholder="https://…" /></label>
+
+    <div class="row-btns">
+      <button id="resetSettings" class="secondary" type="button">Reset</button>
+      <button id="closeSettings" type="button">Done</button>
+    </div>
+  </div>
+
+  <script>
+    (function ()
+    {
+      const POLL_INTERVAL_MS = 10 * 1000;
+
+      const DEFAULT_SETTINGS = {
+        panel: "#000000",
+        text: "#ffffff",
+        teamA: "#ffff00",
+        teamB: "#00ffff",
+        accent: "#2b60bc",
+        nameA: "",
+        nameB: "",
+        playerA1: "",
+        playerA2: "",
+        playerB1: "",
+        playerB2: "",
+        logoA: "",
+        logoB: ""
+      };
+
+      function getCourtIdFromPath()
+      {
+        const segments = window.location.pathname.split("/").filter(Boolean);
+        const last = segments.length ? segments[segments.length - 1] : "";
+
+        if (!last || last === "b" || last === "overlay.html")
+        {
+          return null;
+        }
+
+        try
+        {
+          return decodeURIComponent(last);
+        }
+        catch (_err)
+        {
+          return last;
+        }
+      }
+
+      const courtId = getCourtIdFromPath();
+      const storageKey = "padelPushOverlaySettings:" + (courtId || "default");
+
+      let settings = { ...DEFAULT_SETTINGS };
+      let latestScore = null;
+
+      function loadSettings()
+      {
+        try
+        {
+          const raw = localStorage.getItem(storageKey);
+          if (raw)
+          {
+            settings = { ...DEFAULT_SETTINGS, ...JSON.parse(raw) };
+          }
+        }
+        catch (_err) { /* keep defaults */ }
+      }
+
+      function saveSettings()
+      {
+        try
+        {
+          localStorage.setItem(storageKey, JSON.stringify(settings));
+        }
+        catch (_err) { /* storage unavailable */ }
+      }
+
+      function hexToPanelRgba(hex)
+      {
+        const value = /^#([0-9a-f]{6})$/i.exec(hex || "");
+        if (!value) return "rgba(0, 0, 0, 0.82)";
+        const int = parseInt(value[1], 16);
+        const r = (int >> 16) & 255;
+        const g = (int >> 8) & 255;
+        const b = int & 255;
+        return "rgba(" + r + ", " + g + ", " + b + ", 0.82)";
+      }
+
+      function applySettings()
+      {
+        const root = document.documentElement.style;
+        root.setProperty("--ov-panel", hexToPanelRgba(settings.panel));
+        root.setProperty("--ov-text", settings.text);
+        root.setProperty("--ov-teamA", settings.teamA);
+        root.setProperty("--ov-teamB", settings.teamB);
+        root.setProperty("--ov-accent", settings.accent);
+
+        applyLogo("logoA", settings.logoA);
+        applyLogo("logoB", settings.logoB);
+
+        if (latestScore)
+        {
+          render(latestScore);
+        }
+      }
+
+      function applyLogo(id, url)
+      {
+        const img = document.getElementById(id);
+        if (url)
+        {
+          img.src = url;
+          img.classList.add("visible");
+        }
+        else
+        {
+          img.removeAttribute("src");
+          img.classList.remove("visible");
+        }
+      }
+
+      function setCells(containerId, cells)
+      {
+        const container = document.getElementById(containerId);
+        container.textContent = "";
+
+        cells.forEach((cell) =>
+        {
+          const div = document.createElement("div");
+          div.className = "cell" + (cell.highlight ? " points" : "");
+
+          const label = document.createElement("span");
+          label.className = "cell-label";
+          label.textContent = cell.label;
+
+          const value = document.createElement("span");
+          value.className = "cell-value";
+          value.textContent = cell.value;
+
+          div.appendChild(label);
+          div.appendChild(value);
+          container.appendChild(div);
+        });
+      }
+
+      function serveDot(serving)
+      {
+        return serving ? " \u{1F3BE}" : "";
+      }
+
+      function playersLine(team, data)
+      {
+        const p1 = settings["player" + team + "1"] || data.playerNames[team + "1"];
+        const p2 = settings["player" + team + "2"] || data.playerNames[team + "2"];
+        const server = data.server || "";
+
+        const parts = [];
+        if (p1) parts.push(p1 + (server === team + "1" ? serveDot(true) : ""));
+        if (p2) parts.push(p2 + (server === team + "2" ? serveDot(true) : ""));
+
+        return parts.join(" · ");
+      }
+
+      function render(data)
+      {
+        latestScore = data;
+
+        document.getElementById("courtLabel").textContent = data.courtId || courtId || "";
+
+        ["A", "B"].forEach((team) =>
+        {
+          const nameOverride = settings["name" + team];
+          const teamName = nameOverride || data.teamNames[team] || ("Team " + team);
+          const serverTeam = (data.server || "").charAt(0);
+          const players = playersLine(team, data);
+
+          // Team-level serve marker only when no player names carry it
+          const teamServeMark = serverTeam === team && !players ? serveDot(true) : "";
+
+          document.getElementById("name" + team).textContent = teamName + teamServeMark;
+          document.getElementById("players" + team).textContent = players;
+
+          const cells = [];
+          const mode = data.scoringMode || "standard";
+
+          if (mode === "standard")
+          {
+            (data.completedSets || []).forEach((set, index) =>
+            {
+              cells.push({ label: "S" + (index + 1), value: Number(set[team]) || 0 });
+            });
+            cells.push({ label: "Sets", value: data.teams[team].sets });
+            cells.push({ label: "Games", value: data.teams[team].games });
+            cells.push({
+              label: data.inTiebreak ? "TB" : "Pts",
+              value: data.teams[team].pointsDisplay,
+              highlight: true
+            });
+          }
+          else
+          {
+            cells.push({ label: "Pts", value: data.teams[team].pointsDisplay, highlight: true });
+          }
+
+          setCells("cells" + team, cells);
+        });
+
+        const statusLine = document.getElementById("statusLine");
+        if (data.matchComplete)
+        {
+          statusLine.textContent = "Match complete";
+          statusLine.classList.add("visible");
+        }
+        else
+        {
+          statusLine.textContent = "";
+          statusLine.classList.remove("visible");
+        }
+      }
+
+      function showError(message)
+      {
+        const statusLine = document.getElementById("statusLine");
+        statusLine.textContent = message;
+        statusLine.classList.add("visible");
+      }
+
+      async function poll()
+      {
+        if (!courtId)
+        {
+          showError("No court specified. Use /b/{courtId}.");
+          return;
+        }
+
+        try
+        {
+          const response = await fetch("/a/" + encodeURIComponent(courtId), { cache: "no-store" });
+          const data = await response.json();
+
+          if (!response.ok || !data.success)
+          {
+            showError(data.error || "Could not load score.");
+            return;
+          }
+
+          render(data);
+        }
+        catch (_err)
+        {
+          showError("Connection lost. Retrying…");
+        }
+      }
+
+      // ---------- Settings UI wiring ----------
+      const fieldMap = {
+        setPanel: "panel",
+        setText: "text",
+        setTeamA: "teamA",
+        setTeamB: "teamB",
+        setAccent: "accent",
+        setNameA: "nameA",
+        setNameB: "nameB",
+        setPlayerA1: "playerA1",
+        setPlayerA2: "playerA2",
+        setPlayerB1: "playerB1",
+        setPlayerB2: "playerB2",
+        setLogoA: "logoA",
+        setLogoB: "logoB"
+      };
+
+      function syncInputsFromSettings()
+      {
+        Object.entries(fieldMap).forEach(([inputId, key]) =>
+        {
+          document.getElementById(inputId).value = settings[key];
+        });
+      }
+
+      Object.entries(fieldMap).forEach(([inputId, key]) =>
+      {
+        document.getElementById(inputId).addEventListener("input", (event) =>
+        {
+          settings[key] = key.startsWith("logo") ? event.target.value.trim() : event.target.value;
+          saveSettings();
+          applySettings();
+        });
+      });
+
+      const gearBtn = document.getElementById("gearBtn");
+      const settingsPanel = document.getElementById("settingsPanel");
+
+      gearBtn.addEventListener("click", () =>
+      {
+        settingsPanel.classList.toggle("open");
+      });
+
+      document.getElementById("closeSettings").addEventListener("click", () =>
+      {
+        settingsPanel.classList.remove("open");
+      });
+
+      document.getElementById("resetSettings").addEventListener("click", () =>
+      {
+        settings = { ...DEFAULT_SETTINGS };
+        saveSettings();
+        syncInputsFromSettings();
+        applySettings();
+      });
+
+      // ---------- Boot ----------
+      loadSettings();
+      syncInputsFromSettings();
+      applySettings();
+      void poll();
+      setInterval(poll, POLL_INTERVAL_MS);
+    })();
+  </script>
+</body>
+
+</html>
