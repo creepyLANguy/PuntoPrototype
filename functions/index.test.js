@@ -4,7 +4,7 @@ const {
   toLiveScorePayload
 } = require("./scoringEngine");
 
-let fakeDb = null;
+let mockDb = null;
 
 jest.mock("firebase-functions/v2/firestore", () => ({
   onDocumentCreated: (_config, handler) => handler
@@ -17,7 +17,7 @@ jest.mock("firebase-functions/v2/https", () => ({
 
 jest.mock("firebase-admin", () =>
 {
-  const firestore = () => fakeDb;
+  const firestore = () => mockDb;
   firestore.FieldPath = {
     documentId: () => "__name__"
   };
@@ -261,6 +261,18 @@ class FakeQuery
 
 describe("onEventCreate", () =>
 {
+  let consoleDebugSpy;
+
+  beforeEach(() =>
+  {
+    consoleDebugSpy = jest.spyOn(console, "debug").mockImplementation(() => {});
+  });
+
+  afterEach(() =>
+  {
+    consoleDebugSpy.mockRestore();
+  });
+
   test("fully replays delayed point events that sort before the latest checkpoint", async () =>
   {
     const courtId = "court-1";
@@ -280,7 +292,7 @@ describe("onEventCreate", () =>
     const persistedScore = toLiveScorePayload(replayEvents([e1, e2, e3, e4, e5], DEFAULT_SCORING_OPTIONS));
     const fullReplayScore = toLiveScorePayload(replayEvents([e1, e2, e3, delayed, e4, e5], DEFAULT_SCORING_OPTIONS));
 
-    fakeDb = new FakeFirestore({
+    mockDb = new FakeFirestore({
       [courtPath]: {
         scoreVersion: 0,
         scoringMode: DEFAULT_SCORING_OPTIONS.scoringMode,
@@ -319,7 +331,7 @@ describe("onEventCreate", () =>
       }
     });
 
-    const nextScore = fakeDb.docs.get(scorePath);
+    const nextScore = mockDb.docs.get(scorePath);
 
     expect(nextScore.A.games).toBe(fullReplayScore.A.games);
     expect(nextScore.A.points).toBe(fullReplayScore.A.points);
