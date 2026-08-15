@@ -74,10 +74,20 @@ class FakeFirestore
 
   doc(path)
   {
+    const store = this;
     return {
       kind: "doc",
       path,
-      id: path.split("/").pop()
+      id: path.split("/").pop(),
+      get: async () => store.getDocSnapshot(path),
+      set: async (data, options = {}) =>
+      {
+        const existing = store.docs.get(path);
+        const next = options.merge && existing !== undefined
+          ? { ...structuredClone(existing), ...structuredClone(data) }
+          : structuredClone(data);
+        store.docs.set(path, next);
+      }
     };
   }
 
@@ -257,6 +267,13 @@ class FakeQuery
       count
     );
   }
+
+  doc(id)
+  {
+    this.db.autoIdCounter = (this.db.autoIdCounter || 0) + 1;
+    const docId = id || `auto-${this.db.autoIdCounter}`;
+    return this.db.doc(`${this.path}/${docId}`);
+  }
 }
 
 describe("onEventCreate", () =>
@@ -340,5 +357,145 @@ describe("onEventCreate", () =>
     expect(nextScore.lastEventId).toBe("e5");
     expect(nextScore.lastProcessedEventId).toBe("e5");
     expect(nextScore.lastProcessedCreatedAt).toEqual(e5.createdAt);
+  });
+
+  test("replays ignore scoring events left over from an older scoreVersion", async () =>
+  {
+    const courtId = "court-1";
+    const scorePath = `courts/${courtId}/score/current`;
+    const courtPath = `courts/${courtId}`;
+    const eventsPath = `courts/${courtId}/events`;
+
+    // A stale event written in-flight against the pre-reset scoreVersion must
+    // not pollute the full-replay path, mirroring the direct-path guard.
+    const stale = { id: "s1", eventType: "POINT_TEAM_B", createdAt: timestamp(1), scoreVersion: 0 };
+    const fresh1 = { id: "f1", eventType: "POINT_TEAM_A", createdAt: timestamp(2), scoreVersion: 1 };
+    const delayed = { id: "f0", eventType: "POINT_TEAM_A", createdAt: timestamp(2, 500), scoreVersion: 1 };
+    const fresh2 = { id: "f2", eventType: "POINT_TEAM_A", createdAt: timestamp(3), scoreVersion: 1 };
+
+    const expectedScore = toLiveScorePayload(
+      replayEvents([fresh1, delayed, fresh2], DEFAULT_SCORING_OPTIONS)
+    );
+
+    mockDb = new FakeFirestore({
+      [courtPath]: {
+        scoreVersion: 1,
+        scoringMode: DEFAULT_SCORING_OPTIONS.scoringMode,
+        scoringOptions: DEFAULT_SCORING_OPTIONS
+      },
+      [scorePath]: {
+        ...toLiveScorePayload(replayEvents([fresh1, fresh2], DEFAULT_SCORING_OPTIONS)),
+        lastEventId: "f2",
+        lastProcessedEventId: "f2",
+        lastProcessedCreatedAt: fresh2.createdAt
+      },
+      [`${eventsPath}/s1`]: stale,
+      [`${eventsPath}/f1`]: fresh1,
+      [`${eventsPath}/f0`]: delayed,
+      [`${eventsPath}/f2`]: fresh2
+    });
+
+    let onEventCreate;
+    jest.isolateModules(() =>
+    {
+      ({ onEventCreate } = require("./index"));
+    });
+
+    await onEventCreate({
+      params: { courtId, eventId: delayed.id },
+      data: {
+        data: () => structuredClone(delayed)
+      }
+    });
+
+    const nextScore = mockDb.docs.get(scorePath);
+
+    expect(nextScore.A.points).toBe(expectedScore.A.points);
+    expect(nextScore.B.points).toBe(expectedScore.B.points);
+    expect(nextScore.B.points).toBe(0);
+  });
+});
+
+describe("postEvent", () =>
+{
+  test("stamps device scoring events with the court's active scoreVersion", async () =>
+  {
+    const courtId = "court-1";
+    const deviceId = "device-1";
+
+    mockDb = new FakeFirestore({
+      [`devices/${deviceId}`]: { courtId },
+      [`courts/${courtId}`]: {
+        scoreVersion: 3,
+        scoringMode: DEFAULT_SCORING_OPTIONS.scoringMode,
+        scoringOptions: DEFAULT_SCORING_OPTIONS
+      }
+    });
+
+    let postEvent;
+    jest.isolateModules(() =>
+    {
+      ({ postEvent } = require("./index"));
+    });
+
+    const res = {
+      statusCode: null,
+      payload: null,
+      status(code) { this.statusCode = code; return this; },
+      json(body) { this.payload = body; return this; }
+    };
+
+    await postEvent(
+      { method: "POST", body: { deviceId, eventType: "POINT_TEAM_A" } },
+      res
+    );
+
+    expect(res.statusCode).toBe(200);
+    expect(res.payload.success).toBe(true);
+
+    const eventEntry = [...mockDb.docs.entries()]
+      .find(([path]) => path.startsWith(`courts/${courtId}/events/`));
+    expect(eventEntry).toBeDefined();
+    expect(eventEntry[1].eventType).toBe("POINT_TEAM_A");
+    expect(eventEntry[1].scoreVersion).toBe(3);
+  });
+
+  test("stamps scoreVersion 0 when the court has never been reset", async () =>
+  {
+    const courtId = "court-2";
+    const deviceId = "device-2";
+
+    mockDb = new FakeFirestore({
+      [`devices/${deviceId}`]: { courtId },
+      [`courts/${courtId}`]: {
+        scoringMode: DEFAULT_SCORING_OPTIONS.scoringMode,
+        scoringOptions: DEFAULT_SCORING_OPTIONS
+      }
+    });
+
+    let postEvent;
+    jest.isolateModules(() =>
+    {
+      ({ postEvent } = require("./index"));
+    });
+
+    const res = {
+      statusCode: null,
+      payload: null,
+      status(code) { this.statusCode = code; return this; },
+      json(body) { this.payload = body; return this; }
+    };
+
+    await postEvent(
+      { method: "POST", body: { deviceId, eventType: "UNDO" } },
+      res
+    );
+
+    expect(res.statusCode).toBe(200);
+
+    const eventEntry = [...mockDb.docs.entries()]
+      .find(([path]) => path.startsWith(`courts/${courtId}/events/`));
+    expect(eventEntry).toBeDefined();
+    expect(eventEntry[1].scoreVersion).toBe(0);
   });
 });

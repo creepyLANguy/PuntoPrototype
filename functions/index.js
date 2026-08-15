@@ -105,18 +105,35 @@ function buildScoringEventsQuery(courtId)
 
 async function getLatestCheckpoint(tx, courtId, options)
 {
+    // Order by a single field only: a multi-field orderBy requires a composite
+    // Firestore index, which this repo never defines/deploys. If that index is
+    // missing, this query throws FAILED_PRECONDITION inside every scoring
+    // transaction and the score document is never updated. Tie-break the small
+    // candidate window in memory instead.
     const checkpointsQuery = db
         .collection(`courts/${courtId}/${SCORE_CHECKPOINTS_COLLECTION}`)
         .orderBy("lastCreatedAt", "desc")
-        .orderBy("lastEventId", "desc")
         .limit(10);
 
     const checkpointsSnap = await tx.get(checkpointsQuery);
     const targetOptions = normalizeScoringOptions(options);
 
-    for (const docSnap of checkpointsSnap.docs)
+    const candidates = checkpointsSnap.docs
+        .map((docSnap) => ({ ref: docSnap.ref, data: docSnap.data() || {} }))
+        .sort((left, right) =>
+        {
+            const createdAtDiff = compareEventOrder(
+                right.data.lastCreatedAt,
+                right.data.lastEventId,
+                left.data.lastCreatedAt,
+                left.data.lastEventId
+            );
+            return createdAtDiff === null ? 0 : createdAtDiff;
+        });
+
+    for (const candidate of candidates)
     {
-        const data = docSnap.data() || {};
+        const data = candidate.data;
         const checkpointOptions = normalizeScoringOptions(data.scoringOptions || {});
         const sameOptions =
             checkpointOptions.scoringMode === targetOptions.scoringMode &&
@@ -127,7 +144,7 @@ async function getLatestCheckpoint(tx, courtId, options)
         if (!data.score || !data.lastEventId || !data.lastCreatedAt) continue;
 
         return {
-            ref: docSnap.ref,
+            ref: candidate.ref,
             data
         };
     }
@@ -135,9 +152,10 @@ async function getLatestCheckpoint(tx, courtId, options)
     return null;
 }
 
-async function replayScoreFromEvents(tx, courtId, options, useCheckpoint)
+async function replayScoreFromEvents(tx, courtId, options, useCheckpoint, activeScoreVersion = 0)
 {
     const activeOptions = normalizeScoringOptions(options);
+    const targetScoreVersion = normalizeScoreVersion(activeScoreVersion);
     let replayedScore = defaultScore(activeOptions);
     let query = buildScoringEventsQuery(courtId);
 
@@ -174,6 +192,13 @@ async function replayScoreFromEvents(tx, courtId, options, useCheckpoint)
             return;
         }
 
+        // Mirror the direct-path staleness guard: events posted against an
+        // older scoreVersion must never re-enter the score via a replay.
+        if (normalizeScoreVersion(data.scoreVersion) !== targetScoreVersion)
+        {
+            return;
+        }
+
         const event = { id: docSnap.id, ...data };
         replayedScore = applyEvent(replayedScore, event, activeOptions);
         lastEventId = docSnap.id;
@@ -187,7 +212,7 @@ async function replayScoreFromEvents(tx, courtId, options, useCheckpoint)
     };
 }
 
-async function replayScoreFromEventsExcluding(tx, courtId, options, excludedEventId)
+async function replayScoreFromEventsExcluding(tx, courtId, options, excludedEventId, activeScoreVersion = 0)
 {
     // Rebuild without excluded event so caller can apply it in a deterministic position.
     // Always replays from the very first event (no checkpoint shortcut here): a checkpoint
@@ -196,6 +221,7 @@ async function replayScoreFromEventsExcluding(tx, courtId, options, excludedEven
     // completed a set. Undo is infrequent enough that a full replay is an acceptable cost
     // for guaranteeing the history stack is always correct.
     const activeOptions = normalizeScoringOptions(options);
+    const targetScoreVersion = normalizeScoreVersion(activeScoreVersion);
     let replayedScore = defaultScore(activeOptions);
     const query = buildScoringEventsQuery(courtId);
 
@@ -207,6 +233,11 @@ async function replayScoreFromEventsExcluding(tx, courtId, options, excludedEven
     {
         const data = docSnap.data() || {};
         if (!SCORING_EVENTS.has(data.eventType))
+        {
+            return;
+        }
+
+        if (normalizeScoreVersion(data.scoreVersion) !== targetScoreVersion)
         {
             return;
         }
@@ -896,7 +927,8 @@ async (event) =>
                     tx,
                     courtId,
                     activeScoringOptions,
-                    useCheckpoint
+                    useCheckpoint,
+                    activeScoreVersion
                 );
                 const replayOrdering = resolveReplayOrdering(replayResult, score, incomingOrder);
 
@@ -964,7 +996,8 @@ async (event) =>
                     tx,
                     courtId,
                     activeScoringOptions,
-                    eventId
+                    eventId,
+                    activeScoreVersion
                 );
                 const replayedScore = applyEvent(replayResult.score, incomingEvent, activeScoringOptions);
 
@@ -990,7 +1023,7 @@ async (event) =>
                     ? score.completedSets.map((set) => ({ ...set }))
                     : []
             };
-            const replayResult = await replayScoreFromEvents(tx, courtId, activeScoringOptions, true);
+            const replayResult = await replayScoreFromEvents(tx, courtId, activeScoringOptions, true, activeScoreVersion);
             const nextScore = replayResult.score;
             const replayOrdering = resolveReplayOrdering(replayResult, score, incomingOrder);
 
@@ -1177,8 +1210,13 @@ exports.updateScoringOptions = onCall(
         });
         await courtRef.set({ scoringOptions: normalizedOptions, scoringMode: normalizedOptions.scoringMode }, { merge: true });
 
+        const activeScoreVersion = normalizeScoreVersion(courtData.scoreVersion);
         const eventsSnap = await eventsRef.get();
-        const events = eventsSnap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+        const events = eventsSnap.docs
+            .map((doc) => ({ id: doc.id, ...doc.data() }))
+            .filter((event) =>
+                !SCORING_EVENTS.has(event.eventType) ||
+                normalizeScoreVersion(event.scoreVersion) === activeScoreVersion);
         const replayedScore = replayEvents(events, normalizedOptions);
 
         const lastEventId = events.length > 0 ? events[events.length - 1].id : null;
@@ -1247,10 +1285,14 @@ exports.getDetailedScore = onCall(
             .orderBy(admin.firestore.FieldPath.documentId(), "asc")
             .get();
 
-        // Use only scoring events so details replay mirrors score/current logic.
+        // Use only scoring events so details replay mirrors score/current logic,
+        // including the stale-scoreVersion guard applied by onEventCreate.
+        const activeScoreVersion = normalizeScoreVersion(courtData.scoreVersion);
         const events = eventsSnap.docs
             .map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }))
-            .filter((event) => SCORING_EVENTS.has(event.eventType));
+            .filter((event) =>
+                SCORING_EVENTS.has(event.eventType) &&
+                normalizeScoreVersion(event.scoreVersion) === activeScoreVersion);
 
         let score = defaultScore(normalizedOptions);
 
@@ -1478,10 +1520,18 @@ exports.postEvent = onRequest(
                 });
             }
 
+            // Stamp scoring events with the court's active scoreVersion. Without
+            // it, onEventCreate normalizes the missing field to 0 and silently
+            // skips every device-posted point/undo as "stale" once the court has
+            // been reset at least once — the scoreboard then never updates.
+            const actingCourtSnap = await db.doc(`courts/${actingCourtId}`).get();
+            const actingCourtData = actingCourtSnap.exists ? actingCourtSnap.data() : {};
+
             const eventId = await appendCourtEvent(actingCourtId, {
                 eventType,
                 createdBy: deviceId,
-                actorDeviceId: deviceId
+                actorDeviceId: deviceId,
+                scoreVersion: normalizeScoreVersion(actingCourtData.scoreVersion)
             });
 
             return sendJson(res, 200, { success: true, eventId });
