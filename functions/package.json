@@ -7,7 +7,7 @@
     "start": "npm run shell",
     "deploy": "firebase deploy --only functions",
     "logs": "firebase functions:log",
-    "test": "jest && node --test frontendScoreSync.node-test.mjs"
+    "test": "jest && node --test frontendScoreSync.node-test.mjs frontendScoreboard.node-test.mjs frontendModes.node-test.mjs frontendLifecycle.node-test.mjs"
   },
   "engines": {
     "node": "22"
@@ -19,7 +19,8 @@
   },
   "devDependencies": {
     "firebase-functions-test": "^3.4.1",
-    "jest": "^30.4.2"
+    "jest": "^30.4.2",
+    "jsdom": "^30.0.1"
   },
   "private": true
 }
