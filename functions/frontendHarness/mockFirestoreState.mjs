@@ -111,6 +111,7 @@ export function mergeDoc(path, data)
   const existing = firestoreState.docs.get(path) || {};
   firestoreState.docs.set(path, { ...existing, ...materialize(cloneValue(data)) });
   notifyListeners(path);
+  maybeProcessBackend(path);
 }
 
 export function deleteDocAt(path)
