@@ -1589,9 +1589,19 @@ function extractScoreApiCourtId(reqPath)
             }
         });
 
-    const courtId = segments.length ? segments[segments.length - 1] : "";
+    // With the hosting rewrite the path looks like /a/{courtId}; when the
+    // function URL is hit directly the courtId is simply the last segment.
+    let courtId;
+    if (segments[0] === "a")
+    {
+        courtId = segments.length >= 2 ? segments[segments.length - 1] : null;
+    }
+    else
+    {
+        courtId = segments.length ? segments[segments.length - 1] : null;
+    }
 
-    if (!courtId || courtId === "a" || courtId.length > 64)
+    if (!courtId || courtId.length > 64)
     {
         return null;
     }
@@ -1671,7 +1681,7 @@ exports.getCourtScore = onRequest(
 
             if (!courtSnap.exists)
             {
-                const notFoundBody = { success: false, error: "Court not found for courtId: " + courtId };
+                const notFoundBody = { success: false, error: "Court not found." };
                 setCachedScoreApiEntry(courtId, 404, notFoundBody);
                 return sendJson(res, 404, notFoundBody);
             }

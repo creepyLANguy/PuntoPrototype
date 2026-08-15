@@ -601,9 +601,23 @@
         try
         {
           const response = await fetch("/a/" + encodeURIComponent(courtId), { cache: "no-store" });
+
+          if (!response.ok)
+          {
+            let message = "Could not load score.";
+            try
+            {
+              const errorData = await response.json();
+              if (errorData && errorData.error) message = errorData.error;
+            }
+            catch (_parseErr) { /* non-JSON error body */ }
+            showError(message);
+            return;
+          }
+
           const data = await response.json();
 
-          if (!response.ok || !data.success)
+          if (!data.success)
           {
             showError(data.error || "Could not load score.");
             return;
