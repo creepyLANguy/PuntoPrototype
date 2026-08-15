@@ -207,7 +207,6 @@ function undo(score, scoringOptions)
 {
   if (!score.history || score.history.length === 0)
   {
-    //("Nothing to undo");
     return normalizeScore(score, scoringOptions);
   }
 
@@ -401,7 +400,7 @@ function getEventOrderingTuple(event)
 // Returns <0/0/>0 like a comparator, or null when either side lacks ordering info.
 function compareEventOrder(leftCreatedAt, leftId, rightCreatedAt, rightId)
 {
-  if (!leftCreatedAt || !rightCreatedAt || !leftId || !rightId)
+  if (!leftCreatedAt || !rightCreatedAt)
   {
     return null;
   }
@@ -411,6 +410,11 @@ function compareEventOrder(leftCreatedAt, leftId, rightCreatedAt, rightId)
 
   const nanosDiff = leftCreatedAt.nanoseconds - rightCreatedAt.nanoseconds;
   if (nanosDiff !== 0) return nanosDiff;
+
+  if (!leftId || !rightId)
+  {
+    return null;
+  }
 
   return leftId.localeCompare(rightId);
 }

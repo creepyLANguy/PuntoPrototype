@@ -533,6 +533,11 @@ document.addEventListener("DOMContentLoaded", () =>
   }
 
   let score = defaultScore();
+  let latestAppliedScoreOrder = null;
+  let pendingScoreRenderData = null;
+  let pendingScoreRenderToken = null;
+  let pendingScoreRenderId = null;
+  let activeCourtListenerToken = 0;
   let isMatchDetailsCacheValid = false;
   let matchDetailsCache = null;
   let matchDetailsCacheCourtId = null;
@@ -548,12 +553,149 @@ document.addEventListener("DOMContentLoaded", () =>
     matchDetailsCacheCourtId = null;
   }
 
+  function normalizeOrderEventId(value)
+  {
+    return typeof value === "string" && value.trim() ? value : null;
+  }
+
+  function normalizeOrderTimestamp(value)
+  {
+    if (!value) return null;
+    if (typeof value.seconds === "number" && typeof value.nanoseconds === "number")
+    {
+      return value;
+    }
+    return null;
+  }
+
+  function getScoreOrderTuple(scoreData)
+  {
+    return {
+      createdAt: normalizeOrderTimestamp(scoreData?.lastProcessedCreatedAt || scoreData?.updatedAt),
+      eventId: normalizeOrderEventId(scoreData?.lastProcessedEventId || scoreData?.lastEventId)
+    };
+  }
+
+  function compareScoreOrder(leftOrder, rightOrder)
+  {
+    if (
+      !leftOrder?.createdAt ||
+      !rightOrder?.createdAt
+    )
+    {
+      return null;
+    }
+
+    const secondsDiff = leftOrder.createdAt.seconds - rightOrder.createdAt.seconds;
+    if (secondsDiff !== 0) return secondsDiff;
+
+    const nanosDiff = leftOrder.createdAt.nanoseconds - rightOrder.createdAt.nanoseconds;
+    if (nanosDiff !== 0) return nanosDiff;
+
+    if (!leftOrder?.eventId || !rightOrder?.eventId)
+    {
+      return null;
+    }
+
+    return leftOrder.eventId.localeCompare(rightOrder.eventId);
+  }
+
+  function flushPendingScoreRender()
+  {
+    if (!pendingScoreRenderData) return;
+
+    const renderToken = pendingScoreRenderToken;
+    const nextScore = pendingScoreRenderData;
+    pendingScoreRenderData = null;
+    pendingScoreRenderToken = null;
+
+    if (renderToken !== activeCourtListenerToken)
+    {
+      return;
+    }
+
+    const candidateOrder = getScoreOrderTuple(nextScore);
+    const orderComparison = compareScoreOrder(candidateOrder, latestAppliedScoreOrder);
+    if (orderComparison !== null && orderComparison < 0)
+    {
+      return;
+    }
+
+    score = nextScore;
+    if (candidateOrder.createdAt && candidateOrder.eventId)
+    {
+      latestAppliedScoreOrder = candidateOrder;
+    }
+    invalidateMatchDetailsCache();
+    updateUI();
+
+    if (!elements.detailsModal.classList.contains("hidden"))
+    {
+      showMatchDetails(false, elements.dmDetailsContent.hidden === false, true);
+    }
+
+    if (pendingScoreRenderData && pendingScoreRenderId === null)
+    {
+      pendingScoreRenderId = window.requestAnimationFrame(() =>
+      {
+        pendingScoreRenderId = null;
+        flushPendingScoreRender();
+      });
+    }
+  }
+
+  function queueLatestScoreRender(newData, listenerToken = activeCourtListenerToken)
+  {
+    if (!newData) return;
+    if (listenerToken !== activeCourtListenerToken) return;
+
+    const candidateOrder = getScoreOrderTuple(newData);
+    const appliedComparison = compareScoreOrder(candidateOrder, latestAppliedScoreOrder);
+    if (appliedComparison !== null && appliedComparison < 0)
+    {
+      return;
+    }
+
+    if (pendingScoreRenderData)
+    {
+      const pendingOrder = getScoreOrderTuple(pendingScoreRenderData);
+      const pendingComparison = compareScoreOrder(candidateOrder, pendingOrder);
+      if (pendingComparison !== null && pendingComparison < 0)
+      {
+        return;
+      }
+    }
+
+    pendingScoreRenderData = newData;
+    pendingScoreRenderToken = listenerToken;
+
+    if (pendingScoreRenderId !== null) return;
+    pendingScoreRenderId = window.requestAnimationFrame(() =>
+    {
+      pendingScoreRenderId = null;
+      flushPendingScoreRender();
+    });
+  }
+
+  function clearQueuedScoreRender()
+  {
+    pendingScoreRenderData = null;
+    pendingScoreRenderToken = null;
+    latestAppliedScoreOrder = null;
+    if (pendingScoreRenderId !== null)
+    {
+      window.cancelAnimationFrame(pendingScoreRenderId);
+      pendingScoreRenderId = null;
+    }
+  }
+
   let muted = false;
 
   let currentCourtId = null;
   let currentCourtPassword = null;
   let pendingLocalPasswordUpdate = null;
   let currentCourtStatus = null;
+  let currentScoreVersion = 0;
   let currentScoringOptions = { ...DEFAULT_SCORING_OPTIONS };
   let currentRawTeamNames = { ...DEFAULT_TEAM_NAMES };
   let currentPlayerNames = { ...DEFAULT_PLAYER_NAMES };
@@ -2987,17 +3129,7 @@ document.addEventListener("DOMContentLoaded", () =>
         scoringOptions
       });
       const serverOptions = normalizeScoringOptions(result?.data?.scoringOptions || scoringOptions);
-      const replayedScore = result?.data?.score;
       currentScoringOptions = serverOptions;
-      score = replayedScore
-        ? {
-            ...replayedScore,
-            scoringOptions: serverOptions
-          }
-        : {
-            ...score,
-            scoringOptions: serverOptions
-          };
       syncScoringControls();
       updateUI();
 
@@ -3580,6 +3712,7 @@ document.addEventListener("DOMContentLoaded", () =>
       name: courtName,
       password: courtPass,
       createdAt: serverTimestamp(),
+      scoreVersion: 0,
       teamNames: { A: "Team A", B: "Team B" },
       playerNames: { ...DEFAULT_PLAYER_NAMES },
       status: elements.courtStatus.value,
@@ -3715,6 +3848,7 @@ document.addEventListener("DOMContentLoaded", () =>
     currentCourtName = data.name || courtId;
     currentCourtPassword = data.password;
     currentCourtStatus = data.status;
+    currentScoreVersion = Number(data.scoreVersion) || 0;
     currentRawTeamNames = normalizeTeamNames(data.teamNames || {});
     currentPlayerNames = normalizePlayerNames(data.playerNames || {});
     currentScoringOptions = normalizeScoringOptions({
@@ -3791,6 +3925,8 @@ document.addEventListener("DOMContentLoaded", () =>
   function leaveCourt(historyMode = "push")
   {
     //console.log("Leaving court: " + currentCourtId);
+    activeCourtListenerToken++;
+    clearQueuedScoreRender();
     pendingLocalPasswordUpdate = null;
     bumpCourtHistorySessionId();
     invalidateMatchDetailsCache();
@@ -3808,6 +3944,7 @@ document.addEventListener("DOMContentLoaded", () =>
     currentCourtName = null;
     currentCourtPassword = null;
     currentCourtStatus = null;
+    currentScoreVersion = 0;
     currentScoringOptions = { ...DEFAULT_SCORING_OPTIONS };
     syncScoringControls();
     clearCourtQr();
@@ -3834,6 +3971,7 @@ document.addEventListener("DOMContentLoaded", () =>
 
   function BlankOutScoreboard()
   {
+    clearQueuedScoreRender();
     showCourtTitle("Padel Push - Live Scoreboard");
     const nameA = $("teamA").querySelector(".name-text");
     const nameB = $("teamB").querySelector(".name-text");
@@ -4348,17 +4486,7 @@ document.addEventListener("DOMContentLoaded", () =>
       });
 
       const serverOptions = normalizeScoringOptions(result?.data?.scoringOptions || nextOptions);
-      const replayedScore = result?.data?.score;
       currentScoringOptions = serverOptions;
-      score = replayedScore
-        ? {
-            ...replayedScore,
-            scoringOptions: serverOptions
-          }
-        : {
-            ...score,
-            scoringOptions: serverOptions
-          };
       syncScoringControls();
       updateUI();
       showToast("Scoring updated", TOAST_TYPES.SUCCESS);
@@ -4385,7 +4513,8 @@ document.addEventListener("DOMContentLoaded", () =>
         {
           eventType: addpointevent,
           createdAt: serverTimestamp(),
-          createdBy: thisDeviceId
+          createdBy: thisDeviceId,
+          scoreVersion: Number(currentScoreVersion) || 0
         }
       );
     }
@@ -4407,7 +4536,8 @@ document.addEventListener("DOMContentLoaded", () =>
         {
           eventType: EVENT_TYPES.UNDO,
           createdAt: serverTimestamp(),
-          createdBy: thisDeviceId
+          createdBy: thisDeviceId,
+          scoreVersion: Number(currentScoreVersion) || 0
         }
       );
 
@@ -5221,10 +5351,14 @@ document.addEventListener("DOMContentLoaded", () =>
         pendingLocalPasswordUpdate = newPassword;
       }
 
-      await resetCourt(currentCourtId, false, newPassword, requirePassword);
+      const result = await resetCourt(currentCourtId, false, newPassword, requirePassword);
       if (newPassword)
       {
         currentCourtPassword = newPassword;
+      }
+      if (Number.isInteger(result?.data?.scoreVersion))
+      {
+        currentScoreVersion = result.data.scoreVersion;
       }
 
       elements.resetCourtPassword.value = "";
@@ -5259,8 +5393,12 @@ document.addEventListener("DOMContentLoaded", () =>
       showSpinner(elements.resetModal);
       
       pendingLocalPasswordUpdate = newPassword;
-      await resetCourt(currentCourtId, true, newPassword, true);
+      const result = await resetCourt(currentCourtId, true, newPassword, true);
       currentCourtPassword = newPassword;
+      if (Number.isInteger(result?.data?.scoreVersion))
+      {
+        currentScoreVersion = result.data.scoreVersion;
+      }
 
       elements.resetCourtPassword.value = "";
       elements.resetModal.classList.add("hidden");
@@ -6198,6 +6336,7 @@ document.addEventListener("DOMContentLoaded", () =>
     try
     {
       let result = matchDetailsCache;
+      
       const canUseDetailsCache =
         isMatchDetailsCacheValid &&
         matchDetailsCache &&
@@ -6222,7 +6361,7 @@ document.addEventListener("DOMContentLoaded", () =>
         if (navigator.canShare && navigator.canShare({ files: [dummyFile] }))
         {
           cacheShareableScoreCard();
-        }        
+        }
         //
       }
 
@@ -6539,6 +6678,8 @@ document.addEventListener("DOMContentLoaded", () =>
   {
     //console.log(`Setting up real-time sync for court: ${courtId}`);
     if (unsubscribe) unsubscribe();
+    clearQueuedScoreRender();
+    const listenerToken = ++activeCourtListenerToken;
 
     const scoreRef = doc(db, "courts", courtId, "score", "current");
     const courtRef = doc(db, "courts", courtId);
@@ -6547,9 +6688,15 @@ document.addEventListener("DOMContentLoaded", () =>
     await getDoc(scoreRef);
     await getDoc(courtRef);
 
+    if (listenerToken !== activeCourtListenerToken)
+    {
+      return;
+    }
+
     // 🔥 Listen to score changes
     const unsubscribeScore = onSnapshot(scoreRef, (snap) =>
     {
+      if (listenerToken !== activeCourtListenerToken) return;
       if (!snap.exists()) return;
 
       const newData = snap.data();
@@ -6564,20 +6711,13 @@ document.addEventListener("DOMContentLoaded", () =>
         finishStartupLoading();
       }
 
-      score = newData;
-      invalidateMatchDetailsCache();
-
-      updateUI();
-
-      if (!elements.detailsModal.classList.contains("hidden"))
-      {
-        showMatchDetails(false, elements.dmDetailsContent.hidden === false, true);
-      }
+      queueLatestScoreRender(newData, listenerToken);
     });
 
     // 🔥 Listen to court metadata changes (password + teamNames)
     const unsubscribeCourt = onSnapshot(courtRef, (snap) =>
     {
+      if (listenerToken !== activeCourtListenerToken) return;
       if (!snap.exists())
       {
         // If we are already on a new court (redirected), ignore
@@ -6599,6 +6739,11 @@ document.addEventListener("DOMContentLoaded", () =>
         if (unsubscribeScore) unsubscribeScore();
         if (unsubscribeCourt) unsubscribeCourt();
         unsubscribe = null;
+        if (listenerToken === activeCourtListenerToken)
+        {
+          activeCourtListenerToken++;
+        }
+        clearQueuedScoreRender();
         // Enter new court
         enterCourt(data.redirect, wasSpectating, { historyMode: "replace" });
         return;
@@ -6644,6 +6789,7 @@ document.addEventListener("DOMContentLoaded", () =>
       // Ensure local state tracks newest password
       currentCourtPassword = data.password;
       currentCourtStatus = data.status;
+      currentScoreVersion = Number(data.scoreVersion) || 0;
 
       const nextScoringOptions = normalizeScoringOptions({
         ...(data.scoringOptions || {}),
@@ -6675,6 +6821,11 @@ document.addEventListener("DOMContentLoaded", () =>
     // Combine both unsubscribes
     unsubscribe = () =>
     {
+      if (listenerToken === activeCourtListenerToken)
+      {
+        activeCourtListenerToken++;
+      }
+      clearQueuedScoreRender();
       unsubscribeScore();
       unsubscribeCourt();
     };
