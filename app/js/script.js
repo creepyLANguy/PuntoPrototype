@@ -5203,11 +5203,6 @@ document.addEventListener("DOMContentLoaded", () =>
       elements.resetPasswordError.textContent = "Password must be different from court name.";
       return null;
     }
-    else if (newPassword === currentCourtPassword)
-    {
-      elements.resetPasswordError.textContent = "New password must be different from the current one.";
-      return null;
-    }
 
     return newPassword;
   }
