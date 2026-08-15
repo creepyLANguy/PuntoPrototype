@@ -6763,19 +6763,16 @@ document.addEventListener("DOMContentLoaded", () =>
     const scoreRef = doc(db, "courts", courtId, "score", "current");
     const courtRef = doc(db, "courts", courtId);
 
-    // Warm reads. These are best-effort only: they can reject (or stall) while
-    // the network is still re-establishing after an app resume. The previous
-    // listeners were already torn down above, so aborting here would leave the
-    // scoreboard with no listener at all and freeze score updates permanently.
-    try
+    // Warm reads are best-effort only and must never block listener attachment.
+    // If these reads stall during reconnect, score updates can appear frozen.
+    Promise.allSettled([getDoc(scoreRef), getDoc(courtRef)]).then((results) =>
     {
-      await getDoc(scoreRef);
-      await getDoc(courtRef);
-    }
-    catch (err)
-    {
-      console.warn("Court warm reads failed, continuing to attach listeners:", err);
-    }
+      const failures = results.filter((result) => result.status === "rejected");
+      if (failures.length > 0)
+      {
+        console.warn("Court warm reads failed, listeners remain active:", failures);
+      }
+    });
 
     if (listenerToken !== activeCourtListenerToken)
     {
