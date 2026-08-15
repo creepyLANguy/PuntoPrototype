@@ -3924,6 +3924,7 @@ document.addEventListener("DOMContentLoaded", () =>
   {
     //console.log("Leaving court: " + currentCourtId);
     activeCourtListenerToken++;
+    cancelCourtListenerReconnect();
     clearQueuedScoreRender();
     pendingLocalPasswordUpdate = null;
     bumpCourtHistorySessionId();
@@ -4485,6 +4486,18 @@ document.addEventListener("DOMContentLoaded", () =>
 
       const serverOptions = normalizeScoringOptions(result?.data?.scoringOptions || nextOptions);
       currentScoringOptions = serverOptions;
+
+      // Apply the freshly replayed score returned by the Cloud Function
+      // directly, instead of relying on the local `score` variable. The local
+      // copy is only updated by the onSnapshot pipeline, so rendering it here
+      // races the WebSocket delivery and can show a stale score.
+      const serverScore = result?.data?.score;
+      if (serverScore && serverScore.A && serverScore.B)
+      {
+        score = serverScore;
+        invalidateMatchDetailsCache();
+      }
+
       syncScoringControls();
       updateUI();
       showToast("Scoring updated", TOAST_TYPES.SUCCESS);
@@ -6671,11 +6684,66 @@ document.addEventListener("DOMContentLoaded", () =>
   // =====================================================
 
   let unsubscribe = null;
+  let courtListenerReconnectTimeoutId = null;
+  const COURT_LISTENER_RECONNECT_DELAY_MS = 2000;
+
+  function cancelCourtListenerReconnect()
+  {
+    if (courtListenerReconnectTimeoutId !== null)
+    {
+      window.clearTimeout(courtListenerReconnectTimeoutId);
+      courtListenerReconnectTimeoutId = null;
+    }
+  }
+
+  // Firestore listeners can terminate permanently (e.g. after the underlying
+  // WebSocket is dropped while the app is backgrounded). Schedule a fresh
+  // listenToCourt() so the scoreboard recovers instead of silently freezing.
+  function scheduleCourtListenerReconnect(courtId, listenerToken)
+  {
+    if (listenerToken !== activeCourtListenerToken) return;
+    if (currentCourtId !== courtId) return;
+    if (courtListenerReconnectTimeoutId !== null) return;
+
+    courtListenerReconnectTimeoutId = window.setTimeout(() =>
+    {
+      courtListenerReconnectTimeoutId = null;
+      if (listenerToken !== activeCourtListenerToken) return;
+      if (currentCourtId !== courtId) return;
+      listenToCourt(courtId);
+    }, COURT_LISTENER_RECONNECT_DELAY_MS);
+  }
+
+  // Force-refresh the Firestore listeners when the app resumes so updates
+  // missed while backgrounded (or lost to a stale WebSocket) are re-delivered.
+  function refreshCourtListenersOnResume()
+  {
+    if (!currentCourtId) return;
+    listenToCourt(currentCourtId);
+  }
+
+  document.addEventListener("visibilitychange", () =>
+  {
+    if (document.visibilityState === "visible")
+    {
+      refreshCourtListenersOnResume();
+    }
+  });
+
+  // iOS Safari back-forward cache restores the page without reloading it.
+  window.addEventListener("pageshow", (event) =>
+  {
+    if (event.persisted)
+    {
+      refreshCourtListenersOnResume();
+    }
+  });
 
   async function listenToCourt(courtId)
   {
     //console.log(`Setting up real-time sync for court: ${courtId}`);
     if (unsubscribe) unsubscribe();
+    cancelCourtListenerReconnect();
     clearQueuedScoreRender();
     const listenerToken = ++activeCourtListenerToken;
 
@@ -6710,6 +6778,11 @@ document.addEventListener("DOMContentLoaded", () =>
       }
 
       queueLatestScoreRender(newData, listenerToken);
+    },
+    (error) =>
+    {
+      console.error("Score listener error:", error);
+      scheduleCourtListenerReconnect(courtId, listenerToken);
     });
 
     // 🔥 Listen to court metadata changes (password + teamNames)
@@ -6814,6 +6887,11 @@ document.addEventListener("DOMContentLoaded", () =>
       {
         showMatchDetails(false, elements.dmDetailsContent.hidden === false, true);
       }
+    },
+    (error) =>
+    {
+      console.error("Court listener error:", error);
+      scheduleCourtListenerReconnect(courtId, listenerToken);
     });
 
     // Combine both unsubscribes
