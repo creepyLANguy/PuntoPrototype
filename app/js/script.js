@@ -660,7 +660,7 @@ document.addEventListener("DOMContentLoaded", () =>
     {
       const pendingOrder = getScoreOrderTuple(pendingScoreRenderData);
       const pendingComparison = compareScoreOrder(candidateOrder, pendingOrder);
-      if (pendingComparison !== null && pendingComparison <= 0)
+      if (pendingComparison !== null && pendingComparison < 0)
       {
         return;
       }

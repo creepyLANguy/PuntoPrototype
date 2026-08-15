@@ -885,15 +885,13 @@ async (event) =>
                 // document has already processed.  Rebuild from the full event log so
                 // the event is applied in its correct chronological position.
                 //
-                // For UNDO: useCheckpoint must be false to preserve the in-memory
-                // history stack that undo() depends on (checkpoints strip history).
-                // replayScoreFromEvents processes every event in (createdAt, docId)
-                // order, including this UNDO, so it lands in the right slot.
-                //
-                // For POINT: the event already sits in the collection in its correct
-                // slot, so the replay score is the authoritative result — no second
-                // applyEvent call is needed.
-                const useCheckpoint = newEvent.eventType !== "UNDO";
+                // Do a full replay here instead of resuming from a checkpoint.
+                // A delayed point can sort *before* the latest checkpoint boundary;
+                // if we only replay the tail after that checkpoint, that earlier
+                // event is silently skipped and never affects the authoritative
+                // score. A full replay also preserves the in-memory history stack
+                // that undo() depends on.
+                const useCheckpoint = false;
                 const replayResult = await replayScoreFromEvents(
                     tx,
                     courtId,
