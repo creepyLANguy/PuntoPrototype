@@ -386,7 +386,7 @@ document.addEventListener("DOMContentLoaded", () =>
 
   function getSharePayload(context)
   {  
-    const payload = { title: "", text: "", url: "", files: [] };
+    const payload = { title: "", text: "", files: [] };
 
     const lines = [];
     lines.push("Padel Push\n");
@@ -439,7 +439,6 @@ document.addEventListener("DOMContentLoaded", () =>
             await navigator.share({
               title: share_payload.title,
               text: share_payload.text,
-              url: share_payload.url,
               files: share_payload.files
             });
             result = { done: true, method: "native", files: true };
@@ -463,7 +462,6 @@ document.addEventListener("DOMContentLoaded", () =>
             await navigator.share({
               title: share_payload.title,
               text: share_payload.text,
-              url: share_payload.url
             });
 
             result = { done: true, method: "native", files: false };
