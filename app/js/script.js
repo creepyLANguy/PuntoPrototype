@@ -6767,12 +6767,17 @@ document.addEventListener("DOMContentLoaded", () =>
     // If these reads stall during reconnect, score updates can appear frozen.
     Promise.allSettled([getDoc(scoreRef), getDoc(courtRef)]).then((results) =>
     {
-      const hasFailure = results.some((result) => result.status === "rejected");
-      if (hasFailure)
+      const failures = results.filter((result) => result.status === "rejected");
+      if (failures.length > 0)
       {
-        console.warn("Court warm reads failed, listeners remain active:", results);
+        console.warn("Court warm reads failed, listeners remain active:", failures);
       }
     });
+
+    if (listenerToken !== activeCourtListenerToken)
+    {
+      return;
+    }
 
     // 🔥 Listen to score changes
     const unsubscribeScore = onSnapshot(scoreRef, (snap) =>
