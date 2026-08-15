@@ -3908,7 +3908,11 @@ document.addEventListener("DOMContentLoaded", () =>
     if (spectate) enableSpectateMode();
     else disableSpectateMode();
 
-    listenToCourt(courtId);
+    listenToCourt(courtId).catch((err) =>
+    {
+      console.error("Court listener setup failed:", err);
+      scheduleCourtListenerReconnect(courtId, activeCourtListenerToken);
+    });
 
     requestWakeLock();
 
@@ -6710,7 +6714,11 @@ document.addEventListener("DOMContentLoaded", () =>
       courtListenerReconnectTimeoutId = null;
       if (listenerToken !== activeCourtListenerToken) return;
       if (currentCourtId !== courtId) return;
-      listenToCourt(courtId);
+      listenToCourt(courtId).catch((err) =>
+      {
+        console.error("Court listener reconnect failed:", err);
+        scheduleCourtListenerReconnect(courtId, activeCourtListenerToken);
+      });
     }, COURT_LISTENER_RECONNECT_DELAY_MS);
   }
 
@@ -6719,7 +6727,12 @@ document.addEventListener("DOMContentLoaded", () =>
   function refreshCourtListenersOnResume()
   {
     if (!currentCourtId) return;
-    listenToCourt(currentCourtId);
+    const courtId = currentCourtId;
+    listenToCourt(courtId).catch((err) =>
+    {
+      console.error("Court listener refresh failed:", err);
+      scheduleCourtListenerReconnect(courtId, activeCourtListenerToken);
+    });
   }
 
   document.addEventListener("visibilitychange", () =>
@@ -6750,9 +6763,19 @@ document.addEventListener("DOMContentLoaded", () =>
     const scoreRef = doc(db, "courts", courtId, "score", "current");
     const courtRef = doc(db, "courts", courtId);
 
-    // Warm reads
-    await getDoc(scoreRef);
-    await getDoc(courtRef);
+    // Warm reads. These are best-effort only: they can reject (or stall) while
+    // the network is still re-establishing after an app resume. The previous
+    // listeners were already torn down above, so aborting here would leave the
+    // scoreboard with no listener at all and freeze score updates permanently.
+    try
+    {
+      await getDoc(scoreRef);
+      await getDoc(courtRef);
+    }
+    catch (err)
+    {
+      console.warn("Court warm reads failed, continuing to attach listeners:", err);
+    }
 
     if (listenerToken !== activeCourtListenerToken)
     {
