@@ -472,9 +472,24 @@
       function applyLogo(id, url)
       {
         const img = document.getElementById(id);
+        let safeUrl = "";
+
         if (url)
         {
-          img.src = url;
+          try
+          {
+            const parsed = new URL(url, window.location.origin);
+            if (parsed.protocol === "https:" || parsed.protocol === "http:")
+            {
+              safeUrl = parsed.href;
+            }
+          }
+          catch (_err) { /* invalid URL */ }
+        }
+
+        if (safeUrl)
+        {
+          img.src = safeUrl;
           img.classList.add("visible");
         }
         else
