@@ -26,13 +26,15 @@
       {
         "source": "/a/**",
         "function": {
-          "functionId": "getCourtScore"
+          "functionId": "getCourtScore",
+          "region": "europe-west1"
         }
       },
       {
         "source": "/r/**",
         "function": {
-          "functionId": "getCourtScoreRevision"
+          "functionId": "getCourtScoreRevision",
+          "region": "europe-west1"
         }
       },
       {
