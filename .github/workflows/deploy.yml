@@ -87,6 +87,12 @@ jobs:
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN_STAGING }}
         run: |
           npm ci --prefix functions
+          # Delete any existing instances of these functions from ALL regions (no --region flag)
+          # to clear stale registry entries (e.g. old africa-south1 registrations) and any
+          # broken europe-west1 state that would otherwise cause a 409 on the deploy below.
+          # Keep this function list in sync with the --only filter on the next line.
+          firebase functions:delete getCourtScore getCourtScoreRevision \
+            --project "$FIREBASE_PROJECT_ID" --token "$FIREBASE_TOKEN" --force 2>/dev/null || true
           firebase deploy --only functions:getCourtScore,functions:getCourtScoreRevision --project "$FIREBASE_PROJECT_ID" --token "$FIREBASE_TOKEN" --force
 
       - name: Deploy staging hosting
