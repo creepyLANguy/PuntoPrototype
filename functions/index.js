@@ -16,7 +16,7 @@ const {
 const { onRequest } = require("firebase-functions/v2/https");
 
 const REGION = "africa-south1";
-const HOSTING_REWRITE_REGION = "europe-west1";
+const HOSTING_REWRITE_REGION = "africa-south1";
 const DEFAULT_TEAM_NAMES = {
     A: "Team A",
     B: "Team B"

@@ -27,14 +27,14 @@
         "source": "/a/**",
         "function": {
           "functionId": "getCourtScore",
-          "region": "europe-west1"
+          "region": "africa-south1"
         }
       },
       {
         "source": "/r/**",
         "function": {
           "functionId": "getCourtScoreRevision",
-          "region": "europe-west1"
+          "region": "africa-south1"
         }
       },
       {
