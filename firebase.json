@@ -26,15 +26,13 @@
       {
         "source": "/a/**",
         "function": {
-          "functionId": "getCourtScore",
-          "region": "africa-south1"
+          "functionId": "getCourtScore"
         }
       },
       {
         "source": "/r/**",
         "function": {
-          "functionId": "getCourtScoreRevision",
-          "region": "africa-south1"
+          "functionId": "getCourtScoreRevision"
         }
       },
       {
