@@ -112,7 +112,7 @@
       <div class="reset-box">
         <p>Reset the entire match?</p>
         <div class="form-group">
-          <label>New Court Password (min 4 chars)</label>
+          <label>Court Password (min 4 chars)</label>
           <input type="password" id="resetCourtPassword" />
           <div class="error" id="resetPasswordError"></div>
         </div>
@@ -156,6 +156,10 @@
           <div class="setting-item">
             <button id="swapBtn" class="floating-btn modal-btn" title="Swap sides">⇆</button>
             <span>Swap sides</span>
+          </div>
+          <div class="setting-item" id="obsOverlayTile">
+            <button id="obsOverlayBtn" class="floating-btn modal-btn" title="Open OBS score overlay">📺</button>
+            <span>OBS Overlay</span>
           </div>
           <div class="setting-item player-only-tile" id="serverToggleTile">
             <button id="serverToggleBtn" class="floating-btn modal-btn" title="Toggle server indicator">⚾︎</button>
@@ -265,11 +269,11 @@
           <div class="player-names-grid">
             <label class="form-group player-names-field">
               <span>Team A</span>
-              <input type="text" id="playerTeamAName" autocomplete="off" spellcheck="false" />
+              <input type="text" id="playerTeamAName" autocomplete="off" autocapitalize="words" spellcheck="false" />
             </label>
             <label class="form-group player-names-field">
               <span>Team B</span>
-              <input type="text" id="playerTeamBName" autocomplete="off" spellcheck="false" />
+              <input type="text" id="playerTeamBName" autocomplete="off" autocapitalize="words" spellcheck="false" />
             </label>
           </div>
           <div class="player-team-grid">
@@ -277,22 +281,22 @@
               <h4>Team A players</h4>
               <label class="form-group player-names-field-a">
                 <span>Player A1</span>
-                <input type="text" id="playerNameA1" autocomplete="off" spellcheck="false" />
+                <input type="text" id="playerNameA1" autocomplete="off" autocapitalize="words" spellcheck="false" />
               </label>
               <label class="form-group player-names-field-a">
                 <span>Player A2</span>
-                <input type="text" id="playerNameA2" autocomplete="off" spellcheck="false" />
+                <input type="text" id="playerNameA2" autocomplete="off" autocapitalize="words" spellcheck="false" />
               </label>
             </section>
             <section class="player-team-panel">
               <h4>Team B players</h4>
               <label class="form-group player-names-field-b">
                 <span>Player B1</span>
-                <input type="text" id="playerNameB1" autocomplete="off" spellcheck="false" />
+                <input type="text" id="playerNameB1" autocomplete="off" autocapitalize="words" spellcheck="false" />
               </label>
               <label class="form-group player-names-field-b">
                 <span>Player B2</span>
-                <input type="text" id="playerNameB2" autocomplete="off" spellcheck="false" />
+                <input type="text" id="playerNameB2" autocomplete="off" autocapitalize="words" spellcheck="false" />
               </label>
             </section>
           </div>

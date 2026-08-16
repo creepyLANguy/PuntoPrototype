@@ -2375,7 +2375,16 @@ body.light-mode .dm-table thead th {
     margin-bottom: 2px;
     gap: 0px;
     flex-direction: row;
+    flex-wrap: wrap;
     justify-content: center;
+  }
+
+  /* Court name drops to its own line beneath the Padel Push heading */
+  .dm-header #matchDetailsCourtName {
+    flex-basis: 100%;
+    width: 100%;
+    margin: 2px 0 0;
+    text-align: center;
   }
 
   .dm-logo {

@@ -1357,6 +1357,7 @@ document.addEventListener("DOMContentLoaded", () =>
     editPlayersTile: $("editPlayersTile"),
     resetSettingsBtn: $("resetSettingsBtn"),
     resetSettingsTile: $("resetSettingsTile"),
+    obsOverlayBtn: $("obsOverlayBtn"),
     joinCourtBtn: $("joinCourtBtn"),
     joinCourtTile: $("joinCourtTile"),
     switchToSpectateBtn: $("switchToSpectateBtn"),
@@ -5203,11 +5204,6 @@ document.addEventListener("DOMContentLoaded", () =>
       elements.resetPasswordError.textContent = "Password must be different from court name.";
       return null;
     }
-    else if (newPassword === currentCourtPassword)
-    {
-      elements.resetPasswordError.textContent = "New password must be different from the current one.";
-      return null;
-    }
 
     return newPassword;
   }
@@ -5397,6 +5393,39 @@ document.addEventListener("DOMContentLoaded", () =>
       // Close settings first, then open reset modal
       elements.settingsModal.classList.add("hidden");
       openResetModal();
+    });
+  }
+
+  // OBS overlay tile in settings modal
+  if (elements.obsOverlayBtn)
+  {
+    elements.obsOverlayBtn.addEventListener("click", async () =>
+    {
+      if (!currentCourtId)
+      {
+        showToast("No court is currently open.", TOAST_TYPES.ERROR);
+        return;
+      }
+
+      const baseUrl = window.location.origin.replace(/\/$/, "");
+      const overlayUrl = `${baseUrl}/b/${encodeURIComponent(currentCourtId)}`;
+
+      let copied = false;
+      if (navigator.clipboard?.writeText)
+      {
+        try
+        {
+          await navigator.clipboard.writeText(overlayUrl);
+          copied = true;
+        }
+        catch (error)
+        {
+          console.warn("Overlay URL clipboard copy failed:", error);
+        }
+      }
+
+      window.open(overlayUrl, "_blank", "noopener");
+      showToast(copied ? "Overlay opened. URL copied to clipboard." : "Overlay opened.", TOAST_TYPES.SUCCESS);
     });
   }
 

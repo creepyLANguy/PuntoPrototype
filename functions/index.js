@@ -1095,11 +1095,6 @@ exports.resetCourt = onCall(
             {
                 throw new Error("Password must be different from court name.");
             }
-
-            if (trimmedPassword === (courtData?.password || ""))
-            {
-                throw new Error("New password must be different from the current one.");
-            }
         }
 
         const scoringOptions = buildScoringOptions({
@@ -1539,6 +1534,211 @@ exports.postEvent = onRequest(
         } catch (err)
         {
             console.error(err);
+            return sendJson(res, 500, { success: false, error: "Error" });
+        }
+    }
+);
+
+// -----------------------------
+// GET current score as JSON (/a/{courtId})
+// Read-only public endpoint, aggressively cached (CDN + in-memory)
+// so polling clients (e.g. the OBS overlay) and request floods do not
+// translate into Firestore reads and runaway billing.
+// -----------------------------
+const SCORE_API_CACHE_TTL_MS = 10 * 1000;
+const SCORE_API_CACHE_MAX_ENTRIES = 500;
+const scoreApiCache = new Map();
+
+const SCORE_API_POINT_LABELS = ["0", "15", "30", "40"];
+
+function buildScorePointsDisplay(points, scoringOptions, inTiebreak)
+{
+    const numericPoints = Number(points) || 0;
+    const options = normalizeScoringOptions(scoringOptions);
+    const usesNumericPoints = options.scoringMode === "straight" ||
+        options.scoringMode === "tiebreakTen" ||
+        Boolean(inTiebreak);
+
+    if (usesNumericPoints)
+    {
+        return String(numericPoints);
+    }
+
+    if (numericPoints === 4)
+    {
+        return "Ad";
+    }
+
+    return SCORE_API_POINT_LABELS[numericPoints] ?? String(numericPoints);
+}
+
+function extractScoreApiCourtId(reqPath)
+{
+    const segments = String(reqPath || "")
+        .split("/")
+        .filter(Boolean)
+        .map((segment) =>
+        {
+            try
+            {
+                return decodeURIComponent(segment);
+            }
+            catch (_err)
+            {
+                return segment;
+            }
+        });
+
+    // With the hosting rewrite the path looks like /a/{courtId}; when the
+    // function URL is hit directly the courtId is simply the last segment.
+    let courtId;
+    if (segments[0] === "a")
+    {
+        courtId = segments.length >= 2 ? segments[segments.length - 1] : null;
+    }
+    else
+    {
+        courtId = segments.length ? segments[segments.length - 1] : null;
+    }
+
+    if (!courtId || courtId.length > 64)
+    {
+        return null;
+    }
+
+    return courtId;
+}
+
+function getCachedScoreApiEntry(courtId)
+{
+    const entry = scoreApiCache.get(courtId);
+    if (!entry) return null;
+
+    if (Date.now() > entry.expiresAt)
+    {
+        scoreApiCache.delete(courtId);
+        return null;
+    }
+
+    return entry;
+}
+
+function setCachedScoreApiEntry(courtId, status, body)
+{
+    if (scoreApiCache.size >= SCORE_API_CACHE_MAX_ENTRIES)
+    {
+        const oldestKey = scoreApiCache.keys().next().value;
+        scoreApiCache.delete(oldestKey);
+    }
+
+    scoreApiCache.set(courtId, {
+        status,
+        body,
+        expiresAt: Date.now() + SCORE_API_CACHE_TTL_MS
+    });
+}
+
+exports.getCourtScore = onRequest(
+    { region: REGION, maxInstances: 2 },
+    async (req, res) =>
+    {
+        res.set("Access-Control-Allow-Origin", "*");
+        res.set("Access-Control-Allow-Methods", "GET, OPTIONS");
+
+        if (req.method === "OPTIONS")
+        {
+            return res.status(204).send("");
+        }
+
+        if (req.method !== "GET")
+        {
+            res.set("Cache-Control", "no-store");
+            return sendJson(res, 405, { success: false, error: "Method not allowed" });
+        }
+
+        // Let the Firebase Hosting CDN absorb repeat requests: at most one
+        // origin hit per courtId per TTL window regardless of client volume.
+        res.set("Cache-Control", "public, max-age=10, s-maxage=10");
+
+        try
+        {
+            const courtId = extractScoreApiCourtId(req.path);
+            if (!courtId)
+            {
+                return sendJson(res, 400, { success: false, error: "Missing or invalid courtId. Use /a/{courtId}." });
+            }
+
+            const cached = getCachedScoreApiEntry(courtId);
+            if (cached)
+            {
+                return sendJson(res, cached.status, cached.body);
+            }
+
+            const [courtSnap, scoreSnap] = await Promise.all([
+                db.doc(`courts/${courtId}`).get(),
+                db.doc(`courts/${courtId}/score/current`).get()
+            ]);
+
+            if (!courtSnap.exists)
+            {
+                const notFoundBody = { success: false, error: "Court not found." };
+                setCachedScoreApiEntry(courtId, 404, notFoundBody);
+                return sendJson(res, 404, notFoundBody);
+            }
+
+            const courtData = courtSnap.data() || {};
+            const rawScore = scoreSnap.exists ? scoreSnap.data() : null;
+            const scoringOptions = buildScoringOptions({
+                ...(courtData.scoringOptions || {}),
+                ...(rawScore?.scoringOptions || {}),
+                scoringMode: rawScore?.scoringOptions?.scoringMode || courtData.scoringMode
+            });
+            const score = rawScore || defaultScore(scoringOptions);
+            const inTiebreak = Boolean(score.inTiebreak);
+
+            const body = {
+                success: true,
+                courtId,
+                teamNames: {
+                    A: courtData.teamNames?.A || DEFAULT_TEAM_NAMES.A,
+                    B: courtData.teamNames?.B || DEFAULT_TEAM_NAMES.B
+                },
+                playerNames: {
+                    A1: courtData.playerNames?.A1 || "",
+                    A2: courtData.playerNames?.A2 || "",
+                    B1: courtData.playerNames?.B1 || "",
+                    B2: courtData.playerNames?.B2 || ""
+                },
+                scoringOptions,
+                scoringMode: scoringOptions.scoringMode,
+                teams: {
+                    A: {
+                        sets: Number(score.A?.sets) || 0,
+                        games: Number(score.A?.games) || 0,
+                        points: Number(score.A?.points) || 0,
+                        pointsDisplay: buildScorePointsDisplay(score.A?.points, scoringOptions, inTiebreak)
+                    },
+                    B: {
+                        sets: Number(score.B?.sets) || 0,
+                        games: Number(score.B?.games) || 0,
+                        points: Number(score.B?.points) || 0,
+                        pointsDisplay: buildScorePointsDisplay(score.B?.points, scoringOptions, inTiebreak)
+                    }
+                },
+                completedSets: Array.isArray(score.completedSets) ? score.completedSets : [],
+                inTiebreak,
+                matchComplete: Boolean(score.matchComplete),
+                server: getCurrentServerLabel({ ...score, scoringOptions }),
+                fetchedAt: new Date().toISOString()
+            };
+
+            setCachedScoreApiEntry(courtId, 200, body);
+            return sendJson(res, 200, body);
+        }
+        catch (err)
+        {
+            console.error("getCourtScore failed:", err);
+            res.set("Cache-Control", "no-store");
             return sendJson(res, 500, { success: false, error: "Error" });
         }
     }

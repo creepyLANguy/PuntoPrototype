@@ -499,3 +499,130 @@ describe("postEvent", () =>
     expect(eventEntry[1].scoreVersion).toBe(0);
   });
 });
+
+describe("getCourtScore", () =>
+{
+  function makeRes()
+  {
+    return {
+      statusCode: null,
+      payload: null,
+      headers: {},
+      status(code) { this.statusCode = code; return this; },
+      json(body) { this.payload = body; return this; },
+      set(name, value) { this.headers[name] = value; return this; },
+      send(body) { this.payload = body; return this; }
+    };
+  }
+
+  test("returns the current score with display labels, server, and CDN cache headers", async () =>
+  {
+    const courtId = "court-1";
+    const score = toLiveScorePayload(replayEvents(
+      [
+        { id: "e1", eventType: "POINT_TEAM_A", createdAt: timestamp(1) },
+        { id: "e2", eventType: "POINT_TEAM_A", createdAt: timestamp(2) },
+        { id: "e3", eventType: "POINT_TEAM_A", createdAt: timestamp(3) }
+      ],
+      DEFAULT_SCORING_OPTIONS
+    ));
+
+    mockDb = new FakeFirestore({
+      [`courts/${courtId}`]: {
+        teamNames: { A: "Smashers", B: "Lobbers" },
+        playerNames: { A1: "Ann", A2: "Al", B1: "Bo", B2: "Bea" },
+        scoringMode: DEFAULT_SCORING_OPTIONS.scoringMode,
+        scoringOptions: DEFAULT_SCORING_OPTIONS
+      },
+      [`courts/${courtId}/score/current`]: score
+    });
+
+    let getCourtScore;
+    jest.isolateModules(() =>
+    {
+      ({ getCourtScore } = require("./index"));
+    });
+
+    const res = makeRes();
+    await getCourtScore({ method: "GET", path: `/a/${courtId}` }, res);
+
+    expect(res.statusCode).toBe(200);
+    expect(res.payload.success).toBe(true);
+    expect(res.payload.courtId).toBe(courtId);
+    expect(res.payload.teamNames).toEqual({ A: "Smashers", B: "Lobbers" });
+    expect(res.payload.playerNames.A1).toBe("Ann");
+    expect(res.payload.teams.A.points).toBe(3);
+    expect(res.payload.teams.A.pointsDisplay).toBe("40");
+    expect(res.payload.teams.B.pointsDisplay).toBe("0");
+    expect(res.payload.scoringMode).toBe("standard");
+    expect(res.payload.server).toBe("A1");
+    expect(res.payload.matchComplete).toBe(false);
+    expect(res.headers["Cache-Control"]).toBe("public, max-age=10, s-maxage=10");
+  });
+
+  test("returns 404 for an unknown court", async () =>
+  {
+    mockDb = new FakeFirestore({});
+
+    let getCourtScore;
+    jest.isolateModules(() =>
+    {
+      ({ getCourtScore } = require("./index"));
+    });
+
+    const res = makeRes();
+    await getCourtScore({ method: "GET", path: "/a/no-such-court" }, res);
+
+    expect(res.statusCode).toBe(404);
+    expect(res.payload.success).toBe(false);
+  });
+
+  test("serves repeat requests from the in-memory cache instead of Firestore", async () =>
+  {
+    const courtId = "court-cache";
+
+    mockDb = new FakeFirestore({
+      [`courts/${courtId}`]: {
+        teamNames: { A: "First", B: "Second" },
+        scoringMode: DEFAULT_SCORING_OPTIONS.scoringMode,
+        scoringOptions: DEFAULT_SCORING_OPTIONS
+      }
+    });
+
+    let getCourtScore;
+    jest.isolateModules(() =>
+    {
+      ({ getCourtScore } = require("./index"));
+    });
+
+    const first = makeRes();
+    await getCourtScore({ method: "GET", path: `/a/${courtId}` }, first);
+    expect(first.statusCode).toBe(200);
+    expect(first.payload.teamNames.A).toBe("First");
+
+    // Mutate the backing store; a cached response must still be returned.
+    mockDb.docs.set(`courts/${courtId}`, { teamNames: { A: "Changed", B: "Second" } });
+
+    const second = makeRes();
+    await getCourtScore({ method: "GET", path: `/a/${courtId}` }, second);
+    expect(second.statusCode).toBe(200);
+    expect(second.payload.teamNames.A).toBe("First");
+  });
+
+  test("rejects requests without a usable courtId", async () =>
+  {
+    mockDb = new FakeFirestore({});
+
+    let getCourtScore;
+    jest.isolateModules(() =>
+    {
+      ({ getCourtScore } = require("./index"));
+    });
+
+    const res = makeRes();
+    await getCourtScore({ method: "GET", path: "/a" }, res);
+
+    expect(res.statusCode).toBe(400);
+    expect(res.payload.success).toBe(false);
+  });
+});
