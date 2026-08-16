@@ -557,7 +557,8 @@ describe("getCourtScore", () =>
     expect(res.payload.scoringMode).toBe("standard");
     expect(res.payload.server).toBe("A1");
     expect(res.payload.matchComplete).toBe(false);
-    expect(res.headers["Cache-Control"]).toBe("public, max-age=10, s-maxage=10");
+    expect(typeof res.payload.revision).toBe("string");
+    expect(res.headers["Cache-Control"]).toBe("public, max-age=4, s-maxage=4");
   });
 
   test("returns 404 for an unknown court", async () =>
@@ -623,6 +624,77 @@ describe("getCourtScore", () =>
     await getCourtScore({ method: "GET", path: "/a" }, res);
 
     expect(res.statusCode).toBe(400);
+    expect(res.payload.success).toBe(false);
+  });
+
+  test("revision endpoint returns a tiny payload that tracks score changes", async () =>
+  {
+    const courtId = "court-rev";
+    const baseCourt = {
+      teamNames: { A: "Smashers", B: "Lobbers" },
+      scoringMode: DEFAULT_SCORING_OPTIONS.scoringMode,
+      scoringOptions: DEFAULT_SCORING_OPTIONS
+    };
+
+    mockDb = new FakeFirestore({
+      [`courts/${courtId}`]: baseCourt,
+      [`courts/${courtId}/score/current`]: toLiveScorePayload(replayEvents(
+        [{ id: "e1", eventType: "POINT_TEAM_A", createdAt: timestamp(1) }],
+        DEFAULT_SCORING_OPTIONS
+      ))
+    });
+
+    let getCourtScore;
+    let getCourtScoreRevision;
+    jest.isolateModules(() =>
+    {
+      ({ getCourtScore, getCourtScoreRevision } = require("./index"));
+    });
+
+    const revisionRes = makeRes();
+    await getCourtScoreRevision({ method: "GET", path: `/r/${courtId}` }, revisionRes);
+
+    expect(revisionRes.statusCode).toBe(200);
+    expect(Object.keys(revisionRes.payload).sort()).toEqual(["courtId", "revision", "success"]);
+
+    // The revision poll primes the shared cache, so the follow-up full fetch
+    // must report the exact same revision it advertised.
+    const scoreRes = makeRes();
+    await getCourtScore({ method: "GET", path: `/a/${courtId}` }, scoreRes);
+    expect(scoreRes.payload.revision).toBe(revisionRes.payload.revision);
+
+    mockDb.docs.set(`courts/${courtId}/score/current`, toLiveScorePayload(replayEvents(
+      [
+        { id: "e1", eventType: "POINT_TEAM_A", createdAt: timestamp(1) },
+        { id: "e2", eventType: "POINT_TEAM_B", createdAt: timestamp(2) }
+      ],
+      DEFAULT_SCORING_OPTIONS
+    )));
+
+    jest.isolateModules(() =>
+    {
+      ({ getCourtScoreRevision } = require("./index"));
+    });
+
+    const changedRes = makeRes();
+    await getCourtScoreRevision({ method: "GET", path: `/r/${courtId}` }, changedRes);
+    expect(changedRes.payload.revision).not.toBe(revisionRes.payload.revision);
+  });
+
+  test("revision endpoint reports 404 for an unknown court", async () =>
+  {
+    mockDb = new FakeFirestore({});
+
+    let getCourtScoreRevision;
+    jest.isolateModules(() =>
+    {
+      ({ getCourtScoreRevision } = require("./index"));
+    });
+
+    const res = makeRes();
+    await getCourtScoreRevision({ method: "GET", path: "/r/no-such-court" }, res);
+
+    expect(res.statusCode).toBe(404);
     expect(res.payload.success).toBe(false);
   });
 });

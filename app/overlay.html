@@ -374,7 +374,7 @@
   <script>
     (function ()
     {
-      const POLL_INTERVAL_MS = 10 * 1000;
+      const POLL_INTERVAL_MS = 5 * 1000;
 
       const DEFAULT_SETTINGS = {
         panel: "#000000",
@@ -417,6 +417,8 @@
 
       let settings = { ...DEFAULT_SETTINGS };
       let latestScore = null;
+      let renderedRevision = null;
+      let isPolling = false;
 
       function loadSettings()
       {
@@ -605,6 +607,35 @@
         statusLine.classList.add("visible");
       }
 
+      async function fetchJson(path)
+      {
+        const response = await fetch(path, { cache: "no-store" });
+        let data = null;
+
+        try
+        {
+          data = await response.json();
+        }
+        catch (_parseErr) { /* non-JSON body */ }
+
+        if (!response.ok || !data || !data.success)
+        {
+          throw new Error((data && data.error) || "Could not load score.");
+        }
+
+        return data;
+      }
+
+      async function loadFullScore()
+      {
+        const data = await fetchJson("/a/" + encodeURIComponent(courtId));
+        render(data);
+        // Trust the revision that shipped with this payload rather than the one
+        // that triggered the fetch, so a change landing mid-request is not
+        // mistaken for already-rendered state on the next poll.
+        renderedRevision = data.revision || null;
+      }
+
       async function poll()
       {
         if (!courtId)
@@ -613,36 +644,28 @@
           return;
         }
 
+        if (isPolling) return;
+        isPolling = true;
+
         try
         {
-          const response = await fetch("/a/" + encodeURIComponent(courtId), { cache: "no-store" });
+          const revisionData = await fetchJson("/r/" + encodeURIComponent(courtId));
 
-          if (!response.ok)
+          if (revisionData.revision && revisionData.revision === renderedRevision)
           {
-            let message = "Could not load score.";
-            try
-            {
-              const errorData = await response.json();
-              if (errorData && errorData.error) message = errorData.error;
-            }
-            catch (_parseErr) { /* non-JSON error body */ }
-            showError(message);
+            if (latestScore) render(latestScore);
             return;
           }
 
-          const data = await response.json();
-
-          if (!data.success)
-          {
-            showError(data.error || "Could not load score.");
-            return;
-          }
-
-          render(data);
+          await loadFullScore();
         }
-        catch (_err)
+        catch (err)
         {
-          showError("Connection lost. Retrying…");
+          showError(err.message === "Failed to fetch" ? "Connection lost. Retrying…" : err.message);
+        }
+        finally
+        {
+          isPolling = false;
         }
       }
 

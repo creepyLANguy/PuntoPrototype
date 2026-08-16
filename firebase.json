@@ -31,6 +31,13 @@
         }
       },
       {
+        "source": "/r/**",
+        "function": {
+          "functionId": "getCourtScoreRevision",
+          "region": "africa-south1"
+        }
+      },
+      {
         "source": "/b",
         "destination": "/app/overlay.html"
       },

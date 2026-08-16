@@ -1,4 +1,5 @@
 const admin = require("firebase-admin");
+const crypto = require("crypto");
 const { onDocumentCreated } = require("firebase-functions/v2/firestore");
 const { onCall } = require("firebase-functions/v2/https");
 const {
@@ -1545,7 +1546,7 @@ exports.postEvent = onRequest(
 // so polling clients (e.g. the OBS overlay) and request floods do not
 // translate into Firestore reads and runaway billing.
 // -----------------------------
-const SCORE_API_CACHE_TTL_MS = 10 * 1000;
+const SCORE_API_CACHE_TTL_MS = 4 * 1000;
 const SCORE_API_CACHE_MAX_ENTRIES = 500;
 const scoreApiCache = new Map();
 
@@ -1589,10 +1590,10 @@ function extractScoreApiCourtId(reqPath)
             }
         });
 
-    // With the hosting rewrite the path looks like /a/{courtId}; when the
-    // function URL is hit directly the courtId is simply the last segment.
+    // With the hosting rewrite the path looks like /a/{courtId} or /r/{courtId};
+    // when the function URL is hit directly the courtId is simply the last segment.
     let courtId;
-    if (segments[0] === "a")
+    if (segments[0] === "a" || segments[0] === "r")
     {
         courtId = segments.length >= 2 ? segments[segments.length - 1] : null;
     }
@@ -1638,27 +1639,125 @@ function setCachedScoreApiEntry(courtId, status, body)
     });
 }
 
+// The revision is a content fingerprint of everything the public score payload
+// exposes. Unlike a timestamp it cannot collide when two updates land in the
+// same millisecond, and unlike scoreVersion alone it also changes when a reset
+// rewrites team/player names or when scoreVersion is rolled back by a restore.
+function computeScoreRevision(body)
+{
+    const { fetchedAt: _ignored, revision: _alsoIgnored, ...fingerprintSource } = body || {};
+    return crypto
+        .createHash("sha1")
+        .update(JSON.stringify(fingerprintSource))
+        .digest("hex")
+        .slice(0, 16);
+}
+
+async function buildCourtScoreResponse(courtId)
+{
+    const cached = getCachedScoreApiEntry(courtId);
+    if (cached)
+    {
+        return { status: cached.status, body: cached.body };
+    }
+
+    const [courtSnap, scoreSnap] = await Promise.all([
+        db.doc(`courts/${courtId}`).get(),
+        db.doc(`courts/${courtId}/score/current`).get()
+    ]);
+
+    if (!courtSnap.exists)
+    {
+        const notFoundBody = { success: false, error: "Court not found." };
+        setCachedScoreApiEntry(courtId, 404, notFoundBody);
+        return { status: 404, body: notFoundBody };
+    }
+
+    const courtData = courtSnap.data() || {};
+    const rawScore = scoreSnap.exists ? scoreSnap.data() : null;
+    const scoringOptions = buildScoringOptions({
+        ...(courtData.scoringOptions || {}),
+        ...(rawScore?.scoringOptions || {}),
+        scoringMode: rawScore?.scoringOptions?.scoringMode || courtData.scoringMode
+    });
+    const score = rawScore || defaultScore(scoringOptions);
+    const inTiebreak = Boolean(score.inTiebreak);
+
+    const body = {
+        success: true,
+        courtId,
+        teamNames: {
+            A: courtData.teamNames?.A || DEFAULT_TEAM_NAMES.A,
+            B: courtData.teamNames?.B || DEFAULT_TEAM_NAMES.B
+        },
+        playerNames: {
+            A1: courtData.playerNames?.A1 || "",
+            A2: courtData.playerNames?.A2 || "",
+            B1: courtData.playerNames?.B1 || "",
+            B2: courtData.playerNames?.B2 || ""
+        },
+        scoringOptions,
+        scoringMode: scoringOptions.scoringMode,
+        teams: {
+            A: {
+                sets: Number(score.A?.sets) || 0,
+                games: Number(score.A?.games) || 0,
+                points: Number(score.A?.points) || 0,
+                pointsDisplay: buildScorePointsDisplay(score.A?.points, scoringOptions, inTiebreak)
+            },
+            B: {
+                sets: Number(score.B?.sets) || 0,
+                games: Number(score.B?.games) || 0,
+                points: Number(score.B?.points) || 0,
+                pointsDisplay: buildScorePointsDisplay(score.B?.points, scoringOptions, inTiebreak)
+            }
+        },
+        completedSets: Array.isArray(score.completedSets) ? score.completedSets : [],
+        inTiebreak,
+        matchComplete: Boolean(score.matchComplete),
+        server: getCurrentServerLabel({ ...score, scoringOptions }),
+        scoreVersion: normalizeScoreVersion(courtData.scoreVersion)
+    };
+
+    body.revision = computeScoreRevision(body);
+    body.fetchedAt = new Date().toISOString();
+
+    setCachedScoreApiEntry(courtId, 200, body);
+    return { status: 200, body };
+}
+
+function prepareScoreApiRequest(req, res, cacheSeconds)
+{
+    res.set("Access-Control-Allow-Origin", "*");
+    res.set("Access-Control-Allow-Methods", "GET, OPTIONS");
+
+    if (req.method === "OPTIONS")
+    {
+        res.status(204).send("");
+        return null;
+    }
+
+    if (req.method !== "GET")
+    {
+        res.set("Cache-Control", "no-store");
+        sendJson(res, 405, { success: false, error: "Method not allowed" });
+        return null;
+    }
+
+    // Let the Firebase Hosting CDN absorb repeat requests: at most one
+    // origin hit per courtId per TTL window regardless of client volume.
+    res.set("Cache-Control", `public, max-age=${cacheSeconds}, s-maxage=${cacheSeconds}`);
+    return true;
+}
+
 exports.getCourtScore = onRequest(
     { region: REGION, maxInstances: 2 },
     async (req, res) =>
     {
-        res.set("Access-Control-Allow-Origin", "*");
-        res.set("Access-Control-Allow-Methods", "GET, OPTIONS");
-
-        if (req.method === "OPTIONS")
+        if (!prepareScoreApiRequest(req, res, 4))
         {
-            return res.status(204).send("");
+            return;
         }
-
-        if (req.method !== "GET")
-        {
-            res.set("Cache-Control", "no-store");
-            return sendJson(res, 405, { success: false, error: "Method not allowed" });
-        }
-
-        // Let the Firebase Hosting CDN absorb repeat requests: at most one
-        // origin hit per courtId per TTL window regardless of client volume.
-        res.set("Cache-Control", "public, max-age=10, s-maxage=10");
 
         try
         {
@@ -1668,76 +1767,58 @@ exports.getCourtScore = onRequest(
                 return sendJson(res, 400, { success: false, error: "Missing or invalid courtId. Use /a/{courtId}." });
             }
 
-            const cached = getCachedScoreApiEntry(courtId);
-            if (cached)
-            {
-                return sendJson(res, cached.status, cached.body);
-            }
-
-            const [courtSnap, scoreSnap] = await Promise.all([
-                db.doc(`courts/${courtId}`).get(),
-                db.doc(`courts/${courtId}/score/current`).get()
-            ]);
-
-            if (!courtSnap.exists)
-            {
-                const notFoundBody = { success: false, error: "Court not found." };
-                setCachedScoreApiEntry(courtId, 404, notFoundBody);
-                return sendJson(res, 404, notFoundBody);
-            }
-
-            const courtData = courtSnap.data() || {};
-            const rawScore = scoreSnap.exists ? scoreSnap.data() : null;
-            const scoringOptions = buildScoringOptions({
-                ...(courtData.scoringOptions || {}),
-                ...(rawScore?.scoringOptions || {}),
-                scoringMode: rawScore?.scoringOptions?.scoringMode || courtData.scoringMode
-            });
-            const score = rawScore || defaultScore(scoringOptions);
-            const inTiebreak = Boolean(score.inTiebreak);
-
-            const body = {
-                success: true,
-                courtId,
-                teamNames: {
-                    A: courtData.teamNames?.A || DEFAULT_TEAM_NAMES.A,
-                    B: courtData.teamNames?.B || DEFAULT_TEAM_NAMES.B
-                },
-                playerNames: {
-                    A1: courtData.playerNames?.A1 || "",
-                    A2: courtData.playerNames?.A2 || "",
-                    B1: courtData.playerNames?.B1 || "",
-                    B2: courtData.playerNames?.B2 || ""
-                },
-                scoringOptions,
-                scoringMode: scoringOptions.scoringMode,
-                teams: {
-                    A: {
-                        sets: Number(score.A?.sets) || 0,
-                        games: Number(score.A?.games) || 0,
-                        points: Number(score.A?.points) || 0,
-                        pointsDisplay: buildScorePointsDisplay(score.A?.points, scoringOptions, inTiebreak)
-                    },
-                    B: {
-                        sets: Number(score.B?.sets) || 0,
-                        games: Number(score.B?.games) || 0,
-                        points: Number(score.B?.points) || 0,
-                        pointsDisplay: buildScorePointsDisplay(score.B?.points, scoringOptions, inTiebreak)
-                    }
-                },
-                completedSets: Array.isArray(score.completedSets) ? score.completedSets : [],
-                inTiebreak,
-                matchComplete: Boolean(score.matchComplete),
-                server: getCurrentServerLabel({ ...score, scoringOptions }),
-                fetchedAt: new Date().toISOString()
-            };
-
-            setCachedScoreApiEntry(courtId, 200, body);
-            return sendJson(res, 200, body);
+            const { status, body } = await buildCourtScoreResponse(courtId);
+            return sendJson(res, status, body);
         }
         catch (err)
         {
             console.error("getCourtScore failed:", err);
+            res.set("Cache-Control", "no-store");
+            return sendJson(res, 500, { success: false, error: "Error" });
+        }
+    }
+);
+
+// -----------------------------
+// GET score revision only (/r/{courtId})
+// Tiny polling endpoint: clients compare the returned revision against the one
+// they last rendered and only call /a/{courtId} when it differs. The full
+// payload is built and cached here anyway, so the follow-up fetch is served
+// from cache without extra Firestore reads.
+// -----------------------------
+exports.getCourtScoreRevision = onRequest(
+    { region: REGION, maxInstances: 2 },
+    async (req, res) =>
+    {
+        if (!prepareScoreApiRequest(req, res, 4))
+        {
+            return;
+        }
+
+        try
+        {
+            const courtId = extractScoreApiCourtId(req.path);
+            if (!courtId)
+            {
+                return sendJson(res, 400, { success: false, error: "Missing or invalid courtId. Use /r/{courtId}." });
+            }
+
+            const { status, body } = await buildCourtScoreResponse(courtId);
+
+            if (status !== 200)
+            {
+                return sendJson(res, status, body);
+            }
+
+            return sendJson(res, 200, {
+                success: true,
+                courtId,
+                revision: body.revision
+            });
+        }
+        catch (err)
+        {
+            console.error("getCourtScoreRevision failed:", err);
             res.set("Cache-Control", "no-store");
             return sendJson(res, 500, { success: false, error: "Error" });
         }
