@@ -81,6 +81,14 @@ jobs:
       - run: npm install -g firebase-tools@latest
       - run: firebase --version
 
+      - name: Ensure hosting rewrite functions are deployed in staging region
+        env:
+          FIREBASE_PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID_STAGING }}
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN_STAGING }}
+        run: |
+          npm ci --prefix functions
+          firebase deploy --only functions:getCourtScore,functions:getCourtScoreRevision --project "$FIREBASE_PROJECT_ID" --token "$FIREBASE_TOKEN" --force
+
       - name: Deploy staging hosting
         env:
           FIREBASE_PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID_STAGING }}
