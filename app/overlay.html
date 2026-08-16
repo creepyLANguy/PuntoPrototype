@@ -468,6 +468,12 @@
   <script>
     (function ()
     {
+      //AL.
+      const isDebugCourt = location.hostname === "localhost" || location.hostname === "127.0.0.1";
+      const debugCourt_revisionUrl = "https://qa.padelpush.co.za/r/bnrm";
+      const debugCourt_fullScoreUrl = "https://qa.padelpush.co.za/a/bnrm";
+      //
+      
       const POLL_INTERVAL_MS = 5 * 1000;
 
       const DEFAULT_SETTINGS = {
@@ -754,7 +760,8 @@
 
       async function loadFullScore()
       {
-        const data = await fetchJson("/a/" + encodeURIComponent(courtId));
+        const url = isDebugCourt ? debugCourt_fullScoreUrl : "/a/" + encodeURIComponent(courtId);
+        const data = await fetchJson(url);
         render(data);
         // Trust the revision that shipped with this payload rather than the one
         // that triggered the fetch, so a change landing mid-request is not
@@ -775,7 +782,8 @@
 
         try
         {
-          const revisionData = await fetchJson("/r/" + encodeURIComponent(courtId));
+          const revisionUrl = isDebugCourt ? debugCourt_revisionUrl : "/r/" + encodeURIComponent(courtId);
+          const revisionData = await fetchJson(revisionUrl);
 
           if (revisionData.revision && revisionData.revision === renderedRevision)
           {
