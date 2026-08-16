@@ -30,43 +30,47 @@
       min-height: 100vh;
     }
 
+    /* .overlay's font-size is the single scale knob (24px = 1.5x the old 16px
+       base). Column width stays in rem so the small header labels can share it. */
     .overlay {
       position: fixed;
       top: 16px;
       left: 16px;
-      min-width: 340px;
-      max-width: 480px;
+      font-size: 24px;
+      --ov-col: 2.9rem;
+      min-width: 21.25em;
+      max-width: 30em;
       background: var(--ov-panel);
-      border-radius: 12px;
+      border-radius: 0.75em;
       overflow: hidden;
       box-shadow: 0 4px 18px rgba(0, 0, 0, 0.45);
-      border-left: 4px solid var(--ov-accent);
+      border-left: 0.25em solid var(--ov-accent);
     }
 
     .brand {
       display: flex;
       align-items: center;
-      gap: 8px;
-      padding: 6px 12px 4px;
+      gap: 0.5em;
+      padding: 0.375em 0.75em 0.25em;
       opacity: 0.92;
     }
 
     .brand img {
-      width: 18px;
-      height: 18px;
+      width: 1.125em;
+      height: 1.125em;
       object-fit: contain;
     }
 
     .brand-name {
-      font-size: 0.72rem;
+      font-size: 0.72em;
       font-weight: 800;
       text-transform: uppercase;
-      letter-spacing: 1.4px;
+      letter-spacing: 0.12em;
     }
 
     .brand-court {
       margin-left: auto;
-      font-size: 0.68rem;
+      font-size: 0.68em;
       font-weight: 600;
       opacity: 0.75;
       max-width: 45%;
@@ -75,12 +79,19 @@
       white-space: nowrap;
     }
 
+    /* The header and both team rows share this template so the score columns
+       line up vertically without measuring anything. */
+    .score-header,
     .team-row {
       display: grid;
       grid-template-columns: 1fr auto;
       align-items: center;
-      gap: 8px;
-      padding: 6px 12px;
+      gap: 0.5em;
+      padding: 0.375em 0.75em;
+    }
+
+    .score-header {
+      padding-bottom: 0.15em;
     }
 
     .team-row+.team-row {
@@ -90,15 +101,15 @@
     .team-id {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 0.5em;
       min-width: 0;
     }
 
     .team-logo {
-      width: 26px;
-      height: 26px;
+      width: 1.625em;
+      height: 1.625em;
       object-fit: contain;
-      border-radius: 4px;
+      border-radius: 0.25em;
       display: none;
     }
 
@@ -111,33 +122,68 @@
     }
 
     .team-name {
-      font-size: 1rem;
-      font-weight: 800;
+      font-size: 0.5em;
+      font-weight: 700;
       text-transform: uppercase;
-      letter-spacing: -0.3px;
+      letter-spacing: 0.09em;
+      opacity: 0.6;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
     }
 
-    .team-row[data-team="A"] .team-name {
+    /* Without player names the team name carries the row on its own. */
+    .team-name.primary {
+      font-size: 0.85em;
+      font-weight: 800;
+      letter-spacing: -0.01em;
+      opacity: 1;
+    }
+
+    .team-row[data-team="A"] .team-name.primary {
       color: var(--ov-teamA);
     }
 
-    .team-row[data-team="B"] .team-name {
+    .team-row[data-team="B"] .team-name.primary {
       color: var(--ov-teamB);
     }
 
-    .team-players {
-      font-size: 0.72rem;
-      opacity: 0.8;
+    .player-line {
+      display: flex;
+      align-items: center;
+      gap: 0.35em;
+      font-size: 0.85em;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: -0.01em;
+      line-height: 1.3;
       white-space: nowrap;
+      overflow: hidden;
+    }
+
+    .player-line.hidden {
+      display: none;
+    }
+
+    .player-name {
       overflow: hidden;
       text-overflow: ellipsis;
     }
 
+    .team-row[data-team="A"] .player-line {
+      color: var(--ov-teamA);
+    }
+
+    .team-row[data-team="B"] .player-line {
+      color: var(--ov-teamB);
+    }
+
     .serve-dot {
-      display: inline-block;
+      flex: 0 0 auto;
+      width: 0.5em;
+      height: 0.5em;
+      border-radius: 50%;
+      background: currentColor;
       visibility: hidden;
     }
 
@@ -148,46 +194,70 @@
     .score-cells {
       display: flex;
       align-items: stretch;
-      gap: 4px;
+      gap: 0.25em;
     }
 
+    /* Fixed width: fits two characters, never reflows as values change. */
     .cell {
-      min-width: 30px;
-      padding: 3px 6px;
-      border-radius: 6px;
+      flex: 0 0 var(--ov-col);
+      width: var(--ov-col);
+      padding: 0.15em 0;
+      border-radius: 0.25em;
       background: rgba(255, 255, 255, 0.1);
       text-align: center;
       font-variant-numeric: tabular-nums;
+      font-size: 1.2em;
+      font-weight: 600;
+      line-height: 1.25;
+      opacity: 0.7;
     }
 
-    .cell .cell-label {
-      display: block;
-      font-size: 0.5rem;
-      text-transform: uppercase;
-      letter-spacing: 0.6px;
-      opacity: 0.6;
-    }
-
-    .cell .cell-value {
-      display: block;
-      font-size: 1.05rem;
-      font-weight: 800;
-      line-height: 1.2;
+    .cell.won {
+      font-weight: 900;
+      opacity: 1;
     }
 
     .cell.points {
       background: var(--ov-accent);
+      font-weight: 900;
+      opacity: 1;
+    }
+
+    .cell-head {
+      flex: 0 0 var(--ov-col);
+      width: var(--ov-col);
+      text-align: center;
+      font-size: 0.5em;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      opacity: 0.6;
     }
 
     .status-line {
-      padding: 3px 12px 6px;
-      font-size: 0.66rem;
+      padding: 0.15em 0.75em 0.35em;
+      font-size: 0.66em;
       opacity: 0.75;
       display: none;
     }
 
     .status-line.visible {
       display: block;
+    }
+
+    .loading-line {
+      padding: 0.4em 0.75em 0.6em;
+      font-size: 0.72em;
+      font-weight: 600;
+      opacity: 0.8;
+    }
+
+    .loading-line.hidden {
+      display: none;
+    }
+
+    .score-body.hidden {
+      display: none;
     }
 
     /* ---------- Settings UI ---------- */
@@ -267,6 +337,12 @@
       cursor: pointer;
     }
 
+    .settings-panel input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      cursor: pointer;
+    }
+
     .settings-panel .section {
       margin: 10px 0 6px;
       font-size: 0.66rem;
@@ -313,26 +389,41 @@
       <span class="brand-court" id="courtLabel"></span>
     </div>
 
-    <div class="team-row" data-team="A">
-      <div class="team-id">
-        <img class="team-logo" id="logoA" alt="" />
-        <div class="team-names">
-          <div class="team-name" id="nameA">Team A</div>
-          <div class="team-players" id="playersA"></div>
-        </div>
-      </div>
-      <div class="score-cells" id="cellsA"></div>
-    </div>
+    <div class="loading-line" id="loadingLine">Loading…</div>
 
-    <div class="team-row" data-team="B">
-      <div class="team-id">
-        <img class="team-logo" id="logoB" alt="" />
-        <div class="team-names">
-          <div class="team-name" id="nameB">Team B</div>
-          <div class="team-players" id="playersB"></div>
-        </div>
+    <div class="score-body hidden" id="scoreBody">
+      <div class="score-header">
+        <span></span>
+        <div class="score-cells" id="cellsHead"></div>
       </div>
-      <div class="score-cells" id="cellsB"></div>
+
+      <div class="team-row" data-team="A">
+        <div class="team-id">
+          <img class="team-logo" id="logoA" alt="" />
+          <div class="team-names">
+            <div class="team-name" id="nameA">Team A</div>
+            <div class="player-line" id="lineA1"><span class="serve-dot" id="dotA1"></span><span class="player-name"
+                id="playerA1"></span></div>
+            <div class="player-line" id="lineA2"><span class="serve-dot" id="dotA2"></span><span class="player-name"
+                id="playerA2"></span></div>
+          </div>
+        </div>
+        <div class="score-cells" id="cellsA"></div>
+      </div>
+
+      <div class="team-row" data-team="B">
+        <div class="team-id">
+          <img class="team-logo" id="logoB" alt="" />
+          <div class="team-names">
+            <div class="team-name" id="nameB">Team B</div>
+            <div class="player-line" id="lineB1"><span class="serve-dot" id="dotB1"></span><span class="player-name"
+                id="playerB1"></span></div>
+            <div class="player-line" id="lineB2"><span class="serve-dot" id="dotB2"></span><span class="player-name"
+                id="playerB2"></span></div>
+          </div>
+        </div>
+        <div class="score-cells" id="cellsB"></div>
+      </div>
     </div>
 
     <div class="status-line" id="statusLine"></div>
@@ -343,6 +434,9 @@
   <div class="settings-panel" id="settingsPanel">
     <h2>Customise Overlay</h2>
     <p class="transparent-note">The page background is transparent by default — ideal for an OBS browser source.</p>
+
+    <div class="section">Display</div>
+    <label><span>Show server indicator</span><input type="checkbox" id="setShowServer" /></label>
 
     <div class="section">Colours</div>
     <label><span>Panel background</span><input type="color" id="setPanel" /></label>
@@ -377,6 +471,7 @@
       const POLL_INTERVAL_MS = 5 * 1000;
 
       const DEFAULT_SETTINGS = {
+        showServer: true,
         panel: "#000000",
         text: "#ffffff",
         teamA: "#ffff00",
@@ -509,83 +604,113 @@
         cells.forEach((cell) =>
         {
           const div = document.createElement("div");
-          div.className = "cell" + (cell.highlight ? " points" : "");
-
-          const label = document.createElement("span");
-          label.className = "cell-label";
-          label.textContent = cell.label;
-
-          const value = document.createElement("span");
-          value.className = "cell-value";
-          value.textContent = cell.value;
-
-          div.appendChild(label);
-          div.appendChild(value);
+          div.className = "cell" +
+            (cell.highlight ? " points" : "") +
+            (cell.won ? " won" : "");
+          div.textContent = cell.value;
           container.appendChild(div);
         });
       }
 
-      function serveDot(serving)
+      function setHeadCells(labels)
       {
-        return serving ? " \u{1F3BE}" : "";
+        const container = document.getElementById("cellsHead");
+        container.textContent = "";
+
+        labels.forEach((label) =>
+        {
+          const div = document.createElement("div");
+          div.className = "cell-head";
+          div.textContent = label;
+          container.appendChild(div);
+        });
       }
 
-      function playersLine(team, data)
+      function getPlayerName(slot, data)
       {
-        const p1 = settings["player" + team + "1"] || data.playerNames[team + "1"];
-        const p2 = settings["player" + team + "2"] || data.playerNames[team + "2"];
-        const server = data.server || "";
+        return settings["player" + slot] || data.playerNames[slot] || "";
+      }
 
-        const parts = [];
-        if (p1) parts.push(p1 + (server === team + "1" ? serveDot(true) : ""));
-        if (p2) parts.push(p2 + (server === team + "2" ? serveDot(true) : ""));
+      // Columns are identical for both teams, so a single build keeps them aligned.
+      function buildColumns(data)
+      {
+        const columns = [];
+        const mode = data.scoringMode || "standard";
 
-        return parts.join(" · ");
+        if (mode === "standard")
+        {
+          (data.completedSets || []).forEach((set, index) =>
+          {
+            const a = Number(set.A) || 0;
+            const b = Number(set.B) || 0;
+            columns.push({
+              label: "Set " + (index + 1),
+              A: { value: a, won: a > b },
+              B: { value: b, won: b > a }
+            });
+          });
+
+          const currentIndex = (data.completedSets || []).length + 1;
+          if (!data.matchComplete)
+          {
+            columns.push({
+              label: "Set " + currentIndex,
+              A: { value: data.teams.A.games },
+              B: { value: data.teams.B.games }
+            });
+          }
+        }
+
+        if (mode !== "standard" || !data.matchComplete)
+        {
+          const label = mode !== "standard" ? "Pts" : (data.inTiebreak ? "TB" : "Game");
+          columns.push({
+            label,
+            A: { value: data.teams.A.pointsDisplay, highlight: true },
+            B: { value: data.teams.B.pointsDisplay, highlight: true }
+          });
+        }
+
+        return columns;
       }
 
       function render(data)
       {
         latestScore = data;
 
+        document.getElementById("loadingLine").classList.add("hidden");
+        document.getElementById("scoreBody").classList.remove("hidden");
         document.getElementById("courtLabel").textContent = data.courtId || courtId || "";
+
+        const server = settings.showServer ? (data.server || "") : "";
 
         ["A", "B"].forEach((team) =>
         {
-          const nameOverride = settings["name" + team];
-          const teamName = nameOverride || data.teamNames[team] || ("Team " + team);
-          const serverTeam = (data.server || "").charAt(0);
-          const players = playersLine(team, data);
+          const teamName = settings["name" + team] || data.teamNames[team] || ("Team " + team);
+          const nameEl = document.getElementById("name" + team);
+          nameEl.textContent = teamName;
 
-          // Team-level serve marker only when no player names carry it
-          const teamServeMark = serverTeam === team && !players ? serveDot(true) : "";
+          let hasAnyPlayer = false;
 
-          document.getElementById("name" + team).textContent = teamName + teamServeMark;
-          document.getElementById("players" + team).textContent = players;
-
-          const cells = [];
-          const mode = data.scoringMode || "standard";
-
-          if (mode === "standard")
+          [1, 2].forEach((index) =>
           {
-            (data.completedSets || []).forEach((set, index) =>
-            {
-              cells.push({ label: "S" + (index + 1), value: Number(set[team]) || 0 });
-            });
-            cells.push({ label: "Sets", value: data.teams[team].sets });
-            cells.push({ label: "Games", value: data.teams[team].games });
-            cells.push({
-              label: data.inTiebreak ? "TB" : "Pts",
-              value: data.teams[team].pointsDisplay,
-              highlight: true
-            });
-          }
-          else
-          {
-            cells.push({ label: "Pts", value: data.teams[team].pointsDisplay, highlight: true });
-          }
+            const slot = team + index;
+            const playerName = getPlayerName(slot, data);
+            const line = document.getElementById("line" + slot);
 
-          setCells("cells" + team, cells);
+            line.classList.toggle("hidden", !playerName);
+            document.getElementById("player" + slot).textContent = playerName;
+            document.getElementById("dot" + slot).classList.toggle("serving", server === slot);
+
+            if (playerName) hasAnyPlayer = true;
+          });
+
+          nameEl.classList.toggle("primary", !hasAnyPlayer);
         });
+
+        const columns = buildColumns(data);
+        setHeadCells(columns.map((column) => column.label));
+        ["A", "B"].forEach((team) => setCells("cells" + team, columns.map((column) => column[team])));
 
         const statusLine = document.getElementById("statusLine");
         if (data.matchComplete)
@@ -602,6 +727,7 @@
 
       function showError(message)
       {
+        document.getElementById("loadingLine").classList.add("hidden");
         const statusLine = document.getElementById("statusLine");
         statusLine.textContent = message;
         statusLine.classList.add("visible");
@@ -692,6 +818,8 @@
         {
           document.getElementById(inputId).value = settings[key];
         });
+
+        document.getElementById("setShowServer").checked = settings.showServer !== false;
       }
 
       Object.entries(fieldMap).forEach(([inputId, key]) =>
@@ -702,6 +830,13 @@
           saveSettings();
           applySettings();
         });
+      });
+
+      document.getElementById("setShowServer").addEventListener("change", (event) =>
+      {
+        settings.showServer = event.target.checked;
+        saveSettings();
+        applySettings();
       });
 
       const gearBtn = document.getElementById("gearBtn");
