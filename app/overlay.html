@@ -25,7 +25,9 @@
     html,
     body {
       background: var(--ov-bg);
-      font-family: "Inter", "Outfit", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      font-family: "Arial", "Helvetica Neue", Helvetica, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
       color: var(--ov-text);
       min-height: 100vh;
     }
@@ -37,7 +39,7 @@
       top: 16px;
       left: 16px;
       font-size: 24px;
-      --ov-col: 2.9rem;
+      --ov-col: 4rem;
       min-width: 21.25em;
       max-width: 30em;
       background: var(--ov-panel);
@@ -65,7 +67,7 @@
       font-size: 0.72em;
       font-weight: 800;
       text-transform: uppercase;
-      letter-spacing: 0.12em;
+      letter-spacing: 0.05em;
     }
 
     .brand-court {
@@ -183,8 +185,9 @@
       width: 0.5em;
       height: 0.5em;
       border-radius: 50%;
-      background: currentColor;
+      background: var(--ov-text);
       visibility: hidden;
+      margin-left: 0.5em;
     }
 
     .serve-dot.serving {
@@ -195,21 +198,22 @@
       display: flex;
       align-items: stretch;
       gap: 0.25em;
+      height: 80%;    
     }
 
     /* Fixed width: fits two characters, never reflows as values change. */
     .cell {
       flex: 0 0 var(--ov-col);
       width: var(--ov-col);
-      padding: 0.15em 0;
+      padding: 0.2em 0;
       border-radius: 0.25em;
       background: rgba(255, 255, 255, 0.1);
-      text-align: center;
+      text-align: center;    
       font-variant-numeric: tabular-nums;
-      font-size: 1.2em;
-      font-weight: 600;
+      font-size: 1.4em;
+      font-weight: 900;
       line-height: 1.25;
-      opacity: 0.7;
+      opacity: 0.7;      
     }
 
     .cell.won {
@@ -392,20 +396,15 @@
     <div class="loading-line" id="loadingLine">Loading…</div>
 
     <div class="score-body hidden" id="scoreBody">
-      <div class="score-header">
-        <span></span>
-        <div class="score-cells" id="cellsHead"></div>
-      </div>
-
       <div class="team-row" data-team="A">
         <div class="team-id">
           <img class="team-logo" id="logoA" alt="" />
           <div class="team-names">
             <div class="team-name" id="nameA">Team A</div>
-            <div class="player-line" id="lineA1"><span class="serve-dot" id="dotA1"></span><span class="player-name"
-                id="playerA1"></span></div>
-            <div class="player-line" id="lineA2"><span class="serve-dot" id="dotA2"></span><span class="player-name"
-                id="playerA2"></span></div>
+            <div class="player-line" id="lineA1"><span class="player-name" id="playerA1"></span><span class="serve-dot"
+                id="dotA1"></span></div>
+            <div class="player-line" id="lineA2"><span class="player-name" id="playerA2"></span><span class="serve-dot"
+                id="dotA2"></span></div>
           </div>
         </div>
         <div class="score-cells" id="cellsA"></div>
@@ -416,10 +415,10 @@
           <img class="team-logo" id="logoB" alt="" />
           <div class="team-names">
             <div class="team-name" id="nameB">Team B</div>
-            <div class="player-line" id="lineB1"><span class="serve-dot" id="dotB1"></span><span class="player-name"
-                id="playerB1"></span></div>
-            <div class="player-line" id="lineB2"><span class="serve-dot" id="dotB2"></span><span class="player-name"
-                id="playerB2"></span></div>
+            <div class="player-line" id="lineB1"><span class="player-name" id="playerB1"></span><span class="serve-dot"
+                id="dotB1"></span></div>
+            <div class="player-line" id="lineB2"><span class="player-name" id="playerB2"></span><span class="serve-dot"
+                id="dotB2"></span></div>
           </div>
         </div>
         <div class="score-cells" id="cellsB"></div>
@@ -473,7 +472,7 @@
       const debugCourt_revisionUrl = "https://qa.padelpush.co.za/r/bnrm";
       const debugCourt_fullScoreUrl = "https://qa.padelpush.co.za/a/bnrm";
       //
-      
+
       const POLL_INTERVAL_MS = 5 * 1000;
 
       const DEFAULT_SETTINGS = {
@@ -686,7 +685,9 @@
 
         document.getElementById("loadingLine").classList.add("hidden");
         document.getElementById("scoreBody").classList.remove("hidden");
-        document.getElementById("courtLabel").textContent = data.courtId || courtId || "";
+        const displayCourtId = data.courtId || courtId || "";
+        document.getElementById("courtLabel").textContent =
+        displayCourtId ? "Join : " + displayCourtId.toUpperCase() : "";
 
         const server = settings.showServer ? (data.server || "") : "";
 
@@ -715,7 +716,6 @@
         });
 
         const columns = buildColumns(data);
-        setHeadCells(columns.map((column) => column.label));
         ["A", "B"].forEach((team) => setCells("cells" + team, columns.map((column) => column[team])));
 
         const statusLine = document.getElementById("statusLine");
