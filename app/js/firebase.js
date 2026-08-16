@@ -28,6 +28,12 @@ if (!firebaseConfig)
 export const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app);
 
+// Local-only: point at the emulator when serving from localhost.
+if (location.hostname === "localhost" || location.hostname === "127.0.0.1")
+{
+  connectFirestoreEmulator(db, "127.0.0.1", 8080);
+}
+
 export
 {
   doc,

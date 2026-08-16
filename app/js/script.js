@@ -23,6 +23,10 @@ import
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-functions.js";
 
 const functions = getFunctions(app, "africa-south1");
+if (location.hostname === "localhost" || location.hostname === "127.0.0.1")
+{
+  connectFunctionsEmulator(functions, "127.0.0.1", 5001);
+}
 
 export async function resetCourt(courtId, deepReset = false, newPassword = null, requirePassword = false)
 {
