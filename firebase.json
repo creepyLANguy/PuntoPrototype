@@ -59,11 +59,11 @@
       },
       {
         "source": "/nfc",
-        "destination": "/nfcWriter/index.html"
+        "destination": "/nfc/index.html"
       },
       {
         "source": "/nfc/**",
-        "destination": "/nfcWriter/index.html"
+        "destination": "/nfc/index.html"
       },
       {
         "source": "**",
