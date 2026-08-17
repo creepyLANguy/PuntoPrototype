@@ -1,0 +1,70 @@
+---
+config:
+  theme: 'base'
+---
+
+flowchart LR
+
+    %% =========================================================
+    %% STYLES AND CLASS DEFINITIONS
+    %% =========================================================
+    classDef court fill:#E8F5E9,stroke:#2E7D32,stroke-width:2px,color:#1B5E20,font-weight:bold;
+    classDef platform fill:#E3F2FD,stroke:#1565C0,stroke-width:2px,color:#0D47A1,font-weight:bold;
+    classDef user fill:#F3E5F5,stroke:#7B1FA2,stroke-width:2px,color:#4A148C,font-weight:bold;
+    classDef future fill:#FAFAFA,stroke:#9E9E9E,stroke-width:1px,stroke-dasharray: 5 5,color:#616161;
+
+    subgraph COURT["Court Equipment"]
+        Devices["Padel Push court devices<br/>Beacon • Pulse • Hub"]
+        NFC["NFC setup and player interaction"]
+        Devices -->|"HTTPS event submission"| Ingestion
+        NFC -->|"NFC / QR access"| WebApp
+    end
+
+    subgraph PLATFORM["Padel Push Cloud Platform"]
+        Hosting["Firebase Hosting<br/>Web application"]
+        Ingestion["Event ingestion API<br/>Cloud Function"]
+        Events[("Firestore<br/>Event history")]
+        Scoring["Scoring service<br/>Games • sets • tiebreaks"]
+        LiveState[("Live match state")]
+        Operations["Admin and court operations"]
+        WebApp["Web App"]
+    end
+
+    subgraph USERS["Users"]
+        Player["Players"]
+        Club["Club operators"]
+        Spectator["Spectators"]
+    end
+
+    Ingestion -->|"Stores match events"| Events
+    Events -->|"Triggers score processing"| Scoring
+    Scoring -->|"Updates"| LiveState
+    LiveState -->|"Real-time updates"| WebApp
+    Hosting --> WebApp
+
+    Player --> WebApp
+    Club --> Operations
+    Operations --> WebApp
+    Spectator --> WebApp
+
+    subgraph FUTURE["Potential Extensions"]
+        Broadcast["Broadcast overlay"]
+        Billing["Billing and subscriptions"]
+        Analytics["Club analytics"]
+    end
+
+    LiveState -.-> Broadcast
+    Operations -.-> Billing
+    LiveState -.-> Analytics
+
+    %% CLASS ASSIGNMENTS
+    class Devices,NFC court;
+    class Hosting,Ingestion,Events,Scoring,LiveState,Operations,WebApp platform;
+    class Player,Club,Spectator user;
+    class Broadcast,Billing,Analytics future;
+
+    %% SUBGRAPH STYLING
+    style COURT fill:#F1F8E9,stroke:#2E7D32,stroke-width:2px;
+    style PLATFORM fill:#E8EAF6,stroke:#1A237E,stroke-width:2px;
+    style USERS fill:#F3E5F5,stroke:#4A148C,stroke-width:2px;
+    style FUTURE fill:#FAFAFA,stroke:#9E9E9E,stroke-dasharray: 5 5;

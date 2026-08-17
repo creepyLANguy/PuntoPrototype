@@ -1,0 +1,48 @@
+flowchart LR
+    subgraph COURT["Court Equipment"]
+        Devices["Padel Push court devices<br/>Beacon • Pulse • Hub"]
+        NFC["NFC setup and player interaction"]
+        Devices -->|"HTTPS event submission"| Ingestion
+        NFC -->|"NFC / QR access"| WebApp
+    end
+
+    subgraph PLATFORM["Padel Push Cloud Platform"]
+        Hosting["Firebase Hosting<br/>Web application"]
+        Ingestion["Event ingestion API<br/>Cloud Function"]
+        Events[("Firestore<br/>Event history")]
+        Scoring["Scoring service<br/>Games • sets • tiebreaks"]
+        LiveState[("Live match state")]
+        Operations["Admin and court operations"]
+    end
+
+    subgraph USERS["Users"]
+        Player["Players"]
+        Club["Club operators"]
+        Spectator["Spectators"]
+    end
+
+    Ingestion -->|"Stores match events"| Events
+    Events -->|"Triggers score processing"| Scoring
+    Scoring -->|"Updates"| LiveState
+    LiveState -->|"Real-time updates"| WebApp
+    Hosting --> WebApp
+
+    Player --> WebApp
+    Club --> Operations
+    Operations --> WebApp
+    Spectator --> WebApp
+
+    subgraph FUTURE["Potential Extensions"]
+        Broadcast["Broadcast overlay"]
+        Billing["Billing and subscriptions"]
+        Analytics["Club analytics"]
+    end
+
+    LiveState -.-> Broadcast
+    Operations -.-> Billing
+    LiveState -.-> Analytics
+
+    class Devices,NFC court
+    class Hosting,Ingestion,Events,Scoring,LiveState,Operations platform
+    class Player,Club,Spectator user
+    class Broadcast,Billing,Analytics future

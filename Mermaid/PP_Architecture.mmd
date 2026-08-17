@@ -1,0 +1,219 @@
+flowchart LR
+
+    %% =========================================================
+    %% PADEL PUSH - TECHNICAL ARCHITECTURE
+    %% =========================================================
+
+    subgraph COURT["Court Hardware"]
+        
+        Beacon["Beacon<br/>ESP32 firmware<br/>beacon.ino"]
+        Pulse["Pulse<br/>ESP32 firmware<br/>pulse.ino"]
+        Hub["Hub<br/>ESP32 firmware + PN532 NFC<br/>hub.ino"]
+        Portal["Portal<br/>portal.ino<br/>Placeholder / not implemented"]
+
+        WiFi["Court Wi-Fi"]
+
+        Beacon --> WiFi
+        Pulse --> WiFi
+        Hub --> WiFi
+
+        NFCReader["NFC reader"]
+        NFCReader --> Hub
+    end
+
+
+    subgraph FIREBASE["Firebase Platform"]
+
+        Hosting["Firebase Hosting<br/>Static web application"]
+
+        HTTP["HTTP Cloud Function<br/>postEvent<br/>Device event ingestion"]
+
+        Callable["Callable Cloud Functions"]
+        Reset["resetCourt"]
+        Options["updateScoringOptions"]
+        Details["getDetailedScore"]
+
+        Callable --> Reset
+        Callable --> Options
+        Callable --> Details
+
+        Firestore[("Cloud Firestore")]
+
+        Courts["courts/{courtId}<br/>Court configuration"]
+        Events[("courts/{courtId}/events<br/>Immutable match events")]
+        CurrentScore[("courts/{courtId}/score/current<br/>Current live score")]
+        Checkpoints[("courts/{courtId}/scoreCheckpoints<br/>Replay checkpoints")]
+        Devices["devices/{deviceId}<br/>Device registration"]
+
+        Firestore --- Courts
+        Firestore --- Events
+        Firestore --- CurrentScore
+        Firestore --- Checkpoints
+        Firestore --- Devices
+
+        Trigger["Firestore trigger<br/>onEventCreate"]
+
+        Scoring["Scoring engine<br/>scoringEngine.js"]
+
+        HTTP --> Events
+        Events --> Trigger
+        Trigger --> Scoring
+        Scoring --> CurrentScore
+        Scoring --> Checkpoints
+
+        Reset --> Events
+        Reset --> CurrentScore
+        Options --> Events
+        Options --> CurrentScore
+        Details --> Events
+        Details --> CurrentScore
+    end
+
+
+    subgraph WEB["Web Application"]
+
+        WebApp["Padel Push Web App<br/>app/index.html<br/>app/js/script.js"]
+
+        Scoreboard["Live scoreboard"]
+        Play["Play / scoring controls"]
+        Spectate["Spectator view"]
+        Admin["Admin dashboard"]
+        CourtSetup["Court creation and setup"]
+        DeviceAdmin["Device assignment and management"]
+        QR["QR code generation"]
+        NFCWeb["Browser NFC interaction"]
+
+        WebApp --> Scoreboard
+        WebApp --> Play
+        WebApp --> Spectate
+        WebApp --> Admin
+        WebApp --> CourtSetup
+        WebApp --> DeviceAdmin
+        WebApp --> QR
+        WebApp --> NFCWeb
+    end
+
+
+    subgraph USERS["Users"]
+        Player["Players"]
+        Spectator["Spectators"]
+        ClubOperator["Club operators"]
+        Administrator["System administrators"]
+    end
+
+
+    subgraph DELIVERY["Software Delivery"]
+
+        Repository["Source repository<br/>Firmware • Web • Functions"]
+        Tests["Automated tests<br/>functions/*.test.js"]
+        Deploy["Firebase deployment"]
+        Staging["Staging Firebase environment"]
+        Production["Production Firebase environment"]
+
+        Repository --> Tests
+        Tests --> Deploy
+        Deploy --> Staging
+        Deploy --> Production
+    end
+
+
+    subgraph OPERATIONS["Operations"]
+
+        Monitoring["Monitoring and logs"]
+        Diagnostics["Device diagnostics"]
+        Support["Technical support"]
+        Provisioning["Wi-Fi and device provisioning"]
+
+        Monitoring --> Support
+        Diagnostics --> Support
+        Provisioning --> Diagnostics
+    end
+
+
+    %% =========================================================
+    %% DEVICE RUNTIME FLOWS
+    %% =========================================================
+
+    Beacon -->|"HTTPS POST event"| HTTP
+    Pulse -->|"HTTPS POST event"| HTTP
+    Hub -->|"HTTPS POST event"| HTTP
+
+    Hub -. "NFC configuration and tag reading" .-> NFCReader
+    Hub -. "Device registration / status" .-> Devices
+
+    Portal -. "Future court gateway role" .-> WiFi
+
+
+    %% =========================================================
+    %% WEB RUNTIME FLOWS
+    %% =========================================================
+
+    Hosting --> WebApp
+
+    WebApp -->|"Real-time Firestore listener"| CurrentScore
+    CurrentScore -->|"Live score updates"| WebApp
+
+    WebApp -->|"Add scoring / operational events"| Events
+    WebApp -->|"Admin operations"| Callable
+    WebApp -->|"Court and device reads/writes"| Firestore
+
+    WebApp -. "QR links and court access" .-> QR
+    WebApp -. "Supported browser NFC interaction" .-> NFCWeb
+
+
+    %% =========================================================
+    %% USER FLOWS
+    %% =========================================================
+
+    Player --> Play
+    Player --> NFCWeb
+    Player --> QR
+
+    Spectator --> Spectate
+    ClubOperator --> Admin
+    Administrator --> Admin
+
+
+    %% =========================================================
+    %% DEPLOYMENT FLOWS
+    %% =========================================================
+
+    Staging -. "Validated release" .-> Production
+    Production -. "Hosts" .-> Hosting
+    Production -. "Deploys to" .-> Firestore
+
+
+    %% =========================================================
+    %% OPERATIONS FLOWS
+    %% =========================================================
+
+    Production -. "Logs and runtime health" .-> Monitoring
+    Devices -. "Status and diagnostics" .-> Diagnostics
+    Provisioning -. "Configures" .-> Beacon
+    Provisioning -. "Configures" .-> Pulse
+    Provisioning -. "Configures" .-> Hub
+
+
+    %% =========================================================
+    %% OPTIONAL / FUTURE INTEGRATIONS
+    %% =========================================================
+
+    subgraph FUTURE["Optional / Future Integrations"]
+        Broadcast["Broadcast overlay"]
+        Streaming["OBS / vMix / streaming platform"]
+        Analytics["Club analytics"]
+        Billing["Billing and subscriptions"]
+    end
+
+    CurrentScore -. "Future live score feed" .-> Broadcast
+    Broadcast -.-> Streaming
+    CurrentScore -. "Future reporting" .-> Analytics
+    Admin -. "Future commercial controls" .-> Billing
+
+    class Beacon,Pulse,Hub,WiFi,NFCReader hardware
+    class Hosting,HTTP,Callable,Reset,Options,Details,Firestore,Courts,Events,CurrentScore,Checkpoints,Devices,Trigger,Scoring firebase
+    class WebApp,Scoreboard,Play,Spectate,Admin,CourtSetup,DeviceAdmin,QR,NFCWeb web
+    class Player,Spectator,ClubOperator,Administrator user
+    class Repository,Tests,Deploy,Staging,Production delivery
+    class Monitoring,Diagnostics,Support,Provisioning operations
+    class Portal,Broadcast,Streaming,Analytics,Billing future

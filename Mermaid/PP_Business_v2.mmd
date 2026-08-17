@@ -1,0 +1,202 @@
+---
+config:
+  theme: 'base'
+---
+
+flowchart LR
+
+    %% =========================================================
+    %% STYLES AND CLASS DEFINITIONS
+    %% =========================================================
+    classDef founder fill:#FFEBEE,stroke:#C62828,stroke-width:3px,color:#B71C1C,font-weight:bold;
+    classDef product fill:#FFF3E0,stroke:#EF6C00,stroke-width:2px,color:#E65100;
+    classDef technology fill:#E3F2FD,stroke:#1565C0,stroke-width:2px,color:#0D47A1;
+    classDef governance fill:#E8F5E9,stroke:#2E7D32,stroke-width:2px,color:#1B5E20;
+    classDef business fill:#F3E5F5,stroke:#7B1FA2,stroke-width:2px,color:#4A148C;
+    classDef lifecycle fill:#FFFDE7,stroke:#FBC02D,stroke-width:2px,color:#F57F17;
+    classDef external fill:#ECEFF1,stroke:#455A64,stroke-width:2px,color:#263238;
+
+    Founder["Founder / Product Owner<br/>Vision • priorities • decisions"]
+
+    subgraph DISCOVERY["1. Strategy and Product"]
+        ProductStrategy["Product strategy"]
+        CustomerResearch["Customer and club discovery"]
+        Roadmap["Roadmap and prioritisation"]
+        Pricing["Pricing and packaging"]
+        ProductDesign["User experience and product design"]
+    end
+
+    subgraph HARDWARE["2. Hardware Product"]
+        HardwareDesign["Hardware architecture"]
+        Electronics["Electronics and component selection"]
+        Embedded["Embedded firmware"]
+        Connectivity["Wi-Fi, NFC and device communications"]
+        Enclosure["Physical enclosure and installation design"]
+        Manufacturing["Manufacturing and suppliers"]
+        Provisioning["Device provisioning"]
+    end
+
+    subgraph SOFTWARE["3. Software Platform"]
+        WebApp["Web application"]
+        Backend["Firebase backend"]
+        DataModel["Firestore data model"]
+        Scoring["Scoring and match rules"]
+        Realtime["Real-time scoreboard"]
+        Admin["Club and admin tools"]
+        Broadcast["Broadcast integration"]
+    end
+
+    subgraph DELIVERY["4. Engineering Delivery"]
+        Architecture["Technical architecture"]
+        SourceControl["Source control"]
+        Testing["Automated and manual testing"]
+        Environments["Staging and production environments"]
+        Releases["Release management"]
+        Documentation["Technical documentation"]
+    end
+
+    subgraph QUALITY["5. Quality, Security and Compliance"]
+        Reliability["Hardware reliability"]
+        Performance["Performance and load testing"]
+        Security["Application and device security"]
+        Privacy["Privacy and data protection"]
+        Legal["Terms, contracts and legal protection"]
+        Safety["Electrical, installation and operational safety"]
+    end
+
+    subgraph OPERATIONS["6. Service Operations"]
+        Monitoring["Monitoring and alerting"]
+        Diagnostics["Remote diagnostics"]
+        IncidentResponse["Incident response"]
+        Support["Customer support"]
+        Maintenance["Hardware maintenance"]
+        Training["Club and operator training"]
+        ServiceLevels["Service levels and availability"]
+    end
+
+    subgraph COMMERCIAL["7. Sales and Customer Success"]
+        Sales["Sales"]
+        Demonstrations["Product demonstrations"]
+        Partnerships["Club and brand partnerships"]
+        Onboarding["Club onboarding"]
+        AccountManagement["Account management"]
+        Renewals["Renewals and retention"]
+        Feedback["Customer feedback loop"]
+    end
+
+    subgraph MARKETING["8. Marketing and Brand"]
+        Positioning["Market positioning"]
+        Brand["Brand and visual identity"]
+        Website["Marketing website"]
+        Content["Content and case studies"]
+        Social["Social media"]
+        Events["Padel events and demonstrations"]
+        PublicRelations["Public relations"]
+    end
+
+    subgraph FINANCE["9. Finance and Administration"]
+        Company["Company administration"]
+        Budgeting["Budgeting and forecasting"]
+        Payments["Billing and payments"]
+        Accounting["Bookkeeping and accounting"]
+        Tax["Tax and statutory filings"]
+        Insurance["Insurance and risk management"]
+        Investment["Funding and investment"]
+    end
+
+    subgraph SCALE["10. Growth and Improvement"]
+        Analytics["Product and business analytics"]
+        Usage["Usage and engagement analysis"]
+        RoadmapFeedback["Evidence-based roadmap"]
+        Hiring["Hiring and delegation"]
+        Processes["Operating processes"]
+        Expansion["New clubs, regions and markets"]
+    end
+
+    subgraph STAKEHOLDERS["External Stakeholders"]
+        Clubs["Padel clubs"]
+        Players["Players"]
+        Sponsors["Sponsors and brands"]
+        Suppliers["Hardware suppliers"]
+        Contractors["Installers and service contractors"]
+        ProfessionalAdvisors["Legal, finance and technical advisors"]
+    end
+
+    subgraph LIFECYCLE["Business Lifecycle"]
+        Discover["Discover"]
+        Design["Design"]
+        Build["Build"]
+        Pilot["Pilot"]
+        Launch["Launch"]
+        Operate["Operate"]
+        Improve["Improve"]
+        Scale["Scale"]
+    end
+
+    %% CONNECTIONS
+    Founder --> DISCOVERY
+    Founder --> HARDWARE
+    Founder --> SOFTWARE
+    Founder --> DELIVERY
+    Founder --> QUALITY
+    Founder --> OPERATIONS
+    Founder --> COMMERCIAL
+    Founder --> MARKETING
+    Founder --> FINANCE
+    Founder --> SCALE
+
+    DISCOVERY --> Discover
+    Discover --> Design
+    Design --> HARDWARE
+    Design --> SOFTWARE
+    HARDWARE --> Build
+    SOFTWARE --> Build
+    DELIVERY --> Build
+    QUALITY --> Pilot
+    Build --> Pilot
+    Pilot --> Launch
+    Launch --> Operate
+    Operate --> Improve
+    Improve --> Scale
+
+    Clubs --> CustomerResearch
+    Clubs --> Pilot
+    Clubs --> Onboarding
+    Clubs --> Support
+
+    Players --> CustomerResearch
+    Players --> Feedback
+    Players --> Usage
+
+    Sponsors --> Partnerships
+    Suppliers --> Manufacturing
+    Contractors --> Installation["Court installation"]
+    ProfessionalAdvisors --> Legal
+    ProfessionalAdvisors --> Accounting
+
+    Feedback --> RoadmapFeedback
+    Usage --> RoadmapFeedback
+    RoadmapFeedback --> Roadmap
+
+    Sales --> Clubs
+    Partnerships --> Clubs
+    Positioning --> Sales
+    ProductStrategy --> Pricing
+    Pricing --> Sales
+
+    %% CLASS ASSIGNMENTS
+    class Founder founder;
+    class ProductStrategy,CustomerResearch,Roadmap,Pricing,ProductDesign product;
+    class HardwareDesign,Electronics,Embedded,Connectivity,Enclosure,Manufacturing,Provisioning technology;
+    class WebApp,Backend,DataModel,Scoring,Realtime,Admin,Broadcast technology;
+    class Architecture,SourceControl,Testing,Environments,Releases,Documentation technology;
+    class Reliability,Performance,Security,Privacy,Legal,Safety governance;
+    class Monitoring,Diagnostics,IncidentResponse,Support,Maintenance,Training,ServiceLevels business;
+    class Sales,Demonstrations,Partnerships,Onboarding,AccountManagement,Renewals,Feedback business;
+    class Positioning,Brand,Website,Content,Social,Events,PublicRelations business;
+    class Company,Budgeting,Payments,Accounting,Tax,Insurance,Investment governance;
+    class Analytics,Usage,RoadmapFeedback,Hiring,Processes,Expansion business;
+    class Discover,Design,Build,Pilot,Launch,Operate,Improve,Scale lifecycle;
+    class Clubs,Players,Sponsors,Suppliers,Contractors,ProfessionalAdvisors external;
+
+    %% SUBGRAPH STYLING
