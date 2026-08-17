@@ -9,11 +9,16 @@
   <style>
     :root {
       --ov-bg: transparent;
-      --ov-panel: rgba(0, 0, 0, 0.82);
+      --ov-panel: rgba(8, 12, 16, 0.96);
+      --ov-panel-2: rgba(15, 20, 26, 0.96);
       --ov-text: #ffffff;
-      --ov-teamA: #ffff00;
-      --ov-teamB: #00ffff;
+      --ov-muted: #8f969e;
+      --ov-line: rgba(255, 255, 255, 0.14);
+      --ov-line-soft: rgba(255, 255, 255, 0.08);
+      --ov-teamA: #b7f000;
+      --ov-teamB: #27d9ff;
       --ov-accent: #2b60bc;
+      --ov-radius: 0.9em;
     }
 
     * {
@@ -32,87 +37,116 @@
       min-height: 100vh;
     }
 
-    /* .overlay's font-size is the single scale knob (24px = 1.5x the old 16px
-       base). Column width stays in rem so the small header labels can share it. */
     .overlay {
       position: fixed;
       top: 16px;
       left: 16px;
-      font-size: 24px;
+      width: 32em;
+      min-width: 20em;
       --ov-col: 4rem;
-      min-width: 21.25em;
-      max-width: 30em;
-      background: var(--ov-panel);
-      border-radius: 0.75em;
+      max-width: calc(100vw - 32px);
+      font-size: 24px;
+      background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.025), transparent 28%),
+        linear-gradient(180deg, var(--ov-panel-2), var(--ov-panel));
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: var(--ov-radius);
       overflow: hidden;
-      box-shadow: 0 4px 18px rgba(0, 0, 0, 0.45);
-      border-left: 0.25em solid var(--ov-accent);
+      box-shadow:
+        0 10px 35px rgba(0, 0, 0, 0.42),
+        inset 0 1px 0 rgba(255, 255, 255, 0.035);
     }
 
     .brand {
       display: flex;
       align-items: center;
-      gap: 0.5em;
-      padding: 0.375em 0.75em 0.25em;
-      opacity: 0.92;
+      gap: 0.55em;
+      min-height: 3.15em;
+      padding: 0.65em 1em 0.6em;
+      border-bottom: 1px solid var(--ov-line);
     }
 
     .brand img {
-      width: 1.125em;
-      height: 1.125em;
+      width: 1.55em;
+      height: 1.55em;
       object-fit: contain;
     }
 
     .brand-name {
-      font-size: 0.72em;
-      font-weight: 800;
+      font-size: 0.82em;
+      font-weight: 900;
       text-transform: uppercase;
-      letter-spacing: 0.05em;
+      letter-spacing: 0.055em;
+      font-style: italic;
     }
 
     .brand-court {
       margin-left: auto;
-      font-size: 0.68em;
+      font-size: 0.7em;
       font-weight: 600;
-      opacity: 0.75;
-      max-width: 45%;
+      letter-spacing: 0.035em;
+      opacity: 0.85;
+      max-width: 38%;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
+      color: var(--ov-muted);
     }
 
-    /* The header and both team rows share this template so the score columns
-       line up vertically without measuring anything. */
-    .score-header,
+    .score-cells {
+      display: flex;
+      align-items: stretch;
+      gap: 0;
+      height: 100%;
+    }
+
     .team-row {
+      position: relative;
       display: grid;
       grid-template-columns: 1fr auto;
       align-items: center;
       gap: 0.5em;
-      padding: 0.375em 0.75em;
+      min-height: 4.75em;
+      padding: 0.0em 1em;
+      border-top: 1px solid var(--ov-line-soft);
     }
 
-    .score-header {
-      padding-bottom: 0.15em;
+    .team-row::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 0.65em;
+      bottom: 0.65em;
+      width: 0.2em;
+      border-radius: 0 0.15em 0.15em 0;
     }
 
-    .team-row+.team-row {
-      border-top: 1px solid rgba(255, 255, 255, 0.12);
+    .team-row[data-team="A"]::before {
+      background: var(--ov-teamA);
+      box-shadow: 0 0 12px color-mix(in srgb, var(--ov-teamA) 35%, transparent);
+    }
+
+    .team-row[data-team="B"]::before {
+      background: var(--ov-teamB);
+      box-shadow: 0 0 12px color-mix(in srgb, var(--ov-teamB) 35%, transparent);
     }
 
     .team-id {
       display: flex;
       align-items: center;
-      gap: 0.5em;
+      gap: 0.65em;
       min-width: 0;
     }
 
     .team-logo {
-      width: 1.625em;
-      height: 1.625em;
+      width: 2.35em;
+      height: 2.35em;
+      flex: 0 0 2.35em;
       object-fit: contain;
-      border-radius: 0.25em;
+      border-radius: 0.38em;
       display: none;
+      background: #fff;
+      padding: 0.12em;
     }
 
     .team-logo.visible {
@@ -121,24 +155,27 @@
 
     .team-names {
       min-width: 0;
+      overflow: hidden;
     }
 
     .team-name {
-      font-size: 0.5em;
+      font-size: 0.6em;
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.09em;
-      opacity: 0.6;
+      color: var(--ov-muted);
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+      margin-bottom: 0.12em;
     }
 
-    /* Without player names the team name carries the row on its own. */
     .team-name.primary {
-      font-size: 0.85em;
-      font-weight: 800;
-      letter-spacing: -0.01em;
+      margin: 0;
+      font-size: 1em;
+      font-weight: 900;
+      letter-spacing: -0.015em;
+      color: var(--ov-text);
       opacity: 1;
     }
 
@@ -154,13 +191,15 @@
       display: flex;
       align-items: center;
       gap: 0.35em;
-      font-size: 0.85em;
-      font-weight: 800;
+      min-width: 0;
+      font-size: 0.82em;
+      font-weight: 850;
       text-transform: uppercase;
-      letter-spacing: -0.01em;
-      line-height: 1.3;
+      letter-spacing: -0.012em;
+      line-height: 1.2;
       white-space: nowrap;
       overflow: hidden;
+      color: var(--ov-text);
     }
 
     .player-line.hidden {
@@ -168,80 +207,158 @@
     }
 
     .player-name {
+      min-width: 0;
       overflow: hidden;
       text-overflow: ellipsis;
-    }
-
-    .team-row[data-team="A"] .player-line {
-      color: var(--ov-teamA);
-    }
-
-    .team-row[data-team="B"] .player-line {
-      color: var(--ov-teamB);
+      font-size: 1.2em;
     }
 
     .serve-dot {
       flex: 0 0 auto;
-      width: 0.5em;
-      height: 0.5em;
+      aspect-ratio: 1/1;
       border-radius: 50%;
-      background: var(--ov-text);
+      background: currentColor;
       visibility: hidden;
-      margin-left: 0.5em;
+      margin-left: 0.3em;
+    }
+
+    .serve-dot::after {
+      --size: clamp(4px, 2.25cqi, 10px);
+      --labelHeight: calc(1em + (var(--size)/2));
+      --bounceHeight: calc(clamp(5px, 2cqi, 20px) - var(--size));
+      flex-shrink: 0;
+      bottom: calc(var(--bounceHeight) + var(--labelHeight));
+      width: var(--size);
+      height: var(--size);
+      background: currentColor;
+
+      content: "";
+      position: absolute;
+      border-radius: 50%;
+      z-index: 1;
+      animation: serve-anim 2s linear infinite;
+    }
+    
+    @keyframes serve-anim  {
+
+      100%,
+      0% {
+        transform: translateY(0);
+      }
+
+      10%,
+      90% {
+        transform: translateY(calc(var(--bounceHeight) * 0.02));
+      }
+
+      20%,
+      80% {
+        transform: translateY(calc(var(--bounceHeight) * 0.09));
+      }
+
+      30% {
+        transform: translateY(calc(var(--bounceHeight) * 0.25));
+      }
+
+      40% {
+        transform: translateY(calc(var(--bounceHeight) * 0.55));
+      }
+
+      50% {
+        transform: translateY(calc(var(--bounceHeight))) scaleX(1);
+      }
+
+      53% {
+        transform: translateY(var(--bounceHeight)) scaleX(1.5) scaleY(0.75);
+      }
+
+      60% {
+        transform: translateY(calc(var(--bounceHeight) * 0.55)) scaleX(0.75) scaleY(1.2);
+      }
+
+      70% {
+        transform: translateY(calc(var(--bounceHeight) * 0.25));
+      }
+    }
+
+    .team-row[data-team="A"] .serve-dot {
+      color: var(--ov-teamA);
+    }
+
+    .team-row[data-team="B"] .serve-dot {
+      color: var(--ov-teamB);
     }
 
     .serve-dot.serving {
       visibility: visible;
     }
 
-    .score-cells {
+    .team-row>.score-cells {
+      align-items: center;
+    }
+
+    .team-row>.score-cells .cell {
+      position: relative;
+      flex: 0 0 var(--ov-col);
+      width: var(--ov-col);
+      height: var(--ov-col);
+      min-width: var(--ov-col);
+      min-height: var(--ov-col);
       display: flex;
-      align-items: stretch;
-      gap: 0.25em;
-      height: 80%;    
-    }
-
-    /* Fixed width: fits two characters, never reflows as values change. */
-    .cell {
-      flex: 0 0 var(--ov-col);
-      width: var(--ov-col);
-      padding: 0.2em 0;
-      border-radius: 0.25em;
-      background: rgba(255, 255, 255, 0.1);
-      text-align: center;    
-      font-variant-numeric: tabular-nums;
-      font-size: 1.4em;
-      font-weight: 900;
-      line-height: 1.25;
-      opacity: 0.7;      
-    }
-
-    .cell.won {
-      font-weight: 900;
-      opacity: 1;
-    }
-
-    .cell.points {
-      background: var(--ov-accent);
-      font-weight: 900;
-      opacity: 1;
-    }
-
-    .cell-head {
-      flex: 0 0 var(--ov-col);
-      width: var(--ov-col);
+      align-items: center;
+      justify-content: center;
+      border-left: 1px solid var(--ov-line);
       text-align: center;
-      font-size: 0.5em;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      opacity: 0.6;
+      font-variant-numeric: tabular-nums;
+      font-size: 1.55em;
+      font-weight: 600;
+      line-height: 1;
+      color: var(--ov-text);
+    }
+
+    .team-row>.score-cells .cell:first-child {
+      border-left: 0;
+    }
+
+    .team-row>.score-cells .cell.lost {
+      opacity: 0.7;
+    }
+
+    .team-row[data-team="A"]>.score-cells .cell.won {
+    }
+
+    .team-row[data-team="B"]>.score-cells .cell.won {
+    }
+
+    .team-row[data-team="A"]>.score-cells .cell.points {
+      margin-left: 0.35em;
+      border: 1px solid color-mix(in srgb, var(--ov-teamA) 75%, transparent);
+      border-radius: 0.2em;
+      background:
+        linear-gradient(135deg,
+          color-mix(in srgb, var(--ov-teamA) 3%, transparent),
+          color-mix(in srgb, var(--ov-teamA) 0%, transparent));
+      color: var(--ov-teamA);
+      box-shadow: inset 0 0 20px color-mix(in srgb, var(--ov-teamA) 5%, transparent);
+    }
+
+    .team-row[data-team="B"]>.score-cells .cell.points {
+      margin-left: 0.35em;
+      border: 1px solid color-mix(in srgb, var(--ov-teamB) 75%, transparent);
+      border-radius: 0.2em;
+      background:
+        linear-gradient(135deg,
+          color-mix(in srgb, var(--ov-teamB) 3%, transparent),
+          color-mix(in srgb, var(--ov-teamB) 0%, transparent));
+      color: var(--ov-teamB);
+      box-shadow: inset 0 0 20px color-mix(in srgb, var(--ov-teamB) 5%, transparent);
     }
 
     .status-line {
-      padding: 0.15em 0.75em 0.35em;
-      font-size: 0.66em;
-      opacity: 0.75;
+      padding: 0.3em 1em 0.55em;
+      font-size: 0.58em;
+      font-weight: 700;
+      color: var(--ov-muted);
       display: none;
     }
 
@@ -250,10 +367,10 @@
     }
 
     .loading-line {
-      padding: 0.4em 0.75em 0.6em;
-      font-size: 0.72em;
+      padding: 0.65em 1em 0.8em;
+      font-size: 0.65em;
       font-weight: 600;
-      opacity: 0.8;
+      color: var(--ov-muted);
     }
 
     .loading-line.hidden {
@@ -265,6 +382,7 @@
     }
 
     /* ---------- Settings UI ---------- */
+
     .gear-btn {
       position: fixed;
       bottom: 12px;
@@ -382,6 +500,16 @@
       opacity: 0.55;
       margin-bottom: 8px;
     }
+
+    @media (max-width: 760px) {
+      .overlay {
+        left: 10px;
+        top: 10px;
+        width: calc(100vw - 20px);
+        min-width: 0;
+        font-size: clamp(15px, 3.1vw, 22px);
+      }
+    }
   </style>
 </head>
 
@@ -396,6 +524,9 @@
     <div class="loading-line" id="loadingLine">Loading…</div>
 
     <div class="score-body hidden" id="scoreBody">
+        <div class="score-spacer"></div>
+        <div class="score-cells" id="cellsHead"></div>
+
       <div class="team-row" data-team="A">
         <div class="team-id">
           <img class="team-logo" id="logoA" alt="" />
@@ -477,10 +608,10 @@
 
       const DEFAULT_SETTINGS = {
         showServer: true,
-        panel: "#000000",
+        panel: "#080c10",
         text: "#ffffff",
-        teamA: "#ffff00",
-        teamB: "#00ffff",
+        teamA: "#b7f000",
+        teamB: "#27d9ff",
         accent: "#2b60bc",
         nameA: "",
         nameB: "",
@@ -611,7 +742,8 @@
           const div = document.createElement("div");
           div.className = "cell" +
             (cell.highlight ? " points" : "") +
-            (cell.won ? " won" : "");
+            (cell.won ? " won" : "") + 
+            (cell.lost? " lost" : "");
           div.textContent = cell.value;
           container.appendChild(div);
         });
@@ -621,14 +753,6 @@
       {
         const container = document.getElementById("cellsHead");
         container.textContent = "";
-
-        labels.forEach((label) =>
-        {
-          const div = document.createElement("div");
-          div.className = "cell-head";
-          div.textContent = label;
-          container.appendChild(div);
-        });
       }
 
       function getPlayerName(slot, data)
@@ -650,8 +774,8 @@
             const b = Number(set.B) || 0;
             columns.push({
               label: "Set " + (index + 1),
-              A: { value: a, won: a > b },
-              B: { value: b, won: b > a }
+              A: { value: a, won: a > b, lost: b > a},
+              B: { value: b, won: b > a, lost: a > b }
             });
           });
 
@@ -687,7 +811,7 @@
         document.getElementById("scoreBody").classList.remove("hidden");
         const displayCourtId = data.courtId || courtId || "";
         document.getElementById("courtLabel").textContent =
-        displayCourtId ? "Join : " + displayCourtId.toUpperCase() : "";
+          displayCourtId ? "Join: " + displayCourtId.toUpperCase() : "";
 
         const server = settings.showServer ? (data.server || "") : "";
 
@@ -716,6 +840,7 @@
         });
 
         const columns = buildColumns(data);
+        setHeadCells(columns.map((column) => column.label));
         ["A", "B"].forEach((team) => setCells("cells" + team, columns.map((column) => column[team])));
 
         const statusLine = document.getElementById("statusLine");
