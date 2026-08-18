@@ -127,3 +127,8 @@ export function serverTimestamp()
 {
   return SERVER_TIMESTAMP_SENTINEL;
 }
+
+export function connectFirestoreEmulator(db, host, port)
+{
+  return db;
+}
