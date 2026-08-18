@@ -1715,6 +1715,9 @@ async function buildCourtScoreResponse(courtId)
         },
         completedSets: Array.isArray(score.completedSets) ? score.completedSets : [],
         inTiebreak,
+        // Silver deuce only becomes a deciding point after the first deuce
+        // cycle, so overlays need the cycle count to label it correctly.
+        deuceCycles: Number(score.deuceCycles) || 0,
         matchComplete: Boolean(score.matchComplete),
         server: getCurrentServerLabel({ ...score, scoringOptions }),
         scoreVersion: normalizeScoreVersion(courtData.scoreVersion)
