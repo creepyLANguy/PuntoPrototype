@@ -333,8 +333,13 @@
       opacity: 0.7;
     }
 
+    /* Shared by team rows and the header row so the PTS column stays aligned
+       even though their font sizes differ. */
+    .score-cells .cell.points {
+      margin-left: 0.8rem;
+    }
+
     .team-row[data-team="A"]>.score-cells .cell.points {
-      margin-left: 0.35em;
       border: 1px solid color-mix(in srgb, var(--ov-teamA) 75%, transparent);
       border-radius: 0.2em;
       background:
@@ -346,7 +351,6 @@
     }
 
     .team-row[data-team="B"]>.score-cells .cell.points {
-      margin-left: 0.35em;
       border: 1px solid color-mix(in srgb, var(--ov-teamB) 75%, transparent);
       border-radius: 0.2em;
       background:
@@ -384,6 +388,196 @@
 
     .score-body.hidden {
       display: none;
+    }
+
+    /* ---------- Column headers ---------- */
+
+    .head-row {
+      display: grid;
+      grid-template-columns: var(--ov-name-col) auto;
+      gap: 0.9em;
+      align-items: end;
+      padding: 0.4em 1em 0;
+    }
+
+    .head-row .score-cells {
+      align-items: center;
+    }
+
+    .head-row .cell {
+      flex: 0 0 var(--ov-col);
+      width: var(--ov-col);
+      min-width: var(--ov-col);
+      text-align: center;
+      font-size: 0.52em;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--ov-muted);
+    }
+
+    .overlay.no-headers .head-row {
+      display: none;
+    }
+
+    /* ---------- Score-change / new-set animations ---------- */
+
+    @keyframes cell-pop {
+      0% {
+        transform: scale(1);
+      }
+
+      35% {
+        transform: scale(1.25);
+      }
+
+      100% {
+        transform: scale(1);
+      }
+    }
+
+    .score-cells .cell.changed {
+      animation: cell-pop 0.5s ease;
+    }
+
+    @keyframes cell-in {
+      from {
+        opacity: 0;
+        transform: translateX(0.5em);
+      }
+
+      to {
+        opacity: 1;
+        transform: none;
+      }
+    }
+
+    .score-cells .cell.new {
+      animation: cell-in 0.5s ease both;
+    }
+
+    /* ---------- Set / match / golden point badge ---------- */
+
+    .badge-line {
+      display: none;
+      padding: 0.1em 1em 0.5em;
+    }
+
+    .badge-line.visible {
+      display: block;
+    }
+
+    .badge {
+      display: inline-block;
+      font-size: 0.55em;
+      font-weight: 800;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      padding: 0.35em 0.9em 0.3em;
+      border-radius: 0.35em;
+      border: 1px solid currentColor;
+      animation: badge-pulse 1.6s ease-in-out infinite;
+    }
+
+    .badge.team-A {
+      color: var(--ov-teamA);
+      background: color-mix(in srgb, var(--ov-teamA) 12%, transparent);
+    }
+
+    .badge.team-B {
+      color: var(--ov-teamB);
+      background: color-mix(in srgb, var(--ov-teamB) 12%, transparent);
+    }
+
+    .badge.neutral {
+      color: #f2c94c;
+      background: color-mix(in srgb, #f2c94c 12%, transparent);
+    }
+
+    @keyframes badge-pulse {
+
+      0%,
+      100% {
+        opacity: 1;
+      }
+
+      50% {
+        opacity: 0.55;
+      }
+    }
+
+    /* ---------- Match timer ---------- */
+
+    .match-timer {
+      margin-left: 0.6em;
+      font-size: 0.7em;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: 0.03em;
+      opacity: 0.9;
+    }
+
+    /* ---------- Sponsor strip ---------- */
+
+    .sponsor-strip {
+      /* width:0 + min-width:100% keeps the strip from contributing to the
+         overlay's fit-content width — it fills whatever the scores need. */
+      width: 0;
+      min-width: 100%;
+      height: 1.35em;
+      overflow: hidden;
+      border-top: 1px solid var(--ov-line);
+      display: flex;
+      align-items: center;
+    }
+
+    .sponsor-strip.hidden {
+      display: none;
+    }
+
+    .sponsor-track {
+      display: flex;
+      align-items: center;
+      width: max-content;
+      height: 100%;
+    }
+
+    .sponsor-track.scrolling {
+      animation: sponsor-scroll var(--sponsor-duration, 20s) linear infinite;
+    }
+
+    .sponsor-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35em;
+      padding: 0 1em;
+      font-size: 0.58em;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      color: var(--ov-muted);
+      white-space: nowrap;
+    }
+
+    .sponsor-item img {
+      height: 1.5em;
+      width: auto;
+      object-fit: contain;
+    }
+
+    .sponsor-item strong,
+    .sponsor-item b {
+      color: var(--ov-text);
+      font-weight: 800;
+    }
+
+    @keyframes sponsor-scroll {
+      from {
+        transform: translateX(0);
+      }
+
+      to {
+        transform: translateX(-50%);
+      }
     }
 
     /* ---------- Settings UI ---------- */
@@ -455,6 +649,19 @@
       font-size: 0.72rem;
     }
 
+    .settings-panel textarea {
+      width: 100%;
+      background: #1a1a1a;
+      border: 1px solid #444;
+      border-radius: 6px;
+      color: #fff;
+      padding: 4px 6px;
+      font-size: 0.72rem;
+      font-family: inherit;
+      resize: vertical;
+      margin-bottom: 7px;
+    }
+
     .settings-panel input[type="color"] {
       width: 34px;
       height: 24px;
@@ -522,16 +729,19 @@
 <body>
   <div class="overlay" id="overlayBox">
     <div class="brand">
-      <img src="/app/media/img/logo.svg" alt="Padel Push logo" />
-      <span class="brand-name">Padel Push</span>
+      <img src="/app/media/img/logo.svg" alt="Brand logo" id="brandLogo" />
+      <span class="brand-name" id="brandName">Padel Push</span>
       <span class="brand-court" id="courtLabel"></span>
+      <span class="match-timer" id="matchTimer"></span>
     </div>
 
     <div class="loading-line" id="loadingLine">Loading...</div>
 
     <div class="score-body hidden" id="scoreBody">
+      <div class="head-row" id="headRow">
         <div class="score-spacer"></div>
         <div class="score-cells" id="cellsHead"></div>
+      </div>
 
       <div class="team-row" data-team="A">
         <div class="team-id">
@@ -562,7 +772,16 @@
       </div>
     </div>
 
+    <div class="badge-line" id="badgeLine"><span class="badge" id="badgeText"></span></div>
+
     <div class="status-line" id="statusLine"></div>
+
+    <div class="sponsor-strip hidden" id="sponsorStrip">
+      <div class="sponsor-track" id="sponsorTrack">
+        <div class="sponsor-item" id="sponsorItemA"></div>
+        <div class="sponsor-item" id="sponsorItemB" aria-hidden="true"></div>
+      </div>
+    </div>
   </div>
 
   <button class="gear-btn" id="gearBtn" title="Customise overlay" aria-label="Customise overlay">⚙</button>
@@ -573,6 +792,21 @@
 
     <div class="section">Display</div>
     <label><span>Show server indicator</span><input type="checkbox" id="setShowServer" /></label>
+    <label><span>Show column headers</span><input type="checkbox" id="setShowHeaders" /></label>
+    <label><span>Show team names</span><input type="checkbox" id="setShowTeamNames" /></label>
+    <label><span>Show player names</span><input type="checkbox" id="setShowPlayerNames" /></label>
+    <label><span>Show match timer</span><input type="checkbox" id="setShowTimer" /></label>
+    <label><span>Show sponsor strip</span><input type="checkbox" id="setShowSponsor" /></label>
+
+    <div class="section">Match timer</div>
+    <label><span>Set timer</span><input type="text" id="setTimerValue" placeholder="h:mm:ss, mm:ss or minutes" /></label>
+
+    <div class="section">Brand</div>
+    <label><span>Brand text</span><input type="text" id="setBrandText" placeholder="Padel Push" /></label>
+    <label><span>Brand logo URL</span><input type="url" id="setBrandLogo" placeholder="https://…" /></label>
+
+    <div class="section">Sponsor strip (HTML, {courtId} placeholder)</div>
+    <textarea id="setSponsorHtml" rows="3" placeholder="Defaults to the Padel Push message"></textarea>
 
     <div class="section">Colours</div>
     <label><span>Panel background</span><input type="color" id="setPanel" /></label>
@@ -614,6 +848,11 @@
 
       const DEFAULT_SETTINGS = {
         showServer: true,
+        showHeaders: true,
+        showTeamNames: true,
+        showPlayerNames: true,
+        showTimer: true,
+        showSponsor: true,
         panel: "#080c10",
         text: "#ffffff",
         teamA: "#b7f000",
@@ -626,8 +865,19 @@
         playerB1: "",
         playerB2: "",
         logoA: "",
-        logoB: ""
+        logoB: "",
+        brandText: "",
+        brandLogo: "",
+        sponsorHtml: "",
+        timerText: "",
+        timerOffset: 0,
+        timerAnchor: 0
       };
+
+      const DEFAULT_SPONSOR_HTML =
+        'Live scores brought to you by <img src="/app/media/img/logo.svg" alt="Padel Push" /> ' +
+        '<strong>Padel Push</strong>. Visit <strong>padelpush.co.za</strong> and join us on this court: ' +
+        '<strong>{courtId}</strong>';
 
       function getCourtIdFromPath()
       {
@@ -656,6 +906,9 @@
       let latestScore = null;
       let renderedRevision = null;
       let isPolling = false;
+      let lastSponsorHtml = null;
+      let lastHeadLabels = null;
+      const lastCellValues = {};
 
       function loadSettings()
       {
@@ -701,11 +954,126 @@
 
         applyLogo("logoA", settings.logoA);
         applyLogo("logoB", settings.logoB);
+        applyBrand();
+
+        document.getElementById("overlayBox").classList.toggle("no-headers", settings.showHeaders === false);
+
+        tickTimer();
+        updateSponsor();
 
         if (latestScore)
         {
           render(latestScore);
         }
+      }
+
+      function safeHttpUrl(url)
+      {
+        if (!url) return "";
+        try
+        {
+          const parsed = new URL(url, window.location.origin);
+          if (parsed.protocol === "https:" || parsed.protocol === "http:")
+          {
+            return parsed.href;
+          }
+        }
+        catch (_err) { /* invalid URL */ }
+        return "";
+      }
+
+      function applyBrand()
+      {
+        document.getElementById("brandName").textContent = settings.brandText || "Padel Push";
+        document.getElementById("brandLogo").src = safeHttpUrl(settings.brandLogo) || "/app/media/img/logo.svg";
+      }
+
+      // ---------- Match timer ----------
+
+      function formatTimer(totalSeconds)
+      {
+        const hours = Math.floor(totalSeconds / 3600);
+        const minutes = Math.floor((totalSeconds % 3600) / 60);
+        const seconds = totalSeconds % 60;
+        const mm = String(minutes).padStart(2, "0");
+        const ss = String(seconds).padStart(2, "0");
+        return hours > 0 ? hours + ":" + mm + ":" + ss : mm + ":" + ss;
+      }
+
+      // Accepts "h:mm:ss", "mm:ss" or a plain number of minutes; returns seconds.
+      function parseTimerInput(raw)
+      {
+        const value = (raw || "").trim();
+        if (!value) return 0;
+        if (/^\d+$/.test(value)) return parseInt(value, 10) * 60;
+
+        const parts = value.split(":").map((part) => part.trim());
+        if (parts.length < 2 || parts.length > 3 || parts.some((part) => !/^\d+$/.test(part)))
+        {
+          return 0;
+        }
+
+        return parts.reduce((total, part) => total * 60 + parseInt(part, 10), 0);
+      }
+
+      function tickTimer()
+      {
+        const el = document.getElementById("matchTimer");
+        if (settings.showTimer === false)
+        {
+          el.style.display = "none";
+          return;
+        }
+
+        el.style.display = "";
+        const anchor = settings.timerAnchor || Date.now();
+        const offset = Number(settings.timerOffset) || 0;
+        const elapsed = Math.max(0, Math.floor((Date.now() - anchor) / 1000) + offset);
+        el.textContent = formatTimer(elapsed);
+      }
+
+      // ---------- Sponsor strip ----------
+
+      function updateSponsor()
+      {
+        const strip = document.getElementById("sponsorStrip");
+        const show = settings.showSponsor !== false;
+        strip.classList.toggle("hidden", !show);
+        if (!show) return;
+
+        const displayCourtId = ((latestScore && latestScore.courtId) || courtId || "").toUpperCase();
+        const html = (settings.sponsorHtml || DEFAULT_SPONSOR_HTML).split("{courtId}").join(displayCourtId);
+
+        if (html !== lastSponsorHtml)
+        {
+          lastSponsorHtml = html;
+          document.getElementById("sponsorItemA").innerHTML = html;
+          document.getElementById("sponsorItemB").innerHTML = html;
+
+          // Images load async and change the strip's width — re-measure as they arrive.
+          document.querySelectorAll("#sponsorItemA img").forEach((img) =>
+          {
+            img.addEventListener("load", measureSponsor, { once: true });
+          });
+        }
+
+        measureSponsor();
+      }
+
+      function measureSponsor()
+      {
+        const strip = document.getElementById("sponsorStrip");
+        if (strip.classList.contains("hidden")) return;
+
+        const track = document.getElementById("sponsorTrack");
+        const itemA = document.getElementById("sponsorItemA");
+        const itemB = document.getElementById("sponsorItemB");
+        const overflows = itemA.scrollWidth > strip.clientWidth + 1;
+
+        // The second (duplicate) item only exists to make the loop seamless.
+        itemB.style.display = overflows ? "" : "none";
+        track.classList.toggle("scrolling", overflows);
+        track.style.setProperty("--sponsor-duration", Math.max(8, Math.round(itemA.scrollWidth / 30)) + "s");
       }
 
       function applyLogo(id, url)
@@ -741,24 +1109,43 @@
       function setCells(containerId, cells)
       {
         const container = document.getElementById(containerId);
+        const previous = lastCellValues[containerId] || null;
         container.textContent = "";
 
-        cells.forEach((cell) =>
+        cells.forEach((cell, index) =>
         {
+          const isNew = !previous || index >= previous.length;
+          const changed = !isNew && previous[index] !== String(cell.value);
+
           const div = document.createElement("div");
           div.className = "cell" +
             (cell.highlight ? " points" : "") +
-            (cell.won ? " won" : "") + 
-            (cell.lost? " lost" : "");
+            (cell.won ? " won" : "") +
+            (cell.lost ? " lost" : "") +
+            (isNew ? " new" : changed ? " changed" : "");
           div.textContent = cell.value;
           container.appendChild(div);
         });
+
+        lastCellValues[containerId] = cells.map((cell) => String(cell.value));
       }
 
-      function setHeadCells(labels)
+      function setHeadCells(columns)
       {
         const container = document.getElementById("cellsHead");
         container.textContent = "";
+
+        columns.forEach((column, index) =>
+        {
+          const div = document.createElement("div");
+          div.className = "cell" +
+            (column.highlight ? " points" : "") +
+            (lastHeadLabels && index >= lastHeadLabels.length ? " new" : "");
+          div.textContent = column.label;
+          container.appendChild(div);
+        });
+
+        lastHeadLabels = columns.map((column) => column.label);
       }
 
       function getPlayerName(slot, data)
@@ -779,7 +1166,7 @@
             const a = Number(set.A) || 0;
             const b = Number(set.B) || 0;
             columns.push({
-              label: "Set " + (index + 1),
+              label: "S" + (index + 1),
               A: { value: a, won: a > b, lost: b > a},
               B: { value: b, won: b > a, lost: a > b }
             });
@@ -789,7 +1176,7 @@
           if (!data.matchComplete)
           {
             columns.push({
-              label: "Set " + currentIndex,
+              label: "S" + currentIndex,
               A: { value: data.teams.A.games },
               B: { value: data.teams.B.games }
             });
@@ -798,15 +1185,73 @@
 
         if (mode !== "standard" || !data.matchComplete)
         {
-          const label = mode !== "standard" ? "Pts" : (data.inTiebreak ? "TB" : "Game");
+          const label = mode === "standard" && data.inTiebreak ? "TB" : "PTS";
           columns.push({
             label,
+            highlight: true,
             A: { value: data.teams.A.pointsDisplay, highlight: true },
             B: { value: data.teams.B.pointsDisplay, highlight: true }
           });
         }
 
         return columns;
+      }
+
+      // Derives set / match / golden point purely from the score payload.
+      // Assumes best-of-3 unless data.bestOf says otherwise.
+      function computeBadge(data)
+      {
+        if ((data.scoringMode || "standard") !== "standard" || data.matchComplete) return null;
+
+        const pts = {
+          A: String(data.teams.A.pointsDisplay ?? ""),
+          B: String(data.teams.B.pointsDisplay ?? "")
+        };
+        const games = {
+          A: Number(data.teams.A.games) || 0,
+          B: Number(data.teams.B.games) || 0
+        };
+
+        const setsWon = { A: 0, B: 0 };
+        (data.completedSets || []).forEach((set) =>
+        {
+          if (Number(set.A) > Number(set.B)) setsWon.A++;
+          else if (Number(set.B) > Number(set.A)) setsWon.B++;
+        });
+        const setsNeeded = Math.floor((Number(data.bestOf) || 3) / 2) + 1;
+
+        function gamePoint(team)
+        {
+          const other = team === "A" ? "B" : "A";
+          if (data.inTiebreak)
+          {
+            const p = Number(pts[team]) || 0;
+            const po = Number(pts[other]) || 0;
+            return p >= 6 && p > po;
+          }
+          if (pts[team] === "Ad") return true;
+          return pts[team] === "40" && pts[other] !== "40" && pts[other] !== "Ad";
+        }
+
+        function setPoint(team)
+        {
+          if (!gamePoint(team)) return false;
+          if (data.inTiebreak) return true;
+          const other = team === "A" ? "B" : "A";
+          return games[team] >= 5 && games[team] - games[other] >= 1;
+        }
+
+        for (const team of ["A", "B"])
+        {
+          if (setPoint(team) && setsWon[team] + 1 >= setsNeeded) return { text: "Match point", team };
+        }
+        for (const team of ["A", "B"])
+        {
+          if (setPoint(team)) return { text: "Set point", team };
+        }
+        if (!data.inTiebreak && pts.A === "40" && pts.B === "40") return { text: "Golden point", team: null };
+
+        return null;
       }
 
       function render(data)
@@ -820,19 +1265,22 @@
           displayCourtId ? "Join: " + displayCourtId.toUpperCase() : "";
 
         const server = settings.showServer ? (data.server || "") : "";
+        const showTeamNames = settings.showTeamNames !== false;
+        const showPlayerNames = settings.showPlayerNames !== false;
 
         ["A", "B"].forEach((team) =>
         {
           const teamName = settings["name" + team] || data.teamNames[team] || ("Team " + team);
           const nameEl = document.getElementById("name" + team);
           nameEl.textContent = teamName;
+          nameEl.style.display = showTeamNames ? "" : "none";
 
           let hasAnyPlayer = false;
 
           [1, 2].forEach((index) =>
           {
             const slot = team + index;
-            const playerName = getPlayerName(slot, data);
+            const playerName = showPlayerNames ? getPlayerName(slot, data) : "";
             const line = document.getElementById("line" + slot);
 
             line.classList.toggle("hidden", !playerName);
@@ -846,8 +1294,22 @@
         });
 
         const columns = buildColumns(data);
-        setHeadCells(columns.map((column) => column.label));
+        setHeadCells(columns);
         ["A", "B"].forEach((team) => setCells("cells" + team, columns.map((column) => column[team])));
+
+        const badge = computeBadge(data);
+        const badgeLine = document.getElementById("badgeLine");
+        if (badge)
+        {
+          const badgeText = document.getElementById("badgeText");
+          badgeText.textContent = badge.text;
+          badgeText.className = "badge " + (badge.team ? "team-" + badge.team : "neutral");
+          badgeLine.classList.add("visible");
+        }
+        else
+        {
+          badgeLine.classList.remove("visible");
+        }
 
         const statusLine = document.getElementById("statusLine");
         if (data.matchComplete)
@@ -860,6 +1322,9 @@
           statusLine.textContent = "";
           statusLine.classList.remove("visible");
         }
+
+        // The court id may only be known once data arrives; refresh the strip.
+        updateSponsor();
       }
 
       function showError(message)
@@ -948,7 +1413,21 @@
         setPlayerB1: "playerB1",
         setPlayerB2: "playerB2",
         setLogoA: "logoA",
-        setLogoB: "logoB"
+        setLogoB: "logoB",
+        setBrandText: "brandText",
+        setBrandLogo: "brandLogo",
+        setSponsorHtml: "sponsorHtml"
+      };
+
+      const URL_KEYS = ["logoA", "logoB", "brandLogo"];
+
+      const checkboxMap = {
+        setShowServer: "showServer",
+        setShowHeaders: "showHeaders",
+        setShowTeamNames: "showTeamNames",
+        setShowPlayerNames: "showPlayerNames",
+        setShowTimer: "showTimer",
+        setShowSponsor: "showSponsor"
       };
 
       function syncInputsFromSettings()
@@ -958,24 +1437,41 @@
           document.getElementById(inputId).value = settings[key];
         });
 
-        document.getElementById("setShowServer").checked = settings.showServer !== false;
+        Object.entries(checkboxMap).forEach(([inputId, key]) =>
+        {
+          document.getElementById(inputId).checked = settings[key] !== false;
+        });
+
+        document.getElementById("setTimerValue").value = settings.timerText || "";
       }
 
       Object.entries(fieldMap).forEach(([inputId, key]) =>
       {
         document.getElementById(inputId).addEventListener("input", (event) =>
         {
-          settings[key] = key.startsWith("logo") ? event.target.value.trim() : event.target.value;
+          settings[key] = URL_KEYS.includes(key) ? event.target.value.trim() : event.target.value;
           saveSettings();
           applySettings();
         });
       });
 
-      document.getElementById("setShowServer").addEventListener("change", (event) =>
+      Object.entries(checkboxMap).forEach(([inputId, key]) =>
       {
-        settings.showServer = event.target.checked;
+        document.getElementById(inputId).addEventListener("change", (event) =>
+        {
+          settings[key] = event.target.checked;
+          saveSettings();
+          applySettings();
+        });
+      });
+
+      document.getElementById("setTimerValue").addEventListener("change", (event) =>
+      {
+        settings.timerText = event.target.value.trim();
+        settings.timerOffset = parseTimerInput(settings.timerText);
+        settings.timerAnchor = Date.now();
         saveSettings();
-        applySettings();
+        tickTimer();
       });
 
       const gearBtn = document.getElementById("gearBtn");
@@ -993,7 +1489,15 @@
 
       document.getElementById("resetSettings").addEventListener("click", () =>
       {
-        settings = { ...DEFAULT_SETTINGS };
+        // Drop the stored blob entirely so stale keys from older versions
+        // cannot survive a reset, then restart the timer from zero.
+        try
+        {
+          localStorage.removeItem(storageKey);
+        }
+        catch (_err) { /* storage unavailable */ }
+
+        settings = { ...DEFAULT_SETTINGS, timerAnchor: Date.now() };
         saveSettings();
         syncInputsFromSettings();
         applySettings();
@@ -1001,8 +1505,18 @@
 
       // ---------- Boot ----------
       loadSettings();
+
+      // Anchor the timer on first ever load so it survives OBS source refreshes.
+      if (!settings.timerAnchor)
+      {
+        settings.timerAnchor = Date.now();
+        saveSettings();
+      }
+
       syncInputsFromSettings();
       applySettings();
+      setInterval(tickTimer, 1000);
+      window.addEventListener("resize", measureSponsor);
       void poll();
       setInterval(poll, POLL_INTERVAL_MS);
     })();
