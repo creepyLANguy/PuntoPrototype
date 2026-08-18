@@ -59,7 +59,9 @@
         linear-gradient(180deg, var(--ov-panel-2), var(--ov-panel));
       border: 1px solid rgba(255, 255, 255, 0.18);
       border-radius: var(--ov-radius);
-      overflow: hidden;
+      /* No overflow:hidden here — the point badge slides out past the right
+         edge. Children that could poke past the rounded corners (sponsor
+         strip) carry their own radius/clipping. */
       box-shadow:
         0 10px 35px rgba(0, 0, 0, 0.42),
         inset 0 1px 0 rgba(255, 255, 255, 0.035);
@@ -420,6 +422,10 @@
       display: none;
     }
 
+    .overlay.no-brand .brand {
+      display: none;
+    }
+
     /* ---------- Score-change / new-set animations ---------- */
 
     @keyframes cell-pop {
@@ -456,42 +462,62 @@
       animation: cell-in 0.5s ease both;
     }
 
-    /* ---------- Set / match / golden point badge ---------- */
+    /* ---------- Set / match / golden / silver point badge ---------- */
 
-    .badge-line {
-      display: none;
-      padding: 0.1em 1em 0.5em;
-    }
-
-    .badge-line.visible {
-      display: block;
+    /* Clipping window glued to the panel's right edge. The ribbon slides
+       horizontally inside it, so it appears to emerge from behind the panel
+       and never adds to the overlay's height. */
+    .badge-flyout {
+      position: absolute;
+      left: 100%;
+      top: 0;
+      bottom: 0;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      pointer-events: none;
     }
 
     .badge {
-      display: inline-block;
+      display: block;
+      writing-mode: vertical-rl;
+      text-orientation: mixed;
+      white-space: nowrap;
       font-size: 0.55em;
       font-weight: 800;
       letter-spacing: 0.14em;
       text-transform: uppercase;
-      padding: 0.35em 0.9em 0.3em;
-      border-radius: 0.35em;
+      padding: 0.9em 0.4em;
       border: 1px solid currentColor;
+      border-left: none;
+      border-radius: 0 0.45em 0.45em 0;
+      transform: translateX(-100%);
+      transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    .badge-flyout.visible .badge {
+      transform: translateX(0);
       animation: badge-pulse 1.6s ease-in-out infinite;
     }
 
     .badge.team-A {
       color: var(--ov-teamA);
-      background: color-mix(in srgb, var(--ov-teamA) 12%, transparent);
+      background: color-mix(in srgb, var(--ov-teamA) 22%, var(--ov-panel));
     }
 
     .badge.team-B {
       color: var(--ov-teamB);
-      background: color-mix(in srgb, var(--ov-teamB) 12%, transparent);
+      background: color-mix(in srgb, var(--ov-teamB) 22%, var(--ov-panel));
     }
 
-    .badge.neutral {
+    .badge.gold {
       color: #f2c94c;
-      background: color-mix(in srgb, #f2c94c 12%, transparent);
+      background: color-mix(in srgb, #f2c94c 22%, var(--ov-panel));
+    }
+
+    .badge.silver {
+      color: #d7dee8;
+      background: color-mix(in srgb, #d7dee8 22%, var(--ov-panel));
     }
 
     @keyframes badge-pulse {
@@ -502,7 +528,7 @@
       }
 
       50% {
-        opacity: 0.55;
+        opacity: 0.65;
       }
     }
 
@@ -527,6 +553,7 @@
       height: 1.35em;
       overflow: hidden;
       border-top: 1px solid var(--ov-line);
+      border-radius: 0 0 calc(var(--ov-radius) - 1px) calc(var(--ov-radius) - 1px);
       display: flex;
       align-items: center;
     }
@@ -772,7 +799,7 @@
       </div>
     </div>
 
-    <div class="badge-line" id="badgeLine"><span class="badge" id="badgeText"></span></div>
+    <div class="badge-flyout" id="badgeLine"><span class="badge" id="badgeText"></span></div>
 
     <div class="status-line" id="statusLine"></div>
 
@@ -792,6 +819,7 @@
 
     <div class="section">Display</div>
     <label><span>Show server indicator</span><input type="checkbox" id="setShowServer" /></label>
+    <label><span>Show brand header</span><input type="checkbox" id="setShowBrand" /></label>
     <label><span>Show column headers</span><input type="checkbox" id="setShowHeaders" /></label>
     <label><span>Show team names</span><input type="checkbox" id="setShowTeamNames" /></label>
     <label><span>Show player names</span><input type="checkbox" id="setShowPlayerNames" /></label>
@@ -848,6 +876,7 @@
 
       const DEFAULT_SETTINGS = {
         showServer: true,
+        showBrand: true,
         showHeaders: true,
         showTeamNames: true,
         showPlayerNames: true,
@@ -956,7 +985,9 @@
         applyLogo("logoB", settings.logoB);
         applyBrand();
 
-        document.getElementById("overlayBox").classList.toggle("no-headers", settings.showHeaders === false);
+        const overlayBox = document.getElementById("overlayBox");
+        overlayBox.classList.toggle("no-brand", settings.showBrand === false);
+        overlayBox.classList.toggle("no-headers", settings.showHeaders === false);
 
         tickTimer();
         updateSponsor();
@@ -1197,8 +1228,34 @@
         return columns;
       }
 
-      // Derives set / match / golden point purely from the score payload.
-      // Assumes best-of-3 unless data.bestOf says otherwise.
+      // Fallback for backends that don't send deuceCycles yet: a silver point
+      // is a deuce that follows a cancelled advantage, so remember whether an
+      // "Ad" was seen earlier in the current game.
+      let sawAdGameKey = null;
+      let sawAdInGame = false;
+
+      function trackAdvantage(data)
+      {
+        const gameKey = [
+          (data.completedSets || []).length,
+          data.teams.A.games,
+          data.teams.B.games
+        ].join("|");
+
+        if (gameKey !== sawAdGameKey)
+        {
+          sawAdGameKey = gameKey;
+          sawAdInGame = false;
+        }
+
+        if (String(data.teams.A.pointsDisplay) === "Ad" || String(data.teams.B.pointsDisplay) === "Ad")
+        {
+          sawAdInGame = true;
+        }
+      }
+
+      // Derives set / golden / silver point purely from the score payload.
+      // No match-point badge: the sets required to win aren't knowable here.
       function computeBadge(data)
       {
         if ((data.scoringMode || "standard") !== "standard" || data.matchComplete) return null;
@@ -1211,14 +1268,6 @@
           A: Number(data.teams.A.games) || 0,
           B: Number(data.teams.B.games) || 0
         };
-
-        const setsWon = { A: 0, B: 0 };
-        (data.completedSets || []).forEach((set) =>
-        {
-          if (Number(set.A) > Number(set.B)) setsWon.A++;
-          else if (Number(set.B) > Number(set.A)) setsWon.B++;
-        });
-        const setsNeeded = Math.floor((Number(data.bestOf) || 3) / 2) + 1;
 
         function gamePoint(team)
         {
@@ -1243,13 +1292,24 @@
 
         for (const team of ["A", "B"])
         {
-          if (setPoint(team) && setsWon[team] + 1 >= setsNeeded) return { text: "Match point", team };
+          if (setPoint(team)) return { text: "Set point", cls: "team-" + team };
         }
-        for (const team of ["A", "B"])
+
+        const deuceMode = (data.scoringOptions && data.scoringOptions.deuceMode) || "standard";
+        const atDeuce = !data.inTiebreak && pts.A === "40" && pts.B === "40";
+        if (atDeuce && deuceMode === "golden")
         {
-          if (setPoint(team)) return { text: "Set point", team };
+          return { text: "Golden point", cls: "gold" };
         }
-        if (!data.inTiebreak && pts.A === "40" && pts.B === "40") return { text: "Golden point", team: null };
+        // Silver deuce only decides the game after the first deuce cycle.
+        // Prefer the backend's deuceCycles; infer from an observed cancelled
+        // advantage when the field isn't in the payload yet.
+        if (atDeuce && deuceMode === "silver")
+        {
+          const cyclesKnown = data.deuceCycles !== undefined && data.deuceCycles !== null;
+          const deciding = cyclesKnown ? (Number(data.deuceCycles) || 0) > 0 : sawAdInGame;
+          if (deciding) return { text: "Silver point", cls: "silver" };
+        }
 
         return null;
       }
@@ -1257,6 +1317,7 @@
       function render(data)
       {
         latestScore = data;
+        trackAdvantage(data);
 
         document.getElementById("loadingLine").classList.add("hidden");
         document.getElementById("scoreBody").classList.remove("hidden");
@@ -1301,15 +1362,13 @@
         const badgeLine = document.getElementById("badgeLine");
         if (badge)
         {
+          // Text/colour are left untouched when hiding so the ribbon keeps
+          // its label while it slides back behind the panel.
           const badgeText = document.getElementById("badgeText");
           badgeText.textContent = badge.text;
-          badgeText.className = "badge " + (badge.team ? "team-" + badge.team : "neutral");
-          badgeLine.classList.add("visible");
+          badgeText.className = "badge " + badge.cls;
         }
-        else
-        {
-          badgeLine.classList.remove("visible");
-        }
+        badgeLine.classList.toggle("visible", Boolean(badge));
 
         const statusLine = document.getElementById("statusLine");
         if (data.matchComplete)
@@ -1423,6 +1482,7 @@
 
       const checkboxMap = {
         setShowServer: "showServer",
+        setShowBrand: "showBrand",
         setShowHeaders: "showHeaders",
         setShowTeamNames: "showTeamNames",
         setShowPlayerNames: "showPlayerNames",
