@@ -293,6 +293,8 @@ function createTeamStatsBucket()
         goldenPointWinPct: 0,
         silverPointsWon: 0,
         silverPointWinPct: 0,
+        starPointsWon: 0,
+        starPointWinPct: 0,
         gamePointGames: 0,
         gamePointConversions: 0,
         closingEfficiencyPct: 0
@@ -574,6 +576,7 @@ function computeAdvancedStats(pointHistory, scoringOptions)
         deuceGames: 0,
         goldenPointsPlayed: 0,
         silverPointsPlayed: 0,
+        starPointsPlayed: 0,
     };
     const servePlayerStats = {
         A1: createServePlayerStatsBucket(),
@@ -622,6 +625,7 @@ function computeAdvancedStats(pointHistory, scoringOptions)
         let breakPointReturner = null;
         let isGoldenPoint = false;
         let isSilverPoint = false;
+        let isStarPoint = false;
 
         if (standardMode && !oldIsTiebreak)
         {
@@ -643,6 +647,12 @@ function computeAdvancedStats(pointHistory, scoringOptions)
             {
                 isSilverPoint = true;
                 matchStats.silverPointsPlayed++;
+            }
+
+            if (options.deuceMode === "star" && pointsA === 3 && pointsB === 3 && (Number(score.deuceCycles) || 0) >= 2)
+            {
+                isStarPoint = true;
+                matchStats.starPointsPlayed++;
             }
 
             const gamePointA = isTeamOnGamePoint(score, "A", options, false);
@@ -675,6 +685,11 @@ function computeAdvancedStats(pointHistory, scoringOptions)
         if (isSilverPoint)
         {
             teamStats[pointWinner].silverPointsWon++;
+        }
+
+        if (isStarPoint)
+        {
+            teamStats[pointWinner].starPointsWon++;
         }
 
         if (isBreakPoint)
@@ -776,6 +791,9 @@ function computeAdvancedStats(pointHistory, scoringOptions)
             : 0;
         bucket.silverPointWinPct = matchStats.silverPointsPlayed > 0
             ? (bucket.silverPointsWon / matchStats.silverPointsPlayed) * 100
+            : 0;
+        bucket.starPointWinPct = matchStats.starPointsPlayed > 0
+            ? (bucket.starPointsWon / matchStats.starPointsPlayed) * 100
             : 0;
         bucket.closingEfficiencyPct = bucket.gamePointGames > 0
             ? (bucket.gamePointConversions / bucket.gamePointGames) * 100

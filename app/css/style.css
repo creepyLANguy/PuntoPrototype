@@ -2893,6 +2893,20 @@ body.light-mode .form-group input {
   color: black;
 }
 
+/* Edit-court: tint the name inputs with their team's colour so it's obvious
+   which team each field belongs to. Follows the active theme's team colours. */
+.form-group input#editTeamAName,
+.form-group input#editPlayerA1Name,
+.form-group input#editPlayerA2Name {
+  border: 1px solid var(--teamAcolour);
+}
+
+.form-group input#editTeamBName,
+.form-group input#editPlayerB1Name,
+.form-group input#editPlayerB2Name {
+  border: 1px solid var(--teamBcolour);
+}
+
 body.light-mode .form-group label {
   color: black;
 }

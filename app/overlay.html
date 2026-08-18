@@ -520,6 +520,11 @@
       background: color-mix(in srgb, #d7dee8 22%, var(--ov-panel));
     }
 
+    .badge.star {
+      color: #c9a7ff;
+      background: color-mix(in srgb, #c9a7ff 22%, var(--ov-panel));
+    }
+
     @keyframes badge-pulse {
 
       0%,
@@ -1228,11 +1233,12 @@
         return columns;
       }
 
-      // Fallback for backends that don't send deuceCycles yet: a silver point
-      // is a deuce that follows a cancelled advantage, so remember whether an
-      // "Ad" was seen earlier in the current game.
+      // Fallback for backends that don't send deuceCycles yet: silver/star
+      // points follow cancelled advantages, so count Ad -> deuce transitions
+      // observed within the current game (silver decides after 1, star after 2).
       let sawAdGameKey = null;
-      let sawAdInGame = false;
+      let adWasActive = false;
+      let cancelledAdsInGame = 0;
 
       function trackAdvantage(data)
       {
@@ -1245,12 +1251,19 @@
         if (gameKey !== sawAdGameKey)
         {
           sawAdGameKey = gameKey;
-          sawAdInGame = false;
+          adWasActive = false;
+          cancelledAdsInGame = 0;
         }
 
-        if (String(data.teams.A.pointsDisplay) === "Ad" || String(data.teams.B.pointsDisplay) === "Ad")
+        const hasAd = String(data.teams.A.pointsDisplay) === "Ad" || String(data.teams.B.pointsDisplay) === "Ad";
+        if (hasAd)
         {
-          sawAdInGame = true;
+          adWasActive = true;
+        }
+        else if (adWasActive)
+        {
+          adWasActive = false;
+          cancelledAdsInGame++;
         }
       }
 
@@ -1301,14 +1314,15 @@
         {
           return { text: "Golden point", cls: "gold" };
         }
-        // Silver deuce only decides the game after the first deuce cycle.
-        // Prefer the backend's deuceCycles; infer from an observed cancelled
-        // advantage when the field isn't in the payload yet.
-        if (atDeuce && deuceMode === "silver")
+        // Silver decides after one deuce cycle, star after two. Prefer the
+        // backend's deuceCycles; infer from observed cancelled advantages
+        // when the field isn't in the payload yet.
+        if (atDeuce && (deuceMode === "silver" || deuceMode === "star"))
         {
           const cyclesKnown = data.deuceCycles !== undefined && data.deuceCycles !== null;
-          const deciding = cyclesKnown ? (Number(data.deuceCycles) || 0) > 0 : sawAdInGame;
-          if (deciding) return { text: "Silver point", cls: "silver" };
+          const cycles = cyclesKnown ? (Number(data.deuceCycles) || 0) : cancelledAdsInGame;
+          if (deuceMode === "silver" && cycles >= 1) return { text: "Silver point", cls: "silver" };
+          if (deuceMode === "star" && cycles >= 2) return { text: "Star point", cls: "star" };
         }
 
         return null;

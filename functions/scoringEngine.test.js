@@ -234,6 +234,75 @@ describe("Standard scoring - silver deuce", () =>
   });
 });
 
+describe("Standard scoring - star point", () =>
+{
+  const options = { scoringMode: "standard", deuceMode: "star", tiebreakMode: "sixAllSeven" };
+
+  test("first two deuces play normally with advantage", () =>
+  {
+    let s = defaultScore(options);
+    s = awardPoints(s, "A", 3, options);
+    s = awardPoints(s, "B", 3, options);
+    // First deuce: advantage play
+    s = applyEvent(s, { eventType: "POINT_TEAM_A", id: "e1" }, options);
+    expect(s.A.points).toBe(4);
+    s = applyEvent(s, { eventType: "POINT_TEAM_B", id: "e2" }, options);
+    // Second deuce (one cancelled advantage): still advantage play
+    s = applyEvent(s, { eventType: "POINT_TEAM_B", id: "e3" }, options);
+    expect(s.B.points).toBe(4);
+  });
+
+  test("third deuce is sudden death", () =>
+  {
+    let s = defaultScore(options);
+    s = awardPoints(s, "A", 3, options);
+    s = awardPoints(s, "B", 3, options);
+    // Two full deuce cycles: Ad A cancelled, Ad B cancelled
+    s = applyEvent(s, { eventType: "POINT_TEAM_A", id: "e1" }, options);
+    s = applyEvent(s, { eventType: "POINT_TEAM_B", id: "e2" }, options);
+    s = applyEvent(s, { eventType: "POINT_TEAM_B", id: "e3" }, options);
+    s = applyEvent(s, { eventType: "POINT_TEAM_A", id: "e4" }, options);
+    expect(s.deuceCycles).toBe(2);
+    expect(s.A.points).toBe(3);
+    expect(s.B.points).toBe(3);
+    // Third deuce: next point wins the game outright
+    s = applyEvent(s, { eventType: "POINT_TEAM_A", id: "e5" }, options);
+    expect(s.A.games).toBe(1);
+  });
+});
+
+describe("Standard tiebreak - no upper limit", () =>
+{
+  const options = { scoringMode: "standard", deuceMode: "standard", tiebreakMode: "sixAllSeven" };
+
+  test("tiebreak continues past 7 until two clear", () =>
+  {
+    let s = defaultScore(options);
+    for (let i = 0; i < 6; i++)
+    {
+      s = winGame(s, "A");
+      s = winGame(s, "B");
+    }
+    // 6-6 -> tiebreak; trade points to 7-7
+    for (let i = 0; i < 7; i++)
+    {
+      s = applyEvent(s, { eventType: "POINT_TEAM_A", id: `a${i}` }, options);
+      s = applyEvent(s, { eventType: "POINT_TEAM_B", id: `b${i}` }, options);
+    }
+    expect(s.inTiebreak).toBe(true);
+    expect(s.A.points).toBe(7);
+    expect(s.B.points).toBe(7);
+    expect(s.A.sets).toBe(0);
+    // 8-7 is still not enough
+    s = applyEvent(s, { eventType: "POINT_TEAM_A", id: "a8" }, options);
+    expect(s.A.sets).toBe(0);
+    // 9-7 takes the set
+    s = applyEvent(s, { eventType: "POINT_TEAM_A", id: "a9" }, options);
+    expect(s.A.sets).toBe(1);
+    expect(s.completedSets[0].tiebreakPoints).toEqual({ A: 9, B: 7 });
+  });
+});
+
 describe("Standard scoring - winning a set", () =>
 {
   test("team wins set at 6-0", () =>

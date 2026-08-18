@@ -1,7 +1,7 @@
 const historyThreshold = 500;
 
 const SCORING_MODES = new Set(["standard", "straight", "tiebreakTen"]);
-const DEUCE_MODES = new Set(["standard", "golden", "silver"]);
+const DEUCE_MODES = new Set(["standard", "golden", "silver", "star"]);
 const TIEBREAK_MODES = new Set(["off", "sixAllSeven", "sixAllTen"]);
 
 const DEFAULT_SCORING_OPTIONS = {
@@ -263,7 +263,11 @@ function awardRegularGamePoint(score, scoringTeam, otherTeam, options)
 
   if (team.points === 3 && opponent.points === 3)
   {
-    if (options.deuceMode === "golden" || (options.deuceMode === "silver" && score.deuceCycles > 0))
+    // Golden: every deuce is sudden death. Silver: sudden death after one
+    // cancelled advantage. Star: sudden death after two cancelled advantages.
+    if (options.deuceMode === "golden" ||
+      (options.deuceMode === "silver" && score.deuceCycles > 0) ||
+      (options.deuceMode === "star" && score.deuceCycles >= 2))
     {
       winGame(score, scoringTeam, otherTeam);
       return;
@@ -282,7 +286,7 @@ function awardRegularGamePoint(score, scoringTeam, otherTeam, options)
   if (opponent.points === 4)
   {
     opponent.points = 3;
-    if (options.deuceMode === "silver")
+    if (options.deuceMode === "silver" || options.deuceMode === "star")
     {
       score.deuceCycles++;
     }

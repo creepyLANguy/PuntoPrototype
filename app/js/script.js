@@ -62,6 +62,7 @@ document.addEventListener("DOMContentLoaded", () =>
     tiebreakTen: "Tiebreak Tens",
     golden: "Golden point",
     silver: "Silver deuce",
+    star: "Star point",
     sixAllSeven: "7-point tiebreak",
     sixAllTen: "10-point tiebreak",
     off: "No tiebreak"
@@ -174,7 +175,7 @@ document.addEventListener("DOMContentLoaded", () =>
       normalized.scoringMode = DEFAULT_SCORING_OPTIONS.scoringMode;
     }
 
-    if (!["standard", "golden", "silver"].includes(normalized.deuceMode))
+    if (!["standard", "golden", "silver", "star"].includes(normalized.deuceMode))
     {
       normalized.deuceMode = DEFAULT_SCORING_OPTIONS.deuceMode;
     }
@@ -1416,6 +1417,7 @@ document.addEventListener("DOMContentLoaded", () =>
   elements.courtPasswordError = $("courtPasswordError");
   elements.courtStatus = $("courtStatus");
   elements.courtScoringMode = $("courtScoringMode");
+  elements.courtTiebreakMode = $("courtTiebreakMode");
 
   // ADMIN AUTH ELEMENTS
   elements.adminLoginBtn = $("adminLoginBtn");
@@ -1447,6 +1449,7 @@ document.addEventListener("DOMContentLoaded", () =>
   elements.editCourtPassword = $("editCourtPassword");
   elements.editCourtStatus = $("editCourtStatus");
   elements.editCourtScoringMode = $("editCourtScoringMode");
+  elements.editCourtTiebreakMode = $("editCourtTiebreakMode");
   elements.clearCourtScoreBtn = $("clearCourtScoreBtn");
   elements.saveEditBtn = $("saveEditBtn");
   elements.deleteCourtBtn = $("deleteCourtBtn");
@@ -1725,7 +1728,28 @@ document.addEventListener("DOMContentLoaded", () =>
   submitOnEnter(elements.editCourtPassword, elements.saveEditBtn);
   submitOnEnter(elements.editCourtStatus, elements.saveEditBtn);
   submitOnEnter(elements.editCourtScoringMode, elements.saveEditBtn);
+  submitOnEnter(elements.editCourtTiebreakMode, elements.saveEditBtn);
   submitFormOnEnter(elements.editCourtPage);
+
+  // Tiebreaks only apply to games-and-sets scoring; grey the selector out otherwise.
+  function syncCourtTiebreakDisabled(scoringSelect, tiebreakSelect)
+  {
+    if (!scoringSelect || !tiebreakSelect) return;
+    tiebreakSelect.disabled = scoringSelect.value !== "standard";
+  }
+
+  if (elements.courtScoringMode)
+  {
+    elements.courtScoringMode.addEventListener("change", () =>
+      syncCourtTiebreakDisabled(elements.courtScoringMode, elements.courtTiebreakMode));
+    syncCourtTiebreakDisabled(elements.courtScoringMode, elements.courtTiebreakMode);
+  }
+
+  if (elements.editCourtScoringMode)
+  {
+    elements.editCourtScoringMode.addEventListener("change", () =>
+      syncCourtTiebreakDisabled(elements.editCourtScoringMode, elements.editCourtTiebreakMode));
+  }
 
   // ADMIN DASHBOARD SEARCH & FILTER
   elements.adminCourtSearch.addEventListener("input", filterAndDisplayAdminCourts);
@@ -2931,6 +2955,11 @@ document.addEventListener("DOMContentLoaded", () =>
     elements.editCourtPassword.value = court.password || "";
     elements.editCourtStatus.value = court.status || STATUS.CLOSED;
     elements.editCourtScoringMode.value = scoringOptions.scoringMode;
+    if (elements.editCourtTiebreakMode)
+    {
+      elements.editCourtTiebreakMode.value = scoringOptions.tiebreakMode;
+      elements.editCourtTiebreakMode.disabled = scoringOptions.scoringMode !== "standard";
+    }
 
     elements.adminDashboardPage.style.display = "none";
     elements.editCourtPage.style.display = "flex";
@@ -2956,7 +2985,10 @@ document.addEventListener("DOMContentLoaded", () =>
 
       const scoringOptions = normalizeScoringOptions({
         ...(courtToEdit.scoringOptions || {}),
-        scoringMode: elements.editCourtScoringMode.value
+        scoringMode: elements.editCourtScoringMode.value,
+        tiebreakMode: elements.editCourtTiebreakMode?.value ||
+          courtToEdit.scoringOptions?.tiebreakMode ||
+          DEFAULT_SCORING_OPTIONS.tiebreakMode
       });
       const playerNames = normalizePlayerNames({
         A1: elements.editPlayerA1Name.value.trim(),
@@ -3520,7 +3552,8 @@ document.addEventListener("DOMContentLoaded", () =>
     const courtName = elements.courtName.value.trim();
     const courtPass = elements.courtPassword.value.trim();
     const scoringMode = elements.courtScoringMode?.value || DEFAULT_SCORING_OPTIONS.scoringMode;
-    const scoringOptions = normalizeScoringOptions({ scoringMode });
+    const tiebreakMode = elements.courtTiebreakMode?.value || DEFAULT_SCORING_OPTIONS.tiebreakMode;
+    const scoringOptions = normalizeScoringOptions({ scoringMode, tiebreakMode });
 
     elements.courtNameError.textContent = "";
     elements.courtPasswordError.textContent = "";
@@ -3602,6 +3635,11 @@ document.addEventListener("DOMContentLoaded", () =>
     elements.courtName.value = "";
     elements.courtPassword.value = "";
     if (elements.courtScoringMode) elements.courtScoringMode.value = DEFAULT_SCORING_OPTIONS.scoringMode;
+    if (elements.courtTiebreakMode)
+    {
+      elements.courtTiebreakMode.value = DEFAULT_SCORING_OPTIONS.tiebreakMode;
+      elements.courtTiebreakMode.disabled = false;
+    }
     syncCurrentViewState("replace");
   });
 
@@ -4588,7 +4626,9 @@ document.addEventListener("DOMContentLoaded", () =>
         }
         else if (pts === 3 && oppPts === 3)
         {
-          if (options.deuceMode === "golden" || (options.deuceMode === "silver" && currentScore.deuceCycles > 0))
+          if (options.deuceMode === "golden" ||
+            (options.deuceMode === "silver" && currentScore.deuceCycles > 0) ||
+            (options.deuceMode === "star" && currentScore.deuceCycles >= 2))
           {
             winsGame = true;
           }
@@ -5991,6 +6031,7 @@ document.addEventListener("DOMContentLoaded", () =>
     const isGamesAndSetsMode = resolvedScoringMode === "standard";
     const isGoldenMode = isGamesAndSetsMode && advancedStats.deuceMode === "golden";
     const isSilverMode = isGamesAndSetsMode && advancedStats.deuceMode === "silver";
+    const isStarMode = isGamesAndSetsMode && advancedStats.deuceMode === "star";
     const primaryTeamKey = isSwapped ? "B" : "A";
     const secondaryTeamKey = isSwapped ? "A" : "B";
     const primaryTeamName = teamNames[primaryTeamKey];
@@ -6006,6 +6047,7 @@ document.addEventListener("DOMContentLoaded", () =>
     const deuceGames = Number(matchStats.deuceGames) || 0;
     const goldenPointsPlayed = Number(matchStats.goldenPointsPlayed) || 0;
     const silverPointsPlayed = Number(matchStats.silverPointsPlayed) || 0;
+    const starPointsPlayed = Number(matchStats.starPointsPlayed) || 0;
 
     function row(label, valPrimary, valSecondary, primaryLeader = false, secondaryLeader = false)
     {
@@ -6068,6 +6110,16 @@ document.addEventListener("DOMContentLoaded", () =>
     const secondarySilverPct = Number.isFinite(secondarySilverPctRaw)
       ? secondarySilverPctRaw
       : (silverPointsPlayed > 0 ? (secondarySilverWon / silverPointsPlayed) * 100 : 0);
+    const primaryStarWon = Number(primaryTeamStats.starPointsWon) || 0;
+    const secondaryStarWon = Number(secondaryTeamStats.starPointsWon) || 0;
+    const primaryStarPctRaw = Number(primaryTeamStats.starPointWinPct);
+    const secondaryStarPctRaw = Number(secondaryTeamStats.starPointWinPct);
+    const primaryStarPct = Number.isFinite(primaryStarPctRaw)
+      ? primaryStarPctRaw
+      : (starPointsPlayed > 0 ? (primaryStarWon / starPointsPlayed) * 100 : 0);
+    const secondaryStarPct = Number.isFinite(secondaryStarPctRaw)
+      ? secondaryStarPctRaw
+      : (starPointsPlayed > 0 ? (secondaryStarWon / starPointsPlayed) * 100 : 0);
     const deuceGamesLabel = isGoldenMode ? "Golden Pts" : "Games";
 
     const rows = [
@@ -6131,6 +6183,20 @@ document.addEventListener("DOMContentLoaded", () =>
         `${secondarySilverWon}/${silverPointsPlayed} (${formatPct(secondarySilverPct)})`,
         primarySilverPct > secondarySilverPct,
         secondarySilverPct > primarySilverPct
+      ));
+    }
+
+    if (isStarMode)
+    {
+      rows.push(sharedRow("Star Pts", starPointsPlayed));
+      rows.push(barRow(
+        "Won",
+        primaryStarPct,
+        secondaryStarPct,
+        `${primaryStarWon}/${starPointsPlayed} (${formatPct(primaryStarPct)})`,
+        `${secondaryStarWon}/${starPointsPlayed} (${formatPct(secondaryStarPct)})`,
+        primaryStarPct > secondaryStarPct,
+        secondaryStarPct > primaryStarPct
       ));
     }
 
