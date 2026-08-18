@@ -6,6 +6,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Padel Push — Score Overlay</title>
   <link rel="icon" href="/app/media/img/favicon.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Encode+Sans+Semi+Expanded:wght@600;700&display=swap"
+    rel="stylesheet" />
   <style>
     :root {
       --ov-bg: transparent;
@@ -41,9 +46,12 @@
       position: fixed;
       top: 16px;
       left: 16px;
-      width: 32em;
-      min-width: 20em;
+      /* Content-driven width: name column + however many score cells exist.
+         Base case (2 sets + points) stays compact; extra sets widen the panel. */
+      width: fit-content;
+      min-width: 16em;
       --ov-col: 4rem;
+      --ov-name-col: 10.5em;
       max-width: calc(100vw - 32px);
       font-size: 24px;
       background:
@@ -103,9 +111,11 @@
     .team-row {
       position: relative;
       display: grid;
-      grid-template-columns: 1fr auto;
+      /* Fixed name column keeps the panel width deterministic; long names
+         truncate instead of stretching the overlay. */
+      grid-template-columns: var(--ov-name-col) auto;
       align-items: center;
-      gap: 0.5em;
+      gap: 0.9em;
       min-height: 4.75em;
       padding: 0.0em 1em;
       border-top: 1px solid var(--ov-line-soft);
@@ -214,26 +224,28 @@
     }
 
     .serve-dot {
+      /* Positioning context for the ball, sized to this player's line so the
+         bounce cannot stray outside their row. */
+      position: relative;
       flex: 0 0 auto;
-      aspect-ratio: 1/1;
-      border-radius: 50%;
-      background: currentColor;
+      width: 1em;
+      height: 1em;
       visibility: hidden;
       margin-left: 0.3em;
     }
 
     .serve-dot::after {
-      --size: clamp(4px, 2.25cqi, 10px);
-      --labelHeight: calc(1em + (var(--size)/2));
-      --bounceHeight: calc(clamp(5px, 2cqi, 20px) - var(--size));
-      flex-shrink: 0;
-      bottom: calc(var(--bounceHeight) + var(--labelHeight));
+      --size: 0.5em;
+      /* Drop from the top of the line to its baseline — the player's own
+         vertical region only. */
+      --bounceHeight: calc(1em - var(--size) + 0.05em);
+      content: "";
+      position: absolute;
+      top: 0;
+      left: calc(50% - var(--size) / 2);
       width: var(--size);
       height: var(--size);
       background: currentColor;
-
-      content: "";
-      position: absolute;
       border-radius: 50%;
       z-index: 1;
       animation: serve-anim 2s linear infinite;
@@ -309,9 +321,10 @@
       justify-content: center;
       border-left: 1px solid var(--ov-line);
       text-align: center;
+      font-family: "Encode Sans Semi Expanded", "Arial", "Helvetica Neue", Helvetica, sans-serif;
       font-variant-numeric: tabular-nums;
       font-size: 1.55em;
-      font-weight: 600;
+      font-weight: 700;
       line-height: 1;
       color: var(--ov-text);
     }
@@ -322,12 +335,6 @@
 
     .team-row>.score-cells .cell.lost {
       opacity: 0.7;
-    }
-
-    .team-row[data-team="A"]>.score-cells .cell.won {
-    }
-
-    .team-row[data-team="B"]>.score-cells .cell.won {
     }
 
     .team-row[data-team="A"]>.score-cells .cell.points {
@@ -505,7 +512,8 @@
       .overlay {
         left: 10px;
         top: 10px;
-        width: calc(100vw - 20px);
+        width: fit-content;
+        max-width: calc(100vw - 20px);
         min-width: 0;
         font-size: clamp(15px, 3.1vw, 22px);
       }
