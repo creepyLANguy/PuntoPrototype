@@ -69,8 +69,7 @@
       display: flex;
       align-items: center;
       gap: 0.55em;
-      min-height: 3.15em;
-      padding: 0.65em 1em 0.6em;
+      padding: 0.5em 1em 0.5em;
       border-bottom: 1px solid var(--ov-line);
     }
 
@@ -149,14 +148,10 @@
     }
 
     .team-logo {
-      width: 2.35em;
-      height: 2.35em;
-      flex: 0 0 2.35em;
+      width: 3em;
+      height: 3em;
       object-fit: contain;
-      border-radius: 0.38em;
       display: none;
-      background: #fff;
-      padding: 0.12em;
     }
 
     .team-logo.visible {
@@ -172,7 +167,7 @@
       font-size: 0.6em;
       font-weight: 700;
       text-transform: uppercase;
-      letter-spacing: 0.09em;
+      letter-spacing: 0.04em;
       color: var(--ov-muted);
       white-space: nowrap;
       overflow: hidden;
@@ -221,6 +216,7 @@
       overflow: hidden;
       text-overflow: ellipsis;
       font-size: 1.2em;
+      letter-spacing: 0.05em;
     }
 
     .serve-dot {
@@ -378,6 +374,8 @@
       font-size: 0.65em;
       font-weight: 600;
       color: var(--ov-muted);
+      display: flex;
+      justify-content: center;
     }
 
     .loading-line.hidden {
@@ -529,7 +527,7 @@
       <span class="brand-court" id="courtLabel"></span>
     </div>
 
-    <div class="loading-line" id="loadingLine">Loading…</div>
+    <div class="loading-line" id="loadingLine">Loading...</div>
 
     <div class="score-body hidden" id="scoreBody">
         <div class="score-spacer"></div>
