@@ -154,37 +154,9 @@ async function getLatestCheckpoint(tx, courtId, options)
     return null;
 }
 
-async function replayScoreFromEvents(tx, courtId, options, useCheckpoint, activeScoreVersion = 0)
+function collectApplicableScoringEvents(eventsSnap, targetScoreVersion)
 {
-    const activeOptions = normalizeScoringOptions(options);
-    const targetScoreVersion = normalizeScoreVersion(activeScoreVersion);
-    let replayedScore = defaultScore(activeOptions);
-    let query = buildScoringEventsQuery(courtId);
-
-    if (useCheckpoint)
-    {
-        const checkpoint = await getLatestCheckpoint(tx, courtId, activeOptions);
-        if (checkpoint)
-        {
-            replayedScore = {
-                ...defaultScore(activeOptions),
-                ...(checkpoint.data.score || {}),
-                A: { ...defaultScore(activeOptions).A, ...(checkpoint.data.score?.A || {}) },
-                B: { ...defaultScore(activeOptions).B, ...(checkpoint.data.score?.B || {}) },
-                completedSets: Array.isArray(checkpoint.data.score?.completedSets)
-                    ? checkpoint.data.score.completedSets.map((set) => ({ ...set }))
-                    : [],
-                history: [],
-                scoringOptions: activeOptions
-            };
-
-            query = query.startAfter(checkpoint.data.lastCreatedAt, checkpoint.data.lastEventId);
-        }
-    }
-
-    const eventsSnap = await tx.get(query);
-    let lastEventId = null;
-    let lastCreatedAt = null;
+    const events = [];
 
     eventsSnap.forEach((docSnap) =>
     {
@@ -201,10 +173,69 @@ async function replayScoreFromEvents(tx, courtId, options, useCheckpoint, active
             return;
         }
 
-        const event = { id: docSnap.id, ...data };
+        events.push({ id: docSnap.id, ...data });
+    });
+
+    return events;
+}
+
+async function replayScoreFromEvents(tx, courtId, options, useCheckpoint, activeScoreVersion = 0)
+{
+    const activeOptions = normalizeScoringOptions(options);
+    const targetScoreVersion = normalizeScoreVersion(activeScoreVersion);
+    let replayedScore = defaultScore(activeOptions);
+    let query = buildScoringEventsQuery(courtId);
+    let checkpoint = null;
+
+    if (useCheckpoint)
+    {
+        checkpoint = await getLatestCheckpoint(tx, courtId, activeOptions);
+        if (checkpoint)
+        {
+            query = query.startAfter(checkpoint.data.lastCreatedAt, checkpoint.data.lastEventId);
+        }
+    }
+
+    const eventsSnap = await tx.get(query);
+    let applicableEvents = collectApplicableScoringEvents(eventsSnap, targetScoreVersion);
+
+    // A checkpoint snapshot has its history stripped (see toLiveScorePayload),
+    // so an UNDO event in the tail would replay against an empty undo stack
+    // and silently no-op - resurrecting the very point the user removed.
+    // Checkpoints are written exactly where undos tend to land (set-winning
+    // points and scoring-option changes), so whenever the tail contains an
+    // UNDO, abandon the checkpoint and rebuild from the full event log so the
+    // in-memory history stack is complete.
+    if (checkpoint && applicableEvents.some((event) => event.eventType === "UNDO"))
+    {
+        checkpoint = null;
+        const fullEventsSnap = await tx.get(buildScoringEventsQuery(courtId));
+        applicableEvents = collectApplicableScoringEvents(fullEventsSnap, targetScoreVersion);
+    }
+
+    if (checkpoint)
+    {
+        replayedScore = {
+            ...defaultScore(activeOptions),
+            ...(checkpoint.data.score || {}),
+            A: { ...defaultScore(activeOptions).A, ...(checkpoint.data.score?.A || {}) },
+            B: { ...defaultScore(activeOptions).B, ...(checkpoint.data.score?.B || {}) },
+            completedSets: Array.isArray(checkpoint.data.score?.completedSets)
+                ? checkpoint.data.score.completedSets.map((set) => ({ ...set }))
+                : [],
+            history: [],
+            scoringOptions: activeOptions
+        };
+    }
+
+    let lastEventId = null;
+    let lastCreatedAt = null;
+
+    applicableEvents.forEach((event) =>
+    {
         replayedScore = applyEvent(replayedScore, event, activeOptions);
-        lastEventId = docSnap.id;
-        lastCreatedAt = data.createdAt || lastCreatedAt;
+        lastEventId = event.id;
+        lastCreatedAt = event.createdAt || lastCreatedAt;
     });
 
     return {
@@ -1009,7 +1040,8 @@ async (event) =>
                 return;
             }
 
-            // Rebuild state for undo from latest checkpoint, then replay tail events.
+            // Rebuild state for undo from the full event log (never a
+            // checkpoint - see replayScoreFromEventsExcluding), then apply it.
             if (newEvent.eventType === "UNDO")
             {
                 const replayResult = await replayScoreFromEventsExcluding(
@@ -1028,6 +1060,28 @@ async (event) =>
                     lastProcessedCreatedAt: incomingOrder.createdAt,
                     updatedAt: admin.firestore.FieldValue.serverTimestamp()
                 });
+
+                // Re-anchor the checkpoint stream at the undo itself. The
+                // newest existing checkpoint may sit exactly at the undone
+                // point (set completions and scoring-option changes both write
+                // one there); replays that resume from it would carry this
+                // UNDO in their tail and be forced onto the slow full-replay
+                // path forever. A fresh checkpoint holding the post-undo state
+                // lets subsequent points resume cheaply without ever crossing
+                // the undo boundary.
+                if (incomingOrder.createdAt)
+                {
+                    const checkpointRef = db.collection(`courts/${courtId}/${SCORE_CHECKPOINTS_COLLECTION}`).doc();
+                    tx.set(
+                        checkpointRef,
+                        buildCheckpointPayload(
+                            replayedScore,
+                            activeScoringOptions,
+                            eventId,
+                            incomingOrder.createdAt
+                        )
+                    );
+                }
 
                 return;
             }
@@ -1736,7 +1790,9 @@ async function buildCourtScoreResponse(courtId)
         // Silver deuce only becomes a deciding point after the first deuce
         // cycle, so overlays need the cycle count to label it correctly.
         deuceCycles: Number(score.deuceCycles) || 0,
-        matchComplete: Boolean(score.matchComplete),
+        // Only the match tiebreak has a defined end; other modes play an open
+        // number of sets/points, so a stale persisted flag must not leak out.
+        matchComplete: scoringOptions.scoringMode === "tiebreakTen" && Boolean(score.matchComplete),
         server: getCurrentServerLabel({ ...score, scoringOptions }),
         scoreVersion: normalizeScoreVersion(courtData.scoreVersion)
     };

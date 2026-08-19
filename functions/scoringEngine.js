@@ -139,6 +139,15 @@ function normalizeScore(score, scoringOptions)
   if (typeof merged.deuceCycles !== "number") merged.deuceCycles = 0;
   if (typeof merged.matchComplete !== "boolean") merged.matchComplete = false;
 
+  // matchComplete is only meaningful in the single match tiebreak
+  // ("tiebreakTen"). Standard and straight modes have no fixed set/point
+  // target - a match can go on indefinitely - so a stale flag (e.g. carried
+  // over from a scoring-mode change) must never block or end scoring there.
+  if (normalizedOptions.scoringMode !== "tiebreakTen")
+  {
+    merged.matchComplete = false;
+  }
+
   return merged;
 }
 
@@ -166,7 +175,9 @@ function applyEvent(score, event, scoringOptions)
 
   const newScore = normalizeScore(clone(score), options);
 
-  if (newScore.matchComplete)
+  // Only the match tiebreak has a defined end; normalizeScore already clears
+  // the flag for every other mode, so this guard can never fire there.
+  if (options.scoringMode === "tiebreakTen" && newScore.matchComplete)
   {
     return newScore;
   }

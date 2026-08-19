@@ -212,6 +212,22 @@ document.addEventListener("DOMContentLoaded", () =>
     });
   }
 
+  // Options describing how the CURRENT score numbers were produced. The score
+  // document carries the options the backend engine actually scored it with,
+  // while the court document's options arrive on a separate listener and can
+  // land before the recalculated score does. Preferring the score's own
+  // options keeps the rendered numbers and their formatting consistent during
+  // a scoring-mode change; resolveScoringOptions (court-first) remains the
+  // right source for the settings controls.
+  function resolveScoreDisplayOptions(scoreData = score)
+  {
+    if (scoreData?.scoringOptions?.scoringMode)
+    {
+      return normalizeScoringOptions(scoreData.scoringOptions);
+    }
+    return resolveScoringOptions(scoreData);
+  }
+
   function normalizePlayerNames(playerNames = {})
   {
     return {
@@ -359,7 +375,7 @@ document.addEventListener("DOMContentLoaded", () =>
       return "";
     }
 
-    const options = resolveScoringOptions(score);
+    const options = resolveScoreDisplayOptions(score);
     if (options.scoringMode === "straight" || options.scoringMode === "tiebreakTen")
     {
       const pointsA = Number(score.A.totalPoints ?? score.A.points) || 0;
@@ -4442,6 +4458,11 @@ document.addEventListener("DOMContentLoaded", () =>
   {
     if (isSpectating) return;
 
+    // Snapshot before the write: the score listener can deliver the undone
+    // score while the addDoc await is still settling.
+    const undoTarget = score?.lastPointTeam || null;
+    const hasPointsToUndo = ((score?.A?.totalPoints || 0) + (score?.B?.totalPoints || 0)) > 0;
+
     try
     {
       await addDoc(
@@ -4454,12 +4475,17 @@ document.addEventListener("DOMContentLoaded", () =>
         }
       );
 
-      if (score.lastPointTeam)
+      // Only give undo feedback when there is actually something to undo;
+      // the backend treats an UNDO on a fresh score as a no-op.
+      if (hasPointsToUndo)
       {
-        animateUndo(score.lastPointTeam);
-      }
+        if (undoTarget)
+        {
+          animateUndo(undoTarget);
+        }
 
-      playSound(SOUND_IDS.UNDO);
+        playSound(SOUND_IDS.UNDO);
+      }
     }
     catch (err)
     {
@@ -4474,7 +4500,7 @@ document.addEventListener("DOMContentLoaded", () =>
 
   function usesNumericPoints()
   {
-    const options = resolveScoringOptions(score);
+    const options = resolveScoreDisplayOptions(score);
     return options.scoringMode === "straight" ||
       options.scoringMode === "tiebreakTen" ||
       score.inTiebreak;
@@ -4530,12 +4556,21 @@ document.addEventListener("DOMContentLoaded", () =>
 
   function getCurrentServerLabel(currentScore)
   {
-    if (!currentScore || currentScore.matchComplete)
+    if (!currentScore)
     {
       return null;
     }
 
-    const options = resolveScoringOptions(currentScore);
+    const options = resolveScoreDisplayOptions(currentScore);
+
+    // matchComplete only ends a match in tiebreakTen mode; every other mode
+    // plays an open number of sets/points, so a stale flag must not hide the
+    // server indicator there.
+    if (options.scoringMode === "tiebreakTen" && currentScore.matchComplete)
+    {
+      return null;
+    }
+
     if (options.scoringMode === "straight")
     {
       return null;
@@ -4561,14 +4596,21 @@ document.addEventListener("DOMContentLoaded", () =>
       B: null
     };
 
-    if (!currentScore || currentScore.matchComplete)
+    if (!currentScore)
     {
       return status;
     }
 
-    // Use ONLY score document's scoring options (not overridden by court settings)
-    // This ensures critical points match what was calculated by the backend scoring engine
-    const options = normalizeScoringOptions(currentScore?.scoringOptions || {});
+    // Use the score document's own scoring options (not the court settings)
+    // so critical points match what the backend scoring engine calculated.
+    const options = resolveScoreDisplayOptions(currentScore);
+
+    // matchComplete only ends a match in tiebreakTen mode; a stale flag in
+    // any other mode must not suppress critical-point indicators.
+    if (options.scoringMode === "tiebreakTen" && currentScore.matchComplete)
+    {
+      return status;
+    }
 
     if (options.scoringMode === "straight")
     {
@@ -4676,7 +4718,7 @@ document.addEventListener("DOMContentLoaded", () =>
   {
     if (!elements.scoreFormatBadge) return;
 
-    const options = resolveScoringOptions(score);
+    const options = resolveScoreDisplayOptions(score);
     const total = (score.A.totalPoints || 0) + (score.B.totalPoints || 0);
     let label = "";
 
@@ -4701,7 +4743,7 @@ document.addEventListener("DOMContentLoaded", () =>
   {
     updateScoreFormatBadge();
 
-    const options = resolveScoringOptions(score);
+    const options = resolveScoreDisplayOptions(score);
     const standardFormat = options.scoringMode === "standard";
 
     // Hide sets/games if not applicable
@@ -4810,7 +4852,7 @@ document.addEventListener("DOMContentLoaded", () =>
     teamNameEl.textContent = team === "A" ? nameA : nameB;
     overlay.dataset.winner = team;
 
-    const isTiebreakTen = resolveScoringOptions(score).scoringMode === "tiebreakTen";
+    const isTiebreakTen = resolveScoreDisplayOptions(score).scoringMode === "tiebreakTen";
     overlay.querySelector(".set-win-label").textContent = isTiebreakTen ? "WINS THE MATCH!" : "WINS THE SET!";
 
     overlay.querySelector(".sw-score-a").textContent = isTiebreakTen ? score.A.points : score.A.sets;

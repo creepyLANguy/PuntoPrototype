@@ -96,6 +96,28 @@ class FakeFirestore
     return new FakeQuery(this, path);
   }
 
+  batch()
+  {
+    const store = this;
+    const ops = [];
+    return {
+      set: (ref, data) => ops.push({ type: "set", path: ref.path, data: structuredClone(data) }),
+      delete: (ref) => ops.push({ type: "delete", path: ref.path }),
+      commit: async () =>
+      {
+        ops.forEach((op) =>
+        {
+          if (op.type === "delete")
+          {
+            store.docs.delete(op.path);
+            return;
+          }
+          store.docs.set(op.path, op.data);
+        });
+      }
+    };
+  }
+
   async runTransaction(callback)
   {
     const writes = [];
@@ -274,6 +296,11 @@ class FakeQuery
     const docId = id || `auto-${this.db.autoIdCounter}`;
     return this.db.doc(`${this.path}/${docId}`);
   }
+
+  async get()
+  {
+    return this.db.getQuerySnapshot(this);
+  }
 }
 
 describe("onEventCreate", () =>
@@ -413,6 +440,255 @@ describe("onEventCreate", () =>
     expect(nextScore.A.points).toBe(expectedScore.A.points);
     expect(nextScore.B.points).toBe(expectedScore.B.points);
     expect(nextScore.B.points).toBe(0);
+  });
+});
+
+describe("onEventCreate - undo vs checkpoints", () =>
+{
+  let consoleDebugSpy;
+
+  beforeEach(() =>
+  {
+    consoleDebugSpy = jest.spyOn(console, "debug").mockImplementation(() => {});
+  });
+
+  afterEach(() =>
+  {
+    consoleDebugSpy.mockRestore();
+  });
+
+  // 24 straight points for A = a 6-0 set in standard scoring; the final point
+  // (p023) is the set-winning point where production writes a checkpoint.
+  function buildSetWinPointEvents(startSeconds = 1)
+  {
+    const events = [];
+    for (let i = 0; i < 24; i++)
+    {
+      events.push({
+        id: `p${String(i).padStart(3, "0")}`,
+        eventType: "POINT_TEAM_A",
+        createdAt: timestamp(startSeconds + i),
+        scoreVersion: 0
+      });
+    }
+    return events;
+  }
+
+  function seedEventDocs(state, eventsPath, events)
+  {
+    events.forEach((event) =>
+    {
+      state[`${eventsPath}/${event.id}`] = event;
+    });
+  }
+
+  test("a point after an undo at a checkpoint boundary does not resurrect the undone set", async () =>
+  {
+    const courtId = "court-undo-1";
+    const scorePath = `courts/${courtId}/score/current`;
+    const courtPath = `courts/${courtId}`;
+    const checkpointsPath = `courts/${courtId}/scoreCheckpoints`;
+    const eventsPath = `courts/${courtId}/events`;
+
+    const setEvents = buildSetWinPointEvents();
+    const undoEvent = { id: "u1", eventType: "UNDO", createdAt: timestamp(25), scoreVersion: 0 };
+    const nextPoint = { id: "z1", eventType: "POINT_TEAM_B", createdAt: timestamp(26), scoreVersion: 0 };
+
+    // State as production leaves it after the undo was correctly processed:
+    // the set-completion checkpoint still sits exactly at the undone point.
+    const checkpointScore = toLiveScorePayload(replayEvents(setEvents, DEFAULT_SCORING_OPTIONS));
+    const postUndoScore = toLiveScorePayload(replayEvents([...setEvents, undoEvent], DEFAULT_SCORING_OPTIONS));
+    const expectedScore = toLiveScorePayload(
+      replayEvents([...setEvents, undoEvent, nextPoint], DEFAULT_SCORING_OPTIONS)
+    );
+
+    const initialState = {
+      [courtPath]: {
+        scoreVersion: 0,
+        scoringMode: DEFAULT_SCORING_OPTIONS.scoringMode,
+        scoringOptions: DEFAULT_SCORING_OPTIONS
+      },
+      [scorePath]: {
+        ...postUndoScore,
+        lastEventId: "u1",
+        lastProcessedEventId: "u1",
+        lastProcessedCreatedAt: undoEvent.createdAt
+      },
+      [`${checkpointsPath}/cp1`]: {
+        score: checkpointScore,
+        scoringOptions: DEFAULT_SCORING_OPTIONS,
+        lastEventId: "p023",
+        lastCreatedAt: timestamp(24)
+      }
+    };
+    seedEventDocs(initialState, eventsPath, [...setEvents, undoEvent, nextPoint]);
+    mockDb = new FakeFirestore(initialState);
+
+    let onEventCreate;
+    jest.isolateModules(() =>
+    {
+      ({ onEventCreate } = require("./index"));
+    });
+
+    await onEventCreate({
+      params: { courtId, eventId: nextPoint.id },
+      data: {
+        data: () => structuredClone(nextPoint)
+      }
+    });
+
+    const nextScore = mockDb.docs.get(scorePath);
+
+    // The undone set-winning point must stay undone: still 5-0 in games with
+    // A at game point, plus B's fresh point - never a completed 6-0 set.
+    expect(nextScore.A.sets).toBe(expectedScore.A.sets);
+    expect(nextScore.A.sets).toBe(0);
+    expect(nextScore.A.games).toBe(5);
+    expect(nextScore.A.points).toBe(3);
+    expect(nextScore.B.points).toBe(1);
+    expect(nextScore.completedSets).toEqual([]);
+  });
+
+  test("processing an UNDO writes a fresh checkpoint anchored at the undo event", async () =>
+  {
+    const courtId = "court-undo-2";
+    const scorePath = `courts/${courtId}/score/current`;
+    const courtPath = `courts/${courtId}`;
+    const checkpointsPath = `courts/${courtId}/scoreCheckpoints`;
+    const eventsPath = `courts/${courtId}/events`;
+
+    const setEvents = buildSetWinPointEvents();
+    const undoEvent = { id: "u1", eventType: "UNDO", createdAt: timestamp(25), scoreVersion: 0 };
+
+    const postSetScore = toLiveScorePayload(replayEvents(setEvents, DEFAULT_SCORING_OPTIONS));
+
+    const initialState = {
+      [courtPath]: {
+        scoreVersion: 0,
+        scoringMode: DEFAULT_SCORING_OPTIONS.scoringMode,
+        scoringOptions: DEFAULT_SCORING_OPTIONS
+      },
+      [scorePath]: {
+        ...postSetScore,
+        lastEventId: "p023",
+        lastProcessedEventId: "p023",
+        lastProcessedCreatedAt: timestamp(24)
+      },
+      [`${checkpointsPath}/cp1`]: {
+        score: postSetScore,
+        scoringOptions: DEFAULT_SCORING_OPTIONS,
+        lastEventId: "p023",
+        lastCreatedAt: timestamp(24)
+      }
+    };
+    seedEventDocs(initialState, eventsPath, [...setEvents, undoEvent]);
+    mockDb = new FakeFirestore(initialState);
+
+    let onEventCreate;
+    jest.isolateModules(() =>
+    {
+      ({ onEventCreate } = require("./index"));
+    });
+
+    await onEventCreate({
+      params: { courtId, eventId: undoEvent.id },
+      data: {
+        data: () => structuredClone(undoEvent)
+      }
+    });
+
+    const nextScore = mockDb.docs.get(scorePath);
+    expect(nextScore.A.sets).toBe(0);
+    expect(nextScore.A.games).toBe(5);
+    expect(nextScore.A.points).toBe(3);
+    expect(nextScore.lastEventId).toBe("u1");
+
+    const undoCheckpoint = [...mockDb.docs.entries()]
+      .filter(([path]) => path.startsWith(`${checkpointsPath}/`))
+      .map(([, data]) => data)
+      .find((data) => data.lastEventId === "u1");
+
+    expect(undoCheckpoint).toBeDefined();
+    expect(undoCheckpoint.lastCreatedAt).toEqual(undoEvent.createdAt);
+    expect(undoCheckpoint.score.A.sets).toBe(0);
+    expect(undoCheckpoint.score.A.games).toBe(5);
+    // Checkpoints must never persist the replay-only undo stack.
+    expect(undoCheckpoint.score.history).toBeUndefined();
+  });
+
+  test("undo after a scoring-mode change is not resurrected by the next point", async () =>
+  {
+    const courtId = "court-undo-3";
+    const scorePath = `courts/${courtId}/score/current`;
+    const courtPath = `courts/${courtId}`;
+    const eventsPath = `courts/${courtId}/events`;
+
+    const e1 = { id: "e1", eventType: "POINT_TEAM_A", createdAt: timestamp(1), scoreVersion: 0 };
+    const e2 = { id: "e2", eventType: "POINT_TEAM_A", createdAt: timestamp(2), scoreVersion: 0 };
+    const e3 = { id: "e3", eventType: "POINT_TEAM_A", createdAt: timestamp(3), scoreVersion: 0 };
+
+    const initialState = {
+      [courtPath]: {
+        scoreVersion: 0,
+        scoringMode: DEFAULT_SCORING_OPTIONS.scoringMode,
+        scoringOptions: DEFAULT_SCORING_OPTIONS
+      },
+      [scorePath]: {
+        ...toLiveScorePayload(replayEvents([e1, e2, e3], DEFAULT_SCORING_OPTIONS)),
+        lastEventId: "e3",
+        lastProcessedEventId: "e3",
+        lastProcessedCreatedAt: e3.createdAt
+      }
+    };
+    seedEventDocs(initialState, eventsPath, [e1, e2, e3]);
+    mockDb = new FakeFirestore(initialState);
+
+    let onEventCreate;
+    let updateScoringOptions;
+    jest.isolateModules(() =>
+    {
+      ({ onEventCreate, updateScoringOptions } = require("./index"));
+    });
+
+    // Switch modes mid-match: this re-replays the log under the new options
+    // and writes a checkpoint anchored at the current last event (e3).
+    await updateScoringOptions({
+      data: {
+        courtId,
+        scoringMode: "straight",
+        scoringOptions: { scoringMode: "straight", deuceMode: "standard", tiebreakMode: "sixAllSeven" }
+      }
+    });
+
+    expect(mockDb.docs.get(scorePath).A.points).toBe(3);
+
+    // Undo right after the mode change - the undo sits exactly at the new
+    // checkpoint's boundary.
+    const undoEvent = { id: "u1", eventType: "UNDO", createdAt: timestamp(5), scoreVersion: 0 };
+    mockDb.docs.set(`${eventsPath}/u1`, structuredClone(undoEvent));
+    await onEventCreate({
+      params: { courtId, eventId: undoEvent.id },
+      data: {
+        data: () => structuredClone(undoEvent)
+      }
+    });
+
+    expect(mockDb.docs.get(scorePath).A.points).toBe(2);
+
+    // The next point must build on the undone score, not resurrect the
+    // undone point from the checkpoint boundary.
+    const nextPoint = { id: "z1", eventType: "POINT_TEAM_B", createdAt: timestamp(6), scoreVersion: 0 };
+    mockDb.docs.set(`${eventsPath}/z1`, structuredClone(nextPoint));
+    await onEventCreate({
+      params: { courtId, eventId: nextPoint.id },
+      data: {
+        data: () => structuredClone(nextPoint)
+      }
+    });
+
+    const finalScore = mockDb.docs.get(scorePath);
+    expect(finalScore.A.points).toBe(2);
+    expect(finalScore.B.points).toBe(1);
   });
 });
 
@@ -679,6 +955,71 @@ describe("getCourtScore", () =>
     const changedRes = makeRes();
     await getCourtScoreRevision({ method: "GET", path: `/r/${courtId}` }, changedRes);
     expect(changedRes.payload.revision).not.toBe(revisionRes.payload.revision);
+  });
+
+  test("ignores a stale matchComplete flag for non-tiebreakTen scores", async () =>
+  {
+    const courtId = "court-stale-complete";
+    const staleScore = {
+      ...toLiveScorePayload(replayEvents(
+        [{ id: "e1", eventType: "POINT_TEAM_A", createdAt: timestamp(1) }],
+        DEFAULT_SCORING_OPTIONS
+      )),
+      // e.g. persisted before the court switched away from tiebreakTen
+      matchComplete: true
+    };
+
+    mockDb = new FakeFirestore({
+      [`courts/${courtId}`]: {
+        scoringMode: DEFAULT_SCORING_OPTIONS.scoringMode,
+        scoringOptions: DEFAULT_SCORING_OPTIONS
+      },
+      [`courts/${courtId}/score/current`]: staleScore
+    });
+
+    let getCourtScore;
+    jest.isolateModules(() =>
+    {
+      ({ getCourtScore } = require("./index"));
+    });
+
+    const res = makeRes();
+    await getCourtScore({ method: "GET", path: `/a/${courtId}` }, res);
+
+    expect(res.statusCode).toBe(200);
+    expect(res.payload.matchComplete).toBe(false);
+  });
+
+  test("still reports matchComplete for tiebreakTen scores", async () =>
+  {
+    const courtId = "court-tb-complete";
+    const tiebreakOptions = { scoringMode: "tiebreakTen", deuceMode: "standard", tiebreakMode: "sixAllSeven" };
+    const events = [];
+    for (let i = 0; i < 10; i++)
+    {
+      events.push({ id: `e${i}`, eventType: "POINT_TEAM_A", createdAt: timestamp(i + 1) });
+    }
+    const completedScore = toLiveScorePayload(replayEvents(events, tiebreakOptions));
+
+    mockDb = new FakeFirestore({
+      [`courts/${courtId}`]: {
+        scoringMode: "tiebreakTen",
+        scoringOptions: tiebreakOptions
+      },
+      [`courts/${courtId}/score/current`]: completedScore
+    });
+
+    let getCourtScore;
+    jest.isolateModules(() =>
+    {
+      ({ getCourtScore } = require("./index"));
+    });
+
+    const res = makeRes();
+    await getCourtScore({ method: "GET", path: `/a/${courtId}` }, res);
+
+    expect(res.statusCode).toBe(200);
+    expect(res.payload.matchComplete).toBe(true);
   });
 
   test("revision endpoint reports 404 for an unknown court", async () =>

@@ -975,6 +975,94 @@ describe("Undo immediately after a set-completing point (checkpoint boundary)", 
   });
 });
 
+// -----------------------------------------------------------------------
+// matchComplete only has meaning in tiebreakTen mode. Standard and straight
+// modes have no fixed set/point target (a match can go on indefinitely), so a
+// stale flag - e.g. persisted before a scoring-mode change - must never block
+// or end scoring in those modes.
+// -----------------------------------------------------------------------
+describe("matchComplete is only considered in tiebreakTen mode", () =>
+{
+  const STRAIGHT_OPTIONS = { scoringMode: "straight", deuceMode: "standard", tiebreakMode: "sixAllSeven" };
+  const TIEBREAK_TEN_OPTIONS = { scoringMode: "tiebreakTen", deuceMode: "standard", tiebreakMode: "sixAllSeven" };
+
+  test("a stale matchComplete flag does not block points in standard mode", () =>
+  {
+    let s = defaultScore();
+    s.matchComplete = true; // e.g. left over from a scoring-mode change
+    s = applyEvent(s, { eventType: "POINT_TEAM_A", id: "e1" });
+    expect(s.A.points).toBe(1);
+    expect(s.A.totalPoints).toBe(1);
+    expect(s.matchComplete).toBe(false);
+  });
+
+  test("a stale matchComplete flag does not block points in straight mode", () =>
+  {
+    let s = defaultScore(STRAIGHT_OPTIONS);
+    s.matchComplete = true;
+    s = applyEvent(s, { eventType: "POINT_TEAM_B", id: "e1" }, STRAIGHT_OPTIONS);
+    expect(s.B.points).toBe(1);
+    expect(s.matchComplete).toBe(false);
+  });
+
+  test("undo normalization clears a stale matchComplete flag outside tiebreakTen", () =>
+  {
+    let s = defaultScore();
+    s.matchComplete = true;
+    s = applyEvent(s, { eventType: "UNDO", id: "u1" });
+    expect(s.matchComplete).toBe(false);
+  });
+
+  test("switching a completed tiebreakTen score to another mode clears matchComplete and resumes scoring", () =>
+  {
+    let s = defaultScore(TIEBREAK_TEN_OPTIONS);
+    s = awardPoints(s, "A", 10, TIEBREAK_TEN_OPTIONS);
+    expect(s.matchComplete).toBe(true);
+
+    s = applyEvent(s, { eventType: "POINT_TEAM_B", id: "e1" }, DEFAULT_SCORING_OPTIONS);
+    expect(s.matchComplete).toBe(false);
+    expect(s.B.points).toBe(1);
+  });
+
+  test("tiebreakTen still completes the match and blocks further points", () =>
+  {
+    let s = defaultScore(TIEBREAK_TEN_OPTIONS);
+    s = awardPoints(s, "A", 10, TIEBREAK_TEN_OPTIONS);
+    expect(s.matchComplete).toBe(true);
+
+    s = applyEvent(s, { eventType: "POINT_TEAM_B", id: "blocked" }, TIEBREAK_TEN_OPTIONS);
+    expect(s.B.points).toBe(0);
+    expect(s.B.totalPoints).toBe(0);
+    expect(s.matchComplete).toBe(true);
+  });
+
+  test("replaying a long rally under standard mode never drops events to a stale completion", () =>
+  {
+    // 8 points for A then 4 for B; under standard every event must count
+    // towards totalPoints (nothing swallowed by an early "match complete").
+    const events = [];
+    for (let i = 0; i < 8; i++) events.push({ eventType: "POINT_TEAM_A", id: `a${i}` });
+    for (let i = 0; i < 4; i++) events.push({ eventType: "POINT_TEAM_B", id: `b${i}` });
+
+    const s = replayEvents(events, DEFAULT_SCORING_OPTIONS);
+    expect(s.A.totalPoints).toBe(8);
+    expect(s.B.totalPoints).toBe(4);
+    expect(s.matchComplete).toBe(false);
+  });
+
+  test("replaying the same rally under straight mode counts every event too", () =>
+  {
+    const events = [];
+    for (let i = 0; i < 8; i++) events.push({ eventType: "POINT_TEAM_A", id: `a${i}` });
+    for (let i = 0; i < 4; i++) events.push({ eventType: "POINT_TEAM_B", id: `b${i}` });
+
+    const s = replayEvents(events, STRAIGHT_OPTIONS);
+    expect(s.A.points).toBe(8);
+    expect(s.B.points).toBe(4);
+    expect(s.matchComplete).toBe(false);
+  });
+});
+
 describe("toLiveScorePayload", () =>
 {
   test("strips history but keeps all other fields", () =>
