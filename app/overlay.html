@@ -23,7 +23,7 @@
       --ov-teamA: #b7f000;
       --ov-teamB: #27d9ff;
       --ov-radius: 0.9em;
-      --ov-grad-angle: 270deg;
+      --ov-grad-angle: 90deg;
     }
 
     * {
@@ -117,7 +117,7 @@
       grid-template-columns: var(--ov-name-col) auto;
       align-items: center;
       gap: 0.9em;
-      min-height: 4.75em;
+      min-height: 4em;
       padding: 0.0em 1em;
       border-top: 1px solid var(--ov-line-soft);
     }
@@ -879,7 +879,7 @@
     <label><span>Background colour 1</span><input type="color" id="setPanel" /></label>
     <label><span>Background colour 2</span><input type="color" id="setPanel2" /></label>
     <label><span>Gradient angle</span><input type="range" id="setGradAngle" min="0" max="360" step="1" /><span
-        class="angle-value" id="gradAngleValue">270&deg;</span></label>
+        class="angle-value" id="gradAngleValue">90&deg;</span></label>
     <label><span>Text</span><input type="color" id="setText" /></label>
     <label><span>Team A</span><input type="color" id="setTeamA" /></label>
     <label><span>Team B</span><input type="color" id="setTeamB" /></label>
@@ -925,7 +925,7 @@
         showSponsor: true,
         panel: "#000000",
         panel2: "#00002d",
-        gradientAngle: 270,
+        gradientAngle: 90,
         text: "#ffffff",
         teamA: "#b7f000",
         teamB: "#27d9ff",
