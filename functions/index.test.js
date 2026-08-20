@@ -274,6 +274,11 @@ class FakeQuery
     const docId = id || `auto-${this.db.autoIdCounter}`;
     return this.db.doc(`${this.path}/${docId}`);
   }
+
+  async get()
+  {
+    return this.db.getQuerySnapshot(this);
+  }
 }
 
 describe("onEventCreate", () =>
@@ -693,6 +698,121 @@ describe("getCourtScore", () =>
 
     const res = makeRes();
     await getCourtScoreRevision({ method: "GET", path: "/r/no-such-court" }, res);
+
+    expect(res.statusCode).toBe(404);
+    expect(res.payload.success).toBe(false);
+  });
+});
+
+describe("getCourtStats", () =>
+{
+  function makeRes()
+  {
+    return {
+      statusCode: null,
+      payload: null,
+      headers: {},
+      status(code) { this.statusCode = code; return this; },
+      json(body) { this.payload = body; return this; },
+      set(name, value) { this.headers[name] = value; return this; },
+      send(body) { this.payload = body; return this; }
+    };
+  }
+
+  test("replays the event stream into aggregate stats without the point-by-point streams", async () =>
+  {
+    const courtId = "court-stats";
+    const events = [
+      { eventType: "POINT_TEAM_A", createdAt: timestamp(1) },
+      { eventType: "POINT_TEAM_A", createdAt: timestamp(2) },
+      { eventType: "POINT_TEAM_B", createdAt: timestamp(3) },
+      { eventType: "POINT_TEAM_A", createdAt: timestamp(4) },
+      { eventType: "POINT_TEAM_A", createdAt: timestamp(5) }
+    ];
+
+    const seed = {
+      [`courts/${courtId}`]: {
+        teamNames: { A: "Smashers", B: "Lobbers" },
+        playerNames: { A1: "Ann", A2: "Al", B1: "Bo", B2: "Bea" },
+        scoringMode: DEFAULT_SCORING_OPTIONS.scoringMode,
+        scoringOptions: DEFAULT_SCORING_OPTIONS
+      }
+    };
+    events.forEach((event, index) =>
+    {
+      seed[`courts/${courtId}/events/e${index + 1}`] = event;
+    });
+    mockDb = new FakeFirestore(seed);
+
+    let getCourtStats;
+    jest.isolateModules(() =>
+    {
+      ({ getCourtStats } = require("./index"));
+    });
+
+    const res = makeRes();
+    await getCourtStats({ method: "GET", path: `/s/${courtId}` }, res);
+
+    expect(res.statusCode).toBe(200);
+    expect(res.payload.success).toBe(true);
+    expect(res.payload.courtId).toBe(courtId);
+    expect(res.payload.totalPoints).toBe(5);
+    expect(res.payload.advancedStats.teamStats.A.pointsWon).toBe(4);
+    expect(res.payload.advancedStats.teamStats.B.pointsWon).toBe(1);
+    expect(res.payload.advancedStats.matchStats.totalPoints).toBe(5);
+    expect(res.payload.playerNames.A1).toBe("Ann");
+
+    // The heavy per-point streams stay private to the scoreboard callable.
+    expect(res.payload.pointHistory).toBeUndefined();
+    expect(res.payload.momentumTimeline).toBeUndefined();
+    expect(res.payload.setPointMarkers).toBeUndefined();
+
+    expect(res.headers["Cache-Control"]).toBe("public, max-age=10, s-maxage=10");
+  });
+
+  test("serves repeat requests from the in-memory cache instead of replaying events", async () =>
+  {
+    const courtId = "court-stats-cache";
+    mockDb = new FakeFirestore({
+      [`courts/${courtId}`]: {
+        scoringMode: DEFAULT_SCORING_OPTIONS.scoringMode,
+        scoringOptions: DEFAULT_SCORING_OPTIONS
+      },
+      [`courts/${courtId}/events/e1`]: { eventType: "POINT_TEAM_A", createdAt: timestamp(1) }
+    });
+
+    let getCourtStats;
+    jest.isolateModules(() =>
+    {
+      ({ getCourtStats } = require("./index"));
+    });
+
+    const first = makeRes();
+    await getCourtStats({ method: "GET", path: `/s/${courtId}` }, first);
+    expect(first.statusCode).toBe(200);
+    expect(first.payload.totalPoints).toBe(1);
+
+    // New events land; the cached aggregate must still be returned within the TTL.
+    mockDb.docs.set(`courts/${courtId}/events/e2`, { eventType: "POINT_TEAM_B", createdAt: timestamp(2) });
+
+    const second = makeRes();
+    await getCourtStats({ method: "GET", path: `/s/${courtId}` }, second);
+    expect(second.statusCode).toBe(200);
+    expect(second.payload.totalPoints).toBe(1);
+  });
+
+  test("returns 404 for an unknown court", async () =>
+  {
+    mockDb = new FakeFirestore({});
+
+    let getCourtStats;
+    jest.isolateModules(() =>
+    {
+      ({ getCourtStats } = require("./index"));
+    });
+
+    const res = makeRes();
+    await getCourtStats({ method: "GET", path: "/s/no-such-court" }, res);
 
     expect(res.statusCode).toBe(404);
     expect(res.payload.success).toBe(false);

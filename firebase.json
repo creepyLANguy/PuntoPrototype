@@ -42,6 +42,13 @@
         }
       },
       {
+        "source": "/s/**",
+        "function": {
+          "functionId": "getCourtStats",
+          "region": "europe-west1"
+        }
+      },
+      {
         "source": "/b",
         "destination": "/app/overlay.html"
       },

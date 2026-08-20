@@ -42,17 +42,51 @@
       min-height: 100vh;
     }
 
-    .overlay {
+    /* Fixed-position wrapper: the score panel and the stat card stack inside
+       it so the corner presets and the scale slider move/size them together.
+       --ov-scale (set on :root by JS) is the single knob that drives both the
+       text (via font-size) and the px-based score-cell boxes (via --ov-col). */
+    .overlay-anchor {
       position: fixed;
       top: 16px;
       left: 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.5em;
+      font-size: calc(24px * var(--ov-scale, 1));
+      z-index: 5;
+    }
+
+    .overlay-anchor.pos-tr {
+      left: auto;
+      right: 16px;
+      align-items: flex-end;
+    }
+
+    .overlay-anchor.pos-bl {
+      top: auto;
+      bottom: 16px;
+      flex-direction: column-reverse;
+    }
+
+    .overlay-anchor.pos-br {
+      top: auto;
+      bottom: 16px;
+      left: auto;
+      right: 16px;
+      flex-direction: column-reverse;
+      align-items: flex-end;
+    }
+
+    .overlay {
+      position: relative;
       /* Content-driven width: name column + however many score cells exist.
          Base case (2 sets + points) stays compact; extra sets widen the panel. */
       width: fit-content;
       min-width: 16em;
-      --ov-col: 4rem;
+      --ov-col: calc(64px * var(--ov-scale, 1));
       --ov-name-col: 10.5em;
-      font-size: 24px;
       /* Two user-chosen colours blended at a user-chosen angle - no baked-in
          sheen or fixed gradient. Pick the same colour twice for a flat fill. */
       background: linear-gradient(var(--ov-grad-angle), var(--ov-panel), var(--ov-panel-2));
@@ -333,7 +367,7 @@
     /* Shared by team rows and the header row so the PTS column stays aligned
        even though their font sizes differ. */
     .score-cells .cell.points {
-      margin-left: 0.8rem;
+      margin-left: calc(0.8rem * var(--ov-scale, 1));
     }
 
     .team-row[data-team="A"]>.score-cells .cell.points {
@@ -532,6 +566,400 @@
       }
     }
 
+    /* When the panel hugs the right screen edge the ribbon would slide
+       off-screen, so it emerges from the panel's left side instead. */
+    .pos-tr .badge-flyout,
+    .pos-br .badge-flyout {
+      left: auto;
+      right: 100%;
+    }
+
+    .pos-tr .badge,
+    .pos-br .badge {
+      border: 1px solid currentColor;
+      border-right: none;
+      border-radius: 0.45em 0 0 0.45em;
+      transform: translateX(100%);
+    }
+
+    .pos-tr .badge-flyout.visible .badge,
+    .pos-br .badge-flyout.visible .badge {
+      transform: translateX(0);
+    }
+
+    /* ---------- Layout variants ---------- */
+
+    /* Compact: brand, headers and player names are suppressed in JS; here the
+       rows and cells just shrink to a slimmer footprint. */
+    .layout-compact .team-row {
+      min-height: 2.9em;
+    }
+
+    .layout-compact .team-row>.score-cells .cell {
+      --ov-col: calc(52px * var(--ov-scale, 1));
+      font-size: 1.3em;
+    }
+
+    /* Ticker: both team rows sit side by side in a single centered bar. */
+    .overlay-anchor.layout-ticker,
+    .overlay-anchor.layout-ticker.pos-tr,
+    .overlay-anchor.layout-ticker.pos-bl,
+    .overlay-anchor.layout-ticker.pos-br {
+      left: 50%;
+      right: auto;
+      transform: translateX(-50%);
+      align-items: center;
+    }
+
+    .layout-ticker .overlay {
+      min-width: 0;
+    }
+
+    .layout-ticker .score-body {
+      display: flex;
+      align-items: stretch;
+    }
+
+    .layout-ticker .head-row {
+      display: none;
+    }
+
+    .layout-ticker .team-row {
+      border-top: 0;
+      min-height: 2.5em;
+      padding: 0.2em 0.9em;
+      grid-template-columns: max-content auto;
+      gap: 0.6em;
+    }
+
+    .layout-ticker .team-row[data-team="B"] {
+      border-left: 1px solid var(--ov-line);
+    }
+
+    .layout-ticker .team-row>.score-cells .cell {
+      --ov-col: calc(44px * var(--ov-scale, 1));
+      font-size: 1.15em;
+    }
+
+    .layout-ticker .score-cells .cell.points {
+      margin-left: calc(0.4rem * var(--ov-scale, 1));
+    }
+
+    /* ---------- Set / match win moments ---------- */
+
+    .win-moment {
+      position: absolute;
+      inset: 0;
+      z-index: 3;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: var(--ov-radius);
+      /* The panel colours carry alpha; the black underlay keeps the score
+         from bleeding through the celebration card. */
+      background:
+        linear-gradient(var(--ov-grad-angle), var(--ov-panel), var(--ov-panel-2)),
+        rgba(0, 0, 0, 0.9);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.35s ease;
+    }
+
+    .win-moment.show {
+      opacity: 1;
+    }
+
+    .win-moment-inner {
+      text-align: center;
+      padding: 0.4em 1em;
+    }
+
+    .win-moment.show .win-moment-inner {
+      animation: win-pop 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+
+    @keyframes win-pop {
+      from {
+        opacity: 0;
+        transform: scale(0.75);
+      }
+
+      60% {
+        transform: scale(1.06);
+      }
+
+      to {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
+
+    .win-eyebrow {
+      font-size: 0.55em;
+      font-weight: 800;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      color: var(--ov-muted);
+    }
+
+    .win-title {
+      font-size: 1.3em;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
+      line-height: 1.15;
+      white-space: nowrap;
+    }
+
+    .win-moment.team-A .win-title {
+      color: var(--ov-teamA);
+    }
+
+    .win-moment.team-B .win-title {
+      color: var(--ov-teamB);
+    }
+
+    .win-moment.team-A {
+      box-shadow: inset 0 0 40px color-mix(in srgb, var(--ov-teamA) 14%, transparent);
+    }
+
+    .win-moment.team-B {
+      box-shadow: inset 0 0 40px color-mix(in srgb, var(--ov-teamB) 14%, transparent);
+    }
+
+    .win-score {
+      margin-top: 0.15em;
+      font-family: "Encode Sans Semi Expanded", "Arial", "Helvetica Neue", Helvetica, sans-serif;
+      font-size: 0.9em;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: 0.06em;
+    }
+
+    /* ---------- Stat card ---------- */
+
+    .stat-card {
+      align-self: stretch;
+      background: linear-gradient(var(--ov-grad-angle), var(--ov-panel), var(--ov-panel-2));
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: var(--ov-radius);
+      box-shadow: 0 10px 35px rgba(0, 0, 0, 0.42);
+      padding: 0.6em 1em 0.7em;
+      animation: stat-in 0.35s ease both;
+    }
+
+    .stat-card.hidden {
+      display: none;
+    }
+
+    @keyframes stat-in {
+      from {
+        opacity: 0;
+        transform: translateY(-0.4em);
+      }
+
+      to {
+        opacity: 1;
+        transform: none;
+      }
+    }
+
+    .stat-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 1em;
+      border-bottom: 1px solid var(--ov-line);
+      padding-bottom: 0.3em;
+      margin-bottom: 0.45em;
+    }
+
+    .stat-title {
+      font-size: 0.62em;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+    }
+
+    .stat-sub {
+      font-size: 0.5em;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--ov-muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .stat-row {
+      margin-bottom: 0.45em;
+    }
+
+    .stat-row:last-child {
+      margin-bottom: 0;
+    }
+
+    .stat-vals {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 0.6em;
+      font-size: 0.62em;
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+      margin-bottom: 0.18em;
+    }
+
+    .stat-vals .va {
+      color: var(--ov-teamA);
+    }
+
+    .stat-vals .vb {
+      color: var(--ov-teamB);
+    }
+
+    .stat-label {
+      font-size: 0.85em;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--ov-muted);
+    }
+
+    .stat-bar {
+      display: flex;
+      height: 0.28em;
+      border-radius: 0.14em;
+      overflow: hidden;
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .stat-bar i {
+      display: block;
+      height: 100%;
+    }
+
+    .stat-bar .ba {
+      background: var(--ov-teamA);
+    }
+
+    .stat-bar .bb {
+      background: var(--ov-teamB);
+      margin-left: auto;
+    }
+
+    .stat-empty {
+      font-size: 0.58em;
+      font-weight: 600;
+      color: var(--ov-muted);
+      padding: 0.3em 0;
+    }
+
+    /* ---------- Sponsor slate ---------- */
+
+    .sponsor-slate {
+      position: fixed;
+      left: 50%;
+      bottom: 8vh;
+      transform: translate(-50%, 1em);
+      z-index: 6;
+      font-size: calc(26px * var(--ov-scale, 1));
+      background:
+        linear-gradient(var(--ov-grad-angle), var(--ov-panel), var(--ov-panel-2)),
+        rgba(0, 0, 0, 0.9);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: 0.6em;
+      box-shadow: 0 10px 35px rgba(0, 0, 0, 0.5);
+      padding: 0.7em 1.6em 0.8em;
+      text-align: center;
+      max-width: 80vw;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.4s ease, transform 0.4s ease;
+    }
+
+    .sponsor-slate.show {
+      opacity: 1;
+      transform: translate(-50%, 0);
+    }
+
+    .slate-eyebrow {
+      font-size: 0.45em;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.3em;
+      color: var(--ov-muted);
+      margin-bottom: 0.5em;
+    }
+
+    .slate-body {
+      font-size: 0.85em;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5em;
+      color: var(--ov-text);
+    }
+
+    .slate-body img {
+      height: 2.2em;
+      width: auto;
+      object-fit: contain;
+    }
+
+    /* ---------- QR corner bug ---------- */
+
+    .qr-bug {
+      position: fixed;
+      z-index: 6;
+      background: #ffffff;
+      border-radius: 10px;
+      padding: 8px;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+      text-align: center;
+    }
+
+    .qr-bug.hidden {
+      display: none;
+    }
+
+    .qr-bug canvas,
+    .qr-bug img {
+      display: block;
+      margin: 0 auto;
+    }
+
+    .qr-bug-label {
+      margin-top: 5px;
+      font-size: 11px;
+      font-weight: 700;
+      color: #111111;
+      letter-spacing: 0.02em;
+      max-width: 200px;
+    }
+
+    .qr-bug.qr-tl {
+      top: 16px;
+      left: 16px;
+    }
+
+    .qr-bug.qr-tr {
+      top: 16px;
+      right: 16px;
+    }
+
+    .qr-bug.qr-bl {
+      bottom: 16px;
+      left: 16px;
+    }
+
+    .qr-bug.qr-br {
+      bottom: 16px;
+      right: 16px;
+    }
+
     /* ---------- Match timer ---------- */
 
     .match-timer {
@@ -567,6 +995,11 @@
       align-items: center;
       width: max-content;
       height: 100%;
+      transition: opacity 0.3s ease;
+    }
+
+    .sponsor-track.fading {
+      opacity: 0;
     }
 
     .sponsor-track.scrolling {
@@ -609,31 +1042,42 @@
 
     /* ---------- Settings UI ---------- */
 
-    .gear-btn {
+    .quick-bar {
       position: fixed;
       bottom: 12px;
       right: 12px;
+      display: flex;
+      gap: 8px;
+      z-index: 10;
+      opacity: 0.25;
+      transition: opacity 0.2s;
+    }
+
+    .quick-bar:hover,
+    .quick-bar:focus-within {
+      opacity: 1;
+    }
+
+    .quick-bar button {
       width: 38px;
       height: 38px;
       border-radius: 50%;
       border: none;
       background: rgba(0, 0, 0, 0.65);
       color: #fff;
-      font-size: 1.1rem;
+      font-size: 1.05rem;
       cursor: pointer;
-      opacity: 0.25;
-      transition: opacity 0.2s;
     }
 
-    .gear-btn:hover,
-    .gear-btn:focus {
-      opacity: 1;
+    .quick-bar button.active {
+      background: #2b60bc;
     }
 
     .settings-panel {
       position: fixed;
       bottom: 60px;
       right: 12px;
+      z-index: 20;
       width: 320px;
       max-height: calc(100vh - 90px);
       overflow-y: auto;
@@ -687,7 +1131,8 @@
     }
 
     .settings-panel input[type="text"],
-    .settings-panel input[type="url"] {
+    .settings-panel input[type="url"],
+    .settings-panel select {
       flex: 1;
       max-width: 190px;
       background: #1a1a1a;
@@ -696,6 +1141,54 @@
       color: #fff;
       padding: 4px 6px;
       font-size: 0.72rem;
+    }
+
+    .sponsor-edit-row {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      margin-bottom: 6px;
+    }
+
+    .sponsor-edit-row input[type="text"],
+    .sponsor-edit-row input[type="url"] {
+      max-width: none;
+      min-width: 0;
+    }
+
+    .sponsor-edit-row input.secs {
+      flex: 0 0 40px;
+      width: 40px;
+      max-width: 40px;
+      text-align: center;
+    }
+
+    /* Overrides the panel's stretch-to-fill button defaults. */
+    .settings-panel .sponsor-edit-row button.rm {
+      flex: 0 0 24px;
+      width: 24px;
+      height: 24px;
+      padding: 0;
+      border-radius: 6px;
+      background: #333;
+      font-size: 0.8rem;
+      line-height: 1;
+    }
+
+    .settings-panel .add-sponsor {
+      width: 100%;
+      margin-bottom: 4px;
+    }
+
+    .share-url {
+      width: 100%;
+      margin-top: 6px;
+      background: #1a1a1a;
+      border: 1px solid #444;
+      border-radius: 6px;
+      color: #9fc1ff;
+      padding: 4px 6px;
+      font-size: 0.62rem;
     }
 
     .settings-panel textarea {
@@ -777,18 +1270,24 @@
     }
 
     @media (max-width: 760px) {
-      .overlay {
+      .overlay-anchor {
+        font-size: calc(clamp(15px, 3.1vw, 22px) * var(--ov-scale, 1));
+      }
+
+      .overlay-anchor.pos-tl {
         left: 10px;
         top: 10px;
-        width: fit-content;
+      }
+
+      .overlay {
         min-width: 0;
-        font-size: clamp(15px, 3.1vw, 22px);
       }
     }
   </style>
 </head>
 
 <body>
+  <div class="overlay-anchor pos-tl" id="overlayAnchor">
   <div class="overlay" id="overlayBox">
     <div class="brand">
       <img src="/app/media/img/logo.svg" alt="Brand logo" id="brandLogo" />
@@ -844,9 +1343,40 @@
         <div class="sponsor-item" id="sponsorItemB" aria-hidden="true"></div>
       </div>
     </div>
+
+    <div class="win-moment" id="winMoment">
+      <div class="win-moment-inner">
+        <div class="win-eyebrow" id="winEyebrow"></div>
+        <div class="win-title" id="winTitle"></div>
+        <div class="win-score" id="winScore"></div>
+      </div>
+    </div>
   </div>
 
-  <button class="gear-btn" id="gearBtn" title="Customise overlay" aria-label="Customise overlay">⚙</button>
+  <div class="stat-card hidden" id="statCard">
+    <div class="stat-head">
+      <span class="stat-title" id="statTitle">Match stats</span>
+      <span class="stat-sub" id="statSub"></span>
+    </div>
+    <div class="stat-rows" id="statRows"></div>
+  </div>
+  </div>
+
+  <div class="sponsor-slate" id="sponsorSlate">
+    <div class="slate-eyebrow">Brought to you by</div>
+    <div class="slate-body" id="slateBody"></div>
+  </div>
+
+  <div class="qr-bug hidden" id="qrBug">
+    <div id="qrBugCode"></div>
+    <div class="qr-bug-label" id="qrBugLabel"></div>
+  </div>
+
+  <div class="quick-bar" id="quickBar">
+    <button id="statBtn" type="button" title="Toggle stat card" aria-label="Toggle stat card">📊</button>
+    <button id="slateBtn" type="button" title="Show sponsor slate" aria-label="Show sponsor slate">🎬</button>
+    <button class="gear-btn" id="gearBtn" title="Customise overlay" aria-label="Customise overlay">⚙</button>
+  </div>
 
   <div class="settings-panel" id="settingsPanel">
     <div class="settings-head">
@@ -856,6 +1386,21 @@
     </div>
     <p class="transparent-note">The page background is transparent by default — ideal for an OBS browser source.</p>
 
+    <div class="section">Layout</div>
+    <label><span>Position</span><select id="setPosition">
+        <option value="tl">Top left</option>
+        <option value="tr">Top right</option>
+        <option value="bl">Bottom left</option>
+        <option value="br">Bottom right</option>
+      </select></label>
+    <label><span>Style</span><select id="setLayout">
+        <option value="panel">Full panel</option>
+        <option value="compact">Compact</option>
+        <option value="ticker">Ticker (centered bar)</option>
+      </select></label>
+    <label><span>Scale</span><input type="range" id="setScale" min="0.5" max="2" step="0.05" /><span
+        class="angle-value" id="scaleValue">100%</span></label>
+
     <div class="section">Display</div>
     <label><span>Show server indicator</span><input type="checkbox" id="setShowServer" /></label>
     <label><span>Show brand header</span><input type="checkbox" id="setShowBrand" /></label>
@@ -864,6 +1409,10 @@
     <label><span>Show player names</span><input type="checkbox" id="setShowPlayerNames" /></label>
     <label><span>Show match timer</span><input type="checkbox" id="setShowTimer" /></label>
     <label><span>Show sponsor strip</span><input type="checkbox" id="setShowSponsor" /></label>
+    <label><span>Set / match win moments</span><input type="checkbox" id="setShowWinMoments" /></label>
+    <label><span>Auto stat card at set end</span><input type="checkbox" id="setAutoStatCards" /></label>
+    <label><span>Sponsor slate at set end</span><input type="checkbox" id="setSlateOnSet" /></label>
+    <label><span>Show QR code</span><input type="checkbox" id="setShowQr" /></label>
 
     <div class="section">Match timer</div>
     <label><span>Set timer</span><input type="text" id="setTimerValue" placeholder="h:mm:ss, mm:ss or minutes" /></label>
@@ -874,6 +1423,25 @@
 
     <div class="section">Sponsor strip (HTML, {courtId} placeholder)</div>
     <textarea id="setSponsorHtml" rows="3" placeholder="Defaults to the Padel Push message"></textarea>
+
+    <div class="section">Sponsor rotation (overrides the strip above)</div>
+    <div id="sponsorList"></div>
+    <button id="addSponsorBtn" class="secondary add-sponsor" type="button">+ Add sponsor</button>
+
+    <div class="section">QR code</div>
+    <label><span>Link URL</span><input type="url" id="setQrUrl" placeholder="Defaults to this court's page" /></label>
+    <label><span>Label</span><input type="text" id="setQrLabel" placeholder="Scan for live scores" /></label>
+    <label><span>Corner</span><select id="setQrCorner">
+        <option value="br">Bottom right</option>
+        <option value="bl">Bottom left</option>
+        <option value="tr">Top right</option>
+        <option value="tl">Top left</option>
+      </select></label>
+    <label><span>Size</span><input type="range" id="setQrSize" min="64" max="200" step="4" /><span
+        class="angle-value" id="qrSizeValue">96px</span></label>
+
+    <div class="section">Theme</div>
+    <label><span>Preset</span><select id="setThemePreset"></select></label>
 
     <div class="section">Colours</div>
     <label><span>Background colour 1</span><input type="color" id="setPanel" /></label>
@@ -898,12 +1466,20 @@
     <label><span>Team A logo</span><input type="url" id="setLogoA" placeholder="https://…" /></label>
     <label><span>Team B logo</span><input type="url" id="setLogoB" placeholder="https://…" /></label>
 
+    <div class="section">Share</div>
+    <div class="row-btns" style="margin-top: 0;">
+      <button id="copyObsUrl" type="button">Copy OBS URL</button>
+    </div>
+    <input type="text" class="share-url" id="shareUrlField" readonly
+      placeholder="Click the button to generate a URL with these settings" />
+
     <div class="row-btns">
       <button id="resetSettings" class="secondary" type="button">Reset</button>
       <button id="closeSettings" type="button">Done</button>
     </div>
   </div>
 
+  <script src="/app/js/qrcode.min.js"></script>
   <script>
     (function ()
     {
@@ -911,9 +1487,10 @@
       const isDebugCourt = location.hostname === "localhost" || location.hostname === "127.0.0.1";
       const debugCourt_revisionUrl = "https://qa.padelpush.co.za/r/bnrm";
       const debugCourt_fullScoreUrl = "https://qa.padelpush.co.za/a/bnrm";
+      const debugCourt_statsUrl = "https://qa.padelpush.co.za/s/bnrm";
       //
 
-      const POLL_INTERVAL_MS = 5 * 1000;
+      const POLL_INTERVAL_MS = 2 * 1000;
 
       const DEFAULT_SETTINGS = {
         showServer: true,
@@ -923,6 +1500,14 @@
         showPlayerNames: true,
         showTimer: true,
         showSponsor: true,
+        showWinMoments: true,
+        autoStatCards: true,
+        sponsorSlateOnSet: false,
+        showQr: false,
+        position: "tl",
+        layout: "panel",
+        scale: 1,
+        themePreset: "padelpush",
         panel: "#000000",
         panel2: "#00002d",
         gradientAngle: 90,
@@ -940,10 +1525,38 @@
         brandText: "",
         brandLogo: "",
         sponsorHtml: "",
+        sponsors: [],
+        qrUrl: "",
+        qrLabel: "Scan for live scores",
+        qrCorner: "br",
+        qrSize: 96,
         timerText: "",
         timerOffset: 0,
         timerAnchor: 0
       };
+
+      // Colour keys a theme preset controls; touching any of them by hand
+      // flips the preset selector to "custom".
+      const THEME_COLOR_KEYS = ["panel", "panel2", "gradientAngle", "text", "teamA", "teamB"];
+
+      const THEME_PRESETS = {
+        padelpush: { label: "Padel Push", panel: "#000000", panel2: "#00002d", gradientAngle: 90, text: "#ffffff", teamA: "#b7f000", teamB: "#27d9ff" },
+        broadcast: { label: "Broadcast Navy", panel: "#0a1a3c", panel2: "#050b18", gradientAngle: 135, text: "#ffffff", teamA: "#ffd75e", teamB: "#6ecbff" },
+        carbon: { label: "Carbon", panel: "#101010", panel2: "#1d1d1d", gradientAngle: 180, text: "#f5f5f5", teamA: "#ff5c39", teamB: "#3ddc97" },
+        clay: { label: "Clay Court", panel: "#3d1f14", panel2: "#20100a", gradientAngle: 120, text: "#ffe9dd", teamA: "#ffb26b", teamB: "#7fd8ff" },
+        club: { label: "Club Green", panel: "#0b2e1f", panel2: "#06170f", gradientAngle: 120, text: "#eafff3", teamA: "#c6ff4d", teamB: "#ffdf6b" },
+        custom: { label: "Custom" }
+      };
+
+      const POSITIONS = ["tl", "tr", "bl", "br"];
+      const LAYOUTS = ["panel", "compact", "ticker"];
+
+      function clampNumber(value, min, max, fallback)
+      {
+        const num = Number(value);
+        if (!Number.isFinite(num)) return fallback;
+        return Math.min(max, Math.max(min, num));
+      }
 
       const DEFAULT_SPONSOR_HTML =
         'Live scores brought to you by <img src="/app/media/img/logo.svg" alt="Padel Push" /> ' +
@@ -1003,6 +1616,120 @@
         catch (_err) { /* storage unavailable */ }
       }
 
+      function normalizeSettings()
+      {
+        settings.position = POSITIONS.includes(settings.position) ? settings.position : DEFAULT_SETTINGS.position;
+        settings.layout = LAYOUTS.includes(settings.layout) ? settings.layout : DEFAULT_SETTINGS.layout;
+        settings.scale = clampNumber(settings.scale, 0.5, 2, 1);
+        settings.qrSize = clampNumber(settings.qrSize, 64, 200, DEFAULT_SETTINGS.qrSize);
+        settings.qrCorner = POSITIONS.includes(settings.qrCorner) ? settings.qrCorner : DEFAULT_SETTINGS.qrCorner;
+        settings.themePreset = THEME_PRESETS[settings.themePreset] ? settings.themePreset : "custom";
+        settings.sponsors = (Array.isArray(settings.sponsors) ? settings.sponsors : [])
+          .map((item) => ({
+            text: typeof item?.text === "string" ? item.text : "",
+            img: typeof item?.img === "string" ? item.img : "",
+            seconds: clampNumber(item?.seconds, 3, 600, 8)
+          }))
+          .filter((item) => item.text.trim() || item.img.trim());
+      }
+
+      function applyThemePreset(name)
+      {
+        const preset = THEME_PRESETS[name];
+        if (!preset || name === "custom") return;
+
+        THEME_COLOR_KEYS.forEach((key) =>
+        {
+          if (preset[key] !== undefined)
+          {
+            settings[key] = preset[key];
+          }
+        });
+        settings.themePreset = name;
+      }
+
+      // ---------- Shareable config via URL parameters ----------
+      // Every persisted setting (except transient timer state) can be supplied
+      // as a query parameter, so a fully-styled overlay can be pasted into an
+      // OBS browser source as a single URL that survives cache clears and
+      // machine changes. URL values override stored ones on load; edits made
+      // afterwards in the settings panel still apply and persist locally.
+      const URL_SKIP_KEYS = new Set(["timerText", "timerOffset", "timerAnchor"]);
+      const HEX_COLOR_KEYS = new Set(["panel", "panel2", "text", "teamA", "teamB"]);
+
+      function applyUrlOverrides()
+      {
+        let params;
+        try
+        {
+          params = new URLSearchParams(window.location.search);
+        }
+        catch (_err)
+        {
+          return;
+        }
+
+        // "theme" is applied first so explicit colour params can refine it.
+        const theme = params.get("theme") || params.get("themePreset");
+        if (theme && THEME_PRESETS[theme])
+        {
+          applyThemePreset(theme);
+        }
+
+        Object.keys(DEFAULT_SETTINGS).forEach((key) =>
+        {
+          if (URL_SKIP_KEYS.has(key) || !params.has(key)) return;
+
+          const raw = params.get(key);
+          const fallback = DEFAULT_SETTINGS[key];
+
+          if (typeof fallback === "boolean")
+          {
+            settings[key] = !/^(0|false|no|off)$/i.test(raw.trim());
+          }
+          else if (typeof fallback === "number")
+          {
+            const num = Number(raw);
+            if (Number.isFinite(num)) settings[key] = num;
+          }
+          else if (Array.isArray(fallback))
+          {
+            try
+            {
+              const parsed = JSON.parse(raw);
+              if (Array.isArray(parsed)) settings[key] = parsed;
+            }
+            catch (_err) { /* malformed JSON param */ }
+          }
+          else
+          {
+            // Allow bare hex colours ("b7f000") so the URL reads cleanly.
+            settings[key] = HEX_COLOR_KEYS.has(key) && /^[0-9a-f]{6}$/i.test(raw)
+              ? "#" + raw
+              : raw;
+          }
+        });
+      }
+
+      function buildShareUrl()
+      {
+        const params = new URLSearchParams();
+
+        Object.keys(DEFAULT_SETTINGS).forEach((key) =>
+        {
+          if (URL_SKIP_KEYS.has(key)) return;
+
+          const value = settings[key];
+          if (JSON.stringify(value) === JSON.stringify(DEFAULT_SETTINGS[key])) return;
+
+          params.set(key, Array.isArray(value) ? JSON.stringify(value) : String(value));
+        });
+
+        const base = window.location.origin + "/b/" + encodeURIComponent(courtId || "");
+        const query = params.toString();
+        return query ? base + "?" + query : base;
+      }
+
       function hexToPanelRgba(hex)
       {
         const value = /^#([0-9a-f]{6})$/i.exec(hex || "");
@@ -1014,6 +1741,13 @@
         return "rgba(" + r + ", " + g + ", " + b + ", 0.82)";
       }
 
+      // Compact and ticker layouts trade the header/player detail for a slim
+      // footprint regardless of the individual display toggles.
+      function isSlimLayout()
+      {
+        return settings.layout === "compact" || settings.layout === "ticker";
+      }
+
       function applySettings()
       {
         const root = document.documentElement.style;
@@ -1023,17 +1757,23 @@
         root.setProperty("--ov-text", settings.text);
         root.setProperty("--ov-teamA", settings.teamA);
         root.setProperty("--ov-teamB", settings.teamB);
+        root.setProperty("--ov-scale", String(clampNumber(settings.scale, 0.5, 2, 1)));
+
+        const anchor = document.getElementById("overlayAnchor");
+        anchor.className = "overlay-anchor pos-" + settings.position +
+          (settings.layout !== "panel" ? " layout-" + settings.layout : "");
 
         applyLogo("logoA", settings.logoA);
         applyLogo("logoB", settings.logoB);
         applyBrand();
 
         const overlayBox = document.getElementById("overlayBox");
-        overlayBox.classList.toggle("no-brand", settings.showBrand === false);
-        overlayBox.classList.toggle("no-headers", settings.showHeaders === false);
+        overlayBox.classList.toggle("no-brand", settings.showBrand === false || isSlimLayout());
+        overlayBox.classList.toggle("no-headers", settings.showHeaders === false || isSlimLayout());
 
         tickTimer();
         updateSponsor();
+        renderQrBug();
 
         if (latestScore)
         {
@@ -1110,17 +1850,55 @@
         el.textContent = formatTimer(elapsed);
       }
 
-      // ---------- Sponsor strip ----------
+      // ---------- Sponsor strip & rotation ----------
+
+      let sponsorRotationTimer = null;
+      let sponsorIndex = 0;
+
+      function activeSponsors()
+      {
+        return (Array.isArray(settings.sponsors) ? settings.sponsors : [])
+          .filter((item) => item && ((item.text && item.text.trim()) || safeHttpUrl(item.img)));
+      }
+
+      function sponsorItemHtml(item)
+      {
+        const imgUrl = safeHttpUrl(item.img);
+        const img = imgUrl ? '<img src="' + imgUrl.replace(/"/g, "&quot;") + '" alt="" /> ' : "";
+        return img + (item.text || "");
+      }
+
+      function defaultSponsorHtml()
+      {
+        const displayCourtId = ((latestScore && latestScore.courtId) || courtId || "").toUpperCase();
+        return (settings.sponsorHtml || DEFAULT_SPONSOR_HTML).split("{courtId}").join(displayCourtId);
+      }
+
+      function currentSponsorHtml()
+      {
+        const list = activeSponsors();
+        if (!list.length)
+        {
+          return defaultSponsorHtml();
+        }
+
+        sponsorIndex = sponsorIndex % list.length;
+        return sponsorItemHtml(list[sponsorIndex]);
+      }
 
       function updateSponsor()
       {
         const strip = document.getElementById("sponsorStrip");
         const show = settings.showSponsor !== false;
         strip.classList.toggle("hidden", !show);
-        if (!show) return;
+        if (!show)
+        {
+          clearTimeout(sponsorRotationTimer);
+          sponsorRotationTimer = null;
+          return;
+        }
 
-        const displayCourtId = ((latestScore && latestScore.courtId) || courtId || "").toUpperCase();
-        const html = (settings.sponsorHtml || DEFAULT_SPONSOR_HTML).split("{courtId}").join(displayCourtId);
+        const html = currentSponsorHtml();
 
         if (html !== lastSponsorHtml)
         {
@@ -1136,6 +1914,104 @@
         }
 
         measureSponsor();
+        scheduleSponsorRotation();
+      }
+
+      function scheduleSponsorRotation()
+      {
+        const list = activeSponsors();
+        if (settings.showSponsor === false || list.length < 2)
+        {
+          clearTimeout(sponsorRotationTimer);
+          sponsorRotationTimer = null;
+          return;
+        }
+
+        if (sponsorRotationTimer) return;
+
+        const dwellMs = clampNumber(list[sponsorIndex % list.length].seconds, 3, 600, 8) * 1000;
+        sponsorRotationTimer = setTimeout(() =>
+        {
+          const track = document.getElementById("sponsorTrack");
+          track.classList.add("fading");
+
+          setTimeout(() =>
+          {
+            sponsorIndex = (sponsorIndex + 1) % Math.max(activeSponsors().length, 1);
+            sponsorRotationTimer = null;
+            updateSponsor();
+            track.classList.remove("fading");
+          }, 300);
+        }, dwellMs);
+      }
+
+      // Settings edits can change the list or dwell times mid-cycle; drop the
+      // pending timer so the next updateSponsor() reschedules from scratch.
+      function restartSponsorRotation()
+      {
+        clearTimeout(sponsorRotationTimer);
+        sponsorRotationTimer = null;
+        updateSponsor();
+      }
+
+      // ---------- Sponsor slate (lower-third interstitial) ----------
+
+      let slateTimer = null;
+      let slateIndex = 0;
+
+      function showSponsorSlate(durationMs)
+      {
+        const slate = document.getElementById("sponsorSlate");
+        const body = document.getElementById("slateBody");
+        const list = activeSponsors();
+
+        if (list.length)
+        {
+          slateIndex = slateIndex % list.length;
+          body.innerHTML = sponsorItemHtml(list[slateIndex]);
+          slateIndex++;
+        }
+        else
+        {
+          body.innerHTML = defaultSponsorHtml();
+        }
+
+        slate.classList.add("show");
+        clearTimeout(slateTimer);
+        slateTimer = setTimeout(() => slate.classList.remove("show"), durationMs || 8000);
+      }
+
+      // ---------- QR corner bug ----------
+
+      let lastQrKey = null;
+
+      function renderQrBug()
+      {
+        const bug = document.getElementById("qrBug");
+        const show = settings.showQr === true && Boolean(window.QRCode);
+        const corner = POSITIONS.includes(settings.qrCorner) ? settings.qrCorner : "br";
+        bug.className = "qr-bug qr-" + corner + (show ? "" : " hidden");
+        if (!show) return;
+
+        document.getElementById("qrBugLabel").textContent = settings.qrLabel || "";
+
+        const text = safeHttpUrl(settings.qrUrl) ||
+          window.location.origin + "/c/" + encodeURIComponent(courtId || "");
+        const size = Math.round(clampNumber(settings.qrSize, 64, 200, 96));
+        const key = text + "|" + size;
+        if (key === lastQrKey) return;
+        lastQrKey = key;
+
+        const mount = document.getElementById("qrBugCode");
+        mount.innerHTML = "";
+        new window.QRCode(mount, {
+          text,
+          width: size,
+          height: size,
+          colorDark: "#000000",
+          colorLight: "#ffffff",
+          correctLevel: window.QRCode.CorrectLevel.M
+        });
       }
 
       function measureSponsor()
@@ -1391,10 +2267,290 @@
         return null;
       }
 
+      // ---------- Stat cards ----------
+
+      let statsCache = null;
+      let statsCacheAt = 0;
+      let statCardPinned = false;
+      let statCardTimer = null;
+      let statRefreshTimer = null;
+
+      async function fetchStats(force)
+      {
+        if (!isDebugCourt && !courtId)
+        {
+          throw new Error("No court specified.");
+        }
+
+        if (!force && statsCache && Date.now() - statsCacheAt < 8000)
+        {
+          return statsCache;
+        }
+
+        const url = isDebugCourt ? debugCourt_statsUrl : "/s/" + encodeURIComponent(courtId);
+        const data = await fetchJson(url);
+        statsCache = data;
+        statsCacheAt = Date.now();
+        return data;
+      }
+
+      function teamDisplayName(team)
+      {
+        return settings["name" + team] ||
+          (latestScore && latestScore.teamNames && latestScore.teamNames[team]) ||
+          ("Team " + team);
+      }
+
+      function statRowHtml(label, valueA, valueB, weightA, weightB)
+      {
+        const total = (Number(weightA) || 0) + (Number(weightB) || 0);
+        const pctA = total > 0 ? Math.round((weightA / total) * 98) : 49;
+        const pctB = total > 0 ? 98 - pctA : 49;
+        return '<div class="stat-row">' +
+          '<div class="stat-vals"><span class="va">' + valueA + '</span>' +
+          '<span class="stat-label">' + label + '</span>' +
+          '<span class="vb">' + valueB + '</span></div>' +
+          '<div class="stat-bar"><i class="ba" style="width:' + pctA + '%"></i>' +
+          '<i class="bb" style="width:' + pctB + '%"></i></div>' +
+          '</div>';
+      }
+
+      // Only fixed labels and numbers derived from the payload go through
+      // innerHTML here; anything user-editable (team names) uses textContent.
+      function renderStatCard(data)
+      {
+        const stats = (data && data.advancedStats) || {};
+        const teams = stats.teamStats || { A: {}, B: {} };
+        const serve = stats.servePlayerStats || {};
+        const match = stats.matchStats || {};
+        const rowsEl = document.getElementById("statRows");
+        const subEl = document.getElementById("statSub");
+
+        subEl.textContent = teamDisplayName("A") + " vs " + teamDisplayName("B");
+
+        if (!match.totalPoints)
+        {
+          rowsEl.innerHTML = '<div class="stat-empty">No points played yet.</div>';
+          return;
+        }
+
+        const rows = [];
+        const pointsA = Number(teams.A.pointsWon) || 0;
+        const pointsB = Number(teams.B.pointsWon) || 0;
+        rows.push(statRowHtml("Points won", pointsA, pointsB, pointsA, pointsB));
+
+        const servedA = (Number(serve.A1?.pointsServed) || 0) + (Number(serve.A2?.pointsServed) || 0);
+        const servedB = (Number(serve.B1?.pointsServed) || 0) + (Number(serve.B2?.pointsServed) || 0);
+        const serveWonA = (Number(serve.A1?.pointsWonOnServe) || 0) + (Number(serve.A2?.pointsWonOnServe) || 0);
+        const serveWonB = (Number(serve.B1?.pointsWonOnServe) || 0) + (Number(serve.B2?.pointsWonOnServe) || 0);
+        if (servedA || servedB)
+        {
+          const pctA = servedA ? Math.round((serveWonA / servedA) * 100) + "%" : "–";
+          const pctB = servedB ? Math.round((serveWonB / servedB) * 100) + "%" : "–";
+          rows.push(statRowHtml("Won on serve", pctA, pctB,
+            servedA ? serveWonA / servedA : 0, servedB ? serveWonB / servedB : 0));
+        }
+
+        const bpOppA = Number(teams.A.breakPointConversionOpportunities) || 0;
+        const bpOppB = Number(teams.B.breakPointConversionOpportunities) || 0;
+        if (bpOppA || bpOppB)
+        {
+          const bpWonA = Number(teams.A.breakPointConversions) || 0;
+          const bpWonB = Number(teams.B.breakPointConversions) || 0;
+          rows.push(statRowHtml("Break points", bpWonA + "/" + bpOppA, bpWonB + "/" + bpOppB, bpWonA, bpWonB));
+        }
+
+        const streakA = Number(teams.A.longestScoringStreak) || 0;
+        const streakB = Number(teams.B.longestScoringStreak) || 0;
+        if (streakA > 1 || streakB > 1)
+        {
+          rows.push(statRowHtml("Longest streak", streakA, streakB, streakA, streakB));
+        }
+
+        if (Number(match.goldenPointsPlayed) > 0)
+        {
+          const goldA = Number(teams.A.goldenPointsWon) || 0;
+          const goldB = Number(teams.B.goldenPointsWon) || 0;
+          rows.push(statRowHtml("Golden points", goldA, goldB, goldA, goldB));
+        }
+
+        if (Number(match.deuceGames) > 0)
+        {
+          const deuceA = Number(teams.A.gamesWonAfterDeuce) || 0;
+          const deuceB = Number(teams.B.gamesWonAfterDeuce) || 0;
+          rows.push(statRowHtml("Deuce games won", deuceA, deuceB, deuceA, deuceB));
+        }
+
+        rowsEl.innerHTML = rows.join("");
+      }
+
+      async function showStatCard(options)
+      {
+        const { durationMs = null, pin = false } = options || {};
+        const card = document.getElementById("statCard");
+        card.classList.remove("hidden");
+
+        if (!statsCache)
+        {
+          document.getElementById("statRows").innerHTML = '<div class="stat-empty">Loading stats…</div>';
+        }
+
+        try
+        {
+          renderStatCard(await fetchStats(true));
+        }
+        catch (_err)
+        {
+          if (statsCache)
+          {
+            renderStatCard(statsCache);
+          }
+          else
+          {
+            document.getElementById("statRows").innerHTML = '<div class="stat-empty">Stats unavailable.</div>';
+          }
+        }
+
+        clearTimeout(statCardTimer);
+        if (pin)
+        {
+          statCardPinned = true;
+          document.getElementById("statBtn").classList.add("active");
+          clearInterval(statRefreshTimer);
+          statRefreshTimer = setInterval(async () =>
+          {
+            try { renderStatCard(await fetchStats(true)); }
+            catch (_err) { /* keep the last rendered stats */ }
+          }, 15000);
+        }
+        else if (durationMs)
+        {
+          statCardTimer = setTimeout(() =>
+          {
+            if (!statCardPinned) hideStatCard();
+          }, durationMs);
+        }
+      }
+
+      function hideStatCard()
+      {
+        document.getElementById("statCard").classList.add("hidden");
+        document.getElementById("statBtn").classList.remove("active");
+        statCardPinned = false;
+        clearTimeout(statCardTimer);
+        clearInterval(statRefreshTimer);
+        statRefreshTimer = null;
+      }
+
+      // ---------- Set / match win moments ----------
+
+      let winTimer = null;
+      let prevSetCount = null;
+      let prevMatchComplete = null;
+
+      function showWinMoment(eyebrow, title, scoreText, teamCls, durationMs)
+      {
+        if (settings.showWinMoments === false) return;
+
+        const el = document.getElementById("winMoment");
+        document.getElementById("winEyebrow").textContent = eyebrow;
+        document.getElementById("winTitle").textContent = title;
+        document.getElementById("winScore").textContent = scoreText;
+
+        // Restart the pop animation even if a moment is already showing.
+        el.className = "win-moment";
+        void el.offsetWidth;
+        el.className = "win-moment show" + (teamCls ? " " + teamCls : "");
+
+        clearTimeout(winTimer);
+        winTimer = setTimeout(() => el.classList.remove("show"), durationMs);
+      }
+
+      // After the celebration clears, the follow-ups play: an auto stat card
+      // and (optionally) a sponsor slate.
+      function queuePostMoment(delayMs, statCardMs, slateMs)
+      {
+        setTimeout(() =>
+        {
+          if (settings.autoStatCards !== false && !statCardPinned)
+          {
+            void showStatCard({ durationMs: statCardMs });
+          }
+          if (settings.sponsorSlateOnSet === true)
+          {
+            showSponsorSlate(slateMs);
+          }
+        }, delayMs);
+      }
+
+      function fireSetMoment(data)
+      {
+        const sets = data.completedSets || [];
+        const lastSet = sets[sets.length - 1] || {};
+        const a = Number(lastSet.A) || 0;
+        const b = Number(lastSet.B) || 0;
+        const team = a > b ? "A" : "B";
+
+        showWinMoment("Set " + sets.length, teamDisplayName(team), a + "–" + b, "team-" + team, 7000);
+        queuePostMoment(7300, 12000, 8000);
+      }
+
+      function fireMatchMoment(data)
+      {
+        const sets = data.completedSets || [];
+        let team;
+        let scoreText;
+
+        if ((data.scoringMode || "standard") === "standard" && sets.length)
+        {
+          let wonA = 0;
+          let wonB = 0;
+          sets.forEach((set) => ((Number(set.A) || 0) > (Number(set.B) || 0) ? wonA++ : wonB++));
+          team = wonA >= wonB ? "A" : "B";
+          scoreText = sets.map((set) => (Number(set.A) || 0) + "–" + (Number(set.B) || 0)).join("  ");
+        }
+        else
+        {
+          const pointsA = Number(data.teams.A.points) || 0;
+          const pointsB = Number(data.teams.B.points) || 0;
+          team = pointsA >= pointsB ? "A" : "B";
+          scoreText = data.teams.A.pointsDisplay + "–" + data.teams.B.pointsDisplay;
+        }
+
+        showWinMoment("Match winner", teamDisplayName(team), scoreText, "team-" + team, 12000);
+        queuePostMoment(12300, 20000, 10000);
+      }
+
+      // Fires celebrations only on observed transitions — joining a stream
+      // mid-match (or an OBS source refresh) must not replay old moments.
+      function handleTransitions(data)
+      {
+        const setCount = (data.completedSets || []).length;
+        const matchComplete = Boolean(data.matchComplete);
+        const firstRender = prevSetCount === null;
+        const setIncreased = !firstRender && setCount > prevSetCount;
+        const matchJustEnded = prevMatchComplete === false && matchComplete;
+
+        prevSetCount = setCount;
+        prevMatchComplete = matchComplete;
+
+        if (firstRender) return;
+
+        if (matchJustEnded)
+        {
+          fireMatchMoment(data);
+        }
+        else if (setIncreased && (data.scoringMode || "standard") === "standard")
+        {
+          fireSetMoment(data);
+        }
+      }
+
       function render(data)
       {
         latestScore = data;
         trackAdvantage(data);
+        handleTransitions(data);
 
         document.getElementById("loadingLine").classList.add("hidden");
         document.getElementById("scoreBody").classList.remove("hidden");
@@ -1404,7 +2560,7 @@
 
         const server = settings.showServer ? (data.server || "") : "";
         const showTeamNames = settings.showTeamNames !== false;
-        const showPlayerNames = settings.showPlayerNames !== false;
+        const showPlayerNames = settings.showPlayerNames !== false && !isSlimLayout();
 
         ["A", "B"].forEach((team) =>
         {
@@ -1556,10 +2712,12 @@
         setLogoB: "logoB",
         setBrandText: "brandText",
         setBrandLogo: "brandLogo",
-        setSponsorHtml: "sponsorHtml"
+        setSponsorHtml: "sponsorHtml",
+        setQrUrl: "qrUrl",
+        setQrLabel: "qrLabel"
       };
 
-      const URL_KEYS = ["logoA", "logoB", "brandLogo"];
+      const URL_KEYS = ["logoA", "logoB", "brandLogo", "qrUrl"];
 
       const checkboxMap = {
         setShowServer: "showServer",
@@ -1568,8 +2726,94 @@
         setShowTeamNames: "showTeamNames",
         setShowPlayerNames: "showPlayerNames",
         setShowTimer: "showTimer",
-        setShowSponsor: "showSponsor"
+        setShowSponsor: "showSponsor",
+        setShowWinMoments: "showWinMoments",
+        setAutoStatCards: "autoStatCards",
+        setSlateOnSet: "sponsorSlateOnSet",
+        setShowQr: "showQr"
       };
+
+      const selectMap = {
+        setPosition: "position",
+        setLayout: "layout",
+        setQrCorner: "qrCorner"
+      };
+
+      // Options are built from THEME_PRESETS so new presets only need a
+      // single entry in that map.
+      function buildThemeSelect()
+      {
+        const select = document.getElementById("setThemePreset");
+        select.textContent = "";
+        Object.entries(THEME_PRESETS).forEach(([value, preset]) =>
+        {
+          const option = document.createElement("option");
+          option.value = value;
+          option.textContent = preset.label;
+          select.appendChild(option);
+        });
+      }
+
+      function renderSponsorEditor()
+      {
+        const wrap = document.getElementById("sponsorList");
+        wrap.textContent = "";
+
+        (settings.sponsors || []).forEach((item, index) =>
+        {
+          const row = document.createElement("div");
+          row.className = "sponsor-edit-row";
+
+          const text = document.createElement("input");
+          text.type = "text";
+          text.placeholder = "Text / HTML";
+          text.value = item.text || "";
+          text.addEventListener("input", () =>
+          {
+            item.text = text.value;
+            saveSettings();
+            restartSponsorRotation();
+          });
+
+          const img = document.createElement("input");
+          img.type = "url";
+          img.placeholder = "Image URL";
+          img.value = item.img || "";
+          img.addEventListener("input", () =>
+          {
+            item.img = img.value.trim();
+            saveSettings();
+            restartSponsorRotation();
+          });
+
+          const secs = document.createElement("input");
+          secs.type = "text";
+          secs.className = "secs";
+          secs.title = "Seconds on screen";
+          secs.value = item.seconds || 8;
+          secs.addEventListener("input", () =>
+          {
+            item.seconds = clampNumber(secs.value, 3, 600, 8);
+            saveSettings();
+          });
+
+          const remove = document.createElement("button");
+          remove.type = "button";
+          remove.className = "rm";
+          remove.title = "Remove sponsor";
+          remove.textContent = "\u00d7";
+          remove.addEventListener("click", () =>
+          {
+            settings.sponsors.splice(index, 1);
+            saveSettings();
+            renderSponsorEditor();
+            restartSponsorRotation();
+          });
+
+          row.append(text, img, secs, remove);
+          wrap.appendChild(row);
+        });
+      }
 
       function syncInputsFromSettings()
       {
@@ -1583,11 +2827,27 @@
           document.getElementById(inputId).checked = settings[key] !== false;
         });
 
+        Object.entries(selectMap).forEach(([inputId, key]) =>
+        {
+          document.getElementById(inputId).value = settings[key];
+        });
+
+        document.getElementById("setThemePreset").value = settings.themePreset;
         document.getElementById("setTimerValue").value = settings.timerText || "";
 
         const angle = Number(settings.gradientAngle) || 0;
         document.getElementById("setGradAngle").value = angle;
         document.getElementById("gradAngleValue").textContent = angle + "\u00b0";
+
+        const scale = clampNumber(settings.scale, 0.5, 2, 1);
+        document.getElementById("setScale").value = scale;
+        document.getElementById("scaleValue").textContent = Math.round(scale * 100) + "%";
+
+        const qrSize = Math.round(clampNumber(settings.qrSize, 64, 200, 96));
+        document.getElementById("setQrSize").value = qrSize;
+        document.getElementById("qrSizeValue").textContent = qrSize + "px";
+
+        renderSponsorEditor();
       }
 
       Object.entries(fieldMap).forEach(([inputId, key]) =>
@@ -1595,9 +2855,108 @@
         document.getElementById(inputId).addEventListener("input", (event) =>
         {
           settings[key] = URL_KEYS.includes(key) ? event.target.value.trim() : event.target.value;
+          if (THEME_COLOR_KEYS.includes(key))
+          {
+            settings.themePreset = "custom";
+            document.getElementById("setThemePreset").value = "custom";
+          }
           saveSettings();
           applySettings();
         });
+      });
+
+      Object.entries(selectMap).forEach(([inputId, key]) =>
+      {
+        document.getElementById(inputId).addEventListener("change", (event) =>
+        {
+          settings[key] = event.target.value;
+          saveSettings();
+          applySettings();
+        });
+      });
+
+      buildThemeSelect();
+      document.getElementById("setThemePreset").addEventListener("change", (event) =>
+      {
+        if (event.target.value !== "custom")
+        {
+          applyThemePreset(event.target.value);
+        }
+        else
+        {
+          settings.themePreset = "custom";
+        }
+        saveSettings();
+        syncInputsFromSettings();
+        applySettings();
+      });
+
+      document.getElementById("setScale").addEventListener("input", (event) =>
+      {
+        settings.scale = clampNumber(event.target.value, 0.5, 2, 1);
+        document.getElementById("scaleValue").textContent = Math.round(settings.scale * 100) + "%";
+        saveSettings();
+        applySettings();
+      });
+
+      document.getElementById("setQrSize").addEventListener("input", (event) =>
+      {
+        settings.qrSize = clampNumber(event.target.value, 64, 200, 96);
+        document.getElementById("qrSizeValue").textContent = Math.round(settings.qrSize) + "px";
+        saveSettings();
+        renderQrBug();
+      });
+
+      document.getElementById("addSponsorBtn").addEventListener("click", () =>
+      {
+        if (!Array.isArray(settings.sponsors)) settings.sponsors = [];
+        settings.sponsors.push({ text: "", img: "", seconds: 8 });
+        saveSettings();
+        renderSponsorEditor();
+      });
+
+      document.getElementById("copyObsUrl").addEventListener("click", async (event) =>
+      {
+        const url = buildShareUrl();
+        const field = document.getElementById("shareUrlField");
+        field.value = url;
+
+        let copied = false;
+        try
+        {
+          await navigator.clipboard.writeText(url);
+          copied = true;
+        }
+        catch (_err)
+        {
+          // Clipboard API is unavailable in some embedded browsers (OBS);
+          // fall back to selecting the visible field for a manual copy.
+          field.focus();
+          field.select();
+          try { copied = document.execCommand("copy"); }
+          catch (_execErr) { /* manual copy it is */ }
+        }
+
+        const button = event.currentTarget;
+        button.textContent = copied ? "Copied \u2713" : "Copy from the field below";
+        setTimeout(() => { button.textContent = "Copy OBS URL"; }, 2000);
+      });
+
+      document.getElementById("statBtn").addEventListener("click", () =>
+      {
+        if (statCardPinned)
+        {
+          hideStatCard();
+        }
+        else
+        {
+          void showStatCard({ pin: true });
+        }
+      });
+
+      document.getElementById("slateBtn").addEventListener("click", () =>
+      {
+        showSponsorSlate(8000);
       });
 
       Object.entries(checkboxMap).forEach(([inputId, key]) =>
@@ -1654,13 +3013,18 @@
         catch (_err) { /* storage unavailable */ }
 
         settings = { ...DEFAULT_SETTINGS, timerAnchor: Date.now() };
+        normalizeSettings();
         saveSettings();
+        hideStatCard();
+        document.getElementById("shareUrlField").value = "";
         syncInputsFromSettings();
         applySettings();
       });
 
       // ---------- Boot ----------
       loadSettings();
+      applyUrlOverrides();
+      normalizeSettings();
 
       // Anchor the timer on first ever load so it survives OBS source refreshes.
       if (!settings.timerAnchor)
