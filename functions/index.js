@@ -1272,121 +1272,121 @@ exports.updateScoringOptions = onCall(
 // -----------------------------
 // Get detailed score (replay)
 // -----------------------------
-exports.getDetailedScore = onCall(
-    { region: REGION },
-    async (request) =>
+// Shared by the getDetailedScore callable (scoreboard app) and the public
+// /s/{courtId} stats endpoint (OBS overlay stat cards).
+async function buildDetailedScoreData(courtId)
+{
+    const courtSnap = await db.doc(`courts/${courtId}`).get();
+    const courtExists = courtSnap.exists;
+    const courtData = courtExists ? courtSnap.data() : {};
+    const scoringOptions = buildScoringOptions({
+        ...(courtData.scoringOptions || {}),
+        scoringMode: courtData.scoringMode || courtData.scoringOptions?.scoringMode
+    });
+    const normalizedOptions = normalizeScoringOptions(scoringOptions);
+
+    const playerNames = {
+        A1: typeof courtData?.playerNames?.A1 === "string" ? courtData.playerNames.A1 : "",
+        A2: typeof courtData?.playerNames?.A2 === "string" ? courtData.playerNames.A2 : "",
+        B1: typeof courtData?.playerNames?.B1 === "string" ? courtData.playerNames.B1 : "",
+        B2: typeof courtData?.playerNames?.B2 === "string" ? courtData.playerNames.B2 : ""
+    };
+
+    const eventsSnap = await db
+        .collection(`courts/${courtId}/events`)
+        .orderBy("createdAt", "asc")
+        .orderBy(admin.firestore.FieldPath.documentId(), "asc")
+        .get();
+
+    // Use only scoring events so details replay mirrors score/current logic,
+    // including the stale-scoreVersion guard applied by onEventCreate.
+    const activeScoreVersion = normalizeScoreVersion(courtData.scoreVersion);
+    const events = eventsSnap.docs
+        .map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }))
+        .filter((event) =>
+            SCORING_EVENTS.has(event.eventType) &&
+            normalizeScoreVersion(event.scoreVersion) === activeScoreVersion);
+
+    let score = defaultScore(normalizedOptions);
+
+    // Derived analytics streams (for momentum/stats UI)
+    let pointHistory = [];     // ["A", "B", ...]
+    let setPointMarkers = [];  // 1-based point index where a set is completed
+
+    for (const event of events)
     {
-        const { courtId } = request.data;
-        if (!courtId) throw new Error("Missing courtId");
+        const oldSetsA = score.A.sets;
+        const oldSetsB = score.B.sets;
+        const oldTotalPoints = (Number(score.A.totalPoints) || 0) + (Number(score.B.totalPoints) || 0);
 
-        const courtSnap = await db.doc(`courts/${courtId}`).get();
-        const courtData = courtSnap.exists ? courtSnap.data() : {};
-        const scoringOptions = buildScoringOptions({
-            ...(courtData.scoringOptions || {}),
-            scoringMode: courtData.scoringMode || courtData.scoringOptions?.scoringMode
-        });
-        const normalizedOptions = normalizeScoringOptions(scoringOptions);
+        score = applyEvent(score, event, normalizedOptions);
 
-        const playerNames = {
-            A1: typeof courtData?.playerNames?.A1 === "string" ? courtData.playerNames.A1 : "",
-            A2: typeof courtData?.playerNames?.A2 === "string" ? courtData.playerNames.A2 : "",
-            B1: typeof courtData?.playerNames?.B1 === "string" ? courtData.playerNames.B1 : "",
-            B2: typeof courtData?.playerNames?.B2 === "string" ? courtData.playerNames.B2 : ""
-        };
+        const newTotalPoints = (Number(score.A.totalPoints) || 0) + (Number(score.B.totalPoints) || 0);
+        const pointApplied = newTotalPoints > oldTotalPoints;
 
-        const eventsSnap = await db
-            .collection(`courts/${courtId}/events`)
-            .orderBy("createdAt", "asc")
-            .orderBy(admin.firestore.FieldPath.documentId(), "asc")
-            .get();
-
-        // Use only scoring events so details replay mirrors score/current logic,
-        // including the stale-scoreVersion guard applied by onEventCreate.
-        const activeScoreVersion = normalizeScoreVersion(courtData.scoreVersion);
-        const events = eventsSnap.docs
-            .map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }))
-            .filter((event) =>
-                SCORING_EVENTS.has(event.eventType) &&
-                normalizeScoreVersion(event.scoreVersion) === activeScoreVersion);
-
-        let score = defaultScore(normalizedOptions);
-
-        // Derived analytics streams (for momentum/stats UI)
-        let pointHistory = [];     // ["A", "B", ...]
-        let setPointMarkers = [];  // 1-based point index where a set is completed
-
-        for (const event of events)
+        if (event.eventType === "RESET")
         {
-            const oldSetsA = score.A.sets;
-            const oldSetsB = score.B.sets;
-            const oldTotalPoints = (Number(score.A.totalPoints) || 0) + (Number(score.B.totalPoints) || 0);
-
-            score = applyEvent(score, event, normalizedOptions);
-
-            const newTotalPoints = (Number(score.A.totalPoints) || 0) + (Number(score.B.totalPoints) || 0);
-            const pointApplied = newTotalPoints > oldTotalPoints;
-
-            if (event.eventType === "RESET")
-            {
-                pointHistory = [];
-                setPointMarkers = [];
-                continue;
-            }
-
-            if (event.eventType === "UNDO")
-            {
-                // Only pop pointHistory if the undo actually reversed a point.
-                // If history was empty, the engine returns the score unchanged
-                // (totalPoints stays the same), so we must not pop a real entry.
-                const pointActuallyUndone = newTotalPoints < oldTotalPoints;
-                if (pointActuallyUndone && pointHistory.length > 0)
-                {
-                    pointHistory.pop();
-                }
-                while (
-                    setPointMarkers.length > 0 &&
-                    setPointMarkers[setPointMarkers.length - 1] > pointHistory.length
-                )
-                {
-                    setPointMarkers.pop();
-                }
-                continue;
-            }
-
-            if (pointApplied && event.eventType === "POINT_TEAM_A")
-            {
-                pointHistory.push("A");
-            }
-            else if (pointApplied && event.eventType === "POINT_TEAM_B")
-            {
-                pointHistory.push("B");
-            }
-
-            const setCompleted = score.A.sets > oldSetsA || score.B.sets > oldSetsB;
-            if (pointApplied && setCompleted)
-            {
-                setPointMarkers.push(pointHistory.length);
-            }
+            pointHistory = [];
+            setPointMarkers = [];
+            continue;
         }
 
-        // Canonical source for per-set rows: completedSets from scorer state.
-        // This guarantees details table aligns with score/current.
-        const setScores = Array.isArray(score.completedSets)
-            ? score.completedSets.map((set) => ({
-                A: Number(set?.A) || 0,
-                B: Number(set?.B) || 0,
-                tiebreakPoints: set?.tiebreakPoints || null
-            }))
-            : [];
+        if (event.eventType === "UNDO")
+        {
+            // Only pop pointHistory if the undo actually reversed a point.
+            // If history was empty, the engine returns the score unchanged
+            // (totalPoints stays the same), so we must not pop a real entry.
+            const pointActuallyUndone = newTotalPoints < oldTotalPoints;
+            if (pointActuallyUndone && pointHistory.length > 0)
+            {
+                pointHistory.pop();
+            }
+            while (
+                setPointMarkers.length > 0 &&
+                setPointMarkers[setPointMarkers.length - 1] > pointHistory.length
+            )
+            {
+                setPointMarkers.pop();
+            }
+            continue;
+        }
 
-        const currentSetGames = {
-            A: Number(score.A.games) || 0,
-            B: Number(score.B.games) || 0
-        };
+        if (pointApplied && event.eventType === "POINT_TEAM_A")
+        {
+            pointHistory.push("A");
+        }
+        else if (pointApplied && event.eventType === "POINT_TEAM_B")
+        {
+            pointHistory.push("B");
+        }
 
-        const momentumData = computeMomentumTimeline(pointHistory, normalizedOptions);
+        const setCompleted = score.A.sets > oldSetsA || score.B.sets > oldSetsB;
+        if (pointApplied && setCompleted)
+        {
+            setPointMarkers.push(pointHistory.length);
+        }
+    }
 
-        return {
+    // Canonical source for per-set rows: completedSets from scorer state.
+    // This guarantees details table aligns with score/current.
+    const setScores = Array.isArray(score.completedSets)
+        ? score.completedSets.map((set) => ({
+            A: Number(set?.A) || 0,
+            B: Number(set?.B) || 0,
+            tiebreakPoints: set?.tiebreakPoints || null
+        }))
+        : [];
+
+    const currentSetGames = {
+        A: Number(score.A.games) || 0,
+        B: Number(score.B.games) || 0
+    };
+
+    const momentumData = computeMomentumTimeline(pointHistory, normalizedOptions);
+
+    return {
+        courtExists,
+        payload: {
             sets: setScores,
             currentGames: currentSetGames,
             points: {
@@ -1402,7 +1402,19 @@ exports.getDetailedScore = onCall(
             setPointMarkers,
             momentumTimeline: momentumData.timeline,
             advancedStats: computeAdvancedStats(pointHistory, normalizedOptions)
-        };
+        }
+    };
+}
+
+exports.getDetailedScore = onCall(
+    { region: REGION },
+    async (request) =>
+    {
+        const { courtId } = request.data;
+        if (!courtId) throw new Error("Missing courtId");
+
+        const { payload } = await buildDetailedScoreData(courtId);
+        return payload;
     }
 );
 
@@ -1609,10 +1621,11 @@ function extractScoreApiCourtId(reqPath)
             }
         });
 
-    // With the hosting rewrite the path looks like /a/{courtId} or /r/{courtId};
-    // when the function URL is hit directly the courtId is simply the last segment.
+    // With the hosting rewrite the path looks like /a/{courtId}, /r/{courtId}
+    // or /s/{courtId}; when the function URL is hit directly the courtId is
+    // simply the last segment.
     let courtId;
-    if (segments[0] === "a" || segments[0] === "r")
+    if (segments[0] === "a" || segments[0] === "r" || segments[0] === "s")
     {
         courtId = segments.length >= 2 ? segments[segments.length - 1] : null;
     }
@@ -1841,6 +1854,108 @@ exports.getCourtScoreRevision = onRequest(
         catch (err)
         {
             console.error("getCourtScoreRevision failed:", err);
+            res.set("Cache-Control", "no-store");
+            return sendJson(res, 500, { success: false, error: "Error" });
+        }
+    }
+);
+
+// -----------------------------
+// GET match stats as JSON (/s/{courtId})
+// Public endpoint for the OBS overlay's stat cards. Replaying the full event
+// stream is far heavier than reading score/current, so responses are cached
+// longer than the score API and clients are expected to fetch only at natural
+// pauses (game/set boundaries or a manual trigger), not on every poll.
+// -----------------------------
+const STATS_API_CACHE_TTL_MS = 10 * 1000;
+const STATS_API_CACHE_MAX_ENTRIES = 200;
+const statsApiCache = new Map();
+
+function getCachedStatsApiEntry(courtId)
+{
+    const entry = statsApiCache.get(courtId);
+    if (!entry) return null;
+
+    if (Date.now() > entry.expiresAt)
+    {
+        statsApiCache.delete(courtId);
+        return null;
+    }
+
+    return entry;
+}
+
+function setCachedStatsApiEntry(courtId, status, body)
+{
+    if (statsApiCache.size >= STATS_API_CACHE_MAX_ENTRIES)
+    {
+        const oldestKey = statsApiCache.keys().next().value;
+        statsApiCache.delete(oldestKey);
+    }
+
+    statsApiCache.set(courtId, {
+        status,
+        body,
+        expiresAt: Date.now() + STATS_API_CACHE_TTL_MS
+    });
+}
+
+exports.getCourtStats = onRequest(
+    { region: HOSTING_REWRITE_REGION, maxInstances: 2 },
+    async (req, res) =>
+    {
+        if (!prepareScoreApiRequest(req, res, 10))
+        {
+            return;
+        }
+
+        try
+        {
+            const courtId = extractScoreApiCourtId(req.path);
+            if (!courtId)
+            {
+                return sendJson(res, 400, { success: false, error: "Missing or invalid courtId. Use /s/{courtId}." });
+            }
+
+            const cached = getCachedStatsApiEntry(courtId);
+            if (cached)
+            {
+                return sendJson(res, cached.status, cached.body);
+            }
+
+            const { courtExists, payload } = await buildDetailedScoreData(courtId);
+
+            if (!courtExists)
+            {
+                const notFoundBody = { success: false, error: "Court not found." };
+                setCachedStatsApiEntry(courtId, 404, notFoundBody);
+                return sendJson(res, 404, notFoundBody);
+            }
+
+            // The point-by-point streams are only needed by the scoreboard's
+            // charts; the overlay just renders the aggregates, so keep the
+            // public payload lean.
+            const {
+                pointHistory: _points,
+                momentumTimeline: _momentum,
+                setPointMarkers: _markers,
+                ...publicPayload
+            } = payload;
+
+            const body = {
+                success: true,
+                courtId,
+                ...publicPayload,
+                totalPoints: payload.advancedStats?.matchStats?.totalPoints ?? 0,
+                fetchedAt: new Date().toISOString()
+            };
+
+            setCachedStatsApiEntry(courtId, 200, body);
+            return sendJson(res, 200, body);
+        }
+        catch (err)
+        {
+            console.error("getCourtStats failed:", err);
             res.set("Cache-Control", "no-store");
             return sendJson(res, 500, { success: false, error: "Error" });
         }

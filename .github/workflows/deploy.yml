@@ -1,4 +1,4 @@
-name: Firebase Hosting Deploy
+name: Firebase Deploy
 
 on:
   push:
@@ -10,18 +10,21 @@ on:
       - "media/**"
       - "firebase.json"
       - ".firebaserc"
+      - "functions/**"
+      - ".github/workflows/deploy.yml"
 
 permissions:
   contents: read
 
 concurrency:
-  group: hosting-${{ github.ref }}
+  group: firebase-deploy-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   deploy_production:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v5
 
@@ -29,42 +32,37 @@ jobs:
         env:
           FIREBASE_CONFIG: ${{ secrets.FIREBASE_CONFIG_JS_CONTENT_PRODUCTION }}
         run: |
-          echo "$FIREBASE_CONFIG" > app/js/firebase-config.js
+          printf '%s' "$FIREBASE_CONFIG" > app/js/firebase-config.js
 
       - uses: actions/setup-node@v5
         with:
           node-version: 22
+          cache: npm
+          cache-dependency-path: functions/package-lock.json
 
-      - run: npm install -g firebase-tools@latest
-      - run: firebase --version
+      - name: Install Functions dependencies
+        run: npm ci --prefix functions
 
-      - name: Deploy production hosting
+      - name: Install Firebase CLI
+        run: npm install --global firebase-tools@latest
+
+      - name: Show Firebase CLI version
+        run: firebase --version
+
+      - name: Deploy production
         env:
           FIREBASE_PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID_PRODUCTION }}
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN_PRODUCTION }}
         run: |
-          set +e
-          output=$(firebase deploy --only hosting --project "$FIREBASE_PROJECT_ID" --token "$FIREBASE_TOKEN" 2>&1)
-          exit_code=$?
-
-          echo "$output"
-
-          if [ $exit_code -eq 0 ]; then
-            echo "Deployment successful"
-            exit 0
-          fi
-
-          if echo "$output" | grep -q "current active version"; then
-            echo "Already deployed - no changes to hosting"
-            exit 0
-          fi
-
-          echo "Deployment failed"
-          exit $exit_code
+          firebase deploy \
+            --only functions,hosting \
+            --project "$FIREBASE_PROJECT_ID" \
+            --token "$FIREBASE_TOKEN"
 
   deploy_staging:
     if: github.event_name == 'push' && github.ref != 'refs/heads/main'
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v5
 
@@ -72,49 +70,29 @@ jobs:
         env:
           FIREBASE_CONFIG: ${{ secrets.FIREBASE_CONFIG_JS_CONTENT_STAGING }}
         run: |
-          echo "$FIREBASE_CONFIG" > app/js/firebase-config.js
+          printf '%s' "$FIREBASE_CONFIG" > app/js/firebase-config.js
 
       - uses: actions/setup-node@v5
         with:
           node-version: 22
+          cache: npm
+          cache-dependency-path: functions/package-lock.json
 
-      - run: npm install -g firebase-tools@latest
-      - run: firebase --version
+      - name: Install Functions dependencies
+        run: npm ci --prefix functions
 
-      - name: Ensure hosting rewrite functions are deployed in staging region
+      - name: Install Firebase CLI
+        run: npm install --global firebase-tools@latest
+
+      - name: Show Firebase CLI version
+        run: firebase --version
+
+      - name: Deploy staging
         env:
           FIREBASE_PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID_STAGING }}
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN_STAGING }}
         run: |
-          npm ci --prefix functions
-          # Delete any existing instances of these functions from ALL regions (no --region flag)
-          # to clear stale registry entries (e.g. old africa-south1 registrations) and any
-          # broken europe-west1 state that would otherwise cause a 409 on the deploy below.
-          # Keep this function list in sync with the --only filter on the next line.
-          firebase functions:delete getCourtScore getCourtScoreRevision \
-            --project "$FIREBASE_PROJECT_ID" --token "$FIREBASE_TOKEN" --force 2>/dev/null || true
-          firebase deploy --only functions:getCourtScore,functions:getCourtScoreRevision --project "$FIREBASE_PROJECT_ID" --token "$FIREBASE_TOKEN" --force
-
-      - name: Deploy staging hosting
-        env:
-          FIREBASE_PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID_STAGING }}
-          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN_STAGING }}
-        run: |
-          set +e
-          output=$(firebase deploy --only hosting --project "$FIREBASE_PROJECT_ID" --token "$FIREBASE_TOKEN" 2>&1)
-          exit_code=$?
-
-          echo "$output"
-
-          if [ $exit_code -eq 0 ]; then
-            echo "Deployment successful"
-            exit 0
-          fi
-
-          if echo "$output" | grep -q "current active version"; then
-            echo "Already deployed - no changes to hosting"
-            exit 0
-          fi
-
-          echo "Deployment failed"
-          exit $exit_code
+          firebase deploy \
+            --only functions,hosting \
+            --project "$FIREBASE_PROJECT_ID" \
+            --token "$FIREBASE_TOKEN"
