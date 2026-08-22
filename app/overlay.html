@@ -8,8 +8,7 @@
   <link rel="icon" href="/app/media/img/favicon.svg" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link
-    href="https://fonts.googleapis.com/css2?family=Encode+Sans+Semi+Expanded:wght@600;700&display=swap"
+  <link href="https://fonts.googleapis.com/css2?family=Encode+Sans+Semi+Expanded:wght@600;700&display=swap"
     rel="stylesheet" />
   <style>
     :root {
@@ -277,8 +276,8 @@
       z-index: 1;
       animation: serve-anim 2s linear infinite;
     }
-    
-    @keyframes serve-anim  {
+
+    @keyframes serve-anim {
 
       100%,
       0% {
@@ -864,7 +863,7 @@
       bottom: 8vh;
       transform: translate(-50%, 1em);
       z-index: 6;
-      font-size: calc(26px * var(--ov-scale, 1));
+      font-size: calc(26px * var(--ov-slate-scale, 1));
       background:
         linear-gradient(var(--ov-grad-angle), var(--ov-panel), var(--ov-panel-2)),
         rgba(0, 0, 0, 0.9);
@@ -873,7 +872,9 @@
       box-shadow: 0 10px 35px rgba(0, 0, 0, 0.5);
       padding: 0.7em 1.6em 0.8em;
       text-align: center;
-      max-width: 80vw;
+      width: max-content;
+      max-width: 95vw;
+      white-space: nowrap;
       opacity: 0;
       pointer-events: none;
       transition: opacity 0.4s ease, transform 0.4s ease;
@@ -891,6 +892,7 @@
       letter-spacing: 0.3em;
       color: var(--ov-muted);
       margin-bottom: 0.5em;
+      white-space: nowrap;
     }
 
     .slate-body {
@@ -901,6 +903,11 @@
       justify-content: center;
       gap: 0.5em;
       color: var(--ov-text);
+      white-space: nowrap;
+    }
+
+    .slate-body * {
+      white-space: nowrap;
     }
 
     .slate-body img {
@@ -929,6 +936,25 @@
     .qr-bug img {
       display: block;
       margin: 0 auto;
+    }
+
+    #qrBugCode {
+      position: relative;
+    }
+
+    #qrBugCode::after {
+      content: "";
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 32%;
+      height: 32%;
+      transform: translate(-50%, -50%);
+      border-radius: 50%;
+      background: #000 url("/app/media/img/logo.svg") center / 82% no-repeat;
+      z-index: 2;
+      pointer-events: none;
+      box-shadow: 0 0 2px rgba(0, 0, 0, 0.8);
     }
 
     .qr-bug-label {
@@ -1047,26 +1073,40 @@
       bottom: 12px;
       right: 12px;
       display: flex;
-      gap: 8px;
+      gap: calc(8px * var(--ov-quickbar-scale, 1));
       z-index: 10;
-      opacity: 0.25;
+      opacity: var(--ov-quickbar-opacity, 0.4);
       transition: opacity 0.2s;
+      cursor: grab;
+      user-select: none;
+      touch-action: none;
     }
 
     .quick-bar:hover,
-    .quick-bar:focus-within {
-      opacity: 1;
+    .quick-bar:focus-within,
+    .quick-bar.ov-dragging {
+      opacity: 1 !important;
+    }
+
+    .quick-bar.ov-dragging {
+      cursor: grabbing !important;
     }
 
     .quick-bar button {
-      width: 38px;
-      height: 38px;
+      width: calc(38px * var(--ov-quickbar-scale, 1));
+      height: calc(38px * var(--ov-quickbar-scale, 1));
       border-radius: 50%;
       border: none;
       background: rgba(0, 0, 0, 0.65);
       color: #fff;
-      font-size: 1.05rem;
-      cursor: pointer;
+      font-size: calc(1.05rem * var(--ov-quickbar-scale, 1));
+      cursor: grab;
+      user-select: none;
+      -webkit-user-drag: none;
+    }
+
+    .quick-bar.ov-dragging button {
+      cursor: grabbing !important;
     }
 
     .quick-bar button.active {
@@ -1180,17 +1220,6 @@
       margin-bottom: 4px;
     }
 
-    .share-url {
-      width: 100%;
-      margin-top: 6px;
-      background: #1a1a1a;
-      border: 1px solid #444;
-      border-radius: 6px;
-      color: #9fc1ff;
-      padding: 4px 6px;
-      font-size: 0.62rem;
-    }
-
     .settings-panel textarea {
       width: 100%;
       background: #1a1a1a;
@@ -1269,6 +1298,85 @@
       margin-bottom: 8px;
     }
 
+    .share-url {
+      width: 100% !important;
+      max-width: 100% !important;
+      margin-top: 6px;
+      background: #1a1a1a;
+      border: 1px solid #444;
+      border-radius: 6px;
+      color: #9fc1ff;
+      padding: 4px 6px;
+      font-size: 0.62rem;
+    }
+
+    /* ---------- Momentum card ---------- */
+
+    .momentum-card {
+      align-self: stretch;
+      background: linear-gradient(var(--ov-grad-angle), var(--ov-panel), var(--ov-panel-2));
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: var(--ov-radius);
+      box-shadow: 0 10px 35px rgba(0, 0, 0, 0.42);
+      padding: 0.6em 1em 0.7em;
+      animation: stat-in 0.35s ease both;
+      font-size: calc(24px * var(--ov-momentum-scale, 1));
+      box-sizing: border-box;
+    }
+
+    .momentum-card.standalone {
+      position: fixed;
+      z-index: 5;
+      width: 16em;
+      max-width: 90vw;
+    }
+
+    .momentum-card.hidden {
+      display: none;
+    }
+
+    .momentum-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 1em;
+      border-bottom: 1px solid var(--ov-line);
+      padding-bottom: 0.3em;
+      margin-bottom: 0.45em;
+    }
+
+    .momentum-title {
+      font-size: 0.62em;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+    }
+
+    .momentum-sub {
+      font-size: 0.5em;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--ov-muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .ov-momentum-canvas {
+      width: 100%;
+      height: 90px;
+      display: block;
+      margin-top: 0.2em;
+    }
+
+    /* ---------- Draggable ---------- */
+
+    .ov-dragging {
+      cursor: grabbing !important;
+      user-select: none;
+    }
+
     @media (max-width: 760px) {
       .overlay-anchor {
         font-size: calc(clamp(15px, 3.1vw, 22px) * var(--ov-scale, 1));
@@ -1288,78 +1396,86 @@
 
 <body>
   <div class="overlay-anchor pos-tl" id="overlayAnchor">
-  <div class="overlay" id="overlayBox">
-    <div class="brand">
-      <img src="/app/media/img/logo.svg" alt="Brand logo" id="brandLogo" />
-      <span class="brand-name" id="brandName">Padel Push</span>
-      <span class="brand-court" id="courtLabel"></span>
-      <span class="match-timer" id="matchTimer"></span>
-    </div>
-
-    <div class="loading-line" id="loadingLine">Loading...</div>
-
-    <div class="score-body hidden" id="scoreBody">
-      <div class="head-row" id="headRow">
-        <div class="score-spacer"></div>
-        <div class="score-cells" id="cellsHead"></div>
+    <div class="overlay" id="overlayBox">
+      <div class="brand">
+        <img src="/app/media/img/logo.svg" alt="Brand logo" id="brandLogo" />
+        <span class="brand-name" id="brandName">Padel Push</span>
+        <span class="brand-court" id="courtLabel"></span>
+        <span class="match-timer" id="matchTimer"></span>
       </div>
 
-      <div class="team-row" data-team="A">
-        <div class="team-id">
-          <img class="team-logo" id="logoA" alt="" />
-          <div class="team-names">
-            <div class="team-name" id="nameA">Team A</div>
-            <div class="player-line" id="lineA1"><span class="player-name" id="playerA1"></span><span class="serve-dot"
-                id="dotA1"></span></div>
-            <div class="player-line" id="lineA2"><span class="player-name" id="playerA2"></span><span class="serve-dot"
-                id="dotA2"></span></div>
-          </div>
+      <div class="loading-line" id="loadingLine">Loading...</div>
+
+      <div class="score-body hidden" id="scoreBody">
+        <div class="head-row" id="headRow">
+          <div class="score-spacer"></div>
+          <div class="score-cells" id="cellsHead"></div>
         </div>
-        <div class="score-cells" id="cellsA"></div>
-      </div>
 
-      <div class="team-row" data-team="B">
-        <div class="team-id">
-          <img class="team-logo" id="logoB" alt="" />
-          <div class="team-names">
-            <div class="team-name" id="nameB">Team B</div>
-            <div class="player-line" id="lineB1"><span class="player-name" id="playerB1"></span><span class="serve-dot"
-                id="dotB1"></span></div>
-            <div class="player-line" id="lineB2"><span class="player-name" id="playerB2"></span><span class="serve-dot"
-                id="dotB2"></span></div>
+        <div class="team-row" data-team="A">
+          <div class="team-id">
+            <img class="team-logo" id="logoA" alt="" />
+            <div class="team-names">
+              <div class="team-name" id="nameA">Team A</div>
+              <div class="player-line" id="lineA1"><span class="player-name" id="playerA1"></span><span
+                  class="serve-dot" id="dotA1"></span></div>
+              <div class="player-line" id="lineA2"><span class="player-name" id="playerA2"></span><span
+                  class="serve-dot" id="dotA2"></span></div>
+            </div>
           </div>
+          <div class="score-cells" id="cellsA"></div>
         </div>
-        <div class="score-cells" id="cellsB"></div>
+
+        <div class="team-row" data-team="B">
+          <div class="team-id">
+            <img class="team-logo" id="logoB" alt="" />
+            <div class="team-names">
+              <div class="team-name" id="nameB">Team B</div>
+              <div class="player-line" id="lineB1"><span class="player-name" id="playerB1"></span><span
+                  class="serve-dot" id="dotB1"></span></div>
+              <div class="player-line" id="lineB2"><span class="player-name" id="playerB2"></span><span
+                  class="serve-dot" id="dotB2"></span></div>
+            </div>
+          </div>
+          <div class="score-cells" id="cellsB"></div>
+        </div>
+      </div>
+
+      <div class="badge-flyout" id="badgeLine"><span class="badge" id="badgeText"></span></div>
+
+      <div class="status-line" id="statusLine"></div>
+
+      <div class="sponsor-strip hidden" id="sponsorStrip">
+        <div class="sponsor-track" id="sponsorTrack">
+          <div class="sponsor-item" id="sponsorItemA"></div>
+          <div class="sponsor-item" id="sponsorItemB" aria-hidden="true"></div>
+        </div>
+      </div>
+
+      <div class="win-moment" id="winMoment">
+        <div class="win-moment-inner">
+          <div class="win-eyebrow" id="winEyebrow"></div>
+          <div class="win-title" id="winTitle"></div>
+          <div class="win-score" id="winScore"></div>
+        </div>
       </div>
     </div>
 
-    <div class="badge-flyout" id="badgeLine"><span class="badge" id="badgeText"></span></div>
-
-    <div class="status-line" id="statusLine"></div>
-
-    <div class="sponsor-strip hidden" id="sponsorStrip">
-      <div class="sponsor-track" id="sponsorTrack">
-        <div class="sponsor-item" id="sponsorItemA"></div>
-        <div class="sponsor-item" id="sponsorItemB" aria-hidden="true"></div>
+    <div class="stat-card hidden" id="statCard">
+      <div class="stat-head">
+        <span class="stat-title" id="statTitle">Match stats</span>
+        <span class="stat-sub" id="statSub"></span>
       </div>
+      <div class="stat-rows" id="statRows"></div>
     </div>
 
-    <div class="win-moment" id="winMoment">
-      <div class="win-moment-inner">
-        <div class="win-eyebrow" id="winEyebrow"></div>
-        <div class="win-title" id="winTitle"></div>
-        <div class="win-score" id="winScore"></div>
+    <div class="momentum-card hidden" id="momentumCard">
+      <div class="momentum-head">
+        <span class="momentum-title" id="momentumTitle">Match momentum</span>
+        <span class="momentum-sub" id="momentumSub"></span>
       </div>
+      <canvas id="momentumCanvas" class="ov-momentum-canvas"></canvas>
     </div>
-  </div>
-
-  <div class="stat-card hidden" id="statCard">
-    <div class="stat-head">
-      <span class="stat-title" id="statTitle">Match stats</span>
-      <span class="stat-sub" id="statSub"></span>
-    </div>
-    <div class="stat-rows" id="statRows"></div>
-  </div>
   </div>
 
   <div class="sponsor-slate" id="sponsorSlate">
@@ -1374,6 +1490,7 @@
 
   <div class="quick-bar" id="quickBar">
     <button id="statBtn" type="button" title="Toggle stat card" aria-label="Toggle stat card">📊</button>
+    <button id="momentumBtn" type="button" title="Toggle momentum graph" aria-label="Toggle momentum graph">📈</button>
     <button id="slateBtn" type="button" title="Show sponsor slate" aria-label="Show sponsor slate">🎬</button>
     <button class="gear-btn" id="gearBtn" title="Customise overlay" aria-label="Customise overlay">⚙</button>
   </div>
@@ -1398,8 +1515,18 @@
         <option value="compact">Compact</option>
         <option value="ticker">Ticker (centered bar)</option>
       </select></label>
-    <label><span>Scale</span><input type="range" id="setScale" min="0.5" max="2" step="0.05" /><span
-        class="angle-value" id="scaleValue">100%</span></label>
+    <label><span>Scale</span><input type="range" id="setScale" min="0.5" max="2" step="0.05" /><span class="angle-value"
+        id="scaleValue">100%</span></label>
+    <label><span>Sponsor slate scale</span><input type="range" id="setSlateScale" min="0.5" max="2" step="0.05" /><span
+        class="angle-value" id="slateScaleValue">100%</span></label>
+    <label><span>Momentum scale</span><input type="range" id="setMomentumScale" min="0.5" max="2" step="0.05" /><span
+        class="angle-value" id="momentumScaleValue">100%</span></label>
+
+    <div class="section">Floating Buttons</div>
+    <label><span>Buttons opacity</span><input type="range" id="setQuickBarOpacity" min="0.1" max="1" step="0.05" /><span
+        class="angle-value" id="quickBarOpacityValue">40%</span></label>
+    <label><span>Buttons scale</span><input type="range" id="setQuickBarScale" min="0.5" max="2" step="0.05" /><span
+        class="angle-value" id="quickBarScaleValue">100%</span></label>
 
     <div class="section">Display</div>
     <label><span>Show server indicator</span><input type="checkbox" id="setShowServer" /></label>
@@ -1411,11 +1538,13 @@
     <label><span>Show sponsor strip</span><input type="checkbox" id="setShowSponsor" /></label>
     <label><span>Set / match win moments</span><input type="checkbox" id="setShowWinMoments" /></label>
     <label><span>Auto stat card at set end</span><input type="checkbox" id="setAutoStatCards" /></label>
+    <label><span>Auto momentum at set end</span><input type="checkbox" id="setAutoMomentumCards" /></label>
     <label><span>Sponsor slate at set end</span><input type="checkbox" id="setSlateOnSet" /></label>
     <label><span>Show QR code</span><input type="checkbox" id="setShowQr" /></label>
 
     <div class="section">Match timer</div>
-    <label><span>Set timer</span><input type="text" id="setTimerValue" placeholder="h:mm:ss, mm:ss or minutes" /></label>
+    <label><span>Set timer</span><input type="text" id="setTimerValue"
+        placeholder="h:mm:ss, mm:ss or minutes" /></label>
 
     <div class="section">Brand</div>
     <label><span>Brand text</span><input type="text" id="setBrandText" placeholder="Padel Push" /></label>
@@ -1437,8 +1566,8 @@
         <option value="tr">Top right</option>
         <option value="tl">Top left</option>
       </select></label>
-    <label><span>Size</span><input type="range" id="setQrSize" min="64" max="200" step="4" /><span
-        class="angle-value" id="qrSizeValue">96px</span></label>
+    <label><span>Size</span><input type="range" id="setQrSize" min="64" max="200" step="4" /><span class="angle-value"
+        id="qrSizeValue">96px</span></label>
 
     <div class="section">Theme</div>
     <label><span>Preset</span><select id="setThemePreset"></select></label>
@@ -1481,8 +1610,7 @@
 
   <script src="/app/js/qrcode.min.js"></script>
   <script>
-    (function ()
-    {
+    (function () {
       //AL.
       const isDebugCourt = location.hostname === "localhost" || location.hostname === "127.0.0.1";
       const debugCourt_revisionUrl = "https://qa.padelpush.co.za/r/bnrm";
@@ -1502,11 +1630,22 @@
         showSponsor: true,
         showWinMoments: true,
         autoStatCards: true,
+        autoMomentumCards: false,
         sponsorSlateOnSet: false,
         showQr: false,
         position: "tl",
         layout: "panel",
         scale: 1,
+        slateScale: 1,
+        momentumScale: 1,
+        quickBarOpacity: 0.4,
+        quickBarScale: 1,
+        dragOverlay: null,
+        dragSlate: null,
+        dragQr: null,
+        dragQuickBar: null,
+        dragSettings: null,
+        dragMomentum: null,
         themePreset: "padelpush",
         panel: "#000000",
         panel2: "#00002d",
@@ -1551,8 +1690,7 @@
       const POSITIONS = ["tl", "tr", "bl", "br"];
       const LAYOUTS = ["panel", "compact", "ticker"];
 
-      function clampNumber(value, min, max, fallback)
-      {
+      function clampNumber(value, min, max, fallback) {
         const num = Number(value);
         if (!Number.isFinite(num)) return fallback;
         return Math.min(max, Math.max(min, num));
@@ -1563,22 +1701,18 @@
         '<strong>Padel Push</strong>. Visit <strong>padelpush.co.za</strong> and join us on this court: ' +
         '<strong>{courtId}</strong>';
 
-      function getCourtIdFromPath()
-      {
+      function getCourtIdFromPath() {
         const segments = window.location.pathname.split("/").filter(Boolean);
         const last = segments.length ? segments[segments.length - 1] : "";
 
-        if (!last || last === "b" || last === "overlay.html")
-        {
+        if (!last || last === "b" || last === "overlay.html") {
           return null;
         }
 
-        try
-        {
+        try {
           return decodeURIComponent(last);
         }
-        catch (_err)
-        {
+        catch (_err) {
           return last;
         }
       }
@@ -1594,36 +1728,44 @@
       let lastHeadLabels = null;
       const lastCellValues = {};
 
-      function loadSettings()
-      {
-        try
-        {
+      function loadSettings() {
+        try {
           const raw = localStorage.getItem(storageKey);
-          if (raw)
-          {
+          if (raw) {
             settings = { ...DEFAULT_SETTINGS, ...JSON.parse(raw) };
           }
         }
         catch (_err) { /* keep defaults */ }
       }
 
-      function saveSettings()
-      {
-        try
-        {
+      function saveSettings() {
+        try {
           localStorage.setItem(storageKey, JSON.stringify(settings));
         }
         catch (_err) { /* storage unavailable */ }
       }
 
-      function normalizeSettings()
-      {
+      function normalizeSettings() {
         settings.position = POSITIONS.includes(settings.position) ? settings.position : DEFAULT_SETTINGS.position;
         settings.layout = LAYOUTS.includes(settings.layout) ? settings.layout : DEFAULT_SETTINGS.layout;
         settings.scale = clampNumber(settings.scale, 0.5, 2, 1);
+        settings.slateScale = clampNumber(settings.slateScale, 0.5, 2, 1);
+        settings.momentumScale = clampNumber(settings.momentumScale, 0.5, 2, 1);
+        settings.autoMomentumCards = Boolean(settings.autoMomentumCards);
+        settings.quickBarOpacity = clampNumber(settings.quickBarOpacity, 0.1, 1, 0.4);
+        settings.quickBarScale = clampNumber(settings.quickBarScale, 0.5, 2, 1);
         settings.qrSize = clampNumber(settings.qrSize, 64, 200, DEFAULT_SETTINGS.qrSize);
         settings.qrCorner = POSITIONS.includes(settings.qrCorner) ? settings.qrCorner : DEFAULT_SETTINGS.qrCorner;
         settings.themePreset = THEME_PRESETS[settings.themePreset] ? settings.themePreset : "custom";
+        ["dragOverlay", "dragSlate", "dragQr", "dragQuickBar", "dragSettings", "dragMomentum"].forEach((key) => {
+          const val = settings[key];
+          if (!val || typeof val !== "object" || !Number.isFinite(Number(val.x)) || !Number.isFinite(Number(val.y))) {
+            settings[key] = null;
+          }
+          else {
+            settings[key] = { x: Math.round(Number(val.x)), y: Math.round(Number(val.y)) };
+          }
+        });
         settings.sponsors = (Array.isArray(settings.sponsors) ? settings.sponsors : [])
           .map((item) => ({
             text: typeof item?.text === "string" ? item.text : "",
@@ -1633,15 +1775,12 @@
           .filter((item) => item.text.trim() || item.img.trim());
       }
 
-      function applyThemePreset(name)
-      {
+      function applyThemePreset(name) {
         const preset = THEME_PRESETS[name];
         if (!preset || name === "custom") return;
 
-        THEME_COLOR_KEYS.forEach((key) =>
-        {
-          if (preset[key] !== undefined)
-          {
+        THEME_COLOR_KEYS.forEach((key) => {
+          if (preset[key] !== undefined) {
             settings[key] = preset[key];
           }
         });
@@ -1657,52 +1796,49 @@
       const URL_SKIP_KEYS = new Set(["timerText", "timerOffset", "timerAnchor"]);
       const HEX_COLOR_KEYS = new Set(["panel", "panel2", "text", "teamA", "teamB"]);
 
-      function applyUrlOverrides()
-      {
+      function applyUrlOverrides() {
         let params;
-        try
-        {
+        try {
           params = new URLSearchParams(window.location.search);
         }
-        catch (_err)
-        {
+        catch (_err) {
           return;
         }
 
         // "theme" is applied first so explicit colour params can refine it.
         const theme = params.get("theme") || params.get("themePreset");
-        if (theme && THEME_PRESETS[theme])
-        {
+        if (theme && THEME_PRESETS[theme]) {
           applyThemePreset(theme);
         }
 
-        Object.keys(DEFAULT_SETTINGS).forEach((key) =>
-        {
+        Object.keys(DEFAULT_SETTINGS).forEach((key) => {
           if (URL_SKIP_KEYS.has(key) || !params.has(key)) return;
 
           const raw = params.get(key);
           const fallback = DEFAULT_SETTINGS[key];
 
-          if (typeof fallback === "boolean")
-          {
+          if (typeof fallback === "boolean") {
             settings[key] = !/^(0|false|no|off)$/i.test(raw.trim());
           }
-          else if (typeof fallback === "number")
-          {
+          else if (typeof fallback === "number") {
             const num = Number(raw);
             if (Number.isFinite(num)) settings[key] = num;
           }
-          else if (Array.isArray(fallback))
-          {
-            try
-            {
+          else if (Array.isArray(fallback)) {
+            try {
               const parsed = JSON.parse(raw);
               if (Array.isArray(parsed)) settings[key] = parsed;
             }
             catch (_err) { /* malformed JSON param */ }
           }
-          else
-          {
+          else if (fallback === null || typeof fallback === "object") {
+            try {
+              const parsed = JSON.parse(raw);
+              if (parsed && typeof parsed === "object") settings[key] = parsed;
+            }
+            catch (_err) { /* malformed JSON param */ }
+          }
+          else {
             // Allow bare hex colours ("b7f000") so the URL reads cleanly.
             settings[key] = HEX_COLOR_KEYS.has(key) && /^[0-9a-f]{6}$/i.test(raw)
               ? "#" + raw
@@ -1711,18 +1847,16 @@
         });
       }
 
-      function buildShareUrl()
-      {
+      function buildShareUrl() {
         const params = new URLSearchParams();
 
-        Object.keys(DEFAULT_SETTINGS).forEach((key) =>
-        {
+        Object.keys(DEFAULT_SETTINGS).forEach((key) => {
           if (URL_SKIP_KEYS.has(key)) return;
 
           const value = settings[key];
           if (JSON.stringify(value) === JSON.stringify(DEFAULT_SETTINGS[key])) return;
 
-          params.set(key, Array.isArray(value) ? JSON.stringify(value) : String(value));
+          params.set(key, (typeof value === "object" && value !== null) || Array.isArray(value) ? JSON.stringify(value) : String(value));
         });
 
         const base = window.location.origin + "/b/" + encodeURIComponent(courtId || "");
@@ -1730,8 +1864,7 @@
         return query ? base + "?" + query : base;
       }
 
-      function hexToPanelRgba(hex)
-      {
+      function hexToPanelRgba(hex) {
         const value = /^#([0-9a-f]{6})$/i.exec(hex || "");
         if (!value) return "rgba(0, 0, 0, 0.82)";
         const int = parseInt(value[1], 16);
@@ -1743,13 +1876,29 @@
 
       // Compact and ticker layouts trade the header/player detail for a slim
       // footprint regardless of the individual display toggles.
-      function isSlimLayout()
-      {
+      function isSlimLayout() {
         return settings.layout === "compact" || settings.layout === "ticker";
       }
 
-      function applySettings()
-      {
+      function applyDragPosition(el, pos) {
+        if (!el) return;
+        if (pos && typeof pos.x === "number" && typeof pos.y === "number") {
+          el.style.left = pos.x + "px";
+          el.style.top = pos.y + "px";
+          el.style.right = "auto";
+          el.style.bottom = "auto";
+          el.style.transform = "none";
+        }
+        else {
+          el.style.left = "";
+          el.style.top = "";
+          el.style.right = "";
+          el.style.bottom = "";
+          el.style.transform = "";
+        }
+      }
+
+      function applySettings() {
         const root = document.documentElement.style;
         root.setProperty("--ov-panel", hexToPanelRgba(settings.panel));
         root.setProperty("--ov-panel-2", hexToPanelRgba(settings.panel2));
@@ -1758,10 +1907,21 @@
         root.setProperty("--ov-teamA", settings.teamA);
         root.setProperty("--ov-teamB", settings.teamB);
         root.setProperty("--ov-scale", String(clampNumber(settings.scale, 0.5, 2, 1)));
+        root.setProperty("--ov-slate-scale", String(clampNumber(settings.slateScale, 0.5, 2, 1)));
+        root.setProperty("--ov-momentum-scale", String(clampNumber(settings.momentumScale, 0.5, 2, 1)));
+        root.setProperty("--ov-quickbar-opacity", String(clampNumber(settings.quickBarOpacity, 0.1, 1, 0.4)));
+        root.setProperty("--ov-quickbar-scale", String(clampNumber(settings.quickBarScale, 0.5, 2, 1)));
 
         const anchor = document.getElementById("overlayAnchor");
         anchor.className = "overlay-anchor pos-" + settings.position +
           (settings.layout !== "panel" ? " layout-" + settings.layout : "");
+
+        applyDragPosition(document.getElementById("overlayAnchor"), settings.dragOverlay);
+        applyDragPosition(document.getElementById("sponsorSlate"), settings.dragSlate);
+        applyDragPosition(document.getElementById("qrBug"), settings.dragQr);
+        applyDragPosition(document.getElementById("quickBar"), settings.dragQuickBar);
+        applyDragPosition(document.getElementById("settingsPanel"), settings.dragSettings);
+        applyDragPosition(document.getElementById("momentumCard"), settings.dragMomentum);
 
         applyLogo("logoA", settings.logoA);
         applyLogo("logoB", settings.logoB);
@@ -1775,24 +1935,19 @@
         updateSponsor();
         renderQrBug();
 
-        if (latestScore)
-        {
+        if (latestScore) {
           render(latestScore);
         }
-        else
-        {
+        else {
           syncNameColumn();
         }
       }
 
-      function safeHttpUrl(url)
-      {
+      function safeHttpUrl(url) {
         if (!url) return "";
-        try
-        {
+        try {
           const parsed = new URL(url, window.location.origin);
-          if (parsed.protocol === "https:" || parsed.protocol === "http:")
-          {
+          if (parsed.protocol === "https:" || parsed.protocol === "http:") {
             return parsed.href;
           }
         }
@@ -1800,16 +1955,14 @@
         return "";
       }
 
-      function applyBrand()
-      {
+      function applyBrand() {
         document.getElementById("brandName").textContent = settings.brandText || "Padel Push";
         document.getElementById("brandLogo").src = safeHttpUrl(settings.brandLogo) || "/app/media/img/logo.svg";
       }
 
       // ---------- Match timer ----------
 
-      function formatTimer(totalSeconds)
-      {
+      function formatTimer(totalSeconds) {
         const hours = Math.floor(totalSeconds / 3600);
         const minutes = Math.floor((totalSeconds % 3600) / 60);
         const seconds = totalSeconds % 60;
@@ -1819,26 +1972,22 @@
       }
 
       // Accepts "h:mm:ss", "mm:ss" or a plain number of minutes; returns seconds.
-      function parseTimerInput(raw)
-      {
+      function parseTimerInput(raw) {
         const value = (raw || "").trim();
         if (!value) return 0;
         if (/^\d+$/.test(value)) return parseInt(value, 10) * 60;
 
         const parts = value.split(":").map((part) => part.trim());
-        if (parts.length < 2 || parts.length > 3 || parts.some((part) => !/^\d+$/.test(part)))
-        {
+        if (parts.length < 2 || parts.length > 3 || parts.some((part) => !/^\d+$/.test(part))) {
           return 0;
         }
 
         return parts.reduce((total, part) => total * 60 + parseInt(part, 10), 0);
       }
 
-      function tickTimer()
-      {
+      function tickTimer() {
         const el = document.getElementById("matchTimer");
-        if (settings.showTimer === false)
-        {
+        if (settings.showTimer === false) {
           el.style.display = "none";
           return;
         }
@@ -1855,30 +2004,25 @@
       let sponsorRotationTimer = null;
       let sponsorIndex = 0;
 
-      function activeSponsors()
-      {
+      function activeSponsors() {
         return (Array.isArray(settings.sponsors) ? settings.sponsors : [])
           .filter((item) => item && ((item.text && item.text.trim()) || safeHttpUrl(item.img)));
       }
 
-      function sponsorItemHtml(item)
-      {
+      function sponsorItemHtml(item) {
         const imgUrl = safeHttpUrl(item.img);
         const img = imgUrl ? '<img src="' + imgUrl.replace(/"/g, "&quot;") + '" alt="" /> ' : "";
         return img + (item.text || "");
       }
 
-      function defaultSponsorHtml()
-      {
+      function defaultSponsorHtml() {
         const displayCourtId = ((latestScore && latestScore.courtId) || courtId || "").toUpperCase();
         return (settings.sponsorHtml || DEFAULT_SPONSOR_HTML).split("{courtId}").join(displayCourtId);
       }
 
-      function currentSponsorHtml()
-      {
+      function currentSponsorHtml() {
         const list = activeSponsors();
-        if (!list.length)
-        {
+        if (!list.length) {
           return defaultSponsorHtml();
         }
 
@@ -1886,13 +2030,11 @@
         return sponsorItemHtml(list[sponsorIndex]);
       }
 
-      function updateSponsor()
-      {
+      function updateSponsor() {
         const strip = document.getElementById("sponsorStrip");
         const show = settings.showSponsor !== false;
         strip.classList.toggle("hidden", !show);
-        if (!show)
-        {
+        if (!show) {
           clearTimeout(sponsorRotationTimer);
           sponsorRotationTimer = null;
           return;
@@ -1900,15 +2042,13 @@
 
         const html = currentSponsorHtml();
 
-        if (html !== lastSponsorHtml)
-        {
+        if (html !== lastSponsorHtml) {
           lastSponsorHtml = html;
           document.getElementById("sponsorItemA").innerHTML = html;
           document.getElementById("sponsorItemB").innerHTML = html;
 
           // Images load async and change the strip's width — re-measure as they arrive.
-          document.querySelectorAll("#sponsorItemA img").forEach((img) =>
-          {
+          document.querySelectorAll("#sponsorItemA img").forEach((img) => {
             img.addEventListener("load", measureSponsor, { once: true });
           });
         }
@@ -1917,11 +2057,9 @@
         scheduleSponsorRotation();
       }
 
-      function scheduleSponsorRotation()
-      {
+      function scheduleSponsorRotation() {
         const list = activeSponsors();
-        if (settings.showSponsor === false || list.length < 2)
-        {
+        if (settings.showSponsor === false || list.length < 2) {
           clearTimeout(sponsorRotationTimer);
           sponsorRotationTimer = null;
           return;
@@ -1930,13 +2068,11 @@
         if (sponsorRotationTimer) return;
 
         const dwellMs = clampNumber(list[sponsorIndex % list.length].seconds, 3, 600, 8) * 1000;
-        sponsorRotationTimer = setTimeout(() =>
-        {
+        sponsorRotationTimer = setTimeout(() => {
           const track = document.getElementById("sponsorTrack");
           track.classList.add("fading");
 
-          setTimeout(() =>
-          {
+          setTimeout(() => {
             sponsorIndex = (sponsorIndex + 1) % Math.max(activeSponsors().length, 1);
             sponsorRotationTimer = null;
             updateSponsor();
@@ -1947,8 +2083,7 @@
 
       // Settings edits can change the list or dwell times mid-cycle; drop the
       // pending timer so the next updateSponsor() reschedules from scratch.
-      function restartSponsorRotation()
-      {
+      function restartSponsorRotation() {
         clearTimeout(sponsorRotationTimer);
         sponsorRotationTimer = null;
         updateSponsor();
@@ -1959,20 +2094,17 @@
       let slateTimer = null;
       let slateIndex = 0;
 
-      function showSponsorSlate(durationMs)
-      {
+      function showSponsorSlate(durationMs) {
         const slate = document.getElementById("sponsorSlate");
         const body = document.getElementById("slateBody");
         const list = activeSponsors();
 
-        if (list.length)
-        {
+        if (list.length) {
           slateIndex = slateIndex % list.length;
           body.innerHTML = sponsorItemHtml(list[slateIndex]);
           slateIndex++;
         }
-        else
-        {
+        else {
           body.innerHTML = defaultSponsorHtml();
         }
 
@@ -1985,8 +2117,7 @@
 
       let lastQrKey = null;
 
-      function renderQrBug()
-      {
+      function renderQrBug() {
         const bug = document.getElementById("qrBug");
         const show = settings.showQr === true && Boolean(window.QRCode);
         const corner = POSITIONS.includes(settings.qrCorner) ? settings.qrCorner : "br";
@@ -2010,12 +2141,11 @@
           height: size,
           colorDark: "#000000",
           colorLight: "#ffffff",
-          correctLevel: window.QRCode.CorrectLevel.M
+          correctLevel: window.QRCode.CorrectLevel.H
         });
       }
 
-      function measureSponsor()
-      {
+      function measureSponsor() {
         const strip = document.getElementById("sponsorStrip");
         if (strip.classList.contains("hidden")) return;
 
@@ -2035,60 +2165,51 @@
       // rows and the header share one pinned value so the score columns stay
       // aligned. The original 10.5em acts as a floor so short names don't
       // shrink the panel below its usual size.
-      function syncNameColumn()
-      {
+      function syncNameColumn() {
         const overlay = document.getElementById("overlayBox");
 
         // Let each row size to its own content, measure, then pin the widest.
         overlay.style.setProperty("--ov-name-col", "max-content");
 
         let widest = parseFloat(getComputedStyle(overlay).fontSize) * 10.5 || 0;
-        document.querySelectorAll(".team-row .team-id").forEach((el) =>
-        {
+        document.querySelectorAll(".team-row .team-id").forEach((el) => {
           widest = Math.max(widest, el.getBoundingClientRect().width);
         });
 
         overlay.style.setProperty("--ov-name-col", Math.ceil(widest) + "px");
       }
 
-      function applyLogo(id, url)
-      {
+      function applyLogo(id, url) {
         const img = document.getElementById(id);
         let safeUrl = "";
 
-        if (url)
-        {
-          try
-          {
+        if (url) {
+          try {
             const parsed = new URL(url, window.location.origin);
-            if (parsed.protocol === "https:" || parsed.protocol === "http:")
-            {
+            if (parsed.protocol === "https:" || parsed.protocol === "http:") {
               safeUrl = parsed.href;
             }
           }
           catch (_err) { /* invalid URL */ }
         }
 
-        if (safeUrl)
-        {
+        if (safeUrl) {
           img.src = safeUrl;
           img.classList.add("visible");
         }
-        else
-        {
+        else {
           img.removeAttribute("src");
           img.classList.remove("visible");
         }
       }
 
-      function setCells(containerId, cells)
-      {
-        const container = document.getElementById(containerId);
+      function setCells(containerId, cells) {
+        const container = document.getElementById("containerId" === containerId ? "" : containerId);
+        if (!container) return;
         const previous = lastCellValues[containerId] || null;
         container.textContent = "";
 
-        cells.forEach((cell, index) =>
-        {
+        cells.forEach((cell, index) => {
           const isNew = !previous || index >= previous.length;
           const changed = !isNew && previous[index] !== String(cell.value);
 
@@ -2105,13 +2226,11 @@
         lastCellValues[containerId] = cells.map((cell) => String(cell.value));
       }
 
-      function setHeadCells(columns)
-      {
+      function setHeadCells(columns) {
         const container = document.getElementById("cellsHead");
         container.textContent = "";
 
-        columns.forEach((column, index) =>
-        {
+        columns.forEach((column, index) => {
           const div = document.createElement("div");
           div.className = "cell" +
             (column.highlight ? " points" : "") +
@@ -2123,33 +2242,28 @@
         lastHeadLabels = columns.map((column) => column.label);
       }
 
-      function getPlayerName(slot, data)
-      {
+      function getPlayerName(slot, data) {
         return settings["player" + slot] || data.playerNames[slot] || "";
       }
 
       // Columns are identical for both teams, so a single build keeps them aligned.
-      function buildColumns(data)
-      {
+      function buildColumns(data) {
         const columns = [];
         const mode = data.scoringMode || "standard";
 
-        if (mode === "standard")
-        {
-          (data.completedSets || []).forEach((set, index) =>
-          {
+        if (mode === "standard") {
+          (data.completedSets || []).forEach((set, index) => {
             const a = Number(set.A) || 0;
             const b = Number(set.B) || 0;
             columns.push({
               label: "S" + (index + 1),
-              A: { value: a, won: a > b, lost: b > a},
+              A: { value: a, won: a > b, lost: b > a },
               B: { value: b, won: b > a, lost: a > b }
             });
           });
 
           const currentIndex = (data.completedSets || []).length + 1;
-          if (!data.matchComplete)
-          {
+          if (!data.matchComplete) {
             columns.push({
               label: "S" + currentIndex,
               A: { value: data.teams.A.games },
@@ -2158,8 +2272,7 @@
           }
         }
 
-        if (mode !== "standard" || !data.matchComplete)
-        {
+        if (mode !== "standard" || !data.matchComplete) {
           const label = mode === "standard" && data.inTiebreak ? "TB" : "PTS";
           columns.push({
             label,
@@ -2179,28 +2292,24 @@
       let adWasActive = false;
       let cancelledAdsInGame = 0;
 
-      function trackAdvantage(data)
-      {
+      function trackAdvantage(data) {
         const gameKey = [
           (data.completedSets || []).length,
           data.teams.A.games,
           data.teams.B.games
         ].join("|");
 
-        if (gameKey !== sawAdGameKey)
-        {
+        if (gameKey !== sawAdGameKey) {
           sawAdGameKey = gameKey;
           adWasActive = false;
           cancelledAdsInGame = 0;
         }
 
         const hasAd = String(data.teams.A.pointsDisplay) === "Ad" || String(data.teams.B.pointsDisplay) === "Ad";
-        if (hasAd)
-        {
+        if (hasAd) {
           adWasActive = true;
         }
-        else if (adWasActive)
-        {
+        else if (adWasActive) {
           adWasActive = false;
           cancelledAdsInGame++;
         }
@@ -2208,8 +2317,7 @@
 
       // Derives set / golden / silver point purely from the score payload.
       // No match-point badge: the sets required to win aren't knowable here.
-      function computeBadge(data)
-      {
+      function computeBadge(data) {
         if ((data.scoringMode || "standard") !== "standard" || data.matchComplete) return null;
 
         const pts = {
@@ -2221,11 +2329,9 @@
           B: Number(data.teams.B.games) || 0
         };
 
-        function gamePoint(team)
-        {
+        function gamePoint(team) {
           const other = team === "A" ? "B" : "A";
-          if (data.inTiebreak)
-          {
+          if (data.inTiebreak) {
             const p = Number(pts[team]) || 0;
             const po = Number(pts[other]) || 0;
             return p >= 6 && p > po;
@@ -2234,30 +2340,26 @@
           return pts[team] === "40" && pts[other] !== "40" && pts[other] !== "Ad";
         }
 
-        function setPoint(team)
-        {
+        function setPoint(team) {
           if (!gamePoint(team)) return false;
           if (data.inTiebreak) return true;
           const other = team === "A" ? "B" : "A";
           return games[team] >= 5 && games[team] - games[other] >= 1;
         }
 
-        for (const team of ["A", "B"])
-        {
+        for (const team of ["A", "B"]) {
           if (setPoint(team)) return { text: "Set point", cls: "team-" + team };
         }
 
         const deuceMode = (data.scoringOptions && data.scoringOptions.deuceMode) || "standard";
         const atDeuce = !data.inTiebreak && pts.A === "40" && pts.B === "40";
-        if (atDeuce && deuceMode === "golden")
-        {
+        if (atDeuce && deuceMode === "golden") {
           return { text: "Golden point", cls: "gold" };
         }
         // Silver decides after one deuce cycle, star after two. Prefer the
         // backend's deuceCycles; infer from observed cancelled advantages
         // when the field isn't in the payload yet.
-        if (atDeuce && (deuceMode === "silver" || deuceMode === "star"))
-        {
+        if (atDeuce && (deuceMode === "silver" || deuceMode === "star")) {
           const cyclesKnown = data.deuceCycles !== undefined && data.deuceCycles !== null;
           const cycles = cyclesKnown ? (Number(data.deuceCycles) || 0) : cancelledAdsInGame;
           if (deuceMode === "silver" && cycles >= 1) return { text: "Silver point", cls: "silver" };
@@ -2274,16 +2376,14 @@
       let statCardPinned = false;
       let statCardTimer = null;
       let statRefreshTimer = null;
+      let momentumPulseAnimationFrame = null;
 
-      async function fetchStats(force)
-      {
-        if (!isDebugCourt && !courtId)
-        {
+      async function fetchStats(force) {
+        if (!isDebugCourt && !courtId) {
           throw new Error("No court specified.");
         }
 
-        if (!force && statsCache && Date.now() - statsCacheAt < 8000)
-        {
+        if (!force && statsCache && Date.now() - statsCacheAt < 8000) {
           return statsCache;
         }
 
@@ -2294,15 +2394,13 @@
         return data;
       }
 
-      function teamDisplayName(team)
-      {
+      function teamDisplayName(team) {
         return settings["name" + team] ||
           (latestScore && latestScore.teamNames && latestScore.teamNames[team]) ||
           ("Team " + team);
       }
 
-      function statRowHtml(label, valueA, valueB, weightA, weightB)
-      {
+      function statRowHtml(label, valueA, valueB, weightA, weightB) {
         const total = (Number(weightA) || 0) + (Number(weightB) || 0);
         const pctA = total > 0 ? Math.round((weightA / total) * 98) : 49;
         const pctB = total > 0 ? 98 - pctA : 49;
@@ -2315,10 +2413,230 @@
           '</div>';
       }
 
+      function renderMomentumGraph(data) {
+        const canvas = document.getElementById("momentumCanvas");
+        if (!canvas) return;
+
+        if (momentumPulseAnimationFrame) {
+          cancelAnimationFrame(momentumPulseAnimationFrame);
+          momentumPulseAnimationFrame = null;
+        }
+
+        const subEl = document.getElementById("momentumSub");
+        if (subEl) {
+          subEl.textContent = teamDisplayName("A") + " vs " + teamDisplayName("B");
+        }
+
+        const colourA = settings.teamA || "#b7f000";
+        const colourB = settings.teamB || "#27d9ff";
+        const setPointMarkers = data?.setPointMarkers || [];
+        const momentumTimeline = data?.momentumTimeline || null;
+        const gameMarkers = data?.advancedStats?.gameMarkers || [];
+        const pointHistory = data?.pointHistory || [];
+
+        const CANVAS_FALLBACK_WIDTH = 300;
+        const FILL_OPACITY = "55";
+
+        const MOMENTUM_CLAMP_MIN = -100;
+        const MOMENTUM_CLAMP_MAX = 100;
+
+        const hasLiveMomentum = Array.isArray(momentumTimeline) &&
+          momentumTimeline.length > 0 &&
+          momentumTimeline.length === pointHistory.length;
+
+        const values = (pointHistory && pointHistory.length > 0)
+          ? (hasLiveMomentum
+            ? [0, ...momentumTimeline.map((value) => {
+              const numeric = Number(value);
+              const safeNumeric = Number.isFinite(numeric) ? numeric : 0;
+              return Math.max(MOMENTUM_CLAMP_MIN, Math.min(MOMENTUM_CLAMP_MAX, safeNumeric));
+            })]
+            : (() => {
+              const cumulative = [0];
+              for (const p of pointHistory)
+                cumulative.push(cumulative[cumulative.length - 1] + (p === "A" ? 1 : -1));
+              return cumulative;
+            })())
+          : [0, 0];
+
+        const smoothedValues = values.map((v, i, arr) => {
+          if (i === 0 || i === arr.length - 1) return v;
+          return (arr[i - 1] + arr[i] * 2 + arr[i + 1]) / 4;
+        });
+
+        const maxVal = hasLiveMomentum ? MOMENTUM_CLAMP_MAX : Math.max(...values.map(Math.abs), 1);
+
+        const drawGraphFrame = (timestamp) => {
+          if (!canvas.isConnected || canvas.classList.contains("hidden") || canvas.parentElement?.classList.contains("hidden")) return;
+
+          const dpr = window.devicePixelRatio || 1;
+          const cssW = canvas.offsetWidth || canvas.parentElement?.offsetWidth || CANVAS_FALLBACK_WIDTH;
+          const cssH = 90;
+          canvas.width = cssW * dpr;
+          canvas.height = cssH * dpr;
+          canvas.style.height = cssH + "px";
+
+          const ctx = canvas.getContext("2d");
+          ctx.setTransform(1, 0, 0, 1, 0, 0);
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+          const W = cssW;
+          const H = cssH;
+          const padX = 8;
+          const padY = 8;
+          const midY = H / 2;
+          const axisColour = "rgba(255, 255, 255, 0.25)";
+
+          // Baseline
+          ctx.beginPath();
+          ctx.moveTo(padX, midY);
+          ctx.lineTo(W - padX, midY);
+          ctx.strokeStyle = axisColour;
+          ctx.lineWidth = 1;
+          ctx.stroke();
+
+          const toX = (i) => padX + (i / Math.max(values.length - 1, 1)) * (W - padX * 2);
+          const toY = (v) => midY - (v / maxVal) * (midY - padY);
+
+          // Set point markers
+          const markerIndices = Array.isArray(setPointMarkers)
+            ? [...new Set(setPointMarkers.filter((idx) => Number.isInteger(idx) && idx > 0 && idx < values.length))]
+            : [];
+
+          markerIndices.forEach((index) => {
+            const x = toX(index);
+            ctx.beginPath();
+            ctx.moveTo(x, padY - 2);
+            ctx.lineTo(x, H - padY + 2);
+            ctx.strokeStyle = axisColour;
+            ctx.lineWidth = 1;
+            ctx.stroke();
+          });
+
+          // Game markers
+          const completedGameMarkers = Array.isArray(gameMarkers)
+            ? [...new Set(gameMarkers.filter((idx) => Number.isInteger(idx) && idx > 0 && idx < values.length))]
+              .filter((idx) => !markerIndices.includes(idx))
+            : [];
+
+          completedGameMarkers.forEach((index) => {
+            const x = toX(index);
+            const radius = 1.5;
+            ctx.beginPath();
+            ctx.arc(x, midY, radius, 0, Math.PI * 2);
+            ctx.fillStyle = axisColour;
+            ctx.fill();
+          });
+
+          const points = smoothedValues.map((v, i) => ({ x: toX(i), y: toY(v) }));
+
+          const traceQuadraticPath = (target, pts, moveToStart = true) => {
+            if (!pts || pts.length === 0) return;
+            if (moveToStart) target.moveTo(pts[0].x, pts[0].y);
+            if (pts.length === 1) return;
+            if (pts.length === 2) {
+              target.lineTo(pts[1].x, pts[1].y);
+              return;
+            }
+            for (let i = 1; i < pts.length - 1; i++) {
+              const mx = (pts[i].x + pts[i + 1].x) / 2;
+              const my = (pts[i].y + pts[i + 1].y) / 2;
+              target.quadraticCurveTo(pts[i].x, pts[i].y, mx, my);
+            }
+            const last = pts.length - 1;
+            target.quadraticCurveTo(pts[last - 1].x, pts[last - 1].y, pts[last].x, pts[last].y);
+          };
+
+          if (pointHistory.length > 0) {
+            // Fill above (Team A)
+            const fillAbove = new Path2D();
+            fillAbove.moveTo(points[0].x, midY);
+            fillAbove.lineTo(points[0].x, points[0].y);
+            traceQuadraticPath(fillAbove, points, false);
+            fillAbove.lineTo(points[points.length - 1].x, midY);
+            fillAbove.closePath();
+
+            ctx.save();
+            ctx.beginPath();
+            ctx.rect(0, 0, W, midY);
+            ctx.clip();
+            ctx.fillStyle = colourA + FILL_OPACITY;
+            ctx.fill(fillAbove);
+            ctx.restore();
+
+            // Fill below (Team B)
+            ctx.save();
+            ctx.beginPath();
+            ctx.rect(0, midY, W, H - midY);
+            ctx.clip();
+            ctx.fillStyle = colourB + FILL_OPACITY;
+            ctx.fill(fillAbove);
+            ctx.restore();
+
+            // Stroke Team A
+            ctx.lineWidth = 2;
+            ctx.save();
+            ctx.beginPath();
+            ctx.rect(0, 0, W, midY);
+            ctx.clip();
+            ctx.beginPath();
+            traceQuadraticPath(ctx, points);
+            ctx.strokeStyle = colourA;
+            ctx.stroke();
+            ctx.restore();
+
+            // Stroke Team B
+            ctx.save();
+            ctx.beginPath();
+            ctx.rect(0, midY, W, H - midY);
+            ctx.clip();
+            ctx.beginPath();
+            traceQuadraticPath(ctx, points);
+            ctx.strokeStyle = colourB;
+            ctx.stroke();
+            ctx.restore();
+
+            // Pulsing end dot
+            const finalMomentum = values[values.length - 1];
+            const finalColour = finalMomentum > 0 ? colourA : (finalMomentum < 0 ? colourB : "#ffffff");
+            const lastPt = points[points.length - 1];
+            const pulseWave = (Math.sin((timestamp || performance.now()) / 320) + 1) / 2;
+            const pulseRadius = 3.5 + pulseWave * 2.5;
+            const pulseAlpha = 0.18 + pulseWave * 0.22;
+
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(lastPt.x, lastPt.y, pulseRadius, 0, Math.PI * 2);
+            ctx.strokeStyle = finalColour;
+            ctx.lineWidth = 1.2;
+            ctx.globalAlpha = pulseAlpha;
+            ctx.stroke();
+            ctx.restore();
+
+            ctx.beginPath();
+            ctx.arc(lastPt.x, lastPt.y, 2.8, 0, Math.PI * 2);
+            ctx.fillStyle = finalColour;
+            ctx.fill();
+          }
+          else {
+            ctx.fillStyle = "rgba(255, 255, 255, 0.45)";
+            ctx.font = "600 11px system-ui, sans-serif";
+            ctx.textAlign = "center";
+            ctx.fillText("No point history recorded yet", W / 2, midY - 8);
+          }
+
+          if (canvas.isConnected && !canvas.parentElement?.classList.contains("hidden")) {
+            momentumPulseAnimationFrame = requestAnimationFrame(drawGraphFrame);
+          }
+        };
+
+        momentumPulseAnimationFrame = requestAnimationFrame(drawGraphFrame);
+      }
+
       // Only fixed labels and numbers derived from the payload go through
       // innerHTML here; anything user-editable (team names) uses textContent.
-      function renderStatCard(data)
-      {
+      function renderStatCard(data) {
         const stats = (data && data.advancedStats) || {};
         const teams = stats.teamStats || { A: {}, B: {} };
         const serve = stats.servePlayerStats || {};
@@ -2328,8 +2646,7 @@
 
         subEl.textContent = teamDisplayName("A") + " vs " + teamDisplayName("B");
 
-        if (!match.totalPoints)
-        {
+        if (!match.totalPoints) {
           rowsEl.innerHTML = '<div class="stat-empty">No points played yet.</div>';
           return;
         }
@@ -2343,8 +2660,7 @@
         const servedB = (Number(serve.B1?.pointsServed) || 0) + (Number(serve.B2?.pointsServed) || 0);
         const serveWonA = (Number(serve.A1?.pointsWonOnServe) || 0) + (Number(serve.A2?.pointsWonOnServe) || 0);
         const serveWonB = (Number(serve.B1?.pointsWonOnServe) || 0) + (Number(serve.B2?.pointsWonOnServe) || 0);
-        if (servedA || servedB)
-        {
+        if (servedA || servedB) {
           const pctA = servedA ? Math.round((serveWonA / servedA) * 100) + "%" : "–";
           const pctB = servedB ? Math.round((serveWonB / servedB) * 100) + "%" : "–";
           rows.push(statRowHtml("Won on serve", pctA, pctB,
@@ -2353,8 +2669,7 @@
 
         const bpOppA = Number(teams.A.breakPointConversionOpportunities) || 0;
         const bpOppB = Number(teams.B.breakPointConversionOpportunities) || 0;
-        if (bpOppA || bpOppB)
-        {
+        if (bpOppA || bpOppB) {
           const bpWonA = Number(teams.A.breakPointConversions) || 0;
           const bpWonB = Number(teams.B.breakPointConversions) || 0;
           rows.push(statRowHtml("Break points", bpWonA + "/" + bpOppA, bpWonB + "/" + bpOppB, bpWonA, bpWonB));
@@ -2362,20 +2677,17 @@
 
         const streakA = Number(teams.A.longestScoringStreak) || 0;
         const streakB = Number(teams.B.longestScoringStreak) || 0;
-        if (streakA > 1 || streakB > 1)
-        {
+        if (streakA > 1 || streakB > 1) {
           rows.push(statRowHtml("Longest streak", streakA, streakB, streakA, streakB));
         }
 
-        if (Number(match.goldenPointsPlayed) > 0)
-        {
+        if (Number(match.goldenPointsPlayed) > 0) {
           const goldA = Number(teams.A.goldenPointsWon) || 0;
           const goldB = Number(teams.B.goldenPointsWon) || 0;
           rows.push(statRowHtml("Golden points", goldA, goldB, goldA, goldB));
         }
 
-        if (Number(match.deuceGames) > 0)
-        {
+        if (Number(match.deuceGames) > 0) {
           const deuceA = Number(teams.A.gamesWonAfterDeuce) || 0;
           const deuceB = Number(teams.B.gamesWonAfterDeuce) || 0;
           rows.push(statRowHtml("Deuce games won", deuceA, deuceB, deuceA, deuceB));
@@ -2384,56 +2696,45 @@
         rowsEl.innerHTML = rows.join("");
       }
 
-      async function showStatCard(options)
-      {
+      async function showStatCard(options) {
         const { durationMs = null, pin = false } = options || {};
         const card = document.getElementById("statCard");
         card.classList.remove("hidden");
 
-        if (!statsCache)
-        {
+        if (!statsCache) {
           document.getElementById("statRows").innerHTML = '<div class="stat-empty">Loading stats…</div>';
         }
 
-        try
-        {
+        try {
           renderStatCard(await fetchStats(true));
         }
-        catch (_err)
-        {
-          if (statsCache)
-          {
+        catch (_err) {
+          if (statsCache) {
             renderStatCard(statsCache);
           }
-          else
-          {
+          else {
             document.getElementById("statRows").innerHTML = '<div class="stat-empty">Stats unavailable.</div>';
           }
         }
 
         clearTimeout(statCardTimer);
-        if (pin)
-        {
+        if (pin) {
           statCardPinned = true;
           document.getElementById("statBtn").classList.add("active");
           clearInterval(statRefreshTimer);
-          statRefreshTimer = setInterval(async () =>
-          {
+          statRefreshTimer = setInterval(async () => {
             try { renderStatCard(await fetchStats(true)); }
             catch (_err) { /* keep the last rendered stats */ }
           }, 15000);
         }
-        else if (durationMs)
-        {
-          statCardTimer = setTimeout(() =>
-          {
+        else if (durationMs) {
+          statCardTimer = setTimeout(() => {
             if (!statCardPinned) hideStatCard();
           }, durationMs);
         }
       }
 
-      function hideStatCard()
-      {
+      function hideStatCard() {
         document.getElementById("statCard").classList.add("hidden");
         document.getElementById("statBtn").classList.remove("active");
         statCardPinned = false;
@@ -2442,14 +2743,72 @@
         statRefreshTimer = null;
       }
 
+      // ---------- Momentum card ----------
+
+      let momentumCardTimer = null;
+      let momentumRefreshTimer = null;
+      let momentumCardPinned = false;
+
+      async function showMomentumCard(options) {
+        const { durationMs = null, pin = false } = options || {};
+        const card = document.getElementById("momentumCard");
+        const subEl = document.getElementById("momentumSub");
+        if (subEl) subEl.textContent = teamDisplayName("A") + " vs " + teamDisplayName("B");
+
+        let stats = null;
+        try {
+          stats = await fetchStats(true);
+        }
+        catch (_err) {
+          if (statsCache) {
+            stats = statsCache;
+          }
+        }
+
+        if (!stats) {
+          return;
+        }
+
+        renderMomentumGraph(stats);
+        card.classList.remove("hidden");
+
+        clearTimeout(momentumCardTimer);
+        if (pin) {
+          momentumCardPinned = true;
+          document.getElementById("momentumBtn").classList.add("active");
+          clearInterval(momentumRefreshTimer);
+          momentumRefreshTimer = setInterval(async () => {
+            try { renderMomentumGraph(await fetchStats(true)); }
+            catch (_err) { /* keep last rendered */ }
+          }, 15000);
+        }
+        else if (durationMs) {
+          momentumCardTimer = setTimeout(() => {
+            if (!momentumCardPinned) hideMomentumCard();
+          }, durationMs);
+        }
+      }
+
+      function hideMomentumCard() {
+        document.getElementById("momentumCard").classList.add("hidden");
+        document.getElementById("momentumBtn").classList.remove("active");
+        momentumCardPinned = false;
+        clearTimeout(momentumCardTimer);
+        clearInterval(momentumRefreshTimer);
+        momentumRefreshTimer = null;
+        if (momentumPulseAnimationFrame) {
+          cancelAnimationFrame(momentumPulseAnimationFrame);
+          momentumPulseAnimationFrame = null;
+        }
+      }
+
       // ---------- Set / match win moments ----------
 
       let winTimer = null;
       let prevSetCount = null;
       let prevMatchComplete = null;
 
-      function showWinMoment(eyebrow, title, scoreText, teamCls, durationMs)
-      {
+      function showWinMoment(eyebrow, title, scoreText, teamCls, durationMs) {
         if (settings.showWinMoments === false) return;
 
         const el = document.getElementById("winMoment");
@@ -2468,23 +2827,21 @@
 
       // After the celebration clears, the follow-ups play: an auto stat card
       // and (optionally) a sponsor slate.
-      function queuePostMoment(delayMs, statCardMs, slateMs)
-      {
-        setTimeout(() =>
-        {
-          if (settings.autoStatCards !== false && !statCardPinned)
-          {
+      function queuePostMoment(delayMs, statCardMs, slateMs, momentumMs) {
+        setTimeout(() => {
+          if (settings.autoStatCards !== false && !statCardPinned) {
             void showStatCard({ durationMs: statCardMs });
           }
-          if (settings.sponsorSlateOnSet === true)
-          {
+          if (settings.autoMomentumCards === true && !momentumCardPinned) {
+            void showMomentumCard({ durationMs: momentumMs || statCardMs });
+          }
+          if (settings.sponsorSlateOnSet === true) {
             showSponsorSlate(slateMs);
           }
         }, delayMs);
       }
 
-      function fireSetMoment(data)
-      {
+      function fireSetMoment(data) {
         const sets = data.completedSets || [];
         const lastSet = sets[sets.length - 1] || {};
         const a = Number(lastSet.A) || 0;
@@ -2492,25 +2849,22 @@
         const team = a > b ? "A" : "B";
 
         showWinMoment("Set " + sets.length, teamDisplayName(team), a + "–" + b, "team-" + team, 7000);
-        queuePostMoment(7300, 12000, 8000);
+        queuePostMoment(7300, 12000, 8000, 12000);
       }
 
-      function fireMatchMoment(data)
-      {
+      function fireMatchMoment(data) {
         const sets = data.completedSets || [];
         let team;
         let scoreText;
 
-        if ((data.scoringMode || "standard") === "standard" && sets.length)
-        {
+        if ((data.scoringMode || "standard") === "standard" && sets.length) {
           let wonA = 0;
           let wonB = 0;
           sets.forEach((set) => ((Number(set.A) || 0) > (Number(set.B) || 0) ? wonA++ : wonB++));
           team = wonA >= wonB ? "A" : "B";
           scoreText = sets.map((set) => (Number(set.A) || 0) + "–" + (Number(set.B) || 0)).join("  ");
         }
-        else
-        {
+        else {
           const pointsA = Number(data.teams.A.points) || 0;
           const pointsB = Number(data.teams.B.points) || 0;
           team = pointsA >= pointsB ? "A" : "B";
@@ -2518,13 +2872,12 @@
         }
 
         showWinMoment("Match winner", teamDisplayName(team), scoreText, "team-" + team, 12000);
-        queuePostMoment(12300, 20000, 10000);
+        queuePostMoment(12300, 20000, 10000, 20000);
       }
 
       // Fires celebrations only on observed transitions — joining a stream
       // mid-match (or an OBS source refresh) must not replay old moments.
-      function handleTransitions(data)
-      {
+      function handleTransitions(data) {
         const setCount = (data.completedSets || []).length;
         const matchComplete = Boolean(data.matchComplete);
         const firstRender = prevSetCount === null;
@@ -2536,18 +2889,15 @@
 
         if (firstRender) return;
 
-        if (matchJustEnded)
-        {
+        if (matchJustEnded) {
           fireMatchMoment(data);
         }
-        else if (setIncreased && (data.scoringMode || "standard") === "standard")
-        {
+        else if (setIncreased && (data.scoringMode || "standard") === "standard") {
           fireSetMoment(data);
         }
       }
 
-      function render(data)
-      {
+      function render(data) {
         latestScore = data;
         trackAdvantage(data);
         handleTransitions(data);
@@ -2562,8 +2912,7 @@
         const showTeamNames = settings.showTeamNames !== false;
         const showPlayerNames = settings.showPlayerNames !== false && !isSlimLayout();
 
-        ["A", "B"].forEach((team) =>
-        {
+        ["A", "B"].forEach((team) => {
           const teamName = settings["name" + team] || data.teamNames[team] || ("Team " + team);
           const nameEl = document.getElementById("name" + team);
           nameEl.textContent = teamName;
@@ -2571,8 +2920,7 @@
 
           let hasAnyPlayer = false;
 
-          [1, 2].forEach((index) =>
-          {
+          [1, 2].forEach((index) => {
             const slot = team + index;
             const playerName = showPlayerNames ? getPlayerName(slot, data) : "";
             const line = document.getElementById("line" + slot);
@@ -2593,8 +2941,7 @@
 
         const badge = computeBadge(data);
         const badgeLine = document.getElementById("badgeLine");
-        if (badge)
-        {
+        if (badge) {
           // Text/colour are left untouched when hiding so the ribbon keeps
           // its label while it slides back behind the panel.
           const badgeText = document.getElementById("badgeText");
@@ -2604,13 +2951,11 @@
         badgeLine.classList.toggle("visible", Boolean(badge));
 
         const statusLine = document.getElementById("statusLine");
-        if (data.matchComplete)
-        {
+        if (data.matchComplete) {
           statusLine.textContent = "Match complete";
           statusLine.classList.add("visible");
         }
-        else
-        {
+        else {
           statusLine.textContent = "";
           statusLine.classList.remove("visible");
         }
@@ -2623,35 +2968,30 @@
         updateSponsor();
       }
 
-      function showError(message)
-      {
+      function showError(message) {
         document.getElementById("loadingLine").classList.add("hidden");
         const statusLine = document.getElementById("statusLine");
         statusLine.textContent = message;
         statusLine.classList.add("visible");
       }
 
-      async function fetchJson(path)
-      {
+      async function fetchJson(path) {
         const response = await fetch(path, { cache: "no-store" });
         let data = null;
 
-        try
-        {
+        try {
           data = await response.json();
         }
         catch (_parseErr) { /* non-JSON body */ }
 
-        if (!response.ok || !data || !data.success)
-        {
+        if (!response.ok || !data || !data.success) {
           throw new Error((data && data.error) || "Could not load score.");
         }
 
         return data;
       }
 
-      async function loadFullScore()
-      {
+      async function loadFullScore() {
         const url = isDebugCourt ? debugCourt_fullScoreUrl : "/a/" + encodeURIComponent(courtId);
         const data = await fetchJson(url);
         render(data);
@@ -2661,10 +3001,8 @@
         renderedRevision = data.revision || null;
       }
 
-      async function poll()
-      {
-        if (!courtId)
-        {
+      async function poll() {
+        if (!courtId) {
           showError("No court specified. Use /b/{courtId}.");
           return;
         }
@@ -2672,25 +3010,21 @@
         if (isPolling) return;
         isPolling = true;
 
-        try
-        {
+        try {
           const revisionUrl = isDebugCourt ? debugCourt_revisionUrl : "/r/" + encodeURIComponent(courtId);
           const revisionData = await fetchJson(revisionUrl);
 
-          if (revisionData.revision && revisionData.revision === renderedRevision)
-          {
+          if (revisionData.revision && revisionData.revision === renderedRevision) {
             if (latestScore) render(latestScore);
             return;
           }
 
           await loadFullScore();
         }
-        catch (err)
-        {
+        catch (err) {
           showError(err.message === "Failed to fetch" ? "Connection lost. Retrying…" : err.message);
         }
-        finally
-        {
+        finally {
           isPolling = false;
         }
       }
@@ -2729,6 +3063,7 @@
         setShowSponsor: "showSponsor",
         setShowWinMoments: "showWinMoments",
         setAutoStatCards: "autoStatCards",
+        setAutoMomentumCards: "autoMomentumCards",
         setSlateOnSet: "sponsorSlateOnSet",
         setShowQr: "showQr"
       };
@@ -2741,12 +3076,10 @@
 
       // Options are built from THEME_PRESETS so new presets only need a
       // single entry in that map.
-      function buildThemeSelect()
-      {
+      function buildThemeSelect() {
         const select = document.getElementById("setThemePreset");
         select.textContent = "";
-        Object.entries(THEME_PRESETS).forEach(([value, preset]) =>
-        {
+        Object.entries(THEME_PRESETS).forEach(([value, preset]) => {
           const option = document.createElement("option");
           option.value = value;
           option.textContent = preset.label;
@@ -2754,13 +3087,11 @@
         });
       }
 
-      function renderSponsorEditor()
-      {
+      function renderSponsorEditor() {
         const wrap = document.getElementById("sponsorList");
         wrap.textContent = "";
 
-        (settings.sponsors || []).forEach((item, index) =>
-        {
+        (settings.sponsors || []).forEach((item, index) => {
           const row = document.createElement("div");
           row.className = "sponsor-edit-row";
 
@@ -2768,8 +3099,7 @@
           text.type = "text";
           text.placeholder = "Text / HTML";
           text.value = item.text || "";
-          text.addEventListener("input", () =>
-          {
+          text.addEventListener("input", () => {
             item.text = text.value;
             saveSettings();
             restartSponsorRotation();
@@ -2779,8 +3109,7 @@
           img.type = "url";
           img.placeholder = "Image URL";
           img.value = item.img || "";
-          img.addEventListener("input", () =>
-          {
+          img.addEventListener("input", () => {
             item.img = img.value.trim();
             saveSettings();
             restartSponsorRotation();
@@ -2791,8 +3120,7 @@
           secs.className = "secs";
           secs.title = "Seconds on screen";
           secs.value = item.seconds || 8;
-          secs.addEventListener("input", () =>
-          {
+          secs.addEventListener("input", () => {
             item.seconds = clampNumber(secs.value, 3, 600, 8);
             saveSettings();
           });
@@ -2802,8 +3130,7 @@
           remove.className = "rm";
           remove.title = "Remove sponsor";
           remove.textContent = "\u00d7";
-          remove.addEventListener("click", () =>
-          {
+          remove.addEventListener("click", () => {
             settings.sponsors.splice(index, 1);
             saveSettings();
             renderSponsorEditor();
@@ -2815,20 +3142,16 @@
         });
       }
 
-      function syncInputsFromSettings()
-      {
-        Object.entries(fieldMap).forEach(([inputId, key]) =>
-        {
+      function syncInputsFromSettings() {
+        Object.entries(fieldMap).forEach(([inputId, key]) => {
           document.getElementById(inputId).value = settings[key];
         });
 
-        Object.entries(checkboxMap).forEach(([inputId, key]) =>
-        {
+        Object.entries(checkboxMap).forEach(([inputId, key]) => {
           document.getElementById(inputId).checked = settings[key] !== false;
         });
 
-        Object.entries(selectMap).forEach(([inputId, key]) =>
-        {
+        Object.entries(selectMap).forEach(([inputId, key]) => {
           document.getElementById(inputId).value = settings[key];
         });
 
@@ -2843,6 +3166,22 @@
         document.getElementById("setScale").value = scale;
         document.getElementById("scaleValue").textContent = Math.round(scale * 100) + "%";
 
+        const slateScale = clampNumber(settings.slateScale, 0.5, 2, 1);
+        document.getElementById("setSlateScale").value = slateScale;
+        document.getElementById("slateScaleValue").textContent = Math.round(slateScale * 100) + "%";
+
+        const momScale = clampNumber(settings.momentumScale, 0.5, 2, 1);
+        document.getElementById("setMomentumScale").value = momScale;
+        document.getElementById("momentumScaleValue").textContent = Math.round(momScale * 100) + "%";
+
+        const qbOpacity = clampNumber(settings.quickBarOpacity, 0.1, 1, 0.4);
+        document.getElementById("setQuickBarOpacity").value = qbOpacity;
+        document.getElementById("quickBarOpacityValue").textContent = Math.round(qbOpacity * 100) + "%";
+
+        const qbScale = clampNumber(settings.quickBarScale, 0.5, 2, 1);
+        document.getElementById("setQuickBarScale").value = qbScale;
+        document.getElementById("quickBarScaleValue").textContent = Math.round(qbScale * 100) + "%";
+
         const qrSize = Math.round(clampNumber(settings.qrSize, 64, 200, 96));
         document.getElementById("setQrSize").value = qrSize;
         document.getElementById("qrSizeValue").textContent = qrSize + "px";
@@ -2850,13 +3189,10 @@
         renderSponsorEditor();
       }
 
-      Object.entries(fieldMap).forEach(([inputId, key]) =>
-      {
-        document.getElementById(inputId).addEventListener("input", (event) =>
-        {
+      Object.entries(fieldMap).forEach(([inputId, key]) => {
+        document.getElementById(inputId).addEventListener("input", (event) => {
           settings[key] = URL_KEYS.includes(key) ? event.target.value.trim() : event.target.value;
-          if (THEME_COLOR_KEYS.includes(key))
-          {
+          if (THEME_COLOR_KEYS.includes(key)) {
             settings.themePreset = "custom";
             document.getElementById("setThemePreset").value = "custom";
           }
@@ -2865,10 +3201,8 @@
         });
       });
 
-      Object.entries(selectMap).forEach(([inputId, key]) =>
-      {
-        document.getElementById(inputId).addEventListener("change", (event) =>
-        {
+      Object.entries(selectMap).forEach(([inputId, key]) => {
+        document.getElementById(inputId).addEventListener("change", (event) => {
           settings[key] = event.target.value;
           saveSettings();
           applySettings();
@@ -2876,14 +3210,11 @@
       });
 
       buildThemeSelect();
-      document.getElementById("setThemePreset").addEventListener("change", (event) =>
-      {
-        if (event.target.value !== "custom")
-        {
+      document.getElementById("setThemePreset").addEventListener("change", (event) => {
+        if (event.target.value !== "custom") {
           applyThemePreset(event.target.value);
         }
-        else
-        {
+        else {
           settings.themePreset = "custom";
         }
         saveSettings();
@@ -2891,44 +3222,66 @@
         applySettings();
       });
 
-      document.getElementById("setScale").addEventListener("input", (event) =>
-      {
+      document.getElementById("setScale").addEventListener("input", (event) => {
         settings.scale = clampNumber(event.target.value, 0.5, 2, 1);
         document.getElementById("scaleValue").textContent = Math.round(settings.scale * 100) + "%";
         saveSettings();
         applySettings();
       });
 
-      document.getElementById("setQrSize").addEventListener("input", (event) =>
-      {
+      document.getElementById("setSlateScale").addEventListener("input", (event) => {
+        settings.slateScale = clampNumber(event.target.value, 0.5, 2, 1);
+        document.getElementById("slateScaleValue").textContent = Math.round(settings.slateScale * 100) + "%";
+        saveSettings();
+        applySettings();
+      });
+
+      document.getElementById("setMomentumScale").addEventListener("input", (event) => {
+        settings.momentumScale = clampNumber(event.target.value, 0.5, 2, 1);
+        document.getElementById("momentumScaleValue").textContent = Math.round(settings.momentumScale * 100) + "%";
+        saveSettings();
+        applySettings();
+      });
+
+      document.getElementById("setQuickBarOpacity").addEventListener("input", (event) => {
+        settings.quickBarOpacity = clampNumber(event.target.value, 0.1, 1, 0.4);
+        document.getElementById("quickBarOpacityValue").textContent = Math.round(settings.quickBarOpacity * 100) + "%";
+        saveSettings();
+        applySettings();
+      });
+
+      document.getElementById("setQuickBarScale").addEventListener("input", (event) => {
+        settings.quickBarScale = clampNumber(event.target.value, 0.5, 2, 1);
+        document.getElementById("quickBarScaleValue").textContent = Math.round(settings.quickBarScale * 100) + "%";
+        saveSettings();
+        applySettings();
+      });
+
+      document.getElementById("setQrSize").addEventListener("input", (event) => {
         settings.qrSize = clampNumber(event.target.value, 64, 200, 96);
         document.getElementById("qrSizeValue").textContent = Math.round(settings.qrSize) + "px";
         saveSettings();
         renderQrBug();
       });
 
-      document.getElementById("addSponsorBtn").addEventListener("click", () =>
-      {
+      document.getElementById("addSponsorBtn").addEventListener("click", () => {
         if (!Array.isArray(settings.sponsors)) settings.sponsors = [];
         settings.sponsors.push({ text: "", img: "", seconds: 8 });
         saveSettings();
         renderSponsorEditor();
       });
 
-      document.getElementById("copyObsUrl").addEventListener("click", async (event) =>
-      {
+      document.getElementById("copyObsUrl").addEventListener("click", async (event) => {
         const url = buildShareUrl();
         const field = document.getElementById("shareUrlField");
         field.value = url;
 
         let copied = false;
-        try
-        {
+        try {
           await navigator.clipboard.writeText(url);
           copied = true;
         }
-        catch (_err)
-        {
+        catch (_err) {
           // Clipboard API is unavailable in some embedded browsers (OBS);
           // fall back to selecting the visible field for a manual copy.
           field.focus();
@@ -2937,48 +3290,49 @@
           catch (_execErr) { /* manual copy it is */ }
         }
 
-        const button = event.currentTarget;
+        const button = event.srcElement;
         button.textContent = copied ? "Copied \u2713" : "Copy from the field below";
         setTimeout(() => { button.textContent = "Copy OBS URL"; }, 2000);
       });
 
-      document.getElementById("statBtn").addEventListener("click", () =>
-      {
-        if (statCardPinned)
-        {
+      document.getElementById("statBtn").addEventListener("click", () => {
+        if (statCardPinned) {
           hideStatCard();
         }
-        else
-        {
+        else {
           void showStatCard({ pin: true });
         }
       });
 
-      document.getElementById("slateBtn").addEventListener("click", () =>
-      {
+      document.getElementById("momentumBtn").addEventListener("click", () => {
+        if (momentumCardPinned) {
+          hideMomentumCard();
+        }
+        else {
+          void showMomentumCard({ pin: true });
+        }
+      });
+
+      document.getElementById("slateBtn").addEventListener("click", () => {
         showSponsorSlate(8000);
       });
 
-      Object.entries(checkboxMap).forEach(([inputId, key]) =>
-      {
-        document.getElementById(inputId).addEventListener("change", (event) =>
-        {
+      Object.entries(checkboxMap).forEach(([inputId, key]) => {
+        document.getElementById(inputId).addEventListener("change", (event) => {
           settings[key] = event.target.checked;
           saveSettings();
           applySettings();
         });
       });
 
-      document.getElementById("setGradAngle").addEventListener("input", (event) =>
-      {
+      document.getElementById("setGradAngle").addEventListener("input", (event) => {
         settings.gradientAngle = Number(event.target.value) || 0;
         document.getElementById("gradAngleValue").textContent = settings.gradientAngle + "\u00b0";
         saveSettings();
         applySettings();
       });
 
-      document.getElementById("setTimerValue").addEventListener("change", (event) =>
-      {
+      document.getElementById("setTimerValue").addEventListener("change", (event) => {
         settings.timerText = event.target.value.trim();
         settings.timerOffset = parseTimerInput(settings.timerText);
         settings.timerAnchor = Date.now();
@@ -2989,25 +3343,20 @@
       const gearBtn = document.getElementById("gearBtn");
       const settingsPanel = document.getElementById("settingsPanel");
 
-      gearBtn.addEventListener("click", () =>
-      {
+      gearBtn.addEventListener("click", () => {
         settingsPanel.classList.toggle("open");
       });
 
-      ["closeSettings", "closeSettingsX"].forEach((id) =>
-      {
-        document.getElementById(id).addEventListener("click", () =>
-        {
+      ["closeSettings", "closeSettingsX"].forEach((id) => {
+        document.getElementById(id).addEventListener("click", () => {
           settingsPanel.classList.remove("open");
         });
       });
 
-      document.getElementById("resetSettings").addEventListener("click", () =>
-      {
+      document.getElementById("resetSettings").addEventListener("click", () => {
         // Drop the stored blob entirely so stale keys from older versions
         // cannot survive a reset, then restart the timer from zero.
-        try
-        {
+        try {
           localStorage.removeItem(storageKey);
         }
         catch (_err) { /* storage unavailable */ }
@@ -3016,10 +3365,107 @@
         normalizeSettings();
         saveSettings();
         hideStatCard();
+        hideMomentumCard();
         document.getElementById("shareUrlField").value = "";
         syncInputsFromSettings();
         applySettings();
       });
+
+      // ---------- Draggable interaction ----------
+
+      function makeDraggable(elementId, settingsKey, handleSelector, allowButtonDrag = false) {
+        const el = document.getElementById(elementId);
+        if (!el) return;
+
+        let startX = 0, startY = 0, initialLeft = 0, initialTop = 0;
+        let isPointerDown = false;
+        let isDragging = false;
+        let hasMoved = false;
+
+        const getHandle = () => handleSelector ? el.querySelector(handleSelector) || el : el;
+
+        const onPointerDown = (e) => {
+          if (!handleSelector) {
+            if (e.target.closest("input, select, textarea, a") || e.target.isContentEditable) {
+              return;
+            }
+            if (!allowButtonDrag && e.target.closest("button")) {
+              return;
+            }
+          }
+          const evt = e.touches ? e.touches[0] : e;
+          isPointerDown = true;
+          isDragging = false;
+          hasMoved = false;
+          const rect = el.getBoundingClientRect();
+          startX = evt.clientX;
+          startY = evt.clientY;
+          initialLeft = rect.left;
+          initialTop = rect.top;
+
+          document.addEventListener("mousemove", onPointerMove);
+          document.addEventListener("mouseup", onPointerUp);
+          document.addEventListener("touchmove", onPointerMove, { passive: false });
+          document.addEventListener("touchend", onPointerUp);
+        };
+
+        const onPointerMove = (e) => {
+          if (!isPointerDown) return;
+          const evt = e.touches ? e.touches[0] : e;
+          const dx = evt.clientX - startX;
+          const dy = evt.clientY - startY;
+
+          if (!isDragging && Math.hypot(dx, dy) > 4) {
+            isDragging = true;
+            hasMoved = true;
+            el.classList.add("ov-dragging");
+          }
+
+          if (!isDragging) return;
+          if (e.cancelable) e.preventDefault();
+
+          const newLeft = Math.round(initialLeft + dx);
+          const newTop = Math.round(initialTop + dy);
+
+          el.style.left = newLeft + "px";
+          el.style.top = newTop + "px";
+          el.style.right = "auto";
+          el.style.bottom = "auto";
+          el.style.transform = "none";
+        };
+
+        const onPointerUp = () => {
+          if (!isPointerDown) return;
+          isPointerDown = false;
+
+          if (isDragging) {
+            isDragging = false;
+            el.classList.remove("ov-dragging");
+
+            const rect = el.getBoundingClientRect();
+            settings[settingsKey] = { x: Math.round(rect.left), y: Math.round(rect.top) };
+            saveSettings();
+          }
+
+          document.removeEventListener("mousemove", onPointerMove);
+          document.removeEventListener("mouseup", onPointerUp);
+          document.removeEventListener("touchmove", onPointerMove);
+          document.removeEventListener("touchend", onPointerUp);
+        };
+
+        // Suppress button clicks if the pointer was dragged
+        el.addEventListener("click", (e) => {
+          if (hasMoved) {
+            e.preventDefault();
+            e.stopPropagation();
+            hasMoved = false;
+          }
+        }, true);
+
+        const handle = getHandle();
+        handle.addEventListener("mousedown", onPointerDown);
+        handle.addEventListener("touchstart", onPointerDown, { passive: true });
+      }
 
       // ---------- Boot ----------
       loadSettings();
@@ -3027,17 +3473,22 @@
       normalizeSettings();
 
       // Anchor the timer on first ever load so it survives OBS source refreshes.
-      if (!settings.timerAnchor)
-      {
+      if (!settings.timerAnchor) {
         settings.timerAnchor = Date.now();
         saveSettings();
       }
 
+      makeDraggable("overlayAnchor", "dragOverlay");
+      makeDraggable("sponsorSlate", "dragSlate");
+      makeDraggable("qrBug", "dragQr");
+      makeDraggable("quickBar", "dragQuickBar", null, true);
+      makeDraggable("settingsPanel", "dragSettings", ".settings-head");
+      makeDraggable("momentumCard", "dragMomentum", null, true);
+
       syncInputsFromSettings();
       applySettings();
       setInterval(tickTimer, 1000);
-      window.addEventListener("resize", () =>
-      {
+      window.addEventListener("resize", () => {
         syncNameColumn();
         measureSponsor();
       });
