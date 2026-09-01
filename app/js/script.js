@@ -2041,7 +2041,11 @@ document.addEventListener("DOMContentLoaded", () =>
   {
     const adminref = doc(db, "admin", "goodies");
     const adminSnap = await getDoc(adminref);
-    return adminSnap.data().skeletonKey;
+    const data = adminSnap.data();
+    if (!data || !data.skeletonKey) {
+      throw new Error("Admin document missing or skeletonKey not found");
+    }
+    return data.skeletonKey;
   }
 
   // =====================================================
@@ -3133,7 +3137,15 @@ document.addEventListener("DOMContentLoaded", () =>
 
     showSpinner(elements.adminAuthPage);
 
-    const skeleton = await getSkeleton();
+    let skeleton;
+    try {
+      skeleton = await getSkeleton();
+    }
+    catch (err) {
+      elements.adminAuthError.textContent = "Admin config error: " + err.message;
+      hideSpinner(elements.adminAuthPage);
+      return;
+    }
 
     if (pass === skeleton)
     {
@@ -5729,13 +5741,15 @@ document.addEventListener("DOMContentLoaded", () =>
       return;
     }
 
-    const hasMomentum = elements.dmMomentumWrap && !elements.dmMomentumWrap.classList.contains("hidden");
+    // The panel reveals only once stats are available. Momentum alone is not
+    // enough to show the panel: it must have data from the normal details
+    // endpoint. This keeps an empty "Detailed Stats" toggle from sitting there
+    // while everything's still loading.
     const hasStats = elements.dmStatsWrap && !elements.dmStatsWrap.classList.contains("hidden");
-    const hasDetails = hasMomentum || hasStats;
 
-    elements.dmDetailsPanel.classList.toggle("hidden", !hasDetails);
+    elements.dmDetailsPanel.classList.toggle("hidden", !hasStats);
 
-    if (!hasDetails)
+    if (!hasStats)
     {
       setDetailsPanelExpanded(false);
     }
