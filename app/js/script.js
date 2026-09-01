@@ -553,6 +553,12 @@ document.addEventListener("DOMContentLoaded", () =>
   let isMatchDetailsCacheValid = false;
   let matchDetailsCache = null;
   let matchDetailsCacheCourtId = null;
+  let momentumCache = null;
+  let momentumCacheCourtId = null;
+  // Bumped on every momentum request so a reply that arrives after the view
+  // moved on (court switch, empty match, modal closed) is discarded instead of
+  // drawing over whatever is on screen now.
+  let momentumRequestToken = 0;
   let lastKnownSets = { A: 0, B: 0 };
   let sessionInitialized = false;
 
@@ -563,6 +569,8 @@ document.addEventListener("DOMContentLoaded", () =>
     isMatchDetailsCacheValid = false;
     matchDetailsCache = null;
     matchDetailsCacheCourtId = null;
+    momentumCache = null;
+    momentumCacheCourtId = null;
   }
 
   let muted = false;
@@ -1399,6 +1407,7 @@ document.addEventListener("DOMContentLoaded", () =>
     detailsLoading: $("detailsLoading"),
     dmMomentumWrap: $("dmMomentumWrap"),
     dmMomentumCanvas: $("dmMomentumCanvas"),
+    dmMomentumLoading: $("dmMomentumLoading"),
     dmDetailsPanel: $("dmDetailsPanel"),
     dmDetailsToggle: $("dmDetailsToggle"),
     dmDetailsContent: $("dmDetailsContent"),
@@ -5763,6 +5772,117 @@ document.addEventListener("DOMContentLoaded", () =>
 
   let momentumPulseAnimationFrame = null;
 
+  function setMomentumLoading(isLoading)
+  {
+    if (elements.dmMomentumLoading)
+    {
+      elements.dmMomentumLoading.classList.toggle("hidden", !isLoading);
+    }
+
+    if (elements.dmMomentumCanvas)
+    {
+      elements.dmMomentumCanvas.classList.toggle("hidden", isLoading);
+    }
+  }
+
+  function hideMomentumPanel()
+  {
+    setMomentumLoading(false);
+
+    if (elements.dmMomentumWrap)
+    {
+      elements.dmMomentumWrap.classList.add("hidden");
+    }
+
+    syncDetailsPanelAvailability();
+  }
+
+  // /m/{courtId} is the only source of momentum data; the detailed score
+  // payload deliberately no longer carries the point-by-point streams.
+  async function fetchMomentumPayload(courtId)
+  {
+    const response = await fetch("/m/" + encodeURIComponent(courtId), { cache: "no-store" });
+    let data = null;
+
+    try
+    {
+      data = await response.json();
+    }
+    catch (_parseErr) { /* non-JSON body */ }
+
+    if (!response.ok || !data || data.success !== true)
+    {
+      throw new Error((data && data.error) || "Could not load match momentum.");
+    }
+
+    return data;
+  }
+
+  // Runs alongside the match-details request rather than after it, so the set
+  // tables and stats paint without waiting on the momentum replay. showLoading
+  // is off for live refreshes: the graph on screen is still valid, so leaving
+  // it up beats flashing a loader on every point.
+  async function loadMomentumGraph(courtId, showLoading)
+  {
+    if (!courtId || !elements.dmMomentumWrap)
+    {
+      return;
+    }
+
+    const token = ++momentumRequestToken;
+    const cached = momentumCacheCourtId === courtId ? momentumCache : null;
+
+    if (showLoading && !cached)
+    {
+      elements.dmMomentumWrap.classList.remove("hidden");
+      setMomentumLoading(true);
+      syncDetailsPanelAvailability();
+    }
+
+    let payload = cached;
+
+    if (!payload)
+    {
+      try
+      {
+        payload = await fetchMomentumPayload(courtId);
+      }
+      catch (err)
+      {
+        console.error("Match momentum could not be loaded:", err);
+
+        if (token === momentumRequestToken)
+        {
+          hideMomentumPanel();
+        }
+
+        return;
+      }
+
+      momentumCache = payload;
+      momentumCacheCourtId = courtId;
+    }
+
+    if (token !== momentumRequestToken)
+    {
+      return;
+    }
+
+    setMomentumLoading(false);
+
+    const colourA = getComputedStyle(document.body).getPropertyValue("--teamAcolour").trim();
+    const colourB = getComputedStyle(document.body).getPropertyValue("--teamBcolour").trim();
+
+    renderMomentumGraph(
+      payload.pointHistory,
+      colourA,
+      colourB,
+      payload.setPointMarkers || [],
+      payload.momentumTimeline || null,
+      payload.gameMarkers || []
+    );
+  }
+
   function renderMomentumGraph(pointHistory, colourA, colourB, setPointMarkers = [], momentumTimeline = null, gameMarkers = [])
   {
     const wrap = elements.dmMomentumWrap;
@@ -6344,6 +6464,10 @@ document.addEventListener("DOMContentLoaded", () =>
     syncDetailsPanelAvailability();
     setDetailsPanelExpanded(expanded);
 
+    // Deliberately not awaited: the momentum graph fills itself in when its
+    // endpoint answers, so nothing below is held up by the heavier replay.
+    void loadMomentumGraph(currentCourtId, !refreshing);
+
     try
     {
       let result = matchDetailsCache;
@@ -6395,6 +6519,11 @@ document.addEventListener("DOMContentLoaded", () =>
 
       if (!hasAnyMatchDetails)
       {
+        // Nothing to chart either: cancel the in-flight momentum request so it
+        // cannot re-open the panel this branch is about to hide.
+        momentumRequestToken++;
+        hideMomentumPanel();
+
         if (dmOverall)
         {
           dmOverall.classList.add("hidden");
@@ -6441,16 +6570,6 @@ document.addEventListener("DOMContentLoaded", () =>
         elements.detailsSetsA.textContent = (points && points.A !== undefined) ? points.A : 0;
         elements.detailsSetsB.textContent = (points && points.B !== undefined) ? points.B : 0;
 
-        const colourA = getComputedStyle(document.body).getPropertyValue("--teamAcolour").trim();
-        const colourB = getComputedStyle(document.body).getPropertyValue("--teamBcolour").trim();
-        renderMomentumGraph(
-          result.data.pointHistory,
-          colourA,
-          colourB,
-          result.data.setPointMarkers || [],
-          result.data.momentumTimeline || null,
-          result.data.advancedStats?.gameMarkers || []
-        );
         const detailsPlayerNames = normalizePlayerNames(result?.data?.playerNames || currentPlayerNames || {});
         renderAdvancedStats(result.data.advancedStats, { A: nameA, B: nameB }, isSwapped, detailsPlayerNames);
         syncDetailsPanelAvailability();
@@ -6519,16 +6638,6 @@ document.addEventListener("DOMContentLoaded", () =>
       isSwapped ? elements.dmBody.appendChild(mkRow("b", allSets)) : elements.dmBody.appendChild(mkRow("a", allSets));
       isSwapped ? elements.dmBody.appendChild(mkRow("a", allSets)) : elements.dmBody.appendChild(mkRow("b", allSets));
 
-      const colourA = getComputedStyle(document.body).getPropertyValue("--teamAcolour").trim();
-      const colourB = getComputedStyle(document.body).getPropertyValue("--teamBcolour").trim();
-      renderMomentumGraph(
-        result.data.pointHistory,
-        colourA,
-        colourB,
-        result.data.setPointMarkers || [],
-        result.data.momentumTimeline || null,
-        result.data.advancedStats?.gameMarkers || []
-      );
       const detailsPlayerNames = normalizePlayerNames(result?.data?.playerNames || currentPlayerNames || {});
       renderAdvancedStats(result.data.advancedStats, { A: nameA, B: nameB }, isSwapped, detailsPlayerNames);
       syncDetailsPanelAvailability();

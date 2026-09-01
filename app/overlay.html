@@ -737,6 +737,11 @@
 
     /* ---------- Stat card ---------- */
 
+    /* The stat and momentum cards are stretched siblings of the score panel,
+       so the anchor's width is what they both take. --ov-stats-scale is layered
+       on top of the overlay's own --ov-scale and drives their type size and
+       their shared width floor: one slider, two cards that always match each
+       other, still sized relative to the score panel. */
     .stat-card {
       align-self: stretch;
       background: linear-gradient(var(--ov-grad-angle), var(--ov-panel), var(--ov-panel-2));
@@ -745,6 +750,9 @@
       box-shadow: 0 10px 35px rgba(0, 0, 0, 0.42);
       padding: 0.6em 1em 0.7em;
       animation: stat-in 0.35s ease both;
+      font-size: calc(24px * var(--ov-scale, 1) * var(--ov-stats-scale, 1));
+      min-width: 16em;
+      box-sizing: border-box;
     }
 
     .stat-card.hidden {
@@ -1320,7 +1328,8 @@
       box-shadow: 0 10px 35px rgba(0, 0, 0, 0.42);
       padding: 0.6em 1em 0.7em;
       animation: stat-in 0.35s ease both;
-      font-size: calc(24px * var(--ov-momentum-scale, 1));
+      font-size: calc(24px * var(--ov-scale, 1) * var(--ov-stats-scale, 1));
+      min-width: 16em;
       box-sizing: border-box;
     }
 
@@ -1363,11 +1372,73 @@
       text-overflow: ellipsis;
     }
 
+    /* Height in em so the graph grows with the shared stats/momentum slider
+       instead of staying a fixed strip inside a card that scaled around it. */
     .ov-momentum-canvas {
       width: 100%;
-      height: 90px;
+      height: 3.75em;
       display: block;
       margin-top: 0.2em;
+    }
+
+    .ov-momentum-canvas.hidden {
+      display: none;
+    }
+
+    .momentum-loading {
+      height: 3.75em;
+      margin-top: 0.2em;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .momentum-loading.hidden {
+      display: none;
+    }
+
+    /* Two team-coloured bars sliding past each other - the same loading
+       animation the scoreboard app uses, so the pair read as one product. */
+    .ov-loader {
+      --loader-unit: 1px;
+      width: calc(100 * var(--loader-unit));
+      height: calc(4 * var(--loader-unit));
+      border-radius: calc(2 * var(--loader-unit));
+      display: block;
+      position: relative;
+      background: var(--ov-teamA);
+      box-sizing: border-box;
+      animation: ov-loader-up 1.2s ease-in-out infinite alternate;
+    }
+
+    .ov-loader::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: var(--ov-teamB);
+      border-radius: inherit;
+      box-sizing: border-box;
+      animation: ov-loader-down 1.2s ease-in-out infinite alternate;
+    }
+
+    @keyframes ov-loader-up {
+      0% {
+        transform: translateY(calc(-12 * var(--loader-unit)));
+      }
+
+      100% {
+        transform: translateY(calc(12 * var(--loader-unit)));
+      }
+    }
+
+    @keyframes ov-loader-down {
+      0% {
+        transform: translateY(calc(24 * var(--loader-unit)));
+      }
+
+      100% {
+        transform: translateY(calc(-24 * var(--loader-unit)));
+      }
     }
 
     /* ---------- Draggable ---------- */
@@ -1474,6 +1545,9 @@
         <span class="momentum-title" id="momentumTitle">Match momentum</span>
         <span class="momentum-sub" id="momentumSub"></span>
       </div>
+      <div class="momentum-loading hidden" id="momentumLoading" role="status" aria-live="polite">
+        <span class="ov-loader"></span>
+      </div>
       <canvas id="momentumCanvas" class="ov-momentum-canvas"></canvas>
     </div>
   </div>
@@ -1519,8 +1593,8 @@
         id="scaleValue">100%</span></label>
     <label><span>Sponsor slate scale</span><input type="range" id="setSlateScale" min="0.5" max="2" step="0.05" /><span
         class="angle-value" id="slateScaleValue">100%</span></label>
-    <label><span>Momentum scale</span><input type="range" id="setMomentumScale" min="0.5" max="2" step="0.05" /><span
-        class="angle-value" id="momentumScaleValue">100%</span></label>
+    <label><span>Stats &amp; momentum scale</span><input type="range" id="setStatsScale" min="0.5" max="2"
+        step="0.05" /><span class="angle-value" id="statsScaleValue">100%</span></label>
 
     <div class="section">Floating Buttons</div>
     <label><span>Buttons opacity</span><input type="range" id="setQuickBarOpacity" min="0.1" max="1" step="0.05" /><span
@@ -1616,6 +1690,7 @@
       const debugCourt_revisionUrl = "https://qa.padelpush.co.za/r/bnrm";
       const debugCourt_fullScoreUrl = "https://qa.padelpush.co.za/a/bnrm";
       const debugCourt_statsUrl = "https://qa.padelpush.co.za/s/bnrm";
+      const debugCourt_momentumUrl = "https://qa.padelpush.co.za/m/bnrm";
       //
 
       const POLL_INTERVAL_MS = 2 * 1000;
@@ -1637,7 +1712,7 @@
         layout: "panel",
         scale: 1,
         slateScale: 1,
-        momentumScale: 1,
+        statsScale: 1,
         quickBarOpacity: 0.4,
         quickBarScale: 1,
         dragOverlay: null,
@@ -1690,6 +1765,22 @@
       const POSITIONS = ["tl", "tr", "bl", "br"];
       const LAYOUTS = ["panel", "compact", "ticker"];
 
+      // Settings that have been renamed. Old stored configs and old share URLs
+      // keep working: the legacy name is read once and folded into the new key.
+      const LEGACY_SETTING_ALIASES = {
+        momentumScale: "statsScale"
+      };
+
+      function adoptLegacySettingKeys(source) {
+        Object.entries(LEGACY_SETTING_ALIASES).forEach(([legacyKey, currentKey]) => {
+          if (source[legacyKey] !== undefined && source[currentKey] === undefined) {
+            source[currentKey] = source[legacyKey];
+          }
+          delete source[legacyKey];
+        });
+        return source;
+      }
+
       function clampNumber(value, min, max, fallback) {
         const num = Number(value);
         if (!Number.isFinite(num)) return fallback;
@@ -1732,7 +1823,7 @@
         try {
           const raw = localStorage.getItem(storageKey);
           if (raw) {
-            settings = { ...DEFAULT_SETTINGS, ...JSON.parse(raw) };
+            settings = { ...DEFAULT_SETTINGS, ...adoptLegacySettingKeys(JSON.parse(raw)) };
           }
         }
         catch (_err) { /* keep defaults */ }
@@ -1750,7 +1841,7 @@
         settings.layout = LAYOUTS.includes(settings.layout) ? settings.layout : DEFAULT_SETTINGS.layout;
         settings.scale = clampNumber(settings.scale, 0.5, 2, 1);
         settings.slateScale = clampNumber(settings.slateScale, 0.5, 2, 1);
-        settings.momentumScale = clampNumber(settings.momentumScale, 0.5, 2, 1);
+        settings.statsScale = clampNumber(settings.statsScale, 0.5, 2, 1);
         settings.autoMomentumCards = Boolean(settings.autoMomentumCards);
         settings.quickBarOpacity = clampNumber(settings.quickBarOpacity, 0.1, 1, 0.4);
         settings.quickBarScale = clampNumber(settings.quickBarScale, 0.5, 2, 1);
@@ -1804,6 +1895,12 @@
         catch (_err) {
           return;
         }
+
+        Object.entries(LEGACY_SETTING_ALIASES).forEach(([legacyKey, currentKey]) => {
+          if (params.has(legacyKey) && !params.has(currentKey)) {
+            params.set(currentKey, params.get(legacyKey));
+          }
+        });
 
         // "theme" is applied first so explicit colour params can refine it.
         const theme = params.get("theme") || params.get("themePreset");
@@ -1908,7 +2005,7 @@
         root.setProperty("--ov-teamB", settings.teamB);
         root.setProperty("--ov-scale", String(clampNumber(settings.scale, 0.5, 2, 1)));
         root.setProperty("--ov-slate-scale", String(clampNumber(settings.slateScale, 0.5, 2, 1)));
-        root.setProperty("--ov-momentum-scale", String(clampNumber(settings.momentumScale, 0.5, 2, 1)));
+        root.setProperty("--ov-stats-scale", String(clampNumber(settings.statsScale, 0.5, 2, 1)));
         root.setProperty("--ov-quickbar-opacity", String(clampNumber(settings.quickBarOpacity, 0.1, 1, 0.4)));
         root.setProperty("--ov-quickbar-scale", String(clampNumber(settings.quickBarScale, 0.5, 2, 1)));
 
@@ -2373,6 +2470,8 @@
 
       let statsCache = null;
       let statsCacheAt = 0;
+      let momentumCache = null;
+      let momentumCacheAt = 0;
       let statCardPinned = false;
       let statCardTimer = null;
       let statRefreshTimer = null;
@@ -2391,6 +2490,24 @@
         const data = await fetchJson(url);
         statsCache = data;
         statsCacheAt = Date.now();
+        return data;
+      }
+
+      // The point-by-point momentum streams come from /m/{courtId} and nowhere
+      // else, so this is the momentum card's only data source.
+      async function fetchMomentum(force) {
+        if (!isDebugCourt && !courtId) {
+          throw new Error("No court specified.");
+        }
+
+        if (!force && momentumCache && Date.now() - momentumCacheAt < 8000) {
+          return momentumCache;
+        }
+
+        const url = isDebugCourt ? debugCourt_momentumUrl : "/m/" + encodeURIComponent(courtId);
+        const data = await fetchJson(url);
+        momentumCache = data;
+        momentumCacheAt = Date.now();
         return data;
       }
 
@@ -2431,10 +2548,11 @@
         const colourB = settings.teamB || "#27d9ff";
         const setPointMarkers = data?.setPointMarkers || [];
         const momentumTimeline = data?.momentumTimeline || null;
-        const gameMarkers = data?.advancedStats?.gameMarkers || [];
+        const gameMarkers = data?.gameMarkers || [];
         const pointHistory = data?.pointHistory || [];
 
         const CANVAS_FALLBACK_WIDTH = 300;
+        const CANVAS_FALLBACK_HEIGHT = 90;
         const FILL_OPACITY = "55";
 
         const MOMENTUM_CLAMP_MIN = -100;
@@ -2471,10 +2589,11 @@
 
           const dpr = window.devicePixelRatio || 1;
           const cssW = canvas.offsetWidth || canvas.parentElement?.offsetWidth || CANVAS_FALLBACK_WIDTH;
-          const cssH = 90;
+          const cssH = canvas.offsetHeight || CANVAS_FALLBACK_HEIGHT;
           canvas.width = cssW * dpr;
+          // Only the backing store is set here - the CSS height is in em so it
+          // tracks the scale slider, and an inline px height would freeze it.
           canvas.height = cssH * dpr;
-          canvas.style.height = cssH + "px";
 
           const ctx = canvas.getContext("2d");
           ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -2749,28 +2868,40 @@
       let momentumRefreshTimer = null;
       let momentumCardPinned = false;
 
+      function setMomentumLoading(isLoading) {
+        document.getElementById("momentumLoading").classList.toggle("hidden", !isLoading);
+        document.getElementById("momentumCanvas").classList.toggle("hidden", isLoading);
+      }
+
       async function showMomentumCard(options) {
         const { durationMs = null, pin = false } = options || {};
         const card = document.getElementById("momentumCard");
         const subEl = document.getElementById("momentumSub");
         if (subEl) subEl.textContent = teamDisplayName("A") + " vs " + teamDisplayName("B");
 
-        let stats = null;
+        // Put the card on screen before the request goes out: replaying the
+        // event stream is the slowest call the overlay makes, and a card that
+        // only appears seconds after its trigger reads as a broken source. A
+        // graph that is already drawn stays up while the refresh lands.
+        card.classList.remove("hidden");
+        setMomentumLoading(momentumCache === null);
+
+        let momentum = null;
         try {
-          stats = await fetchStats(true);
+          momentum = await fetchMomentum(true);
         }
         catch (_err) {
-          if (statsCache) {
-            stats = statsCache;
-          }
+          momentum = momentumCache;
         }
 
-        if (!stats) {
+        setMomentumLoading(false);
+
+        if (!momentum) {
+          hideMomentumCard();
           return;
         }
 
-        renderMomentumGraph(stats);
-        card.classList.remove("hidden");
+        renderMomentumGraph(momentum);
 
         clearTimeout(momentumCardTimer);
         if (pin) {
@@ -2778,7 +2909,7 @@
           document.getElementById("momentumBtn").classList.add("active");
           clearInterval(momentumRefreshTimer);
           momentumRefreshTimer = setInterval(async () => {
-            try { renderMomentumGraph(await fetchStats(true)); }
+            try { renderMomentumGraph(await fetchMomentum(true)); }
             catch (_err) { /* keep last rendered */ }
           }, 15000);
         }
@@ -3170,9 +3301,9 @@
         document.getElementById("setSlateScale").value = slateScale;
         document.getElementById("slateScaleValue").textContent = Math.round(slateScale * 100) + "%";
 
-        const momScale = clampNumber(settings.momentumScale, 0.5, 2, 1);
-        document.getElementById("setMomentumScale").value = momScale;
-        document.getElementById("momentumScaleValue").textContent = Math.round(momScale * 100) + "%";
+        const statsScale = clampNumber(settings.statsScale, 0.5, 2, 1);
+        document.getElementById("setStatsScale").value = statsScale;
+        document.getElementById("statsScaleValue").textContent = Math.round(statsScale * 100) + "%";
 
         const qbOpacity = clampNumber(settings.quickBarOpacity, 0.1, 1, 0.4);
         document.getElementById("setQuickBarOpacity").value = qbOpacity;
@@ -3236,9 +3367,9 @@
         applySettings();
       });
 
-      document.getElementById("setMomentumScale").addEventListener("input", (event) => {
-        settings.momentumScale = clampNumber(event.target.value, 0.5, 2, 1);
-        document.getElementById("momentumScaleValue").textContent = Math.round(settings.momentumScale * 100) + "%";
+      document.getElementById("setStatsScale").addEventListener("input", (event) => {
+        settings.statsScale = clampNumber(event.target.value, 0.5, 2, 1);
+        document.getElementById("statsScaleValue").textContent = Math.round(settings.statsScale * 100) + "%";
         saveSettings();
         applySettings();
       });
