@@ -15,21 +15,22 @@ jest.mock("firebase-functions/v2/https", () => ({
   onRequest: (_config, handler) => handler
 }));
 
-jest.mock("firebase-admin", () =>
-{
-  const firestore = () => mockDb;
-  firestore.FieldPath = {
-    documentId: () => "__name__"
-  };
-  firestore.FieldValue = {
-    serverTimestamp: () => ({ __serverTimestamp: true })
-  };
+jest.mock("firebase-admin", () => ({
+  initializeApp: jest.fn(),
+  firestore: () => mockDb
+}));
 
-  return {
-    initializeApp: jest.fn(),
-    firestore
-  };
-});
+// index.js takes FieldPath/FieldValue from the modular entry point rather than
+// the admin namespace, because the functions emulator strips them off the
+// latter. Mock the same surface the production classes expose.
+jest.mock("firebase-admin/firestore", () => ({
+  FieldPath: {
+    documentId: () => "__name__"
+  },
+  FieldValue: {
+    serverTimestamp: () => ({ __serverTimestamp: true })
+  }
+}));
 
 function timestamp(seconds, nanoseconds = 0)
 {

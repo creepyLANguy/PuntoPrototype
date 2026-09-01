@@ -5801,7 +5801,8 @@ document.addEventListener("DOMContentLoaded", () =>
   // payload deliberately no longer carries the point-by-point streams.
   async function fetchMomentumPayload(courtId)
   {
-    const response = await fetch("/m/" + encodeURIComponent(courtId), { cache: "no-store" });
+    const url = "/m/" + encodeURIComponent(courtId);
+    const response = await fetch(url, { cache: "no-store" });
     let data = null;
 
     try
@@ -5810,9 +5811,18 @@ document.addEventListener("DOMContentLoaded", () =>
     }
     catch (_parseErr) { /* non-JSON body */ }
 
-    if (!response.ok || !data || data.success !== true)
+    if (!data)
     {
-      throw new Error((data && data.error) || "Could not load match momentum.");
+      // /m/ is a Firebase Hosting rewrite. Until it is deployed the request
+      // falls through to index.html, so a "successful" HTML response here
+      // means the endpoint is missing rather than the court being empty.
+      throw new Error("No JSON from " + url + " (HTTP " + response.status +
+        ") - the momentum endpoint is probably not deployed.");
+    }
+
+    if (!response.ok || data.success !== true)
+    {
+      throw new Error(data.error || "Could not load match momentum from " + url + ".");
     }
 
     return data;

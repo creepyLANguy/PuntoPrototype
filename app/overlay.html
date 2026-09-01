@@ -737,13 +737,15 @@
 
     /* ---------- Stat card ---------- */
 
-    /* The stat and momentum cards are stretched siblings of the score panel,
-       so the anchor's width is what they both take. --ov-stats-scale is layered
-       on top of the overlay's own --ov-scale and drives their type size and
-       their shared width floor: one slider, two cards that always match each
-       other, still sized relative to the score panel. */
+    /* The stat and momentum cards are driven by one pair of knobs so they can
+       never render differently from each other:
+         --ov-stats-scale  type size, layered on the overlay's own --ov-scale
+         --ov-stats-width  width, as a multiple of the score panel's width
+       width:0 + a percentage min-width is the same trick the sponsor strip
+       uses: it keeps the cards out of the anchor's fit-content width, so the
+       score panel alone decides that width and the cards take a multiple of
+       it. At 100% both cards line up exactly with the score panel. */
     .stat-card {
-      align-self: stretch;
       background: linear-gradient(var(--ov-grad-angle), var(--ov-panel), var(--ov-panel-2));
       border: 1px solid rgba(255, 255, 255, 0.18);
       border-radius: var(--ov-radius);
@@ -751,7 +753,8 @@
       padding: 0.6em 1em 0.7em;
       animation: stat-in 0.35s ease both;
       font-size: calc(24px * var(--ov-scale, 1) * var(--ov-stats-scale, 1));
-      min-width: 16em;
+      width: 0;
+      min-width: calc(100% * var(--ov-stats-width, 1));
       box-sizing: border-box;
     }
 
@@ -797,6 +800,9 @@
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+      /* Lets the ellipsis engage instead of forcing the head wider than the
+         card when the width slider is turned down. */
+      min-width: 0;
     }
 
     .stat-row {
@@ -1320,8 +1326,8 @@
 
     /* ---------- Momentum card ---------- */
 
+    /* Same two knobs as .stat-card - see the note there. */
     .momentum-card {
-      align-self: stretch;
       background: linear-gradient(var(--ov-grad-angle), var(--ov-panel), var(--ov-panel-2));
       border: 1px solid rgba(255, 255, 255, 0.18);
       border-radius: var(--ov-radius);
@@ -1329,7 +1335,8 @@
       padding: 0.6em 1em 0.7em;
       animation: stat-in 0.35s ease both;
       font-size: calc(24px * var(--ov-scale, 1) * var(--ov-stats-scale, 1));
-      min-width: 16em;
+      width: 0;
+      min-width: calc(100% * var(--ov-stats-width, 1));
       box-sizing: border-box;
     }
 
@@ -1370,6 +1377,7 @@
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+      min-width: 0;
     }
 
     /* Height in em so the graph grows with the shared stats/momentum slider
@@ -1394,6 +1402,17 @@
     }
 
     .momentum-loading.hidden {
+      display: none;
+    }
+
+    .momentum-message {
+      font-size: 0.58em;
+      font-weight: 600;
+      color: var(--ov-muted);
+      padding: 0.5em 0 0.3em;
+    }
+
+    .momentum-message.hidden {
       display: none;
     }
 
@@ -1548,6 +1567,7 @@
       <div class="momentum-loading hidden" id="momentumLoading" role="status" aria-live="polite">
         <span class="ov-loader"></span>
       </div>
+      <div class="momentum-message hidden" id="momentumMessage" role="status" aria-live="polite"></div>
       <canvas id="momentumCanvas" class="ov-momentum-canvas"></canvas>
     </div>
   </div>
@@ -1595,6 +1615,8 @@
         class="angle-value" id="slateScaleValue">100%</span></label>
     <label><span>Stats &amp; momentum scale</span><input type="range" id="setStatsScale" min="0.5" max="2"
         step="0.05" /><span class="angle-value" id="statsScaleValue">100%</span></label>
+    <label><span>Stats &amp; momentum width</span><input type="range" id="setStatsWidth" min="0.5" max="2"
+        step="0.05" /><span class="angle-value" id="statsWidthValue">100%</span></label>
 
     <div class="section">Floating Buttons</div>
     <label><span>Buttons opacity</span><input type="range" id="setQuickBarOpacity" min="0.1" max="1" step="0.05" /><span
@@ -1713,6 +1735,7 @@
         scale: 1,
         slateScale: 1,
         statsScale: 1,
+        statsWidth: 1,
         quickBarOpacity: 0.4,
         quickBarScale: 1,
         dragOverlay: null,
@@ -1842,6 +1865,7 @@
         settings.scale = clampNumber(settings.scale, 0.5, 2, 1);
         settings.slateScale = clampNumber(settings.slateScale, 0.5, 2, 1);
         settings.statsScale = clampNumber(settings.statsScale, 0.5, 2, 1);
+        settings.statsWidth = clampNumber(settings.statsWidth, 0.5, 2, 1);
         settings.autoMomentumCards = Boolean(settings.autoMomentumCards);
         settings.quickBarOpacity = clampNumber(settings.quickBarOpacity, 0.1, 1, 0.4);
         settings.quickBarScale = clampNumber(settings.quickBarScale, 0.5, 2, 1);
@@ -2006,6 +2030,7 @@
         root.setProperty("--ov-scale", String(clampNumber(settings.scale, 0.5, 2, 1)));
         root.setProperty("--ov-slate-scale", String(clampNumber(settings.slateScale, 0.5, 2, 1)));
         root.setProperty("--ov-stats-scale", String(clampNumber(settings.statsScale, 0.5, 2, 1)));
+        root.setProperty("--ov-stats-width", String(clampNumber(settings.statsWidth, 0.5, 2, 1)));
         root.setProperty("--ov-quickbar-opacity", String(clampNumber(settings.quickBarOpacity, 0.1, 1, 0.4)));
         root.setProperty("--ov-quickbar-scale", String(clampNumber(settings.quickBarScale, 0.5, 2, 1)));
 
@@ -2868,9 +2893,16 @@
       let momentumRefreshTimer = null;
       let momentumCardPinned = false;
 
-      function setMomentumLoading(isLoading) {
-        document.getElementById("momentumLoading").classList.toggle("hidden", !isLoading);
-        document.getElementById("momentumCanvas").classList.toggle("hidden", isLoading);
+      // Three mutually exclusive states for the card body: the loader, a short
+      // message, or the graph. A card that silently empties itself is
+      // indistinguishable from a broken feed, so a failure always says so.
+      function setMomentumState(state, message) {
+        document.getElementById("momentumLoading").classList.toggle("hidden", state !== "loading");
+        document.getElementById("momentumCanvas").classList.toggle("hidden", state !== "graph");
+
+        const messageEl = document.getElementById("momentumMessage");
+        messageEl.classList.toggle("hidden", state !== "message");
+        messageEl.textContent = state === "message" ? (message || "") : "";
       }
 
       async function showMomentumCard(options) {
@@ -2884,25 +2916,29 @@
         // only appears seconds after its trigger reads as a broken source. A
         // graph that is already drawn stays up while the refresh lands.
         card.classList.remove("hidden");
-        setMomentumLoading(momentumCache === null);
+        if (momentumCache === null) {
+          setMomentumState("loading");
+        }
 
         let momentum = null;
         try {
           momentum = await fetchMomentum(true);
         }
-        catch (_err) {
+        catch (err) {
+          console.error("Momentum could not be loaded:", err);
           momentum = momentumCache;
         }
 
-        setMomentumLoading(false);
-
-        if (!momentum) {
-          hideMomentumCard();
-          return;
+        if (momentum) {
+          setMomentumState("graph");
+          renderMomentumGraph(momentum);
+        }
+        else {
+          setMomentumState("message", "Momentum unavailable.");
         }
 
-        renderMomentumGraph(momentum);
-
+        // The pin and auto-hide timers are set either way: an auto-shown card
+        // that failed to load still has to take itself off screen.
         clearTimeout(momentumCardTimer);
         if (pin) {
           momentumCardPinned = true;
@@ -3115,8 +3151,16 @@
         }
         catch (_parseErr) { /* non-JSON body */ }
 
-        if (!response.ok || !data || !data.success) {
-          throw new Error((data && data.error) || "Could not load score.");
+        if (!data) {
+          // These endpoints are hosting rewrites: until one is deployed the
+          // request falls through to index.html and arrives here as a
+          // perfectly successful lump of HTML.
+          throw new Error("No JSON from " + path + " (HTTP " + response.status +
+            ") - the endpoint is probably not deployed.");
+        }
+
+        if (!response.ok || !data.success) {
+          throw new Error(data.error || "Could not load " + path + ".");
         }
 
         return data;
@@ -3305,6 +3349,10 @@
         document.getElementById("setStatsScale").value = statsScale;
         document.getElementById("statsScaleValue").textContent = Math.round(statsScale * 100) + "%";
 
+        const statsWidth = clampNumber(settings.statsWidth, 0.5, 2, 1);
+        document.getElementById("setStatsWidth").value = statsWidth;
+        document.getElementById("statsWidthValue").textContent = Math.round(statsWidth * 100) + "%";
+
         const qbOpacity = clampNumber(settings.quickBarOpacity, 0.1, 1, 0.4);
         document.getElementById("setQuickBarOpacity").value = qbOpacity;
         document.getElementById("quickBarOpacityValue").textContent = Math.round(qbOpacity * 100) + "%";
@@ -3370,6 +3418,13 @@
       document.getElementById("setStatsScale").addEventListener("input", (event) => {
         settings.statsScale = clampNumber(event.target.value, 0.5, 2, 1);
         document.getElementById("statsScaleValue").textContent = Math.round(settings.statsScale * 100) + "%";
+        saveSettings();
+        applySettings();
+      });
+
+      document.getElementById("setStatsWidth").addEventListener("input", (event) => {
+        settings.statsWidth = clampNumber(event.target.value, 0.5, 2, 1);
+        document.getElementById("statsWidthValue").textContent = Math.round(settings.statsWidth * 100) + "%";
         saveSettings();
         applySettings();
       });

@@ -1,4 +1,11 @@
 const admin = require("firebase-admin");
+// The functions emulator swaps admin.firestore for a bound function, and
+// binding drops a function's static members: admin.firestore.FieldPath and
+// .FieldValue read as undefined there, so every replay query and every
+// serverTimestamp() write throws locally while working in production. The
+// modular entry point is not proxied and exports the very same classes, so
+// take the sentinels from there and keep admin.firestore() for the instance.
+const { FieldPath, FieldValue } = require("firebase-admin/firestore");
 const crypto = require("crypto");
 const { onDocumentCreated } = require("firebase-functions/v2/firestore");
 const { onCall } = require("firebase-functions/v2/https");
@@ -102,7 +109,7 @@ function buildScoringEventsQuery(courtId)
     return db
         .collection(`courts/${courtId}/events`)
         .orderBy("createdAt", "asc")
-        .orderBy(admin.firestore.FieldPath.documentId(), "asc");
+        .orderBy(FieldPath.documentId(), "asc");
 }
 
 async function getLatestCheckpoint(tx, courtId, options)
@@ -302,7 +309,7 @@ function buildCheckpointPayload(score, options, lastEventId, lastCreatedAt)
         setsCompleted: (Number(score?.A?.sets) || 0) + (Number(score?.B?.sets) || 0),
         lastEventId,
         lastCreatedAt,
-        updatedAt: admin.firestore.FieldValue.serverTimestamp()
+        updatedAt: FieldValue.serverTimestamp()
     };
 }
 
@@ -878,7 +885,7 @@ async function appendCourtEvent(courtId, event)
     const ref = db.collection(`courts/${courtId}/events`).doc();
     await ref.set({
         ...event,
-        createdAt: admin.firestore.FieldValue.serverTimestamp()
+        createdAt: FieldValue.serverTimestamp()
     });
 
     return ref.id;
@@ -995,7 +1002,7 @@ async (event) =>
                     lastEventId: replayOrdering.eventId,
                     lastProcessedEventId: replayOrdering.eventId,
                     lastProcessedCreatedAt: replayOrdering.createdAt,
-                    updatedAt: admin.firestore.FieldValue.serverTimestamp()
+                    updatedAt: FieldValue.serverTimestamp()
                 });
 
                 return;
@@ -1021,7 +1028,7 @@ async (event) =>
                     );
                     archiveBatch.set(archiveRef, {
                         ...doc.data(),
-                        archivedAt: admin.firestore.FieldValue.serverTimestamp(),
+                        archivedAt: FieldValue.serverTimestamp(),
                         resetBy: newEvent.createdBy || "system"
                     });
                 });
@@ -1041,7 +1048,7 @@ async (event) =>
                     lastEventId: eventId,
                     lastProcessedEventId: eventId,
                     lastProcessedCreatedAt: incomingOrder.createdAt,
-                    updatedAt: admin.firestore.FieldValue.serverTimestamp()
+                    updatedAt: FieldValue.serverTimestamp()
                 });
 
                 return;
@@ -1065,7 +1072,7 @@ async (event) =>
                     lastEventId: eventId,
                     lastProcessedEventId: eventId,
                     lastProcessedCreatedAt: incomingOrder.createdAt,
-                    updatedAt: admin.firestore.FieldValue.serverTimestamp()
+                    updatedAt: FieldValue.serverTimestamp()
                 });
 
                 // Re-anchor the checkpoint stream at the undo itself. The
@@ -1115,7 +1122,7 @@ async (event) =>
                 lastEventId: replayOrdering.eventId,
                 lastProcessedEventId: replayOrdering.eventId,
                 lastProcessedCreatedAt: replayOrdering.createdAt,
-                updatedAt: admin.firestore.FieldValue.serverTimestamp()
+                updatedAt: FieldValue.serverTimestamp()
             });
 
             // Persist checkpoint whenever set total increases under active scoring mode.
@@ -1199,7 +1206,7 @@ exports.resetCourt = onCall(
             );
             archiveBatch.set(archiveRef, {
                 ...doc.data(),
-                archivedAt: admin.firestore.FieldValue.serverTimestamp(),
+                archivedAt: FieldValue.serverTimestamp(),
                 resetBy: request.auth?.uid || "system"
             });
         });
@@ -1270,7 +1277,7 @@ exports.updateScoringOptions = onCall(
         const eventsRef = db
             .collection(`courts/${courtId}/events`)
             .orderBy("createdAt", "asc")
-            .orderBy(admin.firestore.FieldPath.documentId(), "asc");
+            .orderBy(FieldPath.documentId(), "asc");
 
         const courtSnap = await courtRef.get();
         if (!courtSnap.exists)
@@ -1304,7 +1311,7 @@ exports.updateScoringOptions = onCall(
             lastEventId,
             lastProcessedEventId: lastEventId,
             lastProcessedCreatedAt: lastEventCreatedAt,
-            updatedAt: admin.firestore.FieldValue.serverTimestamp()
+            updatedAt: FieldValue.serverTimestamp()
         });
 
         const checkpointsRef = db.collection(`courts/${courtId}/${SCORE_CHECKPOINTS_COLLECTION}`);
@@ -1358,7 +1365,7 @@ async function replayCourtAnalytics(courtId)
     const eventsSnap = await db
         .collection(`courts/${courtId}/events`)
         .orderBy("createdAt", "asc")
-        .orderBy(admin.firestore.FieldPath.documentId(), "asc")
+        .orderBy(FieldPath.documentId(), "asc")
         .get();
 
     // Use only scoring events so details replay mirrors score/current logic,
