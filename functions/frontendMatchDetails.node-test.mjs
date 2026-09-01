@@ -1,7 +1,7 @@
 // Frontend integration tests: the match details view and its momentum panel.
 // The momentum graph is fed by its own /m/{courtId} endpoint, so the details
-// tables must render without waiting for it, and the panel must show the
-// loading animation until the momentum payload lands.
+// tables must render without waiting for it, and the momentum portion must
+// stay hidden until a payload with actual points is in hand.
 import assert from "node:assert/strict";
 import test from "node:test";
 
@@ -23,7 +23,7 @@ const COURT_ID = "courtdetails";
 let document;
 
 // While set, every /m/ request parks on this gate so a test can inspect the
-// loading state before the payload arrives.
+// view while the momentum payload is still pending.
 let momentumGate = null;
 let momentumRequests = [];
 let momentumPayload = null;
@@ -173,40 +173,32 @@ test("the details tables render while the momentum payload is still in flight", 
   assert.match(momentumRequests[0], new RegExp(`/m/${COURT_ID}$`));
 });
 
-test("the momentum panel shows the loading animation until its payload arrives", async () =>
+test("the momentum portion stays hidden until its payload arrives", async () =>
 {
   assert.equal(
     document.getElementById("dmMomentumWrap").classList.contains("hidden"),
-    false,
-    "the momentum panel should be on screen while it loads"
-  );
-  assert.equal(
-    document.getElementById("dmMomentumLoading").classList.contains("hidden"),
-    false,
-    "the loader should be visible while the momentum payload is pending"
-  );
-  assert.equal(
-    document.getElementById("dmMomentumCanvas").classList.contains("hidden"),
     true,
-    "the canvas should stay hidden while the momentum payload is pending"
+    "no momentum heading should appear while the payload is still pending"
   );
+
+  // The rest of the expanded details is already usable in the meantime.
+  assert.equal(document.getElementById("dmStatsWrap").classList.contains("hidden"), false);
 
   releaseMomentumResponses();
 
   await waitFor(
-    () => document.getElementById("dmMomentumLoading").classList.contains("hidden"),
-    { label: "momentum loader to clear" }
+    () => !document.getElementById("dmMomentumWrap").classList.contains("hidden"),
+    { label: "momentum panel to appear with its graph" }
   );
 
   assert.equal(
     document.getElementById("dmMomentumCanvas").classList.contains("hidden"),
     false,
-    "the canvas should be visible once the graph has been drawn"
+    "the panel appears with the canvas already showing"
   );
-  assert.equal(document.getElementById("dmMomentumWrap").classList.contains("hidden"), false);
 });
 
-test("a match with no momentum data hides the panel instead of leaving the loader up", async () =>
+test("a match with no momentum data keeps the panel hidden", async () =>
 {
   momentumPayload = EMPTY_MOMENTUM;
   momentumRequests = [];
@@ -227,6 +219,4 @@ test("a match with no momentum data hides the panel instead of leaving the loade
     () => document.getElementById("dmMomentumWrap").classList.contains("hidden"),
     { label: "momentum panel to close for an empty timeline" }
   );
-
-  assert.equal(document.getElementById("dmMomentumLoading").classList.contains("hidden"), true);
 });

@@ -1407,7 +1407,6 @@ document.addEventListener("DOMContentLoaded", () =>
     detailsLoading: $("detailsLoading"),
     dmMomentumWrap: $("dmMomentumWrap"),
     dmMomentumCanvas: $("dmMomentumCanvas"),
-    dmMomentumLoading: $("dmMomentumLoading"),
     dmDetailsPanel: $("dmDetailsPanel"),
     dmDetailsToggle: $("dmDetailsToggle"),
     dmDetailsContent: $("dmDetailsContent"),
@@ -5772,23 +5771,8 @@ document.addEventListener("DOMContentLoaded", () =>
 
   let momentumPulseAnimationFrame = null;
 
-  function setMomentumLoading(isLoading)
-  {
-    if (elements.dmMomentumLoading)
-    {
-      elements.dmMomentumLoading.classList.toggle("hidden", !isLoading);
-    }
-
-    if (elements.dmMomentumCanvas)
-    {
-      elements.dmMomentumCanvas.classList.toggle("hidden", isLoading);
-    }
-  }
-
   function hideMomentumPanel()
   {
-    setMomentumLoading(false);
-
     if (elements.dmMomentumWrap)
     {
       elements.dmMomentumWrap.classList.add("hidden");
@@ -5829,10 +5813,15 @@ document.addEventListener("DOMContentLoaded", () =>
   }
 
   // Runs alongside the match-details request rather than after it, so the set
-  // tables and stats paint without waiting on the momentum replay. showLoading
-  // is off for live refreshes: the graph on screen is still valid, so leaving
-  // it up beats flashing a loader on every point.
-  async function loadMomentumGraph(courtId, showLoading)
+  // tables and stats paint without waiting on the momentum replay.
+  //
+  // The panel reveals itself only once a payload with actual points is in hand
+  // (renderMomentumGraph re-hides it for an empty timeline). Nothing is shown
+  // in the meantime: a "Match Momentum" heading over an empty box, or one that
+  // appears and then withdraws when the graph turns out to be empty, reads
+  // worse than the section simply not being there yet. A graph already on
+  // screen stays up untouched while a live refresh is in flight.
+  async function loadMomentumGraph(courtId)
   {
     if (!courtId || !elements.dmMomentumWrap)
     {
@@ -5841,13 +5830,6 @@ document.addEventListener("DOMContentLoaded", () =>
 
     const token = ++momentumRequestToken;
     const cached = momentumCacheCourtId === courtId ? momentumCache : null;
-
-    if (showLoading && !cached)
-    {
-      elements.dmMomentumWrap.classList.remove("hidden");
-      setMomentumLoading(true);
-      syncDetailsPanelAvailability();
-    }
 
     let payload = cached;
 
@@ -5877,8 +5859,6 @@ document.addEventListener("DOMContentLoaded", () =>
     {
       return;
     }
-
-    setMomentumLoading(false);
 
     const colourA = getComputedStyle(document.body).getPropertyValue("--teamAcolour").trim();
     const colourB = getComputedStyle(document.body).getPropertyValue("--teamBcolour").trim();
@@ -6474,9 +6454,9 @@ document.addEventListener("DOMContentLoaded", () =>
     syncDetailsPanelAvailability();
     setDetailsPanelExpanded(expanded);
 
-    // Deliberately not awaited: the momentum graph fills itself in when its
+    // Deliberately not awaited: the momentum graph reveals itself when its
     // endpoint answers, so nothing below is held up by the heavier replay.
-    void loadMomentumGraph(currentCourtId, !refreshing);
+    void loadMomentumGraph(currentCourtId);
 
     try
     {

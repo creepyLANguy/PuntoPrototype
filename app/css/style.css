@@ -5699,28 +5699,6 @@ body.light-mode .dm-momentum-label {
   border-radius: 12px;
 }
 
-.dm-momentum-canvas.hidden {
-  display: none;
-}
-
-/* Stands in for the canvas while the momentum payload is in flight, at the
-   canvas's own height so the panel does not resize when the graph arrives. */
-.dm-momentum-loading {
-  width: 100%;
-  height: 120px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.dm-momentum-loading.hidden {
-  display: none;
-}
-
-.dm-momentum-loading .loader {
-  margin: 0;
-}
-
 .dm-stats-wrap {
   width: 100%;
   margin-top: 14px;

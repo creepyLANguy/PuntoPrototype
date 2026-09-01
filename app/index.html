@@ -370,12 +370,9 @@
           </button>
 
           <div class="dm-details-content" id="dmDetailsContent" hidden>
-            <!-- Momentum graph -->
+            <!-- Momentum graph: hidden until its payload has points to draw. -->
             <div class="dm-momentum-wrap hidden" id="dmMomentumWrap">
               <div class="dm-momentum-label">Match Momentum</div>
-              <div class="dm-momentum-loading hidden" id="dmMomentumLoading" role="status" aria-live="polite">
-                <span class="loader"></span>
-              </div>
               <canvas id="dmMomentumCanvas" class="dm-momentum-canvas"></canvas>
             </div>
 
