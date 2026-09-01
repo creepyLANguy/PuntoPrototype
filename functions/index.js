@@ -1,4 +1,11 @@
 const admin = require("firebase-admin");
+// The functions emulator swaps admin.firestore for a bound function, and
+// binding drops a function's static members: admin.firestore.FieldPath and
+// .FieldValue read as undefined there, so every replay query and every
+// serverTimestamp() write throws locally while working in production. The
+// modular entry point is not proxied and exports the very same classes, so
+// take the sentinels from there and keep admin.firestore() for the instance.
+const { FieldPath, FieldValue } = require("firebase-admin/firestore");
 const crypto = require("crypto");
 const { onDocumentCreated } = require("firebase-functions/v2/firestore");
 const { onCall } = require("firebase-functions/v2/https");
@@ -102,7 +109,7 @@ function buildScoringEventsQuery(courtId)
     return db
         .collection(`courts/${courtId}/events`)
         .orderBy("createdAt", "asc")
-        .orderBy(admin.firestore.FieldPath.documentId(), "asc");
+        .orderBy(FieldPath.documentId(), "asc");
 }
 
 async function getLatestCheckpoint(tx, courtId, options)
@@ -302,7 +309,7 @@ function buildCheckpointPayload(score, options, lastEventId, lastCreatedAt)
         setsCompleted: (Number(score?.A?.sets) || 0) + (Number(score?.B?.sets) || 0),
         lastEventId,
         lastCreatedAt,
-        updatedAt: admin.firestore.FieldValue.serverTimestamp()
+        updatedAt: FieldValue.serverTimestamp()
     };
 }
 
@@ -494,13 +501,16 @@ function classifyPressureBonus(beforeScore, scoringTeam, options)
 function computeMomentumTimeline(pointHistory, scoringOptions)
 {
     const options = normalizeScoringOptions(scoringOptions);
+    const standardMode = options.scoringMode === "standard";
     const timeline = [];
     const breakdown = [];
+    const gameMarkers = [];
     let score = defaultScore(options);
     let momentum = 0;
     let streakTeam = null;
     let streakLength = 0;
     let setCarry = 0;
+    let pointIndex = 0;
     const recentWinners = [];
 
     for (const pointWinner of pointHistory)
@@ -509,6 +519,8 @@ function computeMomentumTimeline(pointHistory, scoringOptions)
         {
             continue;
         }
+
+        pointIndex++;
 
         const oldGamesA = score.A.games;
         const oldGamesB = score.B.games;
@@ -554,6 +566,13 @@ function computeMomentumTimeline(pointHistory, scoringOptions)
         const gameWinner = gameCompleted ? (score.lastGameTeam || pointWinner) : null;
         const gameResultComponent = gameWinner ? (gameWinner === "A" ? 1 : -1) * MOMENTUM_CONFIG.gameWinBonus : 0;
 
+        // Only games-and-sets play has game boundaries worth marking on the
+        // graph; straight/tiebreak modes are one continuous run of points.
+        if (gameCompleted && standardMode)
+        {
+            gameMarkers.push(pointIndex);
+        }
+
         const setCompleted = score.A.sets !== oldSetsA || score.B.sets !== oldSetsB;
         const setWinner = setCompleted ? (score.lastSetTeam || pointWinner) : null;
         const setResultComponent = setWinner ? (setWinner === "A" ? 1 : -1) * MOMENTUM_CONFIG.setWinBonus : 0;
@@ -591,6 +610,7 @@ function computeMomentumTimeline(pointHistory, scoringOptions)
     return {
         timeline,
         breakdown,
+        gameMarkers,
         config: MOMENTUM_CONFIG
     };
 }
@@ -622,17 +642,14 @@ function computeAdvancedStats(pointHistory, scoringOptions)
     let streakTeam = null;
     let streakLength = 0;
     let currentServerTeam = "A";
-    const gameMarkers = [];
     let gameContext = {
         reachedDeuce: false,
         hadGamePoint: { A: false, B: false }
     };
 
-    let pointIndex = 0;
     for (const pointWinner of pointHistory)
     {
         if (pointWinner !== "A" && pointWinner !== "B") continue;
-        pointIndex++;
 
         const serverLabel = getCurrentServerLabel(score);
         if (serverLabel && servePlayerStats[serverLabel])
@@ -781,8 +798,6 @@ function computeAdvancedStats(pointHistory, scoringOptions)
                 teamStats[gameLoser].gamesLostAfterDeuce++;
             }
 
-            gameMarkers.push(pointIndex);
-
             const setCompleted = score.A.sets !== oldSetsA || score.B.sets !== oldSetsB;
             if (setCompleted)
             {
@@ -844,8 +859,7 @@ function computeAdvancedStats(pointHistory, scoringOptions)
         servePlayerStats,
         matchStats,
         scoringMode: options.scoringMode,
-        deuceMode: options.deuceMode,
-        gameMarkers
+        deuceMode: options.deuceMode
     };
 }
 
@@ -871,7 +885,7 @@ async function appendCourtEvent(courtId, event)
     const ref = db.collection(`courts/${courtId}/events`).doc();
     await ref.set({
         ...event,
-        createdAt: admin.firestore.FieldValue.serverTimestamp()
+        createdAt: FieldValue.serverTimestamp()
     });
 
     return ref.id;
@@ -988,7 +1002,7 @@ async (event) =>
                     lastEventId: replayOrdering.eventId,
                     lastProcessedEventId: replayOrdering.eventId,
                     lastProcessedCreatedAt: replayOrdering.createdAt,
-                    updatedAt: admin.firestore.FieldValue.serverTimestamp()
+                    updatedAt: FieldValue.serverTimestamp()
                 });
 
                 return;
@@ -1014,7 +1028,7 @@ async (event) =>
                     );
                     archiveBatch.set(archiveRef, {
                         ...doc.data(),
-                        archivedAt: admin.firestore.FieldValue.serverTimestamp(),
+                        archivedAt: FieldValue.serverTimestamp(),
                         resetBy: newEvent.createdBy || "system"
                     });
                 });
@@ -1034,7 +1048,7 @@ async (event) =>
                     lastEventId: eventId,
                     lastProcessedEventId: eventId,
                     lastProcessedCreatedAt: incomingOrder.createdAt,
-                    updatedAt: admin.firestore.FieldValue.serverTimestamp()
+                    updatedAt: FieldValue.serverTimestamp()
                 });
 
                 return;
@@ -1058,7 +1072,7 @@ async (event) =>
                     lastEventId: eventId,
                     lastProcessedEventId: eventId,
                     lastProcessedCreatedAt: incomingOrder.createdAt,
-                    updatedAt: admin.firestore.FieldValue.serverTimestamp()
+                    updatedAt: FieldValue.serverTimestamp()
                 });
 
                 // Re-anchor the checkpoint stream at the undo itself. The
@@ -1108,7 +1122,7 @@ async (event) =>
                 lastEventId: replayOrdering.eventId,
                 lastProcessedEventId: replayOrdering.eventId,
                 lastProcessedCreatedAt: replayOrdering.createdAt,
-                updatedAt: admin.firestore.FieldValue.serverTimestamp()
+                updatedAt: FieldValue.serverTimestamp()
             });
 
             // Persist checkpoint whenever set total increases under active scoring mode.
@@ -1192,7 +1206,7 @@ exports.resetCourt = onCall(
             );
             archiveBatch.set(archiveRef, {
                 ...doc.data(),
-                archivedAt: admin.firestore.FieldValue.serverTimestamp(),
+                archivedAt: FieldValue.serverTimestamp(),
                 resetBy: request.auth?.uid || "system"
             });
         });
@@ -1263,7 +1277,7 @@ exports.updateScoringOptions = onCall(
         const eventsRef = db
             .collection(`courts/${courtId}/events`)
             .orderBy("createdAt", "asc")
-            .orderBy(admin.firestore.FieldPath.documentId(), "asc");
+            .orderBy(FieldPath.documentId(), "asc");
 
         const courtSnap = await courtRef.get();
         if (!courtSnap.exists)
@@ -1297,7 +1311,7 @@ exports.updateScoringOptions = onCall(
             lastEventId,
             lastProcessedEventId: lastEventId,
             lastProcessedCreatedAt: lastEventCreatedAt,
-            updatedAt: admin.firestore.FieldValue.serverTimestamp()
+            updatedAt: FieldValue.serverTimestamp()
         });
 
         const checkpointsRef = db.collection(`courts/${courtId}/${SCORE_CHECKPOINTS_COLLECTION}`);
@@ -1326,9 +1340,11 @@ exports.updateScoringOptions = onCall(
 // -----------------------------
 // Get detailed score (replay)
 // -----------------------------
-// Shared by the getDetailedScore callable (scoreboard app) and the public
-// /s/{courtId} stats endpoint (OBS overlay stat cards).
-async function buildDetailedScoreData(courtId)
+// Replays a court's scoring events once and hands back everything the detail,
+// stats and momentum payloads are derived from. Shared by the getDetailedScore
+// callable (scoreboard app), the public /s/{courtId} stats endpoint (OBS
+// overlay stat cards) and the public /m/{courtId} momentum endpoint.
+async function replayCourtAnalytics(courtId)
 {
     const courtSnap = await db.doc(`courts/${courtId}`).get();
     const courtExists = courtSnap.exists;
@@ -1349,7 +1365,7 @@ async function buildDetailedScoreData(courtId)
     const eventsSnap = await db
         .collection(`courts/${courtId}/events`)
         .orderBy("createdAt", "asc")
-        .orderBy(admin.firestore.FieldPath.documentId(), "asc")
+        .orderBy(FieldPath.documentId(), "asc")
         .get();
 
     // Use only scoring events so details replay mirrors score/current logic,
@@ -1421,6 +1437,30 @@ async function buildDetailedScoreData(courtId)
         }
     }
 
+    return {
+        courtExists,
+        score,
+        normalizedOptions,
+        playerNames,
+        pointHistory,
+        setPointMarkers
+    };
+}
+
+// Scores, per-set rows and aggregate stats. The point-by-point momentum
+// streams deliberately live in buildMomentumData instead: they are the
+// heaviest part of the payload and the only part every consumer can render
+// later, so keeping them out lets the score tables paint immediately.
+async function buildDetailedScoreData(courtId)
+{
+    const {
+        courtExists,
+        score,
+        normalizedOptions,
+        playerNames,
+        pointHistory
+    } = await replayCourtAnalytics(courtId);
+
     // Canonical source for per-set rows: completedSets from scorer state.
     // This guarantees details table aligns with score/current.
     const setScores = Array.isArray(score.completedSets)
@@ -1436,8 +1476,6 @@ async function buildDetailedScoreData(courtId)
         B: Number(score.B.games) || 0
     };
 
-    const momentumData = computeMomentumTimeline(pointHistory, normalizedOptions);
-
     return {
         courtExists,
         payload: {
@@ -1452,10 +1490,36 @@ async function buildDetailedScoreData(courtId)
             scoringMode: normalizedOptions.scoringMode,
             matchComplete: Boolean(score.matchComplete),
             playerNames,
-            pointHistory,
-            setPointMarkers,
-            momentumTimeline: momentumData.timeline,
             advancedStats: computeAdvancedStats(pointHistory, normalizedOptions)
+        }
+    };
+}
+
+// Everything the momentum graph draws and nothing else. The overlay's momentum
+// card and the scoreboard's match-details graph both read this single payload,
+// so the two renderers cannot drift apart.
+async function buildMomentumData(courtId)
+{
+    const {
+        courtExists,
+        score,
+        normalizedOptions,
+        pointHistory,
+        setPointMarkers
+    } = await replayCourtAnalytics(courtId);
+
+    const momentumData = computeMomentumTimeline(pointHistory, normalizedOptions);
+
+    return {
+        courtExists,
+        payload: {
+            pointHistory,
+            momentumTimeline: momentumData.timeline,
+            setPointMarkers,
+            gameMarkers: momentumData.gameMarkers,
+            totalPoints: pointHistory.length,
+            scoringMode: normalizedOptions.scoringMode,
+            matchComplete: Boolean(score.matchComplete)
         }
     };
 }
@@ -1625,15 +1689,51 @@ exports.postEvent = onRequest(
     }
 );
 
+// Per-courtId response cache shared by the public read-only endpoints: hold a
+// built response for a TTL, drop the oldest entry once the map is full. Keeps
+// polling clients and request floods off Firestore.
+function createApiResponseCache(ttlMs, maxEntries)
+{
+    const entries = new Map();
+
+    return {
+        get(courtId)
+        {
+            const entry = entries.get(courtId);
+            if (!entry) return null;
+
+            if (Date.now() > entry.expiresAt)
+            {
+                entries.delete(courtId);
+                return null;
+            }
+
+            return entry;
+        },
+        set(courtId, status, body)
+        {
+            if (entries.size >= maxEntries)
+            {
+                const oldestKey = entries.keys().next().value;
+                entries.delete(oldestKey);
+            }
+
+            entries.set(courtId, {
+                status,
+                body,
+                expiresAt: Date.now() + ttlMs
+            });
+        }
+    };
+}
+
 // -----------------------------
 // GET current score as JSON (/a/{courtId})
 // Read-only public endpoint, aggressively cached (CDN + in-memory)
 // so polling clients (e.g. the OBS overlay) and request floods do not
 // translate into Firestore reads and runaway billing.
 // -----------------------------
-const SCORE_API_CACHE_TTL_MS = 4 * 1000;
-const SCORE_API_CACHE_MAX_ENTRIES = 500;
-const scoreApiCache = new Map();
+const scoreApiCache = createApiResponseCache(4 * 1000, 500);
 
 const SCORE_API_POINT_LABELS = ["0", "15", "30", "40"];
 
@@ -1658,6 +1758,9 @@ function buildScorePointsDisplay(points, scoringOptions, inTiebreak)
     return SCORE_API_POINT_LABELS[numericPoints] ?? String(numericPoints);
 }
 
+// Path prefixes the hosting rewrites use for the public read-only APIs.
+const SCORE_API_REWRITE_PREFIXES = new Set(["a", "r", "s", "m"]);
+
 function extractScoreApiCourtId(reqPath)
 {
     const segments = String(reqPath || "")
@@ -1675,11 +1778,11 @@ function extractScoreApiCourtId(reqPath)
             }
         });
 
-    // With the hosting rewrite the path looks like /a/{courtId}, /r/{courtId}
-    // or /s/{courtId}; when the function URL is hit directly the courtId is
-    // simply the last segment.
+    // With the hosting rewrite the path looks like /a/{courtId}, /r/{courtId},
+    // /s/{courtId} or /m/{courtId}; when the function URL is hit directly the
+    // courtId is simply the last segment.
     let courtId;
-    if (segments[0] === "a" || segments[0] === "r" || segments[0] === "s")
+    if (SCORE_API_REWRITE_PREFIXES.has(segments[0]))
     {
         courtId = segments.length >= 2 ? segments[segments.length - 1] : null;
     }
@@ -1694,35 +1797,6 @@ function extractScoreApiCourtId(reqPath)
     }
 
     return courtId;
-}
-
-function getCachedScoreApiEntry(courtId)
-{
-    const entry = scoreApiCache.get(courtId);
-    if (!entry) return null;
-
-    if (Date.now() > entry.expiresAt)
-    {
-        scoreApiCache.delete(courtId);
-        return null;
-    }
-
-    return entry;
-}
-
-function setCachedScoreApiEntry(courtId, status, body)
-{
-    if (scoreApiCache.size >= SCORE_API_CACHE_MAX_ENTRIES)
-    {
-        const oldestKey = scoreApiCache.keys().next().value;
-        scoreApiCache.delete(oldestKey);
-    }
-
-    scoreApiCache.set(courtId, {
-        status,
-        body,
-        expiresAt: Date.now() + SCORE_API_CACHE_TTL_MS
-    });
 }
 
 // The revision is a content fingerprint of everything the public score payload
@@ -1741,7 +1815,7 @@ function computeScoreRevision(body)
 
 async function buildCourtScoreResponse(courtId)
 {
-    const cached = getCachedScoreApiEntry(courtId);
+    const cached = scoreApiCache.get(courtId);
     if (cached)
     {
         return { status: cached.status, body: cached.body };
@@ -1755,7 +1829,7 @@ async function buildCourtScoreResponse(courtId)
     if (!courtSnap.exists)
     {
         const notFoundBody = { success: false, error: "Court not found." };
-        setCachedScoreApiEntry(courtId, 404, notFoundBody);
+        scoreApiCache.set(courtId, 404, notFoundBody);
         return { status: 404, body: notFoundBody };
     }
 
@@ -1813,7 +1887,7 @@ async function buildCourtScoreResponse(courtId)
     body.revision = computeScoreRevision(body);
     body.fetchedAt = new Date().toISOString();
 
-    setCachedScoreApiEntry(courtId, 200, body);
+    scoreApiCache.set(courtId, 200, body);
     return { status: 200, body };
 }
 
@@ -1923,38 +1997,7 @@ exports.getCourtScoreRevision = onRequest(
 // longer than the score API and clients are expected to fetch only at natural
 // pauses (game/set boundaries or a manual trigger), not on every poll.
 // -----------------------------
-const STATS_API_CACHE_TTL_MS = 10 * 1000;
-const STATS_API_CACHE_MAX_ENTRIES = 200;
-const statsApiCache = new Map();
-
-function getCachedStatsApiEntry(courtId)
-{
-    const entry = statsApiCache.get(courtId);
-    if (!entry) return null;
-
-    if (Date.now() > entry.expiresAt)
-    {
-        statsApiCache.delete(courtId);
-        return null;
-    }
-
-    return entry;
-}
-
-function setCachedStatsApiEntry(courtId, status, body)
-{
-    if (statsApiCache.size >= STATS_API_CACHE_MAX_ENTRIES)
-    {
-        const oldestKey = statsApiCache.keys().next().value;
-        statsApiCache.delete(oldestKey);
-    }
-
-    statsApiCache.set(courtId, {
-        status,
-        body,
-        expiresAt: Date.now() + STATS_API_CACHE_TTL_MS
-    });
-}
+const statsApiCache = createApiResponseCache(10 * 1000, 200);
 
 exports.getCourtStats = onRequest(
     { region: HOSTING_REWRITE_REGION, maxInstances: 2 },
@@ -1973,7 +2016,7 @@ exports.getCourtStats = onRequest(
                 return sendJson(res, 400, { success: false, error: "Missing or invalid courtId. Use /s/{courtId}." });
             }
 
-            const cached = getCachedStatsApiEntry(courtId);
+            const cached = statsApiCache.get(courtId);
             if (cached)
             {
                 return sendJson(res, cached.status, cached.body);
@@ -1984,34 +2027,85 @@ exports.getCourtStats = onRequest(
             if (!courtExists)
             {
                 const notFoundBody = { success: false, error: "Court not found." };
-                setCachedStatsApiEntry(courtId, 404, notFoundBody);
+                statsApiCache.set(courtId, 404, notFoundBody);
                 return sendJson(res, 404, notFoundBody);
             }
-
-            // The point-by-point streams are only needed by the scoreboard's
-            // charts; the overlay just renders the aggregates, so keep the
-            // public payload lean.
-            const {
-                pointHistory: _points,
-                momentumTimeline: _momentum,
-                setPointMarkers: _markers,
-                ...publicPayload
-            } = payload;
 
             const body = {
                 success: true,
                 courtId,
-                ...publicPayload,
+                ...payload,
                 totalPoints: payload.advancedStats?.matchStats?.totalPoints ?? 0,
                 fetchedAt: new Date().toISOString()
             };
 
-            setCachedStatsApiEntry(courtId, 200, body);
+            statsApiCache.set(courtId, 200, body);
             return sendJson(res, 200, body);
         }
         catch (err)
         {
             console.error("getCourtStats failed:", err);
+            res.set("Cache-Control", "no-store");
+            return sendJson(res, 500, { success: false, error: "Error" });
+        }
+    }
+);
+
+// -----------------------------
+// GET match momentum as JSON (/m/{courtId})
+// The single source of momentum data: the OBS overlay's momentum card and the
+// scoreboard's match-details graph both read this, and no other payload
+// carries the point-by-point streams. Replaying the event stream is heavy, so
+// responses are cached briefly - short enough that a live graph keeps pace
+// with play, long enough that a crowd of viewers costs one replay per window.
+// -----------------------------
+const momentumApiCache = createApiResponseCache(5 * 1000, 200);
+
+exports.getCourtMomentum = onRequest(
+    { region: HOSTING_REWRITE_REGION, maxInstances: 2 },
+    async (req, res) =>
+    {
+        if (!prepareScoreApiRequest(req, res, 5))
+        {
+            return;
+        }
+
+        try
+        {
+            const courtId = extractScoreApiCourtId(req.path);
+            if (!courtId)
+            {
+                return sendJson(res, 400, { success: false, error: "Missing or invalid courtId. Use /m/{courtId}." });
+            }
+
+            const cached = momentumApiCache.get(courtId);
+            if (cached)
+            {
+                return sendJson(res, cached.status, cached.body);
+            }
+
+            const { courtExists, payload } = await buildMomentumData(courtId);
+
+            if (!courtExists)
+            {
+                const notFoundBody = { success: false, error: "Court not found." };
+                momentumApiCache.set(courtId, 404, notFoundBody);
+                return sendJson(res, 404, notFoundBody);
+            }
+
+            const body = {
+                success: true,
+                courtId,
+                ...payload,
+                fetchedAt: new Date().toISOString()
+            };
+
+            momentumApiCache.set(courtId, 200, body);
+            return sendJson(res, 200, body);
+        }
+        catch (err)
+        {
+            console.error("getCourtMomentum failed:", err);
             res.set("Cache-Control", "no-store");
             return sendJson(res, 500, { success: false, error: "Error" });
         }

@@ -553,6 +553,12 @@ document.addEventListener("DOMContentLoaded", () =>
   let isMatchDetailsCacheValid = false;
   let matchDetailsCache = null;
   let matchDetailsCacheCourtId = null;
+  let momentumCache = null;
+  let momentumCacheCourtId = null;
+  // Bumped on every momentum request so a reply that arrives after the view
+  // moved on (court switch, empty match, modal closed) is discarded instead of
+  // drawing over whatever is on screen now.
+  let momentumRequestToken = 0;
   let lastKnownSets = { A: 0, B: 0 };
   let sessionInitialized = false;
 
@@ -563,6 +569,8 @@ document.addEventListener("DOMContentLoaded", () =>
     isMatchDetailsCacheValid = false;
     matchDetailsCache = null;
     matchDetailsCacheCourtId = null;
+    momentumCache = null;
+    momentumCacheCourtId = null;
   }
 
   let muted = false;
@@ -2033,7 +2041,11 @@ document.addEventListener("DOMContentLoaded", () =>
   {
     const adminref = doc(db, "admin", "goodies");
     const adminSnap = await getDoc(adminref);
-    return adminSnap.data().skeletonKey;
+    const data = adminSnap.data();
+    if (!data || !data.skeletonKey) {
+      throw new Error("Admin document missing or skeletonKey not found");
+    }
+    return data.skeletonKey;
   }
 
   // =====================================================
@@ -3125,7 +3137,15 @@ document.addEventListener("DOMContentLoaded", () =>
 
     showSpinner(elements.adminAuthPage);
 
-    const skeleton = await getSkeleton();
+    let skeleton;
+    try {
+      skeleton = await getSkeleton();
+    }
+    catch (err) {
+      elements.adminAuthError.textContent = "Admin config error: " + err.message;
+      hideSpinner(elements.adminAuthPage);
+      return;
+    }
 
     if (pass === skeleton)
     {
@@ -5721,13 +5741,15 @@ document.addEventListener("DOMContentLoaded", () =>
       return;
     }
 
-    const hasMomentum = elements.dmMomentumWrap && !elements.dmMomentumWrap.classList.contains("hidden");
+    // The panel reveals only once stats are available. Momentum alone is not
+    // enough to show the panel: it must have data from the normal details
+    // endpoint. This keeps an empty "Detailed Stats" toggle from sitting there
+    // while everything's still loading.
     const hasStats = elements.dmStatsWrap && !elements.dmStatsWrap.classList.contains("hidden");
-    const hasDetails = hasMomentum || hasStats;
 
-    elements.dmDetailsPanel.classList.toggle("hidden", !hasDetails);
+    elements.dmDetailsPanel.classList.toggle("hidden", !hasStats);
 
-    if (!hasDetails)
+    if (!hasStats)
     {
       setDetailsPanelExpanded(false);
     }
@@ -5762,6 +5784,108 @@ document.addEventListener("DOMContentLoaded", () =>
   });
 
   let momentumPulseAnimationFrame = null;
+
+  function hideMomentumPanel()
+  {
+    if (elements.dmMomentumWrap)
+    {
+      elements.dmMomentumWrap.classList.add("hidden");
+    }
+
+    syncDetailsPanelAvailability();
+  }
+
+  // /m/{courtId} is the only source of momentum data; the detailed score
+  // payload deliberately no longer carries the point-by-point streams.
+  async function fetchMomentumPayload(courtId)
+  {
+    const url = "/m/" + encodeURIComponent(courtId);
+    const response = await fetch(url, { cache: "no-store" });
+    let data = null;
+
+    try
+    {
+      data = await response.json();
+    }
+    catch (_parseErr) { /* non-JSON body */ }
+
+    if (!data)
+    {
+      // /m/ is a Firebase Hosting rewrite. Until it is deployed the request
+      // falls through to index.html, so a "successful" HTML response here
+      // means the endpoint is missing rather than the court being empty.
+      throw new Error("No JSON from " + url + " (HTTP " + response.status +
+        ") - the momentum endpoint is probably not deployed.");
+    }
+
+    if (!response.ok || data.success !== true)
+    {
+      throw new Error(data.error || "Could not load match momentum from " + url + ".");
+    }
+
+    return data;
+  }
+
+  // Runs alongside the match-details request rather than after it, so the set
+  // tables and stats paint without waiting on the momentum replay.
+  //
+  // The panel reveals itself only once a payload with actual points is in hand
+  // (renderMomentumGraph re-hides it for an empty timeline). Nothing is shown
+  // in the meantime: a "Match Momentum" heading over an empty box, or one that
+  // appears and then withdraws when the graph turns out to be empty, reads
+  // worse than the section simply not being there yet. A graph already on
+  // screen stays up untouched while a live refresh is in flight.
+  async function loadMomentumGraph(courtId)
+  {
+    if (!courtId || !elements.dmMomentumWrap)
+    {
+      return;
+    }
+
+    const token = ++momentumRequestToken;
+    const cached = momentumCacheCourtId === courtId ? momentumCache : null;
+
+    let payload = cached;
+
+    if (!payload)
+    {
+      try
+      {
+        payload = await fetchMomentumPayload(courtId);
+      }
+      catch (err)
+      {
+        console.error("Match momentum could not be loaded:", err);
+
+        if (token === momentumRequestToken)
+        {
+          hideMomentumPanel();
+        }
+
+        return;
+      }
+
+      momentumCache = payload;
+      momentumCacheCourtId = courtId;
+    }
+
+    if (token !== momentumRequestToken)
+    {
+      return;
+    }
+
+    const colourA = getComputedStyle(document.body).getPropertyValue("--teamAcolour").trim();
+    const colourB = getComputedStyle(document.body).getPropertyValue("--teamBcolour").trim();
+
+    renderMomentumGraph(
+      payload.pointHistory,
+      colourA,
+      colourB,
+      payload.setPointMarkers || [],
+      payload.momentumTimeline || null,
+      payload.gameMarkers || []
+    );
+  }
 
   function renderMomentumGraph(pointHistory, colourA, colourB, setPointMarkers = [], momentumTimeline = null, gameMarkers = [])
   {
@@ -6344,6 +6468,10 @@ document.addEventListener("DOMContentLoaded", () =>
     syncDetailsPanelAvailability();
     setDetailsPanelExpanded(expanded);
 
+    // Deliberately not awaited: the momentum graph reveals itself when its
+    // endpoint answers, so nothing below is held up by the heavier replay.
+    void loadMomentumGraph(currentCourtId);
+
     try
     {
       let result = matchDetailsCache;
@@ -6395,6 +6523,11 @@ document.addEventListener("DOMContentLoaded", () =>
 
       if (!hasAnyMatchDetails)
       {
+        // Nothing to chart either: cancel the in-flight momentum request so it
+        // cannot re-open the panel this branch is about to hide.
+        momentumRequestToken++;
+        hideMomentumPanel();
+
         if (dmOverall)
         {
           dmOverall.classList.add("hidden");
@@ -6441,16 +6574,6 @@ document.addEventListener("DOMContentLoaded", () =>
         elements.detailsSetsA.textContent = (points && points.A !== undefined) ? points.A : 0;
         elements.detailsSetsB.textContent = (points && points.B !== undefined) ? points.B : 0;
 
-        const colourA = getComputedStyle(document.body).getPropertyValue("--teamAcolour").trim();
-        const colourB = getComputedStyle(document.body).getPropertyValue("--teamBcolour").trim();
-        renderMomentumGraph(
-          result.data.pointHistory,
-          colourA,
-          colourB,
-          result.data.setPointMarkers || [],
-          result.data.momentumTimeline || null,
-          result.data.advancedStats?.gameMarkers || []
-        );
         const detailsPlayerNames = normalizePlayerNames(result?.data?.playerNames || currentPlayerNames || {});
         renderAdvancedStats(result.data.advancedStats, { A: nameA, B: nameB }, isSwapped, detailsPlayerNames);
         syncDetailsPanelAvailability();
@@ -6519,16 +6642,6 @@ document.addEventListener("DOMContentLoaded", () =>
       isSwapped ? elements.dmBody.appendChild(mkRow("b", allSets)) : elements.dmBody.appendChild(mkRow("a", allSets));
       isSwapped ? elements.dmBody.appendChild(mkRow("a", allSets)) : elements.dmBody.appendChild(mkRow("b", allSets));
 
-      const colourA = getComputedStyle(document.body).getPropertyValue("--teamAcolour").trim();
-      const colourB = getComputedStyle(document.body).getPropertyValue("--teamBcolour").trim();
-      renderMomentumGraph(
-        result.data.pointHistory,
-        colourA,
-        colourB,
-        result.data.setPointMarkers || [],
-        result.data.momentumTimeline || null,
-        result.data.advancedStats?.gameMarkers || []
-      );
       const detailsPlayerNames = normalizePlayerNames(result?.data?.playerNames || currentPlayerNames || {});
       renderAdvancedStats(result.data.advancedStats, { A: nameA, B: nameB }, isSwapped, detailsPlayerNames);
       syncDetailsPanelAvailability();

@@ -15,21 +15,22 @@ jest.mock("firebase-functions/v2/https", () => ({
   onRequest: (_config, handler) => handler
 }));
 
-jest.mock("firebase-admin", () =>
-{
-  const firestore = () => mockDb;
-  firestore.FieldPath = {
-    documentId: () => "__name__"
-  };
-  firestore.FieldValue = {
-    serverTimestamp: () => ({ __serverTimestamp: true })
-  };
+jest.mock("firebase-admin", () => ({
+  initializeApp: jest.fn(),
+  firestore: () => mockDb
+}));
 
-  return {
-    initializeApp: jest.fn(),
-    firestore
-  };
-});
+// index.js takes FieldPath/FieldValue from the modular entry point rather than
+// the admin namespace, because the functions emulator strips them off the
+// latter. Mock the same surface the production classes expose.
+jest.mock("firebase-admin/firestore", () => ({
+  FieldPath: {
+    documentId: () => "__name__"
+  },
+  FieldValue: {
+    serverTimestamp: () => ({ __serverTimestamp: true })
+  }
+}));
 
 function timestamp(seconds, nanoseconds = 0)
 {
@@ -1098,10 +1099,11 @@ describe("getCourtStats", () =>
     expect(res.payload.advancedStats.matchStats.totalPoints).toBe(5);
     expect(res.payload.playerNames.A1).toBe("Ann");
 
-    // The heavy per-point streams stay private to the scoreboard callable.
+    // The per-point momentum streams belong to /m/{courtId} alone.
     expect(res.payload.pointHistory).toBeUndefined();
     expect(res.payload.momentumTimeline).toBeUndefined();
     expect(res.payload.setPointMarkers).toBeUndefined();
+    expect(res.payload.advancedStats.gameMarkers).toBeUndefined();
 
     expect(res.headers["Cache-Control"]).toBe("public, max-age=10, s-maxage=10");
   });
@@ -1149,6 +1151,124 @@ describe("getCourtStats", () =>
 
     const res = makeRes();
     await getCourtStats({ method: "GET", path: "/s/no-such-court" }, res);
+
+    expect(res.statusCode).toBe(404);
+    expect(res.payload.success).toBe(false);
+  });
+});
+
+describe("getCourtMomentum", () =>
+{
+  function makeRes()
+  {
+    return {
+      statusCode: null,
+      payload: null,
+      headers: {},
+      status(code) { this.statusCode = code; return this; },
+      json(body) { this.payload = body; return this; },
+      set(name, value) { this.headers[name] = value; return this; },
+      send(body) { this.payload = body; return this; }
+    };
+  }
+
+  test("returns the point-by-point momentum streams for the court", async () =>
+  {
+    const courtId = "court-momentum";
+    const events = [
+      { eventType: "POINT_TEAM_A", createdAt: timestamp(1) },
+      { eventType: "POINT_TEAM_A", createdAt: timestamp(2) },
+      { eventType: "POINT_TEAM_B", createdAt: timestamp(3) },
+      { eventType: "POINT_TEAM_A", createdAt: timestamp(4) },
+      { eventType: "POINT_TEAM_A", createdAt: timestamp(5) }
+    ];
+
+    const seed = {
+      [`courts/${courtId}`]: {
+        scoringMode: DEFAULT_SCORING_OPTIONS.scoringMode,
+        scoringOptions: DEFAULT_SCORING_OPTIONS
+      }
+    };
+    events.forEach((event, index) =>
+    {
+      seed[`courts/${courtId}/events/e${index + 1}`] = event;
+    });
+    mockDb = new FakeFirestore(seed);
+
+    let getCourtMomentum;
+    jest.isolateModules(() =>
+    {
+      ({ getCourtMomentum } = require("./index"));
+    });
+
+    const res = makeRes();
+    await getCourtMomentum({ method: "GET", path: `/m/${courtId}` }, res);
+
+    expect(res.statusCode).toBe(200);
+    expect(res.payload.success).toBe(true);
+    expect(res.payload.courtId).toBe(courtId);
+    expect(res.payload.pointHistory).toEqual(["A", "A", "B", "A", "A"]);
+    expect(res.payload.totalPoints).toBe(5);
+
+    // One value per played point, so the graph can pair them up 1:1.
+    expect(res.payload.momentumTimeline).toHaveLength(5);
+    res.payload.momentumTimeline.forEach((value) =>
+    {
+      expect(typeof value).toBe("number");
+      expect(value).toBeGreaterThanOrEqual(-100);
+      expect(value).toBeLessThanOrEqual(100);
+    });
+
+    // Team A took the game on the fifth point, so that is the only marker.
+    expect(res.payload.gameMarkers).toEqual([5]);
+    expect(res.payload.setPointMarkers).toEqual([]);
+
+    expect(res.headers["Cache-Control"]).toBe("public, max-age=5, s-maxage=5");
+  });
+
+  test("serves repeat requests from the in-memory cache instead of replaying events", async () =>
+  {
+    const courtId = "court-momentum-cache";
+    mockDb = new FakeFirestore({
+      [`courts/${courtId}`]: {
+        scoringMode: DEFAULT_SCORING_OPTIONS.scoringMode,
+        scoringOptions: DEFAULT_SCORING_OPTIONS
+      },
+      [`courts/${courtId}/events/e1`]: { eventType: "POINT_TEAM_A", createdAt: timestamp(1) }
+    });
+
+    let getCourtMomentum;
+    jest.isolateModules(() =>
+    {
+      ({ getCourtMomentum } = require("./index"));
+    });
+
+    const first = makeRes();
+    await getCourtMomentum({ method: "GET", path: `/m/${courtId}` }, first);
+    expect(first.statusCode).toBe(200);
+    expect(first.payload.totalPoints).toBe(1);
+
+    // A new event lands; the cached payload must still be returned inside the TTL.
+    mockDb.docs.set(`courts/${courtId}/events/e2`, { eventType: "POINT_TEAM_B", createdAt: timestamp(2) });
+
+    const second = makeRes();
+    await getCourtMomentum({ method: "GET", path: `/m/${courtId}` }, second);
+    expect(second.statusCode).toBe(200);
+    expect(second.payload.totalPoints).toBe(1);
+  });
+
+  test("returns 404 for an unknown court", async () =>
+  {
+    mockDb = new FakeFirestore({});
+
+    let getCourtMomentum;
+    jest.isolateModules(() =>
+    {
+      ({ getCourtMomentum } = require("./index"));
+    });
+
+    const res = makeRes();
+    await getCourtMomentum({ method: "GET", path: "/m/no-such-court" }, res);
 
     expect(res.statusCode).toBe(404);
     expect(res.payload.success).toBe(false);

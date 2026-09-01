@@ -49,6 +49,13 @@
         }
       },
       {
+        "source": "/m/**",
+        "function": {
+          "functionId": "getCourtMomentum",
+          "region": "europe-west1"
+        }
+      },
+      {
         "source": "/b",
         "destination": "/app/overlay.html"
       },
