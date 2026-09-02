@@ -4188,9 +4188,15 @@ document.addEventListener("DOMContentLoaded", () =>
 
   function enableSpectateMode()
   {
+    const wasPlaying = !isSpectating;
     isSpectating = true;
 
     document.body.classList.add("spectating-mode");
+
+    if (wasPlaying && elements.settingsModal && !elements.settingsModal.classList.contains("hidden"))
+    {
+      elements.settingsModal.classList.add("hidden");
+    }
 
     $("addPointA").style.pointerEvents = "none";
     $("addPointB").style.pointerEvents = "none";
