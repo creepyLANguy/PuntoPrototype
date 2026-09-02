@@ -5006,6 +5006,7 @@ document.addEventListener("DOMContentLoaded", () =>
       overlay.innerHTML = `
         <div class="loading-content">
           <div class="spinner-wrapper">
+            <img src="media/img/logo.svg" alt="Padel Push Logo" class="loading-logo" />
             <div class="spinner"></div>
           </div>
           <div class="loading">${message}</div>
