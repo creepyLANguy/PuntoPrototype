@@ -853,6 +853,11 @@ document.addEventListener("DOMContentLoaded", () =>
       return `${basePath}/c/${encodeURIComponent(state.courtId)}`;
     }
 
+    if (state.page === NAV_PAGES.PLAY && state.returnToScoreboard && state.courtId)
+    {
+      return `${basePath}/p/${encodeURIComponent(state.courtId)}`;
+    }
+
     return basePath ? `${basePath}/` : "/";
   }
 
@@ -2052,9 +2057,9 @@ document.addEventListener("DOMContentLoaded", () =>
   // COURT LOADING & FILTERING
   // =====================================================
 
-  function getCourtIdFromPathname()
+  function matchCourtIdInPathname(pattern)
   {
-    const match = window.location.pathname.match(/^\/(?:app\/)?(?:court|c)\/([^/]+)\/?$/i);
+    const match = window.location.pathname.match(pattern);
     if (!match) return null;
 
     try
@@ -2065,6 +2070,21 @@ document.addEventListener("DOMContentLoaded", () =>
     {
       return match[1].trim().toLowerCase() || null;
     }
+  }
+
+  function getCourtIdFromPathname()
+  {
+    return matchCourtIdInPathname(/^\/(?:app\/)?(?:court|c)\/([^/]+)\/?$/i);
+  }
+
+  function getPlayCourtIdFromPathname()
+  {
+    return matchCourtIdInPathname(/^\/(?:app\/)?(?:play|p)\/([^/]+)\/?$/i);
+  }
+
+  function isPlayRootPathname()
+  {
+    return /^\/(?:app\/)?(?:play|p)\/?$/i.test(window.location.pathname);
   }
 
   function getCurrentViewState()
@@ -2224,6 +2244,24 @@ document.addEventListener("DOMContentLoaded", () =>
 
   function getViewStateFromLocation()
   {
+    const playCourtId = getPlayCourtIdFromPathname();
+
+    if (playCourtId)
+    {
+      return createViewState({
+        page: NAV_PAGES.PLAY,
+        courtId: playCourtId,
+        selectedCourtId: playCourtId,
+        spectate: true,
+        returnToScoreboard: true
+      });
+    }
+
+    if (isPlayRootPathname())
+    {
+      return createViewState({ page: NAV_PAGES.PLAY });
+    }
+
     const courtId = getCourtIdFromPathname();
 
     if (courtId)
@@ -2534,6 +2572,31 @@ document.addEventListener("DOMContentLoaded", () =>
         const opened = await openCourtFromRoute("skip", routeState.courtId);
         if (opened)
         {
+          pushNavigationState(getCurrentViewState());
+          return;
+        }
+      }
+      else if (routeState.page === NAV_PAGES.PLAY)
+      {
+        // /play/<court> (and /p/<court>) drop straight into the join prompt on top of the
+        // court's spectator view, so dismissing the prompt leaves the viewer spectating.
+        const opened = routeState.courtId
+          ? await openCourtFromRoute("skip", routeState.courtId)
+          : true;
+
+        if (opened)
+        {
+          if (routeState.courtId)
+          {
+            // Make the spectator view the entry the prompt falls back to when dismissed.
+            replaceNavigationState(createViewState({
+              page: NAV_PAGES.SCOREBOARD,
+              courtId: routeState.courtId,
+              spectate: true
+            }));
+          }
+
+          await restoreViewState(routeState);
           pushNavigationState(getCurrentViewState());
           return;
         }

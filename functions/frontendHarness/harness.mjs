@@ -105,7 +105,7 @@ function installGlobals(dom)
   });
 }
 
-export async function bootFrontend()
+export async function bootFrontend({ url = "https://padel.test/" } = {})
 {
   if (booted)
   {
@@ -115,7 +115,7 @@ export async function bootFrontend()
 
   const html = readFileSync(indexHtmlPath, "utf8");
   const dom = new JSDOM(html, {
-    url: "https://padel.test/",
+    url,
     pretendToBeVisual: true,
     runScripts: "outside-only"
   });

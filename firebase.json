@@ -28,6 +28,22 @@
         "destination": "/app/index.html"
       },
       {
+        "source": "/play",
+        "destination": "/app/index.html"
+      },
+      {
+        "source": "/play/**",
+        "destination": "/app/index.html"
+      },
+      {
+        "source": "/p",
+        "destination": "/app/index.html"
+      },
+      {
+        "source": "/p/**",
+        "destination": "/app/index.html"
+      },
+      {
         "source": "/a/**",
         "function": {
           "functionId": "getCourtScore",
