@@ -1,0 +1,315 @@
+openapi: 3.1.0
+info:
+  title: Padel Push Public API
+  version: 1.0.0
+  description: |
+    Public read-only API for live Padel Push scores, revisions, statistics and momentum.
+    The deployed URLs are currently unversioned and are governed as v1 by compatibility policy.
+servers:
+  - url: https://www.padelpush.co.za
+    description: Production
+  - url: https://qa.padelpush.co.za
+    description: Staging / QA
+paths:
+  /a/{courtId}:
+    get:
+      operationId: getCourtScore
+      summary: Get the live score
+      parameters:
+        - $ref: '#/components/parameters/CourtId'
+      responses:
+        '200':
+          description: Live score
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScoreResponse'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '405': { $ref: '#/components/responses/MethodNotAllowed' }
+        '500': { $ref: '#/components/responses/InternalError' }
+    options:
+      operationId: optionsCourtScore
+      summary: CORS preflight
+      responses:
+        '204': { description: CORS preflight accepted }
+  /r/{courtId}:
+    get:
+      operationId: getCourtScoreRevision
+      summary: Get the opaque score revision
+      parameters:
+        - $ref: '#/components/parameters/CourtId'
+      responses:
+        '200':
+          description: Revision
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RevisionResponse'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '405': { $ref: '#/components/responses/MethodNotAllowed' }
+        '500': { $ref: '#/components/responses/InternalError' }
+    options:
+      operationId: optionsCourtScoreRevision
+      responses:
+        '204': { description: CORS preflight accepted }
+  /s/{courtId}:
+    get:
+      operationId: getCourtStats
+      summary: Get match statistics
+      parameters:
+        - $ref: '#/components/parameters/CourtId'
+      responses:
+        '200':
+          description: Match statistics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatsResponse'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '405': { $ref: '#/components/responses/MethodNotAllowed' }
+        '500': { $ref: '#/components/responses/InternalError' }
+    options:
+      operationId: optionsCourtStats
+      responses:
+        '204': { description: CORS preflight accepted }
+  /m/{courtId}:
+    get:
+      operationId: getCourtMomentum
+      summary: Get momentum timeline
+      parameters:
+        - $ref: '#/components/parameters/CourtId'
+      responses:
+        '200':
+          description: Momentum data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MomentumResponse'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '405': { $ref: '#/components/responses/MethodNotAllowed' }
+        '500': { $ref: '#/components/responses/InternalError' }
+    options:
+      operationId: optionsCourtMomentum
+      responses:
+        '204': { description: CORS preflight accepted }
+components:
+  parameters:
+    CourtId:
+      name: courtId
+      in: path
+      required: true
+      description: Lowercase court document ID.
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 64
+        pattern: '^[abcdefghjkmnpqrstuxyz]+$'
+  responses:
+    BadRequest:
+      description: Invalid court ID or request
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    NotFound:
+      description: Court not found
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    MethodNotAllowed:
+      description: HTTP method is not supported
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    InternalError:
+      description: Internal server error
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+  schemas:
+    ScoreResponse:
+      type: object
+      required: [success, courtId, teamNames, playerNames, scoringOptions, scoringMode, teams, completedSets, inTiebreak, deuceCycles, matchComplete, server, scoreVersion, revision, fetchedAt]
+      properties:
+        success: { const: true }
+        courtId: { type: string }
+        teamNames: { $ref: '#/components/schemas/TeamNames' }
+        playerNames: { $ref: '#/components/schemas/PlayerNames' }
+        scoringOptions: { $ref: '#/components/schemas/ScoringOptions' }
+        scoringMode: { $ref: '#/components/schemas/ScoringMode' }
+        teams:
+          type: object
+          required: [A, B]
+          properties:
+            A: { $ref: '#/components/schemas/TeamScore' }
+            B: { $ref: '#/components/schemas/TeamScore' }
+        completedSets:
+          type: array
+          items: { $ref: '#/components/schemas/CompletedSet' }
+        inTiebreak: { type: boolean }
+        deuceCycles: { type: integer, minimum: 0 }
+        matchComplete: { type: boolean }
+        server:
+          type: [string, 'null']
+          enum: [A1, A2, B1, B2, null]
+        scoreVersion: { type: integer, minimum: 0 }
+        revision:
+          type: string
+          description: Opaque equality token; do not order or parse it.
+          pattern: '^[0-9a-f]{16}$'
+        fetchedAt: { type: string, format: date-time }
+    RevisionResponse:
+      type: object
+      required: [success, courtId, revision]
+      properties:
+        success: { const: true }
+        courtId: { type: string }
+        revision: { type: string, pattern: '^[0-9a-f]{16}$' }
+    StatsResponse:
+      type: object
+      required: [success, courtId, sets, currentGames, points, setsA, setsB, scoringMode, matchComplete, playerNames, advancedStats, totalPoints, fetchedAt]
+      properties:
+        success: { const: true }
+        courtId: { type: string }
+        sets:
+          type: array
+          items: { $ref: '#/components/schemas/CompletedSet' }
+        currentGames:
+          type: object
+          required: [A, B]
+          properties:
+            A: { type: integer, minimum: 0 }
+            B: { type: integer, minimum: 0 }
+        points:
+          type: object
+          required: [A, B]
+          properties:
+            A: { type: integer, minimum: 0 }
+            B: { type: integer, minimum: 0 }
+        setsA: { type: integer, minimum: 0 }
+        setsB: { type: integer, minimum: 0 }
+        scoringMode: { $ref: '#/components/schemas/ScoringMode' }
+        matchComplete: { type: boolean }
+        playerNames: { $ref: '#/components/schemas/PlayerNames' }
+        advancedStats: { $ref: '#/components/schemas/AdvancedStats' }
+        totalPoints: { type: integer, minimum: 0 }
+        fetchedAt: { type: string, format: date-time }
+    MomentumResponse:
+      type: object
+      required: [success, courtId, pointHistory, momentumTimeline, setPointMarkers, gameMarkers, totalPoints, scoringMode, matchComplete, fetchedAt]
+      properties:
+        success: { const: true }
+        courtId: { type: string }
+        pointHistory:
+          type: array
+          items: { type: string, enum: [A, B] }
+        momentumTimeline:
+          type: array
+          items: { type: number, minimum: -100, maximum: 100 }
+        setPointMarkers:
+          type: array
+          items: { type: integer, minimum: 1 }
+        gameMarkers:
+          type: array
+          items: { type: integer, minimum: 1 }
+        totalPoints: { type: integer, minimum: 0 }
+        scoringMode: { $ref: '#/components/schemas/ScoringMode' }
+        matchComplete: { type: boolean }
+        fetchedAt: { type: string, format: date-time }
+    ErrorResponse:
+      type: object
+      required: [success, error]
+      properties:
+        success: { const: false }
+        error:
+          oneOf:
+            - type: string
+              description: Current deployed error representation.
+            - $ref: '#/components/schemas/StructuredError'
+    StructuredError:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          description: Stable machine-readable error code.
+        message: { type: string }
+        requestId: { type: string }
+    TeamNames:
+      type: object
+      required: [A, B]
+      properties:
+        A: { type: string }
+        B: { type: string }
+    PlayerNames:
+      type: object
+      required: [A1, A2, B1, B2]
+      properties:
+        A1: { type: string }
+        A2: { type: string }
+        B1: { type: string }
+        B2: { type: string }
+    TeamScore:
+      type: object
+      required: [sets, games, points, pointsDisplay]
+      properties:
+        sets: { type: integer, minimum: 0 }
+        games: { type: integer, minimum: 0 }
+        points: { type: integer, minimum: 0 }
+        pointsDisplay: { type: string }
+    CompletedSet:
+      type: object
+      required: [A, B, tiebreakPoints]
+      properties:
+        A: { type: integer, minimum: 0 }
+        B: { type: integer, minimum: 0 }
+        tiebreakPoints:
+          type: [object, 'null']
+          additionalProperties: true
+    ScoringMode:
+      type: string
+      enum: [standard, straight, tiebreakTen]
+    DeuceMode:
+      type: string
+      enum: [standard, golden, silver, star]
+    TiebreakMode:
+      type: string
+      enum: [off, sixAllSeven, sixAllTen]
+    ScoringOptions:
+      type: object
+      required: [scoringMode, deuceMode, tiebreakMode]
+      properties:
+        scoringMode: { $ref: '#/components/schemas/ScoringMode' }
+        deuceMode: { $ref: '#/components/schemas/DeuceMode' }
+        tiebreakMode: { $ref: '#/components/schemas/TiebreakMode' }
+    AdvancedStats:
+      type: object
+      required: [teamStats, servePlayerStats, matchStats, scoringMode, deuceMode]
+      properties:
+        teamStats:
+          type: object
+          required: [A, B]
+          properties:
+            A: { $ref: '#/components/schemas/TeamStats' }
+            B: { $ref: '#/components/schemas/TeamStats' }
+        servePlayerStats:
+          type: object
+          additionalProperties: { $ref: '#/components/schemas/ServePlayerStats' }
+        matchStats:
+          type: object
+          additionalProperties: true
+        scoringMode: { $ref: '#/components/schemas/ScoringMode' }
+        deuceMode: { $ref: '#/components/schemas/DeuceMode' }
+    TeamStats:
+      type: object
+      additionalProperties: true
+      description: Team statistics; percentages are 0–100 and zero-denominator metrics are 0.
+    ServePlayerStats:
+      type: object
+      properties:
+        pointsServed: { type: integer, minimum: 0 }
+        pointsWonOnServe: { type: integer, minimum: 0 }
+        serveWinPct: { type: number, minimum: 0, maximum: 100 }
