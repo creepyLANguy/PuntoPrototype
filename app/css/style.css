@@ -1299,6 +1299,23 @@ body.light-mode .reset-box {
   color: black;
 }
 
+.reset-hint,
+.reset-warning {
+  margin: 8px 0 0;
+  font-size: 0.82rem;
+  line-height: 1.4;
+  text-align: left;
+}
+
+.reset-hint {
+  opacity: 0.8;
+}
+
+.reset-warning {
+  font-weight: 600;
+  opacity: 0.95;
+}
+
 .reset-actions {
   margin-top: 16px;
   display: flex;
