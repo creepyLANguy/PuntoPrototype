@@ -1274,3 +1274,152 @@ describe("getCourtMomentum", () =>
     expect(res.payload.success).toBe(false);
   });
 });
+
+describe("resetCourt - password handling", () =>
+{
+  const courtId = "reset-court";
+
+  function seedCourtDb(overrides = {})
+  {
+    mockDb = new FakeFirestore({
+      [`courts/${courtId}`]: {
+        password: "oldpw",
+        scoreVersion: 2,
+        scoringMode: DEFAULT_SCORING_OPTIONS.scoringMode,
+        scoringOptions: DEFAULT_SCORING_OPTIONS,
+        ...overrides
+      }
+    });
+
+    let resetCourt;
+    jest.isolateModules(() =>
+    {
+      ({ resetCourt } = require("./index"));
+    });
+    return resetCourt;
+  }
+
+  test("a blank password leaves the existing court password untouched", async () =>
+  {
+    const resetCourt = seedCourtDb();
+
+    const result = await resetCourt({ data: { courtId, deepReset: false } });
+
+    expect(result.success).toBe(true);
+    expect(mockDb.docs.get(`courts/${courtId}`).password).toBe("oldpw");
+    expect(result.scoreVersion).toBe(3);
+  });
+
+  test("a whitespace-only password is treated as blank, not as a change", async () =>
+  {
+    const resetCourt = seedCourtDb();
+
+    await resetCourt({ data: { courtId, newPassword: "   " } });
+
+    expect(mockDb.docs.get(`courts/${courtId}`).password).toBe("oldpw");
+  });
+
+  test("a new password replaces the old one", async () =>
+  {
+    const resetCourt = seedCourtDb();
+
+    await resetCourt({ data: { courtId, newPassword: "brandnew" } });
+
+    expect(mockDb.docs.get(`courts/${courtId}`).password).toBe("brandnew");
+  });
+
+  // Records the payload of every set() on the court document, so a test can assert
+  // on what the client-visible write actually contained.
+  function captureCourtWrites()
+  {
+    const writes = [];
+    const originalDoc = mockDb.doc.bind(mockDb);
+    mockDb.doc = (path) =>
+    {
+      const ref = originalDoc(path);
+      if (path !== `courts/${courtId}`) return ref;
+
+      const originalSet = ref.set;
+      ref.set = async (data, options) =>
+      {
+        writes.push(data);
+        return originalSet(data, options);
+      };
+      return ref;
+    };
+    return writes;
+  }
+
+  test("re-submitting the current password is not written back", async () =>
+  {
+    const resetCourt = seedCourtDb();
+    const courtWrites = captureCourtWrites();
+
+    await resetCourt({ data: { courtId, newPassword: "oldpw" } });
+
+    expect(mockDb.docs.get(`courts/${courtId}`).password).toBe("oldpw");
+    // The court doc is still updated (scoreVersion), but the write carries no
+    // password field, so listening clients see no password-change event.
+    expect(courtWrites.length).toBeGreaterThan(0);
+    courtWrites.forEach((write) => expect(write).not.toHaveProperty("password"));
+  });
+
+  test("a blank password writes no password field at all", async () =>
+  {
+    const resetCourt = seedCourtDb();
+    const courtWrites = captureCourtWrites();
+
+    await resetCourt({ data: { courtId, newPassword: "" } });
+
+    courtWrites.forEach((write) => expect(write).not.toHaveProperty("password"));
+  });
+
+  test("an actual password change is written to the court document", async () =>
+  {
+    const resetCourt = seedCourtDb();
+    const courtWrites = captureCourtWrites();
+
+    await resetCourt({ data: { courtId, newPassword: "brandnew" } });
+
+    expect(courtWrites.some((write) => write.password === "brandnew")).toBe(true);
+  });
+
+  test("a supplied password shorter than 4 characters is rejected", async () =>
+  {
+    const resetCourt = seedCourtDb();
+
+    await expect(resetCourt({ data: { courtId, newPassword: "abc" } }))
+      .rejects.toThrow("Password must be at least 4 characters.");
+    expect(mockDb.docs.get(`courts/${courtId}`).password).toBe("oldpw");
+  });
+
+  test("a supplied password equal to the court id is rejected", async () =>
+  {
+    const resetCourt = seedCourtDb();
+
+    await expect(resetCourt({ data: { courtId, newPassword: courtId } }))
+      .rejects.toThrow("Password must be different from court name.");
+  });
+
+  test("requirePassword still makes a password mandatory", async () =>
+  {
+    const resetCourt = seedCourtDb();
+
+    await expect(resetCourt({ data: { courtId, requirePassword: true } }))
+      .rejects.toThrow("Password must be at least 4 characters.");
+  });
+
+  test("a deep reset with a blank password still restores names and keeps the password", async () =>
+  {
+    const resetCourt = seedCourtDb({
+      teamNames: { A: "Reds", B: "Blues" },
+      playerNames: { A1: "Ann", A2: "Bob", B1: "Cy", B2: "Dee" }
+    });
+
+    await resetCourt({ data: { courtId, deepReset: true } });
+
+    const court = mockDb.docs.get(`courts/${courtId}`);
+    expect(court.password).toBe("oldpw");
+    expect(court.teamNames).toEqual({ A: "Team A", B: "Team B" });
+  });
+});

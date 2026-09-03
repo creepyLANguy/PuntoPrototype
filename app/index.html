@@ -112,8 +112,10 @@
       <div class="reset-box">
         <p>Reset the entire match?</p>
         <div class="form-group">
-          <label>Court Password (min 4 chars)</label>
-          <input type="password" id="resetCourtPassword" />
+          <label>New Court Password (optional)</label>
+          <input type="password" id="resetCourtPassword" placeholder="Leave blank to keep current password" autocomplete="new-password" />
+          <p class="reset-hint">Enter a new password (min 4 characters) to change it, or leave this blank to keep the current password.</p>
+          <p class="reset-warning">⚠ Changing the password switches every other player in this court to spectate mode.</p>
           <div class="error" id="resetPasswordError"></div>
         </div>
         <div class="reset-actions">

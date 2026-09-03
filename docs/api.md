@@ -292,8 +292,10 @@ Request: `courtId` (required), `deepReset`, `newPassword`, `requirePassword`, `s
 `scoringOptions`.
 
 - `deepReset: true` also resets team names to `Team A`/`Team B` and clears player names.
-- With `requirePassword: true`, `newPassword` must be at least 4 characters and must differ
-  from the court id.
+- `newPassword` is optional. Blank or omitted keeps the court's existing password; any other
+  value must be at least 4 characters and must differ from the court id. A password equal to
+  the current one is not written back, so connected clients see no password-change event.
+- `requirePassword: true` makes `newPassword` mandatory.
 
 Response: `{ success, archivedId, scoreVersion, scoringMode, scoringOptions }`. `archivedId` is
 an ISO timestamp naming the archive at `courts/{courtId}/archive/{archivedId}/events`.

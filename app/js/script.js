@@ -588,6 +588,15 @@ document.addEventListener("DOMContentLoaded", () =>
 
   let isAdmin = false;
 
+  // True when this device entered the current court with admin credentials (or from
+  // the admin dashboard). Admins keep control of the court across password changes.
+  let enteredCourtAsAdmin = false;
+
+  function hasCourtAdminPrivileges()
+  {
+    return isAdmin || enteredCourtAsAdmin;
+  }
+
   let thisDeviceId = DetermineThisDeviceId();
 
   let lastScannedCourtId = null;
@@ -3783,7 +3792,7 @@ document.addEventListener("DOMContentLoaded", () =>
       var adminPassword = await getSkeleton();
       if (password === adminPassword)
       {
-        await enterCourt(courtId, false, { historyMode: "replace" });
+        await enterCourt(courtId, false, { historyMode: "replace", adminEntry: true });
         return;
       }
 
@@ -3805,9 +3814,10 @@ document.addEventListener("DOMContentLoaded", () =>
     }
   });
 
-  async function enterCourt(courtId, spectate, { historyMode = "push" } = {})
+  async function enterCourt(courtId, spectate, { historyMode = "push", adminEntry = false } = {})
   {
     //console.log(`Entering court: ${courtId}, spectate: ${spectate}`);
+    enteredCourtAsAdmin = Boolean(adminEntry) || isAdmin;
     pendingLocalPasswordUpdate = null;
     bumpCourtHistorySessionId();
     invalidateMatchDetailsCache();
@@ -3928,6 +3938,7 @@ document.addEventListener("DOMContentLoaded", () =>
     //console.log("Leaving court: " + currentCourtId);
     activeCourtListenerToken++;
     cancelCourtListenerReconnect();
+    enteredCourtAsAdmin = false;
     pendingLocalPasswordUpdate = null;
     bumpCourtHistorySessionId();
     invalidateMatchDetailsCache();
@@ -5361,30 +5372,52 @@ document.addEventListener("DOMContentLoaded", () =>
   // CONTROLS
   // =====================================================
 
-  function validateResetPassword()
+  // The reset password field is optional: a blank field keeps the current court
+  // password, any other value replaces it. Returns { valid, password } where a null
+  // password means "leave the existing password alone".
+  function readResetPassword()
   {
     const newPassword = elements.resetCourtPassword.value.trim();
     elements.resetPasswordError.textContent = "";
 
+    if (!newPassword)
+    {
+      return { valid: true, password: null };
+    }
+
     if (newPassword.length < 4)
     {
-      elements.resetPasswordError.textContent = "Password must be at least 4 characters.";
-      return null;
+      elements.resetPasswordError.textContent = "Password must be at least 4 characters, or leave it blank to keep the current password.";
+      return { valid: false, password: null };
     }
-    else if (newPassword === currentCourtId)
+
+    if (newPassword === currentCourtId)
     {
       elements.resetPasswordError.textContent = "Password must be different from court name.";
-      return null;
+      return { valid: false, password: null };
     }
 
-    return newPassword;
+    // Re-entering the existing password is not a change, so nobody gets switched
+    // to spectate mode.
+    if (currentCourtPassword !== null && newPassword === currentCourtPassword)
+    {
+      return { valid: true, password: null };
+    }
+
+    return { valid: true, password: newPassword };
   }
 
-  async function performShallowReset(requirePassword = false)
+  async function performShallowReset(promptForPassword = false)
   {
     if (!currentCourtId) return;
-    const newPassword = requirePassword ? validateResetPassword() : null;
-    if (requirePassword && !newPassword) return;
+
+    let newPassword = null;
+    if (promptForPassword)
+    {
+      const { valid, password } = readResetPassword();
+      if (!valid) return;
+      newPassword = password;
+    }
 
     try
     {
@@ -5393,7 +5426,7 @@ document.addEventListener("DOMContentLoaded", () =>
         pendingLocalPasswordUpdate = newPassword;
       }
 
-      const result = await resetCourt(currentCourtId, false, newPassword, requirePassword);
+      const result = await resetCourt(currentCourtId, false, newPassword, false);
       if (newPassword)
       {
         currentCourtPassword = newPassword;
@@ -5407,7 +5440,12 @@ document.addEventListener("DOMContentLoaded", () =>
       elements.resetModal.classList.add("hidden");
       syncCurrentViewState("replace");
       playSound(SOUND_IDS.START);
-      showToast("Score reset. Team and player names kept.", TOAST_TYPES.SUCCESS);
+      showToast(
+        newPassword
+          ? "Score reset and password updated. Team and player names kept."
+          : "Score reset. Team and player names kept.",
+        TOAST_TYPES.SUCCESS
+      );
     }
     catch (err)
     {
@@ -5427,16 +5465,22 @@ document.addEventListener("DOMContentLoaded", () =>
   elements.confirmResetBtn.addEventListener("click", async () =>
   {
     if (!currentCourtId) return;
-    const newPassword = validateResetPassword();
-    if (!newPassword) return;
+    const { valid, password: newPassword } = readResetPassword();
+    if (!valid) return;
 
     try
     {
       showSpinner(elements.resetModal);
-      
-      pendingLocalPasswordUpdate = newPassword;
-      const result = await resetCourt(currentCourtId, true, newPassword, true);
-      currentCourtPassword = newPassword;
+
+      if (newPassword)
+      {
+        pendingLocalPasswordUpdate = newPassword;
+      }
+      const result = await resetCourt(currentCourtId, true, newPassword, false);
+      if (newPassword)
+      {
+        currentCourtPassword = newPassword;
+      }
       if (Number.isInteger(result?.data?.scoreVersion))
       {
         currentScoreVersion = result.data.scoreVersion;
@@ -5446,7 +5490,12 @@ document.addEventListener("DOMContentLoaded", () =>
       elements.resetModal.classList.add("hidden");
       syncCurrentViewState("replace");
       playSound(SOUND_IDS.START);
-      showToast("Full reset complete. Team and player names restored.", TOAST_TYPES.SUCCESS);
+      showToast(
+        newPassword
+          ? "Full reset complete and password updated. Team and player names restored."
+          : "Full reset complete. Team and player names restored.",
+        TOAST_TYPES.SUCCESS
+      );
     }
     catch (err)
     {
@@ -7014,6 +7063,7 @@ document.addEventListener("DOMContentLoaded", () =>
       {
         showToast(`Court has been renamed to "${data.redirect}". Redirecting...`, TOAST_TYPES.INFO);
         const wasSpectating = isSpectating;
+        const wasAdminEntry = enteredCourtAsAdmin;
         // Clean up current listener
         if (unsubscribeScore) unsubscribeScore();
         if (unsubscribeCourt) unsubscribeCourt();
@@ -7023,7 +7073,7 @@ document.addEventListener("DOMContentLoaded", () =>
           activeCourtListenerToken++;
         }
         // Enter new court
-        enterCourt(data.redirect, wasSpectating, { historyMode: "replace" });
+        enterCourt(data.redirect, wasSpectating, { historyMode: "replace", adminEntry: wasAdminEntry });
         return;
       }
 
@@ -7052,7 +7102,10 @@ document.addEventListener("DOMContentLoaded", () =>
       if (
         currentCourtPassword !== data.password &&
         !isSpectating &&
-        !isExpectedLocalPasswordChange
+        !isExpectedLocalPasswordChange &&
+        // Admins entered with the admin password, so a court password change does
+        // not invalidate their access.
+        !hasCourtAdminPrivileges()
       )
       {
         showToast("Security notice: Court password changed. You are now a spectator.", TOAST_TYPES.ERROR);

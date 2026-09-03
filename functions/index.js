@@ -1172,7 +1172,15 @@ exports.resetCourt = onCall(
         const courtData = courtDoc.exists ? courtDoc.data() : {};
         const trimmedPassword = typeof newPassword === "string" ? newPassword.trim() : "";
 
-        if (requirePassword)
+        // A password is optional on reset: blank means "keep the existing court
+        // password". When one is supplied it still has to satisfy the usual rules,
+        // and callers can set requirePassword to make it mandatory.
+        if (requirePassword && !trimmedPassword)
+        {
+            throw new Error("Password must be at least 4 characters.");
+        }
+
+        if (trimmedPassword)
         {
             if (trimmedPassword.length < 4)
             {
@@ -1236,7 +1244,9 @@ exports.resetCourt = onCall(
             scoringMode: scoringOptions.scoringMode
         };
 
-        if (trimmedPassword)
+        // Skip the write when the password is unchanged so connected clients do not
+        // see a password-change event (which would switch them to spectate mode).
+        if (trimmedPassword && trimmedPassword !== courtData.password)
         {
             courtUpdates.password = trimmedPassword;
         }
