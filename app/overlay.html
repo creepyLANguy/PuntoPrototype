@@ -1816,11 +1816,14 @@
         '<strong>Padel Push</strong>. Visit <strong>padelpush.co.za</strong> and join us on this court: ' +
         '<strong>{courtId}</strong>';
 
+      // Hosting rewrites that all serve this overlay; a bare one carries no courtId.
+      const OVERLAY_ROUTE_PREFIXES = new Set(["b", "o", "overlay", "broadcast"]);
+
       function getCourtIdFromPath() {
         const segments = window.location.pathname.split("/").filter(Boolean);
         const last = segments.length ? segments[segments.length - 1] : "";
 
-        if (!last || last === "b") {
+        if (!last || OVERLAY_ROUTE_PREFIXES.has(last)) {
           return null;
         }
         else if(last === "overlay.html") {

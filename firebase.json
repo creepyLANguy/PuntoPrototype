@@ -80,6 +80,30 @@
         "destination": "/app/overlay.html"
       },
       {
+        "source": "/o",
+        "destination": "/app/overlay.html"
+      },
+      {
+        "source": "/o/**",
+        "destination": "/app/overlay.html"
+      },
+      {
+        "source": "/overlay",
+        "destination": "/app/overlay.html"
+      },
+      {
+        "source": "/overlay/**",
+        "destination": "/app/overlay.html"
+      },
+      {
+        "source": "/broadcast",
+        "destination": "/app/overlay.html"
+      },
+      {
+        "source": "/broadcast/**",
+        "destination": "/app/overlay.html"
+      },
+      {
         "source": "/app",
         "destination": "/app/index.html"
       },
