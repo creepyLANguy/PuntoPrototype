@@ -1,3 +1,15 @@
+---
+config:
+    theme: base
+    themeVariables:
+        primaryColor: '#E3F2FD'
+        primaryBorderColor: '#1565C0'
+        primaryTextColor: '#0D47A1'
+        lineColor: '#455A64'
+        secondaryColor: '#FFF3E0'
+        tertiaryColor: '#E8F5E9'
+---
+
 erDiagram
     COURT {
         string courtId PK
@@ -60,5 +72,4 @@ erDiagram
     COURT ||--o{ CHECKPOINT : accelerates
     COURT ||--o{ ARCHIVED_EVENT : preserves
     COURT ||--o{ DEVICE : binds
-    EVENT ||--o| CHECKPOINT : advances
     EVENT ||--o| ARCHIVED_EVENT : archived_from
