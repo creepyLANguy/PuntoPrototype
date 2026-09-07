@@ -1,0 +1,64 @@
+erDiagram
+    COURT {
+        string courtId PK
+        string name
+        string status
+        string scoreVersion
+        string scoringMode
+        object teamNames
+        object playerNames
+    }
+
+    SCORE_CURRENT {
+        string courtId PK
+        object teamA
+        object teamB
+        array completedSets
+        boolean matchComplete
+        string lastEventId
+        timestamp updatedAt
+    }
+
+    EVENT {
+        string eventId PK
+        string courtId FK
+        string eventType
+        string scoreVersion
+        string createdBy
+        timestamp createdAt
+        string actorDeviceId
+        string targetCourtId
+    }
+
+    CHECKPOINT {
+        string checkpointId PK
+        string courtId FK
+        string lastEventId
+        timestamp lastCreatedAt
+        object score
+        object scoringOptions
+    }
+
+    ARCHIVED_EVENT {
+        string archiveId PK
+        string eventId PK
+        string courtId FK
+        string eventType
+        timestamp archivedAt
+        string resetBy
+    }
+
+    DEVICE {
+        string deviceId PK
+        string courtId FK
+        string deviceType
+        string status
+    }
+
+    COURT ||--|| SCORE_CURRENT : materializes
+    COURT ||--o{ EVENT : owns
+    COURT ||--o{ CHECKPOINT : accelerates
+    COURT ||--o{ ARCHIVED_EVENT : preserves
+    COURT ||--o{ DEVICE : binds
+    EVENT ||--o| CHECKPOINT : advances
+    EVENT ||--o| ARCHIVED_EVENT : archived_from

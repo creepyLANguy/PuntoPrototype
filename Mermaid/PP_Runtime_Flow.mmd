@@ -1,0 +1,49 @@
+sequenceDiagram
+    autonumber
+    participant A as Actor
+    participant C as Client
+    participant I as Ingest
+    participant E as Events
+    participant T as Trigger
+    participant G as Engine
+    participant S as Score
+    participant P as Public
+    participant O as Overlay
+
+    A->>C: Point, undo, reset, spectate or register
+    alt Browser scoring action
+        C->>E: addDoc(event with scoreVersion)
+    else ESP32 device action
+        C->>I: POST event
+        I->>E: append event with server timestamp
+    end
+
+    E-->>T: Document created
+    T->>T: Read court, event and score in transaction
+    T->>T: Reject stale version or duplicate event
+    alt Event is out of order or undo needs full history
+        T->>G: Replay applicable event log
+    else Normal scoring event
+        T->>G: Apply event
+    end
+    G-->>T: Materialized score
+    T->>S: Transactional update
+    S-->>C: onSnapshot live score
+
+    opt Public scoreboard or overlay
+        O->>P: GET /r/{courtId}
+        P->>S: Read current score
+        P-->>O: Revision and score payload
+        O->>P: GET /s or /m/{courtId}
+        P->>E: Replay for stats or momentum
+        P-->>O: Cached derived payload
+    end
+
+    opt Callable resetCourt
+        C->>E: Archive and delete current events
+        C->>S: Clear score/current
+        C->>C: Increment court scoreVersion
+    end
+
+Note over G,S: Modes: standard, straight, tiebreakTen
+Note over C,I: Device auth and replay hardening is a separate production requirement

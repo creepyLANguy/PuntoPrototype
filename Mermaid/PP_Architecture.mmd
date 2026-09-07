@@ -9,7 +9,7 @@ flowchart LR
         Beacon["Beacon<br/>ESP32 firmware<br/>beacon.ino"]
         Pulse["Pulse<br/>ESP32 firmware<br/>pulse.ino"]
         Hub["Hub<br/>ESP32 firmware + PN532 NFC<br/>hub.ino"]
-        Portal["Portal<br/>portal.ino<br/>Placeholder / not implemented"]
+        Portal["Portal<br/>portal.ino<br/>painlessMesh TODO"]
 
         WiFi["Court Wi-Fi"]
 
@@ -26,12 +26,13 @@ flowchart LR
 
         Hosting["Firebase Hosting<br/>Static web application"]
 
-        HTTP["HTTP Cloud Function<br/>postEvent<br/>Device event ingestion"]
+        HTTP["HTTP Cloud Function<br/>postEvent<br/>africa-south1"]
 
-        Callable["Callable Cloud Functions"]
+        Callable["Callable Cloud Functions<br/>africa-south1"]
         Reset["resetCourt"]
         Options["updateScoringOptions"]
         Details["getDetailedScore"]
+        PublicAPI["Public HTTP read functions<br/>europe-west1<br/>/a /r /s /m"]
 
         Callable --> Reset
         Callable --> Options
@@ -44,12 +45,14 @@ flowchart LR
         CurrentScore[("courts/{courtId}/score/current<br/>Current live score")]
         Checkpoints[("courts/{courtId}/scoreCheckpoints<br/>Replay checkpoints")]
         Devices["devices/{deviceId}<br/>Device registration"]
+        Archive[("courts/{courtId}/archive/{resetId}/events<br/>Reset archives")]
 
         Firestore --- Courts
         Firestore --- Events
         Firestore --- CurrentScore
         Firestore --- Checkpoints
         Firestore --- Devices
+        Firestore --- Archive
 
         Trigger["Firestore trigger<br/>onEventCreate"]
 
@@ -63,12 +66,20 @@ flowchart LR
 
         Reset --> Events
         Reset --> CurrentScore
+        Reset --> Archive
         Options --> Events
         Options --> CurrentScore
         Details --> Events
         Details --> CurrentScore
+        PublicAPI --> CurrentScore
+        PublicAPI --> Events
     end
 
+
+    subgraph OVERLAY["Broadcast Surface"]
+        Overlay["OBS overlay<br/>app/overlay.html"]
+        Overlay -->|"GET /r/{courtId}, /a/{courtId}<br/>GET /s/{courtId}, /m/{courtId}"| PublicAPI
+    end
 
     subgraph WEB["Web Application"]
 
@@ -150,7 +161,7 @@ flowchart LR
 
     Hosting --> WebApp
 
-    WebApp -->|"Real-time Firestore listener"| CurrentScore
+    WebApp -->|"onSnapshot listener"| CurrentScore
     CurrentScore -->|"Live score updates"| WebApp
 
     WebApp -->|"Add scoring / operational events"| Events
@@ -199,21 +210,18 @@ flowchart LR
     %% =========================================================
 
     subgraph FUTURE["Optional / Future Integrations"]
-        Broadcast["Broadcast overlay"]
         Streaming["OBS / vMix / streaming platform"]
         Analytics["Club analytics"]
         Billing["Billing and subscriptions"]
     end
 
-    CurrentScore -. "Future live score feed" .-> Broadcast
-    Broadcast -.-> Streaming
     CurrentScore -. "Future reporting" .-> Analytics
     Admin -. "Future commercial controls" .-> Billing
 
     class Beacon,Pulse,Hub,WiFi,NFCReader hardware
-    class Hosting,HTTP,Callable,Reset,Options,Details,Firestore,Courts,Events,CurrentScore,Checkpoints,Devices,Trigger,Scoring firebase
+    class Hosting,HTTP,Callable,Reset,Options,Details,PublicAPI,Firestore,Courts,Events,CurrentScore,Checkpoints,Archive,Devices,Trigger,Scoring firebase
     class WebApp,Scoreboard,Play,Spectate,Admin,CourtSetup,DeviceAdmin,QR,NFCWeb web
     class Player,Spectator,ClubOperator,Administrator user
     class Repository,Tests,Deploy,Staging,Production delivery
     class Monitoring,Diagnostics,Support,Provisioning operations
-    class Portal,Broadcast,Streaming,Analytics,Billing future
+    class Portal,Streaming,Analytics,Billing future

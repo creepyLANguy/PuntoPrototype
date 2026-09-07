@@ -11,30 +11,30 @@ flowchart LR
     end
 
     subgraph HARDWARE["2. Hardware Product"]
-        HardwareDesign["Hardware architecture"]
-        Electronics["Electronics and component selection"]
-        Embedded["Embedded firmware"]
-        Connectivity["Wi-Fi, NFC and device communications"]
+        HardwareDesign["Prototype hardware architecture"]
+        Electronics["ESP32 prototype components"]
+        Embedded["Beacon, Pulse and Hub firmware"]
+        Connectivity["Wi-Fi, HTTPS and NFC"]
         Enclosure["Physical enclosure and installation design"]
-        Manufacturing["Manufacturing and suppliers"]
-        Provisioning["Device provisioning"]
+        Manufacturing["Manufacturing planning"]
+        Provisioning["Wi-Fi/device provisioning"]
     end
 
     subgraph SOFTWARE["3. Software Platform"]
         WebApp["Web application"]
-        Backend["Firebase backend"]
-        DataModel["Firestore data model"]
-        Scoring["Scoring and match rules"]
-        Realtime["Real-time scoreboard"]
-        Admin["Club and admin tools"]
-        Broadcast["Broadcast integration"]
+        Backend["Firebase Functions and Hosting"]
+        DataModel["Firestore events, scores and archives"]
+        Scoring["scoringEngine.js match rules"]
+        Realtime["Firestore live scoreboard"]
+        Admin["Court and device administration"]
+        Broadcast["OBS overlay via /a /r /s /m"]
     end
 
     subgraph DELIVERY["4. Engineering Delivery"]
         Architecture["Technical architecture"]
         SourceControl["Source control"]
         Testing["Automated and manual testing"]
-        Environments["Staging and production environments"]
+        Environments["Staging, production and local emulators"]
         Releases["Release management"]
         Documentation["Technical documentation"]
     end
@@ -49,8 +49,8 @@ flowchart LR
     end
 
     subgraph OPERATIONS["6. Service Operations"]
-        Monitoring["Monitoring and alerting"]
-        Diagnostics["Remote diagnostics"]
+        Monitoring["Firebase logs and runtime monitoring"]
+        Diagnostics["Device and emulator diagnostics"]
         IncidentResponse["Incident response"]
         Support["Customer support"]
         Maintenance["Hardware maintenance"]
@@ -81,7 +81,7 @@ flowchart LR
     subgraph FINANCE["9. Finance and Administration"]
         Company["Company administration"]
         Budgeting["Budgeting and forecasting"]
-        Payments["Billing and payments"]
+        Payments["Billing and payments (future)"]
         Accounting["Bookkeeping and accounting"]
         Tax["Tax and statutory filings"]
         Insurance["Insurance and risk management"]
@@ -89,8 +89,8 @@ flowchart LR
     end
 
     subgraph SCALE["10. Growth and Improvement"]
-        Analytics["Product and business analytics"]
-        Usage["Usage and engagement analysis"]
+        Analytics["Analytics (future)"]
+        Usage["Usage analysis (future)"]
         RoadmapFeedback["Evidence-based roadmap"]
         Hiring["Hiring and delegation"]
         Processes["Operating processes"]
@@ -139,8 +139,8 @@ flowchart LR
     QUALITY --> Pilot
     Build --> Pilot
     Pilot --> Launch
-    Launch --> OPERATE
-    OPERATE --> Improve
+    Launch --> Operate
+    Operate --> Improve
     Improve --> Scale
 
     Clubs --> CustomerResearch
@@ -164,7 +164,7 @@ flowchart LR
 
     Sales --> Clubs
     Partnerships --> Clubs
-    Marketing["Marketing and Brand"] --> Sales
+    Positioning --> Sales
     ProductStrategy --> Pricing
     Pricing --> Sales
 

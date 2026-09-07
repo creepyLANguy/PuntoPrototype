@@ -8,11 +8,12 @@ flowchart LR
 
     subgraph PLATFORM["Padel Push Cloud Platform"]
         Hosting["Firebase Hosting<br/>Web application"]
-        Ingestion["Event ingestion API<br/>Cloud Function"]
-        Events[("Firestore<br/>Event history")]
-        Scoring["Scoring service<br/>Games • sets • tiebreaks"]
-        LiveState[("Live match state")]
+        Ingestion["postEvent<br/>HTTP / africa-south1"]
+        Events[("courts/{courtId}/events<br/>Append-only event history")]
+        Scoring["onEventCreate<br/>scoringEngine.js"]
+        LiveState[("courts/{courtId}/score/current<br/>Materialized live score")]
         Operations["Admin and court operations"]
+        Overlay["OBS overlay<br/>app/overlay.html<br/>/a /r /s /m"]
     end
 
     subgraph USERS["Users"]
@@ -24,7 +25,7 @@ flowchart LR
     Ingestion -->|"Stores match events"| Events
     Events -->|"Triggers score processing"| Scoring
     Scoring -->|"Updates"| LiveState
-    LiveState -->|"Real-time updates"| WebApp
+    LiveState -->|"Firestore onSnapshot"| WebApp
     Hosting --> WebApp
 
     Player --> WebApp
@@ -33,16 +34,15 @@ flowchart LR
     Spectator --> WebApp
 
     subgraph FUTURE["Potential Extensions"]
-        Broadcast["Broadcast overlay"]
         Billing["Billing and subscriptions"]
         Analytics["Club analytics"]
     end
 
-    LiveState -.-> Broadcast
+    LiveState --> Overlay
     Operations -.-> Billing
     LiveState -.-> Analytics
 
     class Devices,NFC court
     class Hosting,Ingestion,Events,Scoring,LiveState,Operations platform
     class Player,Club,Spectator user
-    class Broadcast,Billing,Analytics future
+    class Billing,Analytics future
