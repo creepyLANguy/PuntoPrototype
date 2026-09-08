@@ -2,6 +2,8 @@
 
 This is an implementation reference. These paths are not part of the public API contract and may change without changing public response schemas.
 
+The collection relationships are visualized in [`Mermaid/PP_Data_Model.mmd`](../Mermaid/PP_Data_Model.mmd).
+
 | Path | Role |
 |---|---|
 | `courts/{courtId}` | Court configuration and match generation |

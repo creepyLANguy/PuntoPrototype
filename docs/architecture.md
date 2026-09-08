@@ -2,6 +2,8 @@
 
 ## Logical surfaces
 
+The request-to-score lifecycle is visualized in [`Mermaid/PP_Runtime_Flow.mmd`](../Mermaid/PP_Runtime_Flow.mmd).
+
 ```text
 Browser / OBS / third-party consumers
         │

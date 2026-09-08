@@ -1,0 +1,69 @@
+---
+config:
+    theme: base
+    themeVariables:
+        actorBkg: '#E3F2FD'
+        actorBorder: '#1565C0'
+        actorTextColor: '#0D47A1'
+        signalColor: '#455A64'
+        signalTextColor: '#263238'
+        noteBkgColor: '#FFFDE7'
+        noteBorderColor: '#FBC02D'
+---
+
+sequenceDiagram
+    autonumber
+    participant B as Browser
+    participant D as ESP32 device
+    participant I as Ingest
+    participant E as Events
+    participant T as Trigger
+    participant G as Engine
+    participant S as Score
+    participant P as Public
+    participant O as Overlay
+    participant K as Callable resetCourt
+
+    alt Browser scoring action
+        B->>E: addDoc(event with scoreVersion)
+    else ESP32 device action
+        D->>I: POST event
+        I->>E: append event with server timestamp
+    end
+
+    E-->>T: Document created
+    T->>T: Read court, event and score in transaction
+    T->>T: Reject stale version or duplicate event
+    alt Event is out of order or undo needs full history
+        T->>G: Replay applicable event log
+    else Normal scoring event
+        T->>G: Apply event
+    end
+    G-->>T: Materialized score
+    T->>S: Transactional update
+    S-->>B: onSnapshot live score
+
+    opt Public scoreboard or overlay
+        rect rgb(224, 242, 241)
+        Note over P,O: Public read path
+        O->>P: GET /r/{courtId}
+        P->>S: Read current score
+        P-->>O: Revision and score payload
+        O->>P: GET /s or /m/{courtId}
+        P->>E: Replay for stats or momentum
+        P-->>O: Cached derived payload
+        end
+    end
+
+    opt Callable resetCourt
+        rect rgb(255, 243, 224)
+        Note over C,S: Reset path
+        B->>K: httpsCallable resetCourt
+        K->>E: Archive and delete current events
+        K->>S: Clear score/current
+        K->>K: Increment court scoreVersion
+        end
+    end
+
+Note over G,S: Modes: standard, straight, tiebreakTen
+Note over D,I: Device auth and replay hardening is a separate production requirement

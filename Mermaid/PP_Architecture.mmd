@@ -1,4 +1,23 @@
+---
+config:
+    theme: base
+---
+
 flowchart LR
+
+        classDef hardware fill:#E8F5E9,stroke:#2E7D32,stroke-width:2px,color:#1B5E20,font-weight:bold;
+        classDef firebase fill:#FFF3E0,stroke:#E65100,stroke-width:2px,color:#BF360C,font-weight:bold;
+        classDef web fill:#E3F2FD,stroke:#1565C0,stroke-width:2px,color:#0D47A1,font-weight:bold;
+        classDef broadcast fill:#E0F2F1,stroke:#00695C,stroke-width:2px,color:#004D40,font-weight:bold;
+        classDef user fill:#F3E5F5,stroke:#7B1FA2,stroke-width:2px,color:#4A148C,font-weight:bold;
+        classDef delivery fill:#ECEFF1,stroke:#455A64,stroke-width:2px,color:#263238,font-weight:bold;
+        classDef operations fill:#FFFDE7,stroke:#FBC02D,stroke-width:2px,color:#F57F17,font-weight:bold;
+        classDef primary fill:#FFF8E1,stroke:#C62828,stroke-width:4px,color:#7F0000,font-weight:bold;
+        classDef legendHardware fill:#E8F5E9,stroke:#2E7D32,color:#1B5E20;
+        classDef legendFirebase fill:#FFF3E0,stroke:#E65100,color:#BF360C;
+        classDef legendWeb fill:#E3F2FD,stroke:#1565C0,color:#0D47A1;
+        classDef legendFuture fill:#FAFAFA,stroke:#9E9E9E,stroke-dasharray:5 5,color:#616161;
+        classDef future fill:#FAFAFA,stroke:#9E9E9E,stroke-width:1px,stroke-dasharray:5 5,color:#616161;
 
     %% =========================================================
     %% PADEL PUSH - TECHNICAL ARCHITECTURE
@@ -9,7 +28,7 @@ flowchart LR
         Beacon["Beacon<br/>ESP32 firmware<br/>beacon.ino"]
         Pulse["Pulse<br/>ESP32 firmware<br/>pulse.ino"]
         Hub["Hub<br/>ESP32 firmware + PN532 NFC<br/>hub.ino"]
-        Portal["Portal<br/>portal.ino<br/>Placeholder / not implemented"]
+        Portal["Portal<br/>portal.ino<br/>painlessMesh TODO"]
 
         WiFi["Court Wi-Fi"]
 
@@ -26,12 +45,13 @@ flowchart LR
 
         Hosting["Firebase Hosting<br/>Static web application"]
 
-        HTTP["HTTP Cloud Function<br/>postEvent<br/>Device event ingestion"]
+        HTTP["HTTP Cloud Function<br/>postEvent<br/>africa-south1<br/>deviceId auth; HMAC hardening planned"]
 
-        Callable["Callable Cloud Functions"]
+        Callable["Callable Cloud Functions<br/>africa-south1"]
         Reset["resetCourt"]
         Options["updateScoringOptions"]
         Details["getDetailedScore"]
+        PublicAPI["Public HTTP read functions<br/>europe-west1<br/>/a /r /s /m"]
 
         Callable --> Reset
         Callable --> Options
@@ -44,12 +64,14 @@ flowchart LR
         CurrentScore[("courts/{courtId}/score/current<br/>Current live score")]
         Checkpoints[("courts/{courtId}/scoreCheckpoints<br/>Replay checkpoints")]
         Devices["devices/{deviceId}<br/>Device registration"]
+        Archive[("courts/{courtId}/archive/{resetId}/events<br/>Reset archives")]
 
         Firestore --- Courts
         Firestore --- Events
         Firestore --- CurrentScore
         Firestore --- Checkpoints
         Firestore --- Devices
+        Firestore --- Archive
 
         Trigger["Firestore trigger<br/>onEventCreate"]
 
@@ -63,12 +85,20 @@ flowchart LR
 
         Reset --> Events
         Reset --> CurrentScore
+        Reset --> Archive
         Options --> Events
         Options --> CurrentScore
         Details --> Events
-        Details --> CurrentScore
+        Details --> Events
+        PublicAPI --> CurrentScore
+        PublicAPI --> Events
     end
 
+
+    subgraph OVERLAY["Broadcast Surface"]
+        Overlay["OBS overlay<br/>app/overlay.html"]
+        Overlay -->|"GET /r/{courtId}, /a/{courtId}<br/>GET /s/{courtId}, /m/{courtId}"| PublicAPI
+    end
 
     subgraph WEB["Web Application"]
 
@@ -139,7 +169,7 @@ flowchart LR
     Hub -->|"HTTPS POST event"| HTTP
 
     Hub -. "NFC configuration and tag reading" .-> NFCReader
-    Hub -. "Device registration / status" .-> Devices
+    Hub -->|"REGISTER via postEvent"| HTTP
 
     Portal -. "Future court gateway role" .-> WiFi
 
@@ -150,7 +180,7 @@ flowchart LR
 
     Hosting --> WebApp
 
-    WebApp -->|"Real-time Firestore listener"| CurrentScore
+    WebApp -->|"onSnapshot listener"| CurrentScore
     CurrentScore -->|"Live score updates"| WebApp
 
     WebApp -->|"Add scoring / operational events"| Events
@@ -180,7 +210,7 @@ flowchart LR
 
     Staging -. "Validated release" .-> Production
     Production -. "Hosts" .-> Hosting
-    Production -. "Deploys to" .-> Firestore
+    Production -. "Deploys Firestore rules/indexes" .-> Firestore
 
 
     %% =========================================================
@@ -199,21 +229,40 @@ flowchart LR
     %% =========================================================
 
     subgraph FUTURE["Optional / Future Integrations"]
-        Broadcast["Broadcast overlay"]
         Streaming["OBS / vMix / streaming platform"]
         Analytics["Club analytics"]
         Billing["Billing and subscriptions"]
     end
 
-    CurrentScore -. "Future live score feed" .-> Broadcast
-    Broadcast -.-> Streaming
+    subgraph LEGEND["Diagram key"]
+        LegendHardware["Implemented hardware"]
+        LegendFirebase["Implemented platform"]
+        LegendWeb["Implemented web surface"]
+        LegendFuture["Future or optional"]
+    end
+
     CurrentScore -. "Future reporting" .-> Analytics
     Admin -. "Future commercial controls" .-> Billing
 
     class Beacon,Pulse,Hub,WiFi,NFCReader hardware
-    class Hosting,HTTP,Callable,Reset,Options,Details,Firestore,Courts,Events,CurrentScore,Checkpoints,Devices,Trigger,Scoring firebase
+    class Hosting,HTTP,Callable,Reset,Options,Details,PublicAPI,Firestore,Courts,Events,CurrentScore,Checkpoints,Archive,Devices,Trigger,Scoring firebase
     class WebApp,Scoreboard,Play,Spectate,Admin,CourtSetup,DeviceAdmin,QR,NFCWeb web
     class Player,Spectator,ClubOperator,Administrator user
     class Repository,Tests,Deploy,Staging,Production delivery
     class Monitoring,Diagnostics,Support,Provisioning operations
-    class Portal,Broadcast,Streaming,Analytics,Billing future
+    class Portal,Streaming,Analytics,Billing future
+    class HTTP,Events,Trigger,Scoring,CurrentScore primary
+    class LegendHardware legendHardware;
+    class LegendFirebase legendFirebase;
+    class LegendWeb legendWeb;
+    class LegendFuture legendFuture;
+
+    style COURT fill:#F1F8E9,stroke:#33691E,stroke-width:2px;
+    style FIREBASE fill:#FFF8E1,stroke:#FF6F00,stroke-width:2px;
+    style OVERLAY fill:#E0F2F1,stroke:#00695C,stroke-width:2px;
+    style WEB fill:#E8EAF6,stroke:#1A237E,stroke-width:2px;
+    style USERS fill:#F3E5F5,stroke:#4A148C,stroke-width:2px;
+    style DELIVERY fill:#ECEFF1,stroke:#263238,stroke-width:2px;
+    style OPERATIONS fill:#FFFDE7,stroke:#F57F17,stroke-width:2px;
+    style FUTURE fill:#FAFAFA,stroke:#9E9E9E,stroke-dasharray:5 5;
+    style LEGEND fill:#FFFFFF,stroke:#607D8B,stroke-width:1px;

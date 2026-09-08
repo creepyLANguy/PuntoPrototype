@@ -1,4 +1,15 @@
+---
+config:
+    theme: base
+---
+
 flowchart LR
+
+        classDef court fill:#E8F5E9,stroke:#2E7D32,stroke-width:2px,color:#1B5E20,font-weight:bold;
+        classDef platform fill:#E3F2FD,stroke:#1565C0,stroke-width:2px,color:#0D47A1,font-weight:bold;
+        classDef primary fill:#FFF8E1,stroke:#C62828,stroke-width:4px,color:#7F0000,font-weight:bold;
+        classDef user fill:#F3E5F5,stroke:#7B1FA2,stroke-width:2px,color:#4A148C,font-weight:bold;
+        classDef future fill:#FAFAFA,stroke:#9E9E9E,stroke-width:1px,stroke-dasharray:5 5,color:#616161;
     subgraph COURT["Court Equipment"]
         Devices["Padel Push court devices<br/>Beacon • Pulse • Hub"]
         NFC["NFC setup and player interaction"]
@@ -6,13 +17,14 @@ flowchart LR
         NFC -->|"NFC / QR access"| WebApp
     end
 
-    subgraph PLATFORM["Padel Push Cloud Platform"]
+    subgraph PLATFORM["Padel Push Scoring Flow"]
         Hosting["Firebase Hosting<br/>Web application"]
-        Ingestion["Event ingestion API<br/>Cloud Function"]
-        Events[("Firestore<br/>Event history")]
-        Scoring["Scoring service<br/>Games • sets • tiebreaks"]
-        LiveState[("Live match state")]
+        Ingestion["postEvent<br/>HTTP / africa-south1"]
+        Events[("courts/{courtId}/events<br/>Append-only event history")]
+        Scoring["onEventCreate<br/>scoringEngine.js"]
+        LiveState[("courts/{courtId}/score/current<br/>Materialized live score")]
         Operations["Admin and court operations"]
+        Overlay["OBS overlay<br/>app/overlay.html<br/>/a /r /s /m"]
     end
 
     subgraph USERS["Users"]
@@ -24,7 +36,7 @@ flowchart LR
     Ingestion -->|"Stores match events"| Events
     Events -->|"Triggers score processing"| Scoring
     Scoring -->|"Updates"| LiveState
-    LiveState -->|"Real-time updates"| WebApp
+    LiveState -->|"Firestore onSnapshot"| WebApp
     Hosting --> WebApp
 
     Player --> WebApp
@@ -33,16 +45,21 @@ flowchart LR
     Spectator --> WebApp
 
     subgraph FUTURE["Potential Extensions"]
-        Broadcast["Broadcast overlay"]
         Billing["Billing and subscriptions"]
         Analytics["Club analytics"]
     end
 
-    LiveState -.-> Broadcast
+    LiveState --> Overlay
     Operations -.-> Billing
     LiveState -.-> Analytics
 
     class Devices,NFC court
     class Hosting,Ingestion,Events,Scoring,LiveState,Operations platform
     class Player,Club,Spectator user
-    class Broadcast,Billing,Analytics future
+    class Billing,Analytics future
+    class Ingestion,Events,Scoring,LiveState primary
+
+    style COURT fill:#F1F8E9,stroke:#2E7D32,stroke-width:2px;
+    style PLATFORM fill:#E8EAF6,stroke:#1A237E,stroke-width:2px;
+    style USERS fill:#F3E5F5,stroke:#4A148C,stroke-width:2px;
+    style FUTURE fill:#FAFAFA,stroke:#9E9E9E,stroke-dasharray:5 5;
