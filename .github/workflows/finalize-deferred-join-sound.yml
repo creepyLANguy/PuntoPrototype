@@ -1,0 +1,73 @@
+name: Finalize deferred join sound fix
+
+on:
+  push:
+    branches: ['fix/direct-link-join-sound']
+
+jobs:
+  finalize:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Apply fix
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          p = Path('app/js/script.js')
+          s = p.read_text()
+
+          old = '''  let audioContext = null;\n  let audioBuffers = {};\n  let audioReady = false;\n'''
+          new = '''  let audioContext = null;\n  let audioBuffers = {};\n  let audioReady = false;\n  let audioUserGestureObserved = false;\n  let pendingJoinSound = false;\n  let audioUnlockInFlight = false;\n'''
+          assert s.count(old) == 1
+          s = s.replace(old, new, 1)
+
+          old = '''  async function playJoinSound()\n  {\n    try\n    {\n      return await playSound(SOUND_IDS.START, false, true);\n    }\n    catch (err)\n    {\n      console.warn("Join sound could not be played:", err);\n      return false;\n    }\n  }\n'''
+          new = '''  async function resumeAudioContext()\n  {\n    if (!audioContext) return false;\n    if (audioContext.state === "running") return true;\n\n    try\n    {\n      await audioContext.resume();\n    }\n    catch (err)\n    {\n      console.warn("Audio context could not be resumed:", err);\n      return false;\n    }\n\n    return audioContext.state === "running";\n  }\n\n  async function flushPendingJoinSound()\n  {\n    if (!pendingJoinSound || muted || audioUnlockInFlight) return false;\n\n    audioUnlockInFlight = true;\n\n    try\n    {\n      if (!audioContext)\n      {\n        await initAudio();\n      }\n\n      if (!(await resumeAudioContext())) return false;\n\n      const played = await playSound(SOUND_IDS.START, false, true);\n      if (played) pendingJoinSound = false;\n      return played;\n    }\n    catch (err)\n    {\n      console.warn("Deferred join sound could not be played:", err);\n      return false;\n    }\n    finally\n    {\n      audioUnlockInFlight = false;\n    }\n  }\n\n  function noteUserAudioGesture()\n  {\n    audioUserGestureObserved = true;\n    if (!audioContext) return;\n\n    void (async () =>\n    {\n      const resumed = await resumeAudioContext();\n      if (resumed && pendingJoinSound)\n      {\n        await flushPendingJoinSound();\n      }\n    })();\n  }\n\n  document.addEventListener("pointerdown", noteUserAudioGesture, { capture: true });\n  document.addEventListener("touchstart", noteUserAudioGesture, { capture: true, passive: true });\n  document.addEventListener("keydown", noteUserAudioGesture, { capture: true });\n\n  async function playJoinSound()\n  {\n    if (muted) return false;\n\n    try\n    {\n      const played = await playSound(SOUND_IDS.START, false, true);\n      if (played)\n      {\n        pendingJoinSound = false;\n        return true;\n      }\n\n      if (!audioContext || audioContext.state !== "running")\n      {\n        pendingJoinSound = true;\n        if (audioUserGestureObserved)\n        {\n          return await flushPendingJoinSound();\n        }\n      }\n\n      return false;\n    }\n    catch (err)\n    {\n      console.warn("Join sound could not be played:", err);\n      return false;\n    }\n  }\n'''
+          assert s.count(old) == 1
+          p.write_text(s.replace(old, new, 1))
+
+          h = Path('functions/frontendHarness/harness.mjs')
+          s = h.read_text()
+          old = '''  window.AudioContext = class\n  {\n    constructor() { this.destination = {}; }\n    async decodeAudioData() { return {}; }\n    createBufferSource() { return { connect: () => {}, start: () => {} }; }\n  };\n'''
+          new = '''  window.__audioTestState = { contexts: 0, resumeCalls: 0, starts: 0 };\n\n  window.AudioContext = class\n  {\n    constructor()\n    {\n      this.state = "suspended";\n      this.destination = {};\n      window.__audioTestState.contexts += 1;\n    }\n\n    async resume()\n    {\n      window.__audioTestState.resumeCalls += 1;\n      this.state = "running";\n    }\n\n    async decodeAudioData() { return {}; }\n\n    createBufferSource()\n    {\n      return\n      {\n        connect: () => {},\n        start: () => { window.__audioTestState.starts += 1; }\n      };\n    }\n  };\n'''
+          assert s.count(old) == 1
+          h.write_text(s.replace(old, new, 1))
+
+          Path('functions/frontendAudio.node-test.mjs').write_text('''import assert from "node:assert/strict";\nimport test from "node:test";\nimport { bootFrontend, seedBaseData, seedCourt, waitFor, settle } from "./frontendHarness/harness.mjs";\n\nlet window;\n\ntest.before(async () =>\n{\n  seedBaseData();\n  seedCourt("audiocourt");\n  const dom = await bootFrontend({ url: "https://padel.test/c/audiocourt" });\n  window = dom.window;\n});\n\ntest("direct court links defer the join sound until the first user gesture", async () =>\n{\n  await waitFor(() => window.__audioTestState.contexts > 0, { label: "audio context created" });\n  await settle(25);\n  assert.equal(window.__audioTestState.starts, 0);\n  assert.equal(window.__audioTestState.resumeCalls, 0);\n\n  window.document.body.dispatchEvent(new window.Event("pointerdown", { bubbles: true, cancelable: true }));\n\n  await waitFor(() => window.__audioTestState.resumeCalls > 0, { label: "audio context resumed" });\n  await waitFor(() => window.__audioTestState.starts === 1, { label: "deferred join sound played" });\n});\n''')
+
+          q = Path('functions/package.json')
+          s = q.read_text()
+          old = 'frontendCourtPassword.node-test.mjs"'
+          new = 'frontendCourtPassword.node-test.mjs frontendAudio.node-test.mjs"'
+          assert s.count(old) == 1
+          q.write_text(s.replace(old, new, 1))
+          PY
+
+      - name: Run targeted regression
+        working-directory: functions
+        run: |
+          npm ci
+          node --test frontendAudio.node-test.mjs
+
+      - name: Run full test suite
+        working-directory: functions
+        run: npm test
+
+      - name: Remove temporary workflows and commit
+        run: |
+          set -euo pipefail
+          rm -f .github/workflows/one-shot-deferred-join-sound-fix.yml
+          rm -f .github/workflows/one-shot-direct-link-sound-fix.yml
+          rm -f .github/workflows/one-shot-deferred-join-sound-fix.yml
+          git add -A
+          git diff --cached --check
+          git commit -m "Fix deferred direct-link join sound"
+          git push origin HEAD:fix/direct-link-join-sound
+          git push origin --delete fix/nonexistent 2>/dev/null || true
