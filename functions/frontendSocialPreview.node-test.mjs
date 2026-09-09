@@ -6,8 +6,6 @@ global.document = {
   addEventListener() {}
 };
 
-global.navigator = {};
-
 global.window = {
   location: {
     pathname: '/app/c/kdag/',
