@@ -3928,6 +3928,7 @@ document.addEventListener("DOMContentLoaded", () =>
     if (historyMode !== "skip")
     {
       syncCurrentViewState(historyMode);
+      await playJoinSound();
     }
 
     updatePageTitle(currentCourtName, currentCourtId);
@@ -4403,22 +4404,51 @@ document.addEventListener("DOMContentLoaded", () =>
       });
   }
 
-  async function playSound(id, force = false)
+  async function playSound(id, force = false, dropIfBlocked = false)
   {
-    if (muted && !force) return;
+    if (muted && !force) return false;
 
     if (!audioReady)
     {
-      await initAudio();
+      try
+      {
+        await initAudio();
+      }
+      catch (err)
+      {
+        console.warn("Audio initialization failed:", err);
+        return false;
+      }
+    }
+
+    if (dropIfBlocked && (!audioContext || audioContext.state !== "running"))
+    {
+      return false;
     }
 
     const buffer = audioBuffers[id];
-    if (!buffer) return;
+    if (!buffer) return false;
 
     const source = audioContext.createBufferSource();
     source.buffer = buffer;
     source.connect(audioContext.destination);
     source.start();
+
+    return true;
+  }
+
+  async function playJoinSound()
+  {
+    try
+    {
+      await initAudio();
+      return await playSound(SOUND_IDS.START, false, true);
+    }
+    catch (err)
+    {
+      console.warn("Join sound could not be played:", err);
+      return false;
+    }
   }
 
   // =====================================================
