@@ -70,6 +70,7 @@ jobs:
           git diff --cached --check
 
       - name: Test
+        working-directory: functions
         run: |
           npm ci
           node --test frontendAudio.node-test.mjs
