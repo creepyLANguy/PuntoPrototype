@@ -49,11 +49,13 @@ function installGlobals(dom)
     disconnect() {}
   };
 
+  window.__audioTestState = { contexts: 0, resumeCalls: 0, starts: 0 };
   window.AudioContext = class
   {
-    constructor() { this.destination = {}; }
+    constructor() { this.state = "suspended"; this.destination = {}; window.__audioTestState.contexts += 1; }
+    async resume() { window.__audioTestState.resumeCalls += 1; this.state = "running"; }
     async decodeAudioData() { return {}; }
-    createBufferSource() { return { connect: () => {}, start: () => {} }; }
+    createBufferSource() { return { connect: () => {}, start: () => { window.__audioTestState.starts += 1; } }; }
   };
 
   window.fetch = async () => ({

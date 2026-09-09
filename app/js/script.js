@@ -4363,6 +4363,9 @@ document.addEventListener("DOMContentLoaded", () =>
   let audioContext = null;
   let audioBuffers = {};
   let audioReady = false;
+  let audioUserGestureObserved = false;
+  let pendingJoinSound = false;
+  let audioUnlockInFlight = false;
 
   async function initAudio()
   {
@@ -4428,17 +4431,72 @@ document.addEventListener("DOMContentLoaded", () =>
     return true;
   }
 
-  async function playJoinSound()
+  async function resumeAudioContext()
   {
+    if (!audioContext) return false;
+    if (audioContext.state === "running") return true;
     try
     {
-      return await playSound(SOUND_IDS.START, false, true);
+      await audioContext.resume();
     }
     catch (err)
     {
-      console.warn("Join sound could not be played:", err);
+      console.warn("Audio context could not be resumed:", err);
       return false;
     }
+    return audioContext.state === "running";
+  }
+
+  async function flushPendingJoinSound()
+  {
+    if (!pendingJoinSound || muted || audioUnlockInFlight) return false;
+    audioUnlockInFlight = true;
+    try
+    {
+      if (!audioContext) await initAudio();
+      if (!(await resumeAudioContext())) return false;
+      const played = await playSound(SOUND_IDS.START, false, true);
+      if (played) pendingJoinSound = false;
+      return played;
+    }
+    catch (err) { console.warn("Deferred join sound could not be played:", err); return false; }
+    finally { audioUnlockInFlight = false; }
+  }
+
+  function noteUserAudioGesture()
+  {
+    audioUserGestureObserved = true;
+    if (!audioContext) return;
+    void (async () =>
+    {
+      const resumed = await resumeAudioContext();
+      if (resumed && pendingJoinSound) await flushPendingJoinSound();
+    })();
+  }
+
+  document.addEventListener("pointerdown", noteUserAudioGesture, { capture: true });
+  document.addEventListener("touchstart", noteUserAudioGesture, { capture: true, passive: true });
+  document.addEventListener("keydown", noteUserAudioGesture, { capture: true });
+
+  async function playJoinSound()
+  {
+    if (muted) return false;
+    try
+    {
+      const played = await playSound(SOUND_IDS.START, false, true);
+      if (played)
+      {
+        pendingJoinSound = false;
+        return true;
+      }
+      if (!audioContext || audioContext.state !== "running")
+      {
+        pendingJoinSound = true;
+        if (audioUserGestureObserved) return await flushPendingJoinSound();
+      }
+      return false;
+    }
+    catch (err) { console.warn("Join sound could not be played:", err); return false; }
   }
 
   // =====================================================
