@@ -8,6 +8,7 @@ on:
       - "app/**"
       - "nfc/**"
       - "media/**"
+      - "scripts/**"
       - "firebase.json"
       - ".firebaserc"
       - "functions/**"
@@ -33,6 +34,11 @@ jobs:
           FIREBASE_CONFIG: ${{ secrets.FIREBASE_CONFIG_JS_CONTENT_PRODUCTION }}
         run: |
           printf '%s' "$FIREBASE_CONFIG" > app/js/firebase-config.js
+
+      - name: Configure public origin
+        env:
+          PUBLIC_ORIGIN: https://www.padelpush.co.za
+        run: node scripts/configure-public-origin.mjs
 
       - uses: actions/setup-node@v5
         with:
@@ -71,6 +77,11 @@ jobs:
           FIREBASE_CONFIG: ${{ secrets.FIREBASE_CONFIG_JS_CONTENT_STAGING }}
         run: |
           printf '%s' "$FIREBASE_CONFIG" > app/js/firebase-config.js
+
+      - name: Configure public origin
+        env:
+          PUBLIC_ORIGIN: https://qa.padelpush.co.za
+        run: node scripts/configure-public-origin.mjs
 
       - uses: actions/setup-node@v5
         with:
