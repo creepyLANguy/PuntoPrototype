@@ -8,6 +8,7 @@ on:
       - "app/**"
       - "nfc/**"
       - "media/**"
+      - "scripts/**"
       - "firebase.json"
       - ".firebaserc"
       - "functions/**"
