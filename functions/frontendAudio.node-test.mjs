@@ -10,6 +10,6 @@ test("a failed direct-link join sound is ignored and never replayed on a later g
   assert.equal(window.__audioTestState.resumeCalls, 0);
   window.document.body.dispatchEvent(new window.Event("pointerdown", { bubbles: true, cancelable: true }));
   window.document.body.dispatchEvent(new window.Event("pointerdown", { bubbles: true, cancelable: true }));
-  await settle(100);
-  assert.equal(window.__audioTestState.starts, 0);
+  await settle(250);
+  assert.equal(window.__audioTestState.starts, 0, "a blocked direct-link join sound must never replay after later gestures");
 });
