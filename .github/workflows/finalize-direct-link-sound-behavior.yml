@@ -1,0 +1,84 @@
+name: Adjust direct-link join sound behavior
+
+on:
+  push:
+    branches: [fix/direct-link-join-sound]
+
+jobs:
+  finalize:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Remove deferred replay behavior
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          p = Path('app/js/script.js')
+          s = p.read_text()
+
+          s = s.replace(
+          '''  let audioContext = null;\n  let audioBuffers = {};\n  let audioReady = false;\n  let audioUserGestureObserved = false;\n  let pendingJoinSound = false;\n  let audioUnlockInFlight = false;\n''',
+          '''  let audioContext = null;\n  let audioBuffers = {};\n  let audioReady = false;\n''',
+          1
+          )
+
+          old = '''  async function resumeAudioContext()\n  {\n    if (!audioContext) return false;\n    if (audioContext.state === "running") return true;\n    try\n    {\n      await audioContext.resume();\n    }\n    catch (err)\n    {\n      console.warn("Audio context could not be resumed:", err);\n      return false;\n    }\n    return audioContext.state === "running";\n  }\n\n  async function flushPendingJoinSound()\n  {\n    if (!pendingJoinSound || muted || audioUnlockInFlight) return false;\n    audioUnlockInFlight = true;\n    try\n    {\n      if (!audioContext) await initAudio();\n      if (!(await resumeAudioContext())) return false;\n      const played = await playSound(SOUND_IDS.START, false, true);\n      if (played) pendingJoinSound = false;\n      return played;\n    }\n    catch (err) { console.warn("Deferred join sound could not be played:", err); return false; }\n    finally { audioUnlockInFlight = false; }\n  }\n\n  function noteUserAudioGesture()\n  {\n    audioUserGestureObserved = true;\n    if (!audioContext) return;\n    void (async () =>\n    {\n      const resumed = await resumeAudioContext();\n      if (resumed && pendingJoinSound) await flushPendingJoinSound();\n    })();\n  }\n\n  document.addEventListener("pointerdown", noteUserAudioGesture, { capture: true });\n  document.addEventListener("touchstart", noteUserAudioGesture, { capture: true, passive: true });\n  document.addEventListener("keydown", noteUserAudioGesture, { capture: true });\n\n  async function playJoinSound()\n  {\n    if (muted) return false;\n    try\n    {\n      const played = await playSound(SOUND_IDS.START, false, true);\n      if (played)\n      {\n        pendingJoinSound = false;\n        return true;\n      }\n      if (!audioContext || audioContext.state !== "running")\n      {\n        pendingJoinSound = true;\n        if (audioUserGestureObserved) return await flushPendingJoinSound();\n      }\n      return false;\n    }\n    catch (err) { console.warn("Join sound could not be played:", err); return false; }\n  }\n'''
+          new = '''  async function playJoinSound()\n  {\n    if (muted) return false;\n    try\n    {\n      return await playSound(SOUND_IDS.START, false, true);\n    }\n    catch (err)\n    {\n      console.warn("Join sound could not be played:", err);\n      return false;\n    }\n  }\n'''
+          assert s.count(old) == 1
+          s = s.replace(old, new, 1)
+          p.write_text(s)
+
+          h = Path('functions/frontendHarness/harness.mjs')
+          hs = h.read_text()
+          hs_old = '''  window.__audioTestState = { contexts: 0, resumeCalls: 0, starts: 0 };\n  window.AudioContext = class\n  {\n    constructor() { this.state = "suspended"; this.destination = {}; window.__audioTestState.contexts += 1; }\n    async resume() { window.__audioTestState.resumeCalls += 1; this.state = "running"; }\n    async decodeAudioData() { return {}; }\n    createBufferSource() { return { connect: () => {}, start: () => { window.__audioTestState.starts += 1; } }; }\n  };\n'''
+          hs_new = '''  window.__audioTestState = { contexts: 0, resumeCalls: 0, starts: 0 };\n  window.AudioContext = class\n  {\n    constructor() { this.state = "suspended"; this.destination = {}; window.__audioTestState.contexts += 1; }\n    async resume() { window.__audioTestState.resumeCalls += 1; this.state = "running"; }\n    async decodeAudioData() { return {}; }\n    createBufferSource() { return { connect: () => {}, start: () => { window.__audioTestState.starts += 1; } }; }\n  };\n'''
+          assert hs.count(hs_old) == 1
+          h.write_text(hs.replace(hs_old, hs_new, 1))
+
+          t = Path('functions/frontendAudio.node-test.mjs')
+          test = t.read_text()
+          test = test.replace(
+          'test("direct court links defer the join sound until the first user gesture", async () => {',
+          'test("a failed direct-link join sound is ignored and never replayed on a later gesture", async () => {',
+          1
+          )
+          test = test.replace(
+          '''  await waitFor(() => window.__audioTestState.resumeCalls > 0, { label: "audio context resumed" });\n  await waitFor(() => window.__audioTestState.starts === 1, { label: "deferred join sound played" });\n''',
+          '''  window.document.body.dispatchEvent(new window.Event("pointerdown", { bubbles: true, cancelable: true }));\n  await settle(100);\n  assert.equal(window.__audioTestState.starts, 0);\n''',
+          1
+          )
+          t.write_text(test)
+
+          q = Path('functions/package.json')
+          qs = q.read_text()
+          qs = qs.replace(' frontendAudio.node-test.mjs"', '"', 1)
+          q.write_text(qs)
+
+          wf = Path('.github/workflows/finalize-direct-link-sound-behavior.yml')
+          wf.unlink()
+          PY
+
+          git add -A
+          git diff --cached --check
+
+      - name: Test
+        run: |
+          npm ci
+          node --test frontendAudio.node-test.mjs
+          npm test
+
+      - name: Commit
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "fix: ignore failed direct-link join sound"
+          git push origin HEAD:fix/direct-link-join-sound
