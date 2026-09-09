@@ -4441,7 +4441,6 @@ document.addEventListener("DOMContentLoaded", () =>
   {
     try
     {
-      await initAudio();
       return await playSound(SOUND_IDS.START, false, true);
     }
     catch (err)
