@@ -5,7 +5,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Padel Push — Score Overlay</title>
-  <link rel="icon" href="/app/media/img/favicon.svg" />
+  <link rel="icon" href="/media/favicon.svg" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Encode+Sans+Semi+Expanded:wght@600;700&display=swap"
@@ -965,7 +965,7 @@
       height: 32%;
       transform: translate(-50%, -50%);
       border-radius: 50%;
-      background: #000 url("/app/media/img/logo.svg") center / 82% no-repeat;
+      background: #000 url("/media/logo.svg") center / 82% no-repeat;
       z-index: 2;
       pointer-events: none;
       box-shadow: 0 0 2px rgba(0, 0, 0, 0.8);
@@ -1488,7 +1488,7 @@
   <div class="overlay-anchor pos-tl" id="overlayAnchor">
     <div class="overlay" id="overlayBox">
       <div class="brand">
-        <img src="/app/media/img/logo.svg" alt="Brand logo" id="brandLogo" />
+        <img src="/media/logo.svg" alt="Brand logo" id="brandLogo" />
         <span class="brand-name" id="brandName">Padel Push</span>
         <span class="brand-court" id="courtLabel"></span>
         <span class="match-timer" id="matchTimer"></span>
@@ -1709,10 +1709,10 @@
     (function () {
       //AL.
       const isDebugCourt = location.hostname === "localhost" || location.hostname === "127.0.0.1";
-      const debugCourt_revisionUrl = "https://qa.padelpush.co.za/r/bnrm";
-      const debugCourt_fullScoreUrl = "https://qa.padelpush.co.za/a/bnrm";
-      const debugCourt_statsUrl = "https://qa.padelpush.co.za/s/bnrm";
-      const debugCourt_momentumUrl = "https://qa.padelpush.co.za/m/bnrm";
+      const debugCourt_revisionUrl = "https://padelpush.co.za/r/bnrm";
+      const debugCourt_fullScoreUrl = "https://padelpush.co.za/a/bnrm";
+      const debugCourt_statsUrl = "https://padelpush.co.za/s/bnrm";
+      const debugCourt_momentumUrl = "https://padelpush.co.za/m/bnrm";
       const debugCourt_id = "bnrm";
       //
 
@@ -1812,7 +1812,7 @@
       }
 
       const DEFAULT_SPONSOR_HTML =
-        'Live scores brought to you by <img src="/app/media/img/logo.svg" alt="Padel Push" /> ' +
+        'Live scores brought to you by <img src="/media/logo.svg" alt="Padel Push" /> ' +
         '<strong>Padel Push</strong>. Visit <strong>padelpush.co.za</strong> and join us on this court: ' +
         '<strong>{courtId}</strong>';
 
@@ -2086,7 +2086,7 @@
 
       function applyBrand() {
         document.getElementById("brandName").textContent = settings.brandText || "Padel Push";
-        document.getElementById("brandLogo").src = safeHttpUrl(settings.brandLogo) || "/app/media/img/logo.svg";
+        document.getElementById("brandLogo").src = safeHttpUrl(settings.brandLogo) || "/media/logo.svg";
       }
 
       // ---------- Match timer ----------

@@ -230,7 +230,7 @@ a {
     position: absolute;
     inset: 0;
     pointer-events: none;
-    background: url('app/media/img/logo.svg') center center / cover no-repeat;
+    background: url('media/logo.svg') center center / cover no-repeat;
     opacity: 0.06;
 }
 
