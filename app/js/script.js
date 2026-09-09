@@ -3877,16 +3877,6 @@ document.addEventListener("DOMContentLoaded", () =>
       elements.waveToggleScoreboardBtn.textContent = "═";
     }
 
-    try
-    {
-      await initAudio();
-      playSound(SOUND_IDS.START);
-    }
-    catch (err)
-    {
-      console.warn("Audio initialization failed:", err);
-    }
-
     elements.menuPage.style.display = "none";
     elements.createPage.style.display = "none";
     setPlayPageVisible(false);
@@ -3928,8 +3918,9 @@ document.addEventListener("DOMContentLoaded", () =>
     if (historyMode !== "skip")
     {
       syncCurrentViewState(historyMode);
-      await playJoinSound();
     }
+
+    await playJoinSound();
 
     updatePageTitle(currentCourtName, currentCourtId);
   }
