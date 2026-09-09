@@ -391,7 +391,7 @@ body.light-mode .menu-btn:hover {
   height: 40%;
   transform: translate(-50%, -50%);
   border-radius: 50%;
-  background: #000 url("../media/img/logo.svg") center / 86% no-repeat;
+  background: #000 url("../media/logo.svg") center / 86% no-repeat;
   z-index: 2;
   pointer-events: none;
 }
@@ -3454,8 +3454,8 @@ body.light-mode .court-item-id {
   height: 20px;
   background-color: var(--spectating);
   /* Use the logo as a mask so it takes the --spectating color (red) */
-  mask: url('../media/img/logo.svg') no-repeat center;
-  -webkit-mask: url('../media/img/logo.svg') no-repeat center;
+  mask: url('../media/logo.svg') no-repeat center;
+  -webkit-mask: url('../media/logo.svg') no-repeat center;
   mask-size: contain;
   -webkit-mask-size: contain;
   flex-shrink: 0;
