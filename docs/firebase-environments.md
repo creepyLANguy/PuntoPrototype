@@ -30,6 +30,7 @@ The config secrets must contain the full contents of `app/js/firebase-config.js`
 3. Set `activeFirebaseEnvironment` to:
    - `"staging"` for day-to-day feature testing
    - `"production"` only when you explicitly need live project access
+4. Leave `useFirestoreEmulator` set to `false` to use the selected Firebase project from a local host. Set it to `true` only when the Firestore emulator is running locally.
 
 Because `app/js/firebase-config.js` is gitignored, local environment switches stay out of source control.
 

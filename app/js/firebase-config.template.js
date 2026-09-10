@@ -1,6 +1,7 @@
 // Duplicate this file as firebase-config.js and fill in your values.
 // Set activeFirebaseEnvironment to "production" or "staging".
 export const activeFirebaseEnvironment = "staging";
+export const useFirestoreEmulator = false;
 
 export const firebaseConfigs = {
     production: {

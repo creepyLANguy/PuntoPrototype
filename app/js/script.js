@@ -6637,7 +6637,8 @@ document.addEventListener("DOMContentLoaded", () =>
           'share-image.png',
           { type: 'image/png' }
         );
-        if (navigator.canShare && navigator.canShare({ files: [dummyFile] }))
+        //AL.
+        //if (navigator.canShare && navigator.canShare({ files: [dummyFile] }))
         {
           cacheShareableScoreCard();
         }
