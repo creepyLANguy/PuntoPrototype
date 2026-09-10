@@ -2459,6 +2459,7 @@ document.addEventListener("DOMContentLoaded", () =>
         {
           const selectedCourt = allCourts.find((court) => court.id === selectedPlayCourt);
           elements.playCourtSearch.value = selectedCourt?.name || selectedPlayCourt;
+          elements.playCourtPassword.focus();
         }
         return;
       }
@@ -3756,6 +3757,11 @@ document.addEventListener("DOMContentLoaded", () =>
     if (isJoiningCourt) return;
     isJoiningCourt = true;
 
+    // Direct /p joins do their Firestore work before enterCourt() reaches the
+    // join sound. Start/resume audio from the actual player gesture first so
+    // the later sound playback is not blocked by autoplay policy.
+    primeAudioForUserGesture();
+
     try
     {
       const courtId = selectedPlayCourt;
@@ -4363,25 +4369,44 @@ document.addEventListener("DOMContentLoaded", () =>
   let audioContext = null;
   let audioBuffers = {};
   let audioReady = false;
+  let audioInitPromise = null;
+  let audioResumePromise = null;
 
   async function initAudio()
   {
     if (audioReady) return;
+    if (audioInitPromise) return audioInitPromise;
 
-    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    audioInitPromise = (async () =>
+    {
+      if (!audioContext)
+      {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      }
 
-    await Promise.all([
-      loadSound("pointSound", "media/sfx/point.mp3"),
-      loadSound("undoSound", "media/sfx/undo.mp3"),
-      loadSound("swooshSound", "media/sfx/swoosh.mp3"),
-      loadSound("startSound", "media/sfx/start.mp3"),
-      loadSound("warningSound", "media/sfx/warning.mp3"),
-      loadSound("popSound", "media/sfx/pop.mp3"),
-      loadSound("snapSound", "media/sfx/snap.mp3"),
-      loadSound("setSound", "media/sfx/set.mp3")
-    ]);
+      await Promise.all([
+        loadSound("pointSound", "media/sfx/point.mp3"),
+        loadSound("undoSound", "media/sfx/undo.mp3"),
+        loadSound("swooshSound", "media/sfx/swoosh.mp3"),
+        loadSound("startSound", "media/sfx/start.mp3"),
+        loadSound("warningSound", "media/sfx/warning.mp3"),
+        loadSound("popSound", "media/sfx/pop.mp3"),
+        loadSound("snapSound", "media/sfx/snap.mp3"),
+        loadSound("setSound", "media/sfx/set.mp3")
+      ]);
 
-    audioReady = true;
+      audioReady = true;
+    })();
+
+    try
+    {
+      await audioInitPromise;
+    }
+    catch (err)
+    {
+      audioInitPromise = null;
+      throw err;
+    }
   }
 
   function loadSound(id, url)
@@ -4428,11 +4453,54 @@ document.addEventListener("DOMContentLoaded", () =>
     return true;
   }
 
+  function primeAudioForUserGesture()
+  {
+    if (muted) return;
+
+    try
+    {
+      if (!audioContext)
+      {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      }
+
+      if (audioContext.state === "suspended")
+      {
+        audioResumePromise = audioContext.resume().catch((err) =>
+        {
+          console.warn("Audio context could not be resumed:", err);
+          return false;
+        });
+      }
+      else
+      {
+        audioResumePromise = Promise.resolve(true);
+      }
+
+      void initAudio().catch((err) =>
+      {
+        console.warn("Audio initialization failed:", err);
+      });
+    }
+    catch (err)
+    {
+      console.warn("Audio priming failed:", err);
+    }
+  }
+
   async function playJoinSound()
   {
     if (muted) return false;
     try
     {
+      // The player submit button primes/resumes the AudioContext while the
+      // browser still considers the action a user gesture. Wait for that
+      // resume to finish before playing after the Firestore join work.
+      if (audioResumePromise)
+      {
+        await audioResumePromise;
+      }
+
       return await playSound(SOUND_IDS.START, false, true);
     }
     catch (err)
