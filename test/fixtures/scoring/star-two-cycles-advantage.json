@@ -1,0 +1,105 @@
+{
+  "name": "star-two-cycles-advantage",
+  "description": "Star deuce contrast case: the first two deuce cycles are ordinary advantage play. After A-adv/B-back and B-adv, the score sits at advantage B with two deuce cycles recorded (deuceCycles=1 here, the second cycle not yet cancelled). The deciding point only arrives on the third 40-40.",
+  "options": {
+    "scoringMode": "standard",
+    "deuceMode": "star",
+    "tiebreakMode": "sixAllSeven"
+  },
+  "events": [
+    {
+      "eventType": "POINT_TEAM_A",
+      "createdAt": {
+        "seconds": 1,
+        "nanoseconds": 0
+      },
+      "id": "e0001"
+    },
+    {
+      "eventType": "POINT_TEAM_A",
+      "createdAt": {
+        "seconds": 2,
+        "nanoseconds": 0
+      },
+      "id": "e0002"
+    },
+    {
+      "eventType": "POINT_TEAM_A",
+      "createdAt": {
+        "seconds": 3,
+        "nanoseconds": 0
+      },
+      "id": "e0003"
+    },
+    {
+      "eventType": "POINT_TEAM_B",
+      "createdAt": {
+        "seconds": 4,
+        "nanoseconds": 0
+      },
+      "id": "e0004"
+    },
+    {
+      "eventType": "POINT_TEAM_B",
+      "createdAt": {
+        "seconds": 5,
+        "nanoseconds": 0
+      },
+      "id": "e0005"
+    },
+    {
+      "eventType": "POINT_TEAM_B",
+      "createdAt": {
+        "seconds": 6,
+        "nanoseconds": 0
+      },
+      "id": "e0006"
+    },
+    {
+      "eventType": "POINT_TEAM_A",
+      "createdAt": {
+        "seconds": 7,
+        "nanoseconds": 0
+      },
+      "id": "e0007"
+    },
+    {
+      "eventType": "POINT_TEAM_B",
+      "createdAt": {
+        "seconds": 8,
+        "nanoseconds": 0
+      },
+      "id": "e0008"
+    },
+    {
+      "eventType": "POINT_TEAM_B",
+      "createdAt": {
+        "seconds": 9,
+        "nanoseconds": 0
+      },
+      "id": "e0009"
+    }
+  ],
+  "expected": {
+    "A": {
+      "points": 3,
+      "games": 0,
+      "sets": 0,
+      "totalPoints": 4
+    },
+    "B": {
+      "points": 4,
+      "games": 0,
+      "sets": 0,
+      "totalPoints": 5
+    },
+    "completedSets": [],
+    "inTiebreak": false,
+    "deuceCycles": 1,
+    "matchComplete": false,
+    "lastPointTeam": "B",
+    "lastGameTeam": null,
+    "lastSetTeam": null,
+    "server": "A1"
+  }
+}
