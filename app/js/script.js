@@ -6684,10 +6684,8 @@ document.addEventListener("DOMContentLoaded", () =>
     setDetailsPanelExpanded(expanded);
 
     // Deliberately not awaited: the momentum graph reveals itself when its
-    // endpoint answers, so nothing below is held up by the heavier replay. The
-    // promise is kept so the share card can wait for the graph without the
-    // modal itself having to.
-    const momentumReady = loadMomentumGraph(currentCourtId);
+    // endpoint answers, so nothing below is held up by the heavier replay.
+    void loadMomentumGraph(currentCourtId);
 
     // The share card is captured from the rendered modal, so it can only be
     // taken once every branch below has finished populating #dmBox.
@@ -6870,20 +6868,14 @@ document.addEventListener("DOMContentLoaded", () =>
       // already hidden and cannot appear in the capture. Not awaited, but the
       // rejection is handled so a capture failure stays out of the UI thread
       // and never surfaces as an unhandled rejection.
+      // The card carries the scoreline only, so it does not wait on the
+      // momentum endpoint.
       if (renderedShareCard && canShareFiles())
       {
-        momentumReady
-          // A missing graph must not cancel the card; capture what is there.
-          .catch(() => {})
-          // renderMomentumGraph only queues its first paint, so yield one frame
-          // to let drawGraphFrame put pixels on the canvas. That callback was
-          // queued first, so it runs before this one.
-          .then(() => new Promise(resolve => requestAnimationFrame(() => resolve())))
-          .then(() => cacheShareableScoreCard())
-          .catch(err =>
-          {
-            console.error("Share card capture failed:", err);
-          });
+        cacheShareableScoreCard().catch(err =>
+        {
+          console.error("Share card capture failed:", err);
+        });
       }
     }
   }
@@ -7903,93 +7895,30 @@ async function cacheShareableScoreCard()
   const appOrigin = window.location.origin.replace(/\/$/, '');
   const qrUrl = courtId ? `${appOrigin}/c/${encodeURIComponent(courtId)}` : `${appOrigin}/app/`;
 
-  const sourcePanel = element.querySelector('#dmDetailsPanel, .dm-details-panel');
-  const sourcePanelHeight = Math.max(0, Math.round(sourcePanel?.getBoundingClientRect().height || 0));
-  const footerHeight = Math.min(120, Math.max(60, sourcePanelHeight));
+  const footerHeight = 96;
 
   const clone = element.cloneNode(true);
 
-  // The toggle is interactive chrome ("Tap to expand") with no meaning in a
-  // still image, so it goes the same way as the close and share buttons.
-  clone.querySelectorAll('.dm-close, .dm-share-btn, .dm-details-toggle').forEach(node => node.remove());
-
-  // On screen the detailed stats sit behind a collapsible toggle and are hidden
-  // with the `hidden` attribute. The card has no way to expand anything, so show
-  // that content unconditionally. The momentum graph and the advanced stats both
-  // live in here, so without this the card carries neither.
-  const detailsContent = clone.querySelector('#dmDetailsContent, .dm-details-content');
-  if (detailsContent)
-  {
-    detailsContent.hidden = false;
-    detailsContent.classList.remove('hidden');
-  }
-
-  const detailsPanel = clone.querySelector('#dmDetailsPanel, .dm-details-panel');
-  const detailsPanelHasContent = Boolean(
-    detailsContent && detailsContent.querySelector('.dm-momentum-wrap:not(.hidden), .dm-stats-wrap:not(.hidden)')
-  );
-
-  if (detailsPanel && detailsPanelHasContent)
-  {
-    detailsPanel.classList.remove('hidden');
-    detailsPanel.hidden = false;
-  }
-
-  // cloneNode copies a canvas element but none of its pixels, so the momentum
-  // graph would come out blank. Bake each live canvas into a still image on the
-  // clone. Neither of the nodes removed above contains a canvas, so the two
-  // lists stay in the same order.
-  const sourceCanvases = element.querySelectorAll('canvas');
-  const clonedCanvases = clone.querySelectorAll('canvas');
-
-  clonedCanvases.forEach((clonedCanvas, index) =>
-  {
-    const sourceCanvas = sourceCanvases[index];
-    if (!sourceCanvas || !sourceCanvas.width || !sourceCanvas.height)
-    {
-      return;
-    }
-
-    let canvasDataUrl = '';
-    try
-    {
-      canvasDataUrl = sourceCanvas.toDataURL('image/png');
-    }
-    catch (err)
-    {
-      // A tainted canvas cannot be exported; leave the blank clone in place
-      // rather than failing the whole capture.
-      console.warn('Could not copy canvas into the share card:', err);
-      return;
-    }
-
-    if (!canvasDataUrl || canvasDataUrl === 'data:,')
-    {
-      return;
-    }
-
-    const canvasImage = document.createElement('img');
-    canvasImage.src = canvasDataUrl;
-    canvasImage.alt = '';
-    canvasImage.className = clonedCanvas.className;
-    canvasImage.style.cssText = clonedCanvas.style.cssText;
-    canvasImage.style.display = 'block';
-    canvasImage.style.width = '100%';
-    canvasImage.style.height = 'auto';
-    clonedCanvas.replaceWith(canvasImage);
-  });
+  // The card carries the scoreline only. The detailed stats panel holds the
+  // momentum graph and the advanced stats table, both of which are too dense to
+  // read at share size, so the whole panel is dropped. Nothing in the capture
+  // then depends on the momentum endpoint.
+  clone
+    .querySelectorAll('.dm-close, .dm-share-btn, .dm-details-panel, .dm-empty-state, .dm-error-state')
+    .forEach(node => node.remove());
 
   // A dedicated element appended to the card, rather than the details panel
-  // reused in place. That panel holds the momentum graph and the advanced
-  // stats, so emptying it to make room for the QR code cost the card both.
+  // reused in place. The QR block is centred and sized to its content so the
+  // code and its caption stay together instead of being pushed to opposite
+  // edges with a gap down the middle.
   const footerPanel = document.createElement('div');
   clone.appendChild(footerPanel);
   footerPanel.style.width = '100%';
   footerPanel.style.marginTop = '16px';
   footerPanel.style.display = 'flex';
   footerPanel.style.alignItems = 'center';
-  footerPanel.style.justifyContent = 'space-between';
-  footerPanel.style.gap = '16px';
+  footerPanel.style.justifyContent = 'center';
+  footerPanel.style.gap = '14px';
   footerPanel.style.padding = '12px 16px';
   footerPanel.style.minHeight = `${footerHeight}px`;
   footerPanel.style.boxSizing = 'border-box';
@@ -8009,8 +7938,8 @@ async function cacheShareableScoreCard()
   const footerText = document.createElement('div');
   footerText.style.display = 'flex';
   footerText.style.flexDirection = 'column';
-  footerText.style.gap = '6px';
-  footerText.style.flex = '1 1 auto';
+  footerText.style.gap = '4px';
+  footerText.style.flex = '0 1 auto';
   footerText.style.minWidth = '0';
 
   const footerTitle = document.createElement('div');
