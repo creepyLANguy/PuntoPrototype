@@ -6005,14 +6005,12 @@ document.addEventListener("DOMContentLoaded", () =>
   {
     const url = "/m/" + encodeURIComponent(courtId);
     
-    //AL.
-    if (location.hostname === "localhost" || location.hostname === "127.0.0.1") 
-    {
-      let mockResponse = '{"success":true,"courtId":"bnrm","pointHistory":["A","B","B","A","A","B","B","A","B","A","B","A","B","B","B","B","A","A","A","B","A","B","A","B","B","B","A","A","A","A","A","A","A","A","B","B","A","B","B","B","A","A","A","B","A","B","B","B","B","A","A","B","A","A","B","B","B","A","A","B","B","B","B","B","B","B","B","A","A","A","A","B","A","B","B","B","B","B","B","B","B","A"],"momentumTimeline":[13.2,10.576421052631579,2.6529469005847943,3.6937700865497067,9.472143881356725,5.0371485818086565,-1.5589578841202714,2.134579588926944,-12.615717408630895,-10.440592545931223,-12.977793356811711,-10.344580300857555,-12.451178210078828,-18.413198426565007,-39.062951975516555,-49.482811220621926,-49.02293345647551,-44.77246653999607,-36.65884582032356,-38.71386052564961,-20.827392530474263,-20.995930796827626,-16.136174949017967,-16.14982263389507,-19.544469639497727,-38.817256006582404,-37.251857009823816,-32.39856377105256,-24.154649944789405,0.27644723371614255,15.2871331269659,34.44263241207522,53.75789264916889,85.62332818112783,86.48592849026015,82.60586368993543,83.43133005035749,78.31635933824512,56.853741414314044,44.96069874763701,41.06305682277879,40.78109159523025,44.1978624631528,37.72780889718181,51.4641403633509,47.39447375973166,40.187168970511394,30.1668479231898,4.5022915932529575,2.5957904612941443,4.185497579071041,-0.10199591203685787,0.8859420245035352,18.032785503033324,15.969000191033142,11.083587452298428,3.245844932433248,5.996548781941798,11.964028582298017,-3.444722223548954,-8.91076616286329,-17.29430201127331,-29.02028025423327,-76.45179071170654,-100,-100,-100,-100,-100,-99.72798181818182,-94.33675927272728,-100,-86.50025329090909,-88.7313751461818,-93.43560689395636,-100,-100,-100,-100,-100,-100,-100],"setPointMarkers":[64],"gameMarkers":[9,15,21,26,30,34,39,45,49,54,60,64,73,77,81],"totalPoints":82,"scoringMode":"standard","matchComplete":false,"fetchedAt":"2026-09-12T12:21:11.071Z"}';
-      let data = JSON.parse(mockResponse);
-      return data;
-    }
-    //
+    // if (location.hostname === "localhost" || location.hostname === "127.0.0.1") 
+    // {
+    //   let mockResponse = '{"success":true,"courtId":"bnrm","pointHistory":["A","B","B","A","A","B","B","A","B","A","B","A","B","B","B","B","A","A","A","B","A","B","A","B","B","B","A","A","A","A","A","A","A","A","B","B","A","B","B","B","A","A","A","B","A","B","B","B","B","A","A","B","A","A","B","B","B","A","A","B","B","B","B","B","B","B","B","A","A","A","A","B","A","B","B","B","B","B","B","B","B","A"],"momentumTimeline":[13.2,10.576421052631579,2.6529469005847943,3.6937700865497067,9.472143881356725,5.0371485818086565,-1.5589578841202714,2.134579588926944,-12.615717408630895,-10.440592545931223,-12.977793356811711,-10.344580300857555,-12.451178210078828,-18.413198426565007,-39.062951975516555,-49.482811220621926,-49.02293345647551,-44.77246653999607,-36.65884582032356,-38.71386052564961,-20.827392530474263,-20.995930796827626,-16.136174949017967,-16.14982263389507,-19.544469639497727,-38.817256006582404,-37.251857009823816,-32.39856377105256,-24.154649944789405,0.27644723371614255,15.2871331269659,34.44263241207522,53.75789264916889,85.62332818112783,86.48592849026015,82.60586368993543,83.43133005035749,78.31635933824512,56.853741414314044,44.96069874763701,41.06305682277879,40.78109159523025,44.1978624631528,37.72780889718181,51.4641403633509,47.39447375973166,40.187168970511394,30.1668479231898,4.5022915932529575,2.5957904612941443,4.185497579071041,-0.10199591203685787,0.8859420245035352,18.032785503033324,15.969000191033142,11.083587452298428,3.245844932433248,5.996548781941798,11.964028582298017,-3.444722223548954,-8.91076616286329,-17.29430201127331,-29.02028025423327,-76.45179071170654,-100,-100,-100,-100,-100,-99.72798181818182,-94.33675927272728,-100,-86.50025329090909,-88.7313751461818,-93.43560689395636,-100,-100,-100,-100,-100,-100,-100],"setPointMarkers":[64],"gameMarkers":[9,15,21,26,30,34,39,45,49,54,60,64,73,77,81],"totalPoints":82,"scoringMode":"standard","matchComplete":false,"fetchedAt":"2026-09-12T12:21:11.071Z"}';
+    //   let data = JSON.parse(mockResponse);
+    //   return data;
+    // }
     
     const response = await fetch(url, { cache: "no-store" });
 
@@ -7835,9 +7833,6 @@ let canShareFilesResult = null;
 
 function canShareFiles()
 {
-  //AL.
-  return true;
-  //
   if (canShareFilesResult === null)
   {
     try
@@ -7857,23 +7852,22 @@ function canShareFiles()
   return canShareFilesResult;
 }
 
-//AL.
-let shareableScoreCardImageUrl = null;
-function dismissShareableScoreCard()
-{
-  const modal = document.getElementById("shareImageModal");
-  if (!modal) return;
-
-  modal.classList.add("hidden");
-  document.getElementById("shareImagePreview")?.removeAttribute("src");
-
-  if (shareableScoreCardImageUrl)
-  {
-    URL.revokeObjectURL(shareableScoreCardImageUrl);
-    shareableScoreCardImageUrl = null;
-  }
-}
+// let shareableScoreCardImageUrl = null;
 //
+// function dismissShareableScoreCard()
+// {
+//   const modal = document.getElementById("shareImageModal");
+//   if (!modal) return;
+
+//   modal.classList.add("hidden");
+//   document.getElementById("shareImagePreview")?.removeAttribute("src");
+
+//   if (shareableScoreCardImageUrl)
+//   {
+//     URL.revokeObjectURL(shareableScoreCardImageUrl);
+//     shareableScoreCardImageUrl = null;
+//   }
+// }
 
 async function cacheShareableScoreCard()
 {
@@ -8113,36 +8107,34 @@ async function cacheShareableScoreCard()
 
   shareableScoreCardImage = file;
 
-  //AL.
-  const modal = document.getElementById("shareImageModal");
-  const preview = document.getElementById("shareImagePreview");
-  const closeButton = document.getElementById("closeShareImageBtn");
-  if (!modal || !preview || !closeButton) return;
+  // const modal = document.getElementById("shareImageModal");
+  // const preview = document.getElementById("shareImagePreview");
+  // const closeButton = document.getElementById("closeShareImageBtn");
+  // if (!modal || !preview || !closeButton) return;
 
-  if (shareableScoreCardImageUrl)
-  {
-    URL.revokeObjectURL(shareableScoreCardImageUrl);
-  }
+  // if (shareableScoreCardImageUrl)
+  // {
+  //   URL.revokeObjectURL(shareableScoreCardImageUrl);
+  // }
 
-  shareableScoreCardImageUrl = URL.createObjectURL(shareableScoreCardImage);
-  preview.src = shareableScoreCardImageUrl;
-  modal.classList.remove("hidden");
+  // shareableScoreCardImageUrl = URL.createObjectURL(shareableScoreCardImage);
+  // preview.src = shareableScoreCardImageUrl;
+  // modal.classList.remove("hidden");
 
-  if (closeButton.dataset.bound !== "true")
-  {
-    closeButton.dataset.bound = "true";
-    closeButton.addEventListener("click", dismissShareableScoreCard);
-    modal.addEventListener("click", (event) =>
-    {
-      if (event.target === modal) dismissShareableScoreCard();
-    });
-    document.addEventListener("keydown", (event) =>
-    {
-      if (event.key === "Escape" && !modal.classList.contains("hidden"))
-      {
-        dismissShareableScoreCard();
-      }
-    });
-  }
-  //
+  // if (closeButton.dataset.bound !== "true")
+  // {
+  //   closeButton.dataset.bound = "true";
+  //   closeButton.addEventListener("click", dismissShareableScoreCard);
+  //   modal.addEventListener("click", (event) =>
+  //   {
+  //     if (event.target === modal) dismissShareableScoreCard();
+  //   });
+  //   document.addEventListener("keydown", (event) =>
+  //   {
+  //     if (event.key === "Escape" && !modal.classList.contains("hidden"))
+  //     {
+  //       dismissShareableScoreCard();
+  //     }
+  //   });
+  // }
 }
