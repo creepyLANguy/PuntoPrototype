@@ -1,0 +1,113 @@
+{
+  "name": "standard-deuce",
+  "description": "Standard advantage deuce. 40-40, A takes advantage, B breaks back to deuce, A takes advantage again and wins. In standard deuce mode deuceCycles is NOT incremented (it only matters for silver/star), and it resets to 0 on the game win.",
+  "options": {
+    "scoringMode": "standard",
+    "deuceMode": "standard",
+    "tiebreakMode": "sixAllSeven"
+  },
+  "events": [
+    {
+      "eventType": "POINT_TEAM_A",
+      "createdAt": {
+        "seconds": 1,
+        "nanoseconds": 0
+      },
+      "id": "e0001"
+    },
+    {
+      "eventType": "POINT_TEAM_A",
+      "createdAt": {
+        "seconds": 2,
+        "nanoseconds": 0
+      },
+      "id": "e0002"
+    },
+    {
+      "eventType": "POINT_TEAM_A",
+      "createdAt": {
+        "seconds": 3,
+        "nanoseconds": 0
+      },
+      "id": "e0003"
+    },
+    {
+      "eventType": "POINT_TEAM_B",
+      "createdAt": {
+        "seconds": 4,
+        "nanoseconds": 0
+      },
+      "id": "e0004"
+    },
+    {
+      "eventType": "POINT_TEAM_B",
+      "createdAt": {
+        "seconds": 5,
+        "nanoseconds": 0
+      },
+      "id": "e0005"
+    },
+    {
+      "eventType": "POINT_TEAM_B",
+      "createdAt": {
+        "seconds": 6,
+        "nanoseconds": 0
+      },
+      "id": "e0006"
+    },
+    {
+      "eventType": "POINT_TEAM_A",
+      "createdAt": {
+        "seconds": 7,
+        "nanoseconds": 0
+      },
+      "id": "e0007"
+    },
+    {
+      "eventType": "POINT_TEAM_B",
+      "createdAt": {
+        "seconds": 8,
+        "nanoseconds": 0
+      },
+      "id": "e0008"
+    },
+    {
+      "eventType": "POINT_TEAM_A",
+      "createdAt": {
+        "seconds": 9,
+        "nanoseconds": 0
+      },
+      "id": "e0009"
+    },
+    {
+      "eventType": "POINT_TEAM_A",
+      "createdAt": {
+        "seconds": 10,
+        "nanoseconds": 0
+      },
+      "id": "e0010"
+    }
+  ],
+  "expected": {
+    "A": {
+      "points": 0,
+      "games": 1,
+      "sets": 0,
+      "totalPoints": 6
+    },
+    "B": {
+      "points": 0,
+      "games": 0,
+      "sets": 0,
+      "totalPoints": 4
+    },
+    "completedSets": [],
+    "inTiebreak": false,
+    "deuceCycles": 0,
+    "matchComplete": false,
+    "lastPointTeam": "A",
+    "lastGameTeam": "A",
+    "lastSetTeam": null,
+    "server": "B1"
+  }
+}
