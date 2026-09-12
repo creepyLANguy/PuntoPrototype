@@ -13,11 +13,13 @@ import
   getDocs
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-import
-{
+import * as firebaseEnvironmentConfig from "./firebase-config.js";
+
+const {
   activeFirebaseEnvironment,
   firebaseConfigs
-} from "./firebase-config.js";
+} = firebaseEnvironmentConfig;
+const useFirestoreEmulator = firebaseEnvironmentConfig.useFirestoreEmulator === true;
 
 const firebaseConfig = firebaseConfigs[activeFirebaseEnvironment];
 
@@ -33,7 +35,7 @@ export const db = getFirestore(app);
 const emulatorHosts = ["localhost", "127.0.0.1", "[::1]"];
 export const usingEmulator = emulatorHosts.includes(globalThis.location?.hostname);
 
-if (usingEmulator)
+if (usingEmulator && useFirestoreEmulator)
 {
   connectFirestoreEmulator(db, "127.0.0.1", 8080);
 }

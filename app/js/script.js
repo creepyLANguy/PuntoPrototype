@@ -6705,7 +6705,8 @@ document.addEventListener("DOMContentLoaded", () =>
           'share-image.png',
           { type: 'image/png' }
         );
-        if (navigator.canShare && navigator.canShare({ files: [dummyFile] }))
+        //AL.
+        //if (navigator.canShare && navigator.canShare({ files: [dummyFile] }))
         {
           cacheShareableScoreCard();
         }
@@ -7815,7 +7816,6 @@ async function cacheShareableScoreCard()
 {
   //AL.
   console.log("cacheShareableScoreCard() called");
-  showToast("Generating shareable scoreboard image...", TOAST_TYPES.INFO, 3000);
   //
 
   const element = document.getElementById('dmBox');
@@ -7983,8 +7983,4 @@ async function cacheShareableScoreCard()
   //
 
   console.log("cacheShareableScoreCard() completed successfully");
-  
-  //AL.
-  showToast("Shareable scoreboard image generated!", TOAST_TYPES.SUCCESS, 3000);
-  //
 }
