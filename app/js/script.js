@@ -432,7 +432,7 @@ document.addEventListener("DOMContentLoaded", () =>
   }
 
   //AL.
-  //TODO - test all branches. 
+  //TODO - test all the if/else branches. 
   async function share(context)
   {
     const share_payload = getSharePayload(context);
@@ -561,8 +561,6 @@ document.addEventListener("DOMContentLoaded", () =>
   let momentumRequestToken = 0;
   let lastKnownSets = { A: 0, B: 0 };
   let sessionInitialized = false;
-
-  let shareableScoreCardImage = null;
 
   function invalidateMatchDetailsCache()
   {
@@ -6699,18 +6697,19 @@ document.addEventListener("DOMContentLoaded", () =>
         matchDetailsCacheCourtId = currentCourtId;
 
         //AL.
-        //TODO - test this. Make sure it runs in the background, not block the UI.  
+        //TODO - test this debug call to cacheShareableScoreCard(). Make sure it runs in the background and does not block the UI thread.  
+        cacheShareableScoreCard();
+        //
+
         const dummyFile = new File(
           [],
           'share-image.png',
           { type: 'image/png' }
         );
-        //AL.
-        //if (navigator.canShare && navigator.canShare({ files: [dummyFile] }))
+        if (navigator.canShare && navigator.canShare({ files: [dummyFile] }))
         {
           cacheShareableScoreCard();
         }
-        //
       }
 
       const { sets, currentGames, points, mode, scoringMode, matchComplete } = result.data;
@@ -7812,6 +7811,8 @@ window.addEventListener("resize", () =>
   }
 }, { passive: true });
 
+let shareableScoreCardImage = null;
+
 async function cacheShareableScoreCard()
 {
   //AL.
@@ -7978,7 +7979,7 @@ async function cacheShareableScoreCard()
   );
 
   //AL. 
-  //TODO - this breaks. Fix it. 
+  //TODO - test this out. 
   shareableScoreCardImage = file;
   //
 
