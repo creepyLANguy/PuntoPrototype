@@ -7843,6 +7843,9 @@ let canShareFilesResult = null;
 
 function canShareFiles()
 {
+  //AL.
+  return true;
+  //
   if (canShareFilesResult === null)
   {
     try
@@ -7905,7 +7908,32 @@ async function cacheShareableScoreCard()
   const footerHeight = Math.min(120, Math.max(60, sourcePanelHeight));
 
   const clone = element.cloneNode(true);
-  clone.querySelectorAll('.dm-close, .dm-share-btn').forEach(node => node.remove());
+
+  // The toggle is interactive chrome ("Tap to expand") with no meaning in a
+  // still image, so it goes the same way as the close and share buttons.
+  clone.querySelectorAll('.dm-close, .dm-share-btn, .dm-details-toggle').forEach(node => node.remove());
+
+  // On screen the detailed stats sit behind a collapsible toggle and are hidden
+  // with the `hidden` attribute. The card has no way to expand anything, so show
+  // that content unconditionally. The momentum graph and the advanced stats both
+  // live in here, so without this the card carries neither.
+  const detailsContent = clone.querySelector('#dmDetailsContent, .dm-details-content');
+  if (detailsContent)
+  {
+    detailsContent.hidden = false;
+    detailsContent.classList.remove('hidden');
+  }
+
+  const detailsPanel = clone.querySelector('#dmDetailsPanel, .dm-details-panel');
+  const detailsPanelHasContent = Boolean(
+    detailsContent && detailsContent.querySelector('.dm-momentum-wrap:not(.hidden), .dm-stats-wrap:not(.hidden)')
+  );
+
+  if (detailsPanel && detailsPanelHasContent)
+  {
+    detailsPanel.classList.remove('hidden');
+    detailsPanel.hidden = false;
+  }
 
   // cloneNode copies a canvas element but none of its pixels, so the momentum
   // graph would come out blank. Bake each live canvas into a still image on the
@@ -7951,107 +7979,107 @@ async function cacheShareableScoreCard()
     clonedCanvas.replaceWith(canvasImage);
   });
 
-  const footerPanel = clone.querySelector('#dmDetailsPanel, .dm-details-panel');
-  if (footerPanel)
+  // A dedicated element appended to the card, rather than the details panel
+  // reused in place. That panel holds the momentum graph and the advanced
+  // stats, so emptying it to make room for the QR code cost the card both.
+  const footerPanel = document.createElement('div');
+  clone.appendChild(footerPanel);
+  footerPanel.style.width = '100%';
+  footerPanel.style.marginTop = '16px';
+  footerPanel.style.display = 'flex';
+  footerPanel.style.alignItems = 'center';
+  footerPanel.style.justifyContent = 'space-between';
+  footerPanel.style.gap = '16px';
+  footerPanel.style.padding = '12px 16px';
+  footerPanel.style.minHeight = `${footerHeight}px`;
+  footerPanel.style.boxSizing = 'border-box';
+
+  const qrWrap = document.createElement('div');
+  qrWrap.style.display = 'inline-flex';
+  qrWrap.style.alignItems = 'center';
+  qrWrap.style.justifyContent = 'center';
+  qrWrap.style.padding = '8px';
+  qrWrap.style.background = '#ffffff';
+  qrWrap.style.borderRadius = '10px';
+  qrWrap.style.flex = '0 0 auto';
+
+  const qrMount = document.createElement('div');
+  qrWrap.appendChild(qrMount);
+
+  const footerText = document.createElement('div');
+  footerText.style.display = 'flex';
+  footerText.style.flexDirection = 'column';
+  footerText.style.gap = '6px';
+  footerText.style.flex = '1 1 auto';
+  footerText.style.minWidth = '0';
+
+  const footerTitle = document.createElement('div');
+  footerTitle.textContent = 'Scan for match details';
+  footerTitle.style.fontSize = '14px';
+  footerTitle.style.fontWeight = '700';
+  footerTitle.style.letterSpacing = '0.02em';
+
+  const footerCourtId = document.createElement('div');
+  footerCourtId.textContent = `Court ID: ${courtIdDisplay}`;
+  footerCourtId.style.fontSize = '16px';
+  footerCourtId.style.fontWeight = '800';
+  footerCourtId.style.letterSpacing = '0.06em';
+
+  const footerUrl = document.createElement('div');
+  footerUrl.textContent = qrUrl;
+  footerUrl.style.fontSize = '11px';
+  footerUrl.style.opacity = '0.85';
+  footerUrl.style.overflow = 'hidden';
+  footerUrl.style.textOverflow = 'ellipsis';
+  footerUrl.style.whiteSpace = 'nowrap';
+
+  footerText.appendChild(footerTitle);
+  footerText.appendChild(footerCourtId);
+  footerText.appendChild(footerUrl);
+
+  footerPanel.appendChild(qrWrap);
+  footerPanel.appendChild(footerText);
+
+  if (window.QRCode)
   {
-    footerPanel.classList.remove('hidden');
-    footerPanel.hidden = false;
-    footerPanel.innerHTML = '';
-    footerPanel.style.display = 'flex';
-    footerPanel.style.alignItems = 'center';
-    footerPanel.style.justifyContent = 'space-between';
-    footerPanel.style.gap = '16px';
-    footerPanel.style.padding = '12px 16px';
-    footerPanel.style.minHeight = `${footerHeight}px`;
-    footerPanel.style.boxSizing = 'border-box';
+    const qrSize = Math.max(84, Math.min(120, footerHeight - 24));
+    new window.QRCode(qrMount, {
+      text: qrUrl,
+      width: qrSize,
+      height: qrSize,
+      colorDark: '#000000',
+      colorLight: '#ffffff',
+      correctLevel: window.QRCode.CorrectLevel.H
+    });
 
-    const qrWrap = document.createElement('div');
-    qrWrap.style.display = 'inline-flex';
-    qrWrap.style.alignItems = 'center';
-    qrWrap.style.justifyContent = 'center';
-    qrWrap.style.padding = '8px';
-    qrWrap.style.background = '#ffffff';
-    qrWrap.style.borderRadius = '10px';
-    qrWrap.style.flex = '0 0 auto';
-
-    const qrMount = document.createElement('div');
-    qrWrap.appendChild(qrMount);
-
-    const footerText = document.createElement('div');
-    footerText.style.display = 'flex';
-    footerText.style.flexDirection = 'column';
-    footerText.style.gap = '6px';
-    footerText.style.flex = '1 1 auto';
-    footerText.style.minWidth = '0';
-
-    const footerTitle = document.createElement('div');
-    footerTitle.textContent = 'Scan for match details';
-    footerTitle.style.fontSize = '14px';
-    footerTitle.style.fontWeight = '700';
-    footerTitle.style.letterSpacing = '0.02em';
-
-    const footerCourtId = document.createElement('div');
-    footerCourtId.textContent = `Court ID: ${courtIdDisplay}`;
-    footerCourtId.style.fontSize = '16px';
-    footerCourtId.style.fontWeight = '800';
-    footerCourtId.style.letterSpacing = '0.06em';
-
-    const footerUrl = document.createElement('div');
-    footerUrl.textContent = qrUrl;
-    footerUrl.style.fontSize = '11px';
-    footerUrl.style.opacity = '0.85';
-    footerUrl.style.overflow = 'hidden';
-    footerUrl.style.textOverflow = 'ellipsis';
-    footerUrl.style.whiteSpace = 'nowrap';
-
-    footerText.appendChild(footerTitle);
-    footerText.appendChild(footerCourtId);
-    footerText.appendChild(footerUrl);
-
-    footerPanel.appendChild(qrWrap);
-    footerPanel.appendChild(footerText);
-
-    if (window.QRCode)
+    // qrcode.js paints its canvas synchronously but fills its companion <img>
+    // from a setTimeout retry loop, so that <img> is still src-less when the
+    // capture runs. html-to-image would try to inline it, fetch the empty URL,
+    // get this page's HTML back and reject from the image's onerror handler.
+    // Freeze the canvas into a single data-URL image instead of racing it.
+    const qrCanvas = qrMount.querySelector('canvas');
+    if (qrCanvas)
     {
-      const qrSize = Math.max(84, Math.min(120, footerHeight - 24));
-      new window.QRCode(qrMount, {
-        text: qrUrl,
-        width: qrSize,
-        height: qrSize,
-        colorDark: '#000000',
-        colorLight: '#ffffff',
-        correctLevel: window.QRCode.CorrectLevel.H
-      });
+      const qrDataUrl = qrCanvas.toDataURL('image/png');
+      qrMount.innerHTML = '';
 
-      // qrcode.js paints its canvas synchronously but fills its companion <img>
-      // from a setTimeout retry loop, so that <img> is still src-less when the
-      // capture runs. html-to-image would try to inline it, fetch the empty URL,
-      // get this page's HTML back and reject from the image's onerror handler.
-      // Freeze the canvas into a single data-URL image instead of racing it.
-      const qrCanvas = qrMount.querySelector('canvas');
-      if (qrCanvas)
+      const qrImage = document.createElement('img');
+      qrImage.src = qrDataUrl;
+      qrImage.alt = '';
+      qrImage.width = qrSize;
+      qrImage.height = qrSize;
+      qrImage.style.display = 'block';
+      qrMount.appendChild(qrImage);
+    }
+    else
+    {
+      qrMount.querySelectorAll('img').forEach(node =>
       {
-        const qrDataUrl = qrCanvas.toDataURL('image/png');
-        qrMount.innerHTML = '';
-
-        const qrImage = document.createElement('img');
-        qrImage.src = qrDataUrl;
-        qrImage.alt = '';
-        qrImage.width = qrSize;
-        qrImage.height = qrSize;
-        qrImage.style.display = 'block';
-        qrMount.appendChild(qrImage);
-      }
-      else
-      {
-        qrMount.querySelectorAll('img').forEach(node =>
+        if (!node.getAttribute('src'))
         {
-          if (!node.getAttribute('src'))
-          {
-            node.remove();
-          }
-        });
-      }
+          node.remove();
+        }
+      });
     }
   }
 
@@ -8079,7 +8107,7 @@ async function cacheShareableScoreCard()
       // An <img> with no source makes html-to-image fetch the empty URL, which
       // resolves to this page, and then reject when the HTML fails to decode as
       // an image. Drop those before they reach the serializer.
-      if (el instanceof HTMLImageElement && !el.getAttribute('src'))
+      if (el.tagName === 'IMG' && !el.getAttribute('src'))
       {
         return false;
       }
