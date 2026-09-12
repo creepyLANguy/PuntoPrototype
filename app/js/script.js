@@ -6684,8 +6684,14 @@ document.addEventListener("DOMContentLoaded", () =>
     setDetailsPanelExpanded(expanded);
 
     // Deliberately not awaited: the momentum graph reveals itself when its
-    // endpoint answers, so nothing below is held up by the heavier replay.
-    void loadMomentumGraph(currentCourtId);
+    // endpoint answers, so nothing below is held up by the heavier replay. The
+    // promise is kept so the share card can wait for the graph without the
+    // modal itself having to.
+    const momentumReady = loadMomentumGraph(currentCourtId);
+
+    // The share card is captured from the rendered modal, so it can only be
+    // taken once every branch below has finished populating #dmBox.
+    let renderedShareCard = false;
 
     try
     {
@@ -6704,17 +6710,6 @@ document.addEventListener("DOMContentLoaded", () =>
         matchDetailsCache = result;
         isMatchDetailsCacheValid = true;
         matchDetailsCacheCourtId = currentCourtId;
-
-        //AL.
-        // const dummyFile = new File(
-        //   [],
-        //   'share-image.png',
-        //   { type: 'image/png' }
-        // );
-        // if (navigator.canShare && navigator.canShare({ files: [dummyFile] }))
-        {
-          cacheShareableScoreCard();
-        }
       }
 
       const { sets, currentGames, points, mode, scoringMode, matchComplete } = result.data;
@@ -6858,6 +6853,8 @@ document.addEventListener("DOMContentLoaded", () =>
       const detailsPlayerNames = normalizePlayerNames(result?.data?.playerNames || currentPlayerNames || {});
       renderAdvancedStats(result.data.advancedStats, { A: nameA, B: nameB }, isSwapped, detailsPlayerNames);
       syncDetailsPanelAvailability();
+
+      renderedShareCard = true;
     }
     catch (err)
     {
@@ -6868,6 +6865,26 @@ document.addEventListener("DOMContentLoaded", () =>
     {
       elements.detailsLoading.classList.add("hidden");
       elements.shareDetailsBtn.classList.remove("hidden");
+
+      // Runs here rather than at the end of the try so the loading overlay is
+      // already hidden and cannot appear in the capture. Not awaited, but the
+      // rejection is handled so a capture failure stays out of the UI thread
+      // and never surfaces as an unhandled rejection.
+      if (renderedShareCard)
+      {
+        momentumReady
+          // A missing graph must not cancel the card; capture what is there.
+          .catch(() => {})
+          // renderMomentumGraph only queues its first paint, so yield one frame
+          // to let drawGraphFrame put pixels on the canvas. That callback was
+          // queued first, so it runs before this one.
+          .then(() => new Promise(resolve => requestAnimationFrame(() => resolve())))
+          .then(() => cacheShareableScoreCard())
+          .catch(err =>
+          {
+            console.error("Share card capture failed:", err);
+          });
+      }
     }
   }
 
@@ -7863,6 +7880,50 @@ async function cacheShareableScoreCard()
   const clone = element.cloneNode(true);
   clone.querySelectorAll('.dm-close, .dm-share-btn').forEach(node => node.remove());
 
+  // cloneNode copies a canvas element but none of its pixels, so the momentum
+  // graph would come out blank. Bake each live canvas into a still image on the
+  // clone. Neither of the nodes removed above contains a canvas, so the two
+  // lists stay in the same order.
+  const sourceCanvases = element.querySelectorAll('canvas');
+  const clonedCanvases = clone.querySelectorAll('canvas');
+
+  clonedCanvases.forEach((clonedCanvas, index) =>
+  {
+    const sourceCanvas = sourceCanvases[index];
+    if (!sourceCanvas || !sourceCanvas.width || !sourceCanvas.height)
+    {
+      return;
+    }
+
+    let canvasDataUrl = '';
+    try
+    {
+      canvasDataUrl = sourceCanvas.toDataURL('image/png');
+    }
+    catch (err)
+    {
+      // A tainted canvas cannot be exported; leave the blank clone in place
+      // rather than failing the whole capture.
+      console.warn('Could not copy canvas into the share card:', err);
+      return;
+    }
+
+    if (!canvasDataUrl || canvasDataUrl === 'data:,')
+    {
+      return;
+    }
+
+    const canvasImage = document.createElement('img');
+    canvasImage.src = canvasDataUrl;
+    canvasImage.alt = '';
+    canvasImage.className = clonedCanvas.className;
+    canvasImage.style.cssText = clonedCanvas.style.cssText;
+    canvasImage.style.display = 'block';
+    canvasImage.style.width = '100%';
+    canvasImage.style.height = 'auto';
+    clonedCanvas.replaceWith(canvasImage);
+  });
+
   const footerPanel = clone.querySelector('#dmDetailsPanel, .dm-details-panel');
   if (footerPanel)
   {
@@ -7934,6 +7995,36 @@ async function cacheShareableScoreCard()
         colorLight: '#ffffff',
         correctLevel: window.QRCode.CorrectLevel.H
       });
+
+      // qrcode.js paints its canvas synchronously but fills its companion <img>
+      // from a setTimeout retry loop, so that <img> is still src-less when the
+      // capture runs. html-to-image would try to inline it, fetch the empty URL,
+      // get this page's HTML back and reject from the image's onerror handler.
+      // Freeze the canvas into a single data-URL image instead of racing it.
+      const qrCanvas = qrMount.querySelector('canvas');
+      if (qrCanvas)
+      {
+        const qrDataUrl = qrCanvas.toDataURL('image/png');
+        qrMount.innerHTML = '';
+
+        const qrImage = document.createElement('img');
+        qrImage.src = qrDataUrl;
+        qrImage.alt = '';
+        qrImage.width = qrSize;
+        qrImage.height = qrSize;
+        qrImage.style.display = 'block';
+        qrMount.appendChild(qrImage);
+      }
+      else
+      {
+        qrMount.querySelectorAll('img').forEach(node =>
+        {
+          if (!node.getAttribute('src'))
+          {
+            node.remove();
+          }
+        });
+      }
     }
   }
 
@@ -7957,18 +8048,57 @@ async function cacheShareableScoreCard()
       {
         return false;
       }
+
+      // An <img> with no source makes html-to-image fetch the empty URL, which
+      // resolves to this page, and then reject when the HTML fails to decode as
+      // an image. Drop those before they reach the serializer.
+      if (el instanceof HTMLImageElement && !el.getAttribute('src'))
+      {
+        return false;
+      }
     }
     return true;
   }
 
+  // .dm-box is a capped, scrollable box on screen. Left as-is the clone would be
+  // cropped at one viewport height, and its width:100% would resolve against a
+  // shrink-to-fit parent rather than the width the user actually sees.
+  const sourceWidth = Math.round(element.getBoundingClientRect().width);
+
+  clone.style.maxHeight = 'none';
+  clone.style.height = 'auto';
+  clone.style.overflow = 'visible';
+  clone.style.overflowY = 'visible';
+
+  // Ids are deliberately kept on the clone: id-based rules such as #detailsSetsA
+  // supply the team colours, and html-to-image reads computed style off these
+  // staged nodes. Staging is appended last, so getElementById still resolves to
+  // the original #dmBox in tree order.
   const staging = document.createElement('div');
   staging.style.position = 'fixed';
   staging.style.left = '-10000px';
   staging.style.top = '0';
   staging.style.pointerEvents = 'none';
   staging.style.zIndex = '-1';
+  if (sourceWidth > 0)
+  {
+    staging.style.width = `${sourceWidth}px`;
+  }
   staging.appendChild(clone);
   document.body.appendChild(staging);
+
+  // Computed styles only exist once the clone is attached, so inner scrollers
+  // such as .dm-table-wrap can only be neutralised here.
+  clone.querySelectorAll('*').forEach(node =>
+  {
+    const overflowY = getComputedStyle(node).overflowY;
+    if (overflowY === 'auto' || overflowY === 'scroll')
+    {
+      node.style.maxHeight = 'none';
+      node.style.overflow = 'visible';
+      node.style.overflowY = 'visible';
+    }
+  });
 
   await new Promise(resolve => requestAnimationFrame(() => resolve()));
 

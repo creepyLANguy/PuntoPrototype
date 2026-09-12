@@ -12,9 +12,11 @@
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <!-- crossorigin lets html-to-image read cssRules when embedding web fonts into
+       the shareable score card; without it every capture logs a DOMException. -->
   <link
     href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800;900&family=Outfit:wght@300;400;600;700;800;900&display=swap"
-    rel="stylesheet" />
+    rel="stylesheet" crossorigin="anonymous" />
   <link rel="stylesheet" href="css/style.css" />
   <script src="js/jscolor.min.js"></script>
   <script src="js/qrcode.min.js"></script>
