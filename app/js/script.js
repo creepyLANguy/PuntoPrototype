@@ -6870,7 +6870,7 @@ document.addEventListener("DOMContentLoaded", () =>
       // already hidden and cannot appear in the capture. Not awaited, but the
       // rejection is handled so a capture failure stays out of the UI thread
       // and never surfaces as an unhandled rejection.
-      if (renderedShareCard)
+      if (renderedShareCard && canShareFiles())
       {
         momentumReady
           // A missing graph must not cancel the card; capture what is there.
@@ -7834,6 +7834,33 @@ window.addEventListener("resize", () =>
 }, { passive: true });
 
 let shareableScoreCardImage = null;
+
+// The captured card is only ever consumed as payload.files in getSharePayload,
+// and that path is itself gated on navigator.canShare. Where the browser cannot
+// share files there is nothing to spend the capture on, so probe once with an
+// empty dummy file and reuse the answer.
+let canShareFilesResult = null;
+
+function canShareFiles()
+{
+  if (canShareFilesResult === null)
+  {
+    try
+    {
+      const probeFile = new File([], 'share-image.png', { type: 'image/png' });
+      canShareFilesResult = Boolean(
+        navigator.canShare && navigator.canShare({ files: [probeFile] })
+      );
+    }
+    catch (err)
+    {
+      // Older browsers can throw on either the File constructor or canShare.
+      canShareFilesResult = false;
+    }
+  }
+
+  return canShareFilesResult;
+}
 
 //AL.
 let shareableScoreCardImageUrl = null;
