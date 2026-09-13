@@ -1343,6 +1343,55 @@ body.light-mode .reset-actions button {
   color: white;
 }
 
+.share-image-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.82);
+}
+
+.share-image-modal.hidden {
+  display: none;
+}
+
+.share-image-box {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  max-width: min(92vw, 720px);
+  max-height: 92vh;
+}
+
+.share-image-box img {
+  display: block;
+  max-width: 100%;
+  max-height: 92vh;
+  object-fit: contain;
+  border-radius: 8px;
+  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.45);
+}
+
+.share-image-close {
+  position: absolute;
+  top: -12px;
+  right: -12px;
+  z-index: 1;
+  width: 36px;
+  height: 36px;
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  border-radius: 50%;
+  background: #111;
+  color: #fff;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+
 .reset-actions button:hover {
   filter: brightness(0.875);
 }
@@ -2266,7 +2315,7 @@ body.light-mode .dm-table-wrap {
 /* Header row (S1, S2 …) */
 .dm-table thead th {
   padding: 4px 10px 8px;
-  font-size: 0.7rem;
+  font-size: 0.85rem;
   font-weight: 700;
   letter-spacing: 1px;
   text-transform: uppercase;
@@ -2309,12 +2358,12 @@ body.light-mode .dm-table thead th {
 
 /* Score cells */
 .dm-table tbody td {
-  padding: 10px 6px;
+  padding: 12px 10px;
   text-align: center;
-  font-size: 1.2rem;
+  font-size: 1.6rem;
   font-weight: 600;
   white-space: nowrap;
-  min-width: 36px;
+  min-width: 48px;
   line-height: 1.1;
   vertical-align: middle;
 }
@@ -2519,6 +2568,54 @@ body.light-mode .dm-table thead th {
 
   .dm-marker-cell span {
     min-height: 32px;
+  }
+}
+
+/* Narrow phones: the modal gutter plus the card's own padding eats a large
+   share of the screen, leaving the stats table nothing to work with. Claw some
+   of it back and tighten the densest text. */
+@media (max-width: 480px) {
+  .dm-box {
+    padding: 20px 14px 18px;
+    border-radius: 20px;
+  }
+
+  .dm-watermark {
+    border-radius: 20px;
+  }
+
+  .dm-details-content {
+    padding: 0 8px 10px;
+  }
+
+  .dm-table-wrap {
+    padding: 12px 10px;
+  }
+
+  .dm-stats-table {
+    font-size: 0.7rem;
+  }
+
+  .dm-st-row td {
+    padding: 5px 3px;
+  }
+
+  .dm-st-label {
+    font-size: 0.64rem;
+  }
+
+  .dm-st-val {
+    font-size: 0.7rem;
+  }
+
+  .dm-st-bar-cell {
+    padding-left: 2px !important;
+    padding-right: 3px !important;
+  }
+
+  .dm-split-lbl-a,
+  .dm-split-lbl-b {
+    font-size: 0.62rem;
   }
 }
 
@@ -5730,6 +5827,10 @@ body.light-mode .dm-momentum-label {
   width: 100%;
   border-collapse: collapse;
   font-size: 0.75rem;
+  /* Columns keep their declared percentages instead of being widened past the
+     card by long team names and nowrap values, which is what pushed the right
+     edge off screen on narrow phones. */
+  table-layout: fixed;
 }
 
 /* Column header row */
@@ -5739,6 +5840,8 @@ body.light-mode .dm-momentum-label {
   font-size: 0.7rem;
   letter-spacing: 0.4px;
   text-transform: uppercase;
+  /* Team names are arbitrary text and must wrap rather than overflow. */
+  overflow-wrap: anywhere;
 }
 
 .dm-st-col-label {
@@ -5795,7 +5898,9 @@ body.light-mode .dm-st-row:not(.dm-st-bar-row):nth-child(odd) td {
   font-weight: 700;
   color: rgba(255, 255, 255, 0.5);
   text-align: left;
-  white-space: nowrap;
+  /* With a fixed table layout a nowrap label would spill into the team column
+     on narrow screens, so let the longer labels wrap onto a second line. */
+  overflow-wrap: anywhere;
 }
 
 body.light-mode .dm-st-label {

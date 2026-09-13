@@ -12,9 +12,11 @@
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <!-- crossorigin lets html-to-image read cssRules when embedding web fonts into
+       the shareable score card; without it every capture logs a DOMException. -->
   <link
     href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800;900&family=Outfit:wght@300;400;600;700;800;900&display=swap"
-    rel="stylesheet" />
+    rel="stylesheet" crossorigin="anonymous" />
   <link rel="stylesheet" href="css/style.css" />
   <script src="js/jscolor.min.js"></script>
   <script src="js/qrcode.min.js"></script>
@@ -139,6 +141,15 @@
         </div>
       </div>
     </div>
+
+    <!--
+    <div id="shareImageModal" class="share-image-modal hidden" role="dialog" aria-modal="true" aria-label="Share image preview">
+      <div class="share-image-box">
+        <button id="closeShareImageBtn" class="share-image-close" type="button" aria-label="Close share image preview" title="Close">✕</button>
+        <img id="shareImagePreview" alt="Shareable match score card preview" />
+      </div>
+    </div>
+    -->
 
     <!-- ================= SETTINGS MODAL ================= -->
     <div id="settingsModal" class="reset-modal hidden">
