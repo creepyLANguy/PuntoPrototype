@@ -7870,10 +7870,9 @@ async function getShareLogoDataUrl(color = '#ffffff')
     return shareLogoDataUrlCache.get(normalizedColor);
   }
 
-  const logoUrl = '/media/logo.svg';
   const image = new Image();
   image.decoding = 'async';
-  image.src = logoUrl;
+  image.src = '/media/logo.svg';
 
   await new Promise((resolve, reject) =>
   {
@@ -7898,7 +7897,135 @@ async function getShareLogoDataUrl(color = '#ffffff')
     throw new Error('Could not create logo canvas');
   }
 
-  context.drawImage(image, 0, 0, sasync function cacheShareableScoreCard()
+  context.drawImage(image, 0, 0, size, size);
+
+  if (normalizedColor !== 'source')
+  {
+    context.globalCompositeOperation = 'source-in';
+    context.fillStyle = normalizedColor;
+    context.fillRect(0, 0, size, size);
+    context.globalCompositeOperation = 'source-over';
+  }
+
+  const dataUrl = canvas.toDataURL('image/png');
+  shareLogoDataUrlCache.set(normalizedColor, dataUrl);
+  return dataUrl;
+}
+
+async function blobToImage(blob)
+{
+  return new Promise((resolve, reject) =>
+  {
+    const objectUrl = URL.createObjectURL(blob);
+    const image = new Image();
+
+    image.onload = () =>
+    {
+      URL.revokeObjectURL(objectUrl);
+      resolve(image);
+    };
+
+    image.onerror = () =>
+    {
+      URL.revokeObjectURL(objectUrl);
+      reject(new Error('Could not read generated share image'));
+    };
+
+    image.src = objectUrl;
+  });
+}
+
+async function padShareImageToSquare(blob, backgroundColor)
+{
+  const image = await blobToImage(blob);
+  const width = image.naturalWidth || image.width;
+  const height = image.naturalHeight || image.height;
+  const side = Math.max(width, height);
+
+  const canvas = document.createElement('canvas');
+  canvas.width = side;
+  canvas.height = side;
+
+  const context = canvas.getContext('2d');
+  if (!context)
+  {
+    throw new Error('Could not create square share-image canvas');
+  }
+
+  const safeBackground = backgroundColor && backgroundColor !== 'rgba(0, 0, 0, 0)'
+    ? backgroundColor
+    : '#111111';
+
+  context.fillStyle = safeBackground;
+  context.fillRect(0, 0, side, side);
+
+  const x = Math.round((side - width) / 2);
+  const y = Math.round((side - height) / 2);
+  context.drawImage(image, x, y, width, height);
+
+  const squareBlob = await new Promise((resolve, reject) =>
+  {
+    canvas.toBlob(result =>
+    {
+      if (result)
+      {
+        resolve(result);
+      }
+      else
+      {
+        reject(new Error('Failed to create square share image'));
+      }
+    }, 'image/png');
+  });
+
+  return squareBlob;
+}
+
+// The captured card is only ever consumed as payload.files in getSharePayload,
+// and that path is itself gated on navigator.canShare. Where the browser cannot
+// share files there is nothing to spend the capture on, so probe once with an
+// empty dummy file and reuse the answer.
+let canShareFilesResult = null;
+
+function canShareFiles()
+{
+  if (canShareFilesResult === null)
+  {
+    try
+    {
+      const probeFile = new File([], 'share-image.png', { type: 'image/png' });
+      canShareFilesResult = Boolean(
+        navigator.canShare && navigator.canShare({ files: [probeFile] })
+      );
+    }
+    catch (err)
+    {
+      // Older browsers can throw on either the File constructor or canShare.
+      canShareFilesResult = false;
+    }
+  }
+
+  return canShareFilesResult;
+}
+
+// let shareableScoreCardImageUrl = null;
+//
+// function dismissShareableScoreCard()
+// {
+//   const modal = document.getElementById("shareImageModal");
+//   if (!modal) return;
+
+//   modal.classList.add("hidden");
+//   document.getElementById("shareImagePreview")?.removeAttribute("src");
+
+//   if (shareableScoreCardImageUrl)
+//   {
+//     URL.revokeObjectURL(shareableScoreCardImageUrl);
+//     shareableScoreCardImageUrl = null;
+//   }
+// }
+
+async function cacheShareableScoreCard()
 {
   const element = document.getElementById('dmBox');
 
@@ -7927,7 +8054,6 @@ async function getShareLogoDataUrl(color = '#ffffff')
   const watermarkLogoDataUrl = await getShareLogoDataUrl(watermarkColor);
 
   const footerHeight = 96;
-
   const clone = element.cloneNode(true);
 
   // The modal intentionally ellipsizes long team names for the compact on-screen
@@ -8141,10 +8267,6 @@ async function getShareLogoDataUrl(color = '#ffffff')
   clone.style.overflowY = 'visible';
   clone.style.background = cardBackground;
 
-  // Ids are deliberately kept on the clone: id-based rules such as #detailsSetsA
-  // supply the team colours, and html-to-image reads computed style off these
-  // staged nodes. Staging is appended last, so getElementById still resolves to
-  // the original #dmBox in tree order.
   const staging = document.createElement('div');
   staging.style.position = 'fixed';
   staging.style.left = '-10000px';
@@ -8158,8 +8280,6 @@ async function getShareLogoDataUrl(color = '#ffffff')
   staging.appendChild(clone);
   document.body.appendChild(staging);
 
-  // Computed styles only exist once the clone is attached, so inner scrollers
-  // such as .dm-table-wrap can only be neutralised here.
   clone.querySelectorAll('*').forEach(node =>
   {
     const overflowY = getComputedStyle(node).overflowY;
@@ -8204,4 +8324,35 @@ async function getShareLogoDataUrl(color = '#ffffff')
   );
 
   shareableScoreCardImage = file;
+}
+  // const modal = document.getElementById("shareImageModal");
+  // const preview = document.getElementById("shareImagePreview");
+  // const closeButton = document.getElementById("closeShareImageBtn");
+  // if (!modal || !preview || !closeButton) return;
+
+  // if (shareableScoreCardImageUrl)
+  // {
+  //   URL.revokeObjectURL(shareableScoreCardImageUrl);
+  // }
+
+  // shareableScoreCardImageUrl = URL.createObjectURL(shareableScoreCardImage);
+  // preview.src = shareableScoreCardImageUrl;
+  // modal.classList.remove("hidden");
+
+  // if (closeButton.dataset.bound !== "true")
+  // {
+  //   closeButton.dataset.bound = "true";
+  //   closeButton.addEventListener("click", dismissShareableScoreCard);
+  //   modal.addEventListener("click", (event) =>
+  //   {
+  //     if (event.target === modal) dismissShareableScoreCard();
+  //   });
+  //   document.addEventListener("keydown", (event) =>
+  //   {
+  //     if (event.key === "Escape" && !modal.classList.contains("hidden"))
+  //     {
+  //       dismissShareableScoreCard();
+  //     }
+  //   });
+  // }
 }
