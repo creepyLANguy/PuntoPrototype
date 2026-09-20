@@ -1451,6 +1451,7 @@ document.addEventListener("DOMContentLoaded", () =>
   elements.courtPasswordError = $("courtPasswordError");
   elements.courtStatus = $("courtStatus");
   elements.courtScoringMode = $("courtScoringMode");
+  elements.courtDeuceMode = $("courtDeuceMode");
   elements.courtTiebreakMode = $("courtTiebreakMode");
 
   // ADMIN AUTH ELEMENTS
@@ -1483,6 +1484,7 @@ document.addEventListener("DOMContentLoaded", () =>
   elements.editCourtPassword = $("editCourtPassword");
   elements.editCourtStatus = $("editCourtStatus");
   elements.editCourtScoringMode = $("editCourtScoringMode");
+  elements.editCourtDeuceMode = $("editCourtDeuceMode");
   elements.editCourtTiebreakMode = $("editCourtTiebreakMode");
   elements.clearCourtScoreBtn = $("clearCourtScoreBtn");
   elements.saveEditBtn = $("saveEditBtn");
@@ -1762,27 +1764,42 @@ document.addEventListener("DOMContentLoaded", () =>
   submitOnEnter(elements.editCourtPassword, elements.saveEditBtn);
   submitOnEnter(elements.editCourtStatus, elements.saveEditBtn);
   submitOnEnter(elements.editCourtScoringMode, elements.saveEditBtn);
+  submitOnEnter(elements.editCourtDeuceMode, elements.saveEditBtn);
   submitOnEnter(elements.editCourtTiebreakMode, elements.saveEditBtn);
   submitFormOnEnter(elements.editCourtPage);
 
-  // Tiebreaks only apply to games-and-sets scoring; grey the selector out otherwise.
-  function syncCourtTiebreakDisabled(scoringSelect, tiebreakSelect)
+  // Deuce and tiebreak rules only apply to games-and-sets scoring; grey the selectors out otherwise.
+  function syncCourtScoringRuleControlsDisabled(scoringSelect, deuceSelect, tiebreakSelect)
   {
-    if (!scoringSelect || !tiebreakSelect) return;
-    tiebreakSelect.disabled = scoringSelect.value !== "standard";
+    if (!scoringSelect) return;
+    const disabled = scoringSelect.value !== "standard";
+    if (deuceSelect) deuceSelect.disabled = disabled;
+    if (tiebreakSelect) tiebreakSelect.disabled = disabled;
   }
 
   if (elements.courtScoringMode)
   {
     elements.courtScoringMode.addEventListener("change", () =>
-      syncCourtTiebreakDisabled(elements.courtScoringMode, elements.courtTiebreakMode));
-    syncCourtTiebreakDisabled(elements.courtScoringMode, elements.courtTiebreakMode);
+      syncCourtScoringRuleControlsDisabled(
+        elements.courtScoringMode,
+        elements.courtDeuceMode,
+        elements.courtTiebreakMode
+      ));
+    syncCourtScoringRuleControlsDisabled(
+      elements.courtScoringMode,
+      elements.courtDeuceMode,
+      elements.courtTiebreakMode
+    );
   }
 
   if (elements.editCourtScoringMode)
   {
     elements.editCourtScoringMode.addEventListener("change", () =>
-      syncCourtTiebreakDisabled(elements.editCourtScoringMode, elements.editCourtTiebreakMode));
+      syncCourtScoringRuleControlsDisabled(
+        elements.editCourtScoringMode,
+        elements.editCourtDeuceMode,
+        elements.editCourtTiebreakMode
+      ));
   }
 
   // ADMIN DASHBOARD SEARCH & FILTER
@@ -3052,6 +3069,11 @@ document.addEventListener("DOMContentLoaded", () =>
     elements.editCourtPassword.value = court.password || "";
     elements.editCourtStatus.value = court.status || STATUS.CLOSED;
     elements.editCourtScoringMode.value = scoringOptions.scoringMode;
+    if (elements.editCourtDeuceMode)
+    {
+      elements.editCourtDeuceMode.value = scoringOptions.deuceMode;
+      elements.editCourtDeuceMode.disabled = scoringOptions.scoringMode !== "standard";
+    }
     if (elements.editCourtTiebreakMode)
     {
       elements.editCourtTiebreakMode.value = scoringOptions.tiebreakMode;
@@ -3083,6 +3105,9 @@ document.addEventListener("DOMContentLoaded", () =>
       const scoringOptions = normalizeScoringOptions({
         ...(courtToEdit.scoringOptions || {}),
         scoringMode: elements.editCourtScoringMode.value,
+        deuceMode: elements.editCourtDeuceMode?.value ||
+          courtToEdit.scoringOptions?.deuceMode ||
+          DEFAULT_SCORING_OPTIONS.deuceMode,
         tiebreakMode: elements.editCourtTiebreakMode?.value ||
           courtToEdit.scoringOptions?.tiebreakMode ||
           DEFAULT_SCORING_OPTIONS.tiebreakMode
@@ -3657,8 +3682,9 @@ document.addEventListener("DOMContentLoaded", () =>
     const courtName = elements.courtName.value.trim();
     const courtPass = elements.courtPassword.value.trim();
     const scoringMode = elements.courtScoringMode?.value || DEFAULT_SCORING_OPTIONS.scoringMode;
+    const deuceMode = elements.courtDeuceMode?.value || DEFAULT_SCORING_OPTIONS.deuceMode;
     const tiebreakMode = elements.courtTiebreakMode?.value || DEFAULT_SCORING_OPTIONS.tiebreakMode;
-    const scoringOptions = normalizeScoringOptions({ scoringMode, tiebreakMode });
+    const scoringOptions = normalizeScoringOptions({ scoringMode, deuceMode, tiebreakMode });
 
     elements.courtNameError.textContent = "";
     elements.courtPasswordError.textContent = "";
@@ -3740,11 +3766,17 @@ document.addEventListener("DOMContentLoaded", () =>
     elements.courtName.value = "";
     elements.courtPassword.value = "";
     if (elements.courtScoringMode) elements.courtScoringMode.value = DEFAULT_SCORING_OPTIONS.scoringMode;
+    if (elements.courtDeuceMode) elements.courtDeuceMode.value = DEFAULT_SCORING_OPTIONS.deuceMode;
     if (elements.courtTiebreakMode)
     {
       elements.courtTiebreakMode.value = DEFAULT_SCORING_OPTIONS.tiebreakMode;
       elements.courtTiebreakMode.disabled = false;
     }
+    syncCourtScoringRuleControlsDisabled(
+      elements.courtScoringMode,
+      elements.courtDeuceMode,
+      elements.courtTiebreakMode
+    );
     syncCurrentViewState("replace");
   });
 
