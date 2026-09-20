@@ -7857,51 +7857,48 @@ window.addEventListener("resize", () =>
 
 let shareableScoreCardImage = null;
 
-// The captured card is only ever consumed as payload.files in getSharePayload,
-// and that path is itself gated on navigator.canShare. Where the browser cannot
-// share files there is nothing to spend the capture on, so probe once with an
-// empty dummy file and reuse the answer.
-let canShareFilesResult = null;
+// Cache the Padel Push logo as a same-origin PNG data URL. This avoids relying on
+// SVG/CSS filter rendering inside html-to-image, which is particularly fragile
+// for the light-theme watermark and for the QR-code centre badge.
+const shareLogoDataUrlCache = new Map();
 
-function canShareFiles()
+async function getShareLogoDataUrl(color = '#ffffff')
 {
-  if (canShareFilesResult === null)
+  const normalizedColor = String(color || '#ffffff').toLowerCase();
+  if (shareLogoDataUrlCache.has(normalizedColor))
   {
-    try
-    {
-      const probeFile = new File([], 'share-image.png', { type: 'image/png' });
-      canShareFilesResult = Boolean(
-        navigator.canShare && navigator.canShare({ files: [probeFile] })
-      );
-    }
-    catch (err)
-    {
-      // Older browsers can throw on either the File constructor or canShare.
-      canShareFilesResult = false;
-    }
+    return shareLogoDataUrlCache.get(normalizedColor);
   }
 
-  return canShareFilesResult;
-}
+  const logoUrl = '/media/logo.svg';
+  const image = new Image();
+  image.decoding = 'async';
+  image.src = logoUrl;
 
-// let shareableScoreCardImageUrl = null;
-//
-// function dismissShareableScoreCard()
-// {
-//   const modal = document.getElementById("shareImageModal");
-//   if (!modal) return;
+  await new Promise((resolve, reject) =>
+  {
+    if (image.complete && image.naturalWidth > 0)
+    {
+      resolve();
+      return;
+    }
 
-//   modal.classList.add("hidden");
-//   document.getElementById("shareImagePreview")?.removeAttribute("src");
+    image.addEventListener('load', resolve, { once: true });
+    image.addEventListener('error', () => reject(new Error('Padel Push logo could not be loaded')), { once: true });
+  });
 
-//   if (shareableScoreCardImageUrl)
-//   {
-//     URL.revokeObjectURL(shareableScoreCardImageUrl);
-//     shareableScoreCardImageUrl = null;
-//   }
-// }
+  const size = 256;
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
 
-async function cacheShareableScoreCard()
+  const context = canvas.getContext('2d');
+  if (!context)
+  {
+    throw new Error('Could not create logo canvas');
+  }
+
+  context.drawImage(image, 0, 0, sasync function cacheShareableScoreCard()
 {
   const element = document.getElementById('dmBox');
 
@@ -7921,17 +7918,52 @@ async function cacheShareableScoreCard()
   const appOrigin = window.location.origin.replace(/\/$/, '');
   const qrUrl = courtId ? `${appOrigin}/c/${encodeURIComponent(courtId)}` : `${appOrigin}/app/`;
 
+  // Capture the modal's own background instead of the document body. The
+  // details modal deliberately has a different light-theme surface than body.
+  const cardBackground = getComputedStyle(element).backgroundColor || '#111111';
+  const isLightTheme = document.body.classList.contains('light-mode');
+  const watermarkColor = isLightTheme ? '#111111' : '#ffffff';
+  const shareLogoDataUrl = await getShareLogoDataUrl('#ffffff');
+  const watermarkLogoDataUrl = await getShareLogoDataUrl(watermarkColor);
+
   const footerHeight = 96;
 
   const clone = element.cloneNode(true);
 
-  // The card carries the scoreline only. The detailed stats panel holds the
-  // momentum graph and the advanced stats table, both of which are too dense to
-  // read at share size, so the whole panel is dropped. Nothing in the capture
-  // then depends on the momentum endpoint.
-  clone
-    .querySelectorAll('.dm-close, .dm-share-btn, .dm-details-panel, .dm-empty-state, .dm-error-state')
-    .forEach(node => node.remove());
+  // The modal intentionally ellipsizes long team names for the compact on-screen
+  // layout. The share image has enough vertical space to wrap them instead.
+  clone.querySelectorAll('.dm-name').forEach(node =>
+  {
+    node.style.whiteSpace = 'normal';
+    node.style.overflow = 'visible';
+    node.style.textOverflow = 'clip';
+    node.style.overflowWrap = 'anywhere';
+    node.style.wordBreak = 'break-word';
+    node.style.maxWidth = '100%';
+    node.style.width = '100%';
+    node.style.textAlign = 'center';
+    node.style.lineHeight = '1.15';
+  });
+
+  // Make the watermark deterministic for html-to-image. The light-theme version
+  // previously depended on CSS filter inversion of the white SVG, which can be
+  // omitted by the serializer and leave the watermark invisible on white.
+  const watermark = clone.querySelector('.dm-watermark');
+  const watermarkImage = watermark?.querySelector('img');
+
+  if (watermark)
+  {
+    watermark.style.zIndex = '0';
+    watermark.style.opacity = '0.5';
+  }
+
+  if (watermarkImage)
+  {
+    watermarkImage.src = watermarkLogoDataUrl;
+    watermarkImage.removeAttribute('srcset');
+    watermarkImage.style.filter = 'none';
+    watermarkImage.style.opacity = '0.06';
+  }
 
   // A dedicated element appended to the card, rather than the details panel
   // reused in place. The QR block is centred and sized to its content so the
@@ -7950,6 +7982,7 @@ async function cacheShareableScoreCard()
   footerPanel.style.boxSizing = 'border-box';
 
   const qrWrap = document.createElement('div');
+  qrWrap.style.position = 'relative';
   qrWrap.style.display = 'inline-flex';
   qrWrap.style.alignItems = 'center';
   qrWrap.style.justifyContent = 'center';
@@ -8009,9 +8042,8 @@ async function cacheShareableScoreCard()
 
     // qrcode.js paints its canvas synchronously but fills its companion <img>
     // from a setTimeout retry loop, so that <img> is still src-less when the
-    // capture runs. html-to-image would try to inline it, fetch the empty URL,
-    // get this page's HTML back and reject from the image's onerror handler.
-    // Freeze the canvas into a single data-URL image instead of racing it.
+    // capture runs. Freeze the canvas into a single data-URL image instead of
+    // racing it.
     const qrCanvas = qrMount.querySelector('canvas');
     if (qrCanvas)
     {
@@ -8025,6 +8057,34 @@ async function cacheShareableScoreCard()
       qrImage.height = qrSize;
       qrImage.style.display = 'block';
       qrMount.appendChild(qrImage);
+
+      // Match the QR presentation used elsewhere in Padel Push: a small black
+      // circular badge with the white Padel Push logo centred over the QR code.
+      const qrLogoBadge = document.createElement('span');
+      qrLogoBadge.style.position = 'absolute';
+      qrLogoBadge.style.left = '50%';
+      qrLogoBadge.style.top = '50%';
+      qrLogoBadge.style.transform = 'translate(-50%, -50%)';
+      qrLogoBadge.style.width = '32px';
+      qrLogoBadge.style.height = '32px';
+      qrLogoBadge.style.borderRadius = '50%';
+      qrLogoBadge.style.background = '#000000';
+      qrLogoBadge.style.boxSizing = 'border-box';
+      qrLogoBadge.style.padding = '4px';
+      qrLogoBadge.style.display = 'flex';
+      qrLogoBadge.style.alignItems = 'center';
+      qrLogoBadge.style.justifyContent = 'center';
+
+      const qrLogo = document.createElement('img');
+      qrLogo.src = shareLogoDataUrl;
+      qrLogo.alt = '';
+      qrLogo.style.display = 'block';
+      qrLogo.style.width = '100%';
+      qrLogo.style.height = '100%';
+      qrLogo.style.objectFit = 'contain';
+
+      qrLogoBadge.appendChild(qrLogo);
+      qrWrap.appendChild(qrLogoBadge);
     }
     else
     {
@@ -8041,16 +8101,16 @@ async function cacheShareableScoreCard()
   const inclusions = (node) =>
   {
     const excludedClasses = [
-      'dm-close', 
-      'dm-share-btn', 
-      'dm-empty-state', 
-      'dm-error-state', 
-      'hidden', 
-      'invisible', 
-      'sr-only', 
+      'dm-close',
+      'dm-share-btn',
+      'dm-empty-state',
+      'dm-error-state',
+      'hidden',
+      'invisible',
+      'sr-only',
       'no-print'
     ];
-    
+
     if (node.nodeType === Node.ELEMENT_NODE)
     {
       const el = node;
@@ -8068,7 +8128,7 @@ async function cacheShareableScoreCard()
       }
     }
     return true;
-  }
+  };
 
   // .dm-box is a capped, scrollable box on screen. Left as-is the clone would be
   // cropped at one viewport height, and its width:100% would resolve against a
@@ -8079,6 +8139,7 @@ async function cacheShareableScoreCard()
   clone.style.height = 'auto';
   clone.style.overflow = 'visible';
   clone.style.overflowY = 'visible';
+  clone.style.background = cardBackground;
 
   // Ids are deliberately kept on the clone: id-based rules such as #detailsSetsA
   // supply the team colours, and html-to-image reads computed style off these
@@ -8116,8 +8177,8 @@ async function cacheShareableScoreCard()
   try
   {
     blob = await toBlob(clone, {
-      pixelRatio: 2, // Higher quality
-      backgroundColor: getComputedStyle(document.body).backgroundColor,
+      pixelRatio: 2,
+      backgroundColor: cardBackground,
       filter: (node) => inclusions(node),
     });
   }
@@ -8131,42 +8192,16 @@ async function cacheShareableScoreCard()
     throw new Error('Failed to generate image');
   }
 
+  // Social sharing should always produce a square asset. The original card
+  // keeps its natural dimensions; this final pass adds matching-theme padding
+  // to whichever axis is shorter so no content is cropped.
+  const squareBlob = await padShareImageToSquare(blob, cardBackground);
+
   const file = new File(
-    [blob],
+    [squareBlob],
     'share-image.png',
     { type: 'image/png' }
   );
 
   shareableScoreCardImage = file;
-
-  // const modal = document.getElementById("shareImageModal");
-  // const preview = document.getElementById("shareImagePreview");
-  // const closeButton = document.getElementById("closeShareImageBtn");
-  // if (!modal || !preview || !closeButton) return;
-
-  // if (shareableScoreCardImageUrl)
-  // {
-  //   URL.revokeObjectURL(shareableScoreCardImageUrl);
-  // }
-
-  // shareableScoreCardImageUrl = URL.createObjectURL(shareableScoreCardImage);
-  // preview.src = shareableScoreCardImageUrl;
-  // modal.classList.remove("hidden");
-
-  // if (closeButton.dataset.bound !== "true")
-  // {
-  //   closeButton.dataset.bound = "true";
-  //   closeButton.addEventListener("click", dismissShareableScoreCard);
-  //   modal.addEventListener("click", (event) =>
-  //   {
-  //     if (event.target === modal) dismissShareableScoreCard();
-  //   });
-  //   document.addEventListener("keydown", (event) =>
-  //   {
-  //     if (event.key === "Escape" && !modal.classList.contains("hidden"))
-  //     {
-  //       dismissShareableScoreCard();
-  //     }
-  //   });
-  // }
 }
