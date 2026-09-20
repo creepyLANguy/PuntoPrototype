@@ -8355,4 +8355,3 @@ async function cacheShareableScoreCard()
   //     }
   //   });
   // }
-}
