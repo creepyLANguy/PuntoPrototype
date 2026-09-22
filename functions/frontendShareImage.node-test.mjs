@@ -27,8 +27,8 @@ test("capture uses the match-details modal surface", () => {
 test("share export uses 1080x1350 as both CSS and PNG dimensions", () => {
   assert.match(source, /const SHARE_IMAGE_WIDTH = 1080/);
   assert.match(source, /const SHARE_IMAGE_HEIGHT = 1350/);
-  assert.match(source, /clone\\.style\\.width =/);
-  assert.match(source, /clone\\.style\\.height =/);
+  assert.ok(source.includes("clone.style.width = `${SHARE_IMAGE_WIDTH}px`;"));
+  assert.ok(source.includes("clone.style.height = `${SHARE_IMAGE_HEIGHT}px`;"));
   assert.match(source, /width: SHARE_IMAGE_WIDTH/);
   assert.match(source, /height: SHARE_IMAGE_HEIGHT/);
   assert.match(source, /canvasWidth: SHARE_IMAGE_WIDTH/);
