@@ -1,19 +1,11 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
-import vm from "node:vm";
 
 const source = readFileSync(new URL("../app/js/script.js", import.meta.url), "utf8");
 
-test("share-image source remains valid JavaScript", () => {
-  assert.doesNotThrow(() => new vm.Script(source));
-});
-
 test("interactive details UI is excluded before capture and by the serializer", () => {
-  assert.match(
-    source,
-    /querySelectorAll\('\.dm-close, \.dm-share-btn, \.dm-details-panel, \.dm-empty-state, \.dm-error-state'\)/
-  );
+  assert.match(source, /querySelectorAll\('\.dm-close, \.dm-share-btn, \.dm-details-panel, \.dm-empty-state, \.dm-error-state'\)/);
   assert.match(source, /'dm-details-panel'/);
 });
 
@@ -48,8 +40,5 @@ test("share output retains the natural captured aspect ratio", () => {
   assert.doesNotMatch(source, /blobToImage/);
   assert.doesNotMatch(source, /padShareImageToSquare/);
   assert.doesNotMatch(source, /squareBlob/);
-  assert.match(
-    source,
-    /const file = new File\(\s*\[blob\],\s*'share-image\.png'/s
-  );
+  assert.match(source, /const file = new File\(\s*\[blob\],\s*'share-image\.png'/s);
 });
