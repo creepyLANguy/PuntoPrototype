@@ -7983,9 +7983,6 @@ async function cacheShareableScoreCard()
   const watermarkColor = isLightTheme ? '#111111' : '#ffffff';
   const watermarkLogoDataUrl = await getShareLogoDataUrl(watermarkColor);
 
-  const footerHeight = 96 * SHARE_IMAGE_SCALE;
-  const clone = element.cloneNode(true);
-
   // Share images are designed directly at their final 4:5 dimensions. The clone
   // uses the same CSS pixel dimensions as the final PNG, so typography, wrapping,
   // spacing, and QR sizing are all authored against the real export canvas.
@@ -7994,10 +7991,12 @@ async function cacheShareableScoreCard()
   const SHARE_IMAGE_HEIGHT = 1350;
   const SHARE_IMAGE_CONTENT_WIDTH = 840;
   const SHARE_IMAGE_SCALE = 2;
+  const footerHeight = 96 * SHARE_IMAGE_SCALE;
+
+  const clone = element.cloneNode(true);
 
   // Preserve the visual density of the previous 2x-rendered share image while
   // keeping the design itself authored at the final 1080x1350 CSS dimensions.
-  const shareScale = SHARE_IMAGE_SCALE;
   clone.style.padding = `56px 56px 48px`;
   clone.style.borderRadius = `48px`;
 
@@ -8222,7 +8221,7 @@ async function cacheShareableScoreCard()
 
   if (window.QRCode)
   {
-    const qrSize = Math.max(84, Math.min(120, footerHeight - 24));
+    const qrSize = Math.max(168, Math.min(240, footerHeight - 48));
     new window.QRCode(qrMount, {
       text: qrUrl,
       width: qrSize,
