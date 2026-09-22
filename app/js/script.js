@@ -8045,7 +8045,6 @@ async function cacheShareableScoreCard()
   footerPanel.style.boxSizing = 'border-box';
 
   const qrWrap = document.createElement('div');
-  qrWrap.style.position = 'relative';
   qrWrap.style.display = 'inline-flex';
   qrWrap.style.alignItems = 'center';
   qrWrap.style.justifyContent = 'center';
