@@ -7997,7 +7997,7 @@ async function cacheShareableScoreCard()
 
   // Preserve the visual density of the previous 2x-rendered share image while
   // keeping the design itself authored at the final 1080x1350 CSS dimensions.
-  clone.style.padding = `56px 56px 48px`;
+  clone.style.padding = `40px 56px 16px`;
   clone.style.borderRadius = `48px`;
 
   const shareLogo = clone.querySelector('.dm-logo');
@@ -8016,24 +8016,24 @@ async function cacheShareableScoreCard()
 
   if (shareLogo)
   {
-    shareLogo.style.width = `96px`;
-    shareLogo.style.height = `96px`;
+    shareLogo.style.width = `144px`;
+    shareLogo.style.height = `144px`;
   }
 
   if (shareHeader)
   {
-    shareHeader.style.gap = `12px`;
-    shareHeader.style.marginBottom = `32px`;
+    shareHeader.style.gap = `16px`;
+    shareHeader.style.marginBottom = `36px`;
   }
 
   if (shareTitle)
   {
-    shareTitle.style.fontSize = `3rem`;
+    shareTitle.style.fontSize = `4rem`;
   }
 
   if (shareCourtName)
   {
-    shareCourtName.style.fontSize = `2rem`;
+    shareCourtName.style.fontSize = `2.2rem`;
     shareCourtName.style.lineHeight = '1.2';
     shareCourtName.style.margin = '8px 0 0';
     shareCourtName.style.textAlign = 'center';
@@ -8041,35 +8041,35 @@ async function cacheShareableScoreCard()
 
   shareNames.forEach(node =>
   {
-    node.style.fontSize = `2.5rem`;
+    node.style.fontSize = `2.8rem`;
     node.style.maxWidth = '100%';
   });
 
   if (shareVs)
   {
-    shareVs.style.fontSize = `1.3rem`;
-    shareVs.style.lineHeight = '2';
+    shareVs.style.fontSize = `1.5rem`;
+    shareVs.style.lineHeight = '1.8';
   }
 
   if (shareTeams)
   {
-    shareTeams.style.marginBottom = `36px`;
+    shareTeams.style.marginBottom = `42px`;
   }
 
   if (shareOverall)
   {
-    shareOverall.style.gap = `24px`;
-    shareOverall.style.marginBottom = `40px`;
+    shareOverall.style.gap = `28px`;
+    shareOverall.style.marginBottom = `44px`;
   }
 
   shareSets.forEach(node =>
   {
-    node.style.fontSize = `6rem`;
+    node.style.fontSize = `6.5rem`;
   });
 
   if (shareDash)
   {
-    shareDash.style.fontSize = `3.6rem`;
+    shareDash.style.fontSize = `4rem`;
   }
 
   // Interactive controls and the details dropdown are part of the live modal,
@@ -8130,14 +8130,14 @@ async function cacheShareableScoreCard()
     shareTable.querySelectorAll('thead th').forEach(node =>
     {
       node.style.padding = '6px 16px 12px';
-      node.style.fontSize = '1.7rem';
+      node.style.fontSize = '1.9rem';
     });
 
     shareTable.querySelectorAll('tbody td').forEach(node =>
     {
       node.style.padding = '14px 16px';
       node.style.minWidth = '84px';
-      node.style.fontSize = '3.2rem';
+      node.style.fontSize = '3.5rem';
     });
 
     shareTable.querySelectorAll('.dm-marker-cell').forEach(node =>
@@ -8169,6 +8169,8 @@ async function cacheShareableScoreCard()
   {
     watermark.style.zIndex = '0';
     watermark.style.opacity = '0.5';
+    watermark.style.width = '100%';
+    watermark.style.height = '100%';
     watermark.style.borderRadius = '48px';
   }
 
@@ -8178,6 +8180,8 @@ async function cacheShareableScoreCard()
     watermarkImage.removeAttribute('srcset');
     watermarkImage.style.filter = 'none';
     watermarkImage.style.opacity = '0.06';
+    watermarkImage.style.width = '88%';
+    watermarkImage.style.maxWidth = 'none';
   }
 
   // A dedicated element appended to the card, rather than the details panel
@@ -8188,13 +8192,13 @@ async function cacheShareableScoreCard()
   clone.appendChild(footerPanel);
   footerPanel.style.width = `${SHARE_IMAGE_CONTENT_WIDTH}px`;
   footerPanel.style.maxWidth = '100%';
-  footerPanel.style.marginTop = `32px`;
+  footerPanel.style.marginTop = `24px`;
   footerPanel.style.display = 'flex';
   footerPanel.style.alignItems = 'center';
   footerPanel.style.justifyContent = 'center';
   footerPanel.style.gap = `28px`;
   footerPanel.style.padding = `24px 32px`;
-  footerPanel.style.minHeight = `${footerHeight}px`;
+  footerPanel.style.minHeight = `${footerHeight + 24}px`;
   footerPanel.style.boxSizing = 'border-box';
 
   const qrWrap = document.createElement('div');
@@ -8218,19 +8222,19 @@ async function cacheShareableScoreCard()
 
   const footerTitle = document.createElement('div');
   footerTitle.textContent = 'Scan for match details';
-  footerTitle.style.fontSize = `28px`;
+  footerTitle.style.fontSize = `30px`;
   footerTitle.style.fontWeight = '700';
   footerTitle.style.letterSpacing = '0.02em';
 
   const footerCourtId = document.createElement('div');
   footerCourtId.textContent = `Court ID: ${courtIdDisplay}`;
-  footerCourtId.style.fontSize = `32px`;
+  footerCourtId.style.fontSize = `34px`;
   footerCourtId.style.fontWeight = '800';
   footerCourtId.style.letterSpacing = '0.06em';
 
   const footerUrl = document.createElement('div');
   footerUrl.textContent = qrUrl;
-  footerUrl.style.fontSize = `22px`;
+  footerUrl.style.fontSize = `24px`;
   footerUrl.style.opacity = '0.85';
   footerUrl.style.overflow = 'hidden';
   footerUrl.style.textOverflow = 'ellipsis';
