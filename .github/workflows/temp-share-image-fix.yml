@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - fix/share-match-image-improvements
+  pull_request:
+    types: [synchronize]
 
 permissions:
   contents: write
@@ -23,50 +25,35 @@ jobs:
 
           path = Path('app/js/script.js')
           source = path.read_text()
+          helper_pattern = re.compile(r"async function blobToImage\(blob\)\n\{.*?\n\}\n\nasync function padShareImageToSquare\(blob, backgroundColor\)\n\{.*?\n\}\n\n(?=// The captured card is only ever consumed)", re.S)
+          source, count = helper_pattern.subn('// The captured card is only ever consumed', source)
+          if count != 1: raise SystemExit(f'Expected one square helper block, found {count}')
 
-          helper_pattern = re.compile(
-              r"async function blobToImage\(blob\)\n\{.*?\n\}\n\nasync function padShareImageToSquare\(blob, backgroundColor\)\n\{.*?\n\}\n\n(?=// The captured card is only ever consumed)",
-              re.S,
-          )
-          source, helper_count = helper_pattern.subn('// The captured card is only ever consumed', source)
-          if helper_count != 1:
-              raise SystemExit(f'Expected exactly one square-image helper block, found {helper_count}')
+          old = """  const clone = element.cloneNode(true);\n\n  // The modal intentionally ellipsizes long team names for the compact on-screen\n"""
+          new = """  const clone = element.cloneNode(true);\n\n  // Keep interactive details out of the share image. Remove them from the clone\n  // before html-to-image sees it, rather than relying only on CSS visibility.\n  clone\n    .querySelectorAll('.dm-close, .dm-share-btn, .dm-details-panel, .dm-empty-state, .dm-error-state')\n    .forEach(node => node.remove());\n\n  // The modal intentionally ellipsizes long team names for the compact on-screen\n"""
+          if source.count(old) != 1: raise SystemExit('Share clone block not found')
+          source = source.replace(old, new, 1)
 
-          old_clone = """  const clone = element.cloneNode(true);\n\n  // The modal intentionally ellipsizes long team names for the compact on-screen\n"""
-          new_clone = """  const clone = element.cloneNode(true);\n\n  // The share image intentionally excludes the interactive details dropdown/panel.\n  // This is applied to the clone itself so the excluded UI cannot leak into the\n  // rasterized image even if its CSS visibility changes.\n  clone\n    .querySelectorAll('.dm-close, .dm-share-btn, .dm-details-panel, .dm-empty-state, .dm-error-state')\n    .forEach(node => node.remove());\n\n  // The modal intentionally ellipsizes long team names for the compact on-screen\n"""
-          if source.count(old_clone) != 1:
-              raise SystemExit('Could not locate share-card clone block')
-          source = source.replace(old_clone, new_clone, 1)
+          old = """      'dm-close',\n      'dm-share-btn',\n      'dm-empty-state',\n"""
+          new = """      'dm-close',\n      'dm-share-btn',\n      'dm-details-panel',\n      'dm-empty-state',\n"""
+          if source.count(old) != 1: raise SystemExit('Share filter block not found')
+          source = source.replace(old, new, 1)
 
-          old_classes = """      'dm-close',\n      'dm-share-btn',\n      'dm-empty-state',\n"""
-          new_classes = """      'dm-close',\n      'dm-share-btn',\n      'dm-details-panel',\n      'dm-empty-state',\n"""
-          if source.count(old_classes) != 1:
-              raise SystemExit('Could not locate share-image filter exclusions')
-          source = source.replace(old_classes, new_classes, 1)
-
-          old_square = """  // Social sharing should always produce a square asset. The original card\n  // keeps its natural dimensions; this final pass adds matching-theme padding\n  // to whichever axis is shorter so no content is cropped.\n  const squareBlob = await padShareImageToSquare(blob, cardBackground);\n\n"""
-          if source.count(old_square) != 1:
-              raise SystemExit('Could not locate square-output block')
-          source = source.replace(old_square, '', 1)
-
-          if source.count("    [squareBlob],") != 1:
-              raise SystemExit('Expected exactly one squareBlob file output')
-          source = source.replace("    [squareBlob],", "    [blob],", 1)
-
+          old = """  // Social sharing should always produce a square asset. The original card\n  // keeps its natural dimensions; this final pass adds matching-theme padding\n  // to whichever axis is shorter so no content is cropped.\n  const squareBlob = await padShareImageToSquare(blob, cardBackground);\n\n"""
+          if source.count(old) != 1: raise SystemExit('Square output block not found')
+          source = source.replace(old, '', 1)
+          if source.count('    [squareBlob],') != 1: raise SystemExit('squareBlob output not found')
+          source = source.replace('    [squareBlob],', '    [blob],', 1)
           path.write_text(source)
 
           package_path = Path('functions/package.json')
           package = json.loads(package_path.read_text())
-          test_script = package['scripts']['test']
-          test_name = 'frontendShareImage.node-test.mjs'
-          if test_name not in test_script:
-              package['scripts']['test'] = test_script + ' ' + test_name
+          name = 'frontendShareImage.node-test.mjs'
+          if name not in package['scripts']['test']:
+              package['scripts']['test'] += ' ' + name
               package_path.write_text(json.dumps(package, indent=2) + '\n')
 
-          test_path = Path('functions/frontendShareImage.node-test.mjs')
-          test_path.write_text(r'''// Regression/contract tests for the shareable match-details image pipeline.
-// These tests protect the capture contract that has repeatedly regressed.
-import assert from "node:assert/strict";
+          Path('functions/frontendShareImage.node-test.mjs').write_text(r'''import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import vm from "node:vm";
@@ -78,13 +65,13 @@ test("share-image source remains valid JavaScript", () =>
   assert.doesNotThrow(() => new vm.Script(source));
 });
 
-test("share capture removes the interactive details panel", () =>
+test("interactive details panel is excluded from the share clone and filter", () =>
 {
   assert.match(source, /querySelectorAll\('\.dm-close, \.dm-share-btn, \.dm-details-panel, \.dm-empty-state, \.dm-error-state'\)\s*\n\s*\.forEach\(node => node\.remove\(\)\)/);
   assert.match(source, /'dm-details-panel'/);
 });
 
-test("share capture wraps long team names", () =>
+test("long team names use wrapping instead of ellipsis", () =>
 {
   assert.match(source, /node\.style\.whiteSpace = 'normal'/);
   assert.match(source, /node\.style\.textOverflow = 'clip'/);
@@ -92,21 +79,21 @@ test("share capture wraps long team names", () =>
   assert.match(source, /node\.style\.wordBreak = 'break-word'/);
 });
 
-test("share capture uses the modal surface", () =>
+test("capture uses the match-details modal surface", () =>
 {
   assert.match(source, /const cardBackground = getComputedStyle\(element\)\.backgroundColor/);
   assert.match(source, /clone\.style\.background = cardBackground/);
   assert.match(source, /backgroundColor: cardBackground/);
 });
 
-test("share capture preserves the light-theme watermark", () =>
+test("light-theme watermark is explicitly embedded", () =>
 {
   assert.match(source, /const watermarkColor = isLightTheme \? '#111111' : '#ffffff'/);
   assert.match(source, /watermarkImage\.src = watermarkLogoDataUrl/);
   assert.match(source, /watermarkImage\.style\.filter = 'none'/);
 });
 
-test("share QR has a centred Padel Push logo badge", () =>
+test("QR contains a centred Padel Push logo", () =>
 {
   assert.match(source, /const qrLogoBadge = document\.createElement\('span'\)/);
   assert.match(source, /qrLogoBadge\.style\.left = '50%'/);
@@ -127,8 +114,8 @@ test("share output keeps its natural aspect ratio", () =>
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git rm .github/workflows/temp-share-image-fix.yml
+          git rm .github/workflows/.share-image-fix-trigger 2>/dev/null || true
           git add app/js/script.js functions/package.json functions/frontendShareImage.node-test.mjs
           git diff --cached --check
-          git diff --cached --quiet && exit 0
           git commit -m "Fix share card exclusions and add regression tests"
           git push
