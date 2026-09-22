@@ -7912,76 +7912,7 @@ async function getShareLogoDataUrl(color = '#ffffff')
   return dataUrl;
 }
 
-async function blobToImage(blob)
-{
-  return new Promise((resolve, reject) =>
-  {
-    const objectUrl = URL.createObjectURL(blob);
-    const image = new Image();
-
-    image.onload = () =>
-    {
-      URL.revokeObjectURL(objectUrl);
-      resolve(image);
-    };
-
-    image.onerror = () =>
-    {
-      URL.revokeObjectURL(objectUrl);
-      reject(new Error('Could not read generated share image'));
-    };
-
-    image.src = objectUrl;
-  });
-}
-
-async function padShareImageToSquare(blob, backgroundColor)
-{
-  const image = await blobToImage(blob);
-  const width = image.naturalWidth || image.width;
-  const height = image.naturalHeight || image.height;
-  const side = Math.max(width, height);
-
-  const canvas = document.createElement('canvas');
-  canvas.width = side;
-  canvas.height = side;
-
-  const context = canvas.getContext('2d');
-  if (!context)
-  {
-    throw new Error('Could not create square share-image canvas');
-  }
-
-  const safeBackground = backgroundColor && backgroundColor !== 'rgba(0, 0, 0, 0)'
-    ? backgroundColor
-    : '#111111';
-
-  context.fillStyle = safeBackground;
-  context.fillRect(0, 0, side, side);
-
-  const x = Math.round((side - width) / 2);
-  const y = Math.round((side - height) / 2);
-  context.drawImage(image, x, y, width, height);
-
-  const squareBlob = await new Promise((resolve, reject) =>
-  {
-    canvas.toBlob(result =>
-    {
-      if (result)
-      {
-        resolve(result);
-      }
-      else
-      {
-        reject(new Error('Failed to create square share image'));
-      }
-    }, 'image/png');
-  });
-
-  return squareBlob;
-}
-
-// The captured card is only ever consumed as payload.files in getSharePayload,
+// The captured card is only ever consumed// The captured card is only ever consumed as payload.files in getSharePayload,
 // and that path is itself gated on navigator.canShare. Where the browser cannot
 // share files there is nothing to spend the capture on, so probe once with an
 // empty dummy file and reuse the answer.
@@ -8055,6 +7986,13 @@ async function cacheShareableScoreCard()
 
   const footerHeight = 96;
   const clone = element.cloneNode(true);
+
+  // Interactive controls and the details dropdown are part of the live modal,
+  // but must never be included in the shareable image. Remove them before
+  // html-to-image serializes the clone.
+  clone
+    .querySelectorAll('.dm-close, .dm-share-btn, .dm-details-panel, .dm-empty-state, .dm-error-state')
+    .forEach(node => node.remove());
 
   // The modal intentionally ellipsizes long team names for the compact on-screen
   // layout. The share image has enough vertical space to wrap them instead.
@@ -8229,6 +8167,7 @@ async function cacheShareableScoreCard()
     const excludedClasses = [
       'dm-close',
       'dm-share-btn',
+      'dm-details-panel',
       'dm-empty-state',
       'dm-error-state',
       'hidden',
@@ -8312,13 +8251,8 @@ async function cacheShareableScoreCard()
     throw new Error('Failed to generate image');
   }
 
-  // Social sharing should always produce a square asset. The original card
-  // keeps its natural dimensions; this final pass adds matching-theme padding
-  // to whichever axis is shorter so no content is cropped.
-  const squareBlob = await padShareImageToSquare(blob, cardBackground);
-
   const file = new File(
-    [squareBlob],
+    [blob],
     'share-image.png',
     { type: 'image/png' }
   );
