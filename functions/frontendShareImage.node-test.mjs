@@ -23,16 +23,17 @@ test("capture uses the match-details modal surface", () => {
   assert.match(source, /backgroundColor: cardBackground/);
 });
 
-test("per-set table spacing is compacted only on the cloned share card", () => {
-  assert.match(source, /const shareTableWrap = clone\.querySelector\('\.dm-table-wrap'\)/);
-  assert.match(source, /shareTableWrap\.style\.padding = '6px 10px'/);
-  assert.match(source, /shareTable\.style\.width = 'max-content'/);
+test("share layout uses a common content width without over-compressing scores", () => {
+  assert.match(source, /const shareContentWidth = sourceWidth > 0/);
+  assert.match(source, /Math\.min\(360, Math\.max\(220, sourceWidth - 64\)\)/);
+  assert.match(source, /node\.style\.width = \`\\$\{shareContentWidth\\}px\`/);
+  assert.match(source, /shareTableWrap\.style\.padding = '8px 12px'/);
+  assert.match(source, /shareTable\.style\.width = '100%'/);
   assert.match(source, /shareTable\.style\.minWidth = '0'/);
-  assert.match(source, /shareTable\.style\.margin = '0 auto'/);
-  assert.match(source, /node\.style\.padding = '2px 6px 4px'/);
-  assert.match(source, /node\.style\.padding = '5px 6px'/);
-  assert.match(source, /node\.style\.minWidth = '38px'/);
-  assert.doesNotMatch(source, /\.dm-table-wrap\s*\{[^}]*padding:\s*6px 10px/s);
+  assert.match(source, /node\.style\.padding = '3px 8px 6px'/);
+  assert.match(source, /node\.style\.padding = '7px 8px'/);
+  assert.match(source, /node\.style\.minWidth = '42px'/);
+  assert.doesNotMatch(source, /shareTable\.style\.width = 'max-content'/);
 });
 
 test("light-theme watermark is explicitly embedded", () => {
