@@ -8003,12 +8003,16 @@ async function cacheShareableScoreCard()
   const shareLogo = clone.querySelector('.dm-logo');
   const shareHeader = clone.querySelector('.dm-header');
   const shareTitle = clone.querySelector('.dm-title');
+  const shareCourtName = clone.querySelector('#matchDetailsCourtName');
   const shareTeams = clone.querySelector('.dm-teams');
   const shareNames = clone.querySelectorAll('.dm-name');
   const shareVs = clone.querySelector('.dm-vs');
   const shareOverall = clone.querySelector('.dm-overall');
   const shareSets = clone.querySelectorAll('.dm-sets');
   const shareDash = clone.querySelector('.dm-dash');
+  const shareMidSection = clone.querySelector('.dm-mid-section');
+  const shareTableWrap = clone.querySelector('.dm-table-wrap');
+  const shareTable = clone.querySelector('.dm-table');
 
   if (shareLogo)
   {
@@ -8093,10 +8097,6 @@ async function cacheShareableScoreCard()
   // The share image uses one common 840px final-resolution content column.
   // All visible information blocks are constrained to that same column, while
   // the live details modal keeps its normal responsive width.
-  const shareMidSection = clone.querySelector('.dm-mid-section');
-  const shareTableWrap = clone.querySelector('.dm-table-wrap');
-  const shareCourtName = clone.querySelector('#matchDetailsCourtName');
-
   [shareHeader, shareMidSection, shareTableWrap].forEach(node =>
   {
     if (!node) return;
