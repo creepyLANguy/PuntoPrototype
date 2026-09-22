@@ -7986,6 +7986,11 @@ async function cacheShareableScoreCard()
   const footerHeight = 96;
   const clone = element.cloneNode(true);
 
+  // .dm-box is a capped, scrollable box on screen. Left as-is the clone would be
+  // cropped at one viewport height, and its width:100% would resolve against a
+  // shrink-to-fit parent rather than the width the user actually sees.
+  const sourceWidth = Math.round(element.getBoundingClientRect().width);
+
   // Interactive controls and the details dropdown are part of the live modal,
   // but must never be included in the shareable image. Remove them before
   // html-to-image serializes the clone.
@@ -8025,7 +8030,7 @@ async function cacheShareableScoreCard()
   [shareHeader, shareMidSection, shareTableWrap].forEach(node =>
   {
     if (!node) return;
-    node.style.width = \`${shareContentWidth}px\`;
+    node.style.width = `${shareContentWidth}px`;
     node.style.maxWidth = '100%';
     node.style.boxSizing = 'border-box';
   });
@@ -8072,11 +8077,6 @@ async function cacheShareableScoreCard()
   // Make the watermark deterministic for html-to-image. The light-theme version
   // previously depended on CSS filter inversion of the white SVG, which can be
   // omitted by the serializer and leave the watermark invisible on white.
-  // .dm-box is a capped, scrollable box on screen. Left as-is the clone would be
-  // cropped at one viewport height, and its width:100% would resolve against a
-  // shrink-to-fit parent rather than the width the user actually sees.
-  const sourceWidth = Math.round(element.getBoundingClientRect().width);
-
   const watermark = clone.querySelector('.dm-watermark');
   const watermarkImage = watermark?.querySelector('img');
 
@@ -8100,7 +8100,7 @@ async function cacheShareableScoreCard()
   // edges with a gap down the middle.
   const footerPanel = document.createElement('div');
   clone.appendChild(footerPanel);
-  footerPanel.style.width = \`${shareContentWidth}px\`;
+  footerPanel.style.width = `${shareContentWidth}px`;
   footerPanel.style.maxWidth = '100%';
   footerPanel.style.marginTop = '16px';
   footerPanel.style.display = 'flex';
