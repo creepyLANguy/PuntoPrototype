@@ -23,6 +23,18 @@ test("capture uses the match-details modal surface", () => {
   assert.match(source, /backgroundColor: cardBackground/);
 });
 
+test("per-set table spacing is compacted only on the cloned share card", () => {
+  assert.match(source, /const shareTableWrap = clone\.querySelector\('\.dm-table-wrap'\)/);
+  assert.match(source, /shareTableWrap\.style\.padding = '6px 10px'/);
+  assert.match(source, /shareTable\.style\.width = 'max-content'/);
+  assert.match(source, /shareTable\.style\.minWidth = '0'/);
+  assert.match(source, /shareTable\.style\.margin = '0 auto'/);
+  assert.match(source, /node\.style\.padding = '2px 6px 4px'/);
+  assert.match(source, /node\.style\.padding = '5px 6px'/);
+  assert.match(source, /node\.style\.minWidth = '38px'/);
+  assert.doesNotMatch(source, /\.dm-table-wrap\s*\{[^}]*padding:\s*6px 10px/s);
+});
+
 test("light-theme watermark is explicitly embedded", () => {
   assert.match(source, /const watermarkColor = isLightTheme \? '#111111' : '#ffffff'/);
   assert.match(source, /watermarkImage\.src = watermarkLogoDataUrl/);
