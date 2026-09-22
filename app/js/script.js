@@ -7859,7 +7859,7 @@ let shareableScoreCardImage = null;
 
 // Cache the Padel Push logo as a same-origin PNG data URL. This avoids relying on
 // SVG/CSS filter rendering inside html-to-image, which is particularly fragile
-// for the light-theme watermark and for the QR-code centre badge.
+// for the light-theme watermark.
 const shareLogoDataUrlCache = new Map();
 
 async function getShareLogoDataUrl(color = '#ffffff')
@@ -7981,7 +7981,6 @@ async function cacheShareableScoreCard()
   const cardBackground = getComputedStyle(element).backgroundColor || '#111111';
   const isLightTheme = document.body.classList.contains('light-mode');
   const watermarkColor = isLightTheme ? '#111111' : '#ffffff';
-  const shareLogoDataUrl = await getShareLogoDataUrl('#ffffff');
   const watermarkLogoDataUrl = await getShareLogoDataUrl(watermarkColor);
 
   const footerHeight = 96;
@@ -8122,33 +8121,6 @@ async function cacheShareableScoreCard()
       qrImage.style.display = 'block';
       qrMount.appendChild(qrImage);
 
-      // Match the QR presentation used elsewhere in Padel Push: a small black
-      // circular badge with the white Padel Push logo centred over the QR code.
-      const qrLogoBadge = document.createElement('span');
-      qrLogoBadge.style.position = 'absolute';
-      qrLogoBadge.style.left = '50%';
-      qrLogoBadge.style.top = '50%';
-      qrLogoBadge.style.transform = 'translate(-50%, -50%)';
-      qrLogoBadge.style.width = '32px';
-      qrLogoBadge.style.height = '32px';
-      qrLogoBadge.style.borderRadius = '50%';
-      qrLogoBadge.style.background = '#000000';
-      qrLogoBadge.style.boxSizing = 'border-box';
-      qrLogoBadge.style.padding = '4px';
-      qrLogoBadge.style.display = 'flex';
-      qrLogoBadge.style.alignItems = 'center';
-      qrLogoBadge.style.justifyContent = 'center';
-
-      const qrLogo = document.createElement('img');
-      qrLogo.src = shareLogoDataUrl;
-      qrLogo.alt = '';
-      qrLogo.style.display = 'block';
-      qrLogo.style.width = '100%';
-      qrLogo.style.height = '100%';
-      qrLogo.style.objectFit = 'contain';
-
-      qrLogoBadge.appendChild(qrLogo);
-      qrWrap.appendChild(qrLogoBadge);
     }
     else
     {
