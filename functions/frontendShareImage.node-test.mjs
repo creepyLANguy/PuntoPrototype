@@ -24,33 +24,42 @@ test("capture uses the match-details modal surface", () => {
   assert.match(source, /backgroundColor: cardBackground/);
 });
 
-test("share export uses the fixed 1080x1350 canvas", () => {
-  assert.match(source, /const SHARE_IMAGE_EXPORT_WIDTH = 1080/);
-  assert.match(source, /const SHARE_IMAGE_EXPORT_HEIGHT = 1350/);
-  assert.match(source, /const SHARE_IMAGE_CSS_WIDTH = SHARE_IMAGE_EXPORT_WIDTH \/ 2/);
-  assert.match(source, /const SHARE_IMAGE_CSS_HEIGHT = SHARE_IMAGE_EXPORT_HEIGHT \/ 2/);
-  assert.match(source, /width: SHARE_IMAGE_CSS_WIDTH/);
-  assert.match(source, /height: SHARE_IMAGE_CSS_HEIGHT/);
-  assert.match(source, /canvasWidth: SHARE_IMAGE_EXPORT_WIDTH/);
-  assert.match(source, /canvasHeight: SHARE_IMAGE_EXPORT_HEIGHT/);
+test("share export uses 1080x1350 as both CSS and PNG dimensions", () => {
+  assert.match(source, /const SHARE_IMAGE_WIDTH = 1080/);
+  assert.match(source, /const SHARE_IMAGE_HEIGHT = 1350/);
+  assert.match(source, /clone\\.style\\.width =/);
+  assert.match(source, /clone\\.style\\.height =/);
+  assert.match(source, /width: SHARE_IMAGE_WIDTH/);
+  assert.match(source, /height: SHARE_IMAGE_HEIGHT/);
+  assert.match(source, /canvasWidth: SHARE_IMAGE_WIDTH/);
+  assert.match(source, /canvasHeight: SHARE_IMAGE_HEIGHT/);
   assert.match(source, /pixelRatio: 1/);
   assert.doesNotMatch(source, /pixelRatio: 2/);
+  assert.doesNotMatch(source, /SHARE_IMAGE_CSS_WIDTH/);
+  assert.doesNotMatch(source, /SHARE_IMAGE_CSS_HEIGHT/);
   assert.doesNotMatch(source, /const sourceWidth =/);
 });
 
-test("share content uses a common 840px final-resolution column", () => {
-  assert.match(source, /const SHARE_IMAGE_EXPORT_CONTENT_WIDTH = 840/);
-  assert.match(source, /const SHARE_IMAGE_CSS_CONTENT_WIDTH = SHARE_IMAGE_EXPORT_CONTENT_WIDTH \/ 2/);
-  assert.match(source, /node\.style\.width = `\$\{SHARE_IMAGE_CSS_CONTENT_WIDTH\}px`/);
-  assert.match(source, /shareTableWrap\.style\.padding = '8px 12px'/);
+test("share content uses a common 840px CSS-pixel column", () => {
+  assert.match(source, /const SHARE_IMAGE_CONTENT_WIDTH = 840/);
+  assert.match(source, /SHARE_IMAGE_CONTENT_WIDTH/);
+  assert.match(source, /shareTableWrap\.style\.padding = '16px 24px'/);
   assert.match(source, /shareTable\.style\.width = '100%'/);
   assert.match(source, /shareTable\.style\.minWidth = '0'/);
-  assert.match(source, /node\.style\.padding = '3px 8px 6px'/);
-  assert.match(source, /node\.style\.padding = '7px 8px'/);
-  assert.match(source, /node\.style\.minWidth = '42px'/);
+  assert.match(source, /node\.style\.padding = '6px 16px 12px'/);
+  assert.match(source, /node\.style\.padding = '14px 16px'/);
+  assert.match(source, /node\.style\.minWidth = '84px'/);
   assert.doesNotMatch(source, /shareTable\.style\.width = 'max-content'/);
 });
 
+test("share-only visual scaling stays inside the image-capture path", () => {
+  assert.match(source, /const SHARE_IMAGE_SCALE = 2/);
+  assert.match(source, /clone\.style\.padding = `56px 56px 48px`/);
+  assert.match(source, /shareNames\.forEach/);
+  assert.match(source, /node\.style\.fontSize = `2\.5rem`/);
+  assert.match(source, /footerPanel\.style\.width/);
+  assert.match(source, /const qrSize = Math\.max\(168, Math\.min\(240, footerHeight - 48\)\)/);
+});
 test("share-only sizing does not alter the live modal stylesheet", () => {
   assert.match(liveStyles, /\.dm-box\s*\{[\s\S]*?width:\s*100%;[\s\S]*?max-width:\s*480px;/);
   assert.match(liveStyles, /\.dm-table\s*\{[\s\S]*?width:\s*100%;/);
