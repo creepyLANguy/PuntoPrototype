@@ -57,7 +57,7 @@ test("share-only visual scaling stays inside the image-capture path", () => {
   assert.match(source, /clone\.style\.padding = `56px 56px 48px`/);
   assert.match(source, /shareNames\.forEach/);
   assert.match(source, /node\.style\.fontSize = `2\.5rem`/);
-  assert.match(source, /shareTable\.style\.borderRadius = '32px'/);
+  assert.match(source, /shareTableWrap\.style\.borderRadius = '32px'/);
   assert.match(source, /node\.style\.fontSize = '1\.7rem'/);
   assert.match(source, /node\.style\.fontSize = '3\.2rem'/);
   assert.match(source, /node\.style\.minHeight = '72px'/);
