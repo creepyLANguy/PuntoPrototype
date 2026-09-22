@@ -29,11 +29,12 @@ test("light-theme watermark is explicitly embedded", () => {
   assert.match(source, /watermarkImage\.style\.filter = 'none'/);
 });
 
-test("QR has a centred Padel Push logo", () => {
-  assert.match(source, /const qrLogoBadge = document\.createElement\('span'\)/);
-  assert.match(source, /qrLogoBadge\.style\.left = '50%'/);
-  assert.match(source, /qrLogoBadge\.style\.top = '50%'/);
-  assert.match(source, /qrLogo\.src = shareLogoDataUrl/);
+test("QR contains only the QR image without an overlaid Padel Push logo", () => {
+  assert.match(source, /new window\.QRCode\(qrMount/);
+  assert.match(source, /const qrDataUrl = qrCanvas\.toDataURL\('image\/png'\)/);
+  assert.doesNotMatch(source, /qrLogoBadge/);
+  assert.doesNotMatch(source, /qrLogo\.src = shareLogoDataUrl/);
+  assert.doesNotMatch(source, /const shareLogoDataUrl = /);
 });
 
 test("share output retains the natural captured aspect ratio", () => {
