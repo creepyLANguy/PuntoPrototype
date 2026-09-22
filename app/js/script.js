@@ -7986,10 +7986,15 @@ async function cacheShareableScoreCard()
   const footerHeight = 96;
   const clone = element.cloneNode(true);
 
-  // .dm-box is a capped, scrollable box on screen. Left as-is the clone would be
-  // cropped at one viewport height, and its width:100% would resolve against a
-  // shrink-to-fit parent rather than the width the user actually sees.
-  const sourceWidth = Math.round(element.getBoundingClientRect().width);
+  // Share images are rendered on a fixed 4:5 social-card canvas. The DOM is laid
+  // out at half resolution, then rendered onto the exact final pixel dimensions.
+  // Keeping these values here makes the sizing explicitly local to image sharing.
+  const SHARE_IMAGE_EXPORT_WIDTH = 1080;
+  const SHARE_IMAGE_EXPORT_HEIGHT = 1350;
+  const SHARE_IMAGE_EXPORT_CONTENT_WIDTH = 840;
+  const SHARE_IMAGE_CSS_WIDTH = SHARE_IMAGE_EXPORT_WIDTH / 2;
+  const SHARE_IMAGE_CSS_HEIGHT = SHARE_IMAGE_EXPORT_HEIGHT / 2;
+  const SHARE_IMAGE_CSS_CONTENT_WIDTH = SHARE_IMAGE_EXPORT_CONTENT_WIDTH / 2;
 
   // Interactive controls and the details dropdown are part of the live modal,
   // but must never be included in the shareable image. Remove them before
@@ -8013,13 +8018,9 @@ async function cacheShareableScoreCard()
     node.style.lineHeight = '1.15';
   });
 
-  // The share image uses a narrower common content column so the table, team names,
-  // header, and QR footer read as one coherent block instead of inheriting the
-  // full modal width. Keep this styling on the clone only; the live details modal
-  // retains its normal responsive width.
-  const shareContentWidth = sourceWidth > 0
-    ? Math.min(360, Math.max(220, sourceWidth - 64))
-    : 320;
+  // The share image uses one common 840px final-resolution content column.
+  // All visible information blocks are constrained to that same column, while
+  // the live details modal keeps its normal responsive width.
   const shareHeader = clone.querySelector('.dm-header');
   const shareMidSection = clone.querySelector('.dm-mid-section');
   const shareTableWrap = clone.querySelector('.dm-table-wrap');
@@ -8030,7 +8031,7 @@ async function cacheShareableScoreCard()
   [shareHeader, shareMidSection, shareTableWrap].forEach(node =>
   {
     if (!node) return;
-    node.style.width = `${shareContentWidth}px`;
+    node.style.width = `${SHARE_IMAGE_CSS_CONTENT_WIDTH}px`;
     node.style.maxWidth = '100%';
     node.style.boxSizing = 'border-box';
   });
@@ -8100,7 +8101,7 @@ async function cacheShareableScoreCard()
   // edges with a gap down the middle.
   const footerPanel = document.createElement('div');
   clone.appendChild(footerPanel);
-  footerPanel.style.width = `${shareContentWidth}px`;
+  footerPanel.style.width = `${SHARE_IMAGE_CSS_CONTENT_WIDTH}px`;
   footerPanel.style.maxWidth = '100%';
   footerPanel.style.marginTop = '16px';
   footerPanel.style.display = 'flex';
@@ -8233,8 +8234,13 @@ async function cacheShareableScoreCard()
     return true;
   };
 
-  clone.style.maxHeight = 'none';
-  clone.style.height = 'auto';
+  clone.style.width = `${SHARE_IMAGE_CSS_WIDTH}px`;
+  clone.style.height = `${SHARE_IMAGE_CSS_HEIGHT}px`;
+  clone.style.minWidth = `${SHARE_IMAGE_CSS_WIDTH}px`;
+  clone.style.maxWidth = `${SHARE_IMAGE_CSS_WIDTH}px`;
+  clone.style.minHeight = `${SHARE_IMAGE_CSS_HEIGHT}px`;
+  clone.style.maxHeight = `${SHARE_IMAGE_CSS_HEIGHT}px`;
+  clone.style.boxSizing = 'border-box';
   clone.style.overflow = 'visible';
   clone.style.overflowY = 'visible';
   clone.style.background = cardBackground;
@@ -8245,10 +8251,7 @@ async function cacheShareableScoreCard()
   staging.style.top = '0';
   staging.style.pointerEvents = 'none';
   staging.style.zIndex = '-1';
-  if (sourceWidth > 0)
-  {
-    staging.style.width = `${sourceWidth}px`;
-  }
+  staging.style.width = `${SHARE_IMAGE_CSS_WIDTH}px`;
   staging.appendChild(clone);
   document.body.appendChild(staging);
 
@@ -8269,7 +8272,11 @@ async function cacheShareableScoreCard()
   try
   {
     blob = await toBlob(clone, {
-      pixelRatio: 2,
+      width: SHARE_IMAGE_CSS_WIDTH,
+      height: SHARE_IMAGE_CSS_HEIGHT,
+      canvasWidth: SHARE_IMAGE_EXPORT_WIDTH,
+      canvasHeight: SHARE_IMAGE_EXPORT_HEIGHT,
+      pixelRatio: 1,
       backgroundColor: cardBackground,
       filter: (node) => inclusions(node),
     });
