@@ -53,7 +53,6 @@ The single `.github/workflows/deploy.yml` workflow runs on pushes that affect ap
 
 Preview channels are isolated:
 
-- pull-request deployments can use `pr-<number>` channels when deployed through a workflow configured for pull requests;
 - non-main branch pushes use a stable hashed branch channel in the current deployment workflow.
 
 Reviewers should validate branch-specific changes against the relevant staging preview and staging backend without overwriting production.
@@ -83,6 +82,6 @@ If Firebase Analytics is added later, keep staging analytics disabled or send st
 
 ## Rules and indexes
 
-The repository tracks `firestore.rules` and `firestore.indexes.json`. The Firebase deployment workflow deploys the tracked Firebase configuration to the selected environment, so changes to these files should be validated against both staging and production expectations before release.
+The repository tracks `firestore.rules` and `firestore.indexes.json`. The current Firebase deployment workflow deploys only Hosting and Functions (`--only functions,hosting`). Changes to Firestore rules or indexes are therefore not automatically deployed by this workflow and require an explicit Firestore deployment step when they are ready for release.
 
 Storage rules are not currently tracked in this repository.
