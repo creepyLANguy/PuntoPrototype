@@ -8008,6 +8008,38 @@ async function cacheShareableScoreCard()
     node.style.lineHeight = '1.15';
   });
 
+  // Compact the per-set score table only in the generated share image. The live
+  // details modal keeps its normal spacing; these styles apply to the cloned DOM
+  // that html-to-image serializes.
+  const shareTableWrap = clone.querySelector('.dm-table-wrap');
+  const shareTable = clone.querySelector('.dm-table');
+
+  if (shareTableWrap && shareTable)
+  {
+    shareTableWrap.style.padding = '6px 10px';
+    shareTableWrap.style.overflow = 'visible';
+    shareTable.style.width = 'max-content';
+    shareTable.style.minWidth = '0';
+    shareTable.style.margin = '0 auto';
+
+    shareTable.querySelectorAll('thead th').forEach(node =>
+    {
+      node.style.padding = '2px 6px 4px';
+    });
+
+    shareTable.querySelectorAll('tbody td').forEach(node =>
+    {
+      node.style.padding = '5px 6px';
+      node.style.minWidth = '38px';
+    });
+
+    shareTable.querySelectorAll('.dm-marker-cell').forEach(node =>
+    {
+      node.style.width = '6px';
+      node.style.paddingRight = '8px';
+    });
+  }
+
   // Make the watermark deterministic for html-to-image. The light-theme version
   // previously depended on CSS filter inversion of the white SVG, which can be
   // omitted by the serializer and leave the watermark invisible on white.
