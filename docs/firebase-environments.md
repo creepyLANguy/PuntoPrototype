@@ -9,6 +9,8 @@ This repository now supports two Firebase targets:
 
 ## GitHub Actions configuration
 
+The repository uses a single Firebase deployment workflow at `.github/workflows/deploy.yml`. The workflow contains separate production and staging jobs and deploys both Firebase Hosting and Functions.
+
 Add these repository variables:
 
 - `FIREBASE_PROJECT_ID_PRODUCTION`
@@ -34,25 +36,28 @@ The config secrets must contain the full contents of `app/js/firebase-config.js`
 
 Because `app/js/firebase-config.js` is gitignored, local environment switches stay out of source control.
 
-## Hosting deployment flow
+## Firebase deployment flow
 
-- Push to `main` -> deploys Hosting to the production Firebase project.
-- Push to any other branch -> deploys a 7-day Firebase Hosting preview channel in the staging Firebase project.
-- Open or update a pull request -> refreshes the staging preview and comments the preview URL on the PR.
+The single `.github/workflows/deploy.yml` workflow runs on pushes that affect application, Functions, Firebase configuration, or deployment workflow files.
+
+### Production
+
+- Pushes to `main` deploy Hosting and Functions to the production Firebase project.
+- Production uses `FIREBASE_PROJECT_ID_PRODUCTION` and the corresponding production token/config secrets.
+
+### Staging
+
+- Pushes to non-`main` branches deploy Hosting and Functions to the staging Firebase project.
+- Non-`main` branch pushes deploy a 7-day Firebase Hosting preview channel.
+- Staging uses `FIREBASE_PROJECT_ID_STAGING` and the corresponding staging token/config secrets.
 
 Preview channels are isolated:
 
-- pull requests use `pr-<number>`
-- non-main branch pushes use a stable hashed branch channel
+- non-main branch pushes use a stable hashed branch channel in the current deployment workflow.
 
-This lets reviewers test branch-specific changes without overwriting production Hosting.
+Reviewers should validate branch-specific changes against the relevant staging preview and staging backend without overwriting production.
 
-## Functions deployment flow
-
-- Pushes to `main` deploy Functions to the production Firebase project.
-- Pushes to non-main branches deploy Functions to the shared staging Firebase project.
-
-This keeps production callable functions tied to `main` while allowing feature work to exercise the staging backend.
+The current deployment workflow is triggered by `push` events; opening or updating a pull request by itself does not trigger a deployment.
 
 ## Data and auth isolation
 
@@ -67,7 +72,7 @@ If Firebase Analytics is added later, keep staging analytics disabled or send st
 1. Develop on a feature branch.
 2. Validate against the staging preview URL and staging backend.
 3. Merge into `main`.
-4. Let the production Hosting and Functions workflows deploy the merged code to the production Firebase project (`FIREBASE_PROJECT_ID_PRODUCTION`).
+4. The production job in `.github/workflows/deploy.yml` deploys the merged code to the production Firebase project (`FIREBASE_PROJECT_ID_PRODUCTION`).
 
 ## Rollback
 
@@ -77,4 +82,6 @@ If Firebase Analytics is added later, keep staging analytics disabled or send st
 
 ## Rules and indexes
 
-There are currently no tracked Firestore rules, Storage rules, or Firestore index files in this repository. If those files are added later, include them in both production and staging deployment workflows so environment protections stay aligned.
+The repository tracks `firestore.rules` and `firestore.indexes.json`. The current Firebase deployment workflow deploys only Hosting and Functions (`--only functions,hosting`). Changes to Firestore rules or indexes are therefore not automatically deployed by this workflow and require an explicit Firestore deployment step when they are ready for release.
+
+Storage rules are not currently tracked in this repository.
