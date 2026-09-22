@@ -26,7 +26,7 @@ test("capture uses the match-details modal surface", () => {
 test("share layout uses a common content width without over-compressing scores", () => {
   assert.match(source, /const shareContentWidth = sourceWidth > 0/);
   assert.match(source, /Math\.min\(360, Math\.max\(220, sourceWidth - 64\)\)/);
-  assert.match(source, /node\.style\.width = \`\\$\{shareContentWidth\\}px\`/);
+  assert.match(source, /node\.style\.width = `\$\{shareContentWidth\}px`/);
   assert.match(source, /shareTableWrap\.style\.padding = '8px 12px'/);
   assert.match(source, /shareTable\.style\.width = '100%'/);
   assert.match(source, /shareTable\.style\.minWidth = '0'/);
