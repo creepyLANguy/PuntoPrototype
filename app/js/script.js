@@ -8027,6 +8027,14 @@ async function cacheShareableScoreCard()
     shareTitle.style.fontSize = `3rem`;
   }
 
+  if (shareCourtName)
+  {
+    shareCourtName.style.fontSize = `2rem`;
+    shareCourtName.style.lineHeight = '1.2';
+    shareCourtName.style.margin = '8px 0 0';
+    shareCourtName.style.textAlign = 'center';
+  }
+
   shareNames.forEach(node =>
   {
     node.style.fontSize = `2.5rem`;
@@ -8087,7 +8095,7 @@ async function cacheShareableScoreCard()
   // the live details modal keeps its normal responsive width.
   const shareMidSection = clone.querySelector('.dm-mid-section');
   const shareTableWrap = clone.querySelector('.dm-table-wrap');
-  const shareTable = clone.querySelector('.dm-table');
+  const shareCourtName = clone.querySelector('#matchDetailsCourtName');
 
   [shareHeader, shareMidSection, shareTableWrap].forEach(node =>
   {
@@ -8114,6 +8122,7 @@ async function cacheShareableScoreCard()
     shareTableWrap.style.padding = '16px 24px';
     shareTableWrap.style.overflow = 'visible';
     shareTableWrap.style.boxSizing = 'border-box';
+    shareTableWrap.style.borderRadius = '32px';
     shareTable.style.width = '100%';
     shareTable.style.minWidth = '0';
     shareTable.style.margin = '0';
@@ -8121,18 +8130,32 @@ async function cacheShareableScoreCard()
     shareTable.querySelectorAll('thead th').forEach(node =>
     {
       node.style.padding = '6px 16px 12px';
+      node.style.fontSize = '1.7rem';
     });
 
     shareTable.querySelectorAll('tbody td').forEach(node =>
     {
       node.style.padding = '14px 16px';
       node.style.minWidth = '84px';
+      node.style.fontSize = '3.2rem';
     });
 
     shareTable.querySelectorAll('.dm-marker-cell').forEach(node =>
     {
-      node.style.width = '6px';
+      node.style.width = '12px';
       node.style.paddingRight = '20px';
+    });
+
+    shareTable.querySelectorAll('.dm-marker-cell span').forEach(node =>
+    {
+      node.style.width = '8px';
+      node.style.minHeight = '72px';
+      node.style.borderRadius = '4px';
+    });
+
+    shareTable.querySelectorAll('.dm-row-separator td').forEach(node =>
+    {
+      node.style.height = '2px';
     });
   }
 
@@ -8146,6 +8169,7 @@ async function cacheShareableScoreCard()
   {
     watermark.style.zIndex = '0';
     watermark.style.opacity = '0.5';
+    watermark.style.borderRadius = '48px';
   }
 
   if (watermarkImage)
@@ -8179,7 +8203,7 @@ async function cacheShareableScoreCard()
   qrWrap.style.justifyContent = 'center';
   qrWrap.style.padding = `16px`;
   qrWrap.style.background = '#ffffff';
-  qrWrap.style.borderRadius = '10px';
+  qrWrap.style.borderRadius = '20px';
   qrWrap.style.flex = '0 0 auto';
 
   const qrMount = document.createElement('div');
@@ -8188,7 +8212,7 @@ async function cacheShareableScoreCard()
   const footerText = document.createElement('div');
   footerText.style.display = 'flex';
   footerText.style.flexDirection = 'column';
-  footerText.style.gap = '4px';
+  footerText.style.gap = '8px';
   footerText.style.flex = '0 1 auto';
   footerText.style.minWidth = '0';
 
