@@ -8008,41 +8008,75 @@ async function cacheShareableScoreCard()
     node.style.lineHeight = '1.15';
   });
 
-  // Compact the per-set score table only in the generated share image. The live
-  // details modal keeps its normal spacing; these styles apply to the cloned DOM
-  // that html-to-image serializes.
+  // The share image uses a narrower common content column so the table, team names,
+  // header, and QR footer read as one coherent block instead of inheriting the
+  // full modal width. Keep this styling on the clone only; the live details modal
+  // retains its normal responsive width.
+  const shareContentWidth = sourceWidth > 0
+    ? Math.min(360, Math.max(220, sourceWidth - 64))
+    : 320;
+  const shareHeader = clone.querySelector('.dm-header');
+  const shareMidSection = clone.querySelector('.dm-mid-section');
   const shareTableWrap = clone.querySelector('.dm-table-wrap');
   const shareTable = clone.querySelector('.dm-table');
+  const shareOverall = clone.querySelector('.dm-overall');
+  const shareTeams = clone.querySelector('.dm-teams');
+
+  [shareHeader, shareMidSection, shareTableWrap].forEach(node =>
+  {
+    if (!node) return;
+    node.style.width = \`${shareContentWidth}px\`;
+    node.style.maxWidth = '100%';
+    node.style.boxSizing = 'border-box';
+  });
+
+  if (shareOverall)
+  {
+    shareOverall.style.width = '100%';
+    shareOverall.style.justifyContent = 'center';
+  }
+
+  if (shareTeams)
+  {
+    shareTeams.style.width = '100%';
+    shareTeams.style.maxWidth = '100%';
+  }
 
   if (shareTableWrap && shareTable)
   {
-    shareTableWrap.style.padding = '6px 10px';
+    shareTableWrap.style.padding = '8px 12px';
     shareTableWrap.style.overflow = 'visible';
-    shareTable.style.width = 'max-content';
+    shareTableWrap.style.boxSizing = 'border-box';
+    shareTable.style.width = '100%';
     shareTable.style.minWidth = '0';
-    shareTable.style.margin = '0 auto';
+    shareTable.style.margin = '0';
 
     shareTable.querySelectorAll('thead th').forEach(node =>
     {
-      node.style.padding = '2px 6px 4px';
+      node.style.padding = '3px 8px 6px';
     });
 
     shareTable.querySelectorAll('tbody td').forEach(node =>
     {
-      node.style.padding = '5px 6px';
-      node.style.minWidth = '38px';
+      node.style.padding = '7px 8px';
+      node.style.minWidth = '42px';
     });
 
     shareTable.querySelectorAll('.dm-marker-cell').forEach(node =>
     {
       node.style.width = '6px';
-      node.style.paddingRight = '8px';
+      node.style.paddingRight = '10px';
     });
   }
 
   // Make the watermark deterministic for html-to-image. The light-theme version
   // previously depended on CSS filter inversion of the white SVG, which can be
   // omitted by the serializer and leave the watermark invisible on white.
+  // .dm-box is a capped, scrollable box on screen. Left as-is the clone would be
+  // cropped at one viewport height, and its width:100% would resolve against a
+  // shrink-to-fit parent rather than the width the user actually sees.
+  const sourceWidth = Math.round(element.getBoundingClientRect().width);
+
   const watermark = clone.querySelector('.dm-watermark');
   const watermarkImage = watermark?.querySelector('img');
 
@@ -8066,7 +8100,8 @@ async function cacheShareableScoreCard()
   // edges with a gap down the middle.
   const footerPanel = document.createElement('div');
   clone.appendChild(footerPanel);
-  footerPanel.style.width = '100%';
+  footerPanel.style.width = \`${shareContentWidth}px\`;
+  footerPanel.style.maxWidth = '100%';
   footerPanel.style.marginTop = '16px';
   footerPanel.style.display = 'flex';
   footerPanel.style.alignItems = 'center';
@@ -8197,11 +8232,6 @@ async function cacheShareableScoreCard()
     }
     return true;
   };
-
-  // .dm-box is a capped, scrollable box on screen. Left as-is the clone would be
-  // cropped at one viewport height, and its width:100% would resolve against a
-  // shrink-to-fit parent rather than the width the user actually sees.
-  const sourceWidth = Math.round(element.getBoundingClientRect().width);
 
   clone.style.maxHeight = 'none';
   clone.style.height = 'auto';
