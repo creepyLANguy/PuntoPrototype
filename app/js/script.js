@@ -7983,18 +7983,83 @@ async function cacheShareableScoreCard()
   const watermarkColor = isLightTheme ? '#111111' : '#ffffff';
   const watermarkLogoDataUrl = await getShareLogoDataUrl(watermarkColor);
 
-  const footerHeight = 96;
+  const footerHeight = 96 * SHARE_IMAGE_SCALE;
   const clone = element.cloneNode(true);
 
-  // Share images are rendered on a fixed 4:5 social-card canvas. The DOM is laid
-  // out at half resolution, then rendered onto the exact final pixel dimensions.
+  // Share images are designed directly at their final 4:5 dimensions. The clone
+  // uses the same CSS pixel dimensions as the final PNG, so typography, wrapping,
+  // spacing, and QR sizing are all authored against the real export canvas.
   // Keeping these values here makes the sizing explicitly local to image sharing.
-  const SHARE_IMAGE_EXPORT_WIDTH = 1080;
-  const SHARE_IMAGE_EXPORT_HEIGHT = 1350;
-  const SHARE_IMAGE_EXPORT_CONTENT_WIDTH = 840;
-  const SHARE_IMAGE_CSS_WIDTH = SHARE_IMAGE_EXPORT_WIDTH / 2;
-  const SHARE_IMAGE_CSS_HEIGHT = SHARE_IMAGE_EXPORT_HEIGHT / 2;
-  const SHARE_IMAGE_CSS_CONTENT_WIDTH = SHARE_IMAGE_EXPORT_CONTENT_WIDTH / 2;
+  const SHARE_IMAGE_WIDTH = 1080;
+  const SHARE_IMAGE_HEIGHT = 1350;
+  const SHARE_IMAGE_CONTENT_WIDTH = 840;
+  const SHARE_IMAGE_SCALE = 2;
+
+  // Preserve the visual density of the previous 2x-rendered share image while
+  // keeping the design itself authored at the final 1080x1350 CSS dimensions.
+  const shareScale = SHARE_IMAGE_SCALE;
+  clone.style.padding = `56px 56px 48px`;
+  clone.style.borderRadius = `48px`;
+
+  const shareLogo = clone.querySelector('.dm-logo');
+  const shareHeader = clone.querySelector('.dm-header');
+  const shareTitle = clone.querySelector('.dm-title');
+  const shareTeams = clone.querySelector('.dm-teams');
+  const shareNames = clone.querySelectorAll('.dm-name');
+  const shareVs = clone.querySelector('.dm-vs');
+  const shareOverall = clone.querySelector('.dm-overall');
+  const shareSets = clone.querySelectorAll('.dm-sets');
+  const shareDash = clone.querySelector('.dm-dash');
+
+  if (shareLogo)
+  {
+    shareLogo.style.width = `96px`;
+    shareLogo.style.height = `96px`;
+  }
+
+  if (shareHeader)
+  {
+    shareHeader.style.gap = `12px`;
+    shareHeader.style.marginBottom = `32px`;
+  }
+
+  if (shareTitle)
+  {
+    shareTitle.style.fontSize = `3rem`;
+  }
+
+  shareNames.forEach(node =>
+  {
+    node.style.fontSize = `2.5rem`;
+    node.style.maxWidth = '100%';
+  });
+
+  if (shareVs)
+  {
+    shareVs.style.fontSize = `1.3rem`;
+    shareVs.style.lineHeight = '2';
+  }
+
+  if (shareTeams)
+  {
+    shareTeams.style.marginBottom = `36px`;
+  }
+
+  if (shareOverall)
+  {
+    shareOverall.style.gap = `24px`;
+    shareOverall.style.marginBottom = `40px`;
+  }
+
+  shareSets.forEach(node =>
+  {
+    node.style.fontSize = `6rem`;
+  });
+
+  if (shareDash)
+  {
+    shareDash.style.fontSize = `3.6rem`;
+  }
 
   // Interactive controls and the details dropdown are part of the live modal,
   // but must never be included in the shareable image. Remove them before
@@ -8021,17 +8086,14 @@ async function cacheShareableScoreCard()
   // The share image uses one common 840px final-resolution content column.
   // All visible information blocks are constrained to that same column, while
   // the live details modal keeps its normal responsive width.
-  const shareHeader = clone.querySelector('.dm-header');
   const shareMidSection = clone.querySelector('.dm-mid-section');
   const shareTableWrap = clone.querySelector('.dm-table-wrap');
   const shareTable = clone.querySelector('.dm-table');
-  const shareOverall = clone.querySelector('.dm-overall');
-  const shareTeams = clone.querySelector('.dm-teams');
 
   [shareHeader, shareMidSection, shareTableWrap].forEach(node =>
   {
     if (!node) return;
-    node.style.width = `${SHARE_IMAGE_CSS_CONTENT_WIDTH}px`;
+    node.style.width = `${SHARE_IMAGE_CONTENT_WIDTH}px`;
     node.style.maxWidth = '100%';
     node.style.boxSizing = 'border-box';
   });
@@ -8050,7 +8112,7 @@ async function cacheShareableScoreCard()
 
   if (shareTableWrap && shareTable)
   {
-    shareTableWrap.style.padding = '8px 12px';
+    shareTableWrap.style.padding = '16px 24px';
     shareTableWrap.style.overflow = 'visible';
     shareTableWrap.style.boxSizing = 'border-box';
     shareTable.style.width = '100%';
@@ -8059,19 +8121,19 @@ async function cacheShareableScoreCard()
 
     shareTable.querySelectorAll('thead th').forEach(node =>
     {
-      node.style.padding = '3px 8px 6px';
+      node.style.padding = '6px 16px 12px';
     });
 
     shareTable.querySelectorAll('tbody td').forEach(node =>
     {
-      node.style.padding = '7px 8px';
-      node.style.minWidth = '42px';
+      node.style.padding = '14px 16px';
+      node.style.minWidth = '84px';
     });
 
     shareTable.querySelectorAll('.dm-marker-cell').forEach(node =>
     {
       node.style.width = '6px';
-      node.style.paddingRight = '10px';
+      node.style.paddingRight = '20px';
     });
   }
 
@@ -8101,14 +8163,14 @@ async function cacheShareableScoreCard()
   // edges with a gap down the middle.
   const footerPanel = document.createElement('div');
   clone.appendChild(footerPanel);
-  footerPanel.style.width = `${SHARE_IMAGE_CSS_CONTENT_WIDTH}px`;
+  footerPanel.style.width = `${SHARE_IMAGE_CONTENT_WIDTH}px`;
   footerPanel.style.maxWidth = '100%';
-  footerPanel.style.marginTop = '16px';
+  footerPanel.style.marginTop = `32px`;
   footerPanel.style.display = 'flex';
   footerPanel.style.alignItems = 'center';
   footerPanel.style.justifyContent = 'center';
-  footerPanel.style.gap = '14px';
-  footerPanel.style.padding = '12px 16px';
+  footerPanel.style.gap = `28px`;
+  footerPanel.style.padding = `24px 32px`;
   footerPanel.style.minHeight = `${footerHeight}px`;
   footerPanel.style.boxSizing = 'border-box';
 
@@ -8116,7 +8178,7 @@ async function cacheShareableScoreCard()
   qrWrap.style.display = 'inline-flex';
   qrWrap.style.alignItems = 'center';
   qrWrap.style.justifyContent = 'center';
-  qrWrap.style.padding = '8px';
+  qrWrap.style.padding = `16px`;
   qrWrap.style.background = '#ffffff';
   qrWrap.style.borderRadius = '10px';
   qrWrap.style.flex = '0 0 auto';
@@ -8133,19 +8195,19 @@ async function cacheShareableScoreCard()
 
   const footerTitle = document.createElement('div');
   footerTitle.textContent = 'Scan for match details';
-  footerTitle.style.fontSize = '14px';
+  footerTitle.style.fontSize = `28px`;
   footerTitle.style.fontWeight = '700';
   footerTitle.style.letterSpacing = '0.02em';
 
   const footerCourtId = document.createElement('div');
   footerCourtId.textContent = `Court ID: ${courtIdDisplay}`;
-  footerCourtId.style.fontSize = '16px';
+  footerCourtId.style.fontSize = `32px`;
   footerCourtId.style.fontWeight = '800';
   footerCourtId.style.letterSpacing = '0.06em';
 
   const footerUrl = document.createElement('div');
   footerUrl.textContent = qrUrl;
-  footerUrl.style.fontSize = '11px';
+  footerUrl.style.fontSize = `22px`;
   footerUrl.style.opacity = '0.85';
   footerUrl.style.overflow = 'hidden';
   footerUrl.style.textOverflow = 'ellipsis';
@@ -8234,12 +8296,12 @@ async function cacheShareableScoreCard()
     return true;
   };
 
-  clone.style.width = `${SHARE_IMAGE_CSS_WIDTH}px`;
-  clone.style.height = `${SHARE_IMAGE_CSS_HEIGHT}px`;
-  clone.style.minWidth = `${SHARE_IMAGE_CSS_WIDTH}px`;
-  clone.style.maxWidth = `${SHARE_IMAGE_CSS_WIDTH}px`;
-  clone.style.minHeight = `${SHARE_IMAGE_CSS_HEIGHT}px`;
-  clone.style.maxHeight = `${SHARE_IMAGE_CSS_HEIGHT}px`;
+  clone.style.width = `${SHARE_IMAGE_WIDTH}px`;
+  clone.style.height = `${SHARE_IMAGE_HEIGHT}px`;
+  clone.style.minWidth = `${SHARE_IMAGE_WIDTH}px`;
+  clone.style.maxWidth = `${SHARE_IMAGE_WIDTH}px`;
+  clone.style.minHeight = `${SHARE_IMAGE_HEIGHT}px`;
+  clone.style.maxHeight = `${SHARE_IMAGE_HEIGHT}px`;
   clone.style.boxSizing = 'border-box';
   clone.style.overflow = 'visible';
   clone.style.overflowY = 'visible';
@@ -8251,7 +8313,7 @@ async function cacheShareableScoreCard()
   staging.style.top = '0';
   staging.style.pointerEvents = 'none';
   staging.style.zIndex = '-1';
-  staging.style.width = `${SHARE_IMAGE_CSS_WIDTH}px`;
+  staging.style.width = `${SHARE_IMAGE_WIDTH}px`;
   staging.appendChild(clone);
   document.body.appendChild(staging);
 
@@ -8272,10 +8334,10 @@ async function cacheShareableScoreCard()
   try
   {
     blob = await toBlob(clone, {
-      width: SHARE_IMAGE_CSS_WIDTH,
-      height: SHARE_IMAGE_CSS_HEIGHT,
-      canvasWidth: SHARE_IMAGE_EXPORT_WIDTH,
-      canvasHeight: SHARE_IMAGE_EXPORT_HEIGHT,
+      width: SHARE_IMAGE_WIDTH,
+      height: SHARE_IMAGE_HEIGHT,
+      canvasWidth: SHARE_IMAGE_WIDTH,
+      canvasHeight: SHARE_IMAGE_HEIGHT,
       pixelRatio: 1,
       backgroundColor: cardBackground,
       filter: (node) => inclusions(node),
