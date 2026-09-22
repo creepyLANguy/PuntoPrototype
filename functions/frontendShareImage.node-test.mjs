@@ -54,12 +54,19 @@ test("share content uses a common 840px CSS-pixel column", () => {
 
 test("share-only visual scaling stays inside the image-capture path", () => {
   assert.match(source, /const SHARE_IMAGE_SCALE = 2/);
-  assert.match(source, /clone\.style\.padding = `56px 56px 48px`/);
+  assert.match(source, /clone\.style\.padding = `40px 56px 16px`/);
   assert.match(source, /shareNames\.forEach/);
-  assert.match(source, /node\.style\.fontSize = `2\.5rem`/);
+  assert.match(source, /shareLogo\.style\.width = `144px`/);
+  assert.match(source, /shareLogo\.style\.height = `144px`/);
+  assert.match(source, /shareTitle\.style\.fontSize = `4rem`/);
+  assert.match(source, /shareSets\.forEach/);
+  assert.match(source, /node\.style\.fontSize = `6\.5rem`/);
+  assert.match(source, /watermarkImage\.style\.width = '88%'/);
+  assert.match(source, /watermarkImage\.style\.maxWidth = 'none'/);
+  assert.match(source, /node\.style\.fontSize = `2\.8rem`/);
   assert.match(source, /shareTableWrap\.style\.borderRadius = '32px'/);
-  assert.match(source, /node\.style\.fontSize = '1\.7rem'/);
-  assert.match(source, /node\.style\.fontSize = '3\.2rem'/);
+  assert.match(source, /node\.style\.fontSize = '1\.9rem'/);
+  assert.match(source, /node\.style\.fontSize = '3\.5rem'/);
   assert.match(source, /node\.style\.minHeight = '72px'/);
   assert.match(source, /footerPanel\.style\.width/);
   assert.match(source, /const qrSize = Math\.max\(168, Math\.min\(240, footerHeight - 48\)\)/);
