@@ -57,9 +57,14 @@ test("share-only visual scaling stays inside the image-capture path", () => {
   assert.match(source, /clone\.style\.padding = `56px 56px 48px`/);
   assert.match(source, /shareNames\.forEach/);
   assert.match(source, /node\.style\.fontSize = `2\.5rem`/);
+  assert.match(source, /shareTable\.style\.borderRadius = '32px'/);
+  assert.match(source, /node\.style\.fontSize = '1\.7rem'/);
+  assert.match(source, /node\.style\.fontSize = '3\.2rem'/);
+  assert.match(source, /node\.style\.minHeight = '72px'/);
   assert.match(source, /footerPanel\.style\.width/);
   assert.match(source, /const qrSize = Math\.max\(168, Math\.min\(240, footerHeight - 48\)\)/);
 });
+
 test("share-only sizing does not alter the live modal stylesheet", () => {
   assert.match(liveStyles, /\.dm-box\s*\{[\s\S]*?width:\s*100%;[\s\S]*?max-width:\s*480px;/);
   assert.match(liveStyles, /\.dm-table\s*\{[\s\S]*?width:\s*100%;/);
