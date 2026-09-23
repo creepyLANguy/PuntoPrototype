@@ -92,7 +92,7 @@ test("share-only visual scaling stays inside the image-capture path", () => {
   assert.match(source, /node\.style\.fontSize = '3\.5rem'/);
   assert.match(source, /node\.style\.minHeight = '72px'/);
   assert.match(source, /footerPanel\.style\.width/);
-  assert.match(source, /const qrSize = Math\.max\(168, Math\.min\(240, footerHeight - 48\)\)/);
+  assert.match(source, /qrSize = Math\.max\(168, Math\.min\(240, footerHeight - 48\)\)/);
 });
 
 test("share-only sizing does not alter the live modal stylesheet", () => {
@@ -128,8 +128,12 @@ test("QR is generated off-DOM and composited directly onto the final canvas", ()
 });
 
 test("QR compositing happens after the smoothed card downsample and before PNG encoding", () => {
-  const downsampleIndex = source.indexOf("outputContext.drawImage(");
-  const qrCompositeIndex = source.indexOf("drawPixelAlignedQr(outputContext, qrGenerator");
+  const downsampleIndex = source.indexOf(
+    "outputContext.drawImage(\\n        highResolutionImage,"
+  );
+  const qrCompositeIndex = source.indexOf(
+    "drawPixelAlignedQr(outputContext, qrGenerator"
+  );
   const pngEncodeIndex = source.indexOf("outputCanvas.toBlob(");
 
   assert.ok(downsampleIndex >= 0);
