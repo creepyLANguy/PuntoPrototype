@@ -4049,16 +4049,7 @@ document.addEventListener("DOMContentLoaded", () =>
       return;
     }
 
-    const panelWidth = Math.floor(elements.courtQrPanel.clientWidth);
-    if (panelWidth <= 0)
-    {
-      return;
-    }
-
-    elements.courtQrPanel.style.setProperty(
-      "--qr-panel-scale",
-      Math.max(1, panelWidth / 160)
-    );
+    Math.floor(elements.courtQrPanel.clientWidth);
   }
 
   function clampCourtQrPanelToViewport()
@@ -4353,21 +4344,17 @@ document.addEventListener("DOMContentLoaded", () =>
       panel.style.top = `${nextTop}px`;
     });
 
-    panel.addEventListener("pointerup", (event) =>
+    const stopInteractionFromPointer = (event) =>
     {
       if (qrPointerId === event.pointerId)
       {
         stopInteraction();
       }
-    });
-    panel.addEventListener("pointercancel", (event) =>
-    {
-      if (qrPointerId === event.pointerId)
-      {
-        stopInteraction();
-      }
-    });
+    };
+
     panel.addEventListener("lostpointercapture", stopInteraction);
+    document.addEventListener("pointerup", stopInteractionFromPointer);
+    document.addEventListener("pointercancel", stopInteractionFromPointer);
 
     if (window.ResizeObserver)
     {
