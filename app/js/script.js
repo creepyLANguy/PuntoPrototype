@@ -600,11 +600,6 @@ document.addEventListener("DOMContentLoaded", () =>
   let lastScannedDeviceId = null;
 
   let loadingSpinnerStartTime = 0;
-  let isDraggingQrPanel = false;
-  let isResizingQrPanel = false;
-  let qrPointerId = null;
-  let qrDragOffsetX = 0;
-  let qrDragOffsetY = 0;
   let hasInitializedQrPanelInteractions = false;
 
   let isPickingColour = false;
@@ -4473,7 +4468,6 @@ document.addEventListener("DOMContentLoaded", () =>
       if (isResizeAction)
       {
         interactionMode = "resize";
-        isResizingQrPanel = true;
         resizeLeft = currentPanelRect.left - parentRect.left;
         resizeTop = currentPanelRect.top - parentRect.top;
         resizeStartX = event.clientX;
@@ -4492,7 +4486,6 @@ document.addEventListener("DOMContentLoaded", () =>
       else
       {
         interactionMode = "drag";
-        isDraggingQrPanel = true;
         dragOffsetX = event.clientX - currentPanelRect.left;
         dragOffsetY = event.clientY - currentPanelRect.top;
 
