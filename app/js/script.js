@@ -600,10 +600,6 @@ document.addEventListener("DOMContentLoaded", () =>
   let lastScannedDeviceId = null;
 
   let loadingSpinnerStartTime = 0;
-  let isDraggingQrPanel = false;
-  let qrPointerId = null;
-  let qrDragOffsetX = 0;
-  let qrDragOffsetY = 0;
   let hasInitializedQrPanelInteractions = false;
 
   let isPickingColour = false;
@@ -4048,7 +4044,7 @@ document.addEventListener("DOMContentLoaded", () =>
       return;
     }
 
-    const panelWidth = Math.floor(elements.courtQrPanel.clientWidth);    
+    Math.floor(elements.courtQrPanel.clientWidth);
   }
 
   function clampCourtQrPanelToViewport()
@@ -4083,8 +4079,15 @@ document.addEventListener("DOMContentLoaded", () =>
     );
     const nextHeight = nextWidth * panelAspectRatio;
 
-    panel.style.width = `${nextWidth}px`;
-    panel.style.height = `${nextHeight}px`;
+    if (Math.abs(panelRectNow.width - nextWidth) > 0.25)
+    {
+      panel.style.width = `${nextWidth}px`;
+    }
+
+    if (Math.abs(panelRectNow.height - nextHeight) > 0.25)
+    {
+      panel.style.height = `${nextHeight}px`;
+    }
 
     const panelRect = panel.getBoundingClientRect();
     const maxLeft = Math.max(safeGap, parentRect.width - panelRect.width - safeGap);
@@ -4105,8 +4108,16 @@ document.addEventListener("DOMContentLoaded", () =>
       Math.max(safeGap, Number.isFinite(currentTop) ? currentTop : fallbackTop)
     );
 
-    panel.style.left = `${nextLeft}px`;
-    panel.style.top = `${nextTop}px`;
+    if (!Number.isFinite(currentLeft) || Math.abs(currentLeft - nextLeft) > 0.25)
+    {
+      panel.style.left = `${nextLeft}px`;
+    }
+
+    if (!Number.isFinite(currentTop) || Math.abs(currentTop - nextTop) > 0.25)
+    {
+      panel.style.top = `${nextTop}px`;
+    }
+
     panel.style.right = "auto";
     panel.style.bottom = "auto";
 
@@ -4133,16 +4144,114 @@ document.addEventListener("DOMContentLoaded", () =>
   {
     if (!elements.courtQrPanel)
     {
-      return 100;
+      return 256;
     }
 
     const panelWidth = Math.floor(elements.courtQrPanel.clientWidth);
     if (!panelWidth || panelWidth <= 0)
     {
-      return 100;
+      return 256;
     }
 
-    return Math.max(72, panelWidth - 24);
+    return Math.max(256, panelWidth - 24);
+  }
+
+  function createCourtQrSvg(qrUrl)
+  {
+    if (!window.QRCode || !qrUrl)
+    {
+      return null;
+    }
+
+    const probe = document.createElement("div");
+    const qr = new window.QRCode(probe, {
+      text: qrUrl,
+      width: 1,
+      height: 1,
+      colorDark: "#000000",
+      colorLight: "#ffffff",
+      correctLevel: window.QRCode.CorrectLevel.H
+    });
+
+    const matrix = qr?._oQRCode;
+    const moduleCount = matrix?.getModuleCount?.();
+    if (!matrix || !Number.isInteger(moduleCount) || moduleCount <= 0)
+    {
+      return null;
+    }
+
+    const svgNamespace = "http://www.w3.org/2000/svg";
+    const xlinkNamespace = "http://www.w3.org/1999/xlink";
+    const svg = document.createElementNS(svgNamespace, "svg");
+    svg.setAttribute("viewBox", `0 0 ${moduleCount} ${moduleCount}`);
+    svg.setAttribute("width", "100%");
+    svg.setAttribute("height", "100%");
+    svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
+    svg.setAttribute("aria-hidden", "true");
+
+    const background = document.createElementNS(svgNamespace, "rect");
+    background.setAttribute("x", "0");
+    background.setAttribute("y", "0");
+    background.setAttribute("width", String(moduleCount));
+    background.setAttribute("height", String(moduleCount));
+    background.setAttribute("fill", "#ffffff");
+    svg.appendChild(background);
+
+    const qrGroup = document.createElementNS(svgNamespace, "g");
+    qrGroup.setAttribute("fill", "#000000");
+    qrGroup.setAttribute("shape-rendering", "crispEdges");
+
+    for (let row = 0; row < moduleCount; row += 1)
+    {
+      let runStart = -1;
+
+      for (let column = 0; column <= moduleCount; column += 1)
+      {
+        const dark = column < moduleCount && matrix.isDark(row, column);
+
+        if (dark && runStart < 0)
+        {
+          runStart = column;
+          continue;
+        }
+
+        if (!dark && runStart >= 0)
+        {
+          const module = document.createElementNS(svgNamespace, "rect");
+          module.setAttribute("x", String(runStart));
+          module.setAttribute("y", String(row));
+          module.setAttribute("width", String(column - runStart));
+          module.setAttribute("height", "1");
+          qrGroup.appendChild(module);
+          runStart = -1;
+        }
+      }
+    }
+
+    svg.appendChild(qrGroup);
+
+    const logoSize = moduleCount * 0.4;
+    const logoX = (moduleCount - logoSize) / 2;
+    const logoY = logoX;
+
+    const logoBackground = document.createElementNS(svgNamespace, "circle");
+    logoBackground.setAttribute("cx", String(moduleCount / 2));
+    logoBackground.setAttribute("cy", String(moduleCount / 2));
+    logoBackground.setAttribute("r", String(logoSize / 2));
+    logoBackground.setAttribute("fill", "#000000");
+    svg.appendChild(logoBackground);
+
+    const logoImage = document.createElementNS(svgNamespace, "image");
+    logoImage.setAttribute("x", String(logoX + logoSize * 0.07));
+    logoImage.setAttribute("y", String(logoY + logoSize * 0.07));
+    logoImage.setAttribute("width", String(logoSize * 0.86));
+    logoImage.setAttribute("height", String(logoSize * 0.86));
+    logoImage.setAttribute("preserveAspectRatio", "xMidYMid meet");
+    logoImage.setAttribute("href", "/media/logo.svg");
+    logoImage.setAttributeNS(xlinkNamespace, "xlink:href", "/media/logo.svg");
+    svg.appendChild(logoImage);
+
+    return svg;
   }
 
   function initializeCourtQrPanelInteractions()
@@ -4154,11 +4263,186 @@ document.addEventListener("DOMContentLoaded", () =>
 
     const panel = elements.courtQrPanel;
 
-    const stopDragging = () =>
+    let interactionMode = null;
+    let pointerId = null;
+    let parentRect = null;
+    let panelWidth = 0;
+    let panelHeight = 0;
+    let dragOffsetX = 0;
+    let dragOffsetY = 0;
+    let resizeLeft = 0;
+    let resizeTop = 0;
+    let resizeStartX = 0;
+    let resizeStartY = 0;
+    let resizeStartWidth = 0;
+    let resizeAspectRatio = 1.24;
+
+    let pendingLeft = null;
+    let pendingTop = null;
+    let pendingWidth = null;
+    let pendingHeight = null;
+    let framePending = false;
+
+    const cancelScheduledFrame = () =>
     {
-      isDraggingQrPanel = false;
-      qrPointerId = null;
-      panel.classList.remove("dragging");
+      if (!framePending)
+      {
+        return;
+      }
+
+      window.cancelAnimationFrame(framePending);
+      framePending = false;
+    };
+
+    const applyPendingQrPanelFrame = () =>
+    {
+      framePending = false;
+
+      const nextLeft = pendingLeft;
+      const nextTop = pendingTop;
+      const nextWidth = pendingWidth;
+      const nextHeight = pendingHeight;
+
+      pendingLeft = null;
+      pendingTop = null;
+      pendingWidth = null;
+      pendingHeight = null;
+
+      if (nextLeft !== null)
+      {
+        panel.style.left = nextLeft + "px";
+      }
+
+      if (nextTop !== null)
+      {
+        panel.style.top = nextTop + "px";
+      }
+
+      if (nextWidth !== null)
+      {
+        panel.style.width = nextWidth + "px";
+      }
+
+      if (nextHeight !== null)
+      {
+        panel.style.height = nextHeight + "px";
+      }
+    };
+
+    const scheduleQrPanelFrame = ({ left = null, top = null, width = null, height = null } = {}) =>
+    {
+      if (left !== null) pendingLeft = left;
+      if (top !== null) pendingTop = top;
+      if (width !== null) pendingWidth = width;
+      if (height !== null) pendingHeight = height;
+
+      if (!framePending)
+      {
+        framePending = window.requestAnimationFrame(applyPendingQrPanelFrame);
+      }
+    };
+
+    const getParentRect = () => elements.scoreboardPage.getBoundingClientRect();
+
+    const calculateDragPosition = (clientX, clientY) =>
+    {
+      const maxLeft = Math.max(0, parentRect.width - panelWidth);
+      const maxTop = Math.max(0, parentRect.height - panelHeight);
+
+      return {
+        left: Math.min(
+          maxLeft,
+          Math.max(0, clientX - parentRect.left - dragOffsetX)
+        ),
+        top: Math.min(
+          maxTop,
+          Math.max(0, clientY - parentRect.top - dragOffsetY)
+        )
+      };
+    };
+
+    const calculateResize = (clientX, clientY) =>
+    {
+      const maxWidthByRightEdge = parentRect.width - resizeLeft - 8;
+      const maxWidthByBottomEdge = (parentRect.height - resizeTop - 8) / resizeAspectRatio;
+      const maxWidth = Math.max(
+        72,
+        Math.min(maxWidthByRightEdge, maxWidthByBottomEdge)
+      );
+
+      const deltaX = clientX - resizeStartX;
+      const deltaY = clientY - resizeStartY;
+      const requestedWidth = resizeStartWidth + Math.max(deltaX, deltaY / resizeAspectRatio);
+      const width = Math.max(72, Math.min(maxWidth, requestedWidth));
+
+      return {
+        width,
+        height: width * resizeAspectRatio
+      };
+    };
+
+    const queueInteractionPosition = (clientX, clientY) =>
+    {
+      if (interactionMode === "drag")
+      {
+        const position = calculateDragPosition(clientX, clientY);
+        scheduleQrPanelFrame(position);
+        return;
+      }
+
+      if (interactionMode === "resize")
+      {
+        const size = calculateResize(clientX, clientY);
+        scheduleQrPanelFrame({
+          width: size.width,
+          height: size.height
+        });
+      }
+    };
+
+    const stopInteraction = (event = null) =>
+    {
+      if (!interactionMode || (event && event.pointerId !== pointerId))
+      {
+        return;
+      }
+
+      const wasResizing = interactionMode === "resize";
+      const releasedPointerId = pointerId;
+
+      if (event)
+      {
+        queueInteractionPosition(event.clientX, event.clientY);
+      }
+
+      if (framePending)
+      {
+        window.cancelAnimationFrame(framePending);
+        framePending = false;
+        applyPendingQrPanelFrame();
+      }
+
+      interactionMode = null;
+      pointerId = null;
+      parentRect = null;
+      panel.classList.remove("dragging", "resizing");
+
+      if (releasedPointerId !== null && panel.hasPointerCapture?.(releasedPointerId))
+      {
+        try
+        {
+          panel.releasePointerCapture(releasedPointerId);
+        }
+        catch
+        {
+          // Pointer capture can already have been released by the browser.
+        }
+      }
+
+      if (wasResizing)
+      {
+        clampCourtQrPanelToViewport();
+      }
     };
 
     panel.addEventListener("pointerdown", (event) =>
@@ -4168,77 +4452,82 @@ document.addEventListener("DOMContentLoaded", () =>
         return;
       }
 
-      const panelRect = panel.getBoundingClientRect();
-      const resizeHandleZone = 22;
-      const isResizeAction = event.clientX >= panelRect.right - resizeHandleZone &&
-        event.clientY >= panelRect.bottom - resizeHandleZone;
+      const currentParentRect = getParentRect();
+      const currentPanelRect = panel.getBoundingClientRect();
+      const resizeHandleZone = 28;
+      const isResizeAction = event.clientX >= currentPanelRect.right - resizeHandleZone &&
+        event.clientY >= currentPanelRect.bottom - resizeHandleZone;
+
+      parentRect = currentParentRect;
+      panelWidth = currentPanelRect.width;
+      panelHeight = currentPanelRect.height;
+      pointerId = event.pointerId;
 
       if (isResizeAction)
       {
-        return;
+        interactionMode = "resize";
+        resizeLeft = currentPanelRect.left - parentRect.left;
+        resizeTop = currentPanelRect.top - parentRect.top;
+        resizeStartX = event.clientX;
+        resizeStartY = event.clientY;
+        resizeStartWidth = currentPanelRect.width;
+        resizeAspectRatio = currentPanelRect.width > 0
+          ? currentPanelRect.height / currentPanelRect.width
+          : 1.24;
+
+        panel.style.bottom = "auto";
+        panel.style.right = "auto";
+        panel.style.left = resizeLeft + "px";
+        panel.style.top = resizeTop + "px";
+        panel.classList.add("resizing");
       }
+      else
+      {
+        interactionMode = "drag";
+        dragOffsetX = event.clientX - currentPanelRect.left;
+        dragOffsetY = event.clientY - currentPanelRect.top;
 
-      isDraggingQrPanel = true;
-      qrPointerId = event.pointerId;
-      qrDragOffsetX = event.clientX - panelRect.left;
-      qrDragOffsetY = event.clientY - panelRect.top;
-
-      panel.style.bottom = "auto";
-      panel.style.right = "auto";
-      panel.style.left = `${panelRect.left - elements.scoreboardPage.getBoundingClientRect().left}px`;
-      panel.style.top = `${panelRect.top - elements.scoreboardPage.getBoundingClientRect().top}px`;
-      panel.classList.add("dragging");
+        panel.style.bottom = "auto";
+        panel.style.right = "auto";
+        panel.style.left = (currentPanelRect.left - parentRect.left) + "px";
+        panel.style.top = (currentPanelRect.top - parentRect.top) + "px";
+        panel.classList.add("dragging");
+      }
 
       panel.setPointerCapture(event.pointerId);
       event.preventDefault();
-    });
+    }, { capture: true });
 
-    panel.addEventListener("pointermove", (event) =>
+    document.addEventListener("pointermove", (event) =>
     {
-      if (!isDraggingQrPanel || qrPointerId !== event.pointerId)
+      if (!interactionMode || event.pointerId !== pointerId)
       {
         return;
       }
 
-      const parentRect = elements.scoreboardPage.getBoundingClientRect();
-      const panelRect = panel.getBoundingClientRect();
+      queueInteractionPosition(event.clientX, event.clientY);
+      event.preventDefault();
+    }, { passive: false });
 
-      const maxLeft = Math.max(0, parentRect.width - panelRect.width);
-      const maxTop = Math.max(0, parentRect.height - panelRect.height);
-
-      const nextLeft = Math.min(
-        maxLeft,
-        Math.max(0, event.clientX - parentRect.left - qrDragOffsetX)
-      );
-      const nextTop = Math.min(
-        maxTop,
-        Math.max(0, event.clientY - parentRect.top - qrDragOffsetY)
-      );
-
-      panel.style.left = `${nextLeft}px`;
-      panel.style.top = `${nextTop}px`;
-    });
-
-    panel.addEventListener("pointerup", stopDragging);
-    panel.addEventListener("pointercancel", stopDragging);
-    panel.addEventListener("lostpointercapture", stopDragging);
-
-    if (window.ResizeObserver)
+    const stopInteractionFromPointer = (event) =>
     {
-      const observer = new ResizeObserver(() =>
+      stopInteraction(event);
+    };
+
+    panel.addEventListener("lostpointercapture", stopInteraction);
+    document.addEventListener("pointerup", stopInteractionFromPointer);
+    document.addEventListener("pointercancel", stopInteractionFromPointer);
+
+    window.addEventListener("resize", () =>
+    {
+      if (interactionMode)
       {
-        clampCourtQrPanelToViewport();
+        stopInteraction();
+        return;
+      }
 
-        if (!currentCourtId || panel.classList.contains("hidden"))
-        {
-          return;
-        }
-
-        renderCourtQr(currentCourtId);
-      });
-
-      observer.observe(panel);
-    }
+      clampCourtQrPanelToViewport();
+    });
 
     hasInitializedQrPanelInteractions = true;
   }
@@ -4250,6 +4539,7 @@ document.addEventListener("DOMContentLoaded", () =>
       return;
     }
 
+    elements.courtQrCode.classList.remove("has-svg-qr");
     elements.courtQrCode.innerHTML = "";
     elements.courtQrLabel.textContent = "";
     elements.courtQrPanel.classList.add("hidden");
@@ -4272,17 +4562,27 @@ document.addEventListener("DOMContentLoaded", () =>
     const qrUrl = buildCourtQrUrl(courtId);
     elements.courtQrPanel.classList.remove("hidden");
     clampCourtQrPanelToViewport();
-    elements.courtQrCode.innerHTML = "";
-    const qrSize = getCourtQrSize();
 
-    new window.QRCode(elements.courtQrCode, {
-      text: qrUrl,
-      width: qrSize,
-      height: qrSize,
-      colorDark: "#000000",
-      colorLight: "#ffffff",
-      correctLevel: window.QRCode.CorrectLevel.H
-    });
+    elements.courtQrCode.classList.remove("has-svg-qr");
+    elements.courtQrCode.innerHTML = "";
+
+    const qrSvg = createCourtQrSvg(qrUrl);
+    if (qrSvg)
+    {
+      elements.courtQrCode.classList.add("has-svg-qr");
+      elements.courtQrCode.appendChild(qrSvg);
+    }
+    else
+    {
+      new window.QRCode(elements.courtQrCode, {
+        text: qrUrl,
+        width: Math.max(512, getCourtQrSize()),
+        height: Math.max(512, getCourtQrSize()),
+        colorDark: "#000000",
+        colorLight: "#ffffff",
+        correctLevel: window.QRCode.CorrectLevel.H
+      });
+    }
 
     elements.courtQrLabel.textContent = courtId;
   }
