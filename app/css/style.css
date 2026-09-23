@@ -373,6 +373,7 @@ body.light-mode .menu-btn:hover {
   touch-action: none;
   resize: horizontal;
   cursor: grab;
+  will-change: width, height;
 }
 
 .court-qr-code {
@@ -396,11 +397,26 @@ body.light-mode .menu-btn:hover {
   pointer-events: none;
 }
 
+.court-qr-code.has-svg-qr::after {
+  display: none;
+}
+
+.court-qr-code > svg {
+  width: 100% !important;
+  height: 100% !important;
+  display: block;
+}
+
+.court-qr-code > svg > g {
+  shape-rendering: crispEdges;
+}
+
 .court-qr-code img,
 .court-qr-code canvas {
   width: 100% !important;
   height: 100% !important;
   display: block;
+  image-rendering: pixelated;
 }
 
 .court-qr-label {
