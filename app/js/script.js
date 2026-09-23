@@ -8603,30 +8603,6 @@ async function cacheShareableScoreCard()
     }
   }
 
-  // Keep the QR/footer section in normal document flow. The previous absolute
-  // positioning could make the export renderer place it at the top of the image.
-  // Add exactly half of the remaining vertical space as its top margin so the
-  // gap above and below the footer are equal.
-  footerPanel.style.position = 'static';
-  footerPanel.style.left = '';
-  footerPanel.style.top = '';
-  footerPanel.style.transform = '';
-
-  await new Promise(resolve => requestAnimationFrame(() => resolve()));
-
-  const cloneRect = clone.getBoundingClientRect();
-  const scoreDetailsRect = shareTableWrap?.getBoundingClientRect();
-
-  if (scoreDetailsRect && cloneRect.height > 0)
-  {
-    const scoreBottom = scoreDetailsRect.bottom - cloneRect.top;
-    const footerRect = footerPanel.getBoundingClientRect();
-    const remainingHeight = cloneRect.height - scoreBottom - footerRect.height;
-    const verticalGap = Math.max(0, remainingHeight / 2);
-
-    footerPanel.style.marginTop = `${verticalGap}px`;
-  }
-
   const inclusions = (node) =>
   {
     const excludedClasses = [
@@ -8670,6 +8646,29 @@ async function cacheShareableScoreCard()
   clone.style.overflow = 'visible';
   clone.style.overflowY = 'visible';
   clone.style.background = cardBackground;
+
+  // Wait until the clone has its final 1080x1350 export dimensions, then place
+  // the QR/footer section so the gap above it (from the score details) equals
+  // the gap below it (to the bottom of the share image).
+  await new Promise(resolve => requestAnimationFrame(() => resolve()));
+
+  const cloneRect = clone.getBoundingClientRect();
+  const scoreDetailsRect = shareTableWrap?.getBoundingClientRect();
+
+  if (scoreDetailsRect && cloneRect.height > 0)
+  {
+    const scoreBottom = scoreDetailsRect.bottom - cloneRect.top;
+    const footerRect = footerPanel.getBoundingClientRect();
+    const footerTop = footerRect.top - cloneRect.top;
+    const verticalGap = Math.max(
+      0,
+      (cloneRect.height - scoreBottom - footerRect.height) / 2
+    );
+    const desiredFooterTop = scoreBottom + verticalGap;
+    const additionalMargin = desiredFooterTop - footerTop;
+
+    footerPanel.style.marginTop = `${Math.max(0, additionalMargin)}px`;
+  }
 
   const staging = document.createElement('div');
   staging.style.position = 'fixed';
