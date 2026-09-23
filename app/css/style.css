@@ -3741,6 +3741,30 @@ body.light-mode .scoreboard-logo {
     margin: 15px 0;
     transform: rotate(90deg);
   }
+
+  /*
+   * When the court name is vertically scrolling in landscape, the
+   * scoreboard-app-name reads bottom-to-top because of its 180deg rotation.
+   * Reverse the branding column so the logo becomes the visual prefix of
+   * "Padel Push™" when read in that direction, and use the logo itself as
+   * the separator between the court name and brand.
+   */
+  .marquee-content.scrolling {
+    gap: clamp(18px, 3vmin, 30px);
+  }
+
+  .marquee-content.scrolling #courtTitle {
+    margin-top: 0;
+  }
+
+  .marquee-content.scrolling .scoreboard-branding {
+    flex-direction: column-reverse;
+    gap: clamp(18px, 3vmin, 30px);
+  }
+
+  .marquee-content.scrolling .marquee-separator {
+    display: none;
+  }
 }
 
 @keyframes marquee-vertical {
