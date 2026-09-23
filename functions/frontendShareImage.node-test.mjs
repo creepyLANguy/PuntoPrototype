@@ -38,8 +38,8 @@ test("share export uses 1080x1350 as both CSS and PNG dimensions", () => {
   assert.match(source, /height: SHARE_IMAGE_HEIGHT/);
   assert.match(source, /canvasWidth: SHARE_IMAGE_WIDTH/);
   assert.match(source, /canvasHeight: SHARE_IMAGE_HEIGHT/);
-  assert.match(source, /pixelRatio: 1/);
-  assert.doesNotMatch(source, /pixelRatio: 2/);
+  assert.match(source, /pixelRatio: 2/);
+  assert.doesNotMatch(source, /pixelRatio: 1/);
   assert.doesNotMatch(source, /SHARE_IMAGE_CSS_WIDTH/);
   assert.doesNotMatch(source, /SHARE_IMAGE_CSS_HEIGHT/);
   assert.doesNotMatch(source, /const sourceWidth =/);
