@@ -31,6 +31,7 @@ await updateFile("index.html", (text) => {
   out = out.replace(/<meta property="og:description"\s+content="[^"]*" \/>/, "<meta property=\"og:description\"\n    content=\"" + BRAND.landing.socialDescription + "\" />");
   out = out.replace(/<meta name="twitter:image:alt" content="[^"]*" \/>/, "<meta name=\"twitter:image:alt\" content=\"" + BRAND.landing.socialAlt + "\" />");
   out = out.replace(/(<p class="lead">)[\s\S]*?(<\/p>)/, "$1" + BRAND.tagline + "$2");
+  out = out.replaceAll("Padel%20Push%E2%84%A2", encodeURIComponent(BRAND.name));
   out = out.replaceAll("Padel%20Push", encodeURIComponent(BRAND.name));
   return applyDisplayName(out);
 });
@@ -53,8 +54,12 @@ for (const relativePath of ["nfc/index.html", "docs/api.md", "docs/api/openapi.y
   await updateFile(relativePath, applyDisplayName);
 }
 
-await updateFile("app/js/script.js", (text) =>
-  text
+await updateFile("app/js/script.js", (text) => {
+  let out = text;
+  if (!out.startsWith('import BRAND from "./brand.mjs";')) {
+    out = 'import BRAND from "./brand.mjs";\n' + out;
+  }
+  return out
     .replaceAll('lines.push("Padel Push\\n");', 'lines.push(BRAND.name + "\\n");')
     .replaceAll('document.title = "Padel Push - Live Scoreboard";', 'document.title = BRAND.name + " - " + BRAND.app.title;')
     .replaceAll('document.title = `${courtName} (${courtId.toUpperCase()}) | Padel Push`;', 'document.title = `${courtName} (${courtId.toUpperCase()}) | ${BRAND.name}`;')
