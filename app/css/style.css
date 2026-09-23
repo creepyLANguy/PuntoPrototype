@@ -334,13 +334,22 @@ body.light-mode .menu-btn:hover {
 }
 
 .pull-tab {
-  right: 0%;
-  bottom: 0%;
-  border-top: 20px solid transparent;
-  border-right: 20px double var(--white);
-  opacity: 0.1;
-  position: inherit;
-  pointer-events: none;
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 28px;
+  height: 28px;
+  border-top-left-radius: 8px;
+  background: repeating-linear-gradient(
+    135deg,
+    transparent 0 4px,
+    rgba(255, 255, 255, 0.9) 4px 6px,
+    transparent 6px 10px
+  );
+  opacity: 0.5;
+  pointer-events: auto;
+  cursor: nwse-resize;
+  z-index: 3;
 }
 
 .court-qr-panel {
