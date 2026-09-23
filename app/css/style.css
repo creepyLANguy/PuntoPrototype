@@ -345,8 +345,8 @@ body.light-mode .menu-btn:hover {
     rgba(255, 255, 255, 0.9) 4px 6px,
     transparent 6px 8px
   );
-  clip-path: polygon(0 0, 0 100%, 100% 100%);
-  opacity: 0.5;
+  clip-path: polygon(0px 28px, 28px 100%, 100% 0%);
+  opacity: 0.2;
   pointer-events: auto;
   cursor: nwse-resize;
   z-index: 3;
@@ -382,6 +382,11 @@ body.light-mode .menu-btn:hover {
   touch-action: none;
   resize: none;
   cursor: grab;
+}
+
+
+.court-qr-panel:hover .pull-tab {
+  opacity: 0.75;
 }
 
 .court-qr-code {
