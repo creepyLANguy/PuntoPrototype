@@ -4,19 +4,16 @@ import test from "node:test";
 
 const source = readFileSync(new URL("../app/js/script.js", import.meta.url), "utf8");
 const styles = readFileSync(new URL("../app/css/style.css", import.meta.url), "utf8");
+const brand = readFileSync(new URL("../app/js/brand.mjs", import.meta.url), "utf8");
 
-test("QR panel resize observer does not regenerate the QR", () =>
+test("QR panel interaction coalesces drag and resize writes to animation frames", () =>
 {
-  const observerStart = source.indexOf("const observer = new ResizeObserver(() =>");
-  const observerEnd = source.indexOf("observer.observe(panel);", observerStart);
-
-  assert.ok(observerStart >= 0, "QR ResizeObserver should exist");
-  assert.ok(observerEnd > observerStart, "QR ResizeObserver block should be complete");
-
-  const observerBlock = source.slice(observerStart, observerEnd);
-
-  assert.match(observerBlock, /if \(isResizingQrPanel\)/);
-  assert.doesNotMatch(observerBlock, /renderCourtQr\(/);
+  assert.match(source, /function initializeCourtQrPanelInteractions\(\)/);
+  assert.match(source, /const scheduleQrPanelFrame =/);
+  assert.match(source, /window\.requestAnimationFrame\(applyPendingQrPanelFrame\)/);
+  assert.match(source, /document\.addEventListener\("pointermove"/);
+  assert.match(source, /const stopInteraction =/);
+  assert.doesNotMatch(source, /new ResizeObserver\(/);
 });
 
 test("court QR is rendered as one SVG tree containing both QR modules and logo", () =>
@@ -29,12 +26,12 @@ test("court QR is rendered as one SVG tree containing both QR modules and logo",
   assert.match(source, /logoImage\.setAttribute\("href", "\/media\/logo\.svg"\)/);
 });
 
-test("resize interaction has a distinct native-resize state", () =>
+test("QR panel uses the custom pointer interaction instead of native CSS resize", () =>
 {
-  assert.match(source, /let isResizingQrPanel = false/);
   assert.match(source, /isResizingQrPanel = true/);
-  assert.match(source, /document\.addEventListener\("pointerup", stopInteractionFromPointer\)/);
-  assert.match(source, /document\.addEventListener\("pointercancel", stopInteractionFromPointer\)/);
+  assert.match(source, /panel\.setPointerCapture\(event\.pointerId\)/);
+  assert.match(styles, /\.court-qr-panel\s*\{[\s\S]*?resize: none;/);
+  assert.doesNotMatch(brand, /qr-resize-interaction/);
 });
 
 test("legacy CSS logo overlay is disabled when the SVG QR is active", () =>
