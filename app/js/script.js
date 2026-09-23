@@ -8603,10 +8603,14 @@ async function cacheShareableScoreCard()
     }
   }
 
-  // Centre the QR/footer section in the exact vertical space between the bottom
-  // of the score details table and the bottom edge of the exported image. This
-  // makes the two surrounding gaps equal without changing the live modal.
-  clone.style.position = 'relative';
+  // Keep the QR/footer section in normal document flow. The previous absolute
+  // positioning could make the export renderer place it at the top of the image.
+  // Add exactly half of the remaining vertical space as its top margin so the
+  // gap above and below the footer are equal.
+  footerPanel.style.position = 'static';
+  footerPanel.style.left = '';
+  footerPanel.style.top = '';
+  footerPanel.style.transform = '';
 
   await new Promise(resolve => requestAnimationFrame(() => resolve()));
 
@@ -8620,9 +8624,7 @@ async function cacheShareableScoreCard()
     const remainingHeight = cloneRect.height - scoreBottom - footerRect.height;
     const verticalGap = Math.max(0, remainingHeight / 2);
 
-    footerPanel.style.top = `${scoreBottom + verticalGap}px`;
-    footerPanel.style.left = '50%';
-    footerPanel.style.transform = 'translateX(-50%)';
+    footerPanel.style.marginTop = `${verticalGap}px`;
   }
 
   const inclusions = (node) =>
