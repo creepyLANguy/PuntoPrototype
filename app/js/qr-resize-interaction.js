@@ -20,7 +20,6 @@
     let startPointerX = 0;
     let startPointerY = 0;
     let startWidth = 0;
-    let startHeight = 0;
     let aspectRatio = 1.24;
     let pendingWidth = null;
     let pendingHeight = null;
@@ -77,7 +76,7 @@
         const left = panelRect.left - parentRect.left;
         const top = panelRect.top - parentRect.top;
         const maxWidth = Math.max(72, parentRect.width - left - 8);
-        const maxHeight = Math.max(72, (parentRect.height - top - 8));
+        const maxHeight = Math.max(72, parentRect.height - top - 8);
         const deltaX = event.clientX - startPointerX;
         const deltaY = event.clientY - startPointerY;
         const requestedWidth = startWidth + Math.max(deltaX, deltaY / aspectRatio);
@@ -128,7 +127,6 @@
       startPointerX = event.clientX;
       startPointerY = event.clientY;
       startWidth = currentWidth;
-      startHeight = currentHeight;
       aspectRatio = Number.isFinite(computedAspect) && computedAspect > 0
         ? computedAspect
         : currentWidth > 0
@@ -144,7 +142,7 @@
 
       panel.setPointerCapture(event.pointerId);
       event.preventDefault();
-      event.stopPropagation();
+      event.stopImmediatePropagation();
     }, { capture: true });
 
     document.addEventListener("pointermove", (event) =>
