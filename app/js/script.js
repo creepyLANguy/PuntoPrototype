@@ -4454,7 +4454,7 @@ document.addEventListener("DOMContentLoaded", () =>
 
       const currentParentRect = getParentRect();
       const currentPanelRect = panel.getBoundingClientRect();
-      const resizeHandleZone = 22;
+      const resizeHandleZone = 28;
       const isResizeAction = event.clientX >= currentPanelRect.right - resizeHandleZone &&
         event.clientY >= currentPanelRect.bottom - resizeHandleZone;
 
