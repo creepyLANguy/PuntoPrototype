@@ -47,7 +47,7 @@ test("share export uses 1080x1350 as both CSS and PNG dimensions", () => {
 
 test("share content uses a common 840px CSS-pixel column", () => {
   assert.match(source, /const SHARE_IMAGE_CONTENT_WIDTH = 840/);
-  assert.match(source, /const SHARE_IMAGE_SCORE_PANEL_WIDTH = 480/);
+  assert.match(source, /const SHARE_IMAGE_SCORE_PANEL_WIDTH = 720/);
   assert.match(source, /const SHARE_IMAGE_QR_PANEL_WIDTH = 720/);
   assert.match(source, /const SHARE_IMAGE_QR_LEFT_OFFSET = 104/);
   assert.match(source, /footerPanel\.style\.width = `\$\{SHARE_IMAGE_QR_PANEL_WIDTH\}px`/);
