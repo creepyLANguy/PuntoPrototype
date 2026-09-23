@@ -7971,41 +7971,39 @@ function drawPixelAlignedQr(outputContext, qrGenerator, x, y, size)
     throw new Error('Invalid QR module geometry');
   }
 
-  // The final share canvas is already at its delivery resolution. Draw the QR
-  // directly here, after the smoothed full-card downsample, so every module
-  // boundary lands on an integer final-image pixel coordinate. Rounded module
-  // boundaries intentionally allow adjacent modules to alternate between
-  // floor/ceil pixel widths when the QR does not divide evenly into the area.
-  const drawX = Math.round(x);
-  const drawY = Math.round(y);
-  const drawSize = Math.max(1, Math.round(size));
+  // Use one integer number of final-image pixels for EVERY QR module.
+  // We deliberately fit the QR inside the allocated square instead of
+  // stretching module boundaries independently. This avoids alternating
+  // module widths and guarantees that every dark/light cell is a true
+  // axis-aligned pixel rectangle.
+  const modulePixels = Math.floor(size / moduleCount);
+  if (modulePixels < 1)
+  {
+    throw new Error(`QR area too small for ${moduleCount} modules`);
+  }
+
+  const actualSize = moduleCount * modulePixels;
+  const drawX = Math.round(x + (size - actualSize) / 2);
+  const drawY = Math.round(y + (size - actualSize) / 2);
 
   outputContext.save();
   outputContext.imageSmoothingEnabled = false;
   outputContext.fillStyle = '#ffffff';
-  outputContext.fillRect(drawX, drawY, drawSize, drawSize);
+  outputContext.fillRect(Math.round(x), Math.round(y), Math.round(size), Math.round(size));
 
   outputContext.fillStyle = '#000000';
   for (let row = 0; row < moduleCount; row++)
   {
-    const top = drawY + Math.round((row * drawSize) / moduleCount);
-    const bottom = drawY + Math.round(((row + 1) * drawSize) / moduleCount);
-
     for (let column = 0; column < moduleCount; column++)
     {
-      if (!qrModel.isDark(row, column))
+      if (qrModel.isDark(row, column))
       {
-        continue;
-      }
-
-      const left = drawX + Math.round((column * drawSize) / moduleCount);
-      const right = drawX + Math.round(((column + 1) * drawSize) / moduleCount);
-
-      const width = right - left;
-      const height = bottom - top;
-      if (width > 0 && height > 0)
-      {
-        outputContext.fillRect(left, top, width, height);
+        outputContext.fillRect(
+          drawX + column * modulePixels,
+          drawY + row * modulePixels,
+          modulePixels,
+          modulePixels
+        );
       }
     }
   }
