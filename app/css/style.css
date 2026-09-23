@@ -6243,3 +6243,66 @@ body.light-mode .dm-meta-value {
 .player-names {
   filter: invert(10%) saturate(0%) brightness(225%) contrast(85%);
 }
+
+/* =======================================================
+   MATCH ENGAGEMENT NUDGES
+======================================================= */
+
+/* The floating Match Details / stats button stays gently alive without
+   changing its position or competing with score updates. */
+.match-details-btn {
+  animation: matchStatsEngagementPulse 4.8s ease-in-out infinite;
+  transform-origin: center;
+}
+
+@keyframes matchStatsEngagementPulse {
+  0%, 72%, 100% {
+    box-shadow: 0 0 0 0 transparent;
+  }
+
+  82% {
+    box-shadow: 0 0 0 5px color-mix(in srgb, currentColor 14%, transparent);
+  }
+
+  90% {
+    box-shadow: 0 0 0 2px color-mix(in srgb, currentColor 7%, transparent);
+  }
+}
+
+/* One-shot share-button nudge when match details become ready/visible. */
+.dm-share-btn.engagement-nudge-once {
+  animation: matchDetailsShareNudge 900ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  transform-origin: center;
+}
+
+@keyframes matchDetailsShareNudge {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 transparent;
+  }
+
+  35% {
+    transform: scale(1.1);
+    box-shadow: 0 0 0 6px color-mix(in srgb, currentColor 16%, transparent);
+  }
+
+  65% {
+    transform: scale(0.98);
+    box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 8%, transparent);
+  }
+
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 transparent;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .match-details-btn {
+    animation: none;
+  }
+
+  .dm-share-btn.engagement-nudge-once {
+    animation: none;
+  }
+}
