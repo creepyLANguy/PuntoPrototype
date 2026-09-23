@@ -115,8 +115,11 @@ test("QR is generated off-DOM and composited directly onto the final canvas", ()
   assert.match(source, /function drawPixelAlignedQr\(outputContext, qrGenerator, x, y, size\)/);
   assert.match(source, /const qrModel = qrGenerator\?\._oQRCode/);
   assert.match(source, /outputContext\.imageSmoothingEnabled = false/);
-  assert.match(source, /Math\.round\(\(\(column \+ 1\) \* drawSize\) \/ moduleCount\)/);
-  assert.match(source, /outputContext\.fillRect\(left, top, width, height\)/);
+  assert.match(source, /const modulePixels = Math\.floor\(size \/ moduleCount\)/);
+  assert.match(source, /const actualSize = moduleCount \* modulePixels/);
+  assert.match(source, /drawX \+ column \* modulePixels/);
+  assert.match(source, /drawY \+ row \* modulePixels/);
+  assert.match(source, /outputContext\.fillRect\(\s*drawX \+ column \* modulePixels,/s);
   assert.doesNotMatch(source, /const qrDataUrl = qrCanvas\.toDataURL\('image\/png'\)/);
   assert.doesNotMatch(source, /qrMount\.appendChild\(qrImage\)/);
   assert.doesNotMatch(source, /qrLogoBadge/);
