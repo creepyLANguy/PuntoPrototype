@@ -3749,20 +3749,26 @@ body.light-mode .scoreboard-logo {
    * "Padel Push™" when read in that direction, and use the logo itself as
    * the separator between the court name and brand.
    */
-  .marquee-content.scrolling {
+  /*
+   * Keep the landscape branding layout identical whether the content fits or
+   * needs to scroll. The logo is the visual separator between the court name
+   * and "Padel Push™"; scrolling should only add movement, not change the
+   * arrangement of the branding.
+   */
+  .marquee-content {
     gap: clamp(18px, 3vmin, 30px);
   }
 
-  .marquee-content.scrolling #courtTitle {
+  .marquee-content #courtTitle {
     margin-top: 0;
   }
 
-  .marquee-content.scrolling .scoreboard-branding {
+  .marquee-content .scoreboard-branding {
     flex-direction: column-reverse;
     gap: clamp(18px, 3vmin, 30px);
   }
 
-  .marquee-content.scrolling .marquee-separator {
+  .marquee-content .marquee-separator {
     display: none;
   }
 }
