@@ -7957,6 +7957,62 @@ function canShareFiles()
 //   }
 // }
 
+function drawPixelAlignedQr(outputContext, qrGenerator, x, y, size)
+{
+  const qrModel = qrGenerator?._oQRCode;
+  if (!qrModel || typeof qrModel.getModuleCount !== 'function' || typeof qrModel.isDark !== 'function')
+  {
+    throw new Error('QR generator did not expose its generated module matrix');
+  }
+
+  const moduleCount = qrModel.getModuleCount();
+  if (!Number.isInteger(moduleCount) || moduleCount <= 0 || size <= 0)
+  {
+    throw new Error('Invalid QR module geometry');
+  }
+
+  // The final share canvas is already at its delivery resolution. Draw the QR
+  // directly here, after the smoothed full-card downsample, so every module
+  // boundary lands on an integer final-image pixel coordinate. Rounded module
+  // boundaries intentionally allow adjacent modules to alternate between
+  // floor/ceil pixel widths when the QR does not divide evenly into the area.
+  const drawX = Math.round(x);
+  const drawY = Math.round(y);
+  const drawSize = Math.max(1, Math.round(size));
+
+  outputContext.save();
+  outputContext.imageSmoothingEnabled = false;
+  outputContext.fillStyle = '#ffffff';
+  outputContext.fillRect(drawX, drawY, drawSize, drawSize);
+
+  outputContext.fillStyle = '#000000';
+  for (let row = 0; row < moduleCount; row++)
+  {
+    const top = drawY + Math.round((row * drawSize) / moduleCount);
+    const bottom = drawY + Math.round(((row + 1) * drawSize) / moduleCount);
+
+    for (let column = 0; column < moduleCount; column++)
+    {
+      if (!qrModel.isDark(row, column))
+      {
+        continue;
+      }
+
+      const left = drawX + Math.round((column * drawSize) / moduleCount);
+      const right = drawX + Math.round(((column + 1) * drawSize) / moduleCount);
+
+      const width = right - left;
+      const height = bottom - top;
+      if (width > 0 && height > 0)
+      {
+        outputContext.fillRect(left, top, width, height);
+      }
+    }
+  }
+
+  outputContext.restore();
+}
+
 async function cacheShareableScoreCard()
 {
   const element = document.getElementById('dmBox');
@@ -8259,10 +8315,17 @@ async function cacheShareableScoreCard()
   footerPanel.appendChild(qrWrap);
   footerPanel.appendChild(footerText);
 
+  let qrGenerator = null;
+  let qrSize = 0;
+
   if (window.QRCode)
   {
-    const qrSize = Math.max(168, Math.min(240, footerHeight - 48));
-    new window.QRCode(qrMount, {
+    qrSize = Math.max(168, Math.min(240, footerHeight - 48));
+
+    // Generate the QR only to obtain its canonical module matrix. The generated
+    // canvas/image is deliberately never attached to the export DOM, so it
+    // cannot be resampled by html-to-image or by the later 2x -> 1x downsample.
+    qrGenerator = new window.QRCode(document.createElement('div'), {
       text: qrUrl,
       width: qrSize,
       height: qrSize,
@@ -8271,35 +8334,11 @@ async function cacheShareableScoreCard()
       correctLevel: window.QRCode.CorrectLevel.H
     });
 
-    // qrcode.js paints its canvas synchronously but fills its companion <img>
-    // from a setTimeout retry loop, so that <img> is still src-less when the
-    // capture runs. Freeze the canvas into a single data-URL image instead of
-    // racing it.
-    const qrCanvas = qrMount.querySelector('canvas');
-    if (qrCanvas)
-    {
-      const qrDataUrl = qrCanvas.toDataURL('image/png');
-      qrMount.innerHTML = '';
-
-      const qrImage = document.createElement('img');
-      qrImage.src = qrDataUrl;
-      qrImage.alt = '';
-      qrImage.width = qrSize;
-      qrImage.height = qrSize;
-      qrImage.style.display = 'block';
-      qrMount.appendChild(qrImage);
-
-    }
-    else
-    {
-      qrMount.querySelectorAll('img').forEach(node =>
-      {
-        if (!node.getAttribute('src'))
-        {
-          node.remove();
-        }
-      });
-    }
+    // Reserve exactly the same final-resolution square that the old QR occupied,
+    // but leave it blank until the final output canvas exists.
+    qrMount.style.width = qrSize + 'px';
+    qrMount.style.height = qrSize + 'px';
+    qrMount.style.flex = '0 0 auto';
   }
 
   const inclusions = (node) =>
@@ -8420,6 +8459,21 @@ async function cacheShareableScoreCard()
         SHARE_IMAGE_WIDTH,
         SHARE_IMAGE_HEIGHT
       );
+
+      // QR is intentionally rendered last. The rest of the card can benefit
+      // from the high-quality smoothed downsample, while the QR is placed
+      // directly into the final 1080x1350 raster with integer-aligned module
+      // boundaries and no intermediate image resampling.
+      if (qrGenerator)
+      {
+        const cloneRect = clone.getBoundingClientRect();
+        const qrRect = qrMount.getBoundingClientRect();
+        const qrX = Math.round(qrRect.left - cloneRect.left);
+        const qrY = Math.round(qrRect.top - cloneRect.top);
+        const qrFinalSize = Math.round(Math.min(qrRect.width, qrRect.height));
+
+        drawPixelAlignedQr(outputContext, qrGenerator, qrX, qrY, qrFinalSize);
+      }
 
       blob = await new Promise((resolve, reject) =>
       {
