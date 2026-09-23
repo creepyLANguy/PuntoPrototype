@@ -7990,7 +7990,9 @@ async function cacheShareableScoreCard()
   const SHARE_IMAGE_WIDTH = 1080;
   const SHARE_IMAGE_HEIGHT = 1350;
   const SHARE_IMAGE_CONTENT_WIDTH = 840;
-  const SHARE_IMAGE_SCORE_PANEL_WIDTH = 520;
+  const SHARE_IMAGE_SCORE_PANEL_WIDTH = 480;
+  const SHARE_IMAGE_QR_PANEL_WIDTH = 720;
+  const SHARE_IMAGE_QR_LEFT_OFFSET = 104;
   const SHARE_IMAGE_SCALE = 2;
   const footerHeight = 96 * SHARE_IMAGE_SCALE;
 
@@ -8198,16 +8200,17 @@ async function cacheShareableScoreCard()
   // edges with a gap down the middle.
   const footerPanel = document.createElement('div');
   clone.appendChild(footerPanel);
-  footerPanel.style.width = `${SHARE_IMAGE_SCORE_PANEL_WIDTH}px`;
+  footerPanel.style.width = `${SHARE_IMAGE_QR_PANEL_WIDTH}px`;
   footerPanel.style.maxWidth = '100%';
   footerPanel.style.marginTop = `24px`;
   footerPanel.style.display = 'flex';
   footerPanel.style.alignItems = 'center';
-  footerPanel.style.justifyContent = 'center';
+  footerPanel.style.justifyContent = 'flex-start';
   footerPanel.style.gap = `28px`;
   footerPanel.style.padding = `24px 32px`;
   footerPanel.style.minHeight = `${footerHeight + 24}px`;
   footerPanel.style.boxSizing = 'border-box';
+  footerPanel.style.paddingLeft = `${SHARE_IMAGE_QR_LEFT_OFFSET}px`;
 
   const qrWrap = document.createElement('div');
   qrWrap.style.display = 'inline-flex';
