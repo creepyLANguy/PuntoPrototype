@@ -1,9 +1,9 @@
 openapi: 3.1.0
 info:
-  title: Padel Push Public API
+  title: Padel Push™ Public API
   version: 1.0.0
   description: |
-    Public read-only API for live Padel Push scores, revisions, statistics and momentum.
+    Public read-only API for live Padel Push™ scores, revisions, statistics and momentum.
     The deployed URLs are currently unversioned and are governed as v1 by compatibility policy.
 servers:
   - url: https://www.padelpush.co.za
