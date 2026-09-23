@@ -339,13 +339,13 @@ body.light-mode .menu-btn:hover {
   bottom: 0;
   width: 28px;
   height: 28px;
-  border-top-left-radius: 8px;
   background: repeating-linear-gradient(
     135deg,
     transparent 0 4px,
     rgba(255, 255, 255, 0.9) 4px 6px,
-    transparent 6px 10px
+    transparent 6px 8px
   );
+  clip-path: polygon(0 0, 100% 0, 100% 100%);
   opacity: 0.5;
   pointer-events: auto;
   cursor: nwse-resize;
