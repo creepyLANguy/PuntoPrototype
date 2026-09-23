@@ -4268,14 +4268,183 @@ document.addEventListener("DOMContentLoaded", () =>
 
     const panel = elements.courtQrPanel;
 
-    const stopInteraction = () =>
-    {
-      const wasResizing = isResizingQrPanel;
+    let interactionMode = null;
+    let pointerId = null;
+    let parentRect = null;
+    let panelWidth = 0;
+    let panelHeight = 0;
+    let dragOffsetX = 0;
+    let dragOffsetY = 0;
+    let resizeLeft = 0;
+    let resizeTop = 0;
+    let resizeStartX = 0;
+    let resizeStartY = 0;
+    let resizeStartWidth = 0;
+    let resizeAspectRatio = 1.24;
 
+    let pendingLeft = null;
+    let pendingTop = null;
+    let pendingWidth = null;
+    let pendingHeight = null;
+    let framePending = false;
+
+    const cancelScheduledFrame = () =>
+    {
+      if (!framePending)
+      {
+        return;
+      }
+
+      window.cancelAnimationFrame(framePending);
+      framePending = false;
+    };
+
+    const applyPendingQrPanelFrame = () =>
+    {
+      framePending = false;
+
+      const nextLeft = pendingLeft;
+      const nextTop = pendingTop;
+      const nextWidth = pendingWidth;
+      const nextHeight = pendingHeight;
+
+      pendingLeft = null;
+      pendingTop = null;
+      pendingWidth = null;
+      pendingHeight = null;
+
+      if (nextLeft !== null)
+      {
+        panel.style.left = nextLeft + "px";
+      }
+
+      if (nextTop !== null)
+      {
+        panel.style.top = nextTop + "px";
+      }
+
+      if (nextWidth !== null)
+      {
+        panel.style.width = nextWidth + "px";
+      }
+
+      if (nextHeight !== null)
+      {
+        panel.style.height = nextHeight + "px";
+      }
+    };
+
+    const scheduleQrPanelFrame = ({ left = null, top = null, width = null, height = null } = {}) =>
+    {
+      if (left !== null) pendingLeft = left;
+      if (top !== null) pendingTop = top;
+      if (width !== null) pendingWidth = width;
+      if (height !== null) pendingHeight = height;
+
+      if (!framePending)
+      {
+        framePending = window.requestAnimationFrame(applyPendingQrPanelFrame);
+      }
+    };
+
+    const getParentRect = () => elements.scoreboardPage.getBoundingClientRect();
+
+    const calculateDragPosition = (clientX, clientY) =>
+    {
+      const maxLeft = Math.max(0, parentRect.width - panelWidth);
+      const maxTop = Math.max(0, parentRect.height - panelHeight);
+
+      return {
+        left: Math.min(
+          maxLeft,
+          Math.max(0, clientX - parentRect.left - dragOffsetX)
+        ),
+        top: Math.min(
+          maxTop,
+          Math.max(0, clientY - parentRect.top - dragOffsetY)
+        )
+      };
+    };
+
+    const calculateResize = (clientX, clientY) =>
+    {
+      const maxWidthByRightEdge = parentRect.width - resizeLeft - 8;
+      const maxWidthByBottomEdge = (parentRect.height - resizeTop - 8) / resizeAspectRatio;
+      const maxWidth = Math.max(
+        72,
+        Math.min(maxWidthByRightEdge, maxWidthByBottomEdge)
+      );
+
+      const deltaX = clientX - resizeStartX;
+      const deltaY = clientY - resizeStartY;
+      const requestedWidth = resizeStartWidth + Math.max(deltaX, deltaY / resizeAspectRatio);
+      const width = Math.max(72, Math.min(maxWidth, requestedWidth));
+
+      return {
+        width,
+        height: width * resizeAspectRatio
+      };
+    };
+
+    const queueInteractionPosition = (clientX, clientY) =>
+    {
+      if (interactionMode === "drag")
+      {
+        const position = calculateDragPosition(clientX, clientY);
+        scheduleQrPanelFrame(position);
+        return;
+      }
+
+      if (interactionMode === "resize")
+      {
+        const size = calculateResize(clientX, clientY);
+        scheduleQrPanelFrame({
+          width: size.width,
+          height: size.height
+        });
+      }
+    };
+
+    const stopInteraction = (event = null) =>
+    {
+      if (!interactionMode || (event && event.pointerId !== pointerId))
+      {
+        return;
+      }
+
+      const wasResizing = interactionMode === "resize";
+      const releasedPointerId = pointerId;
+
+      if (event)
+      {
+        queueInteractionPosition(event.clientX, event.clientY);
+      }
+
+      if (framePending)
+      {
+        window.cancelAnimationFrame(framePending);
+        framePending = false;
+        applyPendingQrPanelFrame();
+      }
+
+      interactionMode = null;
       isDraggingQrPanel = false;
       isResizingQrPanel = false;
-      qrPointerId = null;
+      pointerId = null;
+      parentRect = null;
       panel.classList.remove("dragging", "resizing");
+
+      if (releasedPointerId !== null && panel.hasPointerCapture?.(releasedPointerId))
+      {
+        try
+        {
+          panel.releasePointerCapture(releasedPointerId);
+        }
+        catch
+        {
+          // Pointer capture can already have been released by the browser.
+        }
+      }
 
       if (wasResizing)
       {
@@ -4290,86 +4459,84 @@ document.addEventListener("DOMContentLoaded", () =>
         return;
       }
 
-      const panelRect = panel.getBoundingClientRect();
+      const currentParentRect = getParentRect();
+      const currentPanelRect = panel.getBoundingClientRect();
       const resizeHandleZone = 22;
-      const isResizeAction = event.clientX >= panelRect.right - resizeHandleZone &&
-        event.clientY >= panelRect.bottom - resizeHandleZone;
+      const isResizeAction = event.clientX >= currentPanelRect.right - resizeHandleZone &&
+        event.clientY >= currentPanelRect.bottom - resizeHandleZone;
+
+      parentRect = currentParentRect;
+      panelWidth = currentPanelRect.width;
+      panelHeight = currentPanelRect.height;
+      pointerId = event.pointerId;
 
       if (isResizeAction)
       {
+        interactionMode = "resize";
         isResizingQrPanel = true;
-        qrPointerId = event.pointerId;
+        resizeLeft = currentPanelRect.left - parentRect.left;
+        resizeTop = currentPanelRect.top - parentRect.top;
+        resizeStartX = event.clientX;
+        resizeStartY = event.clientY;
+        resizeStartWidth = currentPanelRect.width;
+        resizeAspectRatio = currentPanelRect.width > 0
+          ? currentPanelRect.height / currentPanelRect.width
+          : 1.24;
+
+        panel.style.bottom = "auto";
+        panel.style.right = "auto";
+        panel.style.left = resizeLeft + "px";
+        panel.style.top = resizeTop + "px";
         panel.classList.add("resizing");
-        return;
       }
+      else
+      {
+        interactionMode = "drag";
+        isDraggingQrPanel = true;
+        dragOffsetX = event.clientX - currentPanelRect.left;
+        dragOffsetY = event.clientY - currentPanelRect.top;
 
-      isDraggingQrPanel = true;
-      qrPointerId = event.pointerId;
-      qrDragOffsetX = event.clientX - panelRect.left;
-      qrDragOffsetY = event.clientY - panelRect.top;
-
-      panel.style.bottom = "auto";
-      panel.style.right = "auto";
-      panel.style.left = `${panelRect.left - elements.scoreboardPage.getBoundingClientRect().left}px`;
-      panel.style.top = `${panelRect.top - elements.scoreboardPage.getBoundingClientRect().top}px`;
-      panel.classList.add("dragging");
+        panel.style.bottom = "auto";
+        panel.style.right = "auto";
+        panel.style.left = (currentPanelRect.left - parentRect.left) + "px";
+        panel.style.top = (currentPanelRect.top - parentRect.top) + "px";
+        panel.classList.add("dragging");
+      }
 
       panel.setPointerCapture(event.pointerId);
       event.preventDefault();
-    });
+    }, { capture: true });
 
-    panel.addEventListener("pointermove", (event) =>
+    document.addEventListener("pointermove", (event) =>
     {
-      if (!isDraggingQrPanel || qrPointerId !== event.pointerId)
+      if (!interactionMode || event.pointerId !== pointerId)
       {
         return;
       }
 
-      const parentRect = elements.scoreboardPage.getBoundingClientRect();
-      const panelRect = panel.getBoundingClientRect();
-
-      const maxLeft = Math.max(0, parentRect.width - panelRect.width);
-      const maxTop = Math.max(0, parentRect.height - panelRect.height);
-
-      const nextLeft = Math.min(
-        maxLeft,
-        Math.max(0, event.clientX - parentRect.left - qrDragOffsetX)
-      );
-      const nextTop = Math.min(
-        maxTop,
-        Math.max(0, event.clientY - parentRect.top - qrDragOffsetY)
-      );
-
-      panel.style.left = `${nextLeft}px`;
-      panel.style.top = `${nextTop}px`;
-    });
+      queueInteractionPosition(event.clientX, event.clientY);
+      event.preventDefault();
+    }, { passive: false });
 
     const stopInteractionFromPointer = (event) =>
     {
-      if (qrPointerId === event.pointerId)
-      {
-        stopInteraction();
-      }
+      stopInteraction(event);
     };
 
     panel.addEventListener("lostpointercapture", stopInteraction);
     document.addEventListener("pointerup", stopInteractionFromPointer);
     document.addEventListener("pointercancel", stopInteractionFromPointer);
 
-    if (window.ResizeObserver)
+    window.addEventListener("resize", () =>
     {
-      const observer = new ResizeObserver(() =>
+      if (interactionMode)
       {
-        if (isResizingQrPanel)
-        {
-          return;
-        }
+        stopInteraction();
+        return;
+      }
 
-        clampCourtQrPanelToViewport();
-      });
-
-      observer.observe(panel);
-    }
+      clampCourtQrPanelToViewport();
+    });
 
     hasInitializedQrPanelInteractions = true;
   }
