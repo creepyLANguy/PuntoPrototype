@@ -3749,6 +3749,10 @@ body.light-mode .scoreboard-logo {
    * "Padel Push™" when read in that direction, and use the logo itself as
    * the separator between the court name and brand.
    */
+  .marquee-content.scrolling {
+    gap: clamp(18px, 3vmin, 30px);
+  }
+
   .marquee-content.scrolling .scoreboard-branding {
     flex-direction: column-reverse;
   }
