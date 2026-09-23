@@ -7990,7 +7990,7 @@ async function cacheShareableScoreCard()
   const SHARE_IMAGE_WIDTH = 1080;
   const SHARE_IMAGE_HEIGHT = 1350;
   const SHARE_IMAGE_CONTENT_WIDTH = 840;
-  const SHARE_IMAGE_SCORE_PANEL_WIDTH = 720;
+  const SHARE_IMAGE_SCORE_PANEL_WIDTH = 520;
   const SHARE_IMAGE_SCALE = 2;
   const footerHeight = 96 * SHARE_IMAGE_SCALE;
 
