@@ -28,7 +28,7 @@ test("court QR is rendered as one SVG tree containing both QR modules and logo",
 
 test("QR panel uses the custom pointer interaction instead of native CSS resize", () =>
 {
-  assert.match(source, /isResizingQrPanel = true/);
+  assert.match(source, /interactionMode = "resize"/);
   assert.match(source, /panel\.setPointerCapture\(event\.pointerId\)/);
   assert.match(styles, /\.court-qr-panel\s*\{[\s\S]*?resize: none;/);
   assert.doesNotMatch(brand, /qr-resize-interaction/);
