@@ -128,14 +128,18 @@ test("QR is generated off-DOM and composited directly onto the final canvas", ()
 });
 
 test("QR compositing happens after the smoothed card downsample and before PNG encoding", () => {
+  const exportStartIndex = source.indexOf("async function cacheShareableScoreCard()");
   const downsampleIndex = source.indexOf(
-    "outputContext.drawImage(\n        highResolutionImage,"
+    "outputContext.drawImage(\n        highResolutionImage,",
+    exportStartIndex
   );
   const qrCompositeIndex = source.indexOf(
-    "drawPixelAlignedQr(outputContext, qrGenerator"
+    "drawPixelAlignedQr(outputContext, qrGenerator, qrX, qrY, qrFinalSize);",
+    exportStartIndex
   );
-  const pngEncodeIndex = source.indexOf("outputCanvas.toBlob(");
+  const pngEncodeIndex = source.indexOf("outputCanvas.toBlob(", exportStartIndex);
 
+  assert.ok(exportStartIndex >= 0);
   assert.ok(downsampleIndex >= 0);
   assert.ok(qrCompositeIndex > downsampleIndex);
   assert.ok(pngEncodeIndex > qrCompositeIndex);
