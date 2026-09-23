@@ -11,13 +11,13 @@ flowchart LR
         classDef user fill:#F3E5F5,stroke:#7B1FA2,stroke-width:2px,color:#4A148C,font-weight:bold;
         classDef future fill:#FAFAFA,stroke:#9E9E9E,stroke-width:1px,stroke-dasharray:5 5,color:#616161;
     subgraph COURT["Court Equipment"]
-        Devices["Padel Push court devices<br/>Beacon • Pulse • Hub"]
+        Devices["Padel Push™ court devices<br/>Beacon • Pulse • Hub"]
         NFC["NFC setup and player interaction"]
         Devices -->|"HTTPS event submission"| Ingestion
         NFC -->|"NFC / QR access"| WebApp
     end
 
-    subgraph PLATFORM["Padel Push Scoring Flow"]
+    subgraph PLATFORM["Padel Push™ Scoring Flow"]
         Hosting["Firebase Hosting<br/>Web application"]
         Ingestion["postEvent<br/>HTTP / africa-south1"]
         Events[("courts/{courtId}/events<br/>Append-only event history")]

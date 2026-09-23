@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Padel Push — Score Overlay</title>
+  <title>Padel Push™ — Score Overlay</title>
   <link rel="icon" href="/media/favicon.svg" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -1489,7 +1489,7 @@
     <div class="overlay" id="overlayBox">
       <div class="brand">
         <img src="/media/logo.svg" alt="Brand logo" id="brandLogo" />
-        <span class="brand-name" id="brandName">Padel Push</span>
+        <span class="brand-name" id="brandName">Padel Push™</span>
         <span class="brand-court" id="courtLabel"></span>
         <span class="match-timer" id="matchTimer"></span>
       </div>
@@ -1643,11 +1643,11 @@
         placeholder="h:mm:ss, mm:ss or minutes" /></label>
 
     <div class="section">Brand</div>
-    <label><span>Brand text</span><input type="text" id="setBrandText" placeholder="Padel Push" /></label>
+    <label><span>Brand text</span><input type="text" id="setBrandText" placeholder="Padel Push™" /></label>
     <label><span>Brand logo URL</span><input type="url" id="setBrandLogo" placeholder="https://…" /></label>
 
     <div class="section">Sponsor strip (HTML, {courtId} placeholder)</div>
-    <textarea id="setSponsorHtml" rows="3" placeholder="Defaults to the Padel Push message"></textarea>
+    <textarea id="setSponsorHtml" rows="3" placeholder="Defaults to the Padel Push™ message"></textarea>
 
     <div class="section">Sponsor rotation (overrides the strip above)</div>
     <div id="sponsorList"></div>
@@ -1778,7 +1778,7 @@
       const THEME_COLOR_KEYS = ["panel", "panel2", "gradientAngle", "text", "teamA", "teamB"];
 
       const THEME_PRESETS = {
-        padelpush: { label: "Padel Push", panel: "#000000", panel2: "#00002d", gradientAngle: 90, text: "#ffffff", teamA: "#b7f000", teamB: "#27d9ff" },
+        padelpush: { label: "Padel Push™", panel: "#000000", panel2: "#00002d", gradientAngle: 90, text: "#ffffff", teamA: "#b7f000", teamB: "#27d9ff" },
         broadcast: { label: "Broadcast Navy", panel: "#0a1a3c", panel2: "#050b18", gradientAngle: 135, text: "#ffffff", teamA: "#ffd75e", teamB: "#6ecbff" },
         carbon: { label: "Carbon", panel: "#101010", panel2: "#1d1d1d", gradientAngle: 180, text: "#f5f5f5", teamA: "#ff5c39", teamB: "#3ddc97" },
         clay: { label: "Clay Court", panel: "#3d1f14", panel2: "#20100a", gradientAngle: 120, text: "#ffe9dd", teamA: "#ffb26b", teamB: "#7fd8ff" },
@@ -1812,8 +1812,8 @@
       }
 
       const DEFAULT_SPONSOR_HTML =
-        'Live scores brought to you by <img src="/media/logo.svg" alt="Padel Push" /> ' +
-        '<strong>Padel Push</strong>. Visit <strong>padelpush.co.za</strong> and join us on this court: ' +
+        'Live scores brought to you by <img src="/media/logo.svg" alt="Padel Push™" /> ' +
+        '<strong>Padel Push™</strong>. Visit <strong>padelpush.co.za</strong> and join us on this court: ' +
         '<strong>{courtId}</strong>';
 
       // Hosting rewrites that all serve this overlay; a bare one carries no courtId.
@@ -2085,7 +2085,7 @@
       }
 
       function applyBrand() {
-        document.getElementById("brandName").textContent = settings.brandText || "Padel Push";
+        document.getElementById("brandName").textContent = settings.brandText || "Padel Push™";
         document.getElementById("brandLogo").src = safeHttpUrl(settings.brandLogo) || "/media/logo.svg";
       }
 
