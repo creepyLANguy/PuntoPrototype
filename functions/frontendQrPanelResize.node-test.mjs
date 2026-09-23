@@ -38,7 +38,7 @@ test("QR panel pull tab looks and behaves like a resize handle", () =>
 {
   assert.match(styles, /\.pull-tab\s*\{[\s\S]*?opacity:\s*0\.5;/);
   assert.match(styles, /\.pull-tab\s*\{[\s\S]*?repeating-linear-gradient\(/);
-  assert.match(styles, /\.pull-tab\s*\{[\s\S]*?clip-path:\s*polygon\(0 0, 100% 0, 100% 100%\);/);
+  assert.match(styles, /\.pull-tab\s*\{[\s\S]*?clip-path:\s*polygon\(0 0, 0 100%, 100% 100%\);/);
   assert.match(styles, /\.pull-tab\s*\{[\s\S]*?transparent 0 4px,[\s\S]*?rgba\(255, 255, 255, 0\.9\) 4px 6px,[\s\S]*?transparent 6px 8px/);
   assert.match(styles, /\.pull-tab\s*\{[\s\S]*?cursor:\s*nwse-resize;/);
   assert.match(source, /const resizeHandleZone = 28;/);
