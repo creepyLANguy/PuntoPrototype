@@ -8501,9 +8501,10 @@ async function cacheShareableScoreCard()
   // edges with a gap down the middle.
   const footerPanel = document.createElement('div');
   clone.appendChild(footerPanel);
+  footerPanel.style.position = 'absolute';
   footerPanel.style.width = `${SHARE_IMAGE_QR_PANEL_WIDTH}px`;
   footerPanel.style.maxWidth = '100%';
-  footerPanel.style.marginTop = `24px`;
+  footerPanel.style.marginTop = '0';
   footerPanel.style.display = 'flex';
   footerPanel.style.alignItems = 'center';
   footerPanel.style.justifyContent = 'flex-start';
@@ -8545,7 +8546,7 @@ async function cacheShareableScoreCard()
   footerCourtId.style.letterSpacing = '0.06em';
 
   const footerUrl = document.createElement('div');
-  footerUrl.textContent = qrUrl;
+  footerUrl.textContent = qrUrl.replace(/^https?:\/\//i, '');
   footerUrl.style.fontSize = `24px`;
   footerUrl.style.opacity = '0.85';
   footerUrl.style.overflow = 'hidden';
@@ -8600,6 +8601,28 @@ async function cacheShareableScoreCard()
         }
       });
     }
+  }
+
+  // Centre the QR/footer section in the exact vertical space between the bottom
+  // of the score details table and the bottom edge of the exported image. This
+  // makes the two surrounding gaps equal without changing the live modal.
+  clone.style.position = 'relative';
+
+  await new Promise(resolve => requestAnimationFrame(() => resolve()));
+
+  const cloneRect = clone.getBoundingClientRect();
+  const scoreDetailsRect = shareTableWrap?.getBoundingClientRect();
+
+  if (scoreDetailsRect && cloneRect.height > 0)
+  {
+    const scoreBottom = scoreDetailsRect.bottom - cloneRect.top;
+    const footerRect = footerPanel.getBoundingClientRect();
+    const remainingHeight = cloneRect.height - scoreBottom - footerRect.height;
+    const verticalGap = Math.max(0, remainingHeight / 2);
+
+    footerPanel.style.top = `${scoreBottom + verticalGap}px`;
+    footerPanel.style.left = '50%';
+    footerPanel.style.transform = 'translateX(-50%)';
   }
 
   const inclusions = (node) =>
