@@ -7990,6 +7990,7 @@ async function cacheShareableScoreCard()
   const SHARE_IMAGE_WIDTH = 1080;
   const SHARE_IMAGE_HEIGHT = 1350;
   const SHARE_IMAGE_CONTENT_WIDTH = 840;
+  const SHARE_IMAGE_SCORE_PANEL_WIDTH = 720;
   const SHARE_IMAGE_SCALE = 2;
   const footerHeight = 96 * SHARE_IMAGE_SCALE;
 
@@ -8094,10 +8095,10 @@ async function cacheShareableScoreCard()
     node.style.lineHeight = '1.15';
   });
 
-  // The share image uses one common 840px final-resolution content column.
-  // All visible information blocks are constrained to that same column, while
-  // the live details modal keeps its normal responsive width.
-  [shareHeader, shareMidSection, shareTableWrap].forEach(node =>
+  // The share image uses an 840px main content column. The score table and QR/footer
+  // use the same narrower panel width so their horizontal density stays compact,
+  // while the live details modal keeps its normal responsive width.
+  [shareHeader, shareMidSection].forEach(node =>
   {
     if (!node) return;
     node.style.width = `${SHARE_IMAGE_CONTENT_WIDTH}px`;
@@ -8115,6 +8116,13 @@ async function cacheShareableScoreCard()
   {
     shareTeams.style.width = '100%';
     shareTeams.style.maxWidth = '100%';
+  }
+
+  if (shareTableWrap)
+  {
+    shareTableWrap.style.width = `${SHARE_IMAGE_SCORE_PANEL_WIDTH}px`;
+    shareTableWrap.style.maxWidth = '100%';
+    shareTableWrap.style.boxSizing = 'border-box';
   }
 
   if (shareTableWrap && shareTable)
@@ -8190,7 +8198,7 @@ async function cacheShareableScoreCard()
   // edges with a gap down the middle.
   const footerPanel = document.createElement('div');
   clone.appendChild(footerPanel);
-  footerPanel.style.width = `${SHARE_IMAGE_CONTENT_WIDTH}px`;
+  footerPanel.style.width = `${SHARE_IMAGE_SCORE_PANEL_WIDTH}px`;
   footerPanel.style.maxWidth = '100%';
   footerPanel.style.marginTop = `24px`;
   footerPanel.style.display = 'flex';
