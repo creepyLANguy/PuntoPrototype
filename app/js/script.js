@@ -601,6 +601,7 @@ document.addEventListener("DOMContentLoaded", () =>
 
   let loadingSpinnerStartTime = 0;
   let isDraggingQrPanel = false;
+  let isResizingQrPanel = false;
   let qrPointerId = null;
   let qrDragOffsetX = 0;
   let qrDragOffsetY = 0;
@@ -4048,7 +4049,16 @@ document.addEventListener("DOMContentLoaded", () =>
       return;
     }
 
-    const panelWidth = Math.floor(elements.courtQrPanel.clientWidth);    
+    const panelWidth = Math.floor(elements.courtQrPanel.clientWidth);
+    if (panelWidth <= 0)
+    {
+      return;
+    }
+
+    elements.courtQrPanel.style.setProperty(
+      "--qr-panel-scale",
+      Math.max(1, panelWidth / 160)
+    );
   }
 
   function clampCourtQrPanelToViewport()
@@ -4083,8 +4093,15 @@ document.addEventListener("DOMContentLoaded", () =>
     );
     const nextHeight = nextWidth * panelAspectRatio;
 
-    panel.style.width = `${nextWidth}px`;
-    panel.style.height = `${nextHeight}px`;
+    if (Math.abs(panelRectNow.width - nextWidth) > 0.25)
+    {
+      panel.style.width = `${nextWidth}px`;
+    }
+
+    if (Math.abs(panelRectNow.height - nextHeight) > 0.25)
+    {
+      panel.style.height = `${nextHeight}px`;
+    }
 
     const panelRect = panel.getBoundingClientRect();
     const maxLeft = Math.max(safeGap, parentRect.width - panelRect.width - safeGap);
@@ -4105,8 +4122,16 @@ document.addEventListener("DOMContentLoaded", () =>
       Math.max(safeGap, Number.isFinite(currentTop) ? currentTop : fallbackTop)
     );
 
-    panel.style.left = `${nextLeft}px`;
-    panel.style.top = `${nextTop}px`;
+    if (!Number.isFinite(currentLeft) || Math.abs(currentLeft - nextLeft) > 0.25)
+    {
+      panel.style.left = `${nextLeft}px`;
+    }
+
+    if (!Number.isFinite(currentTop) || Math.abs(currentTop - nextTop) > 0.25)
+    {
+      panel.style.top = `${nextTop}px`;
+    }
+
     panel.style.right = "auto";
     panel.style.bottom = "auto";
 
@@ -4133,16 +4158,114 @@ document.addEventListener("DOMContentLoaded", () =>
   {
     if (!elements.courtQrPanel)
     {
-      return 100;
+      return 256;
     }
 
     const panelWidth = Math.floor(elements.courtQrPanel.clientWidth);
     if (!panelWidth || panelWidth <= 0)
     {
-      return 100;
+      return 256;
     }
 
-    return Math.max(72, panelWidth - 24);
+    return Math.max(256, panelWidth - 24);
+  }
+
+  function createCourtQrSvg(qrUrl)
+  {
+    if (!window.QRCode || !qrUrl)
+    {
+      return null;
+    }
+
+    const probe = document.createElement("div");
+    const qr = new window.QRCode(probe, {
+      text: qrUrl,
+      width: 256,
+      height: 256,
+      colorDark: "#000000",
+      colorLight: "#ffffff",
+      correctLevel: window.QRCode.CorrectLevel.H
+    });
+
+    const matrix = qr?._oQRCode;
+    const moduleCount = matrix?.getModuleCount?.();
+    if (!matrix || !Number.isInteger(moduleCount) || moduleCount <= 0)
+    {
+      return null;
+    }
+
+    const svgNamespace = "http://www.w3.org/2000/svg";
+    const xlinkNamespace = "http://www.w3.org/1999/xlink";
+    const svg = document.createElementNS(svgNamespace, "svg");
+    svg.setAttribute("viewBox", `0 0 ${moduleCount} ${moduleCount}`);
+    svg.setAttribute("width", "100%");
+    svg.setAttribute("height", "100%");
+    svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
+    svg.setAttribute("aria-hidden", "true");
+
+    const background = document.createElementNS(svgNamespace, "rect");
+    background.setAttribute("x", "0");
+    background.setAttribute("y", "0");
+    background.setAttribute("width", String(moduleCount));
+    background.setAttribute("height", String(moduleCount));
+    background.setAttribute("fill", "#ffffff");
+    svg.appendChild(background);
+
+    const qrGroup = document.createElementNS(svgNamespace, "g");
+    qrGroup.setAttribute("fill", "#000000");
+    qrGroup.setAttribute("shape-rendering", "crispEdges");
+
+    for (let row = 0; row < moduleCount; row += 1)
+    {
+      let runStart = -1;
+
+      for (let column = 0; column <= moduleCount; column += 1)
+      {
+        const dark = column < moduleCount && matrix.isDark(row, column);
+
+        if (dark && runStart < 0)
+        {
+          runStart = column;
+          continue;
+        }
+
+        if (!dark && runStart >= 0)
+        {
+          const module = document.createElementNS(svgNamespace, "rect");
+          module.setAttribute("x", String(runStart));
+          module.setAttribute("y", String(row));
+          module.setAttribute("width", String(column - runStart));
+          module.setAttribute("height", "1");
+          qrGroup.appendChild(module);
+          runStart = -1;
+        }
+      }
+    }
+
+    svg.appendChild(qrGroup);
+
+    const logoSize = moduleCount * 0.4;
+    const logoX = (moduleCount - logoSize) / 2;
+    const logoY = logoX;
+
+    const logoBackground = document.createElementNS(svgNamespace, "circle");
+    logoBackground.setAttribute("cx", String(moduleCount / 2));
+    logoBackground.setAttribute("cy", String(moduleCount / 2));
+    logoBackground.setAttribute("r", String(logoSize / 2));
+    logoBackground.setAttribute("fill", "#000000");
+    svg.appendChild(logoBackground);
+
+    const logoImage = document.createElementNS(svgNamespace, "image");
+    logoImage.setAttribute("x", String(logoX + logoSize * 0.07));
+    logoImage.setAttribute("y", String(logoY + logoSize * 0.07));
+    logoImage.setAttribute("width", String(logoSize * 0.86));
+    logoImage.setAttribute("height", String(logoSize * 0.86));
+    logoImage.setAttribute("preserveAspectRatio", "xMidYMid meet");
+    logoImage.setAttribute("href", "/media/logo.svg");
+    logoImage.setAttributeNS(xlinkNamespace, "xlink:href", "/media/logo.svg");
+    svg.appendChild(logoImage);
+
+    return svg;
   }
 
   function initializeCourtQrPanelInteractions()
@@ -4154,11 +4277,19 @@ document.addEventListener("DOMContentLoaded", () =>
 
     const panel = elements.courtQrPanel;
 
-    const stopDragging = () =>
+    const stopInteraction = () =>
     {
+      const wasResizing = isResizingQrPanel;
+
       isDraggingQrPanel = false;
+      isResizingQrPanel = false;
       qrPointerId = null;
-      panel.classList.remove("dragging");
+      panel.classList.remove("dragging", "resizing");
+
+      if (wasResizing)
+      {
+        clampCourtQrPanelToViewport();
+      }
     };
 
     panel.addEventListener("pointerdown", (event) =>
@@ -4175,6 +4306,9 @@ document.addEventListener("DOMContentLoaded", () =>
 
       if (isResizeAction)
       {
+        isResizingQrPanel = true;
+        qrPointerId = event.pointerId;
+        panel.classList.add("resizing");
         return;
       }
 
@@ -4219,22 +4353,32 @@ document.addEventListener("DOMContentLoaded", () =>
       panel.style.top = `${nextTop}px`;
     });
 
-    panel.addEventListener("pointerup", stopDragging);
-    panel.addEventListener("pointercancel", stopDragging);
-    panel.addEventListener("lostpointercapture", stopDragging);
+    panel.addEventListener("pointerup", (event) =>
+    {
+      if (qrPointerId === event.pointerId)
+      {
+        stopInteraction();
+      }
+    });
+    panel.addEventListener("pointercancel", (event) =>
+    {
+      if (qrPointerId === event.pointerId)
+      {
+        stopInteraction();
+      }
+    });
+    panel.addEventListener("lostpointercapture", stopInteraction);
 
     if (window.ResizeObserver)
     {
       const observer = new ResizeObserver(() =>
       {
-        clampCourtQrPanelToViewport();
-
-        if (!currentCourtId || panel.classList.contains("hidden"))
+        if (isResizingQrPanel)
         {
           return;
         }
 
-        renderCourtQr(currentCourtId);
+        clampCourtQrPanelToViewport();
       });
 
       observer.observe(panel);
@@ -4250,6 +4394,7 @@ document.addEventListener("DOMContentLoaded", () =>
       return;
     }
 
+    elements.courtQrCode.classList.remove("has-svg-qr");
     elements.courtQrCode.innerHTML = "";
     elements.courtQrLabel.textContent = "";
     elements.courtQrPanel.classList.add("hidden");
@@ -4272,17 +4417,27 @@ document.addEventListener("DOMContentLoaded", () =>
     const qrUrl = buildCourtQrUrl(courtId);
     elements.courtQrPanel.classList.remove("hidden");
     clampCourtQrPanelToViewport();
-    elements.courtQrCode.innerHTML = "";
-    const qrSize = getCourtQrSize();
 
-    new window.QRCode(elements.courtQrCode, {
-      text: qrUrl,
-      width: qrSize,
-      height: qrSize,
-      colorDark: "#000000",
-      colorLight: "#ffffff",
-      correctLevel: window.QRCode.CorrectLevel.H
-    });
+    elements.courtQrCode.classList.remove("has-svg-qr");
+    elements.courtQrCode.innerHTML = "";
+
+    const qrSvg = createCourtQrSvg(qrUrl);
+    if (qrSvg)
+    {
+      elements.courtQrCode.classList.add("has-svg-qr");
+      elements.courtQrCode.appendChild(qrSvg);
+    }
+    else
+    {
+      new window.QRCode(elements.courtQrCode, {
+        text: qrUrl,
+        width: Math.max(512, getCourtQrSize()),
+        height: Math.max(512, getCourtQrSize()),
+        colorDark: "#000000",
+        colorLight: "#ffffff",
+        correctLevel: window.QRCode.CorrectLevel.H
+      });
+    }
 
     elements.courtQrLabel.textContent = courtId;
   }
