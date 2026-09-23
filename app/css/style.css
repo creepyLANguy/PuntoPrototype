@@ -488,16 +488,12 @@ body.light-mode .court-qr-label {
 }
 
 @media (orientation: landscape) {
-  .scoreboard-app-name,
   #courtTitle {
     writing-mode: vertical-rl;
     text-orientation: sideways;
     transform: rotate(180deg);
-    text-align: center;
-  }
-
-  #courtTitle {
     margin-top: 10px;
+    text-align: center;
   }
 }
 
