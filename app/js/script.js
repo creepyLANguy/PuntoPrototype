@@ -4423,8 +4423,6 @@ document.addEventListener("DOMContentLoaded", () =>
       }
 
       interactionMode = null;
-      isDraggingQrPanel = false;
-      isResizingQrPanel = false;
       pointerId = null;
       parentRect = null;
       panel.classList.remove("dragging", "resizing");
