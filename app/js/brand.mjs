@@ -41,4 +41,9 @@ export default BRAND;
 
 if (typeof globalThis !== "undefined") {
   globalThis.PadelPushBrand = BRAND;
+
+  import("./qr-resize-interaction.js").catch((error) =>
+  {
+    console.warn("Could not initialize QR resize interaction:", error);
+  });
 }
