@@ -54,7 +54,7 @@ test("share content uses a common 840px CSS-pixel column", () => {
   assert.match(source, /footerPanel\.style\.justifyContent = 'flex-start'/);
   assert.match(source, /footerPanel\.style\.paddingLeft = `\$\{SHARE_IMAGE_QR_LEFT_OFFSET\}px`/);
   assert.match(source, /shareTableWrap\.style\.width = `\$\{SHARE_IMAGE_SCORE_PANEL_WIDTH\}px`/);
-  assert.match(source, /footerPanel\.style\.width = `\$\{SHARE_IMAGE_SCORE_PANEL_WIDTH\}px`/);
+  assert.match(source, /footerPanel\.style\.width = `\$\{SHARE_IMAGE_QR_PANEL_WIDTH\}px`/);
   assert.match(source, /SHARE_IMAGE_CONTENT_WIDTH/);
   assert.match(source, /shareTableWrap\.style\.padding = '16px 24px'/);
   assert.match(source, /shareTable\.style\.width = '100%'/);
