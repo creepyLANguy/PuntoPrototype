@@ -60,6 +60,13 @@
       }
     };
 
+    const getMaxWidth = (parentRect, left, top) =>
+    {
+      const maxWidthByRightEdge = parentRect.width - left - 8;
+      const maxWidthByBottomEdge = (parentRect.height - top - 8) / aspectRatio;
+      return Math.max(72, Math.min(maxWidthByRightEdge, maxWidthByBottomEdge));
+    };
+
     const finishResize = (event = null) =>
     {
       if (!resizing || (event && event.pointerId !== pointerId))
@@ -75,13 +82,12 @@
         const panelRect = panel.getBoundingClientRect();
         const left = panelRect.left - parentRect.left;
         const top = panelRect.top - parentRect.top;
-        const maxWidth = Math.max(72, parentRect.width - left - 8);
-        const maxHeight = Math.max(72, parentRect.height - top - 8);
+        const maxWidth = getMaxWidth(parentRect, left, top);
         const deltaX = event.clientX - startPointerX;
         const deltaY = event.clientY - startPointerY;
         const requestedWidth = startWidth + Math.max(deltaX, deltaY / aspectRatio);
         const width = Math.max(72, Math.min(maxWidth, requestedWidth));
-        const height = Math.min(maxHeight, width * aspectRatio);
+        const height = width * aspectRatio;
         scheduleSize(width, height);
       }
 
@@ -156,8 +162,7 @@
       const panelRect = panel.getBoundingClientRect();
       const left = panelRect.left - parentRect.left;
       const top = panelRect.top - parentRect.top;
-      const maxWidth = Math.max(72, parentRect.width - left - 8);
-      const maxHeight = Math.max(72, parentRect.height - top - 8);
+      const maxWidth = getMaxWidth(parentRect, left, top);
       const deltaX = event.clientX - startPointerX;
       const deltaY = event.clientY - startPointerY;
 
@@ -165,7 +170,7 @@
       // derived from it, so they can never visually drift apart during resize.
       const requestedWidth = startWidth + Math.max(deltaX, deltaY / aspectRatio);
       const width = Math.max(72, Math.min(maxWidth, requestedWidth));
-      const height = Math.min(maxHeight, width * aspectRatio);
+      const height = width * aspectRatio;
 
       scheduleSize(width, height);
       event.preventDefault();
