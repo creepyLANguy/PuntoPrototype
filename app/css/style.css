@@ -373,7 +373,6 @@ body.light-mode .menu-btn:hover {
   touch-action: none;
   resize: horizontal;
   cursor: grab;
-  will-change: width, height;
 }
 
 .court-qr-code {
@@ -381,6 +380,7 @@ body.light-mode .menu-btn:hover {
   width: 100%;
   aspect-ratio: 1 / 1;
   padding: 1%;
+  box-sizing: border-box;
 }
 
 .court-qr-code::after {
