@@ -1,0 +1,89 @@
+{
+  "name": "silver-first-deuce-advantage",
+  "description": "Silver deuce contrast case: the FIRST deuce is ordinary advantage play. At 40-40 A takes advantage (points index 4 = 'Ad'); the game is NOT decided by that single point. Stops at advantage to show first-cycle behaviour.",
+  "options": {
+    "scoringMode": "standard",
+    "deuceMode": "silver",
+    "tiebreakMode": "sixAllSeven"
+  },
+  "events": [
+    {
+      "eventType": "POINT_TEAM_A",
+      "createdAt": {
+        "seconds": 1,
+        "nanoseconds": 0
+      },
+      "id": "e0001"
+    },
+    {
+      "eventType": "POINT_TEAM_A",
+      "createdAt": {
+        "seconds": 2,
+        "nanoseconds": 0
+      },
+      "id": "e0002"
+    },
+    {
+      "eventType": "POINT_TEAM_A",
+      "createdAt": {
+        "seconds": 3,
+        "nanoseconds": 0
+      },
+      "id": "e0003"
+    },
+    {
+      "eventType": "POINT_TEAM_B",
+      "createdAt": {
+        "seconds": 4,
+        "nanoseconds": 0
+      },
+      "id": "e0004"
+    },
+    {
+      "eventType": "POINT_TEAM_B",
+      "createdAt": {
+        "seconds": 5,
+        "nanoseconds": 0
+      },
+      "id": "e0005"
+    },
+    {
+      "eventType": "POINT_TEAM_B",
+      "createdAt": {
+        "seconds": 6,
+        "nanoseconds": 0
+      },
+      "id": "e0006"
+    },
+    {
+      "eventType": "POINT_TEAM_A",
+      "createdAt": {
+        "seconds": 7,
+        "nanoseconds": 0
+      },
+      "id": "e0007"
+    }
+  ],
+  "expected": {
+    "A": {
+      "points": 4,
+      "games": 0,
+      "sets": 0,
+      "totalPoints": 4
+    },
+    "B": {
+      "points": 3,
+      "games": 0,
+      "sets": 0,
+      "totalPoints": 3
+    },
+    "completedSets": [],
+    "inTiebreak": false,
+    "deuceCycles": 0,
+    "matchComplete": false,
+    "lastPointTeam": "A",
+    "lastGameTeam": null,
+    "lastSetTeam": null,
+    "server": "A1"
+  }
+}

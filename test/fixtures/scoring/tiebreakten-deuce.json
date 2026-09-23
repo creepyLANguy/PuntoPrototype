@@ -1,0 +1,209 @@
+{
+  "name": "tiebreakten-deuce",
+  "description": "Tiebreak Ten match format taken past 10: trade to 10-10, then A wins 12-10. Confirms the win-by-two rule holds at and beyond the target of 10.",
+  "options": {
+    "scoringMode": "tiebreakTen",
+    "deuceMode": "standard",
+    "tiebreakMode": "sixAllSeven"
+  },
+  "events": [
+    {
+      "eventType": "POINT_TEAM_A",
+      "createdAt": {
+        "seconds": 1,
+        "nanoseconds": 0
+      },
+      "id": "e0001"
+    },
+    {
+      "eventType": "POINT_TEAM_A",
+      "createdAt": {
+        "seconds": 2,
+        "nanoseconds": 0
+      },
+      "id": "e0002"
+    },
+    {
+      "eventType": "POINT_TEAM_A",
+      "createdAt": {
+        "seconds": 3,
+        "nanoseconds": 0
+      },
+      "id": "e0003"
+    },
+    {
+      "eventType": "POINT_TEAM_A",
+      "createdAt": {
+        "seconds": 4,
+        "nanoseconds": 0
+      },
+      "id": "e0004"
+    },
+    {
+      "eventType": "POINT_TEAM_A",
+      "createdAt": {
+        "seconds": 5,
+        "nanoseconds": 0
+      },
+      "id": "e0005"
+    },
+    {
+      "eventType": "POINT_TEAM_A",
+      "createdAt": {
+        "seconds": 6,
+        "nanoseconds": 0
+      },
+      "id": "e0006"
+    },
+    {
+      "eventType": "POINT_TEAM_A",
+      "createdAt": {
+        "seconds": 7,
+        "nanoseconds": 0
+      },
+      "id": "e0007"
+    },
+    {
+      "eventType": "POINT_TEAM_A",
+      "createdAt": {
+        "seconds": 8,
+        "nanoseconds": 0
+      },
+      "id": "e0008"
+    },
+    {
+      "eventType": "POINT_TEAM_A",
+      "createdAt": {
+        "seconds": 9,
+        "nanoseconds": 0
+      },
+      "id": "e0009"
+    },
+    {
+      "eventType": "POINT_TEAM_B",
+      "createdAt": {
+        "seconds": 10,
+        "nanoseconds": 0
+      },
+      "id": "e0010"
+    },
+    {
+      "eventType": "POINT_TEAM_B",
+      "createdAt": {
+        "seconds": 11,
+        "nanoseconds": 0
+      },
+      "id": "e0011"
+    },
+    {
+      "eventType": "POINT_TEAM_B",
+      "createdAt": {
+        "seconds": 12,
+        "nanoseconds": 0
+      },
+      "id": "e0012"
+    },
+    {
+      "eventType": "POINT_TEAM_B",
+      "createdAt": {
+        "seconds": 13,
+        "nanoseconds": 0
+      },
+      "id": "e0013"
+    },
+    {
+      "eventType": "POINT_TEAM_B",
+      "createdAt": {
+        "seconds": 14,
+        "nanoseconds": 0
+      },
+      "id": "e0014"
+    },
+    {
+      "eventType": "POINT_TEAM_B",
+      "createdAt": {
+        "seconds": 15,
+        "nanoseconds": 0
+      },
+      "id": "e0015"
+    },
+    {
+      "eventType": "POINT_TEAM_B",
+      "createdAt": {
+        "seconds": 16,
+        "nanoseconds": 0
+      },
+      "id": "e0016"
+    },
+    {
+      "eventType": "POINT_TEAM_B",
+      "createdAt": {
+        "seconds": 17,
+        "nanoseconds": 0
+      },
+      "id": "e0017"
+    },
+    {
+      "eventType": "POINT_TEAM_B",
+      "createdAt": {
+        "seconds": 18,
+        "nanoseconds": 0
+      },
+      "id": "e0018"
+    },
+    {
+      "eventType": "POINT_TEAM_A",
+      "createdAt": {
+        "seconds": 19,
+        "nanoseconds": 0
+      },
+      "id": "e0019"
+    },
+    {
+      "eventType": "POINT_TEAM_B",
+      "createdAt": {
+        "seconds": 20,
+        "nanoseconds": 0
+      },
+      "id": "e0020"
+    },
+    {
+      "eventType": "POINT_TEAM_A",
+      "createdAt": {
+        "seconds": 21,
+        "nanoseconds": 0
+      },
+      "id": "e0021"
+    },
+    {
+      "eventType": "POINT_TEAM_A",
+      "createdAt": {
+        "seconds": 22,
+        "nanoseconds": 0
+      },
+      "id": "e0022"
+    }
+  ],
+  "expected": {
+    "A": {
+      "points": 12,
+      "games": 0,
+      "sets": 1,
+      "totalPoints": 12
+    },
+    "B": {
+      "points": 10,
+      "games": 0,
+      "sets": 0,
+      "totalPoints": 10
+    },
+    "completedSets": [],
+    "inTiebreak": false,
+    "deuceCycles": 0,
+    "matchComplete": true,
+    "lastPointTeam": "A",
+    "lastGameTeam": "A",
+    "lastSetTeam": "A",
+    "server": "B2"
+  }
+}

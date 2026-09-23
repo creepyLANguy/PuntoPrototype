@@ -1,5 +1,6 @@
 // Mock of app/js/firebase-config.js (real file is generated at deploy time).
 export const activeFirebaseEnvironment = "staging";
+export const useFirestoreEmulator = false;
 
 export const firebaseConfigs = {
   staging: {

@@ -1,0 +1,97 @@
+{
+  "name": "reset",
+  "description": "RESET clears all match state (points, games, sets, completed sets, tiebreak, deuce, matchComplete). A game and two points are played, RESET wipes them, then a single new point resumes scoring from zero.",
+  "options": {
+    "scoringMode": "standard",
+    "deuceMode": "standard",
+    "tiebreakMode": "sixAllSeven"
+  },
+  "events": [
+    {
+      "eventType": "POINT_TEAM_A",
+      "createdAt": {
+        "seconds": 1,
+        "nanoseconds": 0
+      },
+      "id": "e0001"
+    },
+    {
+      "eventType": "POINT_TEAM_A",
+      "createdAt": {
+        "seconds": 2,
+        "nanoseconds": 0
+      },
+      "id": "e0002"
+    },
+    {
+      "eventType": "POINT_TEAM_A",
+      "createdAt": {
+        "seconds": 3,
+        "nanoseconds": 0
+      },
+      "id": "e0003"
+    },
+    {
+      "eventType": "POINT_TEAM_A",
+      "createdAt": {
+        "seconds": 4,
+        "nanoseconds": 0
+      },
+      "id": "e0004"
+    },
+    {
+      "eventType": "POINT_TEAM_B",
+      "createdAt": {
+        "seconds": 5,
+        "nanoseconds": 0
+      },
+      "id": "e0005"
+    },
+    {
+      "eventType": "POINT_TEAM_B",
+      "createdAt": {
+        "seconds": 6,
+        "nanoseconds": 0
+      },
+      "id": "e0006"
+    },
+    {
+      "eventType": "RESET",
+      "createdAt": {
+        "seconds": 7,
+        "nanoseconds": 0
+      },
+      "id": "e0007"
+    },
+    {
+      "eventType": "POINT_TEAM_A",
+      "createdAt": {
+        "seconds": 8,
+        "nanoseconds": 0
+      },
+      "id": "e0008"
+    }
+  ],
+  "expected": {
+    "A": {
+      "points": 1,
+      "games": 0,
+      "sets": 0,
+      "totalPoints": 1
+    },
+    "B": {
+      "points": 0,
+      "games": 0,
+      "sets": 0,
+      "totalPoints": 0
+    },
+    "completedSets": [],
+    "inTiebreak": false,
+    "deuceCycles": 0,
+    "matchComplete": false,
+    "lastPointTeam": "A",
+    "lastGameTeam": null,
+    "lastSetTeam": null,
+    "server": "A1"
+  }
+}

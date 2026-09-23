@@ -431,8 +431,6 @@ document.addEventListener("DOMContentLoaded", () =>
     return payload;
   }
 
-  //AL.
-  //TODO - test all branches. 
   async function share(context)
   {
     const share_payload = getSharePayload(context);
@@ -516,7 +514,7 @@ document.addEventListener("DOMContentLoaded", () =>
         result = { done: true, method: "prompt" };
       }
       
-
+      
       //Toast based on the result of the share attempts
       if (result.method === "native")
       {
@@ -561,8 +559,6 @@ document.addEventListener("DOMContentLoaded", () =>
   let momentumRequestToken = 0;
   let lastKnownSets = { A: 0, B: 0 };
   let sessionInitialized = false;
-
-  let shareableScoreCardImage = null;
 
   function invalidateMatchDetailsCache()
   {
@@ -1455,6 +1451,7 @@ document.addEventListener("DOMContentLoaded", () =>
   elements.courtPasswordError = $("courtPasswordError");
   elements.courtStatus = $("courtStatus");
   elements.courtScoringMode = $("courtScoringMode");
+  elements.courtDeuceMode = $("courtDeuceMode");
   elements.courtTiebreakMode = $("courtTiebreakMode");
 
   // ADMIN AUTH ELEMENTS
@@ -1487,6 +1484,7 @@ document.addEventListener("DOMContentLoaded", () =>
   elements.editCourtPassword = $("editCourtPassword");
   elements.editCourtStatus = $("editCourtStatus");
   elements.editCourtScoringMode = $("editCourtScoringMode");
+  elements.editCourtDeuceMode = $("editCourtDeuceMode");
   elements.editCourtTiebreakMode = $("editCourtTiebreakMode");
   elements.clearCourtScoreBtn = $("clearCourtScoreBtn");
   elements.saveEditBtn = $("saveEditBtn");
@@ -1766,27 +1764,42 @@ document.addEventListener("DOMContentLoaded", () =>
   submitOnEnter(elements.editCourtPassword, elements.saveEditBtn);
   submitOnEnter(elements.editCourtStatus, elements.saveEditBtn);
   submitOnEnter(elements.editCourtScoringMode, elements.saveEditBtn);
+  submitOnEnter(elements.editCourtDeuceMode, elements.saveEditBtn);
   submitOnEnter(elements.editCourtTiebreakMode, elements.saveEditBtn);
   submitFormOnEnter(elements.editCourtPage);
 
-  // Tiebreaks only apply to games-and-sets scoring; grey the selector out otherwise.
-  function syncCourtTiebreakDisabled(scoringSelect, tiebreakSelect)
+  // Deuce and tiebreak rules only apply to games-and-sets scoring; grey the selectors out otherwise.
+  function syncCourtScoringRuleControlsDisabled(scoringSelect, deuceSelect, tiebreakSelect)
   {
-    if (!scoringSelect || !tiebreakSelect) return;
-    tiebreakSelect.disabled = scoringSelect.value !== "standard";
+    if (!scoringSelect) return;
+    const disabled = scoringSelect.value !== "standard";
+    if (deuceSelect) deuceSelect.disabled = disabled;
+    if (tiebreakSelect) tiebreakSelect.disabled = disabled;
   }
 
   if (elements.courtScoringMode)
   {
     elements.courtScoringMode.addEventListener("change", () =>
-      syncCourtTiebreakDisabled(elements.courtScoringMode, elements.courtTiebreakMode));
-    syncCourtTiebreakDisabled(elements.courtScoringMode, elements.courtTiebreakMode);
+      syncCourtScoringRuleControlsDisabled(
+        elements.courtScoringMode,
+        elements.courtDeuceMode,
+        elements.courtTiebreakMode
+      ));
+    syncCourtScoringRuleControlsDisabled(
+      elements.courtScoringMode,
+      elements.courtDeuceMode,
+      elements.courtTiebreakMode
+    );
   }
 
   if (elements.editCourtScoringMode)
   {
     elements.editCourtScoringMode.addEventListener("change", () =>
-      syncCourtTiebreakDisabled(elements.editCourtScoringMode, elements.editCourtTiebreakMode));
+      syncCourtScoringRuleControlsDisabled(
+        elements.editCourtScoringMode,
+        elements.editCourtDeuceMode,
+        elements.editCourtTiebreakMode
+      ));
   }
 
   // ADMIN DASHBOARD SEARCH & FILTER
@@ -2459,6 +2472,7 @@ document.addEventListener("DOMContentLoaded", () =>
         {
           const selectedCourt = allCourts.find((court) => court.id === selectedPlayCourt);
           elements.playCourtSearch.value = selectedCourt?.name || selectedPlayCourt;
+          elements.playCourtPassword.focus();
         }
         return;
       }
@@ -3055,6 +3069,11 @@ document.addEventListener("DOMContentLoaded", () =>
     elements.editCourtPassword.value = court.password || "";
     elements.editCourtStatus.value = court.status || STATUS.CLOSED;
     elements.editCourtScoringMode.value = scoringOptions.scoringMode;
+    if (elements.editCourtDeuceMode)
+    {
+      elements.editCourtDeuceMode.value = scoringOptions.deuceMode;
+      elements.editCourtDeuceMode.disabled = scoringOptions.scoringMode !== "standard";
+    }
     if (elements.editCourtTiebreakMode)
     {
       elements.editCourtTiebreakMode.value = scoringOptions.tiebreakMode;
@@ -3086,6 +3105,9 @@ document.addEventListener("DOMContentLoaded", () =>
       const scoringOptions = normalizeScoringOptions({
         ...(courtToEdit.scoringOptions || {}),
         scoringMode: elements.editCourtScoringMode.value,
+        deuceMode: elements.editCourtDeuceMode?.value ||
+          courtToEdit.scoringOptions?.deuceMode ||
+          DEFAULT_SCORING_OPTIONS.deuceMode,
         tiebreakMode: elements.editCourtTiebreakMode?.value ||
           courtToEdit.scoringOptions?.tiebreakMode ||
           DEFAULT_SCORING_OPTIONS.tiebreakMode
@@ -3660,8 +3682,9 @@ document.addEventListener("DOMContentLoaded", () =>
     const courtName = elements.courtName.value.trim();
     const courtPass = elements.courtPassword.value.trim();
     const scoringMode = elements.courtScoringMode?.value || DEFAULT_SCORING_OPTIONS.scoringMode;
+    const deuceMode = elements.courtDeuceMode?.value || DEFAULT_SCORING_OPTIONS.deuceMode;
     const tiebreakMode = elements.courtTiebreakMode?.value || DEFAULT_SCORING_OPTIONS.tiebreakMode;
-    const scoringOptions = normalizeScoringOptions({ scoringMode, tiebreakMode });
+    const scoringOptions = normalizeScoringOptions({ scoringMode, deuceMode, tiebreakMode });
 
     elements.courtNameError.textContent = "";
     elements.courtPasswordError.textContent = "";
@@ -3743,11 +3766,17 @@ document.addEventListener("DOMContentLoaded", () =>
     elements.courtName.value = "";
     elements.courtPassword.value = "";
     if (elements.courtScoringMode) elements.courtScoringMode.value = DEFAULT_SCORING_OPTIONS.scoringMode;
+    if (elements.courtDeuceMode) elements.courtDeuceMode.value = DEFAULT_SCORING_OPTIONS.deuceMode;
     if (elements.courtTiebreakMode)
     {
       elements.courtTiebreakMode.value = DEFAULT_SCORING_OPTIONS.tiebreakMode;
       elements.courtTiebreakMode.disabled = false;
     }
+    syncCourtScoringRuleControlsDisabled(
+      elements.courtScoringMode,
+      elements.courtDeuceMode,
+      elements.courtTiebreakMode
+    );
     syncCurrentViewState("replace");
   });
 
@@ -3755,6 +3784,11 @@ document.addEventListener("DOMContentLoaded", () =>
   {
     if (isJoiningCourt) return;
     isJoiningCourt = true;
+
+    // Direct /p joins do their Firestore work before enterCourt() reaches the
+    // join sound. Start/resume audio from the actual player gesture first so
+    // the later sound playback is not blocked by autoplay policy.
+    primeAudioForUserGesture();
 
     try
     {
@@ -4363,25 +4397,44 @@ document.addEventListener("DOMContentLoaded", () =>
   let audioContext = null;
   let audioBuffers = {};
   let audioReady = false;
+  let audioInitPromise = null;
+  let audioResumePromise = null;
 
   async function initAudio()
   {
     if (audioReady) return;
+    if (audioInitPromise) return audioInitPromise;
 
-    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    audioInitPromise = (async () =>
+    {
+      if (!audioContext)
+      {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      }
 
-    await Promise.all([
-      loadSound("pointSound", "media/sfx/point.mp3"),
-      loadSound("undoSound", "media/sfx/undo.mp3"),
-      loadSound("swooshSound", "media/sfx/swoosh.mp3"),
-      loadSound("startSound", "media/sfx/start.mp3"),
-      loadSound("warningSound", "media/sfx/warning.mp3"),
-      loadSound("popSound", "media/sfx/pop.mp3"),
-      loadSound("snapSound", "media/sfx/snap.mp3"),
-      loadSound("setSound", "media/sfx/set.mp3")
-    ]);
+      await Promise.all([
+        loadSound("pointSound", "media/sfx/point.mp3"),
+        loadSound("undoSound", "media/sfx/undo.mp3"),
+        loadSound("swooshSound", "media/sfx/swoosh.mp3"),
+        loadSound("startSound", "media/sfx/start.mp3"),
+        loadSound("warningSound", "media/sfx/warning.mp3"),
+        loadSound("popSound", "media/sfx/pop.mp3"),
+        loadSound("snapSound", "media/sfx/snap.mp3"),
+        loadSound("setSound", "media/sfx/set.mp3")
+      ]);
 
-    audioReady = true;
+      audioReady = true;
+    })();
+
+    try
+    {
+      await audioInitPromise;
+    }
+    catch (err)
+    {
+      audioInitPromise = null;
+      throw err;
+    }
   }
 
   function loadSound(id, url)
@@ -4428,11 +4481,54 @@ document.addEventListener("DOMContentLoaded", () =>
     return true;
   }
 
+  function primeAudioForUserGesture()
+  {
+    if (muted) return;
+
+    try
+    {
+      if (!audioContext)
+      {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      }
+
+      if (audioContext.state === "suspended")
+      {
+        audioResumePromise = audioContext.resume().catch((err) =>
+        {
+          console.warn("Audio context could not be resumed:", err);
+          return false;
+        });
+      }
+      else
+      {
+        audioResumePromise = Promise.resolve(true);
+      }
+
+      void initAudio().catch((err) =>
+      {
+        console.warn("Audio initialization failed:", err);
+      });
+    }
+    catch (err)
+    {
+      console.warn("Audio priming failed:", err);
+    }
+  }
+
   async function playJoinSound()
   {
     if (muted) return false;
     try
     {
+      // The player submit button primes/resumes the AudioContext while the
+      // browser still considers the action a user gesture. Wait for that
+      // resume to finish before playing after the Firestore join work.
+      if (audioResumePromise)
+      {
+        await audioResumePromise;
+      }
+
       return await playSound(SOUND_IDS.START, false, true);
     }
     catch (err)
@@ -5940,7 +6036,16 @@ document.addEventListener("DOMContentLoaded", () =>
   async function fetchMomentumPayload(courtId)
   {
     const url = "/m/" + encodeURIComponent(courtId);
+    
+    // if (location.hostname === "localhost" || location.hostname === "127.0.0.1") 
+    // {
+    //   let mockResponse = '{"success":true,"courtId":"bnrm","pointHistory":["A","B","B","A","A","B","B","A","B","A","B","A","B","B","B","B","A","A","A","B","A","B","A","B","B","B","A","A","A","A","A","A","A","A","B","B","A","B","B","B","A","A","A","B","A","B","B","B","B","A","A","B","A","A","B","B","B","A","A","B","B","B","B","B","B","B","B","A","A","A","A","B","A","B","B","B","B","B","B","B","B","A"],"momentumTimeline":[13.2,10.576421052631579,2.6529469005847943,3.6937700865497067,9.472143881356725,5.0371485818086565,-1.5589578841202714,2.134579588926944,-12.615717408630895,-10.440592545931223,-12.977793356811711,-10.344580300857555,-12.451178210078828,-18.413198426565007,-39.062951975516555,-49.482811220621926,-49.02293345647551,-44.77246653999607,-36.65884582032356,-38.71386052564961,-20.827392530474263,-20.995930796827626,-16.136174949017967,-16.14982263389507,-19.544469639497727,-38.817256006582404,-37.251857009823816,-32.39856377105256,-24.154649944789405,0.27644723371614255,15.2871331269659,34.44263241207522,53.75789264916889,85.62332818112783,86.48592849026015,82.60586368993543,83.43133005035749,78.31635933824512,56.853741414314044,44.96069874763701,41.06305682277879,40.78109159523025,44.1978624631528,37.72780889718181,51.4641403633509,47.39447375973166,40.187168970511394,30.1668479231898,4.5022915932529575,2.5957904612941443,4.185497579071041,-0.10199591203685787,0.8859420245035352,18.032785503033324,15.969000191033142,11.083587452298428,3.245844932433248,5.996548781941798,11.964028582298017,-3.444722223548954,-8.91076616286329,-17.29430201127331,-29.02028025423327,-76.45179071170654,-100,-100,-100,-100,-100,-99.72798181818182,-94.33675927272728,-100,-86.50025329090909,-88.7313751461818,-93.43560689395636,-100,-100,-100,-100,-100,-100,-100],"setPointMarkers":[64],"gameMarkers":[9,15,21,26,30,34,39,45,49,54,60,64,73,77,81],"totalPoints":82,"scoringMode":"standard","matchComplete":false,"fetchedAt":"2026-09-12T12:21:11.071Z"}';
+    //   let data = JSON.parse(mockResponse);
+    //   return data;
+    // }
+    
     const response = await fetch(url, { cache: "no-store" });
+
     let data = null;
 
     try
@@ -6612,6 +6717,10 @@ document.addEventListener("DOMContentLoaded", () =>
     // endpoint answers, so nothing below is held up by the heavier replay.
     void loadMomentumGraph(currentCourtId);
 
+    // The share card is captured from the rendered modal, so it can only be
+    // taken once every branch below has finished populating #dmBox.
+    let renderedShareCard = false;
+
     try
     {
       let result = matchDetailsCache;
@@ -6629,19 +6738,6 @@ document.addEventListener("DOMContentLoaded", () =>
         matchDetailsCache = result;
         isMatchDetailsCacheValid = true;
         matchDetailsCacheCourtId = currentCourtId;
-
-        //AL.
-        //TODO - test this. Make sure it runs in the background, not block the UI.  
-        const dummyFile = new File(
-          [],
-          'share-image.png',
-          { type: 'image/png' }
-        );
-        if (navigator.canShare && navigator.canShare({ files: [dummyFile] }))
-        {
-          cacheShareableScoreCard();
-        }
-        //
       }
 
       const { sets, currentGames, points, mode, scoringMode, matchComplete } = result.data;
@@ -6785,6 +6881,8 @@ document.addEventListener("DOMContentLoaded", () =>
       const detailsPlayerNames = normalizePlayerNames(result?.data?.playerNames || currentPlayerNames || {});
       renderAdvancedStats(result.data.advancedStats, { A: nameA, B: nameB }, isSwapped, detailsPlayerNames);
       syncDetailsPanelAvailability();
+
+      renderedShareCard = true;
     }
     catch (err)
     {
@@ -6795,6 +6893,20 @@ document.addEventListener("DOMContentLoaded", () =>
     {
       elements.detailsLoading.classList.add("hidden");
       elements.shareDetailsBtn.classList.remove("hidden");
+
+      // Runs here rather than at the end of the try so the loading overlay is
+      // already hidden and cannot appear in the capture. Not awaited, but the
+      // rejection is handled so a capture failure stays out of the UI thread
+      // and never surfaces as an unhandled rejection.
+      // The card carries the scoreline only, so it does not wait on the
+      // momentum endpoint.
+      if (renderedShareCard && canShareFiles())
+      {
+        cacheShareableScoreCard().catch(err =>
+        {
+          console.error("Share card capture failed:", err);
+        });
+      }
     }
   }
 
@@ -7743,13 +7855,54 @@ window.addEventListener("resize", () =>
   }
 }, { passive: true });
 
+let shareableScoreCardImage = null;
+
+// The captured card is only ever consumed as payload.files in getSharePayload,
+// and that path is itself gated on navigator.canShare. Where the browser cannot
+// share files there is nothing to spend the capture on, so probe once with an
+// empty dummy file and reuse the answer.
+let canShareFilesResult = null;
+
+function canShareFiles()
+{
+  if (canShareFilesResult === null)
+  {
+    try
+    {
+      const probeFile = new File([], 'share-image.png', { type: 'image/png' });
+      canShareFilesResult = Boolean(
+        navigator.canShare && navigator.canShare({ files: [probeFile] })
+      );
+    }
+    catch (err)
+    {
+      // Older browsers can throw on either the File constructor or canShare.
+      canShareFilesResult = false;
+    }
+  }
+
+  return canShareFilesResult;
+}
+
+// let shareableScoreCardImageUrl = null;
+//
+// function dismissShareableScoreCard()
+// {
+//   const modal = document.getElementById("shareImageModal");
+//   if (!modal) return;
+
+//   modal.classList.add("hidden");
+//   document.getElementById("shareImagePreview")?.removeAttribute("src");
+
+//   if (shareableScoreCardImageUrl)
+//   {
+//     URL.revokeObjectURL(shareableScoreCardImageUrl);
+//     shareableScoreCardImageUrl = null;
+//   }
+// }
+
 async function cacheShareableScoreCard()
 {
-  //AL.
-  console.log("cacheShareableScoreCard() called");
-  showToast("Generating shareable scoreboard image...", TOAST_TYPES.INFO, 3000);
-  //
-
   const element = document.getElementById('dmBox');
 
   if (!element)
@@ -7768,83 +7921,119 @@ async function cacheShareableScoreCard()
   const appOrigin = window.location.origin.replace(/\/$/, '');
   const qrUrl = courtId ? `${appOrigin}/c/${encodeURIComponent(courtId)}` : `${appOrigin}/app/`;
 
-  const sourcePanel = element.querySelector('#dmDetailsPanel, .dm-details-panel');
-  const sourcePanelHeight = Math.max(0, Math.round(sourcePanel?.getBoundingClientRect().height || 0));
-  const footerHeight = Math.min(120, Math.max(60, sourcePanelHeight));
+  const footerHeight = 96;
 
   const clone = element.cloneNode(true);
-  clone.querySelectorAll('.dm-close, .dm-share-btn').forEach(node => node.remove());
 
-  const footerPanel = clone.querySelector('#dmDetailsPanel, .dm-details-panel');
-  if (footerPanel)
+  // The card carries the scoreline only. The detailed stats panel holds the
+  // momentum graph and the advanced stats table, both of which are too dense to
+  // read at share size, so the whole panel is dropped. Nothing in the capture
+  // then depends on the momentum endpoint.
+  clone
+    .querySelectorAll('.dm-close, .dm-share-btn, .dm-details-panel, .dm-empty-state, .dm-error-state')
+    .forEach(node => node.remove());
+
+  // A dedicated element appended to the card, rather than the details panel
+  // reused in place. The QR block is centred and sized to its content so the
+  // code and its caption stay together instead of being pushed to opposite
+  // edges with a gap down the middle.
+  const footerPanel = document.createElement('div');
+  clone.appendChild(footerPanel);
+  footerPanel.style.width = '100%';
+  footerPanel.style.marginTop = '16px';
+  footerPanel.style.display = 'flex';
+  footerPanel.style.alignItems = 'center';
+  footerPanel.style.justifyContent = 'center';
+  footerPanel.style.gap = '14px';
+  footerPanel.style.padding = '12px 16px';
+  footerPanel.style.minHeight = `${footerHeight}px`;
+  footerPanel.style.boxSizing = 'border-box';
+
+  const qrWrap = document.createElement('div');
+  qrWrap.style.display = 'inline-flex';
+  qrWrap.style.alignItems = 'center';
+  qrWrap.style.justifyContent = 'center';
+  qrWrap.style.padding = '8px';
+  qrWrap.style.background = '#ffffff';
+  qrWrap.style.borderRadius = '10px';
+  qrWrap.style.flex = '0 0 auto';
+
+  const qrMount = document.createElement('div');
+  qrWrap.appendChild(qrMount);
+
+  const footerText = document.createElement('div');
+  footerText.style.display = 'flex';
+  footerText.style.flexDirection = 'column';
+  footerText.style.gap = '4px';
+  footerText.style.flex = '0 1 auto';
+  footerText.style.minWidth = '0';
+
+  const footerTitle = document.createElement('div');
+  footerTitle.textContent = 'Scan for match details';
+  footerTitle.style.fontSize = '14px';
+  footerTitle.style.fontWeight = '700';
+  footerTitle.style.letterSpacing = '0.02em';
+
+  const footerCourtId = document.createElement('div');
+  footerCourtId.textContent = `Court ID: ${courtIdDisplay}`;
+  footerCourtId.style.fontSize = '16px';
+  footerCourtId.style.fontWeight = '800';
+  footerCourtId.style.letterSpacing = '0.06em';
+
+  const footerUrl = document.createElement('div');
+  footerUrl.textContent = qrUrl;
+  footerUrl.style.fontSize = '11px';
+  footerUrl.style.opacity = '0.85';
+  footerUrl.style.overflow = 'hidden';
+  footerUrl.style.textOverflow = 'ellipsis';
+  footerUrl.style.whiteSpace = 'nowrap';
+
+  footerText.appendChild(footerTitle);
+  footerText.appendChild(footerCourtId);
+  footerText.appendChild(footerUrl);
+
+  footerPanel.appendChild(qrWrap);
+  footerPanel.appendChild(footerText);
+
+  if (window.QRCode)
   {
-    footerPanel.classList.remove('hidden');
-    footerPanel.hidden = false;
-    footerPanel.innerHTML = '';
-    footerPanel.style.display = 'flex';
-    footerPanel.style.alignItems = 'center';
-    footerPanel.style.justifyContent = 'space-between';
-    footerPanel.style.gap = '16px';
-    footerPanel.style.padding = '12px 16px';
-    footerPanel.style.minHeight = `${footerHeight}px`;
-    footerPanel.style.boxSizing = 'border-box';
+    const qrSize = Math.max(84, Math.min(120, footerHeight - 24));
+    new window.QRCode(qrMount, {
+      text: qrUrl,
+      width: qrSize,
+      height: qrSize,
+      colorDark: '#000000',
+      colorLight: '#ffffff',
+      correctLevel: window.QRCode.CorrectLevel.H
+    });
 
-    const qrWrap = document.createElement('div');
-    qrWrap.style.display = 'inline-flex';
-    qrWrap.style.alignItems = 'center';
-    qrWrap.style.justifyContent = 'center';
-    qrWrap.style.padding = '8px';
-    qrWrap.style.background = '#ffffff';
-    qrWrap.style.borderRadius = '10px';
-    qrWrap.style.flex = '0 0 auto';
-
-    const qrMount = document.createElement('div');
-    qrWrap.appendChild(qrMount);
-
-    const footerText = document.createElement('div');
-    footerText.style.display = 'flex';
-    footerText.style.flexDirection = 'column';
-    footerText.style.gap = '6px';
-    footerText.style.flex = '1 1 auto';
-    footerText.style.minWidth = '0';
-
-    const footerTitle = document.createElement('div');
-    footerTitle.textContent = 'Scan for match details';
-    footerTitle.style.fontSize = '14px';
-    footerTitle.style.fontWeight = '700';
-    footerTitle.style.letterSpacing = '0.02em';
-
-    const footerCourtId = document.createElement('div');
-    footerCourtId.textContent = `Court ID: ${courtIdDisplay}`;
-    footerCourtId.style.fontSize = '16px';
-    footerCourtId.style.fontWeight = '800';
-    footerCourtId.style.letterSpacing = '0.06em';
-
-    const footerUrl = document.createElement('div');
-    footerUrl.textContent = qrUrl;
-    footerUrl.style.fontSize = '11px';
-    footerUrl.style.opacity = '0.85';
-    footerUrl.style.overflow = 'hidden';
-    footerUrl.style.textOverflow = 'ellipsis';
-    footerUrl.style.whiteSpace = 'nowrap';
-
-    footerText.appendChild(footerTitle);
-    footerText.appendChild(footerCourtId);
-    footerText.appendChild(footerUrl);
-
-    footerPanel.appendChild(qrWrap);
-    footerPanel.appendChild(footerText);
-
-    if (window.QRCode)
+    // qrcode.js paints its canvas synchronously but fills its companion <img>
+    // from a setTimeout retry loop, so that <img> is still src-less when the
+    // capture runs. html-to-image would try to inline it, fetch the empty URL,
+    // get this page's HTML back and reject from the image's onerror handler.
+    // Freeze the canvas into a single data-URL image instead of racing it.
+    const qrCanvas = qrMount.querySelector('canvas');
+    if (qrCanvas)
     {
-      const qrSize = Math.max(84, Math.min(120, footerHeight - 24));
-      new window.QRCode(qrMount, {
-        text: qrUrl,
-        width: qrSize,
-        height: qrSize,
-        colorDark: '#000000',
-        colorLight: '#ffffff',
-        correctLevel: window.QRCode.CorrectLevel.H
+      const qrDataUrl = qrCanvas.toDataURL('image/png');
+      qrMount.innerHTML = '';
+
+      const qrImage = document.createElement('img');
+      qrImage.src = qrDataUrl;
+      qrImage.alt = '';
+      qrImage.width = qrSize;
+      qrImage.height = qrSize;
+      qrImage.style.display = 'block';
+      qrMount.appendChild(qrImage);
+    }
+    else
+    {
+      qrMount.querySelectorAll('img').forEach(node =>
+      {
+        if (!node.getAttribute('src'))
+        {
+          node.remove();
+        }
       });
     }
   }
@@ -7869,18 +8058,57 @@ async function cacheShareableScoreCard()
       {
         return false;
       }
+
+      // An <img> with no source makes html-to-image fetch the empty URL, which
+      // resolves to this page, and then reject when the HTML fails to decode as
+      // an image. Drop those before they reach the serializer.
+      if (el.tagName === 'IMG' && !el.getAttribute('src'))
+      {
+        return false;
+      }
     }
     return true;
   }
 
+  // .dm-box is a capped, scrollable box on screen. Left as-is the clone would be
+  // cropped at one viewport height, and its width:100% would resolve against a
+  // shrink-to-fit parent rather than the width the user actually sees.
+  const sourceWidth = Math.round(element.getBoundingClientRect().width);
+
+  clone.style.maxHeight = 'none';
+  clone.style.height = 'auto';
+  clone.style.overflow = 'visible';
+  clone.style.overflowY = 'visible';
+
+  // Ids are deliberately kept on the clone: id-based rules such as #detailsSetsA
+  // supply the team colours, and html-to-image reads computed style off these
+  // staged nodes. Staging is appended last, so getElementById still resolves to
+  // the original #dmBox in tree order.
   const staging = document.createElement('div');
   staging.style.position = 'fixed';
   staging.style.left = '-10000px';
   staging.style.top = '0';
   staging.style.pointerEvents = 'none';
   staging.style.zIndex = '-1';
+  if (sourceWidth > 0)
+  {
+    staging.style.width = `${sourceWidth}px`;
+  }
   staging.appendChild(clone);
   document.body.appendChild(staging);
+
+  // Computed styles only exist once the clone is attached, so inner scrollers
+  // such as .dm-table-wrap can only be neutralised here.
+  clone.querySelectorAll('*').forEach(node =>
+  {
+    const overflowY = getComputedStyle(node).overflowY;
+    if (overflowY === 'auto' || overflowY === 'scroll')
+    {
+      node.style.maxHeight = 'none';
+      node.style.overflow = 'visible';
+      node.style.overflowY = 'visible';
+    }
+  });
 
   await new Promise(resolve => requestAnimationFrame(() => resolve()));
 
@@ -7909,14 +8137,36 @@ async function cacheShareableScoreCard()
     { type: 'image/png' }
   );
 
-  //AL. 
-  //TODO - this breaks. Fix it. 
   shareableScoreCardImage = file;
-  //
 
-  console.log("cacheShareableScoreCard() completed successfully");
-  
-  //AL.
-  showToast("Shareable scoreboard image generated!", TOAST_TYPES.SUCCESS, 3000);
-  //
+  // const modal = document.getElementById("shareImageModal");
+  // const preview = document.getElementById("shareImagePreview");
+  // const closeButton = document.getElementById("closeShareImageBtn");
+  // if (!modal || !preview || !closeButton) return;
+
+  // if (shareableScoreCardImageUrl)
+  // {
+  //   URL.revokeObjectURL(shareableScoreCardImageUrl);
+  // }
+
+  // shareableScoreCardImageUrl = URL.createObjectURL(shareableScoreCardImage);
+  // preview.src = shareableScoreCardImageUrl;
+  // modal.classList.remove("hidden");
+
+  // if (closeButton.dataset.bound !== "true")
+  // {
+  //   closeButton.dataset.bound = "true";
+  //   closeButton.addEventListener("click", dismissShareableScoreCard);
+  //   modal.addEventListener("click", (event) =>
+  //   {
+  //     if (event.target === modal) dismissShareableScoreCard();
+  //   });
+  //   document.addEventListener("keydown", (event) =>
+  //   {
+  //     if (event.key === "Escape" && !modal.classList.contains("hidden"))
+  //     {
+  //       dismissShareableScoreCard();
+  //     }
+  //   });
+  // }
 }

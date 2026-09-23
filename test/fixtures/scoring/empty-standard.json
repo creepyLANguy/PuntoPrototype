@@ -1,0 +1,32 @@
+{
+  "name": "empty-standard",
+  "description": "No events. The canonical fresh-match state: everything zero, no completed sets, A1 to serve. Base case that every orchestration path must reproduce from an empty event log.",
+  "options": {
+    "scoringMode": "standard",
+    "deuceMode": "standard",
+    "tiebreakMode": "sixAllSeven"
+  },
+  "events": [],
+  "expected": {
+    "A": {
+      "points": 0,
+      "games": 0,
+      "sets": 0,
+      "totalPoints": 0
+    },
+    "B": {
+      "points": 0,
+      "games": 0,
+      "sets": 0,
+      "totalPoints": 0
+    },
+    "completedSets": [],
+    "inTiebreak": false,
+    "deuceCycles": 0,
+    "matchComplete": false,
+    "lastPointTeam": null,
+    "lastGameTeam": null,
+    "lastSetTeam": null,
+    "server": "A1"
+  }
+}

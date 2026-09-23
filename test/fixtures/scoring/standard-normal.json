@@ -1,0 +1,113 @@
+{
+  "name": "standard-normal",
+  "description": "Standard scoring, standard (advantage) deuce, 7-point tiebreak. Two clean games (A to love, B to love) then a partial third game at 15-15. Exercises basic point->game progression and server rotation.",
+  "options": {
+    "scoringMode": "standard",
+    "deuceMode": "standard",
+    "tiebreakMode": "sixAllSeven"
+  },
+  "events": [
+    {
+      "eventType": "POINT_TEAM_A",
+      "createdAt": {
+        "seconds": 1,
+        "nanoseconds": 0
+      },
+      "id": "e0001"
+    },
+    {
+      "eventType": "POINT_TEAM_A",
+      "createdAt": {
+        "seconds": 2,
+        "nanoseconds": 0
+      },
+      "id": "e0002"
+    },
+    {
+      "eventType": "POINT_TEAM_A",
+      "createdAt": {
+        "seconds": 3,
+        "nanoseconds": 0
+      },
+      "id": "e0003"
+    },
+    {
+      "eventType": "POINT_TEAM_A",
+      "createdAt": {
+        "seconds": 4,
+        "nanoseconds": 0
+      },
+      "id": "e0004"
+    },
+    {
+      "eventType": "POINT_TEAM_B",
+      "createdAt": {
+        "seconds": 5,
+        "nanoseconds": 0
+      },
+      "id": "e0005"
+    },
+    {
+      "eventType": "POINT_TEAM_B",
+      "createdAt": {
+        "seconds": 6,
+        "nanoseconds": 0
+      },
+      "id": "e0006"
+    },
+    {
+      "eventType": "POINT_TEAM_B",
+      "createdAt": {
+        "seconds": 7,
+        "nanoseconds": 0
+      },
+      "id": "e0007"
+    },
+    {
+      "eventType": "POINT_TEAM_B",
+      "createdAt": {
+        "seconds": 8,
+        "nanoseconds": 0
+      },
+      "id": "e0008"
+    },
+    {
+      "eventType": "POINT_TEAM_A",
+      "createdAt": {
+        "seconds": 9,
+        "nanoseconds": 0
+      },
+      "id": "e0009"
+    },
+    {
+      "eventType": "POINT_TEAM_B",
+      "createdAt": {
+        "seconds": 10,
+        "nanoseconds": 0
+      },
+      "id": "e0010"
+    }
+  ],
+  "expected": {
+    "A": {
+      "points": 1,
+      "games": 1,
+      "sets": 0,
+      "totalPoints": 5
+    },
+    "B": {
+      "points": 1,
+      "games": 1,
+      "sets": 0,
+      "totalPoints": 5
+    },
+    "completedSets": [],
+    "inTiebreak": false,
+    "deuceCycles": 0,
+    "matchComplete": false,
+    "lastPointTeam": "B",
+    "lastGameTeam": "B",
+    "lastSetTeam": null,
+    "server": "A2"
+  }
+}

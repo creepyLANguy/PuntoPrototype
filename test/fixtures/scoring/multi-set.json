@@ -1,0 +1,1019 @@
+{
+  "name": "multi-set",
+  "description": "Standard scoring plays an open number of sets. A takes three sets 6-0 while B takes two 6-0; the match still does not complete (matchComplete stays false) because standard mode has no fixed set target. Five completed sets are recorded.",
+  "options": {
+    "scoringMode": "standard",
+    "deuceMode": "standard",
+    "tiebreakMode": "sixAllSeven"
+  },
+  "events": [
+    {
+      "eventType": "POINT_TEAM_A",
+      "createdAt": {
+        "seconds": 1,
+        "nanoseconds": 0
+      },
+      "id": "e0001"
+    },
+    {
+      "eventType": "POINT_TEAM_A",
+      "createdAt": {
+        "seconds": 2,
+        "nanoseconds": 0
+      },
+      "id": "e0002"
+    },
+    {
+      "eventType": "POINT_TEAM_A",
+      "createdAt": {
+        "seconds": 3,
+        "nanoseconds": 0
+      },
+      "id": "e0003"
+    },
+    {
+      "eventType": "POINT_TEAM_A",
+      "createdAt": {
+        "seconds": 4,
+        "nanoseconds": 0
+      },
+      "id": "e0004"
+    },
+    {
+      "eventType": "POINT_TEAM_A",
+      "createdAt": {
+        "seconds": 5,
+        "nanoseconds": 0
+      },
+      "id": "e0005"
+    },
+    {
+      "eventType": "POINT_TEAM_A",
+      "createdAt": {
+        "seconds": 6,
+        "nanoseconds": 0
+      },
+      "id": "e0006"
+    },
+    {
+      "eventType": "POINT_TEAM_A",
+      "createdAt": {
+        "seconds": 7,
+        "nanoseconds": 0
+      },
+      "id": "e0007"
+    },
+    {
+      "eventType": "POINT_TEAM_A",
+      "createdAt": {
+        "seconds": 8,
+        "nanoseconds": 0
+      },
+      "id": "e0008"
+    },
+    {
+      "eventType": "POINT_TEAM_A",
+      "createdAt": {
+        "seconds": 9,
+        "nanoseconds": 0
+      },
+      "id": "e0009"
+    },
+    {
+      "eventType": "POINT_TEAM_A",
+      "createdAt": {
+        "seconds": 10,
+        "nanoseconds": 0
+      },
+      "id": "e0010"
+    },
+    {
+      "eventType": "POINT_TEAM_A",
+      "createdAt": {
+        "seconds": 11,
+        "nanoseconds": 0
+      },
+      "id": "e0011"
+    },
+    {
+      "eventType": "POINT_TEAM_A",
+      "createdAt": {
+        "seconds": 12,
+        "nanoseconds": 0
+      },
+      "id": "e0012"
+    },
+    {
+      "eventType": "POINT_TEAM_A",
+      "createdAt": {
+        "seconds": 13,
+        "nanoseconds": 0
+      },
+      "id": "e0013"
+    },
+    {
+      "eventType": "POINT_TEAM_A",
+      "createdAt": {
+        "seconds": 14,
+        "nanoseconds": 0
+      },
+      "id": "e0014"
+    },
+    {
+      "eventType": "POINT_TEAM_A",
+      "createdAt": {
+        "seconds": 15,
+        "nanoseconds": 0
+      },
+      "id": "e0015"
+    },
+    {
+      "eventType": "POINT_TEAM_A",
+      "createdAt": {
+        "seconds": 16,
+        "nanoseconds": 0
+      },
+      "id": "e0016"
+    },
+    {
+      "eventType": "POINT_TEAM_A",
+      "createdAt": {
+        "seconds": 17,
+        "nanoseconds": 0
+      },
+      "id": "e0017"
+    },
+    {
+      "eventType": "POINT_TEAM_A",
+      "createdAt": {
+        "seconds": 18,
+        "nanoseconds": 0
+      },
+      "id": "e0018"
+    },
+    {
+      "eventType": "POINT_TEAM_A",
+      "createdAt": {
+        "seconds": 19,
+        "nanoseconds": 0
+      },
+      "id": "e0019"
+    },
+    {
+      "eventType": "POINT_TEAM_A",
+      "createdAt": {
+        "seconds": 20,
+        "nanoseconds": 0
+      },
+      "id": "e0020"
+    },
+    {
+      "eventType": "POINT_TEAM_A",
+      "createdAt": {
+        "seconds": 21,
+        "nanoseconds": 0
+      },
+      "id": "e0021"
+    },
+    {
+      "eventType": "POINT_TEAM_A",
+      "createdAt": {
+        "seconds": 22,
+        "nanoseconds": 0
+      },
+      "id": "e0022"
+    },
+    {
+      "eventType": "POINT_TEAM_A",
+      "createdAt": {
+        "seconds": 23,
+        "nanoseconds": 0
+      },
+      "id": "e0023"
+    },
+    {
+      "eventType": "POINT_TEAM_A",
+      "createdAt": {
+        "seconds": 24,
+        "nanoseconds": 0
+      },
+      "id": "e0024"
+    },
+    {
+      "eventType": "POINT_TEAM_B",
+      "createdAt": {
+        "seconds": 25,
+        "nanoseconds": 0
+      },
+      "id": "e0025"
+    },
+    {
+      "eventType": "POINT_TEAM_B",
+      "createdAt": {
+        "seconds": 26,
+        "nanoseconds": 0
+      },
+      "id": "e0026"
+    },
+    {
+      "eventType": "POINT_TEAM_B",
+      "createdAt": {
+        "seconds": 27,
+        "nanoseconds": 0
+      },
+      "id": "e0027"
+    },
+    {
+      "eventType": "POINT_TEAM_B",
+      "createdAt": {
+        "seconds": 28,
+        "nanoseconds": 0
+      },
+      "id": "e0028"
+    },
+    {
+      "eventType": "POINT_TEAM_B",
+      "createdAt": {
+        "seconds": 29,
+        "nanoseconds": 0
+      },
+      "id": "e0029"
+    },
+    {
+      "eventType": "POINT_TEAM_B",
+      "createdAt": {
+        "seconds": 30,
+        "nanoseconds": 0
+      },
+      "id": "e0030"
+    },
+    {
+      "eventType": "POINT_TEAM_B",
+      "createdAt": {
+        "seconds": 31,
+        "nanoseconds": 0
+      },
+      "id": "e0031"
+    },
+    {
+      "eventType": "POINT_TEAM_B",
+      "createdAt": {
+        "seconds": 32,
+        "nanoseconds": 0
+      },
+      "id": "e0032"
+    },
+    {
+      "eventType": "POINT_TEAM_B",
+      "createdAt": {
+        "seconds": 33,
+        "nanoseconds": 0
+      },
+      "id": "e0033"
+    },
+    {
+      "eventType": "POINT_TEAM_B",
+      "createdAt": {
+        "seconds": 34,
+        "nanoseconds": 0
+      },
+      "id": "e0034"
+    },
+    {
+      "eventType": "POINT_TEAM_B",
+      "createdAt": {
+        "seconds": 35,
+        "nanoseconds": 0
+      },
+      "id": "e0035"
+    },
+    {
+      "eventType": "POINT_TEAM_B",
+      "createdAt": {
+        "seconds": 36,
+        "nanoseconds": 0
+      },
+      "id": "e0036"
+    },
+    {
+      "eventType": "POINT_TEAM_B",
+      "createdAt": {
+        "seconds": 37,
+        "nanoseconds": 0
+      },
+      "id": "e0037"
+    },
+    {
+      "eventType": "POINT_TEAM_B",
+      "createdAt": {
+        "seconds": 38,
+        "nanoseconds": 0
+      },
+      "id": "e0038"
+    },
+    {
+      "eventType": "POINT_TEAM_B",
+      "createdAt": {
+        "seconds": 39,
+        "nanoseconds": 0
+      },
+      "id": "e0039"
+    },
+    {
+      "eventType": "POINT_TEAM_B",
+      "createdAt": {
+        "seconds": 40,
+        "nanoseconds": 0
+      },
+      "id": "e0040"
+    },
+    {
+      "eventType": "POINT_TEAM_B",
+      "createdAt": {
+        "seconds": 41,
+        "nanoseconds": 0
+      },
+      "id": "e0041"
+    },
+    {
+      "eventType": "POINT_TEAM_B",
+      "createdAt": {
+        "seconds": 42,
+        "nanoseconds": 0
+      },
+      "id": "e0042"
+    },
+    {
+      "eventType": "POINT_TEAM_B",
+      "createdAt": {
+        "seconds": 43,
+        "nanoseconds": 0
+      },
+      "id": "e0043"
+    },
+    {
+      "eventType": "POINT_TEAM_B",
+      "createdAt": {
+        "seconds": 44,
+        "nanoseconds": 0
+      },
+      "id": "e0044"
+    },
+    {
+      "eventType": "POINT_TEAM_B",
+      "createdAt": {
+        "seconds": 45,
+        "nanoseconds": 0
+      },
+      "id": "e0045"
+    },
+    {
+      "eventType": "POINT_TEAM_B",
+      "createdAt": {
+        "seconds": 46,
+        "nanoseconds": 0
+      },
+      "id": "e0046"
+    },
+    {
+      "eventType": "POINT_TEAM_B",
+      "createdAt": {
+        "seconds": 47,
+        "nanoseconds": 0
+      },
+      "id": "e0047"
+    },
+    {
+      "eventType": "POINT_TEAM_B",
+      "createdAt": {
+        "seconds": 48,
+        "nanoseconds": 0
+      },
+      "id": "e0048"
+    },
+    {
+      "eventType": "POINT_TEAM_A",
+      "createdAt": {
+        "seconds": 49,
+        "nanoseconds": 0
+      },
+      "id": "e0049"
+    },
+    {
+      "eventType": "POINT_TEAM_A",
+      "createdAt": {
+        "seconds": 50,
+        "nanoseconds": 0
+      },
+      "id": "e0050"
+    },
+    {
+      "eventType": "POINT_TEAM_A",
+      "createdAt": {
+        "seconds": 51,
+        "nanoseconds": 0
+      },
+      "id": "e0051"
+    },
+    {
+      "eventType": "POINT_TEAM_A",
+      "createdAt": {
+        "seconds": 52,
+        "nanoseconds": 0
+      },
+      "id": "e0052"
+    },
+    {
+      "eventType": "POINT_TEAM_A",
+      "createdAt": {
+        "seconds": 53,
+        "nanoseconds": 0
+      },
+      "id": "e0053"
+    },
+    {
+      "eventType": "POINT_TEAM_A",
+      "createdAt": {
+        "seconds": 54,
+        "nanoseconds": 0
+      },
+      "id": "e0054"
+    },
+    {
+      "eventType": "POINT_TEAM_A",
+      "createdAt": {
+        "seconds": 55,
+        "nanoseconds": 0
+      },
+      "id": "e0055"
+    },
+    {
+      "eventType": "POINT_TEAM_A",
+      "createdAt": {
+        "seconds": 56,
+        "nanoseconds": 0
+      },
+      "id": "e0056"
+    },
+    {
+      "eventType": "POINT_TEAM_A",
+      "createdAt": {
+        "seconds": 57,
+        "nanoseconds": 0
+      },
+      "id": "e0057"
+    },
+    {
+      "eventType": "POINT_TEAM_A",
+      "createdAt": {
+        "seconds": 58,
+        "nanoseconds": 0
+      },
+      "id": "e0058"
+    },
+    {
+      "eventType": "POINT_TEAM_A",
+      "createdAt": {
+        "seconds": 59,
+        "nanoseconds": 0
+      },
+      "id": "e0059"
+    },
+    {
+      "eventType": "POINT_TEAM_A",
+      "createdAt": {
+        "seconds": 60,
+        "nanoseconds": 0
+      },
+      "id": "e0060"
+    },
+    {
+      "eventType": "POINT_TEAM_A",
+      "createdAt": {
+        "seconds": 61,
+        "nanoseconds": 0
+      },
+      "id": "e0061"
+    },
+    {
+      "eventType": "POINT_TEAM_A",
+      "createdAt": {
+        "seconds": 62,
+        "nanoseconds": 0
+      },
+      "id": "e0062"
+    },
+    {
+      "eventType": "POINT_TEAM_A",
+      "createdAt": {
+        "seconds": 63,
+        "nanoseconds": 0
+      },
+      "id": "e0063"
+    },
+    {
+      "eventType": "POINT_TEAM_A",
+      "createdAt": {
+        "seconds": 64,
+        "nanoseconds": 0
+      },
+      "id": "e0064"
+    },
+    {
+      "eventType": "POINT_TEAM_A",
+      "createdAt": {
+        "seconds": 65,
+        "nanoseconds": 0
+      },
+      "id": "e0065"
+    },
+    {
+      "eventType": "POINT_TEAM_A",
+      "createdAt": {
+        "seconds": 66,
+        "nanoseconds": 0
+      },
+      "id": "e0066"
+    },
+    {
+      "eventType": "POINT_TEAM_A",
+      "createdAt": {
+        "seconds": 67,
+        "nanoseconds": 0
+      },
+      "id": "e0067"
+    },
+    {
+      "eventType": "POINT_TEAM_A",
+      "createdAt": {
+        "seconds": 68,
+        "nanoseconds": 0
+      },
+      "id": "e0068"
+    },
+    {
+      "eventType": "POINT_TEAM_A",
+      "createdAt": {
+        "seconds": 69,
+        "nanoseconds": 0
+      },
+      "id": "e0069"
+    },
+    {
+      "eventType": "POINT_TEAM_A",
+      "createdAt": {
+        "seconds": 70,
+        "nanoseconds": 0
+      },
+      "id": "e0070"
+    },
+    {
+      "eventType": "POINT_TEAM_A",
+      "createdAt": {
+        "seconds": 71,
+        "nanoseconds": 0
+      },
+      "id": "e0071"
+    },
+    {
+      "eventType": "POINT_TEAM_A",
+      "createdAt": {
+        "seconds": 72,
+        "nanoseconds": 0
+      },
+      "id": "e0072"
+    },
+    {
+      "eventType": "POINT_TEAM_B",
+      "createdAt": {
+        "seconds": 73,
+        "nanoseconds": 0
+      },
+      "id": "e0073"
+    },
+    {
+      "eventType": "POINT_TEAM_B",
+      "createdAt": {
+        "seconds": 74,
+        "nanoseconds": 0
+      },
+      "id": "e0074"
+    },
+    {
+      "eventType": "POINT_TEAM_B",
+      "createdAt": {
+        "seconds": 75,
+        "nanoseconds": 0
+      },
+      "id": "e0075"
+    },
+    {
+      "eventType": "POINT_TEAM_B",
+      "createdAt": {
+        "seconds": 76,
+        "nanoseconds": 0
+      },
+      "id": "e0076"
+    },
+    {
+      "eventType": "POINT_TEAM_B",
+      "createdAt": {
+        "seconds": 77,
+        "nanoseconds": 0
+      },
+      "id": "e0077"
+    },
+    {
+      "eventType": "POINT_TEAM_B",
+      "createdAt": {
+        "seconds": 78,
+        "nanoseconds": 0
+      },
+      "id": "e0078"
+    },
+    {
+      "eventType": "POINT_TEAM_B",
+      "createdAt": {
+        "seconds": 79,
+        "nanoseconds": 0
+      },
+      "id": "e0079"
+    },
+    {
+      "eventType": "POINT_TEAM_B",
+      "createdAt": {
+        "seconds": 80,
+        "nanoseconds": 0
+      },
+      "id": "e0080"
+    },
+    {
+      "eventType": "POINT_TEAM_B",
+      "createdAt": {
+        "seconds": 81,
+        "nanoseconds": 0
+      },
+      "id": "e0081"
+    },
+    {
+      "eventType": "POINT_TEAM_B",
+      "createdAt": {
+        "seconds": 82,
+        "nanoseconds": 0
+      },
+      "id": "e0082"
+    },
+    {
+      "eventType": "POINT_TEAM_B",
+      "createdAt": {
+        "seconds": 83,
+        "nanoseconds": 0
+      },
+      "id": "e0083"
+    },
+    {
+      "eventType": "POINT_TEAM_B",
+      "createdAt": {
+        "seconds": 84,
+        "nanoseconds": 0
+      },
+      "id": "e0084"
+    },
+    {
+      "eventType": "POINT_TEAM_B",
+      "createdAt": {
+        "seconds": 85,
+        "nanoseconds": 0
+      },
+      "id": "e0085"
+    },
+    {
+      "eventType": "POINT_TEAM_B",
+      "createdAt": {
+        "seconds": 86,
+        "nanoseconds": 0
+      },
+      "id": "e0086"
+    },
+    {
+      "eventType": "POINT_TEAM_B",
+      "createdAt": {
+        "seconds": 87,
+        "nanoseconds": 0
+      },
+      "id": "e0087"
+    },
+    {
+      "eventType": "POINT_TEAM_B",
+      "createdAt": {
+        "seconds": 88,
+        "nanoseconds": 0
+      },
+      "id": "e0088"
+    },
+    {
+      "eventType": "POINT_TEAM_B",
+      "createdAt": {
+        "seconds": 89,
+        "nanoseconds": 0
+      },
+      "id": "e0089"
+    },
+    {
+      "eventType": "POINT_TEAM_B",
+      "createdAt": {
+        "seconds": 90,
+        "nanoseconds": 0
+      },
+      "id": "e0090"
+    },
+    {
+      "eventType": "POINT_TEAM_B",
+      "createdAt": {
+        "seconds": 91,
+        "nanoseconds": 0
+      },
+      "id": "e0091"
+    },
+    {
+      "eventType": "POINT_TEAM_B",
+      "createdAt": {
+        "seconds": 92,
+        "nanoseconds": 0
+      },
+      "id": "e0092"
+    },
+    {
+      "eventType": "POINT_TEAM_B",
+      "createdAt": {
+        "seconds": 93,
+        "nanoseconds": 0
+      },
+      "id": "e0093"
+    },
+    {
+      "eventType": "POINT_TEAM_B",
+      "createdAt": {
+        "seconds": 94,
+        "nanoseconds": 0
+      },
+      "id": "e0094"
+    },
+    {
+      "eventType": "POINT_TEAM_B",
+      "createdAt": {
+        "seconds": 95,
+        "nanoseconds": 0
+      },
+      "id": "e0095"
+    },
+    {
+      "eventType": "POINT_TEAM_B",
+      "createdAt": {
+        "seconds": 96,
+        "nanoseconds": 0
+      },
+      "id": "e0096"
+    },
+    {
+      "eventType": "POINT_TEAM_A",
+      "createdAt": {
+        "seconds": 97,
+        "nanoseconds": 0
+      },
+      "id": "e0097"
+    },
+    {
+      "eventType": "POINT_TEAM_A",
+      "createdAt": {
+        "seconds": 98,
+        "nanoseconds": 0
+      },
+      "id": "e0098"
+    },
+    {
+      "eventType": "POINT_TEAM_A",
+      "createdAt": {
+        "seconds": 99,
+        "nanoseconds": 0
+      },
+      "id": "e0099"
+    },
+    {
+      "eventType": "POINT_TEAM_A",
+      "createdAt": {
+        "seconds": 100,
+        "nanoseconds": 0
+      },
+      "id": "e0100"
+    },
+    {
+      "eventType": "POINT_TEAM_A",
+      "createdAt": {
+        "seconds": 101,
+        "nanoseconds": 0
+      },
+      "id": "e0101"
+    },
+    {
+      "eventType": "POINT_TEAM_A",
+      "createdAt": {
+        "seconds": 102,
+        "nanoseconds": 0
+      },
+      "id": "e0102"
+    },
+    {
+      "eventType": "POINT_TEAM_A",
+      "createdAt": {
+        "seconds": 103,
+        "nanoseconds": 0
+      },
+      "id": "e0103"
+    },
+    {
+      "eventType": "POINT_TEAM_A",
+      "createdAt": {
+        "seconds": 104,
+        "nanoseconds": 0
+      },
+      "id": "e0104"
+    },
+    {
+      "eventType": "POINT_TEAM_A",
+      "createdAt": {
+        "seconds": 105,
+        "nanoseconds": 0
+      },
+      "id": "e0105"
+    },
+    {
+      "eventType": "POINT_TEAM_A",
+      "createdAt": {
+        "seconds": 106,
+        "nanoseconds": 0
+      },
+      "id": "e0106"
+    },
+    {
+      "eventType": "POINT_TEAM_A",
+      "createdAt": {
+        "seconds": 107,
+        "nanoseconds": 0
+      },
+      "id": "e0107"
+    },
+    {
+      "eventType": "POINT_TEAM_A",
+      "createdAt": {
+        "seconds": 108,
+        "nanoseconds": 0
+      },
+      "id": "e0108"
+    },
+    {
+      "eventType": "POINT_TEAM_A",
+      "createdAt": {
+        "seconds": 109,
+        "nanoseconds": 0
+      },
+      "id": "e0109"
+    },
+    {
+      "eventType": "POINT_TEAM_A",
+      "createdAt": {
+        "seconds": 110,
+        "nanoseconds": 0
+      },
+      "id": "e0110"
+    },
+    {
+      "eventType": "POINT_TEAM_A",
+      "createdAt": {
+        "seconds": 111,
+        "nanoseconds": 0
+      },
+      "id": "e0111"
+    },
+    {
+      "eventType": "POINT_TEAM_A",
+      "createdAt": {
+        "seconds": 112,
+        "nanoseconds": 0
+      },
+      "id": "e0112"
+    },
+    {
+      "eventType": "POINT_TEAM_A",
+      "createdAt": {
+        "seconds": 113,
+        "nanoseconds": 0
+      },
+      "id": "e0113"
+    },
+    {
+      "eventType": "POINT_TEAM_A",
+      "createdAt": {
+        "seconds": 114,
+        "nanoseconds": 0
+      },
+      "id": "e0114"
+    },
+    {
+      "eventType": "POINT_TEAM_A",
+      "createdAt": {
+        "seconds": 115,
+        "nanoseconds": 0
+      },
+      "id": "e0115"
+    },
+    {
+      "eventType": "POINT_TEAM_A",
+      "createdAt": {
+        "seconds": 116,
+        "nanoseconds": 0
+      },
+      "id": "e0116"
+    },
+    {
+      "eventType": "POINT_TEAM_A",
+      "createdAt": {
+        "seconds": 117,
+        "nanoseconds": 0
+      },
+      "id": "e0117"
+    },
+    {
+      "eventType": "POINT_TEAM_A",
+      "createdAt": {
+        "seconds": 118,
+        "nanoseconds": 0
+      },
+      "id": "e0118"
+    },
+    {
+      "eventType": "POINT_TEAM_A",
+      "createdAt": {
+        "seconds": 119,
+        "nanoseconds": 0
+      },
+      "id": "e0119"
+    },
+    {
+      "eventType": "POINT_TEAM_A",
+      "createdAt": {
+        "seconds": 120,
+        "nanoseconds": 0
+      },
+      "id": "e0120"
+    }
+  ],
+  "expected": {
+    "A": {
+      "points": 0,
+      "games": 0,
+      "sets": 3,
+      "totalPoints": 72
+    },
+    "B": {
+      "points": 0,
+      "games": 0,
+      "sets": 2,
+      "totalPoints": 48
+    },
+    "completedSets": [
+      {
+        "A": 6,
+        "B": 0,
+        "tiebreakPoints": null
+      },
+      {
+        "A": 0,
+        "B": 6,
+        "tiebreakPoints": null
+      },
+      {
+        "A": 6,
+        "B": 0,
+        "tiebreakPoints": null
+      },
+      {
+        "A": 0,
+        "B": 6,
+        "tiebreakPoints": null
+      },
+      {
+        "A": 6,
+        "B": 0,
+        "tiebreakPoints": null
+      }
+    ],
+    "inTiebreak": false,
+    "deuceCycles": 0,
+    "matchComplete": false,
+    "lastPointTeam": "A",
+    "lastGameTeam": "A",
+    "lastSetTeam": "A",
+    "server": "A2"
+  }
+}
