@@ -76,15 +76,12 @@ test("share content uses a common 840px CSS-pixel column", () => {
 });
 
 test("QR footer is vertically centered between score details and image bottom", () => {
-  assert.match(source, /footerPanel\.style\.position = 'absolute'/);
-  assert.match(source, /footerPanel\.style\.marginTop = '0'/);
-  assert.match(source, /clone\.style\.position = 'relative'/);
+  assert.match(source, /footerPanel\.style\.position = 'static'/);
+  assert.match(source, /footerPanel\.style\.marginTop = `\$\{verticalGap\}px`/);
   assert.match(source, /const scoreDetailsRect = shareTableWrap\?\.getBoundingClientRect\(\)/);
   assert.match(source, /const remainingHeight = cloneRect\.height - scoreBottom - footerRect\.height/);
   assert.match(source, /const verticalGap = Math\.max\(0, remainingHeight \/ 2\)/);
   assert.match(source, /footerPanel\.style\.top = `\$\{scoreBottom \+ verticalGap\}px`/);
-  assert.match(source, /footerPanel\.style\.left = '50%'/);
-  assert.match(source, /footerPanel\.style\.transform = 'translateX\(-50%\)'/);
 });
 
 test("visible QR URL omits the protocol while the QR payload keeps the full URL", () => {
