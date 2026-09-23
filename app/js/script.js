@@ -1,3 +1,4 @@
+import BRAND from "./brand.mjs";
 import { app, db } from "./firebase.js";
 import { applyActiveScoreSnapshot } from "./scoreSync.mjs";
 import { toBlob } from "https://esm.sh/html-to-image@1.11.13";
@@ -407,7 +408,7 @@ document.addEventListener("DOMContentLoaded", () =>
     const payload = { title: "", text: "", files: [] };
 
     const lines = [];
-    lines.push("Padel Push\n");
+    lines.push(BRAND.name + "\n");
 
     lines.push(...buildTeamsShareLines(currentRawTeamNames || {}, currentPlayerNames || {}));
     const scoreSummary = buildCurrentScoreSummary();
@@ -3640,11 +3641,11 @@ document.addEventListener("DOMContentLoaded", () =>
   {
     if (!courtName || !courtId)
     {
-      document.title = "Padel Push - Live Scoreboard";
+      document.title = BRAND.name + " - " + BRAND.app.title;
       return;
     }
 
-    document.title = `${courtName} (${courtId.toUpperCase()}) | Padel Push`;
+    document.title = `${courtName} (${courtId.toUpperCase()}) | ${BRAND.name}`;
   }
 
   function updateMarqueeScrolling()
@@ -4009,7 +4010,7 @@ document.addEventListener("DOMContentLoaded", () =>
 
   function BlankOutScoreboard()
   {
-    showCourtTitle("Padel Push - Live Scoreboard");
+    showCourtTitle(BRAND.name + " - " + BRAND.app.title);
     const nameA = $("teamA").querySelector(".name-text");
     const nameB = $("teamB").querySelector(".name-text");
     if (nameA)
@@ -5197,7 +5198,7 @@ document.addEventListener("DOMContentLoaded", () =>
       overlay.innerHTML = `
         <div class="loading-content">
           <div class="spinner-wrapper">
-            <img src="/media/logo.svg" alt="Padel Push Logo" class="loading-logo" />
+            <img src="/media/logo.svg" alt="${BRAND.name} Logo" class="loading-logo" />
             <div class="spinner"></div>
           </div>
           <div class="loading">${message}</div>

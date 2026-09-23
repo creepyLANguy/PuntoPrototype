@@ -1,6 +1,6 @@
-# Padel Push API
+# Padel Push™ API
 
-Production-facing API contract and integration guide for Padel Push.
+Production-facing API contract and integration guide for Padel Push™.
 
 > **Status:** This document describes the currently deployed API behaviour and the production-hardening contract. Items explicitly marked **P0 hardening** are requirements for production API consumers/implementations; documentation alone does not change deployed runtime behaviour.
 
