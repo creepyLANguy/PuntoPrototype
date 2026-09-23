@@ -371,7 +371,7 @@ body.light-mode .menu-btn:hover {
   box-sizing: border-box;
   user-select: none;
   touch-action: none;
-  resize: horizontal;
+  resize: none;
   cursor: grab;
 }
 
