@@ -8501,7 +8501,7 @@ async function cacheShareableScoreCard()
   // edges with a gap down the middle.
   const footerPanel = document.createElement('div');
   clone.appendChild(footerPanel);
-  footerPanel.style.position = 'absolute';
+  footerPanel.style.position = 'static';
   footerPanel.style.width = `${SHARE_IMAGE_QR_PANEL_WIDTH}px`;
   footerPanel.style.maxWidth = '100%';
   footerPanel.style.marginTop = '0';
@@ -8647,9 +8647,18 @@ async function cacheShareableScoreCard()
   clone.style.overflowY = 'visible';
   clone.style.background = cardBackground;
 
-  // Wait until the clone has its final 1080x1350 export dimensions, then place
-  // the QR/footer section so the gap above it (from the score details) equals
-  // the gap below it (to the bottom of the share image).
+  const staging = document.createElement('div');
+  staging.style.position = 'fixed';
+  staging.style.left = '-10000px';
+  staging.style.top = '0';
+  staging.style.pointerEvents = 'none';
+  staging.style.zIndex = '-1';
+  staging.style.width = `${SHARE_IMAGE_WIDTH}px`;
+  staging.appendChild(clone);
+  document.body.appendChild(staging);
+
+  // The clone now has its final export dimensions and is attached to the DOM,
+  // so its geometry reflects the actual 1080x1350 share image.
   await new Promise(resolve => requestAnimationFrame(() => resolve()));
 
   const cloneRect = clone.getBoundingClientRect();
@@ -8669,16 +8678,6 @@ async function cacheShareableScoreCard()
 
     footerPanel.style.marginTop = `${Math.max(0, additionalMargin)}px`;
   }
-
-  const staging = document.createElement('div');
-  staging.style.position = 'fixed';
-  staging.style.left = '-10000px';
-  staging.style.top = '0';
-  staging.style.pointerEvents = 'none';
-  staging.style.zIndex = '-1';
-  staging.style.width = `${SHARE_IMAGE_WIDTH}px`;
-  staging.appendChild(clone);
-  document.body.appendChild(staging);
 
   clone.querySelectorAll('*').forEach(node =>
   {
