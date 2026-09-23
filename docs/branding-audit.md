@@ -1,97 +1,51 @@
-# Padel Push branding audit
+# Padel Push™ branding audit
 
-Audit of customer-facing product naming and tagline/copy in `main` before centralisation.
+## Canonical definition
 
-## Brand-name variants found
+`app/js/brand.mjs` is the single source of truth for customer-facing brand identity.
 
-The repository currently uses these meaningful brand-name variants:
+- Display name: `Padel Push™`
+- Display wordmark: `PADEL PUSH™`
+- Single tagline: `Smart scoring. Connected courts. One platform.`
 
-| Variant | Context | Locations |
+`app/js/brand.js` is only a compatibility re-export.
+
+## Customer-facing surfaces updated
+
+| Surface | Files | Changes |
 |---|---|---|
-| `Padel Push` | Normal product name | `index.html`, `app/index.html`, `app/overlay.html`, `nfc/index.html`, `app/js/script.js`, API/docs and diagrams |
-| `PADEL PUSH` | Uppercase visual lock-up | `index.html` landing-page navigation and hero |
-| `PadelPush` | JavaScript identifier / storage-key form | e.g. `padelPushOverlaySettings:` in overlay tests; this is a technical identifier, not customer-facing copy |
-| `padelpush` | Domain/URL form | `www.padelpush.co.za`, `qa.padelpush.co.za`, email address, API examples and deployment configuration; this is intentionally not treated as display branding |
+| Landing page | `index.html` | Brand name, wordmark, page title, descriptions, social alt, visible tagline, accessibility labels, email subject text and footer |
+| Scoring app | `app/index.html`, `app/js/script.js` | Brand name, alt text, share text and dynamic page titles |
+| Score overlay | `app/overlay.html` | Overlay title, displayed brand, default text, sponsor copy and theme label |
+| NFC tool | `nfc/index.html` | Title and attribution |
+| API docs | `docs/api.md`, `docs/api/openapi.yaml` | User-facing product name |
+| Architecture diagrams | `docs/PP_Basic_Flow.mmd`, `docs/PP_Architecture.mmd` | Product name |
+| CSS | `app/css/style.css` | Brand-specific developer comment removed |
 
-Examples confirmed by repository search include the API docs, landing page, NFC page, app page, overlay, public API docs, deployment configuration and frontend tests. fileciteturn0file0L2-L10 fileciteturn8file2L36-L43 fileciteturn8file6L100-L109 fileciteturn8file7L123-L130 fileciteturn5file7L110-L117
+## Tagline
 
-## Taglines / brand-level positioning copy found
+The former primary tagline `Smart devices. Live scoring. Connected courts.` has been removed.
 
-### 1. Primary landing-page tagline
+The only brand tagline is now `Smart scoring. Connected courts. One platform.`
 
-`Smart devices. Live scoring. Connected courts.`
+`Smart Scoring for Modern Padel Clubs`, `Live Scoreboard`, `Score Overlay`, and the page descriptions remain functional/SEO descriptors, not secondary taglines.
 
-Location: `index.html`, hero lead. fileciteturn12file0L2-L8
+## Technical forms intentionally unchanged
 
-### 2. Landing-page title positioning
+- `padel_push_accessible_v1` — persisted NFC localStorage key
+- `padelPushOverlaySettings:` — persisted overlay settings key
+- `themePreset: "padelpush"` — internal overlay enum/key
 
-`Smart Scoring for Modern Padel Clubs`
+Per scope, these are also untouched:
 
-Used in the HTML title and social title alongside the brand name. fileciteturn2file0L8-L15
+- Domains and domain URLs
+- Email addresses
+- `media/logo.svg`
+- `media/favicon.svg`
+- `media/social-preview.png`
 
-### 3. Landing-page meta description
+## Tooling
 
-`The connected smart court ecosystem with portable scoring devices, live scoreboards, and scalable tools for modern padel clubs.`
+Run `node scripts/build-branding.mjs` after changing the canonical brand values.
 
-Used as the landing page description. fileciteturn13file0L2-L8
-
-### 4. Landing-page social description
-
-`Smart devices, live scoring, and connected tools for modern padel clubs.`
-
-Used as the Open Graph description. fileciteturn7file0L2-L9
-
-### 5. App title / positioning
-
-`Live Scoreboard`
-
-Combined with the brand as `Padel Push - Live Scoreboard`. fileciteturn7file7L121-L128
-
-### 6. App description
-
-`Padel Push — Live padel scoring system. Track points, games, sets, and matches in real-time.`
-
-A closely related Open Graph version omits the brand and uses `real time` rather than `real-time`. fileciteturn14file0L2-L21
-
-### 7. App social alt text
-
-`Padel Push - Live padel scoring`
-
-Confirmed in `app/index.html`. fileciteturn7file7L121-L128
-
-### 8. Overlay branding
-
-The overlay has a configurable `brandText` / `brandLogo`, but its fallback currently hard-codes `Padel Push`. fileciteturn15file0L8-L13
-
-The default sponsor copy also contains `Padel Push` and `padelpush.co.za`. fileciteturn7file14L233-L241
-
-## Central definition introduced on this branch
-
-`app/js/brand.js` is now the canonical source for the display name and the identified brand-level/tagline copy:
-
-- `BRAND.name`
-- `BRAND.displayName`
-- `BRAND.taglines.primary`
-- `BRAND.taglines.landingTitle`
-- `BRAND.taglines.landingDescription`
-- `BRAND.taglines.landingSocialDescription`
-- `BRAND.taglines.appTitle`
-- `BRAND.taglines.appDescription`
-- `BRAND.taglines.appSocialDescription`
-- `BRAND.taglines.appSocialAlt`
-- `BRAND.taglines.landingSocialAlt`
-
-Technical identifiers and infrastructure URLs such as `padelPushOverlaySettings`, `www.padelpush.co.za`, `qa.padelpush.co.za`, and `info.padelpush@gmail.com` should remain independent from display-brand configuration.
-
-## Recommended follow-through
-
-The remaining hard-coded customer-facing occurrences should be migrated to `BRAND` consumers. In particular:
-
-1. Landing-page HTML metadata and visible brand copy in `index.html`.
-2. App HTML metadata in `app/index.html`.
-3. Overlay fallback/sponsor branding in `app/overlay.html`.
-4. Generated/share text in `app/js/script.js`.
-5. NFC page copy in `nfc/index.html` where applicable.
-6. Any customer-facing documentation/diagrams where the product name is intended to be rendered rather than merely describing architecture.
-
-Infrastructure URLs and stable technical identifiers should not be mechanically replaced with display-brand constants.
+Run `node scripts/check-branding.mjs` to verify that no untrademarked customer-facing brand name or legacy primary tagline remains.
