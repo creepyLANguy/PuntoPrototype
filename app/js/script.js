@@ -1,7 +1,7 @@
 import BRAND from "./brand.mjs";
 import { app, db } from "./firebase.js";
 import { applyActiveScoreSnapshot } from "./scoreSync.mjs";
-import { toBlob } from "https://esm.sh/html-to-image@1.11.13";
+import { toCanvas } from "https://esm.sh/html-to-image@1.11.13";
 
 import
 {
@@ -8372,7 +8372,9 @@ async function cacheShareableScoreCard()
   let blob = null;
   try
   {
-    blob = await toBlob(clone, {
+    // Render at 2x internally so text and vector-like edges are rasterized
+    // with more samples, then downsample to the original 1080x1350 output.
+    const highResolutionCanvas = await toCanvas(clone, {
       width: SHARE_IMAGE_WIDTH,
       height: SHARE_IMAGE_HEIGHT,
       canvasWidth: SHARE_IMAGE_WIDTH,
@@ -8380,6 +8382,38 @@ async function cacheShareableScoreCard()
       pixelRatio: 2,
       backgroundColor: cardBackground,
       filter: (node) => inclusions(node),
+    });
+
+    const outputCanvas = document.createElement('canvas');
+    outputCanvas.width = SHARE_IMAGE_WIDTH;
+    outputCanvas.height = SHARE_IMAGE_HEIGHT;
+
+    const outputContext = outputCanvas.getContext('2d');
+    if (!outputContext)
+    {
+      throw new Error('Failed to create output canvas');
+    }
+
+    outputContext.imageSmoothingEnabled = true;
+    outputContext.imageSmoothingQuality = 'high';
+    outputContext.drawImage(
+      highResolutionCanvas,
+      0,
+      0,
+      highResolutionCanvas.width,
+      highResolutionCanvas.height,
+      0,
+      0,
+      SHARE_IMAGE_WIDTH,
+      SHARE_IMAGE_HEIGHT
+    );
+
+    blob = await new Promise((resolve, reject) =>
+    {
+      outputCanvas.toBlob(
+        generatedBlob => generatedBlob ? resolve(generatedBlob) : reject(new Error('Failed to encode output image')),
+        'image/png'
+      );
     });
   }
   finally
