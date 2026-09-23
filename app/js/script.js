@@ -7858,7 +7858,62 @@ window.addEventListener("resize", () =>
 
 let shareableScoreCardImage = null;
 
-// The captured card is only ever consumed as payload.files in getSharePayload,
+// Cache the Padel Push logo as a same-origin PNG data URL. This avoids relying on
+// SVG/CSS filter rendering inside html-to-image, which is particularly fragile
+// for the light-theme watermark.
+const shareLogoDataUrlCache = new Map();
+
+async function getShareLogoDataUrl(color = '#ffffff')
+{
+  const normalizedColor = String(color || '#ffffff').toLowerCase();
+  if (shareLogoDataUrlCache.has(normalizedColor))
+  {
+    return shareLogoDataUrlCache.get(normalizedColor);
+  }
+
+  const image = new Image();
+  image.decoding = 'async';
+  image.src = '/media/logo.svg';
+
+  await new Promise((resolve, reject) =>
+  {
+    if (image.complete && image.naturalWidth > 0)
+    {
+      resolve();
+      return;
+    }
+
+    image.addEventListener('load', resolve, { once: true });
+    image.addEventListener('error', () => reject(new Error('Padel Push logo could not be loaded')), { once: true });
+  });
+
+  const size = 256;
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+
+  const context = canvas.getContext('2d');
+  if (!context)
+  {
+    throw new Error('Could not create logo canvas');
+  }
+
+  context.drawImage(image, 0, 0, size, size);
+
+  if (normalizedColor !== 'source')
+  {
+    context.globalCompositeOperation = 'source-in';
+    context.fillStyle = normalizedColor;
+    context.fillRect(0, 0, size, size);
+    context.globalCompositeOperation = 'source-over';
+  }
+
+  const dataUrl = canvas.toDataURL('image/png');
+  shareLogoDataUrlCache.set(normalizedColor, dataUrl);
+  return dataUrl;
+}
+
+// The captured card is only ever consumed// The captured card is only ever consumed as payload.files in getSharePayload,
 // and that path is itself gated on navigator.canShare. Where the browser cannot
 // share files there is nothing to spend the capture on, so probe once with an
 // empty dummy file and reuse the answer.
@@ -7922,17 +7977,223 @@ async function cacheShareableScoreCard()
   const appOrigin = window.location.origin.replace(/\/$/, '');
   const qrUrl = courtId ? `${appOrigin}/c/${encodeURIComponent(courtId)}` : `${appOrigin}/app/`;
 
-  const footerHeight = 96;
+  // Capture the modal's own background instead of the document body. The
+  // details modal deliberately has a different light-theme surface than body.
+  const cardBackground = getComputedStyle(element).backgroundColor || '#111111';
+  const isLightTheme = document.body.classList.contains('light-mode');
+  const watermarkColor = isLightTheme ? '#111111' : '#ffffff';
+  const watermarkLogoDataUrl = await getShareLogoDataUrl(watermarkColor);
+
+  // Share images are designed directly at their final 4:5 dimensions. The clone
+  // uses the same CSS pixel dimensions as the final PNG, so typography, wrapping,
+  // spacing, and QR sizing are all authored against the real export canvas.
+  // Keeping these values here makes the sizing explicitly local to image sharing.
+  const SHARE_IMAGE_WIDTH = 1080;
+  const SHARE_IMAGE_HEIGHT = 1350;
+  const SHARE_IMAGE_CONTENT_WIDTH = 840;
+  const SHARE_IMAGE_SCORE_PANEL_WIDTH = 720;
+  const SHARE_IMAGE_QR_PANEL_WIDTH = 720;
+  const SHARE_IMAGE_QR_LEFT_OFFSET = 104;
+  const SHARE_IMAGE_SCALE = 2;
+  const footerHeight = 96 * SHARE_IMAGE_SCALE;
 
   const clone = element.cloneNode(true);
 
-  // The card carries the scoreline only. The detailed stats panel holds the
-  // momentum graph and the advanced stats table, both of which are too dense to
-  // read at share size, so the whole panel is dropped. Nothing in the capture
-  // then depends on the momentum endpoint.
+  // Preserve the visual density of the previous 2x-rendered share image while
+  // keeping the design itself authored at the final 1080x1350 CSS dimensions.
+  clone.style.padding = `40px 56px 16px`;
+  clone.style.borderRadius = `48px`;
+
+  const shareLogo = clone.querySelector('.dm-logo');
+  const shareHeader = clone.querySelector('.dm-header');
+  const shareTitle = clone.querySelector('.dm-title');
+  const shareCourtName = clone.querySelector('#matchDetailsCourtName');
+  const shareTeams = clone.querySelector('.dm-teams');
+  const shareNames = clone.querySelectorAll('.dm-name');
+  const shareVs = clone.querySelector('.dm-vs');
+  const shareOverall = clone.querySelector('.dm-overall');
+  const shareSets = clone.querySelectorAll('.dm-sets');
+  const shareDash = clone.querySelector('.dm-dash');
+  const shareMidSection = clone.querySelector('.dm-mid-section');
+  const shareTableWrap = clone.querySelector('.dm-table-wrap');
+  const shareTable = clone.querySelector('.dm-table');
+
+  if (shareLogo)
+  {
+    shareLogo.style.width = `144px`;
+    shareLogo.style.height = `144px`;
+  }
+
+  if (shareHeader)
+  {
+    shareHeader.style.gap = `16px`;
+    shareHeader.style.marginBottom = `36px`;
+  }
+
+  if (shareTitle)
+  {
+    shareTitle.style.fontSize = `4rem`;
+  }
+
+  if (shareCourtName)
+  {
+    shareCourtName.style.fontSize = `2.2rem`;
+    shareCourtName.style.lineHeight = '1.2';
+    shareCourtName.style.margin = '8px 0 0';
+    shareCourtName.style.textAlign = 'center';
+  }
+
+  shareNames.forEach(node =>
+  {
+    node.style.fontSize = `2.8rem`;
+    node.style.maxWidth = '100%';
+  });
+
+  if (shareVs)
+  {
+    shareVs.style.fontSize = `1.5rem`;
+    shareVs.style.lineHeight = '1.8';
+  }
+
+  if (shareTeams)
+  {
+    shareTeams.style.marginBottom = `42px`;
+  }
+
+  if (shareOverall)
+  {
+    shareOverall.style.gap = `28px`;
+    shareOverall.style.marginBottom = `44px`;
+  }
+
+  shareSets.forEach(node =>
+  {
+    node.style.fontSize = `6.5rem`;
+  });
+
+  if (shareDash)
+  {
+    shareDash.style.fontSize = `4rem`;
+  }
+
+  // Interactive controls and the details dropdown are part of the live modal,
+  // but must never be included in the shareable image. Remove them before
+  // html-to-image serializes the clone.
   clone
     .querySelectorAll('.dm-close, .dm-share-btn, .dm-details-panel, .dm-empty-state, .dm-error-state')
     .forEach(node => node.remove());
+
+  // The modal intentionally ellipsizes long team names for the compact on-screen
+  // layout. The share image has enough vertical space to wrap them instead.
+  clone.querySelectorAll('.dm-name').forEach(node =>
+  {
+    node.style.whiteSpace = 'normal';
+    node.style.overflow = 'visible';
+    node.style.textOverflow = 'clip';
+    node.style.overflowWrap = 'anywhere';
+    node.style.wordBreak = 'break-word';
+    node.style.maxWidth = '100%';
+    node.style.width = '100%';
+    node.style.textAlign = 'center';
+    node.style.lineHeight = '1.15';
+  });
+
+  // The share image uses an 840px main content column. The score table and QR/footer
+  // use the same narrower panel width so their horizontal density stays compact,
+  // while the live details modal keeps its normal responsive width.
+  [shareHeader, shareMidSection].forEach(node =>
+  {
+    if (!node) return;
+    node.style.width = `${SHARE_IMAGE_CONTENT_WIDTH}px`;
+    node.style.maxWidth = '100%';
+    node.style.boxSizing = 'border-box';
+  });
+
+  if (shareOverall)
+  {
+    shareOverall.style.width = '100%';
+    shareOverall.style.justifyContent = 'center';
+  }
+
+  if (shareTeams)
+  {
+    shareTeams.style.width = '100%';
+    shareTeams.style.maxWidth = '100%';
+  }
+
+  if (shareTableWrap)
+  {
+    shareTableWrap.style.width = `${SHARE_IMAGE_SCORE_PANEL_WIDTH}px`;
+    shareTableWrap.style.maxWidth = '100%';
+    shareTableWrap.style.boxSizing = 'border-box';
+  }
+
+  if (shareTableWrap && shareTable)
+  {
+    shareTableWrap.style.padding = '16px 24px';
+    shareTableWrap.style.overflow = 'visible';
+    shareTableWrap.style.boxSizing = 'border-box';
+    shareTableWrap.style.borderRadius = '32px';
+    shareTable.style.width = '100%';
+    shareTable.style.minWidth = '0';
+    shareTable.style.margin = '0';
+
+    shareTable.querySelectorAll('thead th').forEach(node =>
+    {
+      node.style.padding = '6px 16px 12px';
+      node.style.fontSize = '1.9rem';
+    });
+
+    shareTable.querySelectorAll('tbody td').forEach(node =>
+    {
+      node.style.padding = '14px 16px';
+      node.style.minWidth = '84px';
+      node.style.fontSize = '3.5rem';
+    });
+
+    shareTable.querySelectorAll('.dm-marker-cell').forEach(node =>
+    {
+      node.style.width = '12px';
+      node.style.paddingRight = '20px';
+    });
+
+    shareTable.querySelectorAll('.dm-marker-cell span').forEach(node =>
+    {
+      node.style.width = '8px';
+      node.style.minHeight = '72px';
+      node.style.borderRadius = '4px';
+    });
+
+    shareTable.querySelectorAll('.dm-row-separator td').forEach(node =>
+    {
+      node.style.height = '2px';
+    });
+  }
+
+  // Make the watermark deterministic for html-to-image. The light-theme version
+  // previously depended on CSS filter inversion of the white SVG, which can be
+  // omitted by the serializer and leave the watermark invisible on white.
+  const watermark = clone.querySelector('.dm-watermark');
+  const watermarkImage = watermark?.querySelector('img');
+
+  if (watermark)
+  {
+    watermark.style.zIndex = '0';
+    watermark.style.opacity = '0.5';
+    watermark.style.width = '100%';
+    watermark.style.height = '100%';
+    watermark.style.borderRadius = '48px';
+  }
+
+  if (watermarkImage)
+  {
+    watermarkImage.src = watermarkLogoDataUrl;
+    watermarkImage.removeAttribute('srcset');
+    watermarkImage.style.filter = 'none';
+    watermarkImage.style.opacity = '0.06';
+    watermarkImage.style.width = '88%';
+    watermarkImage.style.maxWidth = 'none';
+  }
 
   // A dedicated element appended to the card, rather than the details panel
   // reused in place. The QR block is centred and sized to its content so the
@@ -7940,23 +8201,25 @@ async function cacheShareableScoreCard()
   // edges with a gap down the middle.
   const footerPanel = document.createElement('div');
   clone.appendChild(footerPanel);
-  footerPanel.style.width = '100%';
-  footerPanel.style.marginTop = '16px';
+  footerPanel.style.width = `${SHARE_IMAGE_QR_PANEL_WIDTH}px`;
+  footerPanel.style.maxWidth = '100%';
+  footerPanel.style.marginTop = `24px`;
   footerPanel.style.display = 'flex';
   footerPanel.style.alignItems = 'center';
-  footerPanel.style.justifyContent = 'center';
-  footerPanel.style.gap = '14px';
-  footerPanel.style.padding = '12px 16px';
-  footerPanel.style.minHeight = `${footerHeight}px`;
+  footerPanel.style.justifyContent = 'flex-start';
+  footerPanel.style.gap = `28px`;
+  footerPanel.style.padding = `24px 32px`;
+  footerPanel.style.minHeight = `${footerHeight + 24}px`;
   footerPanel.style.boxSizing = 'border-box';
+  footerPanel.style.paddingLeft = `${SHARE_IMAGE_QR_LEFT_OFFSET}px`;
 
   const qrWrap = document.createElement('div');
   qrWrap.style.display = 'inline-flex';
   qrWrap.style.alignItems = 'center';
   qrWrap.style.justifyContent = 'center';
-  qrWrap.style.padding = '8px';
+  qrWrap.style.padding = `16px`;
   qrWrap.style.background = '#ffffff';
-  qrWrap.style.borderRadius = '10px';
+  qrWrap.style.borderRadius = '20px';
   qrWrap.style.flex = '0 0 auto';
 
   const qrMount = document.createElement('div');
@@ -7965,25 +8228,25 @@ async function cacheShareableScoreCard()
   const footerText = document.createElement('div');
   footerText.style.display = 'flex';
   footerText.style.flexDirection = 'column';
-  footerText.style.gap = '4px';
+  footerText.style.gap = '8px';
   footerText.style.flex = '0 1 auto';
   footerText.style.minWidth = '0';
 
   const footerTitle = document.createElement('div');
   footerTitle.textContent = 'Scan for match details';
-  footerTitle.style.fontSize = '14px';
+  footerTitle.style.fontSize = `30px`;
   footerTitle.style.fontWeight = '700';
   footerTitle.style.letterSpacing = '0.02em';
 
   const footerCourtId = document.createElement('div');
   footerCourtId.textContent = `Court ID: ${courtIdDisplay}`;
-  footerCourtId.style.fontSize = '16px';
+  footerCourtId.style.fontSize = `34px`;
   footerCourtId.style.fontWeight = '800';
   footerCourtId.style.letterSpacing = '0.06em';
 
   const footerUrl = document.createElement('div');
   footerUrl.textContent = qrUrl;
-  footerUrl.style.fontSize = '11px';
+  footerUrl.style.fontSize = `24px`;
   footerUrl.style.opacity = '0.85';
   footerUrl.style.overflow = 'hidden';
   footerUrl.style.textOverflow = 'ellipsis';
@@ -7998,7 +8261,7 @@ async function cacheShareableScoreCard()
 
   if (window.QRCode)
   {
-    const qrSize = Math.max(84, Math.min(120, footerHeight - 24));
+    const qrSize = Math.max(168, Math.min(240, footerHeight - 48));
     new window.QRCode(qrMount, {
       text: qrUrl,
       width: qrSize,
@@ -8010,9 +8273,8 @@ async function cacheShareableScoreCard()
 
     // qrcode.js paints its canvas synchronously but fills its companion <img>
     // from a setTimeout retry loop, so that <img> is still src-less when the
-    // capture runs. html-to-image would try to inline it, fetch the empty URL,
-    // get this page's HTML back and reject from the image's onerror handler.
-    // Freeze the canvas into a single data-URL image instead of racing it.
+    // capture runs. Freeze the canvas into a single data-URL image instead of
+    // racing it.
     const qrCanvas = qrMount.querySelector('canvas');
     if (qrCanvas)
     {
@@ -8026,6 +8288,7 @@ async function cacheShareableScoreCard()
       qrImage.height = qrSize;
       qrImage.style.display = 'block';
       qrMount.appendChild(qrImage);
+
     }
     else
     {
@@ -8042,16 +8305,17 @@ async function cacheShareableScoreCard()
   const inclusions = (node) =>
   {
     const excludedClasses = [
-      'dm-close', 
-      'dm-share-btn', 
-      'dm-empty-state', 
-      'dm-error-state', 
-      'hidden', 
-      'invisible', 
-      'sr-only', 
+      'dm-close',
+      'dm-share-btn',
+      'dm-details-panel',
+      'dm-empty-state',
+      'dm-error-state',
+      'hidden',
+      'invisible',
+      'sr-only',
       'no-print'
     ];
-    
+
     if (node.nodeType === Node.ELEMENT_NODE)
     {
       const el = node;
@@ -8069,37 +8333,29 @@ async function cacheShareableScoreCard()
       }
     }
     return true;
-  }
+  };
 
-  // .dm-box is a capped, scrollable box on screen. Left as-is the clone would be
-  // cropped at one viewport height, and its width:100% would resolve against a
-  // shrink-to-fit parent rather than the width the user actually sees.
-  const sourceWidth = Math.round(element.getBoundingClientRect().width);
-
-  clone.style.maxHeight = 'none';
-  clone.style.height = 'auto';
+  clone.style.width = `${SHARE_IMAGE_WIDTH}px`;
+  clone.style.height = `${SHARE_IMAGE_HEIGHT}px`;
+  clone.style.minWidth = `${SHARE_IMAGE_WIDTH}px`;
+  clone.style.maxWidth = `${SHARE_IMAGE_WIDTH}px`;
+  clone.style.minHeight = `${SHARE_IMAGE_HEIGHT}px`;
+  clone.style.maxHeight = `${SHARE_IMAGE_HEIGHT}px`;
+  clone.style.boxSizing = 'border-box';
   clone.style.overflow = 'visible';
   clone.style.overflowY = 'visible';
+  clone.style.background = cardBackground;
 
-  // Ids are deliberately kept on the clone: id-based rules such as #detailsSetsA
-  // supply the team colours, and html-to-image reads computed style off these
-  // staged nodes. Staging is appended last, so getElementById still resolves to
-  // the original #dmBox in tree order.
   const staging = document.createElement('div');
   staging.style.position = 'fixed';
   staging.style.left = '-10000px';
   staging.style.top = '0';
   staging.style.pointerEvents = 'none';
   staging.style.zIndex = '-1';
-  if (sourceWidth > 0)
-  {
-    staging.style.width = `${sourceWidth}px`;
-  }
+  staging.style.width = `${SHARE_IMAGE_WIDTH}px`;
   staging.appendChild(clone);
   document.body.appendChild(staging);
 
-  // Computed styles only exist once the clone is attached, so inner scrollers
-  // such as .dm-table-wrap can only be neutralised here.
   clone.querySelectorAll('*').forEach(node =>
   {
     const overflowY = getComputedStyle(node).overflowY;
@@ -8116,11 +8372,67 @@ async function cacheShareableScoreCard()
   let blob = null;
   try
   {
-    blob = await toBlob(clone, {
-      pixelRatio: 2, // Higher quality
-      backgroundColor: getComputedStyle(document.body).backgroundColor,
+    // Render at 2x internally so text and vector-like edges are rasterized
+    // with more samples, then downsample to the original 1080x1350 output.
+    const highResolutionBlob = await toBlob(clone, {
+      width: SHARE_IMAGE_WIDTH,
+      height: SHARE_IMAGE_HEIGHT,
+      canvasWidth: SHARE_IMAGE_WIDTH,
+      canvasHeight: SHARE_IMAGE_HEIGHT,
+      pixelRatio: 2,
+      backgroundColor: cardBackground,
       filter: (node) => inclusions(node),
     });
+
+    if (!highResolutionBlob)
+    {
+      throw new Error('Failed to generate high-resolution image');
+    }
+
+    const highResolutionImage = new Image();
+    const highResolutionUrl = URL.createObjectURL(highResolutionBlob);
+
+    try
+    {
+      highResolutionImage.src = highResolutionUrl;
+      await highResolutionImage.decode();
+
+      const outputCanvas = document.createElement('canvas');
+      outputCanvas.width = SHARE_IMAGE_WIDTH;
+      outputCanvas.height = SHARE_IMAGE_HEIGHT;
+
+      const outputContext = outputCanvas.getContext('2d');
+      if (!outputContext)
+      {
+        throw new Error('Failed to create output canvas');
+      }
+
+      outputContext.imageSmoothingEnabled = true;
+      outputContext.imageSmoothingQuality = 'high';
+      outputContext.drawImage(
+        highResolutionImage,
+        0,
+        0,
+        highResolutionImage.naturalWidth,
+        highResolutionImage.naturalHeight,
+        0,
+        0,
+        SHARE_IMAGE_WIDTH,
+        SHARE_IMAGE_HEIGHT
+      );
+
+      blob = await new Promise((resolve, reject) =>
+      {
+        outputCanvas.toBlob(
+          generatedBlob => generatedBlob ? resolve(generatedBlob) : reject(new Error('Failed to encode output image')),
+          'image/png'
+        );
+      });
+    }
+    finally
+    {
+      URL.revokeObjectURL(highResolutionUrl);
+    }
   }
   finally
   {
@@ -8139,7 +8451,7 @@ async function cacheShareableScoreCard()
   );
 
   shareableScoreCardImage = file;
-
+}
   // const modal = document.getElementById("shareImageModal");
   // const preview = document.getElementById("shareImagePreview");
   // const closeButton = document.getElementById("closeShareImageBtn");
@@ -8170,4 +8482,3 @@ async function cacheShareableScoreCard()
   //     }
   //   });
   // }
-}
