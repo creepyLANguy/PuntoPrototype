@@ -8377,7 +8377,7 @@ async function cacheShareableScoreCard()
       height: SHARE_IMAGE_HEIGHT,
       canvasWidth: SHARE_IMAGE_WIDTH,
       canvasHeight: SHARE_IMAGE_HEIGHT,
-      pixelRatio: 1,
+      pixelRatio: 2,
       backgroundColor: cardBackground,
       filter: (node) => inclusions(node),
     });
