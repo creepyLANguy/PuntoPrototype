@@ -4171,8 +4171,8 @@ document.addEventListener("DOMContentLoaded", () =>
     const probe = document.createElement("div");
     const qr = new window.QRCode(probe, {
       text: qrUrl,
-      width: 256,
-      height: 256,
+      width: 1,
+      height: 1,
       colorDark: "#000000",
       colorLight: "#ffffff",
       correctLevel: window.QRCode.CorrectLevel.H
