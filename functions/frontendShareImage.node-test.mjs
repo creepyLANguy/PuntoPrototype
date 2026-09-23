@@ -16,6 +16,11 @@ test("long team names wrap rather than ellipsize", () => {
   assert.match(source, /node\.style\.textOverflow = 'clip'/);
   assert.match(source, /node\.style\.overflowWrap = 'anywhere'/);
   assert.match(source, /node\.style\.wordBreak = 'break-word'/);
+  assert.match(source, /node\.style\.maxWidth = '100%'/);
+  assert.match(source, /node\.style\.width = '100%'/);
+  assert.match(source, /node\.style\.lineHeight = '1\.15'/);
+  assert.doesNotMatch(source, /node\.style\.whiteSpace = 'nowrap'/);
+  assert.doesNotMatch(source, /node\.style\.textOverflow = 'ellipsis'/);
 });
 
 test("capture uses the match-details modal surface", () => {
