@@ -345,7 +345,7 @@ body.light-mode .menu-btn:hover {
     rgba(255, 255, 255, 0.9) 4px 6px,
     transparent 6px 8px
   );
-  clip-path: polygon(0 0, 100% 0, 100% 100%);
+  clip-path: polygon(0 0, 0 100%, 100% 100%);
   opacity: 0.5;
   pointer-events: auto;
   cursor: nwse-resize;
