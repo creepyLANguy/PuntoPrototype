@@ -108,12 +108,30 @@ test("light-theme watermark is explicitly embedded", () => {
   assert.match(source, /watermarkImage\.style\.filter = 'none'/);
 });
 
-test("QR contains only the QR image without an overlaid Padel Push logo", () => {
-  assert.match(source, /new window\.QRCode\(qrMount/);
-  assert.match(source, /const qrDataUrl = qrCanvas\.toDataURL\('image\/png'\)/);
+test("QR is generated off-DOM and composited directly onto the final canvas", () => {
+  assert.match(source, /qrGenerator = new window\.QRCode\(document\.createElement\('div'\)/);
+  assert.match(source, /qrMount\.style\.width = qrSize \+ 'px'/);
+  assert.match(source, /qrMount\.style\.height = qrSize \+ 'px'/);
+  assert.match(source, /function drawPixelAlignedQr\(outputContext, qrGenerator, x, y, size\)/);
+  assert.match(source, /const qrModel = qrGenerator\?\._oQRCode/);
+  assert.match(source, /outputContext\.imageSmoothingEnabled = false/);
+  assert.match(source, /Math\.round\(\(\(column \+ 1\) \* drawSize\) \/ moduleCount\)/);
+  assert.match(source, /outputContext\.fillRect\(left, top, width, height\)/);
+  assert.doesNotMatch(source, /const qrDataUrl = qrCanvas\.toDataURL\('image\/png'\)/);
+  assert.doesNotMatch(source, /qrMount\.appendChild\(qrImage\)/);
   assert.doesNotMatch(source, /qrLogoBadge/);
   assert.doesNotMatch(source, /qrLogo\.src = shareLogoDataUrl/);
   assert.doesNotMatch(source, /const shareLogoDataUrl = /);
+});
+
+test("QR compositing happens after the smoothed card downsample and before PNG encoding", () => {
+  const downsampleIndex = source.indexOf("outputContext.drawImage(");
+  const qrCompositeIndex = source.indexOf("drawPixelAlignedQr(outputContext, qrGenerator");
+  const pngEncodeIndex = source.indexOf("outputCanvas.toBlob(");
+
+  assert.ok(downsampleIndex >= 0);
+  assert.ok(qrCompositeIndex > downsampleIndex);
+  assert.ok(pngEncodeIndex > qrCompositeIndex);
 });
 
 test("share output no longer uses square-image post-processing", () => {
