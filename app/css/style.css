@@ -6251,8 +6251,14 @@ body.light-mode .dm-meta-value {
 /* The share affordance is always subtly alive while match details are open. */
 .dm-share-btn {
   --engagement-rest-opacity: 0.75;
+  opacity: var(--engagement-rest-opacity);
   animation: matchEngagementPulse 4.8s ease-in-out infinite;
   transform-origin: center;
+}
+
+.dm-share-btn.engagement-animation-disabled {
+  animation: none;
+  opacity: var(--engagement-rest-opacity);
 }
 
 /* The scoreboard Match Details affordance is intentionally mobile-only.
