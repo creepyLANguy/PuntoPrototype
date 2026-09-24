@@ -56,7 +56,7 @@ sequenceDiagram
         A->>S: Read current score
         A-->>O: Live score payload
 
-        O->>A: GET /stats or /momentum/{courtId}
+        O->>A: GET /stats/{courtId} or /momentum/{courtId}
         A->>F: Replay active court event history
         A-->>O: Statistics / momentum payload
     end
