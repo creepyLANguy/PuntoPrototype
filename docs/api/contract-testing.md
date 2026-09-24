@@ -6,7 +6,7 @@ The API documentation should be executable as a compatibility contract rather th
 
 ### Schema tests
 
-Validate every successful `/a`, `/r`, `/s`, `/m` response against `docs/api/openapi.yaml`.
+Validate every successful `/score`, `/revision`, `/stats`, `/momentum` response against `docs/api/openapi.yaml`.
 
 Cover:
 
