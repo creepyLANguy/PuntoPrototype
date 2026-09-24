@@ -6325,6 +6325,11 @@ document.addEventListener("DOMContentLoaded", () =>
     elements.dmDetailsToggle.setAttribute("aria-expanded", isExpanded ? "true" : "false");
     elements.dmDetailsToggle.querySelector(".dm-details-toggle-hint").textContent = isExpanded ? "Tap to collapse" : "Tap to expand";
     elements.dmDetailsContent.hidden = !isExpanded;
+
+    if (isExpanded)
+    {
+      window.requestAnimationFrame(() => fitAdvancedStatsColumns());
+    }
   }
 
   function syncDetailsPanelAvailability()
@@ -6788,17 +6793,17 @@ document.addEventListener("DOMContentLoaded", () =>
     if (!tableWidth) return;
 
     const primaryCells = Array.from(
-      table.querySelectorAll("tbody .dm-st-val:nth-child(2)")
+      table.querySelectorAll("tbody .dm-st-val:nth-child(2) .dm-st-value-content")
     );
     const secondaryCells = Array.from(
-      table.querySelectorAll("tbody .dm-st-val:nth-child(3)")
+      table.querySelectorAll("tbody .dm-st-val:nth-child(3) .dm-st-value-content")
     );
 
-    const getRequiredWidth = (cells, baseWidth) =>
+    const getRequiredWidth = (contents, baseWidth) =>
     {
-      return cells.reduce((required, cell) =>
+      return contents.reduce((required, content) =>
       {
-        return Math.max(required, cell.scrollWidth, baseWidth);
+        return Math.max(required, content.getBoundingClientRect().width, baseWidth);
       }, baseWidth);
     };
 
@@ -6878,8 +6883,8 @@ document.addEventListener("DOMContentLoaded", () =>
     {
       return `<tr class="dm-st-row">
         <td class="dm-st-label">${label}</td>
-        <td class="dm-st-val dm-st-${primaryClassSuffix} ${primaryLeader ? "is-leader" : ""} ${secondaryLeader ? "is-loser" : ""}">${valPrimary}</td>
-        <td class="dm-st-val dm-st-${secondaryClassSuffix} ${secondaryLeader ? "is-leader" : ""} ${primaryLeader ? "is-loser" : ""}">${valSecondary}</td>
+        <td class="dm-st-val dm-st-${primaryClassSuffix} ${primaryLeader ? "is-leader" : ""} ${secondaryLeader ? "is-loser" : ""}"><span class="dm-st-value-content">${valPrimary}</span></td>
+        <td class="dm-st-val dm-st-${secondaryClassSuffix} ${secondaryLeader ? "is-leader" : ""} ${primaryLeader ? "is-loser" : ""}"><span class="dm-st-value-content">${valSecondary}</span></td>
       </tr>`;
     }
 
