@@ -29,7 +29,7 @@ Consumers should not use `fetchedAt` as proof of real-time freshness. Use `revis
 let renderedRevision = null;
 
 async function poll(courtId) {
-  const revisionResponse = await fetch(`/r/${encodeURIComponent(courtId)}`, {
+  const revisionResponse = await fetch(`/revision/${encodeURIComponent(courtId)}`, {
     cache: "no-store"
   });
   if (!revisionResponse.ok) throw new Error(`Revision HTTP ${revisionResponse.status}`);
@@ -38,7 +38,7 @@ async function poll(courtId) {
   if (!revisionPayload.success) throw new Error(revisionPayload.error?.message ?? revisionPayload.error);
   if (revisionPayload.revision === renderedRevision) return;
 
-  const scoreResponse = await fetch(`/a/${encodeURIComponent(courtId)}`, {
+  const scoreResponse = await fetch(`/score/${encodeURIComponent(courtId)}`, {
     cache: "no-store"
   });
   if (!scoreResponse.ok) throw new Error(`Score HTTP ${scoreResponse.status}`);
@@ -128,8 +128,8 @@ The implementation should migrate atomically or provide a documented compatibili
 ## Example with curl
 
 ```bash
-curl -sS https://www.padelpush.co.za/a/bnrm
-curl -sS https://www.padelpush.co.za/r/bnrm
-curl -sS https://www.padelpush.co.za/s/bnrm
-curl -sS https://www.padelpush.co.za/m/bnrm
+curl -sS https://www.padelpush.co.za/score/bnrm
+curl -sS https://www.padelpush.co.za/revision/bnrm
+curl -sS https://www.padelpush.co.za/stats/bnrm
+curl -sS https://www.padelpush.co.za/momentum/bnrm
 ```
