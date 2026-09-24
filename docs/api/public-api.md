@@ -6,10 +6,10 @@ The public API is designed for scoreboards, OBS integrations and third-party rea
 
 | Endpoint | Purpose | Typical refresh | Cache TTL |
 |---|---|---:|---:|
-| `GET /a/{courtId}` | Complete live score | On revision change | 4s |
-| `GET /r/{courtId}` | Cheap revision check | ~2s | 4s |
-| `GET /s/{courtId}` | Full match statistics | On demand/boundaries | 10s |
-| `GET /m/{courtId}` | Momentum timeline | When displayed | 5s |
+| `GET /score/{courtId}` | Complete live score | On revision change | 4s |
+| `GET /revision/{courtId}` | Cheap revision check | ~2s | 4s |
+| `GET /stats/{courtId}` | Full match statistics | On demand/boundaries | 10s |
+| `GET /momentum/{courtId}` | Momentum timeline | When displayed | 5s |
 
 `OPTIONS` is supported for CORS. Other methods return `405`.
 
@@ -55,7 +55,7 @@ setInterval(() => poll("bnrm").catch(console.error), 2000);
 
 Always store the `revision` returned with the `/a` response. Do not assume the `/r` value that triggered a request still represents the fetched score if an update occurred during the request.
 
-## `/a/{courtId}` response
+## `/score/{courtId}` response
 
 Top-level fields:
 
@@ -81,13 +81,13 @@ Top-level fields:
 
 `pointsDisplay` uses `0/15/30/40/Ad` in standard play and raw numeric values in straight/tiebreak contexts.
 
-## `/s/{courtId}` statistics
+## `/stats/{courtId}` statistics
 
 This endpoint replays the event stream and is deliberately more expensive. Do not poll it at scoreboard cadence.
 
 Percentages are represented as numbers from 0 to 100. A metric with a zero denominator returns `0`. Break-point, deuce and game-point statistics are accumulated only in standard scoring outside a tiebreak.
 
-## `/m/{courtId}` momentum
+## `/momentum/{courtId}` momentum
 
 - `pointHistory`: ordered point winners (`A`/`B`).
 - `momentumTimeline`: one value after each point, clamped to `[-100,100]`; positive favours A.
