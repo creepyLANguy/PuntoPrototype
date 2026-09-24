@@ -6248,18 +6248,24 @@ body.light-mode .dm-meta-value {
    MATCH ENGAGEMENT NUDGES
 ======================================================= */
 
-/* Match Details and Share buttons use the same subtle looping nudge.
-   The opacity lift makes the interaction affordance briefly clearer
-   without changing the buttons' resting layout. */
-.match-details-btn,
+/* The share affordance is always subtly alive while match details are open. */
 .dm-share-btn {
-  --engagement-rest-opacity: 0.6;
+  --engagement-rest-opacity: 0.75;
   animation: matchEngagementPulse 4.8s ease-in-out infinite;
   transform-origin: center;
 }
 
-.dm-share-btn {
-  --engagement-rest-opacity: 0.75;
+/* The scoreboard Match Details affordance is intentionally mobile-only.
+   Desktop users have a larger viewport and do not need the same nudge. */
+.match-details-btn {
+  --engagement-rest-opacity: 0.6;
+  transform-origin: center;
+}
+
+@media (hover: none) and (pointer: coarse) and (max-width: 767px) {
+  .match-details-btn {
+    animation: matchEngagementPulse 4.8s ease-in-out infinite;
+  }
 }
 
 @keyframes matchEngagementPulse {
@@ -6279,9 +6285,54 @@ body.light-mode .dm-meta-value {
   }
 }
 
+/* Looping cue for the expandable Detailed Stats control. */
+.dm-details-toggle-icon {
+  animation: matchDetailsArrowPulse 4.8s ease-in-out infinite;
+  transform-origin: center;
+}
+
+.dm-details-toggle[aria-expanded="true"] .dm-details-toggle-icon {
+  animation-name: matchDetailsArrowPulseExpanded;
+}
+
+@keyframes matchDetailsArrowPulse {
+  0%, 72%, 100% {
+    opacity: 0.55;
+    transform: translateY(0);
+  }
+
+  82% {
+    opacity: 1;
+    transform: translateY(2px);
+  }
+
+  90% {
+    opacity: 0.8;
+    transform: translateY(0);
+  }
+}
+
+@keyframes matchDetailsArrowPulseExpanded {
+  0%, 72%, 100% {
+    opacity: 0.55;
+    transform: rotate(180deg) translateY(0);
+  }
+
+  82% {
+    opacity: 1;
+    transform: rotate(180deg) translateY(2px);
+  }
+
+  90% {
+    opacity: 0.8;
+    transform: rotate(180deg) translateY(0);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .match-details-btn,
-  .dm-share-btn {
+  .dm-share-btn,
+  .dm-details-toggle-icon {
     animation: none;
   }
 }
