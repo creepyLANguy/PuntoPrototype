@@ -11,7 +11,7 @@ servers:
   - url: https://qa.padelpush.co.za
     description: Staging / QA
 paths:
-  /a/{courtId}:
+  /score/{courtId}:
     get:
       operationId: getCourtScore
       summary: Get the live score
@@ -33,7 +33,7 @@ paths:
       summary: CORS preflight
       responses:
         '204': { description: CORS preflight accepted }
-  /r/{courtId}:
+  /revision/{courtId}:
     get:
       operationId: getCourtScoreRevision
       summary: Get the opaque score revision
@@ -54,7 +54,7 @@ paths:
       operationId: optionsCourtScoreRevision
       responses:
         '204': { description: CORS preflight accepted }
-  /s/{courtId}:
+  /stats/{courtId}:
     get:
       operationId: getCourtStats
       summary: Get match statistics
@@ -75,7 +75,7 @@ paths:
       operationId: optionsCourtStats
       responses:
         '204': { description: CORS preflight accepted }
-  /m/{courtId}:
+  /momentum/{courtId}:
     get:
       operationId: getCourtMomentum
       summary: Get momentum timeline
