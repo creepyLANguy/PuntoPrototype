@@ -2518,7 +2518,7 @@
           return statsCache;
         }
 
-        const url = isDebugCourt ? debugCourt_statsUrl : "/s/" + encodeURIComponent(courtId);
+        const url = isDebugCourt ? debugCourt_statsUrl : "/stats/" + encodeURIComponent(courtId);
         const data = await fetchJson(url);
         statsCache = data;
         statsCacheAt = Date.now();
@@ -3174,7 +3174,7 @@
       }
 
       async function loadFullScore() {
-        const url = isDebugCourt ? debugCourt_fullScoreUrl : "/a/" + encodeURIComponent(courtId);
+        const url = isDebugCourt ? debugCourt_fullScoreUrl : "/score/" + encodeURIComponent(courtId);
         const data = await fetchJson(url);
         render(data);
         // Trust the revision that shipped with this payload rather than the one
@@ -3193,7 +3193,7 @@
         isPolling = true;
 
         try {
-          const revisionUrl = isDebugCourt ? debugCourt_revisionUrl : "/r/" + encodeURIComponent(courtId);
+          const revisionUrl = isDebugCourt ? debugCourt_revisionUrl : "/revision/" + encodeURIComponent(courtId);
           const revisionData = await fetchJson(revisionUrl);
 
           if (revisionData.revision && revisionData.revision === renderedRevision) {
