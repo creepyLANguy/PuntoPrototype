@@ -618,6 +618,20 @@ document.addEventListener("DOMContentLoaded", () =>
   // =====================================================
   // THEME STATE
   // =====================================================
+  function updateMobileDeviceClass()
+  {
+    const userAgent = navigator.userAgent || "";
+    const isIpadDesktopMode = navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1;
+    const isMobileDevice = navigator.userAgentData?.mobile === true ||
+      /Android|iPhone|iPad|iPod|IEMobile|Windows Phone|Mobile/i.test(userAgent) ||
+      isIpadDesktopMode;
+
+    document.documentElement.classList.toggle("mobile-device", isMobileDevice);
+    return isMobileDevice;
+  }
+
+  updateMobileDeviceClass();
+
   const TEAM_COLOUR_STORAGE_KEY = "punto_team_colours";
 
   let isLightMode = localStorage.getItem("theme") === "light";
