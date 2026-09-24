@@ -75,6 +75,23 @@ test("share content uses a common 840px CSS-pixel column", () => {
   assert.doesNotMatch(source, /shareTable\.style\.width = 'max-content'/);
 });
 
+test("QR footer is vertically centered between score details and image bottom", () => {
+  assert.match(source, /footerPanel\.style\.position = 'static'/);
+  assert.match(source, /clone\.style\.height = `\$\{SHARE_IMAGE_HEIGHT\}px`/);
+  assert.match(source, /document\.body\.appendChild\(staging\)/);
+  assert.match(source, /const scoreDetailsRect = shareTableWrap\?\.getBoundingClientRect\(\)/);
+  assert.match(source, /const footerTop = footerRect\.top - cloneRect\.top/);
+  assert.match(source, /\(cloneRect\.height - scoreBottom - footerRect\.height\) \/ 2/);
+  assert.match(source, /const desiredFooterTop = scoreBottom \+ verticalGap/);
+  assert.match(source, /const additionalMargin = desiredFooterTop - footerTop/);
+  assert.match(source, /footerPanel\.style\.marginTop = `\$\{Math\.max\(0, additionalMargin\)\}px`/);
+});
+
+test("visible QR URL omits the protocol while the QR payload keeps the full URL", () => {
+  assert.match(source, /const qrUrl = courtId \? `\$\{appOrigin\}\/c\/\$\{encodeURIComponent\(courtId\)\}`/);
+  assert.match(source, /text: qrUrl/);
+  assert.match(source, /footerUrl\.textContent = qrUrl\.replace\(\/\^https\?:\\\/\\\/\/i, ''\)/);
+});
 test("share-only visual scaling stays inside the image-capture path", () => {
   assert.match(source, /const SHARE_IMAGE_SCALE = 2/);
   assert.match(source, /clone\.style\.padding = `40px 56px 16px`/);

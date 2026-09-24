@@ -614,6 +614,8 @@ document.addEventListener("DOMContentLoaded", () =>
   let loadingSpinnerStartTime = 0;
   let hasInitializedQrPanelInteractions = false;
 
+
+
   let isPickingColour = false;
 
   // =====================================================
@@ -628,6 +630,20 @@ document.addEventListener("DOMContentLoaded", () =>
   // =====================================================
   // THEME STATE
   // =====================================================
+  function updateMobileDeviceClass()
+  {
+    const userAgent = navigator.userAgent || "";
+    const isIpadDesktopMode = navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1;
+    const isMobileDevice = navigator.userAgentData?.mobile === true ||
+      /Android|iPhone|iPad|iPod|IEMobile|Windows Phone|Mobile/i.test(userAgent) ||
+      isIpadDesktopMode;
+
+    document.documentElement.classList.toggle("mobile-device", isMobileDevice);
+    return isMobileDevice;
+  }
+
+  updateMobileDeviceClass();
+
   const TEAM_COLOUR_STORAGE_KEY = "punto_team_colours";
 
   let isLightMode = localStorage.getItem("theme") === "light";
@@ -6250,6 +6266,7 @@ document.addEventListener("DOMContentLoaded", () =>
         return;
       }
 
+      elements.shareDetailsBtn.classList.add("engagement-animation-disabled");
       void share("details");
     });
   }
@@ -6981,6 +6998,13 @@ document.addEventListener("DOMContentLoaded", () =>
     if (hideShareButtonUntilReady && elements.shareDetailsBtn)
     {
       elements.shareDetailsBtn.classList.add("hidden");
+    }
+
+    const detailsWasHidden = elements.detailsModal.classList.contains("hidden");
+
+    if (detailsWasHidden)
+    {
+      elements.shareDetailsBtn?.classList.remove("engagement-animation-disabled");
     }
 
     elements.detailsModal.classList.remove("hidden");
@@ -8616,9 +8640,10 @@ async function cacheShareableScoreCard(generation = shareableScoreCardGeneration
   // edges with a gap down the middle.
   const footerPanel = document.createElement('div');
   clone.appendChild(footerPanel);
+  footerPanel.style.position = 'static';
   footerPanel.style.width = `${SHARE_IMAGE_QR_PANEL_WIDTH}px`;
   footerPanel.style.maxWidth = '100%';
-  footerPanel.style.marginTop = `24px`;
+  footerPanel.style.marginTop = '0';
   footerPanel.style.display = 'flex';
   footerPanel.style.alignItems = 'center';
   footerPanel.style.justifyContent = 'flex-start';
@@ -8660,7 +8685,7 @@ async function cacheShareableScoreCard(generation = shareableScoreCardGeneration
   footerCourtId.style.letterSpacing = '0.06em';
 
   const footerUrl = document.createElement('div');
-  footerUrl.textContent = qrUrl;
+  footerUrl.textContent = qrUrl.replace(/^https?:\/\//i, '');
   footerUrl.style.fontSize = `24px`;
   footerUrl.style.opacity = '0.85';
   footerUrl.style.overflow = 'hidden';
@@ -8764,6 +8789,28 @@ async function cacheShareableScoreCard(generation = shareableScoreCardGeneration
   staging.style.width = `${SHARE_IMAGE_WIDTH}px`;
   staging.appendChild(clone);
   document.body.appendChild(staging);
+
+  // The clone now has its final export dimensions and is attached to the DOM,
+  // so its geometry reflects the actual 1080x1350 share image.
+  await new Promise(resolve => requestAnimationFrame(() => resolve()));
+
+  const cloneRect = clone.getBoundingClientRect();
+  const scoreDetailsRect = shareTableWrap?.getBoundingClientRect();
+
+  if (scoreDetailsRect && cloneRect.height > 0)
+  {
+    const scoreBottom = scoreDetailsRect.bottom - cloneRect.top;
+    const footerRect = footerPanel.getBoundingClientRect();
+    const footerTop = footerRect.top - cloneRect.top;
+    const verticalGap = Math.max(
+      0,
+      (cloneRect.height - scoreBottom - footerRect.height) / 2
+    );
+    const desiredFooterTop = scoreBottom + verticalGap;
+    const additionalMargin = desiredFooterTop - footerTop;
+
+    footerPanel.style.marginTop = `${Math.max(0, additionalMargin)}px`;
+  }
 
   clone.querySelectorAll('*').forEach(node =>
   {
