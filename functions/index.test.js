@@ -849,7 +849,7 @@ describe("getCourtScore", () =>
     });
 
     const res = makeRes();
-    await getCourtScore({ method: "GET", path: "/a/no-such-court" }, res);
+    await getCourtScore({ method: "GET", path: "/score/no-such-court" }, res);
 
     expect(res.statusCode).toBe(404);
     expect(res.payload.success).toBe(false);
@@ -1034,7 +1034,7 @@ describe("getCourtScore", () =>
     });
 
     const res = makeRes();
-    await getCourtScoreRevision({ method: "GET", path: "/r/no-such-court" }, res);
+    await getCourtScoreRevision({ method: "GET", path: "/revision/no-such-court" }, res);
 
     expect(res.statusCode).toBe(404);
     expect(res.payload.success).toBe(false);
@@ -1150,7 +1150,7 @@ describe("getCourtStats", () =>
     });
 
     const res = makeRes();
-    await getCourtStats({ method: "GET", path: "/s/no-such-court" }, res);
+    await getCourtStats({ method: "GET", path: "/stats/no-such-court" }, res);
 
     expect(res.statusCode).toBe(404);
     expect(res.payload.success).toBe(false);
@@ -1268,7 +1268,7 @@ describe("getCourtMomentum", () =>
     });
 
     const res = makeRes();
-    await getCourtMomentum({ method: "GET", path: "/m/no-such-court" }, res);
+    await getCourtMomentum({ method: "GET", path: "/momentum/no-such-court" }, res);
 
     expect(res.statusCode).toBe(404);
     expect(res.payload.success).toBe(false);
