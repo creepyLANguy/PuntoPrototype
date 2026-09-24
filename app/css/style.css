@@ -6256,16 +6256,15 @@ body.light-mode .dm-meta-value {
 }
 
 /* The scoreboard Match Details affordance is intentionally mobile-only.
-   Desktop users have a larger viewport and do not need the same nudge. */
+   Device detection is applied to <html>, so phone landscape mode is still
+   treated as mobile regardless of viewport width. */
 .match-details-btn {
   --engagement-rest-opacity: 0.6;
   transform-origin: center;
 }
 
-@media (hover: none) and (pointer: coarse) and (max-width: 767px) {
-  .match-details-btn {
-    animation: matchEngagementPulse 4.8s ease-in-out infinite;
-  }
+.mobile-device .match-details-btn {
+  animation: matchEngagementPulse 4.8s ease-in-out infinite;
 }
 
 @keyframes matchEngagementPulse {
@@ -6285,47 +6284,53 @@ body.light-mode .dm-meta-value {
   }
 }
 
-/* Looping cue for the expandable Detailed Stats control. */
+/* Looping cue for the expandable Detailed Stats control.
+   It is exactly half a cycle out of phase with the share button, so the two
+   engagement cues alternate rather than pulsing together. */
 .dm-details-toggle-icon {
-  animation: matchDetailsArrowPulse 4.8s ease-in-out infinite;
   transform-origin: center;
 }
 
+.dm-details-toggle[aria-expanded="false"] .dm-details-toggle-icon {
+  animation: matchDetailsArrowPulse 4.8s ease-in-out infinite;
+  animation-delay: -2.4s;
+}
+
 .dm-details-toggle[aria-expanded="true"] .dm-details-toggle-icon {
-  animation-name: matchDetailsArrowPulseExpanded;
+  animation: none;
+  transform: rotate(180deg);
 }
 
 @keyframes matchDetailsArrowPulse {
-  0%, 72%, 100% {
+  0%, 70%, 100% {
     opacity: 0.55;
-    transform: translateY(0);
+    transform: scale(1) translateY(0);
   }
 
-  82% {
+  74% {
     opacity: 1;
-    transform: translateY(2px);
+    transform: scale(1.14) translateY(0);
   }
 
-  90% {
+  77% {
+    transform: scale(1.14) translateY(5px);
+  }
+
+  80% {
+    transform: scale(1.14) translateY(0);
+  }
+
+  83% {
+    transform: scale(1.14) translateY(5px);
+  }
+
+  86% {
+    transform: scale(1.14) translateY(0);
+  }
+
+  91% {
     opacity: 0.8;
-    transform: translateY(0);
-  }
-}
-
-@keyframes matchDetailsArrowPulseExpanded {
-  0%, 72%, 100% {
-    opacity: 0.55;
-    transform: rotate(180deg) translateY(0);
-  }
-
-  82% {
-    opacity: 1;
-    transform: rotate(180deg) translateY(2px);
-  }
-
-  90% {
-    opacity: 0.8;
-    transform: rotate(180deg) translateY(0);
+    transform: scale(1) translateY(0);
   }
 }
 
