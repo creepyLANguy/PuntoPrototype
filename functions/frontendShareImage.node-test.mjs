@@ -130,6 +130,17 @@ test("SVG renderer inlines SVG image assets so the watermark remains vector cont
   assert.match(svgRendererSource, /preserveAspectRatio="xMidYMid meet"/);
   assert.match(source, /watermarkImage\.src = watermarkLogoDataUrl/);
 });
+test("SVG image opacity is applied once by the element wrapper", () => {
+  const start = svgRendererSource.indexOf("function serializeImageElement");
+  const end = svgRendererSource.indexOf("function serializeBackgroundAndBorder");
+  const imageSerializer = svgRendererSource.slice(start, end);
+
+  assert.match(imageSerializer, /serializeInlineSvgImage\(src, rect, 1\)/);
+  assert.doesNotMatch(imageSerializer, /opacity=\\\"' \+ opacity \+ '\\\"/);
+  assert.match(source, /watermark\.style\.opacity = '0\.5'/);
+  assert.match(source, /watermarkImage\.style\.opacity = '0\.06'/);
+});
+
 test("light-theme watermark is explicitly embedded", () => {
   assert.match(source, /const watermarkColor = isLightTheme \? '#111111' : '#ffffff'/);
   assert.match(source, /watermarkImage\.src = watermarkLogoDataUrl/);
