@@ -147,6 +147,19 @@ test("QR compositing happens after the smoothed card downsample and before PNG e
   assert.ok(pngEncodeIndex > qrCompositeIndex);
 });
 
+test("share files are invalidated and awaited for each fresh details render", () => {
+  assert.match(source, /let shareableScoreCardImage = null/);
+  assert.match(source, /let shareableScoreCardPromise = null/);
+  assert.match(source, /let shareableScoreCardGeneration = 0/);
+  assert.match(source, /const shareCaptureGeneration = ++shareableScoreCardGeneration/);
+  assert.match(source, /shareableScoreCardImage = null/);
+  assert.match(source, /await shareableScoreCardPromise/);
+  assert.match(source, /cacheShareableScoreCard\(shareCaptureGeneration\)/);
+  assert.match(source, /if \(generation !== shareableScoreCardGeneration\)/);
+  assert.match(source, /resolveShareableScoreCardReady/);
+  assert.match(source, /rejectShareableScoreCardReady/);
+});
+
 test("share output no longer uses square-image post-processing", () => {
   assert.doesNotMatch(source, /blobToImage/);
   assert.doesNotMatch(source, /padShareImageToSquare/);
