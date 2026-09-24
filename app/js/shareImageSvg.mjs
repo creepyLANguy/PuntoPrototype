@@ -303,36 +303,107 @@ function serializeTextElement(element, rootRect)
   }).join("");
 }
 
+function decodeSvgDataUrl(source)
+{
+  if (!source.startsWith('data:image/svg+xml'))
+  {
+    return null;
+  }
+
+  const commaIndex = source.indexOf(',');
+  if (commaIndex < 0)
+  {
+    return null;
+  }
+
+  const metadata = source.slice(0, commaIndex).toLowerCase();
+  const payload = source.slice(commaIndex + 1);
+
+  try
+  {
+    return metadata.includes(';base64')
+      ? atob(payload)
+      : decodeURIComponent(payload);
+  }
+  catch (error)
+  {
+    return null;
+  }
+}
+
+function serializeInlineSvgImage(source, rect, opacity)
+{
+  const svgText = decodeSvgDataUrl(source);
+  if (!svgText)
+  {
+    return null;
+  }
+
+  const rootMatch = svgText.match(/<svg\\b[^>]*>/i);
+  const closeMatch = svgText.match(/<\\/svg>\\s*$/i);
+  if (!rootMatch || !closeMatch)
+  {
+    return null;
+  }
+
+  const viewBoxMatch = rootMatch[0].match(/\\bviewBox\\s*=\\s*[\"']([^\"']+)[\"']/i);
+  const viewBox = viewBoxMatch ? viewBoxMatch[1].trim() : '0 0 1 1';
+  const innerSvg = svgText
+    .slice(rootMatch.index + rootMatch[0].length, closeMatch.index)
+    .replace(/<\\?xml[\\s\\S]*?\\?>/gi, '');
+
+  return [
+    '<svg',
+    ' x="' + rect.x + '"',
+    ' y="' + rect.y + '"',
+    ' width="' + rect.width + '"',
+    ' height="' + rect.height + '"',
+    ' viewBox="' + escapeXml(viewBox) + '"',
+    ' preserveAspectRatio="xMidYMid meet"',
+    ' opacity="' + opacity + '"',
+    ' overflow="hidden"',
+    '>',
+    innerSvg,
+    '</svg>'
+  ].join('');
+}
+
 function serializeImageElement(element, rootRect)
 {
-  const src = element.getAttribute("src") || "";
+  const src = element.currentSrc || element.getAttribute('src') || '';
   if (!src)
   {
-    return "";
+    return '';
   }
 
   const rect = getRelativeRect(element, rootRect);
   if (!rectHasArea(rect))
   {
-    return "";
+    return '';
   }
 
   const computed = getComputedStyle(element);
   const opacity = Math.max(0, Math.min(1, cssNumber(computed.opacity, 1)));
+  const inlineSvg = serializeInlineSvgImage(src, rect, opacity);
+
+  if (inlineSvg)
+  {
+    return inlineSvg;
+  }
 
   return [
-    "<image",
-    ` x="${rect.x}"`,
-    ` y="${rect.y}"`,
-    ` width="${rect.width}"`,
-    ` height="${rect.height}"`,
-    ` href="${escapeXml(src)}"`,
-    ` opacity="${opacity}"`,
+    '<image',
+    ' x="' + rect.x + '"',
+    ' y="' + rect.y + '"',
+    ' width="' + rect.width + '"',
+    ' height="' + rect.height + '"',
+    ' href="' + escapeXml(src) + '"',
+    ' xlink:href="' + escapeXml(src) + '"',
+    ' opacity="' + opacity + '"',
     ' preserveAspectRatio="xMidYMid meet"',
-    " />"
-  ].join("");
+    ' />'
+  ].join('');
 }
-
 function serializeBackgroundAndBorder(element, rootRect)
 {
   const rect = getRelativeRect(element, rootRect);
