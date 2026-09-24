@@ -5889,12 +5889,14 @@ body.light-mode .dm-momentum-label {
 /* ── Unified side-by-side stats table ── */
 
 .dm-stats-table {
+  --dm-st-label-width: 28%;
+  --dm-st-primary-width: 36%;
+  --dm-st-secondary-width: 36%;
   width: 100%;
   border-collapse: collapse;
   font-size: 0.75rem;
-  /* Columns keep their declared percentages instead of being widened past the
-     card by long team names and nowrap values, which is what pushed the right
-     edge off screen on narrow phones. */
+  /* Keep the table contained, then let the frontend tighten the label column
+     only when a nowrap team value actually needs more room. */
   table-layout: fixed;
 }
 
@@ -5911,12 +5913,19 @@ body.light-mode .dm-momentum-label {
 
 .dm-st-col-label {
   text-align: left;
-  width: 28%;
+  width: var(--dm-st-label-width);
 }
 
 .dm-st-col-team {
   text-align: center;
-  width: 36%;
+}
+
+.dm-stats-table th:nth-child(2) {
+  width: var(--dm-st-primary-width);
+}
+
+.dm-stats-table th:nth-child(3) {
+  width: var(--dm-st-secondary-width);
 }
 
 .dm-st-col-a {

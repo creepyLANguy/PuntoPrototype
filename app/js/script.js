@@ -1710,6 +1710,8 @@ document.addEventListener("DOMContentLoaded", () =>
     window.setTimeout(hideOverlay, LOADING_SPINNER_MIN_DURATION_MS - spinnerTimeElapsed);
   }
 
+  window.addEventListener("resize", fitAdvancedStatsColumns);
+
   initializeTheme();
   initializeWaves();
   updateFullscreenButton();
@@ -6769,6 +6771,63 @@ document.addEventListener("DOMContentLoaded", () =>
     return document.querySelector(".scoreboard")?.classList.contains("swapped") || false;
   }
 
+  // Long team-value strings (especially the final player-stat rows) can be
+  // wider than their fixed table column on narrow mobile screens. Keep the
+  // value columns at their normal width unless they actually overflow, then
+  // take only the required space from the label column.
+  function fitAdvancedStatsColumns()
+  {
+    const table = elements.dmStatsTeam?.querySelector(".dm-stats-table");
+    if (!table) return;
+
+    table.style.setProperty("--dm-st-label-width", "28%");
+    table.style.setProperty("--dm-st-primary-width", "36%");
+    table.style.setProperty("--dm-st-secondary-width", "36%");
+
+    const tableWidth = table.getBoundingClientRect().width;
+    if (!tableWidth) return;
+
+    const primaryCells = Array.from(
+      table.querySelectorAll("tbody .dm-st-val:nth-child(2)")
+    );
+    const secondaryCells = Array.from(
+      table.querySelectorAll("tbody .dm-st-val:nth-child(3)")
+    );
+
+    const getRequiredWidth = (cells, baseWidth) =>
+    {
+      return cells.reduce((required, cell) =>
+      {
+        return Math.max(required, cell.scrollWidth, baseWidth);
+      }, baseWidth);
+    };
+
+    const baseLabelWidth = tableWidth * 0.28;
+    const baseTeamWidth = tableWidth * 0.36;
+    const requiredPrimaryWidth = getRequiredWidth(primaryCells, baseTeamWidth);
+    const requiredSecondaryWidth = getRequiredWidth(secondaryCells, baseTeamWidth);
+
+    const extraPrimary = Math.max(0, requiredPrimaryWidth - baseTeamWidth);
+    const extraSecondary = Math.max(0, requiredSecondaryWidth - baseTeamWidth);
+    const totalExtra = extraPrimary + extraSecondary;
+    if (!totalExtra) return;
+
+    // Preserve enough room for the label column to remain readable. When the
+    // requested adjustment is within that budget, allocate exactly the space
+    // needed by each overflowing team column.
+    const minimumLabelWidth = Math.max(44, tableWidth * 0.14);
+    const availableLabelReduction = Math.max(0, baseLabelWidth - minimumLabelWidth);
+    if (!availableLabelReduction) return;
+
+    const adjustmentScale = Math.min(1, availableLabelReduction / totalExtra);
+    const labelWidth = baseLabelWidth - totalExtra * adjustmentScale;
+    const primaryWidth = baseTeamWidth + extraPrimary * adjustmentScale;
+    const secondaryWidth = baseTeamWidth + extraSecondary * adjustmentScale;
+
+    table.style.setProperty("--dm-st-label-width", ((labelWidth / tableWidth) * 100) + "%");
+    table.style.setProperty("--dm-st-primary-width", ((primaryWidth / tableWidth) * 100) + "%");
+    table.style.setProperty("--dm-st-secondary-width", ((secondaryWidth / tableWidth) * 100) + "%");
+  }
   function renderAdvancedStats(advancedStats, teamNames, isSwapped = false, playerNames = DEFAULT_PLAYER_NAMES)
   {
     if (!elements.dmStatsWrap || !elements.dmStatsTeam)
@@ -7001,6 +7060,7 @@ document.addEventListener("DOMContentLoaded", () =>
     `;
 
     elements.dmStatsWrap.classList.remove("hidden");
+    fitAdvancedStatsColumns();
     syncDetailsPanelAvailability();
   }
 
