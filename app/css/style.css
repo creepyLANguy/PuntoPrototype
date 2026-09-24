@@ -5989,6 +5989,11 @@ body.light-mode .dm-st-label {
   transition: opacity 180ms ease, filter 180ms ease, transform 180ms ease;
 }
 
+.dm-st-value-content {
+  display: inline-block;
+  white-space: nowrap;
+}
+
 .dm-st-val.is-leader {
   filter: brightness(1.18);
   font-weight: 800;
