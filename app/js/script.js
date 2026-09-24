@@ -434,6 +434,18 @@ document.addEventListener("DOMContentLoaded", () =>
 
   async function share(context)
   {
+    if (context === "details" && shareableScoreCardPromise)
+    {
+      try
+      {
+        await shareableScoreCardPromise;
+      }
+      catch (error)
+      {
+        console.warn("Share card capture was not ready:", error);
+      }
+    }
+
     const share_payload = getSharePayload(context);
 
     let result = { done: false, method: "unavailable" };
@@ -6969,6 +6981,25 @@ document.addEventListener("DOMContentLoaded", () =>
 
   async function showMatchDetails(syncHistory = true, expanded = false, refreshing = false)
   {
+    const shareCaptureGeneration = ++shareableScoreCardGeneration;
+    shareableScoreCardImage = null;
+
+    let resolveShareableScoreCardReady;
+    let rejectShareableScoreCardReady;
+
+    shareableScoreCardPromise = new Promise((resolve, reject) =>
+    {
+      resolveShareableScoreCardReady = resolve;
+      rejectShareableScoreCardReady = reject;
+    });
+
+    const hideShareButtonUntilReady = !refreshing;
+
+    if (hideShareButtonUntilReady && elements.shareDetailsBtn)
+    {
+      elements.shareDetailsBtn.classList.add("hidden");
+    }
+
     const detailsWasHidden = elements.detailsModal.classList.contains("hidden");
 
     if (detailsWasHidden)
@@ -7217,20 +7248,49 @@ document.addEventListener("DOMContentLoaded", () =>
     finally
     {
       elements.detailsLoading.classList.add("hidden");
-      elements.shareDetailsBtn.classList.remove("hidden");
 
-      // Runs here rather than at the end of the try so the loading overlay is
-      // already hidden and cannot appear in the capture. Not awaited, but the
-      // rejection is handled so a capture failure stays out of the UI thread
-      // and never surfaces as an unhandled rejection.
-      // The card carries the scoreline only, so it does not wait on the
-      // momentum endpoint.
+      // Old share files are invalidated when a new details render starts, and
+      // the current share waits for its capture to finish before using a file.
       if (renderedShareCard && canShareFiles())
       {
-        cacheShareableScoreCard().catch(err =>
+        const capturePromise = cacheShareableScoreCard(shareCaptureGeneration);
+
+        capturePromise
+          .then(() =>
+          {
+            resolveShareableScoreCardReady();
+          })
+          .catch(err =>
+          {
+            console.error("Share card capture failed:", err);
+
+            if (shareCaptureGeneration === shareableScoreCardGeneration)
+            {
+              shareableScoreCardImage = null;
+            }
+
+            rejectShareableScoreCardReady(err);
+          })
+          .finally(() =>
+          {
+            if (hideShareButtonUntilReady &&
+                shareCaptureGeneration === shareableScoreCardGeneration &&
+                elements.shareDetailsBtn)
+            {
+              elements.shareDetailsBtn.classList.remove("hidden");
+            }
+          });
+      }
+      else
+      {
+        resolveShareableScoreCardReady();
+
+        if (hideShareButtonUntilReady &&
+            shareCaptureGeneration === shareableScoreCardGeneration &&
+            elements.shareDetailsBtn)
         {
-          console.error("Share card capture failed:", err);
-        });
+          elements.shareDetailsBtn.classList.remove("hidden");
+        }
       }
     }
   }
@@ -8181,6 +8241,8 @@ window.addEventListener("resize", () =>
 }, { passive: true });
 
 let shareableScoreCardImage = null;
+let shareableScoreCardPromise = null;
+let shareableScoreCardGeneration = 0;
 
 // Cache the Padel Push logo as a same-origin PNG data URL. This avoids relying on
 // SVG/CSS filter rendering inside html-to-image, which is particularly fragile
@@ -8281,7 +8343,60 @@ function canShareFiles()
 //   }
 // }
 
-async function cacheShareableScoreCard()
+function drawPixelAlignedQr(outputContext, qrGenerator, x, y, size)
+{
+  const qrModel = qrGenerator?._oQRCode;
+  if (!qrModel || typeof qrModel.getModuleCount !== 'function' || typeof qrModel.isDark !== 'function')
+  {
+    throw new Error('QR generator did not expose its generated module matrix');
+  }
+
+  const moduleCount = qrModel.getModuleCount();
+  if (!Number.isInteger(moduleCount) || moduleCount <= 0 || size <= 0)
+  {
+    throw new Error('Invalid QR module geometry');
+  }
+
+  // Use one integer number of final-image pixels for EVERY QR module.
+  // Choose the next integer module size rather than flooring down. This keeps
+  // every dark/light cell pixel-aligned while avoiding the systematic shrink
+  // caused by fitting the QR strictly inside the requested square.
+  const modulePixels = Math.ceil(size / moduleCount);
+  if (modulePixels < 1)
+  {
+    throw new Error(`QR area too small for ${moduleCount} modules`);
+  }
+
+  const actualSize = moduleCount * modulePixels;
+  const drawX = Math.round(x + (size - actualSize) / 2);
+  const drawY = Math.round(y + (size - actualSize) / 2);
+
+  outputContext.save();
+  outputContext.imageSmoothingEnabled = false;
+  outputContext.fillStyle = '#ffffff';
+  outputContext.fillRect(Math.round(x), Math.round(y), Math.round(size), Math.round(size));
+
+  outputContext.fillStyle = '#000000';
+  for (let row = 0; row < moduleCount; row++)
+  {
+    for (let column = 0; column < moduleCount; column++)
+    {
+      if (qrModel.isDark(row, column))
+      {
+        outputContext.fillRect(
+          drawX + column * modulePixels,
+          drawY + row * modulePixels,
+          modulePixels,
+          modulePixels
+        );
+      }
+    }
+  }
+
+  outputContext.restore();
+}
+
+async function cacheShareableScoreCard(generation = shareableScoreCardGeneration)
 {
   const element = document.getElementById('dmBox');
 
@@ -8584,10 +8699,17 @@ async function cacheShareableScoreCard()
   footerPanel.appendChild(qrWrap);
   footerPanel.appendChild(footerText);
 
+  let qrGenerator = null;
+  let qrSize = 0;
+
   if (window.QRCode)
   {
-    const qrSize = Math.max(168, Math.min(240, footerHeight - 48));
-    new window.QRCode(qrMount, {
+    qrSize = Math.max(168, Math.min(240, footerHeight - 48));
+
+    // Generate the QR only to obtain its canonical module matrix. The generated
+    // canvas/image is deliberately never attached to the export DOM, so it
+    // cannot be resampled by html-to-image or by the later 2x -> 1x downsample.
+    qrGenerator = new window.QRCode(document.createElement('div'), {
       text: qrUrl,
       width: qrSize,
       height: qrSize,
@@ -8596,35 +8718,22 @@ async function cacheShareableScoreCard()
       correctLevel: window.QRCode.CorrectLevel.H
     });
 
-    // qrcode.js paints its canvas synchronously but fills its companion <img>
-    // from a setTimeout retry loop, so that <img> is still src-less when the
-    // capture runs. Freeze the canvas into a single data-URL image instead of
-    // racing it.
-    const qrCanvas = qrMount.querySelector('canvas');
-    if (qrCanvas)
+    // Reserve the next pixel-aligned QR resolution in the layout as well. This
+    // keeps the enlarged QR inside its own white/padded block instead of letting
+    // the extra pixels spill into the footer text.
+    const qrModel = qrGenerator?._oQRCode;
+    const qrModuleCount = qrModel?.getModuleCount?.();
+    if (!Number.isInteger(qrModuleCount) || qrModuleCount <= 0)
     {
-      const qrDataUrl = qrCanvas.toDataURL('image/png');
-      qrMount.innerHTML = '';
-
-      const qrImage = document.createElement('img');
-      qrImage.src = qrDataUrl;
-      qrImage.alt = '';
-      qrImage.width = qrSize;
-      qrImage.height = qrSize;
-      qrImage.style.display = 'block';
-      qrMount.appendChild(qrImage);
-
+      throw new Error('QR generator did not expose its generated module matrix');
     }
-    else
-    {
-      qrMount.querySelectorAll('img').forEach(node =>
-      {
-        if (!node.getAttribute('src'))
-        {
-          node.remove();
-        }
-      });
-    }
+
+    const qrModulePixels = Math.ceil(qrSize / qrModuleCount);
+    const qrRenderSize = qrModuleCount * qrModulePixels;
+
+    qrMount.style.width = qrRenderSize + 'px';
+    qrMount.style.height = qrRenderSize + 'px';
+    qrMount.style.flex = '0 0 auto';
   }
 
   const inclusions = (node) =>
@@ -8768,6 +8877,21 @@ async function cacheShareableScoreCard()
         SHARE_IMAGE_HEIGHT
       );
 
+      // QR is intentionally rendered last. The rest of the card can benefit
+      // from the high-quality smoothed downsample, while the QR is placed
+      // directly into the final 1080x1350 raster with integer-aligned module
+      // boundaries and no intermediate image resampling.
+      if (qrGenerator)
+      {
+        const cloneRect = clone.getBoundingClientRect();
+        const qrRect = qrMount.getBoundingClientRect();
+        const qrX = Math.round(qrRect.left - cloneRect.left);
+        const qrY = Math.round(qrRect.top - cloneRect.top);
+        const qrFinalSize = Math.round(Math.min(qrRect.width, qrRect.height));
+
+        drawPixelAlignedQr(outputContext, qrGenerator, qrX, qrY, qrFinalSize);
+      }
+
       blob = await new Promise((resolve, reject) =>
       {
         outputCanvas.toBlob(
@@ -8796,6 +8920,11 @@ async function cacheShareableScoreCard()
     'share-image.png',
     { type: 'image/png' }
   );
+
+  if (generation !== shareableScoreCardGeneration)
+  {
+    return;
+  }
 
   shareableScoreCardImage = file;
 }

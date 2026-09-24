@@ -109,7 +109,7 @@ test("share-only visual scaling stays inside the image-capture path", () => {
   assert.match(source, /node\.style\.fontSize = '3\.5rem'/);
   assert.match(source, /node\.style\.minHeight = '72px'/);
   assert.match(source, /footerPanel\.style\.width/);
-  assert.match(source, /const qrSize = Math\.max\(168, Math\.min\(240, footerHeight - 48\)\)/);
+  assert.match(source, /qrSize = Math\.max\(168, Math\.min\(240, footerHeight - 48\)\)/);
 });
 
 test("share-only sizing does not alter the live modal stylesheet", () => {
@@ -125,12 +125,56 @@ test("light-theme watermark is explicitly embedded", () => {
   assert.match(source, /watermarkImage\.style\.filter = 'none'/);
 });
 
-test("QR contains only the QR image without an overlaid Padel Push logo", () => {
-  assert.match(source, /new window\.QRCode\(qrMount/);
-  assert.match(source, /const qrDataUrl = qrCanvas\.toDataURL\('image\/png'\)/);
+test("QR is generated off-DOM and composited directly onto the final canvas", () => {
+  assert.match(source, /qrGenerator = new window\.QRCode\(document\.createElement\('div'\)/);
+  assert.match(source, /qrMount\.style\.width = qrRenderSize \+ 'px'/);
+  assert.match(source, /qrMount\.style\.height = qrRenderSize \+ 'px'/);
+  assert.match(source, /function drawPixelAlignedQr\(outputContext, qrGenerator, x, y, size\)/);
+  assert.match(source, /const qrModel = qrGenerator\?\._oQRCode/);
+  assert.match(source, /outputContext\.imageSmoothingEnabled = false/);
+  assert.match(source, /const modulePixels = Math\.ceil\(size \/ moduleCount\)/);
+  assert.match(source, /const actualSize = moduleCount \* modulePixels/);
+  assert.match(source, /const qrModulePixels = Math\.ceil\(qrSize \/ qrModuleCount\)/);
+  assert.match(source, /const qrRenderSize = qrModuleCount \* qrModulePixels/);
+  assert.match(source, /drawX \+ column \* modulePixels/);
+  assert.match(source, /drawY \+ row \* modulePixels/);
+  assert.match(source, /outputContext\.fillRect\(\s*drawX \+ column \* modulePixels,/s);
+  assert.doesNotMatch(source, /const qrDataUrl = qrCanvas\.toDataURL\('image\/png'\)/);
+  assert.doesNotMatch(source, /qrMount\.appendChild\(qrImage\)/);
   assert.doesNotMatch(source, /qrLogoBadge/);
   assert.doesNotMatch(source, /qrLogo\.src = shareLogoDataUrl/);
   assert.doesNotMatch(source, /const shareLogoDataUrl = /);
+});
+
+test("QR compositing happens after the smoothed card downsample and before PNG encoding", () => {
+  const exportStartIndex = source.indexOf("async function cacheShareableScoreCard(generation = shareableScoreCardGeneration)");
+  const downsampleIndex = source.indexOf(
+    "outputContext.drawImage(\n        highResolutionImage,",
+    exportStartIndex
+  );
+  const qrCompositeIndex = source.indexOf(
+    "drawPixelAlignedQr(outputContext, qrGenerator, qrX, qrY, qrFinalSize);",
+    exportStartIndex
+  );
+  const pngEncodeIndex = source.indexOf("outputCanvas.toBlob(", exportStartIndex);
+
+  assert.ok(exportStartIndex >= 0);
+  assert.ok(downsampleIndex >= 0);
+  assert.ok(qrCompositeIndex > downsampleIndex);
+  assert.ok(pngEncodeIndex > qrCompositeIndex);
+});
+
+test("share files are invalidated and awaited for each fresh details render", () => {
+  assert.match(source, /let shareableScoreCardImage = null/);
+  assert.match(source, /let shareableScoreCardPromise = null/);
+  assert.match(source, /let shareableScoreCardGeneration = 0/);
+  assert.ok(source.includes("const shareCaptureGeneration = ++shareableScoreCardGeneration"));
+  assert.match(source, /shareableScoreCardImage = null/);
+  assert.match(source, /await shareableScoreCardPromise/);
+  assert.match(source, /cacheShareableScoreCard\(shareCaptureGeneration\)/);
+  assert.match(source, /if \(generation !== shareableScoreCardGeneration\)/);
+  assert.match(source, /resolveShareableScoreCardReady/);
+  assert.match(source, /rejectShareableScoreCardReady/);
 });
 
 test("share output no longer uses square-image post-processing", () => {
