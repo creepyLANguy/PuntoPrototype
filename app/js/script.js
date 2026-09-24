@@ -434,6 +434,18 @@ document.addEventListener("DOMContentLoaded", () =>
 
   async function share(context)
   {
+    if (context === "details" && shareableScoreCardPromise)
+    {
+      try
+      {
+        await shareableScoreCardPromise;
+      }
+      catch (error)
+      {
+        console.warn("Share card capture was not ready:", error);
+      }
+    }
+
     const share_payload = getSharePayload(context);
 
     let result = { done: false, method: "unavailable" };
@@ -6952,6 +6964,25 @@ document.addEventListener("DOMContentLoaded", () =>
 
   async function showMatchDetails(syncHistory = true, expanded = false, refreshing = false)
   {
+    const shareCaptureGeneration = ++shareableScoreCardGeneration;
+    shareableScoreCardImage = null;
+
+    let resolveShareableScoreCardReady;
+    let rejectShareableScoreCardReady;
+
+    shareableScoreCardPromise = new Promise((resolve, reject) =>
+    {
+      resolveShareableScoreCardReady = resolve;
+      rejectShareableScoreCardReady = reject;
+    });
+
+    const hideShareButtonUntilReady = !refreshing;
+
+    if (hideShareButtonUntilReady && elements.shareDetailsBtn)
+    {
+      elements.shareDetailsBtn.classList.add("hidden");
+    }
+
     elements.detailsModal.classList.remove("hidden");
 
     if (syncHistory)
@@ -7193,20 +7224,49 @@ document.addEventListener("DOMContentLoaded", () =>
     finally
     {
       elements.detailsLoading.classList.add("hidden");
-      elements.shareDetailsBtn.classList.remove("hidden");
 
-      // Runs here rather than at the end of the try so the loading overlay is
-      // already hidden and cannot appear in the capture. Not awaited, but the
-      // rejection is handled so a capture failure stays out of the UI thread
-      // and never surfaces as an unhandled rejection.
-      // The card carries the scoreline only, so it does not wait on the
-      // momentum endpoint.
+      // Old share files are invalidated when a new details render starts, and
+      // the current share waits for its capture to finish before using a file.
       if (renderedShareCard && canShareFiles())
       {
-        cacheShareableScoreCard().catch(err =>
+        const capturePromise = cacheShareableScoreCard(shareCaptureGeneration);
+
+        capturePromise
+          .then(() =>
+          {
+            resolveShareableScoreCardReady();
+          })
+          .catch(err =>
+          {
+            console.error("Share card capture failed:", err);
+
+            if (shareCaptureGeneration === shareableScoreCardGeneration)
+            {
+              shareableScoreCardImage = null;
+            }
+
+            rejectShareableScoreCardReady(err);
+          })
+          .finally(() =>
+          {
+            if (hideShareButtonUntilReady &&
+                shareCaptureGeneration === shareableScoreCardGeneration &&
+                elements.shareDetailsBtn)
+            {
+              elements.shareDetailsBtn.classList.remove("hidden");
+            }
+          });
+      }
+      else
+      {
+        resolveShareableScoreCardReady();
+
+        if (hideShareButtonUntilReady &&
+            shareCaptureGeneration === shareableScoreCardGeneration &&
+            elements.shareDetailsBtn)
         {
-          console.error("Share card capture failed:", err);
-        });
+          elements.shareDetailsBtn.classList.remove("hidden");
+        }
       }
     }
   }
@@ -8157,6 +8217,8 @@ window.addEventListener("resize", () =>
 }, { passive: true });
 
 let shareableScoreCardImage = null;
+let shareableScoreCardPromise = null;
+let shareableScoreCardGeneration = 0;
 
 // Cache the Padel Push logo as a same-origin PNG data URL. This avoids relying on
 // SVG/CSS filter rendering inside html-to-image, which is particularly fragile
@@ -8310,7 +8372,7 @@ function drawPixelAlignedQr(outputContext, qrGenerator, x, y, size)
   outputContext.restore();
 }
 
-async function cacheShareableScoreCard()
+async function cacheShareableScoreCard(generation = shareableScoreCardGeneration)
 {
   const element = document.getElementById('dmBox');
 
@@ -8811,6 +8873,11 @@ async function cacheShareableScoreCard()
     'share-image.png',
     { type: 'image/png' }
   );
+
+  if (generation !== shareableScoreCardGeneration)
+  {
+    return;
+  }
 
   shareableScoreCardImage = file;
 }
