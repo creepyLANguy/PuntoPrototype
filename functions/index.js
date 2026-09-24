@@ -1352,8 +1352,8 @@ exports.updateScoringOptions = onCall(
 // -----------------------------
 // Replays a court's scoring events once and hands back everything the detail,
 // stats and momentum payloads are derived from. Shared by the getDetailedScore
-// callable (scoreboard app), the public /s/{courtId} stats endpoint (OBS
-// overlay stat cards) and the public /m/{courtId} momentum endpoint.
+// callable (scoreboard app), the public /stats/{courtId} stats endpoint (OBS
+// overlay stat cards) and the public /momentum/{courtId} momentum endpoint.
 async function replayCourtAnalytics(courtId)
 {
     const courtSnap = await db.doc(`courts/${courtId}`).get();
@@ -1738,7 +1738,7 @@ function createApiResponseCache(ttlMs, maxEntries)
 }
 
 // -----------------------------
-// GET current score as JSON (/a/{courtId})
+// GET current score as JSON (/score/{courtId})
 // Read-only public endpoint, aggressively cached (CDN + in-memory)
 // so polling clients (e.g. the OBS overlay) and request floods do not
 // translate into Firestore reads and runaway billing.
@@ -1788,8 +1788,8 @@ function extractScoreApiCourtId(reqPath)
             }
         });
 
-    // With the hosting rewrite the path looks like /a/{courtId}, /r/{courtId},
-    // /s/{courtId} or /m/{courtId}; when the function URL is hit directly the
+    // With the hosting rewrite the path looks like /score/{courtId}, /revision/{courtId},
+    // /stats/{courtId} or /momentum/{courtId}; when the function URL is hit directly the
     // courtId is simply the last segment.
     let courtId;
     if (SCORE_API_REWRITE_PREFIXES.has(segments[0]))
@@ -1939,7 +1939,7 @@ exports.getCourtScore = onRequest(
             const courtId = extractScoreApiCourtId(req.path);
             if (!courtId)
             {
-                return sendJson(res, 400, { success: false, error: "Missing or invalid courtId. Use /a/{courtId}." });
+                return sendJson(res, 400, { success: false, error: "Missing or invalid courtId. Use /score/{courtId}." });
             }
 
             const { status, body } = await buildCourtScoreResponse(courtId);
@@ -1955,9 +1955,9 @@ exports.getCourtScore = onRequest(
 );
 
 // -----------------------------
-// GET score revision only (/r/{courtId})
+// GET score revision only (/revision/{courtId})
 // Tiny polling endpoint: clients compare the returned revision against the one
-// they last rendered and only call /a/{courtId} when it differs. The full
+// they last rendered and only call /score/{courtId} when it differs. The full
 // payload is built and cached here anyway, so the follow-up fetch is served
 // from cache without extra Firestore reads.
 // -----------------------------
@@ -1975,7 +1975,7 @@ exports.getCourtScoreRevision = onRequest(
             const courtId = extractScoreApiCourtId(req.path);
             if (!courtId)
             {
-                return sendJson(res, 400, { success: false, error: "Missing or invalid courtId. Use /r/{courtId}." });
+                return sendJson(res, 400, { success: false, error: "Missing or invalid courtId. Use /revision/{courtId}." });
             }
 
             const { status, body } = await buildCourtScoreResponse(courtId);
@@ -2001,7 +2001,7 @@ exports.getCourtScoreRevision = onRequest(
 );
 
 // -----------------------------
-// GET match stats as JSON (/s/{courtId})
+// GET match stats as JSON (/stats/{courtId})
 // Public endpoint for the OBS overlay's stat cards. Replaying the full event
 // stream is far heavier than reading score/current, so responses are cached
 // longer than the score API and clients are expected to fetch only at natural
@@ -2023,7 +2023,7 @@ exports.getCourtStats = onRequest(
             const courtId = extractScoreApiCourtId(req.path);
             if (!courtId)
             {
-                return sendJson(res, 400, { success: false, error: "Missing or invalid courtId. Use /s/{courtId}." });
+                return sendJson(res, 400, { success: false, error: "Missing or invalid courtId. Use /stats/{courtId}." });
             }
 
             const cached = statsApiCache.get(courtId);
@@ -2062,7 +2062,7 @@ exports.getCourtStats = onRequest(
 );
 
 // -----------------------------
-// GET match momentum as JSON (/m/{courtId})
+// GET match momentum as JSON (/momentum/{courtId})
 // The single source of momentum data: the OBS overlay's momentum card and the
 // scoreboard's match-details graph both read this, and no other payload
 // carries the point-by-point streams. Replaying the event stream is heavy, so
@@ -2085,7 +2085,7 @@ exports.getCourtMomentum = onRequest(
             const courtId = extractScoreApiCourtId(req.path);
             if (!courtId)
             {
-                return sendJson(res, 400, { success: false, error: "Missing or invalid courtId. Use /m/{courtId}." });
+                return sendJson(res, 400, { success: false, error: "Missing or invalid courtId. Use /momentum/{courtId}." });
             }
 
             const cached = momentumApiCache.get(courtId);
