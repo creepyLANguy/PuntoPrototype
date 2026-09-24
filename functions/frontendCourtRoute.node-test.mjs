@@ -20,8 +20,9 @@ test("/c opens the spectator selection screen without a court id", async () =>
   const document = dom.window.document;
 
   await waitFor(
-    () => document.getElementById("spectatePage").style.display !== "none",
-    { label: "spectate page from /c" }
+    () => document.getElementById("spectatePage").style.display !== "none"
+      && document.querySelector("#spectateCourtList .court-item"),
+    { label: "spectate page and court list from /c" }
   );
   await settle(30);
 
