@@ -8244,61 +8244,43 @@ let shareableScoreCardImage = null;
 let shareableScoreCardPromise = null;
 let shareableScoreCardGeneration = 0;
 
-// Cache the Padel Push logo as a same-origin PNG data URL. This avoids relying on
-// SVG/CSS filter rendering inside html-to-image, which is particularly fragile
-// for the light-theme watermark.
-const shareLogoDataUrlCache = new Map();
+// Keep the Padel Push logo as SVG throughout the share-card pipeline. The
+// master share image is SVG too, so converting the logo to a bitmap here would
+// throw away resolution before the 3x rasterisation stage.
+const shareLogoSvgDataUrlCache = new Map();
 
 async function getShareLogoDataUrl(color = '#ffffff')
 {
   const normalizedColor = String(color || '#ffffff').toLowerCase();
-  if (shareLogoDataUrlCache.has(normalizedColor))
+  if (shareLogoSvgDataUrlCache.has(normalizedColor))
   {
-    return shareLogoDataUrlCache.get(normalizedColor);
+    return shareLogoSvgDataUrlCache.get(normalizedColor);
   }
 
-  const image = new Image();
-  image.decoding = 'async';
-  image.src = '/media/logo.svg';
-
-  await new Promise((resolve, reject) =>
+  const response = await fetch('/media/logo.svg', { credentials: 'same-origin' });
+  if (!response.ok)
   {
-    if (image.complete && image.naturalWidth > 0)
-    {
-      resolve();
-      return;
-    }
-
-    image.addEventListener('load', resolve, { once: true });
-    image.addEventListener('error', () => reject(new Error('Padel Push logo could not be loaded')), { once: true });
-  });
-
-  const size = 256;
-  const canvas = document.createElement('canvas');
-  canvas.width = size;
-  canvas.height = size;
-
-  const context = canvas.getContext('2d');
-  if (!context)
-  {
-    throw new Error('Could not create logo canvas');
+    throw new Error(`Padel Push logo could not be loaded (${response.status})`);
   }
 
-  context.drawImage(image, 0, 0, size, size);
+  let svgText = await response.text();
 
   if (normalizedColor !== 'source')
   {
-    context.globalCompositeOperation = 'source-in';
-    context.fillStyle = normalizedColor;
-    context.fillRect(0, 0, size, size);
-    context.globalCompositeOperation = 'source-over';
+    svgText = svgText.replace(
+      /fill\s*:\s*#ffffff\b/gi,
+      `fill:${normalizedColor}`
+    );
+    svgText = svgText.replace(
+      /fill\s*=\s*["']#ffffff["']/gi,
+      `fill="${normalizedColor}"`
+    );
   }
 
-  const dataUrl = canvas.toDataURL('image/png');
-  shareLogoDataUrlCache.set(normalizedColor, dataUrl);
+  const dataUrl = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svgText)}`;
+  shareLogoSvgDataUrlCache.set(normalizedColor, dataUrl);
   return dataUrl;
 }
-
 // The captured card is only ever consumed// The captured card is only ever consumed as payload.files in getSharePayload,
 // and that path is itself gated on navigator.canShare. Where the browser cannot
 // share files there is nothing to spend the capture on, so probe once with an
