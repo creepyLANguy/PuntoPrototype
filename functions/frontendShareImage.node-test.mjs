@@ -84,7 +84,7 @@ test("QR footer is vertically centered between score details and image bottom", 
   assert.match(source, /const footerTop = footerRect\.top - cloneRect\.top/);
   assert.match(source, /\(cloneRect\.height - scoreBottom - footerRect\.height\) \/ 2/);
   assert.match(source, /const desiredFooterTop = Math\.round\(scoreBottom \+ verticalGap\)/);
-  assert.match(source, /const additionalMargin = desiredFooterTop - footerTop/);
+  assert.match(source, /const additionalMargin = Math\.round\(desiredFooterTop - footerTop\)/);
   assert.match(source, /Math\.round\(scoreBottom \+ verticalGap\)/);
   assert.match(source, /const additionalMargin = Math\.round\(desiredFooterTop - footerTop\)/);
   assert.match(source, /footerPanel\.style\.marginTop = `\$\{Math\.max\(0, additionalMargin\)\}px`/);
