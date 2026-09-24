@@ -33,7 +33,7 @@ See firebase-environments.md.
 ### Function regions
 
 - africa-south1: callable functions, postEvent and onEventCreate.
-- europe-west1: public JSON Hosting rewrites /a, /r, /stats and /m.
+- europe-west1: public JSON Hosting rewrites /score, /revision, /stats and /momentum.
 
 ## API compatibility policy
 
