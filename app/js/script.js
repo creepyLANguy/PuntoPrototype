@@ -6411,7 +6411,7 @@ document.addEventListener("DOMContentLoaded", () =>
 
     if (!data)
     {
-      // /m/ is a Firebase Hosting rewrite. Until it is deployed the request
+      // /momentum/ is a Firebase Hosting rewrite. Until it is deployed the request
       // falls through to index.html, so a "successful" HTML response here
       // means the endpoint is missing rather than the court being empty.
       throw new Error("No JSON from " + url + " (HTTP " + response.status +
