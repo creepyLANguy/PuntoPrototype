@@ -221,7 +221,7 @@ test("a momentumScale share URL still applies", async () =>
   page.dom.window.close();
 });
 
-test("the momentum card loads from /m/{courtId} and swaps the loader for the graph", async () =>
+test("the momentum card loads from /momentum/{courtId} and swaps the loader for the graph", async () =>
 {
   const page = await bootOverlay();
   page.holdMomentum();
