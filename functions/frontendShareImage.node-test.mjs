@@ -151,7 +151,7 @@ test("share files are invalidated and awaited for each fresh details render", ()
   assert.match(source, /let shareableScoreCardImage = null/);
   assert.match(source, /let shareableScoreCardPromise = null/);
   assert.match(source, /let shareableScoreCardGeneration = 0/);
-  assert.match(source, /const shareCaptureGeneration = ++shareableScoreCardGeneration/);
+  assert.ok(source.includes("const shareCaptureGeneration = ++shareableScoreCardGeneration"));
   assert.match(source, /shareableScoreCardImage = null/);
   assert.match(source, /await shareableScoreCardPromise/);
   assert.match(source, /cacheShareableScoreCard\(shareCaptureGeneration\)/);
