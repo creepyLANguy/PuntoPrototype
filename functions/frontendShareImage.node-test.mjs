@@ -122,6 +122,14 @@ test("share-only sizing does not alter the live modal stylesheet", () => {
   assert.doesNotMatch(liveStyles, /shareContentWidth/);
 });
 
+test("SVG renderer inlines SVG image assets so the watermark remains vector content", () => {
+  assert.match(svgRendererSource, /function decodeSvgDataUrl\(source\)/);
+  assert.match(svgRendererSource, /function serializeInlineSvgImage\(source, rect, opacity\)/);
+  assert.match(svgRendererSource, /const src = element\.currentSrc \|\| element\.getAttribute\('src'\)/);
+  assert.match(svgRendererSource, /viewBox=/);
+  assert.match(svgRendererSource, /preserveAspectRatio="xMidYMid meet"/);
+  assert.match(source, /watermarkImage\.src = watermarkLogoDataUrl/);
+});
 test("light-theme watermark is explicitly embedded", () => {
   assert.match(source, /const watermarkColor = isLightTheme \? '#111111' : '#ffffff'/);
   assert.match(source, /watermarkImage\.src = watermarkLogoDataUrl/);
