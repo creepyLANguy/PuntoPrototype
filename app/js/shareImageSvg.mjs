@@ -384,7 +384,7 @@ function serializeImageElement(element, rootRect)
 
   const computed = getComputedStyle(element);
   const opacity = Math.max(0, Math.min(1, cssNumber(computed.opacity, 1)));
-  const inlineSvg = serializeInlineSvgImage(src, rect, opacity);
+  const inlineSvg = serializeInlineSvgImage(src, rect, 1);
 
   if (inlineSvg)
   {
@@ -399,7 +399,6 @@ function serializeImageElement(element, rootRect)
     ' height="' + rect.height + '"',
     ' href="' + escapeXml(src) + '"',
     ' xlink:href="' + escapeXml(src) + '"',
-    ' opacity="' + opacity + '"',
     ' preserveAspectRatio="xMidYMid meet"',
     ' />'
   ].join('');
