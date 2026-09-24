@@ -64,48 +64,32 @@
         "destination": "/app/index.html"
       },
       {
-        "source": "/a/**",
+        "source": "/score/**",
         "function": {
           "functionId": "getCourtScore",
           "region": "europe-west1"
         }
       },
       {
-        "source": "/r/**",
+        "source": "/revision/**",
         "function": {
           "functionId": "getCourtScoreRevision",
           "region": "europe-west1"
         }
       },
       {
-        "source": "/s/**",
+        "source": "/stats/**",
         "function": {
           "functionId": "getCourtStats",
           "region": "europe-west1"
         }
       },
       {
-        "source": "/m/**",
+        "source": "/momentum/**",
         "function": {
           "functionId": "getCourtMomentum",
           "region": "europe-west1"
         }
-      },
-      {
-        "source": "/b",
-        "destination": "/app/overlay.html"
-      },
-      {
-        "source": "/b/**",
-        "destination": "/app/overlay.html"
-      },
-      {
-        "source": "/o",
-        "destination": "/app/overlay.html"
-      },
-      {
-        "source": "/o/**",
-        "destination": "/app/overlay.html"
       },
       {
         "source": "/overlay",
