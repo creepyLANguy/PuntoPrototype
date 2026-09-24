@@ -68,6 +68,9 @@ jobs:
             --project "$FIREBASE_PROJECT_ID" \
             --token "$FIREBASE_TOKEN"
 
+      - name: Smoke-test public endpoints
+        run: node scripts/smoke-test-public-routes.mjs https://www.padelpush.co.za
+
   deploy_staging:
     if: github.event_name == 'push' && github.ref != 'refs/heads/main'
     runs-on: ubuntu-latest
@@ -113,3 +116,6 @@ jobs:
             --only functions,hosting \
             --project "$FIREBASE_PROJECT_ID" \
             --token "$FIREBASE_TOKEN"
+
+      - name: Smoke-test public endpoints
+        run: node scripts/smoke-test-public-routes.mjs https://qa.padelpush.co.za
