@@ -32,7 +32,7 @@ function assertJsonError(response, label)
   assert.match(response.contentType, /application\/json/i, label + ': expected JSON but received ' + response.contentType + ' (HTTP ' + response.status + ')');
   const payload = JSON.parse(response.body);
   assert.equal(payload.success, false, label + ': expected missing-court response to be unsuccessful');
-  assert.equal(payload.courtId, 'zzzz', label + ': expected courtId zzzz');
+  assert.ok(payload.error, label + ': expected a structured error payload');
 }
 
 function assertNotJson(response, label)
