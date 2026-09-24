@@ -16,6 +16,21 @@ Documentation-only contract hardening release.
 
 **Important:** this release does not itself alter deployed runtime security, error wire format, rate limiting or device idempotency. Those are implementation changes tracked as P0 hardening work.
 
+## 1.1.0 — 2026-09-24
+
+Breaking public-route rename ahead of the tournament suite foundation.
+
+- `/a/{courtId}` -> `/score/{courtId}`
+- `/r/{courtId}` -> `/revision/{courtId}`
+- `/s/{courtId}` -> `/stats/{courtId}`
+- `/m/{courtId}` -> `/momentum/{courtId}`
+- `/b` and `/b/{courtId}` -> `/overlay` and `/overlay/{courtId}`
+- `/o` and `/o/{courtId}` are removed.
+- The legacy single-character public routes are intentionally not retained as aliases so those paths are free for future functionality.
+- `/c` is now an explicit spectator selection route; `/c/{courtId}` remains the direct court route.
+
+This is a deliberate breaking route change. Update integrations to the canonical full-word endpoints before release.
+
 ## Deprecation policy
 
 A deprecated field or endpoint must:
@@ -28,4 +43,4 @@ A deprecated field or endpoint must:
 
 ## Versioning policy
 
-Current `/a`, `/r`, `/s`, `/m` endpoints are treated as v1. A breaking change must not be silently introduced into those paths. Use an explicit versioned path or equivalent negotiated version for future breaking contracts.
+The public API remains v1 by contract, but 1.1.0 deliberately renames the unversioned public paths. This change is coordinated across Hosting rewrites, clients, tests and documentation; legacy single-character aliases are removed rather than retained as compatibility routes.

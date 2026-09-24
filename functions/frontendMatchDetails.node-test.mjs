@@ -1,5 +1,5 @@
 // Frontend integration tests: the match details view and its momentum panel.
-// The momentum graph is fed by its own /m/{courtId} endpoint, so the details
+// The momentum graph is fed by its own /momentum/{courtId} endpoint, so the details
 // tables must render without waiting for it, and the momentum portion must
 // stay hidden until a payload with actual points is in hand.
 import assert from "node:assert/strict";
@@ -22,7 +22,7 @@ const COURT_ID = "courtdetails";
 
 let document;
 
-// While set, every /m/ request parks on this gate so a test can inspect the
+// While set, every /momentum/ request parks on this gate so a test can inspect the
 // view while the momentum payload is still pending.
 let momentumGate = null;
 let momentumRequests = [];
@@ -122,7 +122,7 @@ test.before(async () =>
   const baseFetch = window.fetch;
   const momentumFetch = async (url, options) =>
   {
-    if (!String(url).includes("/m/"))
+    if (!String(url).includes("/momentum/"))
     {
       return baseFetch(url, options);
     }
@@ -170,7 +170,7 @@ test("the details tables render while the momentum payload is still in flight", 
   assert.equal(document.getElementById("detailsLoading").classList.contains("hidden"), true);
 
   assert.equal(momentumRequests.length, 1, "momentum is fetched exactly once per open");
-  assert.match(momentumRequests[0], new RegExp(`/m/${COURT_ID}$`));
+  assert.match(momentumRequests[0], new RegExp(`/momentum/${COURT_ID}$`));
 });
 
 test("the momentum portion stays hidden until its payload arrives", async () =>

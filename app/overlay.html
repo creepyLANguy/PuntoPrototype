@@ -1709,10 +1709,10 @@
     (function () {
       //AL.
       const isDebugCourt = location.hostname === "localhost" || location.hostname === "127.0.0.1";
-      const debugCourt_revisionUrl = "https://qa.padelpush.co.za/r/bnrm";
-      const debugCourt_fullScoreUrl = "https://qa.padelpush.co.za/a/bnrm";
-      const debugCourt_statsUrl = "https://qa.padelpush.co.za/s/bnrm";
-      const debugCourt_momentumUrl = "https://qa.padelpush.co.za/m/bnrm";
+      const debugCourt_revisionUrl = "https://qa.padelpush.co.za/revision/bnrm";
+      const debugCourt_fullScoreUrl = "https://qa.padelpush.co.za/score/bnrm";
+      const debugCourt_statsUrl = "https://qa.padelpush.co.za/stats/bnrm";
+      const debugCourt_momentumUrl = "https://qa.padelpush.co.za/momentum/bnrm";
       const debugCourt_id = "bnrm";
       //
 
@@ -1817,7 +1817,7 @@
         '<strong>{courtId}</strong>';
 
       // Hosting rewrites that all serve this overlay; a bare one carries no courtId.
-      const OVERLAY_ROUTE_PREFIXES = new Set(["b", "o", "overlay", "broadcast"]);
+      const OVERLAY_ROUTE_PREFIXES = new Set(["overlay", "broadcast"]);
 
       function getCourtIdFromPath() {
         const segments = window.location.pathname.split("/").filter(Boolean);
@@ -1987,7 +1987,7 @@
           params.set(key, (typeof value === "object" && value !== null) || Array.isArray(value) ? JSON.stringify(value) : String(value));
         });
 
-        const base = window.location.origin + "/b/" + encodeURIComponent(courtId || "");
+        const base = window.location.origin + "/overlay/" + encodeURIComponent(courtId || "");
         const query = params.toString();
         return query ? base + "?" + query : base;
       }
@@ -2518,14 +2518,14 @@
           return statsCache;
         }
 
-        const url = isDebugCourt ? debugCourt_statsUrl : "/s/" + encodeURIComponent(courtId);
+        const url = isDebugCourt ? debugCourt_statsUrl : "/stats/" + encodeURIComponent(courtId);
         const data = await fetchJson(url);
         statsCache = data;
         statsCacheAt = Date.now();
         return data;
       }
 
-      // The point-by-point momentum streams come from /m/{courtId} and nowhere
+      // The point-by-point momentum streams come from /momentum/{courtId} and nowhere
       // else, so this is the momentum card's only data source.
       async function fetchMomentum(force) {
         if (!isDebugCourt && !courtId) {
@@ -2536,7 +2536,7 @@
           return momentumCache;
         }
 
-        const url = isDebugCourt ? debugCourt_momentumUrl : "/m/" + encodeURIComponent(courtId);
+        const url = isDebugCourt ? debugCourt_momentumUrl : "/momentum/" + encodeURIComponent(courtId);
         const data = await fetchJson(url);
         momentumCache = data;
         momentumCacheAt = Date.now();
@@ -3174,7 +3174,7 @@
       }
 
       async function loadFullScore() {
-        const url = isDebugCourt ? debugCourt_fullScoreUrl : "/a/" + encodeURIComponent(courtId);
+        const url = isDebugCourt ? debugCourt_fullScoreUrl : "/score/" + encodeURIComponent(courtId);
         const data = await fetchJson(url);
         render(data);
         // Trust the revision that shipped with this payload rather than the one
@@ -3185,7 +3185,7 @@
 
       async function poll() {
         if (!courtId) {
-          showError("No court specified. Use /b/{courtId}.");
+          showError("No court specified. Use /overlay/{courtId}.");
           return;
         }
 
@@ -3193,7 +3193,7 @@
         isPolling = true;
 
         try {
-          const revisionUrl = isDebugCourt ? debugCourt_revisionUrl : "/r/" + encodeURIComponent(courtId);
+          const revisionUrl = isDebugCourt ? debugCourt_revisionUrl : "/revision/" + encodeURIComponent(courtId);
           const revisionData = await fetchJson(revisionUrl);
 
           if (revisionData.revision && revisionData.revision === renderedRevision) {

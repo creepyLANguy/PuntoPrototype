@@ -9,7 +9,7 @@ This repository now supports two Firebase targets:
 
 ## GitHub Actions configuration
 
-The repository uses a single Firebase deployment workflow at `.github/workflows/deploy.yml`. The workflow contains separate production and staging jobs and deploys both Firebase Hosting and Functions.
+The repository uses a single Firebase deployment workflow at `.github/workflows/deploy.yml`. The workflow contains separate production and staging jobs, runs the full Functions/Jest + Node integration test suite, and deploys both Firebase Hosting and Functions.
 
 Add these repository variables:
 
@@ -57,7 +57,7 @@ Preview channels are isolated:
 
 Reviewers should validate branch-specific changes against the relevant staging preview and staging backend without overwriting production.
 
-The current deployment workflow is triggered by `push` events; opening or updating a pull request by itself does not trigger a deployment.
+The current deployment workflow is triggered by `push` events; opening or updating a pull request by itself does not trigger a deployment. Each deployment push runs the Functions/Jest + Node integration test suite before deployment.
 
 ## Data and auth isolation
 

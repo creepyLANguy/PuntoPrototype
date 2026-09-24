@@ -888,6 +888,16 @@ document.addEventListener("DOMContentLoaded", () =>
       return `${basePath}/p/${encodeURIComponent(state.courtId)}`;
     }
 
+    if (state.page === NAV_PAGES.PLAY)
+    {
+      return `${basePath}/p`;
+    }
+
+    if (state.page === NAV_PAGES.SPECTATE)
+    {
+      return `${basePath}/c`;
+    }
+
     return basePath ? `${basePath}/` : "/";
   }
 
@@ -2133,6 +2143,10 @@ document.addEventListener("DOMContentLoaded", () =>
   {
     return /^\/(?:app\/)?(?:play|p)\/?$/i.test(window.location.pathname);
   }
+  function isSpectateRootPathname()
+  {
+    return /^\/(?:app\/)?(?:court|c)\/?$/i.test(window.location.pathname);
+  }
 
   function getCurrentViewState()
   {
@@ -2307,6 +2321,11 @@ document.addEventListener("DOMContentLoaded", () =>
     if (isPlayRootPathname())
     {
       return createViewState({ page: NAV_PAGES.PLAY });
+    }
+
+    if (isSpectateRootPathname())
+    {
+      return createViewState({ page: NAV_PAGES.SPECTATE });
     }
 
     const courtId = getCourtIdFromPathname();
@@ -2648,6 +2667,12 @@ document.addEventListener("DOMContentLoaded", () =>
           pushNavigationState(getCurrentViewState());
           return;
         }
+      }
+      else if (routeState.page === NAV_PAGES.SPECTATE)
+      {
+        await restoreViewState(routeState);
+        pushNavigationState(getCurrentViewState());
+        return;
       }
 
       await restoreViewState(createViewState({ page: NAV_PAGES.MENU }));
@@ -6075,7 +6100,7 @@ document.addEventListener("DOMContentLoaded", () =>
       }
 
       const baseUrl = window.location.origin.replace(/\/$/, "");
-      const overlayUrl = `${baseUrl}/b/${encodeURIComponent(currentCourtId)}`;
+      const overlayUrl = `${baseUrl}/overlay/${encodeURIComponent(currentCourtId)}`;
 
       let copied = false;
       if (navigator.clipboard?.writeText)
@@ -6365,7 +6390,7 @@ document.addEventListener("DOMContentLoaded", () =>
   // payload deliberately no longer carries the point-by-point streams.
   async function fetchMomentumPayload(courtId)
   {
-    const url = "/m/" + encodeURIComponent(courtId);
+    const url = "/momentum/" + encodeURIComponent(courtId);
     
     // if (location.hostname === "localhost" || location.hostname === "127.0.0.1") 
     // {
@@ -6386,7 +6411,7 @@ document.addEventListener("DOMContentLoaded", () =>
 
     if (!data)
     {
-      // /m/ is a Firebase Hosting rewrite. Until it is deployed the request
+      // /momentum/ is a Firebase Hosting rewrite. Until it is deployed the request
       // falls through to index.html, so a "successful" HTML response here
       // means the endpoint is missing rather than the court being empty.
       throw new Error("No JSON from " + url + " (HTTP " + response.status +

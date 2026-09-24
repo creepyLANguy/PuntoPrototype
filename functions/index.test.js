@@ -821,7 +821,7 @@ describe("getCourtScore", () =>
     });
 
     const res = makeRes();
-    await getCourtScore({ method: "GET", path: `/a/${courtId}` }, res);
+    await getCourtScore({ method: "GET", path: `/score/${courtId}` }, res);
 
     expect(res.statusCode).toBe(200);
     expect(res.payload.success).toBe(true);
@@ -849,7 +849,7 @@ describe("getCourtScore", () =>
     });
 
     const res = makeRes();
-    await getCourtScore({ method: "GET", path: "/a/no-such-court" }, res);
+    await getCourtScore({ method: "GET", path: "/score/no-such-court" }, res);
 
     expect(res.statusCode).toBe(404);
     expect(res.payload.success).toBe(false);
@@ -874,7 +874,7 @@ describe("getCourtScore", () =>
     });
 
     const first = makeRes();
-    await getCourtScore({ method: "GET", path: `/a/${courtId}` }, first);
+    await getCourtScore({ method: "GET", path: `/score/${courtId}` }, first);
     expect(first.statusCode).toBe(200);
     expect(first.payload.teamNames.A).toBe("First");
 
@@ -882,7 +882,7 @@ describe("getCourtScore", () =>
     mockDb.docs.set(`courts/${courtId}`, { teamNames: { A: "Changed", B: "Second" } });
 
     const second = makeRes();
-    await getCourtScore({ method: "GET", path: `/a/${courtId}` }, second);
+    await getCourtScore({ method: "GET", path: `/score/${courtId}` }, second);
     expect(second.statusCode).toBe(200);
     expect(second.payload.teamNames.A).toBe("First");
   });
@@ -929,7 +929,7 @@ describe("getCourtScore", () =>
     });
 
     const revisionRes = makeRes();
-    await getCourtScoreRevision({ method: "GET", path: `/r/${courtId}` }, revisionRes);
+    await getCourtScoreRevision({ method: "GET", path: `/revision/${courtId}` }, revisionRes);
 
     expect(revisionRes.statusCode).toBe(200);
     expect(Object.keys(revisionRes.payload).sort()).toEqual(["courtId", "revision", "success"]);
@@ -937,7 +937,7 @@ describe("getCourtScore", () =>
     // The revision poll primes the shared cache, so the follow-up full fetch
     // must report the exact same revision it advertised.
     const scoreRes = makeRes();
-    await getCourtScore({ method: "GET", path: `/a/${courtId}` }, scoreRes);
+    await getCourtScore({ method: "GET", path: `/score/${courtId}` }, scoreRes);
     expect(scoreRes.payload.revision).toBe(revisionRes.payload.revision);
 
     mockDb.docs.set(`courts/${courtId}/score/current`, toLiveScorePayload(replayEvents(
@@ -954,7 +954,7 @@ describe("getCourtScore", () =>
     });
 
     const changedRes = makeRes();
-    await getCourtScoreRevision({ method: "GET", path: `/r/${courtId}` }, changedRes);
+    await getCourtScoreRevision({ method: "GET", path: `/revision/${courtId}` }, changedRes);
     expect(changedRes.payload.revision).not.toBe(revisionRes.payload.revision);
   });
 
@@ -985,7 +985,7 @@ describe("getCourtScore", () =>
     });
 
     const res = makeRes();
-    await getCourtScore({ method: "GET", path: `/a/${courtId}` }, res);
+    await getCourtScore({ method: "GET", path: `/score/${courtId}` }, res);
 
     expect(res.statusCode).toBe(200);
     expect(res.payload.matchComplete).toBe(false);
@@ -1017,7 +1017,7 @@ describe("getCourtScore", () =>
     });
 
     const res = makeRes();
-    await getCourtScore({ method: "GET", path: `/a/${courtId}` }, res);
+    await getCourtScore({ method: "GET", path: `/score/${courtId}` }, res);
 
     expect(res.statusCode).toBe(200);
     expect(res.payload.matchComplete).toBe(true);
@@ -1034,7 +1034,7 @@ describe("getCourtScore", () =>
     });
 
     const res = makeRes();
-    await getCourtScoreRevision({ method: "GET", path: "/r/no-such-court" }, res);
+    await getCourtScoreRevision({ method: "GET", path: "/revision/no-such-court" }, res);
 
     expect(res.statusCode).toBe(404);
     expect(res.payload.success).toBe(false);
@@ -1088,7 +1088,7 @@ describe("getCourtStats", () =>
     });
 
     const res = makeRes();
-    await getCourtStats({ method: "GET", path: `/s/${courtId}` }, res);
+    await getCourtStats({ method: "GET", path: `/stats/${courtId}` }, res);
 
     expect(res.statusCode).toBe(200);
     expect(res.payload.success).toBe(true);
@@ -1099,7 +1099,7 @@ describe("getCourtStats", () =>
     expect(res.payload.advancedStats.matchStats.totalPoints).toBe(5);
     expect(res.payload.playerNames.A1).toBe("Ann");
 
-    // The per-point momentum streams belong to /m/{courtId} alone.
+    // The per-point momentum streams belong to /momentum/{courtId} alone.
     expect(res.payload.pointHistory).toBeUndefined();
     expect(res.payload.momentumTimeline).toBeUndefined();
     expect(res.payload.setPointMarkers).toBeUndefined();
@@ -1126,7 +1126,7 @@ describe("getCourtStats", () =>
     });
 
     const first = makeRes();
-    await getCourtStats({ method: "GET", path: `/s/${courtId}` }, first);
+    await getCourtStats({ method: "GET", path: `/stats/${courtId}` }, first);
     expect(first.statusCode).toBe(200);
     expect(first.payload.totalPoints).toBe(1);
 
@@ -1134,7 +1134,7 @@ describe("getCourtStats", () =>
     mockDb.docs.set(`courts/${courtId}/events/e2`, { eventType: "POINT_TEAM_B", createdAt: timestamp(2) });
 
     const second = makeRes();
-    await getCourtStats({ method: "GET", path: `/s/${courtId}` }, second);
+    await getCourtStats({ method: "GET", path: `/stats/${courtId}` }, second);
     expect(second.statusCode).toBe(200);
     expect(second.payload.totalPoints).toBe(1);
   });
@@ -1150,7 +1150,7 @@ describe("getCourtStats", () =>
     });
 
     const res = makeRes();
-    await getCourtStats({ method: "GET", path: "/s/no-such-court" }, res);
+    await getCourtStats({ method: "GET", path: "/stats/no-such-court" }, res);
 
     expect(res.statusCode).toBe(404);
     expect(res.payload.success).toBe(false);
@@ -1202,7 +1202,7 @@ describe("getCourtMomentum", () =>
     });
 
     const res = makeRes();
-    await getCourtMomentum({ method: "GET", path: `/m/${courtId}` }, res);
+    await getCourtMomentum({ method: "GET", path: `/momentum/${courtId}` }, res);
 
     expect(res.statusCode).toBe(200);
     expect(res.payload.success).toBe(true);
@@ -1244,7 +1244,7 @@ describe("getCourtMomentum", () =>
     });
 
     const first = makeRes();
-    await getCourtMomentum({ method: "GET", path: `/m/${courtId}` }, first);
+    await getCourtMomentum({ method: "GET", path: `/momentum/${courtId}` }, first);
     expect(first.statusCode).toBe(200);
     expect(first.payload.totalPoints).toBe(1);
 
@@ -1252,7 +1252,7 @@ describe("getCourtMomentum", () =>
     mockDb.docs.set(`courts/${courtId}/events/e2`, { eventType: "POINT_TEAM_B", createdAt: timestamp(2) });
 
     const second = makeRes();
-    await getCourtMomentum({ method: "GET", path: `/m/${courtId}` }, second);
+    await getCourtMomentum({ method: "GET", path: `/momentum/${courtId}` }, second);
     expect(second.statusCode).toBe(200);
     expect(second.payload.totalPoints).toBe(1);
   });
@@ -1268,7 +1268,7 @@ describe("getCourtMomentum", () =>
     });
 
     const res = makeRes();
-    await getCourtMomentum({ method: "GET", path: "/m/no-such-court" }, res);
+    await getCourtMomentum({ method: "GET", path: "/momentum/no-such-court" }, res);
 
     expect(res.statusCode).toBe(404);
     expect(res.payload.success).toBe(false);

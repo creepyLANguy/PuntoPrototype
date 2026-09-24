@@ -6,7 +6,7 @@ The API documentation should be executable as a compatibility contract rather th
 
 ### Schema tests
 
-Validate every successful `/a`, `/r`, `/s`, `/m` response against `docs/api/openapi.yaml`.
+Validate every successful `/score`, `/revision`, `/stats`, `/momentum` response against `docs/api/openapi.yaml`.
 
 Cover:
 
@@ -39,7 +39,7 @@ Verify:
 ### Cache/revision tests
 
 - Repeated requests within the documented TTL return semantically identical payloads.
-- `/r` revision equals the corresponding `/a` revision.
+- `/revision` revision equals the corresponding `/score` revision.
 - A score mutation changes revision.
 - `fetchedAt` does not participate in revision generation.
 - Clients never depend on lexical/numeric ordering of revision strings.
