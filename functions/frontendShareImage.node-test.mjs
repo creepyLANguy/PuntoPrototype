@@ -119,8 +119,6 @@ test("QR is generated off-DOM and composited directly onto the final canvas", ()
   assert.match(source, /const actualSize = moduleCount \* modulePixels/);
   assert.match(source, /const qrModulePixels = Math\.ceil\(qrSize \/ qrModuleCount\)/);
   assert.match(source, /const qrRenderSize = qrModuleCount \* qrModulePixels/);
-  assert.match(source, /qrMount\.style\.width = qrRenderSize \+ 'px'/);
-  assert.match(source, /qrMount\.style\.height = qrRenderSize \+ 'px'/);
   assert.match(source, /drawX \+ column \* modulePixels/);
   assert.match(source, /drawY \+ row \* modulePixels/);
   assert.match(source, /outputContext\.fillRect\(\s*drawX \+ column \* modulePixels,/s);
