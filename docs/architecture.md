@@ -31,7 +31,7 @@ The runtime sequence is visualized in [PP_Runtime_Flow.mmd](PP_Runtime_Flow.mmd)
       |-- /stats/{courtId} -> replayed statistics
       +-- /momentum/{courtId} -> replayed momentum
 
-Firebase Hosting rewrites the public /a, /r, /stats and /momentum paths to read functions running in europe-west1. The device ingestion, callable functions and event trigger run in africa-south1.
+Firebase Hosting rewrites the public /score, /revision, /stats and /momentum paths to read functions running in europe-west1. The device ingestion, callable functions and event trigger run in africa-south1.
 
 ## Current data and mutation boundaries
 
@@ -54,8 +54,8 @@ Current implementation TTLs:
 
 - /a: 4 seconds
 - /r: 4 seconds
-- /s: 10 seconds
-- /m: 5 seconds
+- /stats: 10 seconds
+- /momentum: 5 seconds
 
 The /revision endpoint exists so polling clients can detect a changed revision before fetching the larger /score payload.
 
