@@ -6253,13 +6253,18 @@ body.light-mode .dm-meta-value {
    without changing the buttons' resting layout. */
 .match-details-btn,
 .dm-share-btn {
+  --engagement-rest-opacity: 0.6;
   animation: matchEngagementPulse 4.8s ease-in-out infinite;
   transform-origin: center;
 }
 
+.dm-share-btn {
+  --engagement-rest-opacity: 0.75;
+}
+
 @keyframes matchEngagementPulse {
   0%, 72%, 100% {
-    opacity: 0.45;
+    opacity: var(--engagement-rest-opacity);
     box-shadow: 0 0 0 0 transparent;
   }
 
@@ -6269,7 +6274,7 @@ body.light-mode .dm-meta-value {
   }
 
   90% {
-    opacity: 0.65;
+    opacity: 0.9;
     box-shadow: 0 0 0 2px color-mix(in srgb, currentColor 7%, transparent);
   }
 }
