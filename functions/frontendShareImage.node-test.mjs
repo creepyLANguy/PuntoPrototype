@@ -47,7 +47,7 @@ test("share export uses 1080x1350 with a 3x SVG raster pipeline", () => {
   assert.match(source, /renderedImage\.naturalHeight/);
   assert.match(source, /'image\/png'/);
   assert.match(source, /URL\.revokeObjectURL\(renderedUrl\)/);
-  assert.doesNotMatch(source, /html-to-image/);
+  assert.doesNotMatch(source, /import\s*\{\s*toBlob\s*\}\s*from\s*["']https:\/\/esm\.sh\/html-to-image/);
   assert.doesNotMatch(source, /pixelRatio:\s*2/);
   assert.doesNotMatch(source, /canvasWidth: SHARE_IMAGE_WIDTH/);
   assert.doesNotMatch(source, /canvasHeight: SHARE_IMAGE_HEIGHT/);
@@ -83,7 +83,7 @@ test("QR footer is vertically centered between score details and image bottom", 
   assert.match(source, /const scoreDetailsRect = shareTableWrap\?\.getBoundingClientRect\(\)/);
   assert.match(source, /const footerTop = footerRect\.top - cloneRect\.top/);
   assert.match(source, /\(cloneRect\.height - scoreBottom - footerRect\.height\) \/ 2/);
-  assert.match(source, /const desiredFooterTop = scoreBottom \+ verticalGap/);
+  assert.match(source, /const desiredFooterTop = Math\.round\(scoreBottom \+ verticalGap\)/);
   assert.match(source, /const additionalMargin = desiredFooterTop - footerTop/);
   assert.match(source, /Math\.round\(scoreBottom \+ verticalGap\)/);
   assert.match(source, /const additionalMargin = Math\.round\(desiredFooterTop - footerTop\)/);
@@ -169,7 +169,7 @@ test("QR compositing happens after the SVG-rendered card reaches the final canva
 
 test("SVG renderer keeps layout geometry integer-aligned and preserves vector QR geometry", () => {
   assert.match(svgRendererSource, /function snap\(value\)/);
-  assert.match(svgRendererSource, /Math\.round\(value\)/);
+  assert.match(svgRendererSource, /Math\.round\(numeric\)/);
   assert.match(svgRendererSource, /font-size="\$\{fontSize\}px"/);
   assert.match(svgRendererSource, /shape-rendering="geometricPrecision"/);
   assert.match(svgRendererSource, /shape-rendering="crispEdges"/);
