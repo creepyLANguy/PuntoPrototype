@@ -79,7 +79,7 @@ async function bootOverlay({ search = "", stored = null, momentumResponse = "ok"
   let releaseMomentum = null;
 
   const dom = new JSDOM(readFileSync(overlayPath, "utf8"), {
-    url: "https://padel.test/b/" + COURT_ID + search,
+    url: "https://padel.test/overlay/" + COURT_ID + search,
     runScripts: "dangerously",
     pretendToBeVisual: true,
     virtualConsole,
@@ -98,7 +98,7 @@ async function bootOverlay({ search = "", stored = null, momentumResponse = "ok"
         const target = String(url);
         requested.push(target);
 
-        if (!target.includes("/m/"))
+        if (!target.includes("/momentum/"))
         {
           return { ok: true, status: 200, json: async () => SCORE_PAYLOAD };
         }
@@ -243,11 +243,11 @@ test("the momentum card loads from /momentum/{courtId} and swaps the loader for 
   assert.equal(page.$("momentumMessage").classList.contains("hidden"), true);
 
   assert.ok(
-    page.requested.some((url) => url.endsWith("/m/" + COURT_ID)),
+    page.requested.some((url) => url.endsWith("/momentum/" + COURT_ID)),
     "momentum came from the momentum endpoint, saw: " + JSON.stringify(page.requested)
   );
   assert.ok(
-    !page.requested.some((url) => url.includes("/s/")),
+    !page.requested.some((url) => url.includes("/stats/")),
     "the stats endpoint is not used for momentum"
   );
 
