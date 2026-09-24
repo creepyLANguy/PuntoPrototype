@@ -94,8 +94,8 @@ The OpenAPI document remains the canonical machine-readable HTTP contract.
 | /app, /app/** | Scoreboard web app |
 | /court/{courtId}, /c/{courtId} | Court/spectator deep links |
 | /play, /p, /play/{courtId}, /p/{courtId} | Play/court picker and direct join |
-| /b, /b/{courtId} | Canonical OBS overlay |
-| /o, /overlay, /broadcast and aliases | Overlay aliases |
+| /overlay, /overlay/{courtId} | Canonical OBS overlay |
+| /broadcast, /broadcast/{courtId} | Secondary overlay alias |
 | /nfc, /nfc/** | NFC utility |
 | /score/{courtId} | Live score JSON |
 | /revision/{courtId} | Revision JSON |
