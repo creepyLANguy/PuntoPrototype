@@ -110,8 +110,8 @@ test("light-theme watermark is explicitly embedded", () => {
 
 test("QR is generated off-DOM and composited directly onto the final canvas", () => {
   assert.match(source, /qrGenerator = new window\.QRCode\(document\.createElement\('div'\)/);
-  assert.match(source, /qrMount\.style\.width = qrSize \+ 'px'/);
-  assert.match(source, /qrMount\.style\.height = qrSize \+ 'px'/);
+  assert.match(source, /qrMount\.style\.width = qrRenderSize \+ 'px'/);
+  assert.match(source, /qrMount\.style\.height = qrRenderSize \+ 'px'/);
   assert.match(source, /function drawPixelAlignedQr\(outputContext, qrGenerator, x, y, size\)/);
   assert.match(source, /const qrModel = qrGenerator\?\._oQRCode/);
   assert.match(source, /outputContext\.imageSmoothingEnabled = false/);
