@@ -173,6 +173,58 @@ test("the details tables render while the momentum payload is still in flight", 
   assert.match(momentumRequests[0], new RegExp(`/momentum/${COURT_ID}$`));
 });
 
+test("stat columns are fitted when the detailed panel is expanded after rendering", async () =>
+{
+  DETAILED_SCORE.playerNames = {
+    A1: "Very Long Player Name",
+    A2: "",
+    B1: "Another Very Long Player Name",
+    B2: ""
+  };
+
+  // Open again with the panel collapsed. The render-time fit is expected to see
+  // a hidden parent and therefore cannot measure it; expansion must schedule the
+  // real measurement after the hidden attribute is removed.
+  document.getElementById("detailsBtn").click();
+
+  await waitFor(
+    () => document.querySelector("#dmStatsTeam .dm-stats-table") !== null,
+    { label: "stats table for fit test" }
+  );
+
+  const table = document.querySelector("#dmStatsTeam .dm-stats-table");
+  table.getBoundingClientRect = () => ({ width: 300, height: 0, top: 0, left: 0, right: 300, bottom: 0 });
+
+  const primaryContents = Array.from(
+    table.querySelectorAll("tbody .dm-st-val:nth-child(2) .dm-st-value-content")
+  );
+  const secondaryContents = Array.from(
+    table.querySelectorAll("tbody .dm-st-val:nth-child(3) .dm-st-value-content")
+  );
+
+  primaryContents.forEach(content =>
+  {
+    content.getBoundingClientRect = () => ({ width: 108, height: 0, top: 0, left: 0, right: 108, bottom: 0 });
+  });
+  secondaryContents.forEach(content =>
+  {
+    content.getBoundingClientRect = () => ({ width: 132, height: 0, top: 0, left: 0, right: 132, bottom: 0 });
+  });
+
+  document.getElementById("dmDetailsToggle").click();
+  await settle();
+
+  assert.equal(document.getElementById("dmDetailsContent").hidden, false);
+  assert.ok(
+    Number.parseFloat(table.style.getPropertyValue("--dm-st-secondary-width")) > 36,
+    "the overflowing secondary column should receive extra width after expansion"
+  );
+  assert.ok(
+    Number.parseFloat(table.style.getPropertyValue("--dm-st-label-width")) < 28,
+    "the label column should give up only the required space"
+  );
+});
+
 test("the momentum portion stays hidden until its payload arrives", async () =>
 {
   assert.equal(
