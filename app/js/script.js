@@ -602,6 +602,8 @@ document.addEventListener("DOMContentLoaded", () =>
   let loadingSpinnerStartTime = 0;
   let hasInitializedQrPanelInteractions = false;
 
+
+
   let isPickingColour = false;
 
   // =====================================================
@@ -616,6 +618,20 @@ document.addEventListener("DOMContentLoaded", () =>
   // =====================================================
   // THEME STATE
   // =====================================================
+  function updateMobileDeviceClass()
+  {
+    const userAgent = navigator.userAgent || "";
+    const isIpadDesktopMode = navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1;
+    const isMobileDevice = navigator.userAgentData?.mobile === true ||
+      /Android|iPhone|iPad|iPod|IEMobile|Windows Phone|Mobile/i.test(userAgent) ||
+      isIpadDesktopMode;
+
+    document.documentElement.classList.toggle("mobile-device", isMobileDevice);
+    return isMobileDevice;
+  }
+
+  updateMobileDeviceClass();
+
   const TEAM_COLOUR_STORAGE_KEY = "punto_team_colours";
 
   let isLightMode = localStorage.getItem("theme") === "light";
@@ -6238,6 +6254,7 @@ document.addEventListener("DOMContentLoaded", () =>
         return;
       }
 
+      elements.shareDetailsBtn.classList.add("engagement-animation-disabled");
       void share("details");
     });
   }
@@ -6952,6 +6969,13 @@ document.addEventListener("DOMContentLoaded", () =>
 
   async function showMatchDetails(syncHistory = true, expanded = false, refreshing = false)
   {
+    const detailsWasHidden = elements.detailsModal.classList.contains("hidden");
+
+    if (detailsWasHidden)
+    {
+      elements.shareDetailsBtn?.classList.remove("engagement-animation-disabled");
+    }
+
     elements.detailsModal.classList.remove("hidden");
 
     if (syncHistory)
