@@ -602,9 +602,6 @@ document.addEventListener("DOMContentLoaded", () =>
   let loadingSpinnerStartTime = 0;
   let hasInitializedQrPanelInteractions = false;
 
-  // Engagement nudge state. The stats button loops subtly while available;
-  // the share button gets one nudge per actual details-view opening.
-  let detailsShareNudgePending = false;
 
 
   let isPickingColour = false;
@@ -6955,43 +6952,9 @@ document.addEventListener("DOMContentLoaded", () =>
     syncDetailsPanelAvailability();
   }
 
-  function prepareDetailsShareNudge()
-  {
-    detailsShareNudgePending = true;
-
-    if (elements.shareDetailsBtn)
-    {
-      elements.shareDetailsBtn.classList.remove("engagement-nudge-once");
-    }
-  }
-
-  function triggerDetailsShareNudge()
-  {
-    if (!detailsShareNudgePending || !elements.shareDetailsBtn)
-    {
-      return;
-    }
-
-    if (elements.shareDetailsBtn.classList.contains("hidden"))
-    {
-      return;
-    }
-
-    detailsShareNudgePending = false;
-    elements.shareDetailsBtn.classList.remove("engagement-nudge-once");
-    void elements.shareDetailsBtn.offsetWidth;
-    elements.shareDetailsBtn.classList.add("engagement-nudge-once");
-  }
-
   async function showMatchDetails(syncHistory = true, expanded = false, refreshing = false)
   {
-    const wasDetailsViewOpen = !elements.detailsModal.classList.contains("hidden");
     elements.detailsModal.classList.remove("hidden");
-
-    if (!wasDetailsViewOpen)
-    {
-      prepareDetailsShareNudge();
-    }
 
     if (syncHistory)
     {
@@ -7233,7 +7196,6 @@ document.addEventListener("DOMContentLoaded", () =>
     {
       elements.detailsLoading.classList.add("hidden");
       elements.shareDetailsBtn.classList.remove("hidden");
-      triggerDetailsShareNudge();
 
       // Runs here rather than at the end of the try so the loading overlay is
       // already hidden and cannot appear in the capture. Not awaited, but the
