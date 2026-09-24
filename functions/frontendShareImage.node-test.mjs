@@ -4,6 +4,7 @@ import test from "node:test";
 
 const source = readFileSync(new URL("../app/js/script.js", import.meta.url), "utf8");
 const liveStyles = readFileSync(new URL("../app/css/style.css", import.meta.url), "utf8");
+const svgRendererSource = readFileSync(new URL("../app/js/shareImageSvg.mjs", import.meta.url), "utf8");
 
 test("interactive details UI is excluded before capture and by the serializer", () => {
   assert.match(source, /querySelectorAll\('\.dm-close, \.dm-share-btn, \.dm-details-panel, \.dm-empty-state, \.dm-error-state'\)/);
@@ -29,27 +30,27 @@ test("capture uses the match-details modal surface", () => {
   assert.match(source, /backgroundColor: cardBackground/);
 });
 
-test("share export uses 1080x1350 as both CSS and PNG dimensions", () => {
+test("share export uses 1080x1350 with a 3x SVG raster pipeline", () => {
   assert.match(source, /const SHARE_IMAGE_WIDTH = 1080/);
   assert.match(source, /const SHARE_IMAGE_HEIGHT = 1350/);
+  assert.match(source, /const SHARE_IMAGE_RASTER_SCALE = 3/);
   assert.ok(source.includes("clone.style.width = `${SHARE_IMAGE_WIDTH}px`;"));
   assert.ok(source.includes("clone.style.height = `${SHARE_IMAGE_HEIGHT}px`;"));
-  assert.match(source, /width: SHARE_IMAGE_WIDTH/);
-  assert.match(source, /height: SHARE_IMAGE_HEIGHT/);
-  assert.match(source, /canvasWidth: SHARE_IMAGE_WIDTH/);
-  assert.match(source, /canvasHeight: SHARE_IMAGE_HEIGHT/);
-  assert.match(source, /pixelRatio: 2/);
-  assert.match(source, /const highResolutionBlob = await toBlob\(clone/);
-  assert.match(source, /const highResolutionImage = new Image\(\)/);
+  assert.match(source, /renderShareCardSvgToPngBlob\(/);
+  assert.match(source, /scale: SHARE_IMAGE_RASTER_SCALE/);
+  assert.match(source, /const renderedImage = new Image\(\)/);
   assert.match(source, /outputCanvas\.width = SHARE_IMAGE_WIDTH/);
   assert.match(source, /outputCanvas\.height = SHARE_IMAGE_HEIGHT/);
   assert.match(source, /outputContext\.imageSmoothingEnabled = true/);
   assert.match(source, /outputContext\.imageSmoothingQuality = 'high'/);
-  assert.match(source, /highResolutionImage\.naturalWidth/);
-  assert.match(source, /highResolutionImage\.naturalHeight/);
+  assert.match(source, /renderedImage\.naturalWidth/);
+  assert.match(source, /renderedImage\.naturalHeight/);
   assert.match(source, /'image\/png'/);
-  assert.match(source, /URL\.revokeObjectURL\(highResolutionUrl\)/);
-  assert.doesNotMatch(source, /pixelRatio: 1/);
+  assert.match(source, /URL\.revokeObjectURL\(renderedUrl\)/);
+  assert.doesNotMatch(source, /html-to-image/);
+  assert.doesNotMatch(source, /pixelRatio:\s*2/);
+  assert.doesNotMatch(source, /canvasWidth: SHARE_IMAGE_WIDTH/);
+  assert.doesNotMatch(source, /canvasHeight: SHARE_IMAGE_HEIGHT/);
   assert.doesNotMatch(source, /SHARE_IMAGE_CSS_WIDTH/);
   assert.doesNotMatch(source, /SHARE_IMAGE_CSS_HEIGHT/);
   assert.doesNotMatch(source, /const sourceWidth =/);
@@ -93,7 +94,7 @@ test("visible QR URL omits the protocol while the QR payload keeps the full URL"
   assert.match(source, /footerUrl\.textContent = qrUrl\.replace\(\/\^https\?:\\\/\\\/\/i, ''\)/);
 });
 test("share-only visual scaling stays inside the image-capture path", () => {
-  assert.match(source, /const SHARE_IMAGE_SCALE = 2/);
+  assert.match(source, /const SHARE_IMAGE_RASTER_SCALE = 3/);
   assert.match(source, /clone\.style\.padding = `40px 56px 16px`/);
   assert.match(source, /shareNames\.forEach/);
   assert.match(source, /shareLogo\.style\.width = `144px`/);
@@ -146,10 +147,10 @@ test("QR is generated off-DOM and composited directly onto the final canvas", ()
   assert.doesNotMatch(source, /const shareLogoDataUrl = /);
 });
 
-test("QR compositing happens after the smoothed card downsample and before PNG encoding", () => {
+test("QR compositing happens after the SVG-rendered card reaches the final canvas and before PNG encoding", () => {
   const exportStartIndex = source.indexOf("async function cacheShareableScoreCard(generation = shareableScoreCardGeneration)");
   const downsampleIndex = source.indexOf(
-    "outputContext.drawImage(\n        highResolutionImage,",
+    "outputContext.drawImage(\n        renderedImage,",
     exportStartIndex
   );
   const qrCompositeIndex = source.indexOf(
@@ -162,6 +163,27 @@ test("QR compositing happens after the smoothed card downsample and before PNG e
   assert.ok(downsampleIndex >= 0);
   assert.ok(qrCompositeIndex > downsampleIndex);
   assert.ok(pngEncodeIndex > qrCompositeIndex);
+});
+
+test("SVG renderer keeps layout geometry integer-aligned and preserves vector QR geometry", () => {
+  assert.match(svgRendererSource, /function snap\(value\)/);
+  assert.match(svgRendererSource, /Math\.round\(value\)/);
+  assert.match(svgRendererSource, /font-size="${fontSize}px"/);
+  assert.match(svgRendererSource, /shape-rendering="geometricPrecision"/);
+  assert.match(svgRendererSource, /shape-rendering="crispEdges"/);
+  assert.match(svgRendererSource, /const modulePixels = Math\.max\(1, Math\.ceil\(size \/ moduleCount\)\)/);
+  assert.match(svgRendererSource, /const actualSize = moduleCount \* modulePixels/);
+  assert.match(svgRendererSource, /await document\.fonts\?\.ready/);
+  assert.match(svgRendererSource, /scale = 3/);
+  assert.match(svgRendererSource, /const highWidth = outputWidth \* rasterScale/);
+  assert.match(svgRendererSource, /const highHeight = outputHeight \* rasterScale/);
+  assert.match(svgRendererSource, /outputCanvas\.toBlob\(/);
+});
+
+test("share renderer passes the QR into the SVG stage before the final pixel-aligned QR redraw", () => {
+  assert.match(source, /qrGenerator,/);
+  assert.match(source, /qrElement: qrMount/);
+  assert.match(source, /drawPixelAlignedQr\(outputContext, qrGenerator, qrX, qrY, qrFinalSize\)/);
 });
 
 test("share files are invalidated and awaited for each fresh details render", () => {
