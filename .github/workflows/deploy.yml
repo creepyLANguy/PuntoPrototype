@@ -49,6 +49,9 @@ jobs:
       - name: Install Functions dependencies
         run: npm ci --prefix functions
 
+      - name: Run Functions test suite
+        run: npm test --prefix functions
+
       - name: Install Firebase CLI
         run: npm install --global firebase-tools@latest
 
@@ -91,6 +94,9 @@ jobs:
 
       - name: Install Functions dependencies
         run: npm ci --prefix functions
+
+      - name: Run Functions test suite
+        run: npm test --prefix functions
 
       - name: Install Firebase CLI
         run: npm install --global firebase-tools@latest
