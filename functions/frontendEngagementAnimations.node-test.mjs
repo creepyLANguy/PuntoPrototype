@@ -37,3 +37,36 @@ test("share engagement is CSS-driven rather than one-shot JavaScript state", () 
 {
   assert.doesNotMatch(source, /detailsShareNudgePending|prepareDetailsShareNudge|triggerDetailsShareNudge|engagement-nudge-once/);
 });
+
+
+test("scoreboard Match Details animation is restricted to coarse-pointer mobile viewports", () =>
+{
+  assert.match(
+    styles,
+    /@media\s*\(hover:\s*none\)\s+and\s*\(pointer:\s*coarse\)\s+and\s*\(max-width:\s*767px\)[\s\S]*?\.match-details-btn\s*\{[\s\S]*?animation:\s*matchEngagementPulse\s+4\.8s\s+ease-in-out\s+infinite;/
+  );
+
+  const matchDetailsRule = styles.match(
+    /\.match-details-btn\s*\{[\s\S]*?\}/
+  )?.[0];
+
+  assert.ok(matchDetailsRule, "base Match Details rule should exist");
+  assert.doesNotMatch(
+    matchDetailsRule,
+    /animation:\s*matchEngagementPulse/
+  );
+});
+
+test("expandable match details arrow uses a continuous looping pulse", () =>
+{
+  assert.match(
+    styles,
+    /\.dm-details-toggle-icon\s*\{[\s\S]*?animation:\s*matchDetailsArrowPulse\s+4\.8s\s+ease-in-out\s+infinite;/
+  );
+  assert.match(styles, /@keyframes\s+matchDetailsArrowPulse\s*\{/);
+  assert.match(styles, /@keyframes\s+matchDetailsArrowPulseExpanded\s*\{/);
+  assert.match(
+    styles,
+    /\.dm-details-toggle\[aria-expanded="true"\] \.dm-details-toggle-icon\s*\{[\s\S]*?animation-name:\s*matchDetailsArrowPulseExpanded;/
+  );
+});
