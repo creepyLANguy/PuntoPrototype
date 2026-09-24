@@ -6254,6 +6254,7 @@ document.addEventListener("DOMContentLoaded", () =>
         return;
       }
 
+      elements.shareDetailsBtn.classList.add("engagement-animation-disabled");
       void share("details");
     });
   }
@@ -6968,6 +6969,13 @@ document.addEventListener("DOMContentLoaded", () =>
 
   async function showMatchDetails(syncHistory = true, expanded = false, refreshing = false)
   {
+    const detailsWasHidden = elements.detailsModal.classList.contains("hidden");
+
+    if (detailsWasHidden)
+    {
+      elements.shareDetailsBtn?.classList.remove("engagement-animation-disabled");
+    }
+
     elements.detailsModal.classList.remove("hidden");
 
     if (syncHistory)
