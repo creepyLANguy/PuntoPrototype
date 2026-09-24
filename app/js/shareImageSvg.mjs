@@ -339,18 +339,18 @@ function serializeInlineSvgImage(source, rect, opacity)
     return null;
   }
 
-  const rootMatch = svgText.match(/<svg\\b[^>]*>/i);
-  const closeMatch = svgText.match(/<\\/svg>\\s*$/i);
+  const rootMatch = svgText.match(/<svg\b[^>]*>/i);
+  const closeMatch = svgText.match(/<\/svg>\s*$/i);
   if (!rootMatch || !closeMatch)
   {
     return null;
   }
 
-  const viewBoxMatch = rootMatch[0].match(/\\bviewBox\\s*=\\s*[\"']([^\"']+)[\"']/i);
+  const viewBoxMatch = rootMatch[0].match(/\bviewBox\s*=\s*[\"']([^\"']+)[\"']/i);
   const viewBox = viewBoxMatch ? viewBoxMatch[1].trim() : '0 0 1 1';
   const innerSvg = svgText
     .slice(rootMatch.index + rootMatch[0].length, closeMatch.index)
-    .replace(/<\\?xml[\\s\\S]*?\\?>/gi, '');
+    .replace(/<\?xml[\s\S]*?\?>/gi, '');
 
   return [
     '<svg',
