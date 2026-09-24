@@ -85,6 +85,8 @@ test("QR footer is vertically centered between score details and image bottom", 
   assert.match(source, /\(cloneRect\.height - scoreBottom - footerRect\.height\) \/ 2/);
   assert.match(source, /const desiredFooterTop = scoreBottom \+ verticalGap/);
   assert.match(source, /const additionalMargin = desiredFooterTop - footerTop/);
+  assert.match(source, /Math\.round\(scoreBottom \+ verticalGap\)/);
+  assert.match(source, /const additionalMargin = Math\.round\(desiredFooterTop - footerTop\)/);
   assert.match(source, /footerPanel\.style\.marginTop = `\$\{Math\.max\(0, additionalMargin\)\}px`/);
 });
 
@@ -168,7 +170,7 @@ test("QR compositing happens after the SVG-rendered card reaches the final canva
 test("SVG renderer keeps layout geometry integer-aligned and preserves vector QR geometry", () => {
   assert.match(svgRendererSource, /function snap\(value\)/);
   assert.match(svgRendererSource, /Math\.round\(value\)/);
-  assert.match(svgRendererSource, /font-size="${fontSize}px"/);
+  assert.match(svgRendererSource, /font-size="\$\{fontSize\}px"/);
   assert.match(svgRendererSource, /shape-rendering="geometricPrecision"/);
   assert.match(svgRendererSource, /shape-rendering="crispEdges"/);
   assert.match(svgRendererSource, /const modulePixels = Math\.max\(1, Math\.ceil\(size \/ moduleCount\)\)/);
