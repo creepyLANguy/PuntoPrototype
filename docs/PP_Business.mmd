@@ -5,207 +5,91 @@ config:
 
 flowchart LR
 
-        classDef founder fill:#FFEBEE,stroke:#C62828,stroke-width:3px,color:#B71C1C,font-weight:bold;
-        classDef product fill:#FFF3E0,stroke:#EF6C00,stroke-width:2px,color:#E65100;
-        classDef technology fill:#E3F2FD,stroke:#1565C0,stroke-width:2px,color:#0D47A1;
-        classDef governance fill:#E8F5E9,stroke:#2E7D32,stroke-width:2px,color:#1B5E20;
-        classDef business fill:#F3E5F5,stroke:#7B1FA2,stroke-width:2px,color:#4A148C;
-        classDef lifecycle fill:#FFFDE7,stroke:#FBC02D,stroke-width:2px,color:#F57F17;
-        classDef external fill:#ECEFF1,stroke:#455A64,stroke-width:2px,color:#263238;
+    classDef current fill:#E3F2FD,stroke:#1565C0,stroke-width:2px,color:#0D47A1,font-weight:bold;
+    classDef product fill:#FCE4EC,stroke:#C2185B,stroke-width:2px,color:#880E4F;
+    classDef delivery fill:#ECEFF1,stroke:#455A64,stroke-width:2px,color:#263238;
+    classDef business fill:#F3E5F5,stroke:#7B1FA2,stroke-width:2px,color:#4A148C;
+    classDef future fill:#FAFAFA,stroke:#9E9E9E,stroke-width:1px,stroke-dasharray:5 5,color:#616161;
 
-    Founder["Founder / Product Owner<br/>Vision • priorities • decisions"]
+    Founder["Founder / Product Owner"]
 
-    subgraph DISCOVERY["1. Strategy and Product"]
-        ProductStrategy["Product strategy"]
-        CustomerResearch["Customer and club discovery"]
-        Roadmap["Roadmap and prioritisation"]
-        Pricing["Pricing and packaging"]
-        ProductDesign["User experience and product design"]
+    subgraph CURRENT["Current repo-backed product"]
+        Landing["Marketing site<br/>index.html"]
+        WebApp["Scoring web app<br/>Play • Spectate • Scoreboard"]
+        Admin["Admin surfaces<br/>Courts • Devices"]
+        Overlay["OBS / broadcast overlay"]
+        NFC["NFC utility"]
+        Backend["Firebase Functions<br/>scoring + replay + public API"]
+        Firestore["Firestore<br/>courts • events • score • checkpoints • archives"]
+        DeviceAPI["Device ingestion API<br/>/postEvent"]
+        Tests["Automated test suite"]
+        Environments["Staging + production deployment"]
     end
 
-    subgraph HARDWARE["2. Hardware Product"]
-        HardwareDesign["Prototype hardware architecture"]
-        Electronics["ESP32 prototype components"]
-        Embedded["Beacon, Pulse and Hub firmware"]
-        Connectivity["Wi-Fi, HTTPS and NFC"]
-        Enclosure["Physical enclosure and installation design"]
-        Manufacturing["Manufacturing planning"]
-        Provisioning["Wi-Fi/device provisioning"]
+    subgraph DEVICES["Current product concepts shown on the marketing site"]
+        Pulse["Pulse<br/>portable scoring control"]
+        Beacon["Beacon<br/>hands-free scoring concept"]
+        Hub["Hub<br/>smart court integration concept"]
     end
 
-    subgraph SOFTWARE["3. Software Platform"]
-        WebApp["Web application"]
-        Backend["Firebase Functions and Hosting"]
-        DataModel["Firestore events, scores and archives"]
-        Scoring["scoringEngine.js match rules"]
-        Realtime["Firestore live scoreboard"]
-        Admin["Court and device administration"]
-        Broadcast["OBS overlay via /a /r /s /m"]
-    end
-
-    subgraph DELIVERY["4. Engineering Delivery"]
-        Architecture["Technical architecture"]
-        SourceControl["Source control"]
-        Testing["Automated and manual testing"]
-        Environments["Staging, production and local emulators"]
-        Releases["Release management"]
+    subgraph BUSINESS["Business / operational surfaces represented in the repo"]
+        ProductDesign["Product and UX development"]
         Documentation["Technical documentation"]
+        Support["Club / operator support"]
+        Marketing["Marketing and brand"]
+        Partnerships["Club pilots and partnerships"]
     end
 
-    subgraph QUALITY["5. Quality, Security and Compliance"]
-        Reliability["Hardware reliability"]
-        Performance["Performance and load testing"]
-        Security["Application and device security"]
-        Privacy["Privacy and data protection"]
-        Legal["Terms, contracts and legal protection"]
-        Safety["Electrical, installation and operational safety"]
+    subgraph OUTSIDE["Outside current repo / future implementation"]
+        Firmware["Physical-device firmware source"]
+        Manufacturing["Manufacturing + provisioning system"]
+        MatchModel["First-class match / tournament model"]
+        Billing["Billing / subscriptions"]
+        Analytics["Commercial analytics"]
     end
 
-    subgraph OPERATIONS["6. Service Operations"]
-        Monitoring["Firebase logs and runtime monitoring"]
-        Diagnostics["Device and emulator diagnostics"]
-        IncidentResponse["Incident response"]
-        Support["Customer support"]
-        Maintenance["Hardware maintenance"]
-        Training["Club and operator training"]
-        ServiceLevels["Service levels and availability"]
-    end
+    Founder --> ProductDesign
+    Founder --> Marketing
+    Founder --> Partnerships
 
-    subgraph COMMERCIAL["7. Sales and Customer Success"]
-        Sales["Sales"]
-        Demonstrations["Product demonstrations"]
-        Partnerships["Club and brand partnerships"]
-        Onboarding["Club onboarding"]
-        AccountManagement["Account management"]
-        Renewals["Renewals and retention"]
-        Feedback["Customer feedback loop"]
-    end
+    Landing --> Pulse
+    Landing --> Beacon
+    Landing --> Hub
 
-    subgraph MARKETING["8. Marketing and Brand"]
-        Positioning["Market positioning"]
-        Brand["Brand and visual identity"]
-        Website["Marketing website"]
-        Content["Content and case studies"]
-        Social["Social media"]
-        Events["Padel events and demonstrations"]
-        PublicRelations["Public relations"]
-    end
+    WebApp --> Firestore
+    WebApp --> Backend
+    Admin --> Firestore
+    Overlay --> Backend
+    NFC --> WebApp
+    DeviceAPI --> Backend
+    Backend --> Firestore
 
-    subgraph FINANCE["9. Finance and Administration"]
-        Company["Company administration"]
-        Budgeting["Budgeting and forecasting"]
-        Payments["Billing and payments (future)"]
-        Accounting["Bookkeeping and accounting"]
-        Tax["Tax and statutory filings"]
-        Insurance["Insurance and risk management"]
-        Investment["Funding and investment"]
-    end
+    Tests --> Backend
+    Tests --> WebApp
+    Environments --> Backend
+    Environments --> WebApp
 
-    subgraph SCALE["10. Growth and Improvement"]
-        Analytics["Analytics (future)"]
-        Usage["Usage analysis (future)"]
-        RoadmapFeedback["Evidence-based roadmap"]
-        Hiring["Hiring and delegation"]
-        Processes["Operating processes"]
-        Expansion["New clubs, regions and markets"]
-    end
+    ProductDesign --> WebApp
+    Documentation --> Backend
+    Support --> Admin
+    Marketing --> Landing
+    Partnerships --> Landing
 
-    subgraph STAKEHOLDERS["External Stakeholders"]
-        Clubs["Padel clubs"]
-        Players["Players"]
-        Sponsors["Sponsors and brands"]
-        Suppliers["Hardware suppliers"]
-        Contractors["Installers and service contractors"]
-        ProfessionalAdvisors["Legal, finance and technical advisors"]
-    end
+    Pulse -. "implementation outside repo" .-> Firmware
+    Beacon -. "implementation outside repo" .-> Firmware
+    Hub -. "implementation outside repo" .-> Firmware
+    Firmware -. "future" .-> Manufacturing
+    Firestore -. "future architecture" .-> MatchModel
+    Firestore -. "future" .-> Billing
+    Firestore -. "future" .-> Analytics
 
-    subgraph LIFECYCLE["Business Lifecycle"]
-        Discover["Discover"]
-        Design["Design"]
-        Build["Build"]
-        Pilot["Pilot"]
-        Launch["Launch"]
-        Operate["Operate"]
-        Improve["Improve"]
-        Scale["Scale"]
-    end
+    class Landing,WebApp,Admin,Overlay,NFC,Backend,Firestore,DeviceAPI current
+    class Pulse,Beacon,Hub product
+    class Tests,Environments delivery
+    class ProductDesign,Documentation,Support,Marketing,Partnerships business
+    class Firmware,Manufacturing,MatchModel,Billing,Analytics future
 
-
-    Founder --> DISCOVERY
-    Founder --> HARDWARE
-    Founder --> SOFTWARE
-    Founder --> DELIVERY
-    Founder --> QUALITY
-    Founder --> OPERATIONS
-    Founder --> COMMERCIAL
-    Founder --> MARKETING
-    Founder --> FINANCE
-    Founder --> SCALE
-
-    DISCOVERY --> Discover
-    Discover --> Design
-    Design --> HARDWARE
-    Design --> SOFTWARE
-    HARDWARE --> Build
-    SOFTWARE --> Build
-    DELIVERY --> Build
-    QUALITY --> Pilot
-    Build --> Pilot
-    Pilot --> Launch
-    Launch --> Operate
-    Operate --> Improve
-    Improve --> Scale
-
-    Clubs --> CustomerResearch
-    Clubs --> Pilot
-    Clubs --> Onboarding
-    Clubs --> Support
-
-    Players --> CustomerResearch
-    Players --> Feedback
-    Players --> Usage
-
-    Sponsors --> Partnerships
-    Suppliers --> Manufacturing
-    Contractors --> Installation["Court installation"]
-    ProfessionalAdvisors --> Legal
-    ProfessionalAdvisors --> Accounting
-
-    Feedback --> RoadmapFeedback
-    Usage --> RoadmapFeedback
-    RoadmapFeedback --> Roadmap
-
-    Sales --> Clubs
-    Partnerships --> Clubs
-    Positioning --> Sales
-    ProductStrategy --> Pricing
-    Pricing --> Sales
-
-    class Founder founder
-
-    class ProductStrategy,CustomerResearch,Roadmap,Pricing,ProductDesign product
-    class HardwareDesign,Electronics,Embedded,Connectivity,Enclosure,Manufacturing,Provisioning technology
-    class WebApp,Backend,DataModel,Scoring,Realtime,Admin,Broadcast technology
-    class Architecture,SourceControl,Testing,Environments,Releases,Documentation technology
-    class Reliability,Performance,Security,Privacy,Legal,Safety governance
-    class Monitoring,Diagnostics,IncidentResponse,Support,Maintenance,Training,ServiceLevels business
-    class Sales,Demonstrations,Partnerships,Onboarding,AccountManagement,Renewals,Feedback business
-    class Positioning,Brand,Website,Content,Social,Events,PublicRelations business
-    class Company,Budgeting,Payments,Accounting,Tax,Insurance,Investment governance
-    class Analytics,Usage,RoadmapFeedback,Hiring,Processes,Expansion business
-
-    class Discover,Design,Build,Pilot,Launch,Operate,Improve,Scale lifecycle
-    class Clubs,Players,Sponsors,Suppliers,Contractors,ProfessionalAdvisors external
-
-    style DISCOVERY fill:#FFF8E1,stroke:#EF6C00,stroke-width:2px;
-    style HARDWARE fill:#E8F5E9,stroke:#2E7D32,stroke-width:2px;
-    style SOFTWARE fill:#E3F2FD,stroke:#1565C0,stroke-width:2px;
-    style DELIVERY fill:#E3F2FD,stroke:#1565C0,stroke-width:2px;
-    style QUALITY fill:#E8F5E9,stroke:#2E7D32,stroke-width:2px;
-    style OPERATIONS fill:#F3E5F5,stroke:#7B1FA2,stroke-width:2px;
-    style COMMERCIAL fill:#F3E5F5,stroke:#7B1FA2,stroke-width:2px;
-    style MARKETING fill:#F3E5F5,stroke:#7B1FA2,stroke-width:2px;
-    style FINANCE fill:#E8F5E9,stroke:#2E7D32,stroke-width:2px;
-    style SCALE fill:#FFFDE7,stroke:#FBC02D,stroke-width:2px;
-    style STAKEHOLDERS fill:#ECEFF1,stroke:#455A64,stroke-width:2px;
-    style LIFECYCLE fill:#FFFDE7,stroke:#FBC02D,stroke-width:2px;
+    style CURRENT fill:#E8EAF6,stroke:#1A237E,stroke-width:2px;
+    style DEVICES fill:#FCE4EC,stroke:#AD1457,stroke-width:2px;
+    style BUSINESS fill:#F3E5F5,stroke:#4A148C,stroke-width:2px;
+    style OUTSIDE fill:#FAFAFA,stroke:#9E9E9E,stroke-dasharray:5 5;
