@@ -48,15 +48,15 @@ sequenceDiagram
     S-->>B: onSnapshot live score
 
     opt Public scoreboard / overlay
-        O->>A: GET /r/{courtId}
+        O->>A: GET /revision/{courtId}
         A->>S: Read current score
         A-->>O: Revision payload
 
-        O->>A: GET /a/{courtId}
+        O->>A: GET /score/{courtId}
         A->>S: Read current score
         A-->>O: Live score payload
 
-        O->>A: GET /s or /m/{courtId}
+        O->>A: GET /stats or /momentum/{courtId}
         A->>F: Replay active court event history
         A-->>O: Statistics / momentum payload
     end
