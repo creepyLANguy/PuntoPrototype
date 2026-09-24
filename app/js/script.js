@@ -8272,11 +8272,10 @@ function drawPixelAlignedQr(outputContext, qrGenerator, x, y, size)
   }
 
   // Use one integer number of final-image pixels for EVERY QR module.
-  // We deliberately fit the QR inside the allocated square instead of
-  // stretching module boundaries independently. This avoids alternating
-  // module widths and guarantees that every dark/light cell is a true
-  // axis-aligned pixel rectangle.
-  const modulePixels = Math.floor(size / moduleCount);
+  // Choose the next integer module size rather than flooring down. This keeps
+  // every dark/light cell pixel-aligned while avoiding the systematic shrink
+  // caused by fitting the QR strictly inside the requested square.
+  const modulePixels = Math.ceil(size / moduleCount);
   if (modulePixels < 1)
   {
     throw new Error(`QR area too small for ${moduleCount} modules`);
@@ -8632,10 +8631,21 @@ async function cacheShareableScoreCard()
       correctLevel: window.QRCode.CorrectLevel.H
     });
 
-    // Reserve exactly the same final-resolution square that the old QR occupied,
-    // but leave it blank until the final output canvas exists.
-    qrMount.style.width = qrSize + 'px';
-    qrMount.style.height = qrSize + 'px';
+    // Reserve the next pixel-aligned QR resolution in the layout as well. This
+    // keeps the enlarged QR inside its own white/padded block instead of letting
+    // the extra pixels spill into the footer text.
+    const qrModel = qrGenerator?._oQRCode;
+    const qrModuleCount = qrModel?.getModuleCount?.();
+    if (!Number.isInteger(qrModuleCount) || qrModuleCount <= 0)
+    {
+      throw new Error('QR generator did not expose its generated module matrix');
+    }
+
+    const qrModulePixels = Math.ceil(qrSize / qrModuleCount);
+    const qrRenderSize = qrModuleCount * qrModulePixels;
+
+    qrMount.style.width = qrRenderSize + 'px';
+    qrMount.style.height = qrRenderSize + 'px';
     qrMount.style.flex = '0 0 auto';
   }
 
