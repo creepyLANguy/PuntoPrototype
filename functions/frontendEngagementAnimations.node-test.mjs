@@ -5,6 +5,7 @@ import test from "node:test";
 const styles = readFileSync(new URL("../app/css/style.css", import.meta.url), "utf8");
 const source = readFileSync(new URL("../app/js/script.js", import.meta.url), "utf8");
 
+
 test("match details and share buttons use the same infinite engagement animation", () =>
 {
   assert.match(
@@ -15,16 +16,13 @@ test("match details and share buttons use the same infinite engagement animation
   assert.doesNotMatch(styles, /engagement-nudge-once|matchDetailsShareNudge|matchStatsEngagementPulse/);
 });
 
-test("the engagement pulse briefly restores full opacity before fading back to resting opacity", () =>
+test("the engagement pulse lifts opacity above both buttons' resting opacity and fades back", () =>
 {
-  const animation = styles.match(
-    /@keyframes\s+matchEngagementPulse\s*\{([\s\S]*?)\n\}/
-  )?.[1];
-
-  assert.ok(animation, "shared engagement animation should exist");
-  assert.match(animation, /0%, 72%, 100%\s*\{[\s\S]*?opacity:\s*0\.45/);
-  assert.match(animation, /82%\s*\{[\s\S]*?opacity:\s*1/);
-  assert.match(animation, /90%\s*\{[\s\S]*?opacity:\s*0\.65/);
+  assert.match(styles, /\.match-details-btn,\s*\.dm-share-btn\s*\{[\s\S]*?--engagement-rest-opacity:\s*0\.6;/);
+  assert.match(styles, /\.dm-share-btn\s*\{[\s\S]*?--engagement-rest-opacity:\s*0\.75;/);
+  assert.match(styles, /0%, 72%, 100%\s*\{[\s\S]*?opacity:\s*var\(--engagement-rest-opacity\)/);
+  assert.match(styles, /82%\s*\{[\s\S]*?opacity:\s*1/);
+  assert.match(styles, /90%\s*\{[\s\S]*?opacity:\s*0\.9/);
 });
 
 test("engagement animation is disabled when reduced motion is requested", () =>
