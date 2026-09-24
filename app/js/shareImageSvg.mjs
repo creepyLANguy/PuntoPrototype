@@ -510,7 +510,7 @@ async function imageFromBlob(blob)
   {
     image.src = url;
     await image.decode();
-    return image;
+    return { image, url };
   }
   catch (error)
   {
@@ -558,7 +558,7 @@ export async function renderShareCardSvgToPngBlob({
   );
 
   const svgBlob = new Blob([svg], { type: "image/svg+xml;charset=utf-8" });
-  const svgImage = await imageFromBlob(svgBlob);
+  const { image: svgImage, url: svgUrl } = await imageFromBlob(svgBlob);
   const highResolutionCanvas = document.createElement("canvas");
   highResolutionCanvas.width = highWidth;
   highResolutionCanvas.height = highHeight;
@@ -566,7 +566,7 @@ export async function renderShareCardSvgToPngBlob({
   const highResolutionContext = highResolutionCanvas.getContext("2d");
   if (!highResolutionContext)
   {
-    URL.revokeObjectURL("");
+    URL.revokeObjectURL(svgUrl);
     throw new Error("Failed to create high-resolution SVG canvas");
   }
 
@@ -581,6 +581,8 @@ export async function renderShareCardSvgToPngBlob({
     highWidth,
     highHeight
   );
+
+  URL.revokeObjectURL(svgUrl);
 
   const outputCanvas = document.createElement("canvas");
   outputCanvas.width = outputWidth;
