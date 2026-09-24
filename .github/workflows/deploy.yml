@@ -49,6 +49,12 @@ jobs:
       - name: Install Functions dependencies
         run: npm ci --prefix functions
 
+      - name: Run Functions lint
+        run: npm run lint --prefix functions
+
+      - name: Run Functions format check
+        run: npm run format:check --prefix functions
+
       - name: Run Functions test suite
         run: npm test --prefix functions
 

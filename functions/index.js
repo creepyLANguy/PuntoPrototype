@@ -10,29 +10,29 @@ const crypto = require("crypto");
 const { onDocumentCreated } = require("firebase-functions/v2/firestore");
 const { onCall } = require("firebase-functions/v2/https");
 const {
-    defaultScore,
-    applyEvent,
-    normalizeScoringOptions,
-    replayEvents,
-    getCurrentServerLabel,
-    toLiveScorePayload,
-    getEventOrderingTuple,
-    compareEventOrder,
-    didSetCountIncrease
+  defaultScore,
+  applyEvent,
+  normalizeScoringOptions,
+  replayEvents,
+  getCurrentServerLabel,
+  toLiveScorePayload,
+  getEventOrderingTuple,
+  compareEventOrder,
+  didSetCountIncrease,
 } = require("./scoringEngine");
 const { onRequest } = require("firebase-functions/v2/https");
 
 const REGION = "africa-south1";
 const HOSTING_REWRITE_REGION = "europe-west1";
 const DEFAULT_TEAM_NAMES = {
-    A: "Team A",
-    B: "Team B"
+  A: "Team A",
+  B: "Team B",
 };
 const DEFAULT_PLAYER_NAMES = {
-    A1: "",
-    A2: "",
-    B1: "",
-    B2: ""
+  A1: "",
+  A2: "",
+  B1: "",
+  B2: "",
 };
 const SCORING_EVENTS = new Set(["POINT_TEAM_A", "POINT_TEAM_B", "UNDO", "RESET"]);
 const OPERATIONAL_EVENTS = new Set(["SPECTATE", "REGISTER"]);
@@ -42,874 +42,826 @@ const SCORE_CHECKPOINTS_COLLECTION = "scoreCheckpoints";
 admin.initializeApp();
 const db = admin.firestore();
 
-function sendJson(res, status, body)
-{
-    return res.status(status).json(body);
+function sendJson(res, status, body) {
+  return res.status(status).json(body);
 }
 
-function buildScoringOptions(source = {})
-{
-    const normalizedInput = { ...(source || {}) };
-    const explicitScoringMode = typeof normalizedInput.scoringMode === "string" ? normalizedInput.scoringMode : undefined;
-    const explicitDeuceMode = typeof normalizedInput.deuceMode === "string" ? normalizedInput.deuceMode : undefined;
-    const explicitTiebreakMode = typeof normalizedInput.tiebreakMode === "string" ? normalizedInput.tiebreakMode : undefined;
+function buildScoringOptions(source = {}) {
+  const normalizedInput = { ...(source || {}) };
+  const explicitScoringMode =
+    typeof normalizedInput.scoringMode === "string" ? normalizedInput.scoringMode : undefined;
+  const explicitDeuceMode =
+    typeof normalizedInput.deuceMode === "string" ? normalizedInput.deuceMode : undefined;
+  const explicitTiebreakMode =
+    typeof normalizedInput.tiebreakMode === "string" ? normalizedInput.tiebreakMode : undefined;
 
-    const options = normalizeScoringOptions({
-        ...(normalizedInput.scoringOptions || {}),
-        scoringMode: explicitScoringMode,
-        deuceMode: explicitDeuceMode,
-        tiebreakMode: explicitTiebreakMode
+  const options = normalizeScoringOptions({
+    ...(normalizedInput.scoringOptions || {}),
+    scoringMode: explicitScoringMode,
+    deuceMode: explicitDeuceMode,
+    tiebreakMode: explicitTiebreakMode,
+  });
+
+  if (explicitScoringMode) {
+    options.scoringMode = explicitScoringMode;
+  }
+
+  if (explicitDeuceMode) {
+    options.deuceMode = explicitDeuceMode;
+  }
+
+  if (explicitTiebreakMode) {
+    options.tiebreakMode = explicitTiebreakMode;
+  }
+
+  return normalizeScoringOptions(options);
+}
+
+function getPersistedScoreOrder(score = {}) {
+  const createdAt = score?.lastProcessedCreatedAt || score?.updatedAt || null;
+  const eventId =
+    typeof score?.lastProcessedEventId === "string"
+      ? score.lastProcessedEventId
+      : typeof score?.lastEventId === "string"
+        ? score.lastEventId
+        : null;
+
+  return { createdAt, eventId };
+}
+
+function resolveReplayOrdering(replayResult, existingScore = {}, fallbackOrder = {}) {
+  const persistedOrder = getPersistedScoreOrder(existingScore);
+
+  return {
+    eventId: replayResult?.lastEventId ?? persistedOrder.eventId ?? fallbackOrder.id ?? null,
+    createdAt:
+      replayResult?.lastCreatedAt ?? persistedOrder.createdAt ?? fallbackOrder.createdAt ?? null,
+  };
+}
+
+function normalizeScoreVersion(value) {
+  return Number.isInteger(value) && value >= 0 ? value : 0;
+}
+
+function buildScoringEventsQuery(courtId) {
+  return db
+    .collection(`courts/${courtId}/events`)
+    .orderBy("createdAt", "asc")
+    .orderBy(FieldPath.documentId(), "asc");
+}
+
+async function getLatestCheckpoint(tx, courtId, options) {
+  // Order by a single field only: a multi-field orderBy requires a composite
+  // Firestore index, which this repo never defines/deploys. If that index is
+  // missing, this query throws FAILED_PRECONDITION inside every scoring
+  // transaction and the score document is never updated. Tie-break the small
+  // candidate window in memory instead.
+  const checkpointsQuery = db
+    .collection(`courts/${courtId}/${SCORE_CHECKPOINTS_COLLECTION}`)
+    .orderBy("lastCreatedAt", "desc")
+    .limit(10);
+
+  const checkpointsSnap = await tx.get(checkpointsQuery);
+  const targetOptions = normalizeScoringOptions(options);
+
+  const candidates = checkpointsSnap.docs
+    .map((docSnap) => ({ ref: docSnap.ref, data: docSnap.data() || {} }))
+    .sort((left, right) => {
+      const createdAtDiff = compareEventOrder(
+        right.data.lastCreatedAt,
+        right.data.lastEventId,
+        left.data.lastCreatedAt,
+        left.data.lastEventId,
+      );
+      return createdAtDiff === null ? 0 : createdAtDiff;
     });
 
-    if (explicitScoringMode)
-    {
-        options.scoringMode = explicitScoringMode;
-    }
+  for (const candidate of candidates) {
+    const data = candidate.data;
+    const checkpointOptions = normalizeScoringOptions(data.scoringOptions || {});
+    const sameOptions =
+      checkpointOptions.scoringMode === targetOptions.scoringMode &&
+      checkpointOptions.deuceMode === targetOptions.deuceMode &&
+      checkpointOptions.tiebreakMode === targetOptions.tiebreakMode;
 
-    if (explicitDeuceMode)
-    {
-        options.deuceMode = explicitDeuceMode;
-    }
-
-    if (explicitTiebreakMode)
-    {
-        options.tiebreakMode = explicitTiebreakMode;
-    }
-
-    return normalizeScoringOptions(options);
-}
-
-function getPersistedScoreOrder(score = {})
-{
-    const createdAt = score?.lastProcessedCreatedAt || score?.updatedAt || null;
-    const eventId = typeof score?.lastProcessedEventId === "string"
-        ? score.lastProcessedEventId
-        : (typeof score?.lastEventId === "string" ? score.lastEventId : null);
-
-    return { createdAt, eventId };
-}
-
-function resolveReplayOrdering(replayResult, existingScore = {}, fallbackOrder = {})
-{
-    const persistedOrder = getPersistedScoreOrder(existingScore);
+    if (!sameOptions) continue;
+    if (!data.score || !data.lastEventId || !data.lastCreatedAt) continue;
 
     return {
-        eventId: replayResult?.lastEventId ?? persistedOrder.eventId ?? fallbackOrder.id ?? null,
-        createdAt: replayResult?.lastCreatedAt ?? persistedOrder.createdAt ?? fallbackOrder.createdAt ?? null
+      ref: candidate.ref,
+      data,
     };
+  }
+
+  return null;
 }
 
-function normalizeScoreVersion(value)
-{
-    return Number.isInteger(value) && value >= 0 ? value : 0;
-}
+function collectApplicableScoringEvents(eventsSnap, targetScoreVersion) {
+  const events = [];
 
-function buildScoringEventsQuery(courtId)
-{
-    return db
-        .collection(`courts/${courtId}/events`)
-        .orderBy("createdAt", "asc")
-        .orderBy(FieldPath.documentId(), "asc");
-}
-
-async function getLatestCheckpoint(tx, courtId, options)
-{
-    // Order by a single field only: a multi-field orderBy requires a composite
-    // Firestore index, which this repo never defines/deploys. If that index is
-    // missing, this query throws FAILED_PRECONDITION inside every scoring
-    // transaction and the score document is never updated. Tie-break the small
-    // candidate window in memory instead.
-    const checkpointsQuery = db
-        .collection(`courts/${courtId}/${SCORE_CHECKPOINTS_COLLECTION}`)
-        .orderBy("lastCreatedAt", "desc")
-        .limit(10);
-
-    const checkpointsSnap = await tx.get(checkpointsQuery);
-    const targetOptions = normalizeScoringOptions(options);
-
-    const candidates = checkpointsSnap.docs
-        .map((docSnap) => ({ ref: docSnap.ref, data: docSnap.data() || {} }))
-        .sort((left, right) =>
-        {
-            const createdAtDiff = compareEventOrder(
-                right.data.lastCreatedAt,
-                right.data.lastEventId,
-                left.data.lastCreatedAt,
-                left.data.lastEventId
-            );
-            return createdAtDiff === null ? 0 : createdAtDiff;
-        });
-
-    for (const candidate of candidates)
-    {
-        const data = candidate.data;
-        const checkpointOptions = normalizeScoringOptions(data.scoringOptions || {});
-        const sameOptions =
-            checkpointOptions.scoringMode === targetOptions.scoringMode &&
-            checkpointOptions.deuceMode === targetOptions.deuceMode &&
-            checkpointOptions.tiebreakMode === targetOptions.tiebreakMode;
-
-        if (!sameOptions) continue;
-        if (!data.score || !data.lastEventId || !data.lastCreatedAt) continue;
-
-        return {
-            ref: candidate.ref,
-            data
-        };
+  eventsSnap.forEach((docSnap) => {
+    const data = docSnap.data() || {};
+    if (!SCORING_EVENTS.has(data.eventType)) {
+      return;
     }
 
-    return null;
-}
-
-function collectApplicableScoringEvents(eventsSnap, targetScoreVersion)
-{
-    const events = [];
-
-    eventsSnap.forEach((docSnap) =>
-    {
-        const data = docSnap.data() || {};
-        if (!SCORING_EVENTS.has(data.eventType))
-        {
-            return;
-        }
-
-        // Mirror the direct-path staleness guard: events posted against an
-        // older scoreVersion must never re-enter the score via a replay.
-        if (normalizeScoreVersion(data.scoreVersion) !== targetScoreVersion)
-        {
-            return;
-        }
-
-        events.push({ id: docSnap.id, ...data });
-    });
-
-    return events;
-}
-
-async function replayScoreFromEvents(tx, courtId, options, useCheckpoint, activeScoreVersion = 0)
-{
-    const activeOptions = normalizeScoringOptions(options);
-    const targetScoreVersion = normalizeScoreVersion(activeScoreVersion);
-    let replayedScore = defaultScore(activeOptions);
-    let query = buildScoringEventsQuery(courtId);
-    let checkpoint = null;
-
-    if (useCheckpoint)
-    {
-        checkpoint = await getLatestCheckpoint(tx, courtId, activeOptions);
-        if (checkpoint)
-        {
-            query = query.startAfter(checkpoint.data.lastCreatedAt, checkpoint.data.lastEventId);
-        }
+    // Mirror the direct-path staleness guard: events posted against an
+    // older scoreVersion must never re-enter the score via a replay.
+    if (normalizeScoreVersion(data.scoreVersion) !== targetScoreVersion) {
+      return;
     }
 
-    const eventsSnap = await tx.get(query);
-    let applicableEvents = collectApplicableScoringEvents(eventsSnap, targetScoreVersion);
+    events.push({ id: docSnap.id, ...data });
+  });
 
-    // A checkpoint snapshot has its history stripped (see toLiveScorePayload),
-    // so an UNDO event in the tail would replay against an empty undo stack
-    // and silently no-op - resurrecting the very point the user removed.
-    // Checkpoints are written exactly where undos tend to land (set-winning
-    // points and scoring-option changes), so whenever the tail contains an
-    // UNDO, abandon the checkpoint and rebuild from the full event log so the
-    // in-memory history stack is complete.
-    if (checkpoint && applicableEvents.some((event) => event.eventType === "UNDO"))
-    {
-        checkpoint = null;
-        const fullEventsSnap = await tx.get(buildScoringEventsQuery(courtId));
-        applicableEvents = collectApplicableScoringEvents(fullEventsSnap, targetScoreVersion);
+  return events;
+}
+
+async function replayScoreFromEvents(tx, courtId, options, useCheckpoint, activeScoreVersion = 0) {
+  const activeOptions = normalizeScoringOptions(options);
+  const targetScoreVersion = normalizeScoreVersion(activeScoreVersion);
+  let replayedScore = defaultScore(activeOptions);
+  let query = buildScoringEventsQuery(courtId);
+  let checkpoint = null;
+
+  if (useCheckpoint) {
+    checkpoint = await getLatestCheckpoint(tx, courtId, activeOptions);
+    if (checkpoint) {
+      query = query.startAfter(checkpoint.data.lastCreatedAt, checkpoint.data.lastEventId);
+    }
+  }
+
+  const eventsSnap = await tx.get(query);
+  let applicableEvents = collectApplicableScoringEvents(eventsSnap, targetScoreVersion);
+
+  // A checkpoint snapshot has its history stripped (see toLiveScorePayload),
+  // so an UNDO event in the tail would replay against an empty undo stack
+  // and silently no-op - resurrecting the very point the user removed.
+  // Checkpoints are written exactly where undos tend to land (set-winning
+  // points and scoring-option changes), so whenever the tail contains an
+  // UNDO, abandon the checkpoint and rebuild from the full event log so the
+  // in-memory history stack is complete.
+  if (checkpoint && applicableEvents.some((event) => event.eventType === "UNDO")) {
+    checkpoint = null;
+    const fullEventsSnap = await tx.get(buildScoringEventsQuery(courtId));
+    applicableEvents = collectApplicableScoringEvents(fullEventsSnap, targetScoreVersion);
+  }
+
+  if (checkpoint) {
+    replayedScore = {
+      ...defaultScore(activeOptions),
+      ...(checkpoint.data.score || {}),
+      A: { ...defaultScore(activeOptions).A, ...(checkpoint.data.score?.A || {}) },
+      B: { ...defaultScore(activeOptions).B, ...(checkpoint.data.score?.B || {}) },
+      completedSets: Array.isArray(checkpoint.data.score?.completedSets)
+        ? checkpoint.data.score.completedSets.map((set) => ({ ...set }))
+        : [],
+      history: [],
+      scoringOptions: activeOptions,
+    };
+  }
+
+  let lastEventId = null;
+  let lastCreatedAt = null;
+
+  applicableEvents.forEach((event) => {
+    replayedScore = applyEvent(replayedScore, event, activeOptions);
+    lastEventId = event.id;
+    lastCreatedAt = event.createdAt || lastCreatedAt;
+  });
+
+  return {
+    score: replayedScore,
+    lastEventId,
+    lastCreatedAt,
+  };
+}
+
+async function replayScoreFromEventsExcluding(
+  tx,
+  courtId,
+  options,
+  excludedEventId,
+  activeScoreVersion = 0,
+) {
+  // Rebuild without excluded event so caller can apply it in a deterministic position.
+  // Always replays from the very first event (no checkpoint shortcut here): a checkpoint
+  // snapshot has its history stripped, so resuming from one leaves the undo stack empty
+  // right at the checkpoint boundary and silently breaks "undo" for the point that just
+  // completed a set. Undo is infrequent enough that a full replay is an acceptable cost
+  // for guaranteeing the history stack is always correct.
+  const activeOptions = normalizeScoringOptions(options);
+  const targetScoreVersion = normalizeScoreVersion(activeScoreVersion);
+  let replayedScore = defaultScore(activeOptions);
+  const query = buildScoringEventsQuery(courtId);
+
+  const eventsSnap = await tx.get(query);
+  let lastEventId = null;
+  let lastCreatedAt = null;
+
+  eventsSnap.forEach((docSnap) => {
+    const data = docSnap.data() || {};
+    if (!SCORING_EVENTS.has(data.eventType)) {
+      return;
     }
 
-    if (checkpoint)
-    {
-        replayedScore = {
-            ...defaultScore(activeOptions),
-            ...(checkpoint.data.score || {}),
-            A: { ...defaultScore(activeOptions).A, ...(checkpoint.data.score?.A || {}) },
-            B: { ...defaultScore(activeOptions).B, ...(checkpoint.data.score?.B || {}) },
-            completedSets: Array.isArray(checkpoint.data.score?.completedSets)
-                ? checkpoint.data.score.completedSets.map((set) => ({ ...set }))
-                : [],
-            history: [],
-            scoringOptions: activeOptions
-        };
+    if (normalizeScoreVersion(data.scoreVersion) !== targetScoreVersion) {
+      return;
     }
 
-    let lastEventId = null;
-    let lastCreatedAt = null;
-
-    applicableEvents.forEach((event) =>
-    {
-        replayedScore = applyEvent(replayedScore, event, activeOptions);
-        lastEventId = event.id;
-        lastCreatedAt = event.createdAt || lastCreatedAt;
-    });
-
-    return {
-        score: replayedScore,
-        lastEventId,
-        lastCreatedAt
-    };
-}
-
-async function replayScoreFromEventsExcluding(tx, courtId, options, excludedEventId, activeScoreVersion = 0)
-{
-    // Rebuild without excluded event so caller can apply it in a deterministic position.
-    // Always replays from the very first event (no checkpoint shortcut here): a checkpoint
-    // snapshot has its history stripped, so resuming from one leaves the undo stack empty
-    // right at the checkpoint boundary and silently breaks "undo" for the point that just
-    // completed a set. Undo is infrequent enough that a full replay is an acceptable cost
-    // for guaranteeing the history stack is always correct.
-    const activeOptions = normalizeScoringOptions(options);
-    const targetScoreVersion = normalizeScoreVersion(activeScoreVersion);
-    let replayedScore = defaultScore(activeOptions);
-    const query = buildScoringEventsQuery(courtId);
-
-    const eventsSnap = await tx.get(query);
-    let lastEventId = null;
-    let lastCreatedAt = null;
-
-    eventsSnap.forEach((docSnap) =>
-    {
-        const data = docSnap.data() || {};
-        if (!SCORING_EVENTS.has(data.eventType))
-        {
-            return;
-        }
-
-        if (normalizeScoreVersion(data.scoreVersion) !== targetScoreVersion)
-        {
-            return;
-        }
-
-        if (docSnap.id === excludedEventId)
-        {
-            return;
-        }
-
-        const event = { id: docSnap.id, ...data };
-        replayedScore = applyEvent(replayedScore, event, activeOptions);
-        lastEventId = docSnap.id;
-        lastCreatedAt = data.createdAt || lastCreatedAt;
-    });
-
-    return {
-        score: replayedScore,
-        lastEventId,
-        lastCreatedAt
-    };
-}
-
-function buildCheckpointPayload(score, options, lastEventId, lastCreatedAt)
-{
-    return {
-        score: toLiveScorePayload(score),
-        scoringOptions: normalizeScoringOptions(options),
-        totalPoints: (Number(score?.A?.totalPoints) || 0) + (Number(score?.B?.totalPoints) || 0),
-        setsCompleted: (Number(score?.A?.sets) || 0) + (Number(score?.B?.sets) || 0),
-        lastEventId,
-        lastCreatedAt,
-        updatedAt: FieldValue.serverTimestamp()
-    };
-}
-
-function createTeamStatsBucket()
-{
-    return {
-        pointsWon: 0,
-        pointWinPct: 0,
-        longestScoringStreak: 0,
-        breakPointsFaced: 0,
-        breakPointsWon: 0,
-        breakPointWinPct: 0,
-        breakPointConversionOpportunities: 0,
-        breakPointConversions: 0,
-        breakPointConversionPct: 0,
-        gamesWonAfterDeuce: 0,
-        gamesLostAfterDeuce: 0,
-        goldenPointsWon: 0,
-        goldenPointWinPct: 0,
-        silverPointsWon: 0,
-        silverPointWinPct: 0,
-        starPointsWon: 0,
-        starPointWinPct: 0,
-        gamePointGames: 0,
-        gamePointConversions: 0,
-        closingEfficiencyPct: 0
-    };
-}
-
-function createServePlayerStatsBucket()
-{
-    return {
-        pointsServed: 0,
-        pointsWonOnServe: 0,
-        serveWinPct: 0
-    };
-}
-
-function isTeamOnGamePoint(state, team, options, isTiebreakGame)
-{
-    if (options.scoringMode !== "standard" || isTiebreakGame)
-    {
-        return false;
+    if (docSnap.id === excludedEventId) {
+      return;
     }
 
-    const opponent = team === "A" ? "B" : "A";
-    const ownPoints = Number(state[team]?.points) || 0;
-    const oppPoints = Number(state[opponent]?.points) || 0;
+    const event = { id: docSnap.id, ...data };
+    replayedScore = applyEvent(replayedScore, event, activeOptions);
+    lastEventId = docSnap.id;
+    lastCreatedAt = data.createdAt || lastCreatedAt;
+  });
 
-    if (options.deuceMode === "golden")
-    {
-        if (ownPoints === 3 && oppPoints === 3) return true;
-        if (ownPoints === 3 && oppPoints < 3) return true;
-        return ownPoints >= 4;
-    }
+  return {
+    score: replayedScore,
+    lastEventId,
+    lastCreatedAt,
+  };
+}
 
-    if (ownPoints === 3 && oppPoints < 3) return true;
-    if (ownPoints >= 4) return true;
+function buildCheckpointPayload(score, options, lastEventId, lastCreatedAt) {
+  return {
+    score: toLiveScorePayload(score),
+    scoringOptions: normalizeScoringOptions(options),
+    totalPoints: (Number(score?.A?.totalPoints) || 0) + (Number(score?.B?.totalPoints) || 0),
+    setsCompleted: (Number(score?.A?.sets) || 0) + (Number(score?.B?.sets) || 0),
+    lastEventId,
+    lastCreatedAt,
+    updatedAt: FieldValue.serverTimestamp(),
+  };
+}
+
+function createTeamStatsBucket() {
+  return {
+    pointsWon: 0,
+    pointWinPct: 0,
+    longestScoringStreak: 0,
+    breakPointsFaced: 0,
+    breakPointsWon: 0,
+    breakPointWinPct: 0,
+    breakPointConversionOpportunities: 0,
+    breakPointConversions: 0,
+    breakPointConversionPct: 0,
+    gamesWonAfterDeuce: 0,
+    gamesLostAfterDeuce: 0,
+    goldenPointsWon: 0,
+    goldenPointWinPct: 0,
+    silverPointsWon: 0,
+    silverPointWinPct: 0,
+    starPointsWon: 0,
+    starPointWinPct: 0,
+    gamePointGames: 0,
+    gamePointConversions: 0,
+    closingEfficiencyPct: 0,
+  };
+}
+
+function createServePlayerStatsBucket() {
+  return {
+    pointsServed: 0,
+    pointsWonOnServe: 0,
+    serveWinPct: 0,
+  };
+}
+
+function isTeamOnGamePoint(state, team, options, isTiebreakGame) {
+  if (options.scoringMode !== "standard" || isTiebreakGame) {
     return false;
+  }
+
+  const opponent = team === "A" ? "B" : "A";
+  const ownPoints = Number(state[team]?.points) || 0;
+  const oppPoints = Number(state[opponent]?.points) || 0;
+
+  if (options.deuceMode === "golden") {
+    if (ownPoints === 3 && oppPoints === 3) return true;
+    if (ownPoints === 3 && oppPoints < 3) return true;
+    return ownPoints >= 4;
+  }
+
+  if (ownPoints === 3 && oppPoints < 3) return true;
+  if (ownPoints >= 4) return true;
+  return false;
 }
 
 const MOMENTUM_CONFIG = Object.freeze({
-    decayPerPoint: 0.94,
-    clampMin: -100,
-    clampMax: 100,
-    recentWindowSize: 10,
-    recentWeights: [1.0, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1],
-    recentScale: 12,
-    streakGrowthDivisor: 2,
-    streakScale: 0.6,
-    streakCap: 18,
-    pressureScale: 1.2,
-    gameWinBonus: 10,
-    setWinBonus: 20,
-    setCarryDecayPerPoint: 0.9
+  decayPerPoint: 0.94,
+  clampMin: -100,
+  clampMax: 100,
+  recentWindowSize: 10,
+  recentWeights: [1.0, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1],
+  recentScale: 12,
+  streakGrowthDivisor: 2,
+  streakScale: 0.6,
+  streakCap: 18,
+  pressureScale: 1.2,
+  gameWinBonus: 10,
+  setWinBonus: 20,
+  setCarryDecayPerPoint: 0.9,
 });
 
-function clamp(value, min, max)
-{
-    return Math.min(max, Math.max(min, value));
+function clamp(value, min, max) {
+  return Math.min(max, Math.max(min, value));
 }
 
-function extractServingTeam(serverLabel)
-{
-    if (typeof serverLabel !== "string" || serverLabel.length === 0)
-    {
-        return null;
-    }
+function extractServingTeam(serverLabel) {
+  if (typeof serverLabel !== "string" || serverLabel.length === 0) {
+    return null;
+  }
 
-    const team = serverLabel[0];
-    return team === "A" || team === "B" ? team : null;
+  const team = serverLabel[0];
+  return team === "A" || team === "B" ? team : null;
 }
 
-function buildRecentComponent(recentWinners)
-{
-    if (!Array.isArray(recentWinners) || recentWinners.length === 0)
-    {
-        return 0;
-    }
+function buildRecentComponent(recentWinners) {
+  if (!Array.isArray(recentWinners) || recentWinners.length === 0) {
+    return 0;
+  }
 
-    const maxLen = Math.min(MOMENTUM_CONFIG.recentWindowSize, recentWinners.length);
-    const windowStart = recentWinners.length - maxLen;
-    let weightedSum = 0;
-    let totalWeight = 0;
+  const maxLen = Math.min(MOMENTUM_CONFIG.recentWindowSize, recentWinners.length);
+  const windowStart = recentWinners.length - maxLen;
+  let weightedSum = 0;
+  let totalWeight = 0;
 
-    for (let i = 0; i < maxLen; i++)
-    {
-        const winner = recentWinners[windowStart + i];
-        const sign = winner === "A" ? 1 : winner === "B" ? -1 : 0;
-        const ageIndex = maxLen - i - 1;
-        const weight = MOMENTUM_CONFIG.recentWeights[ageIndex] ?? 0;
-        weightedSum += sign * weight;
-        totalWeight += weight;
-    }
+  for (let i = 0; i < maxLen; i++) {
+    const winner = recentWinners[windowStart + i];
+    const sign = winner === "A" ? 1 : winner === "B" ? -1 : 0;
+    const ageIndex = maxLen - i - 1;
+    const weight = MOMENTUM_CONFIG.recentWeights[ageIndex] ?? 0;
+    weightedSum += sign * weight;
+    totalWeight += weight;
+  }
 
-    if (totalWeight <= 0)
-    {
-        return 0;
-    }
+  if (totalWeight <= 0) {
+    return 0;
+  }
 
-    return (weightedSum / totalWeight) * MOMENTUM_CONFIG.recentScale;
+  return (weightedSum / totalWeight) * MOMENTUM_CONFIG.recentScale;
 }
 
-function buildStreakComponent(streakLength)
-{
-    if (!Number.isFinite(streakLength) || streakLength <= 1)
-    {
-        return 0;
-    }
+function buildStreakComponent(streakLength) {
+  if (!Number.isFinite(streakLength) || streakLength <= 1) {
+    return 0;
+  }
 
-    // Non-linear growth makes short streaks noticeable and long streaks feel decisive.
-    // Dividing by streakGrowthDivisor keeps the curve responsive without overwhelming other components too early.
-    const rawBonus = (streakLength * streakLength) / MOMENTUM_CONFIG.streakGrowthDivisor;
-    return Math.min(MOMENTUM_CONFIG.streakCap, rawBonus) * MOMENTUM_CONFIG.streakScale;
+  // Non-linear growth makes short streaks noticeable and long streaks feel decisive.
+  // Dividing by streakGrowthDivisor keeps the curve responsive without overwhelming other components too early.
+  const rawBonus = (streakLength * streakLength) / MOMENTUM_CONFIG.streakGrowthDivisor;
+  return Math.min(MOMENTUM_CONFIG.streakCap, rawBonus) * MOMENTUM_CONFIG.streakScale;
 }
 
-function classifyPressureBonus(beforeScore, scoringTeam, options)
-{
-    if (!beforeScore || options.scoringMode !== "standard")
-    {
-        return 1;
-    }
-
-    const isTiebreakGame = beforeScore.inTiebreak ||
-        (options.tiebreakMode !== "off" && beforeScore.A.games === 6 && beforeScore.B.games === 6);
-    if (isTiebreakGame)
-    {
-        return 1;
-    }
-
-    const pointsA = Number(beforeScore.A?.points) || 0;
-    const pointsB = Number(beforeScore.B?.points) || 0;
-
-    const isAdvantage = (pointsA === 4 && pointsB === 3) || (pointsB === 4 && pointsA === 3);
-    const isDeuce = pointsA >= 3 && pointsB >= 3 && pointsA === pointsB;
-    const isThirtyAll = pointsA === 2 && pointsB === 2;
-    const gamePointA = isTeamOnGamePoint(beforeScore, "A", options, false);
-    const gamePointB = isTeamOnGamePoint(beforeScore, "B", options, false);
-
-    const serverLabel = getCurrentServerLabel(beforeScore);
-    const serverTeam = extractServingTeam(serverLabel);
-    const returnerTeam = serverTeam === "A" ? "B" : serverTeam === "B" ? "A" : null;
-    const isBreakPoint = (returnerTeam === "A" && gamePointA) || (returnerTeam === "B" && gamePointB);
-    const scoringTeamOnGamePoint = scoringTeam === "A" ? gamePointA : gamePointB;
-
-    if (isBreakPoint || scoringTeamOnGamePoint || gamePointA || gamePointB)
-    {
-        return 3;
-    }
-
-    if (isAdvantage)
-    {
-        return 2.5;
-    }
-
-    if (isDeuce)
-    {
-        return 2;
-    }
-
-    if (isThirtyAll)
-    {
-        return 1.5;
-    }
-
+function classifyPressureBonus(beforeScore, scoringTeam, options) {
+  if (!beforeScore || options.scoringMode !== "standard") {
     return 1;
+  }
+
+  const isTiebreakGame =
+    beforeScore.inTiebreak ||
+    (options.tiebreakMode !== "off" && beforeScore.A.games === 6 && beforeScore.B.games === 6);
+  if (isTiebreakGame) {
+    return 1;
+  }
+
+  const pointsA = Number(beforeScore.A?.points) || 0;
+  const pointsB = Number(beforeScore.B?.points) || 0;
+
+  const isAdvantage = (pointsA === 4 && pointsB === 3) || (pointsB === 4 && pointsA === 3);
+  const isDeuce = pointsA >= 3 && pointsB >= 3 && pointsA === pointsB;
+  const isThirtyAll = pointsA === 2 && pointsB === 2;
+  const gamePointA = isTeamOnGamePoint(beforeScore, "A", options, false);
+  const gamePointB = isTeamOnGamePoint(beforeScore, "B", options, false);
+
+  const serverLabel = getCurrentServerLabel(beforeScore);
+  const serverTeam = extractServingTeam(serverLabel);
+  const returnerTeam = serverTeam === "A" ? "B" : serverTeam === "B" ? "A" : null;
+  const isBreakPoint = (returnerTeam === "A" && gamePointA) || (returnerTeam === "B" && gamePointB);
+  const scoringTeamOnGamePoint = scoringTeam === "A" ? gamePointA : gamePointB;
+
+  if (isBreakPoint || scoringTeamOnGamePoint || gamePointA || gamePointB) {
+    return 3;
+  }
+
+  if (isAdvantage) {
+    return 2.5;
+  }
+
+  if (isDeuce) {
+    return 2;
+  }
+
+  if (isThirtyAll) {
+    return 1.5;
+  }
+
+  return 1;
 }
 
-function computeMomentumTimeline(pointHistory, scoringOptions)
-{
-    const options = normalizeScoringOptions(scoringOptions);
-    const standardMode = options.scoringMode === "standard";
-    const timeline = [];
-    const breakdown = [];
-    const gameMarkers = [];
-    let score = defaultScore(options);
-    let momentum = 0;
-    let streakTeam = null;
-    let streakLength = 0;
-    let setCarry = 0;
-    let pointIndex = 0;
-    const recentWinners = [];
+function computeMomentumTimeline(pointHistory, scoringOptions) {
+  const options = normalizeScoringOptions(scoringOptions);
+  const standardMode = options.scoringMode === "standard";
+  const timeline = [];
+  const breakdown = [];
+  const gameMarkers = [];
+  let score = defaultScore(options);
+  let momentum = 0;
+  let streakTeam = null;
+  let streakLength = 0;
+  let setCarry = 0;
+  let pointIndex = 0;
+  const recentWinners = [];
 
-    for (const pointWinner of pointHistory)
-    {
-        if (pointWinner !== "A" && pointWinner !== "B")
-        {
-            continue;
-        }
-
-        pointIndex++;
-
-        const oldGamesA = score.A.games;
-        const oldGamesB = score.B.games;
-        const oldSetsA = score.A.sets;
-        const oldSetsB = score.B.sets;
-        const beforeScore = JSON.parse(JSON.stringify(score));
-
-        score = applyEvent(score, {
-            eventType: pointWinner === "A" ? "POINT_TEAM_A" : "POINT_TEAM_B"
-        }, options);
-
-        // Decay first so this point is applied as fresh "current control" on top of prior state.
-        momentum *= MOMENTUM_CONFIG.decayPerPoint;
-
-        recentWinners.push(pointWinner);
-        if (recentWinners.length > MOMENTUM_CONFIG.recentWindowSize)
-        {
-            recentWinners.shift();
-        }
-
-        if (pointWinner === streakTeam)
-        {
-            streakLength++;
-        }
-        else
-        {
-            streakTeam = pointWinner;
-            streakLength = 1;
-        }
-
-        const pointSign = pointWinner === "A" ? 1 : -1;
-        const recentComponent = buildRecentComponent(recentWinners);
-        const streakComponent = buildStreakComponent(streakLength) * pointSign;
-        const pressureMultiplier = classifyPressureBonus(beforeScore, pointWinner, options);
-        // pressureMultiplier is in [1..3], and pressureScale controls the final pressure contribution size.
-        const pressureComponent = pressureMultiplier * MOMENTUM_CONFIG.pressureScale * pointSign;
-        const setCarryComponent = setCarry;
-
-        const gameCompleted = score.A.games !== oldGamesA ||
-            score.B.games !== oldGamesB ||
-            score.A.sets !== oldSetsA ||
-            score.B.sets !== oldSetsB;
-        const gameWinner = gameCompleted ? (score.lastGameTeam || pointWinner) : null;
-        const gameResultComponent = gameWinner ? (gameWinner === "A" ? 1 : -1) * MOMENTUM_CONFIG.gameWinBonus : 0;
-
-        // Only games-and-sets play has game boundaries worth marking on the
-        // graph; straight/tiebreak modes are one continuous run of points.
-        if (gameCompleted && standardMode)
-        {
-            gameMarkers.push(pointIndex);
-        }
-
-        const setCompleted = score.A.sets !== oldSetsA || score.B.sets !== oldSetsB;
-        const setWinner = setCompleted ? (score.lastSetTeam || pointWinner) : null;
-        const setResultComponent = setWinner ? (setWinner === "A" ? 1 : -1) * MOMENTUM_CONFIG.setWinBonus : 0;
-        if (setResultComponent !== 0)
-        {
-            setCarry += setResultComponent;
-        }
-
-        momentum += recentComponent;
-        momentum += streakComponent;
-        momentum += pressureComponent;
-        momentum += gameResultComponent;
-        momentum += setResultComponent;
-        momentum += setCarryComponent;
-        momentum = clamp(momentum, MOMENTUM_CONFIG.clampMin, MOMENTUM_CONFIG.clampMax);
-
-        timeline.push(momentum);
-        breakdown.push({
-            recentPoints: recentComponent,
-            currentStreak: streakComponent,
-            pressurePerformance: pressureComponent,
-            gameResultBonus: gameResultComponent,
-            setResultBonus: setResultComponent,
-            setCarryBonus: setCarryComponent,
-            total: momentum
-        });
-
-        if (!setCompleted)
-        {
-            setCarry *= MOMENTUM_CONFIG.setCarryDecayPerPoint;
-        }
-        // setCarry intentionally starts decaying from the next point after a set win for an immediate post-set carryover.
+  for (const pointWinner of pointHistory) {
+    if (pointWinner !== "A" && pointWinner !== "B") {
+      continue;
     }
 
-    return {
-        timeline,
-        breakdown,
-        gameMarkers,
-        config: MOMENTUM_CONFIG
-    };
+    pointIndex++;
+
+    const oldGamesA = score.A.games;
+    const oldGamesB = score.B.games;
+    const oldSetsA = score.A.sets;
+    const oldSetsB = score.B.sets;
+    const beforeScore = JSON.parse(JSON.stringify(score));
+
+    score = applyEvent(
+      score,
+      {
+        eventType: pointWinner === "A" ? "POINT_TEAM_A" : "POINT_TEAM_B",
+      },
+      options,
+    );
+
+    // Decay first so this point is applied as fresh "current control" on top of prior state.
+    momentum *= MOMENTUM_CONFIG.decayPerPoint;
+
+    recentWinners.push(pointWinner);
+    if (recentWinners.length > MOMENTUM_CONFIG.recentWindowSize) {
+      recentWinners.shift();
+    }
+
+    if (pointWinner === streakTeam) {
+      streakLength++;
+    } else {
+      streakTeam = pointWinner;
+      streakLength = 1;
+    }
+
+    const pointSign = pointWinner === "A" ? 1 : -1;
+    const recentComponent = buildRecentComponent(recentWinners);
+    const streakComponent = buildStreakComponent(streakLength) * pointSign;
+    const pressureMultiplier = classifyPressureBonus(beforeScore, pointWinner, options);
+    // pressureMultiplier is in [1..3], and pressureScale controls the final pressure contribution size.
+    const pressureComponent = pressureMultiplier * MOMENTUM_CONFIG.pressureScale * pointSign;
+    const setCarryComponent = setCarry;
+
+    const gameCompleted =
+      score.A.games !== oldGamesA ||
+      score.B.games !== oldGamesB ||
+      score.A.sets !== oldSetsA ||
+      score.B.sets !== oldSetsB;
+    const gameWinner = gameCompleted ? score.lastGameTeam || pointWinner : null;
+    const gameResultComponent = gameWinner
+      ? (gameWinner === "A" ? 1 : -1) * MOMENTUM_CONFIG.gameWinBonus
+      : 0;
+
+    // Only games-and-sets play has game boundaries worth marking on the
+    // graph; straight/tiebreak modes are one continuous run of points.
+    if (gameCompleted && standardMode) {
+      gameMarkers.push(pointIndex);
+    }
+
+    const setCompleted = score.A.sets !== oldSetsA || score.B.sets !== oldSetsB;
+    const setWinner = setCompleted ? score.lastSetTeam || pointWinner : null;
+    const setResultComponent = setWinner
+      ? (setWinner === "A" ? 1 : -1) * MOMENTUM_CONFIG.setWinBonus
+      : 0;
+    if (setResultComponent !== 0) {
+      setCarry += setResultComponent;
+    }
+
+    momentum += recentComponent;
+    momentum += streakComponent;
+    momentum += pressureComponent;
+    momentum += gameResultComponent;
+    momentum += setResultComponent;
+    momentum += setCarryComponent;
+    momentum = clamp(momentum, MOMENTUM_CONFIG.clampMin, MOMENTUM_CONFIG.clampMax);
+
+    timeline.push(momentum);
+    breakdown.push({
+      recentPoints: recentComponent,
+      currentStreak: streakComponent,
+      pressurePerformance: pressureComponent,
+      gameResultBonus: gameResultComponent,
+      setResultBonus: setResultComponent,
+      setCarryBonus: setCarryComponent,
+      total: momentum,
+    });
+
+    if (!setCompleted) {
+      setCarry *= MOMENTUM_CONFIG.setCarryDecayPerPoint;
+    }
+    // setCarry intentionally starts decaying from the next point after a set win for an immediate post-set carryover.
+  }
+
+  return {
+    timeline,
+    breakdown,
+    gameMarkers,
+    config: MOMENTUM_CONFIG,
+  };
 }
 
-function computeAdvancedStats(pointHistory, scoringOptions)
-{
-    const options = normalizeScoringOptions(scoringOptions);
-    const teamStats = {
-        A: createTeamStatsBucket(),
-        B: createTeamStatsBucket()
-    };
-    const matchStats = {
-        totalPoints: pointHistory.length,
-        deuceGames: 0,
-        goldenPointsPlayed: 0,
-        silverPointsPlayed: 0,
-        starPointsPlayed: 0,
-    };
-    const servePlayerStats = {
-        A1: createServePlayerStatsBucket(),
-        A2: createServePlayerStatsBucket(),
-        B1: createServePlayerStatsBucket(),
-        B2: createServePlayerStatsBucket()
-    };
+function computeAdvancedStats(pointHistory, scoringOptions) {
+  const options = normalizeScoringOptions(scoringOptions);
+  const teamStats = {
+    A: createTeamStatsBucket(),
+    B: createTeamStatsBucket(),
+  };
+  const matchStats = {
+    totalPoints: pointHistory.length,
+    deuceGames: 0,
+    goldenPointsPlayed: 0,
+    silverPointsPlayed: 0,
+    starPointsPlayed: 0,
+  };
+  const servePlayerStats = {
+    A1: createServePlayerStatsBucket(),
+    A2: createServePlayerStatsBucket(),
+    B1: createServePlayerStatsBucket(),
+    B2: createServePlayerStatsBucket(),
+  };
 
-    const standardMode = options.scoringMode === "standard";
-    let score = defaultScore(options);
+  const standardMode = options.scoringMode === "standard";
+  let score = defaultScore(options);
 
-    let streakTeam = null;
-    let streakLength = 0;
-    let currentServerTeam = "A";
-    let gameContext = {
-        reachedDeuce: false,
-        hadGamePoint: { A: false, B: false }
-    };
+  let streakTeam = null;
+  let streakLength = 0;
+  let currentServerTeam = "A";
+  let gameContext = {
+    reachedDeuce: false,
+    hadGamePoint: { A: false, B: false },
+  };
 
-    for (const pointWinner of pointHistory)
-    {
-        if (pointWinner !== "A" && pointWinner !== "B") continue;
+  for (const pointWinner of pointHistory) {
+    if (pointWinner !== "A" && pointWinner !== "B") continue;
 
-        const serverLabel = getCurrentServerLabel(score);
-        if (serverLabel && servePlayerStats[serverLabel])
-        {
-            servePlayerStats[serverLabel].pointsServed++;
-            if (pointWinner === serverLabel[0])
-            {
-                servePlayerStats[serverLabel].pointsWonOnServe++;
-            }
-        }
+    const serverLabel = getCurrentServerLabel(score);
+    if (serverLabel && servePlayerStats[serverLabel]) {
+      servePlayerStats[serverLabel].pointsServed++;
+      if (pointWinner === serverLabel[0]) {
+        servePlayerStats[serverLabel].pointsWonOnServe++;
+      }
+    }
 
-        const oldGamesA = score.A.games;
-        const oldGamesB = score.B.games;
-        const oldSetsA = score.A.sets;
-        const oldSetsB = score.B.sets;
-        const oldIsTiebreak = score.inTiebreak ||
-            (standardMode && options.tiebreakMode !== "off" && score.A.games === 6 && score.B.games === 6);
+    const oldGamesA = score.A.games;
+    const oldGamesB = score.B.games;
+    const oldSetsA = score.A.sets;
+    const oldSetsB = score.B.sets;
+    const oldIsTiebreak =
+      score.inTiebreak ||
+      (standardMode &&
+        options.tiebreakMode !== "off" &&
+        score.A.games === 6 &&
+        score.B.games === 6);
 
-        let isBreakPoint = false;
-        let breakPointServer = null;
-        let breakPointReturner = null;
-        let isGoldenPoint = false;
-        let isSilverPoint = false;
-        let isStarPoint = false;
+    let isBreakPoint = false;
+    let breakPointServer = null;
+    let breakPointReturner = null;
+    let isGoldenPoint = false;
+    let isSilverPoint = false;
+    let isStarPoint = false;
 
-        if (standardMode && !oldIsTiebreak)
-        {
-            const pointsA = Number(score.A.points) || 0;
-            const pointsB = Number(score.B.points) || 0;
+    if (standardMode && !oldIsTiebreak) {
+      const pointsA = Number(score.A.points) || 0;
+      const pointsB = Number(score.B.points) || 0;
 
-            if (pointsA >= 3 && pointsB >= 3)
-            {
-                gameContext.reachedDeuce = true;
-            }
+      if (pointsA >= 3 && pointsB >= 3) {
+        gameContext.reachedDeuce = true;
+      }
 
-            if (options.deuceMode === "golden" && pointsA === 3 && pointsB === 3)
-            {
-                isGoldenPoint = true;
-                matchStats.goldenPointsPlayed++;
-            }
+      if (options.deuceMode === "golden" && pointsA === 3 && pointsB === 3) {
+        isGoldenPoint = true;
+        matchStats.goldenPointsPlayed++;
+      }
 
-            if (options.deuceMode === "silver" && pointsA === 3 && pointsB === 3 && (Number(score.deuceCycles) || 0) > 0)
-            {
-                isSilverPoint = true;
-                matchStats.silverPointsPlayed++;
-            }
+      if (
+        options.deuceMode === "silver" &&
+        pointsA === 3 &&
+        pointsB === 3 &&
+        (Number(score.deuceCycles) || 0) > 0
+      ) {
+        isSilverPoint = true;
+        matchStats.silverPointsPlayed++;
+      }
 
-            if (options.deuceMode === "star" && pointsA === 3 && pointsB === 3 && (Number(score.deuceCycles) || 0) >= 2)
-            {
-                isStarPoint = true;
-                matchStats.starPointsPlayed++;
-            }
+      if (
+        options.deuceMode === "star" &&
+        pointsA === 3 &&
+        pointsB === 3 &&
+        (Number(score.deuceCycles) || 0) >= 2
+      ) {
+        isStarPoint = true;
+        matchStats.starPointsPlayed++;
+      }
 
-            const gamePointA = isTeamOnGamePoint(score, "A", options, false);
-            const gamePointB = isTeamOnGamePoint(score, "B", options, false);
-            if (gamePointA) gameContext.hadGamePoint.A = true;
-            if (gamePointB) gameContext.hadGamePoint.B = true;
+      const gamePointA = isTeamOnGamePoint(score, "A", options, false);
+      const gamePointB = isTeamOnGamePoint(score, "B", options, false);
+      if (gamePointA) gameContext.hadGamePoint.A = true;
+      if (gamePointB) gameContext.hadGamePoint.B = true;
 
-            breakPointServer = currentServerTeam;
-            breakPointReturner = breakPointServer === "A" ? "B" : "A";
-            isBreakPoint = isTeamOnGamePoint(score, breakPointReturner, options, false);
+      breakPointServer = currentServerTeam;
+      breakPointReturner = breakPointServer === "A" ? "B" : "A";
+      isBreakPoint = isTeamOnGamePoint(score, breakPointReturner, options, false);
 
-            if (isBreakPoint)
-            {
-                teamStats[breakPointServer].breakPointsFaced++;
-                teamStats[breakPointReturner].breakPointConversionOpportunities++;
-            }
-        }
+      if (isBreakPoint) {
+        teamStats[breakPointServer].breakPointsFaced++;
+        teamStats[breakPointReturner].breakPointConversionOpportunities++;
+      }
+    }
 
-        score = applyEvent(score, {
-            eventType: pointWinner === "A" ? "POINT_TEAM_A" : "POINT_TEAM_B"
-        }, options);
+    score = applyEvent(
+      score,
+      {
+        eventType: pointWinner === "A" ? "POINT_TEAM_A" : "POINT_TEAM_B",
+      },
+      options,
+    );
 
-        teamStats[pointWinner].pointsWon++;
+    teamStats[pointWinner].pointsWon++;
 
-        if (isGoldenPoint)
-        {
-            teamStats[pointWinner].goldenPointsWon++;
-        }
+    if (isGoldenPoint) {
+      teamStats[pointWinner].goldenPointsWon++;
+    }
 
-        if (isSilverPoint)
-        {
-            teamStats[pointWinner].silverPointsWon++;
-        }
+    if (isSilverPoint) {
+      teamStats[pointWinner].silverPointsWon++;
+    }
 
-        if (isStarPoint)
-        {
-            teamStats[pointWinner].starPointsWon++;
-        }
+    if (isStarPoint) {
+      teamStats[pointWinner].starPointsWon++;
+    }
 
-        if (isBreakPoint)
-        {
-            if (pointWinner === breakPointServer)
-            {
-                teamStats[breakPointServer].breakPointsWon++;
-            }
-            else
-            {
-                teamStats[breakPointReturner].breakPointConversions++;
-            }
-        }
+    if (isBreakPoint) {
+      if (pointWinner === breakPointServer) {
+        teamStats[breakPointServer].breakPointsWon++;
+      } else {
+        teamStats[breakPointReturner].breakPointConversions++;
+      }
+    }
 
-        if (pointWinner === streakTeam)
-        {
-            streakLength++;
-        }
-        else
-        {
-            streakTeam = pointWinner;
-            streakLength = 1;
-        }
+    if (pointWinner === streakTeam) {
+      streakLength++;
+    } else {
+      streakTeam = pointWinner;
+      streakLength = 1;
+    }
 
-        teamStats[pointWinner].longestScoringStreak = Math.max(
-            teamStats[pointWinner].longestScoringStreak,
-            streakLength
-        );
+    teamStats[pointWinner].longestScoringStreak = Math.max(
+      teamStats[pointWinner].longestScoringStreak,
+      streakLength,
+    );
 
-        const gameCompleted = standardMode && (
-            score.A.games !== oldGamesA ||
-            score.B.games !== oldGamesB ||
-            score.A.sets !== oldSetsA ||
-            score.B.sets !== oldSetsB
-        );
+    const gameCompleted =
+      standardMode &&
+      (score.A.games !== oldGamesA ||
+        score.B.games !== oldGamesB ||
+        score.A.sets !== oldSetsA ||
+        score.B.sets !== oldSetsB);
 
-        if (gameCompleted)
-        {
-            const gameWinner = score.lastGameTeam || pointWinner;
-            const gameLoser = gameWinner === "A" ? "B" : "A";
+    if (gameCompleted) {
+      const gameWinner = score.lastGameTeam || pointWinner;
+      const gameLoser = gameWinner === "A" ? "B" : "A";
 
-            if (gameContext.hadGamePoint.A)
-            {
-                teamStats.A.gamePointGames++;
-                if (gameWinner === "A") teamStats.A.gamePointConversions++;
-            }
+      if (gameContext.hadGamePoint.A) {
+        teamStats.A.gamePointGames++;
+        if (gameWinner === "A") teamStats.A.gamePointConversions++;
+      }
 
-            if (gameContext.hadGamePoint.B)
-            {
-                teamStats.B.gamePointGames++;
-                if (gameWinner === "B") teamStats.B.gamePointConversions++;
-            }
+      if (gameContext.hadGamePoint.B) {
+        teamStats.B.gamePointGames++;
+        if (gameWinner === "B") teamStats.B.gamePointConversions++;
+      }
 
-            if (gameContext.reachedDeuce)
-            {
-                matchStats.deuceGames++;
-                teamStats[gameWinner].gamesWonAfterDeuce++;
-                teamStats[gameLoser].gamesLostAfterDeuce++;
-            }
+      if (gameContext.reachedDeuce) {
+        matchStats.deuceGames++;
+        teamStats[gameWinner].gamesWonAfterDeuce++;
+        teamStats[gameLoser].gamesLostAfterDeuce++;
+      }
 
-            const setCompleted = score.A.sets !== oldSetsA || score.B.sets !== oldSetsB;
-            if (setCompleted)
-            {
-                const completedSet = Array.isArray(score.completedSets) && score.completedSets.length > 0
-                    ? score.completedSets[score.completedSets.length - 1]
-                    : null;
-                const finalSetScore = completedSet
-                    ? { A: Number(completedSet.A) || 0, B: Number(completedSet.B) || 0 }
-                    : {
-                        A: gameWinner === "A" ? oldGamesA + 1 : oldGamesA,
-                        B: gameWinner === "B" ? oldGamesB + 1 : oldGamesB
-                    };
-            }
-
-            gameContext = {
-                reachedDeuce: false,
-                hadGamePoint: { A: false, B: false }
+      const setCompleted = score.A.sets !== oldSetsA || score.B.sets !== oldSetsB;
+      if (setCompleted) {
+        const completedSet =
+          Array.isArray(score.completedSets) && score.completedSets.length > 0
+            ? score.completedSets[score.completedSets.length - 1]
+            : null;
+        const finalSetScore = completedSet
+          ? { A: Number(completedSet.A) || 0, B: Number(completedSet.B) || 0 }
+          : {
+              A: gameWinner === "A" ? oldGamesA + 1 : oldGamesA,
+              B: gameWinner === "B" ? oldGamesB + 1 : oldGamesB,
             };
+      }
 
-            currentServerTeam = currentServerTeam === "A" ? "B" : "A";
-        }
+      gameContext = {
+        reachedDeuce: false,
+        hadGamePoint: { A: false, B: false },
+      };
+
+      currentServerTeam = currentServerTeam === "A" ? "B" : "A";
     }
+  }
 
-    const totalPoints = Math.max(0, pointHistory.length);
-    ["A", "B"].forEach((team) =>
-    {
-        const bucket = teamStats[team];
-        bucket.pointWinPct = totalPoints > 0 ? (bucket.pointsWon / totalPoints) * 100 : 0;
-        bucket.breakPointWinPct = bucket.breakPointsFaced > 0
-            ? (bucket.breakPointsWon / bucket.breakPointsFaced) * 100
-            : 0;
-        bucket.breakPointConversionPct = bucket.breakPointConversionOpportunities > 0
-            ? (bucket.breakPointConversions / bucket.breakPointConversionOpportunities) * 100
-            : 0;
-        bucket.goldenPointWinPct = matchStats.goldenPointsPlayed > 0
-            ? (bucket.goldenPointsWon / matchStats.goldenPointsPlayed) * 100
-            : 0;
-        bucket.silverPointWinPct = matchStats.silverPointsPlayed > 0
-            ? (bucket.silverPointsWon / matchStats.silverPointsPlayed) * 100
-            : 0;
-        bucket.starPointWinPct = matchStats.starPointsPlayed > 0
-            ? (bucket.starPointsWon / matchStats.starPointsPlayed) * 100
-            : 0;
-        bucket.closingEfficiencyPct = bucket.gamePointGames > 0
-            ? (bucket.gamePointConversions / bucket.gamePointGames) * 100
-            : 0;
-    });
+  const totalPoints = Math.max(0, pointHistory.length);
+  ["A", "B"].forEach((team) => {
+    const bucket = teamStats[team];
+    bucket.pointWinPct = totalPoints > 0 ? (bucket.pointsWon / totalPoints) * 100 : 0;
+    bucket.breakPointWinPct =
+      bucket.breakPointsFaced > 0 ? (bucket.breakPointsWon / bucket.breakPointsFaced) * 100 : 0;
+    bucket.breakPointConversionPct =
+      bucket.breakPointConversionOpportunities > 0
+        ? (bucket.breakPointConversions / bucket.breakPointConversionOpportunities) * 100
+        : 0;
+    bucket.goldenPointWinPct =
+      matchStats.goldenPointsPlayed > 0
+        ? (bucket.goldenPointsWon / matchStats.goldenPointsPlayed) * 100
+        : 0;
+    bucket.silverPointWinPct =
+      matchStats.silverPointsPlayed > 0
+        ? (bucket.silverPointsWon / matchStats.silverPointsPlayed) * 100
+        : 0;
+    bucket.starPointWinPct =
+      matchStats.starPointsPlayed > 0
+        ? (bucket.starPointsWon / matchStats.starPointsPlayed) * 100
+        : 0;
+    bucket.closingEfficiencyPct =
+      bucket.gamePointGames > 0 ? (bucket.gamePointConversions / bucket.gamePointGames) * 100 : 0;
+  });
 
-    ["A1", "A2", "B1", "B2"].forEach((slot) =>
-    {
-        const bucket = servePlayerStats[slot];
-        bucket.serveWinPct = bucket.pointsServed > 0
-            ? (bucket.pointsWonOnServe / bucket.pointsServed) * 100
-            : 0;
-    });
+  ["A1", "A2", "B1", "B2"].forEach((slot) => {
+    const bucket = servePlayerStats[slot];
+    bucket.serveWinPct =
+      bucket.pointsServed > 0 ? (bucket.pointsWonOnServe / bucket.pointsServed) * 100 : 0;
+  });
 
-    return {
-        teamStats,
-        servePlayerStats,
-        matchStats,
-        scoringMode: options.scoringMode,
-        deuceMode: options.deuceMode
-    };
+  return {
+    teamStats,
+    servePlayerStats,
+    matchStats,
+    scoringMode: options.scoringMode,
+    deuceMode: options.deuceMode,
+  };
 }
 
-async function requireDevice(deviceId)
-{
-    const deviceRef = db.doc(`devices/${deviceId}`);
-    const deviceSnap = await deviceRef.get();
+async function requireDevice(deviceId) {
+  const deviceRef = db.doc(`devices/${deviceId}`);
+  const deviceSnap = await deviceRef.get();
 
-    if (!deviceSnap.exists)
-    {
-        return null;
-    }
+  if (!deviceSnap.exists) {
+    return null;
+  }
 
-    return {
-        ref: deviceRef,
-        snap: deviceSnap,
-        data: deviceSnap.data() || {}
-    };
+  return {
+    ref: deviceRef,
+    snap: deviceSnap,
+    data: deviceSnap.data() || {},
+  };
 }
 
-async function appendCourtEvent(courtId, event)
-{
-    const ref = db.collection(`courts/${courtId}/events`).doc();
-    await ref.set({
-        ...event,
-        createdAt: FieldValue.serverTimestamp()
-    });
+async function appendCourtEvent(courtId, event) {
+  const ref = db.collection(`courts/${courtId}/events`).doc();
+  await ref.set({
+    ...event,
+    createdAt: FieldValue.serverTimestamp(),
+  });
 
-    return ref.id;
+  return ref.id;
 }
 
 // -----------------------------
 // Event processor
 // -----------------------------
-function shouldApplyIncomingEventAfterReplay(eventId, replayResult)
-{
-    return replayResult.lastEventId !== eventId;
+function shouldApplyIncomingEventAfterReplay(eventId, replayResult) {
+  return replayResult.lastEventId !== eventId;
 }
 
 exports.onEventCreate = onDocumentCreated(
-{
+  {
     document: "courts/{courtId}/events/{eventId}",
     region: REGION,
     // Rapid clicks fire many concurrent invocations that all contend for the same
     // score/current document. Retry lets Cloud Functions redeliver this event if the
     // transaction below ever exhausts its attempts, so a point/undo is never dropped.
-    retry: true
-},
-async (event) =>
-{
+    retry: true,
+  },
+  async (event) => {
     const { courtId, eventId } = event.params;
     const newEvent = event.data?.data();
     const incomingEvent = { id: eventId, ...(newEvent || {}) };
@@ -918,434 +870,426 @@ async (event) =>
 
     if (!newEvent) return;
 
-    if (!SCORING_EVENTS.has(newEvent.eventType))
-    {
-        console.debug(`Ignoring non-scoring event ${eventId} (${newEvent.eventType}) for score processing.`);
-        return;
+    if (!SCORING_EVENTS.has(newEvent.eventType)) {
+      console.debug(
+        `Ignoring non-scoring event ${eventId} (${newEvent.eventType}) for score processing.`,
+      );
+      return;
     }
 
     const scoreRef = db.doc(`courts/${courtId}/score/current`);
 
-    try
-    {
-        await db.runTransaction(async (tx) =>
-        {
-            // Guard against reset races: if the event document was deleted by a
-            // concurrent reset before this CF ran its transaction, skip processing
-            // so a pre-reset point cannot corrupt the newly-zeroed score.
-            const eventRef = db.doc(`courts/${courtId}/events/${eventId}`);
-            const eventSnap = await tx.get(eventRef);
-            if (!eventSnap.exists)
-            {
-                return;
-            }
+    try {
+      await db.runTransaction(
+        async (tx) => {
+          // Guard against reset races: if the event document was deleted by a
+          // concurrent reset before this CF ran its transaction, skip processing
+          // so a pre-reset point cannot corrupt the newly-zeroed score.
+          const eventRef = db.doc(`courts/${courtId}/events/${eventId}`);
+          const eventSnap = await tx.get(eventRef);
+          if (!eventSnap.exists) {
+            return;
+          }
 
-            const courtRef = db.doc(`courts/${courtId}`);
-            const courtSnap = await tx.get(courtRef);
-            const courtData = courtSnap.exists ? courtSnap.data() : {};
-            const scoreSnap = await tx.get(scoreRef);
-            const activeScoringOptions = buildScoringOptions({
-                ...(courtData.scoringOptions || {}),
-                scoringMode: courtData.scoringMode || courtData.scoringOptions?.scoringMode
-            });
-            const activeScoreVersion = normalizeScoreVersion(courtData.scoreVersion);
-            let score = scoreSnap.exists ? scoreSnap.data() : defaultScore(activeScoringOptions);
-            const incomingOrder = getEventOrderingTuple(incomingEvent);
-            const persistedOrder = getPersistedScoreOrder(score);
-            const eventScoreVersion = normalizeScoreVersion(newEvent.scoreVersion);
+          const courtRef = db.doc(`courts/${courtId}`);
+          const courtSnap = await tx.get(courtRef);
+          const courtData = courtSnap.exists ? courtSnap.data() : {};
+          const scoreSnap = await tx.get(scoreRef);
+          const activeScoringOptions = buildScoringOptions({
+            ...(courtData.scoringOptions || {}),
+            scoringMode: courtData.scoringMode || courtData.scoringOptions?.scoringMode,
+          });
+          const activeScoreVersion = normalizeScoreVersion(courtData.scoreVersion);
+          let score = scoreSnap.exists ? scoreSnap.data() : defaultScore(activeScoringOptions);
+          const incomingOrder = getEventOrderingTuple(incomingEvent);
+          const persistedOrder = getPersistedScoreOrder(score);
+          const eventScoreVersion = normalizeScoreVersion(newEvent.scoreVersion);
 
-            if (score.lastEventId === eventId)
-            {
-                console.debug(`Event ${eventId} already processed, skipping.`);
-                return;
-            }
+          if (score.lastEventId === eventId) {
+            console.debug(`Event ${eventId} already processed, skipping.`);
+            return;
+          }
 
-            if (eventScoreVersion !== activeScoreVersion)
-            {
-                console.debug(
-                    `Skipping stale event ${eventId} for court ${courtId}: event version ${eventScoreVersion}, active version ${activeScoreVersion}.`
-                );
-                return;
-            }
-
-            const orderComparison = compareEventOrder(
-                incomingOrder.createdAt,
-                incomingOrder.id,
-                persistedOrder.createdAt,
-                persistedOrder.eventId
+          if (eventScoreVersion !== activeScoreVersion) {
+            console.debug(
+              `Skipping stale event ${eventId} for court ${courtId}: event version ${eventScoreVersion}, active version ${activeScoreVersion}.`,
             );
+            return;
+          }
 
-            if (orderComparison !== null && orderComparison <= 0)
-            {
-                // The incoming event arrived out-of-order relative to what the score
-                // document has already processed.  Rebuild from the full event log so
-                // the event is applied in its correct chronological position.
-                //
-                // Do a full replay here instead of resuming from a checkpoint.
-                // A delayed point can sort *before* the latest checkpoint boundary;
-                // if we only replay the tail after that checkpoint, that earlier
-                // event is silently skipped and never affects the authoritative
-                // score. A full replay also preserves the in-memory history stack
-                // that undo() depends on.
-                const useCheckpoint = false;
-                const replayResult = await replayScoreFromEvents(
-                    tx,
-                    courtId,
-                    activeScoringOptions,
-                    useCheckpoint,
-                    activeScoreVersion
-                );
-                const replayOrdering = resolveReplayOrdering(replayResult, score, incomingOrder);
+          const orderComparison = compareEventOrder(
+            incomingOrder.createdAt,
+            incomingOrder.id,
+            persistedOrder.createdAt,
+            persistedOrder.eventId,
+          );
 
-                tx.set(scoreRef, {
-                    ...toLiveScorePayload(replayResult.score),
-                    lastEventId: replayOrdering.eventId,
-                    lastProcessedEventId: replayOrdering.eventId,
-                    lastProcessedCreatedAt: replayOrdering.createdAt,
-                    updatedAt: FieldValue.serverTimestamp()
-                });
-
-                return;
-            }
-
-            // -----------------------------
-            // Handle RESET event
-            // -----------------------------
-            if (newEvent.eventType === "RESET")
-            {
-                console.debug(`Resetting court ${courtId}`);
-                const eventsRef = db.collection(`courts/${courtId}/events`);
-                const eventsSnap = await eventsRef.get();
-                const checkpointsRef = db.collection(`courts/${courtId}/${SCORE_CHECKPOINTS_COLLECTION}`);
-                const checkpointsSnap = await checkpointsRef.get();
-                const archiveId = new Date().toISOString();
-
-                const archiveBatch = db.batch();
-                eventsSnap.forEach(doc =>
-                {
-                    const archiveRef = db.doc(
-                        `courts/${courtId}/archive/${archiveId}/events/${doc.id}`
-                    );
-                    archiveBatch.set(archiveRef, {
-                        ...doc.data(),
-                        archivedAt: FieldValue.serverTimestamp(),
-                        resetBy: newEvent.createdBy || "system"
-                    });
-                });
-                await archiveBatch.commit();
-
-                const deleteBatch = db.batch();
-                eventsSnap.forEach(doc => deleteBatch.delete(doc.ref));
-                await deleteBatch.commit();
-
-                checkpointsSnap.forEach((docSnap) =>
-                {
-                    tx.delete(docSnap.ref);
-                });
-
-                tx.set(scoreRef, {
-                    ...toLiveScorePayload(defaultScore(activeScoringOptions)),
-                    lastEventId: eventId,
-                    lastProcessedEventId: eventId,
-                    lastProcessedCreatedAt: incomingOrder.createdAt,
-                    updatedAt: FieldValue.serverTimestamp()
-                });
-
-                return;
-            }
-
-            // Rebuild state for undo from the full event log (never a
-            // checkpoint - see replayScoreFromEventsExcluding), then apply it.
-            if (newEvent.eventType === "UNDO")
-            {
-                const replayResult = await replayScoreFromEventsExcluding(
-                    tx,
-                    courtId,
-                    activeScoringOptions,
-                    eventId,
-                    activeScoreVersion
-                );
-                const replayedScore = applyEvent(replayResult.score, incomingEvent, activeScoringOptions);
-
-                tx.set(scoreRef, {
-                    ...toLiveScorePayload(replayedScore),
-                    lastEventId: eventId,
-                    lastProcessedEventId: eventId,
-                    lastProcessedCreatedAt: incomingOrder.createdAt,
-                    updatedAt: FieldValue.serverTimestamp()
-                });
-
-                // Re-anchor the checkpoint stream at the undo itself. The
-                // newest existing checkpoint may sit exactly at the undone
-                // point (set completions and scoring-option changes both write
-                // one there); replays that resume from it would carry this
-                // UNDO in their tail and be forced onto the slow full-replay
-                // path forever. A fresh checkpoint holding the post-undo state
-                // lets subsequent points resume cheaply without ever crossing
-                // the undo boundary.
-                if (incomingOrder.createdAt)
-                {
-                    const checkpointRef = db.collection(`courts/${courtId}/${SCORE_CHECKPOINTS_COLLECTION}`).doc();
-                    tx.set(
-                        checkpointRef,
-                        buildCheckpointPayload(
-                            replayedScore,
-                            activeScoringOptions,
-                            eventId,
-                            incomingOrder.createdAt
-                        )
-                    );
-                }
-
-                return;
-            }
-
-            // Normal point events are rebuilt from the authoritative event log so
-            // rapid concurrent writes cannot drop points by racing on score/current.
-            const previousScore = {
-                ...defaultScore(activeScoringOptions),
-                ...(score || {}),
-                A: { ...defaultScore(activeScoringOptions).A, ...(score?.A || {}) },
-                B: { ...defaultScore(activeScoringOptions).B, ...(score?.B || {}) },
-                completedSets: Array.isArray(score?.completedSets)
-                    ? score.completedSets.map((set) => ({ ...set }))
-                    : []
-            };
-            const replayResult = await replayScoreFromEvents(tx, courtId, activeScoringOptions, true, activeScoreVersion);
-            const nextScore = replayResult.score;
+          if (orderComparison !== null && orderComparison <= 0) {
+            // The incoming event arrived out-of-order relative to what the score
+            // document has already processed.  Rebuild from the full event log so
+            // the event is applied in its correct chronological position.
+            //
+            // Do a full replay here instead of resuming from a checkpoint.
+            // A delayed point can sort *before* the latest checkpoint boundary;
+            // if we only replay the tail after that checkpoint, that earlier
+            // event is silently skipped and never affects the authoritative
+            // score. A full replay also preserves the in-memory history stack
+            // that undo() depends on.
+            const useCheckpoint = false;
+            const replayResult = await replayScoreFromEvents(
+              tx,
+              courtId,
+              activeScoringOptions,
+              useCheckpoint,
+              activeScoreVersion,
+            );
             const replayOrdering = resolveReplayOrdering(replayResult, score, incomingOrder);
 
-            console.debug(`Updating score for ${courtId}. New points: A:${nextScore.A.points}, B:${nextScore.B.points}`);
-
             tx.set(scoreRef, {
-                ...toLiveScorePayload(nextScore),
-                lastEventId: replayOrdering.eventId,
-                lastProcessedEventId: replayOrdering.eventId,
-                lastProcessedCreatedAt: replayOrdering.createdAt,
-                updatedAt: FieldValue.serverTimestamp()
+              ...toLiveScorePayload(replayResult.score),
+              lastEventId: replayOrdering.eventId,
+              lastProcessedEventId: replayOrdering.eventId,
+              lastProcessedCreatedAt: replayOrdering.createdAt,
+              updatedAt: FieldValue.serverTimestamp(),
             });
 
-            // Persist checkpoint whenever set total increases under active scoring mode.
-            if (didSetCountIncrease(previousScore, nextScore))
-            {
-                const checkpointRef = db.collection(`courts/${courtId}/${SCORE_CHECKPOINTS_COLLECTION}`).doc();
-                tx.set(
-                    checkpointRef,
-                    buildCheckpointPayload(
-                        nextScore,
-                        activeScoringOptions,
-                        replayOrdering.eventId,
-                        replayOrdering.createdAt
-                    )
-                );
+            return;
+          }
+
+          // -----------------------------
+          // Handle RESET event
+          // -----------------------------
+          if (newEvent.eventType === "RESET") {
+            console.debug(`Resetting court ${courtId}`);
+            const eventsRef = db.collection(`courts/${courtId}/events`);
+            const eventsSnap = await eventsRef.get();
+            const checkpointsRef = db.collection(
+              `courts/${courtId}/${SCORE_CHECKPOINTS_COLLECTION}`,
+            );
+            const checkpointsSnap = await checkpointsRef.get();
+            const archiveId = new Date().toISOString();
+
+            const archiveBatch = db.batch();
+            eventsSnap.forEach((doc) => {
+              const archiveRef = db.doc(`courts/${courtId}/archive/${archiveId}/events/${doc.id}`);
+              archiveBatch.set(archiveRef, {
+                ...doc.data(),
+                archivedAt: FieldValue.serverTimestamp(),
+                resetBy: newEvent.createdBy || "system",
+              });
+            });
+            await archiveBatch.commit();
+
+            const deleteBatch = db.batch();
+            eventsSnap.forEach((doc) => deleteBatch.delete(doc.ref));
+            await deleteBatch.commit();
+
+            checkpointsSnap.forEach((docSnap) => {
+              tx.delete(docSnap.ref);
+            });
+
+            tx.set(scoreRef, {
+              ...toLiveScorePayload(defaultScore(activeScoringOptions)),
+              lastEventId: eventId,
+              lastProcessedEventId: eventId,
+              lastProcessedCreatedAt: incomingOrder.createdAt,
+              updatedAt: FieldValue.serverTimestamp(),
+            });
+
+            return;
+          }
+
+          // Rebuild state for undo from the full event log (never a
+          // checkpoint - see replayScoreFromEventsExcluding), then apply it.
+          if (newEvent.eventType === "UNDO") {
+            const replayResult = await replayScoreFromEventsExcluding(
+              tx,
+              courtId,
+              activeScoringOptions,
+              eventId,
+              activeScoreVersion,
+            );
+            const replayedScore = applyEvent(
+              replayResult.score,
+              incomingEvent,
+              activeScoringOptions,
+            );
+
+            tx.set(scoreRef, {
+              ...toLiveScorePayload(replayedScore),
+              lastEventId: eventId,
+              lastProcessedEventId: eventId,
+              lastProcessedCreatedAt: incomingOrder.createdAt,
+              updatedAt: FieldValue.serverTimestamp(),
+            });
+
+            // Re-anchor the checkpoint stream at the undo itself. The
+            // newest existing checkpoint may sit exactly at the undone
+            // point (set completions and scoring-option changes both write
+            // one there); replays that resume from it would carry this
+            // UNDO in their tail and be forced onto the slow full-replay
+            // path forever. A fresh checkpoint holding the post-undo state
+            // lets subsequent points resume cheaply without ever crossing
+            // the undo boundary.
+            if (incomingOrder.createdAt) {
+              const checkpointRef = db
+                .collection(`courts/${courtId}/${SCORE_CHECKPOINTS_COLLECTION}`)
+                .doc();
+              tx.set(
+                checkpointRef,
+                buildCheckpointPayload(
+                  replayedScore,
+                  activeScoringOptions,
+                  eventId,
+                  incomingOrder.createdAt,
+                ),
+              );
             }
-        }, { maxAttempts: 20 });
-    } catch (err)
-    {
-        console.error(`Transaction failed for event ${eventId}:`, err);
-        // Rethrow so Cloud Functions retries delivery (see retry:true above) instead of
-        // silently dropping this point/undo when the score doc is under heavy contention.
-        throw err;
+
+            return;
+          }
+
+          // Normal point events are rebuilt from the authoritative event log so
+          // rapid concurrent writes cannot drop points by racing on score/current.
+          const previousScore = {
+            ...defaultScore(activeScoringOptions),
+            ...(score || {}),
+            A: { ...defaultScore(activeScoringOptions).A, ...(score?.A || {}) },
+            B: { ...defaultScore(activeScoringOptions).B, ...(score?.B || {}) },
+            completedSets: Array.isArray(score?.completedSets)
+              ? score.completedSets.map((set) => ({ ...set }))
+              : [],
+          };
+          const replayResult = await replayScoreFromEvents(
+            tx,
+            courtId,
+            activeScoringOptions,
+            true,
+            activeScoreVersion,
+          );
+          const nextScore = replayResult.score;
+          const replayOrdering = resolveReplayOrdering(replayResult, score, incomingOrder);
+
+          console.debug(
+            `Updating score for ${courtId}. New points: A:${nextScore.A.points}, B:${nextScore.B.points}`,
+          );
+
+          tx.set(scoreRef, {
+            ...toLiveScorePayload(nextScore),
+            lastEventId: replayOrdering.eventId,
+            lastProcessedEventId: replayOrdering.eventId,
+            lastProcessedCreatedAt: replayOrdering.createdAt,
+            updatedAt: FieldValue.serverTimestamp(),
+          });
+
+          // Persist checkpoint whenever set total increases under active scoring mode.
+          if (didSetCountIncrease(previousScore, nextScore)) {
+            const checkpointRef = db
+              .collection(`courts/${courtId}/${SCORE_CHECKPOINTS_COLLECTION}`)
+              .doc();
+            tx.set(
+              checkpointRef,
+              buildCheckpointPayload(
+                nextScore,
+                activeScoringOptions,
+                replayOrdering.eventId,
+                replayOrdering.createdAt,
+              ),
+            );
+          }
+        },
+        { maxAttempts: 20 },
+      );
+    } catch (err) {
+      console.error(`Transaction failed for event ${eventId}:`, err);
+      // Rethrow so Cloud Functions retries delivery (see retry:true above) instead of
+      // silently dropping this point/undo when the score doc is under heavy contention.
+      throw err;
     }
-}
+  },
 );
 
 // -----------------------------
 // Callable reset (shallow/deep)
 // -----------------------------
-exports.resetCourt = onCall(
-    { region: REGION },
-    async (request) =>
-    {
-        const {
-            courtId,
-            deepReset,
-            newPassword,
-            requirePassword,
-            scoringMode,
-            scoringOptions: incomingScoringOptions
-        } = request.data;
-        if (!courtId) throw new Error("Missing courtId");
+exports.resetCourt = onCall({ region: REGION }, async (request) => {
+  const {
+    courtId,
+    deepReset,
+    newPassword,
+    requirePassword,
+    scoringMode,
+    scoringOptions: incomingScoringOptions,
+  } = request.data;
+  if (!courtId) throw new Error("Missing courtId");
 
-        const courtRef = db.doc(`courts/${courtId}`);
-        const courtDoc = await courtRef.get();
-        const courtData = courtDoc.exists ? courtDoc.data() : {};
-        const trimmedPassword = typeof newPassword === "string" ? newPassword.trim() : "";
+  const courtRef = db.doc(`courts/${courtId}`);
+  const courtDoc = await courtRef.get();
+  const courtData = courtDoc.exists ? courtDoc.data() : {};
+  const trimmedPassword = typeof newPassword === "string" ? newPassword.trim() : "";
 
-        // A password is optional on reset: blank means "keep the existing court
-        // password". When one is supplied it still has to satisfy the usual rules,
-        // and callers can set requirePassword to make it mandatory.
-        if (requirePassword && !trimmedPassword)
-        {
-            throw new Error("Password must be at least 4 characters.");
-        }
+  // A password is optional on reset: blank means "keep the existing court
+  // password". When one is supplied it still has to satisfy the usual rules,
+  // and callers can set requirePassword to make it mandatory.
+  if (requirePassword && !trimmedPassword) {
+    throw new Error("Password must be at least 4 characters.");
+  }
 
-        if (trimmedPassword)
-        {
-            if (trimmedPassword.length < 4)
-            {
-                throw new Error("Password must be at least 4 characters.");
-            }
-
-            if (trimmedPassword === courtId)
-            {
-                throw new Error("Password must be different from court name.");
-            }
-        }
-
-        const scoringOptions = buildScoringOptions({
-            ...(courtData.scoringOptions || {}),
-            ...(incomingScoringOptions || {}),
-            scoringMode: scoringMode || courtData.scoringMode || courtData.scoringOptions?.scoringMode
-        });
-        const nextScoreVersion = normalizeScoreVersion(courtData.scoreVersion) + 1;
-
-        const eventsRef = db.collection(`courts/${courtId}/events`);
-        const eventsSnap = await eventsRef.get();
-        const checkpointsRef = db.collection(`courts/${courtId}/${SCORE_CHECKPOINTS_COLLECTION}`);
-        const checkpointsSnap = await checkpointsRef.get();
-        const archiveId = new Date().toISOString();
-
-        const archiveBatch = db.batch();
-        eventsSnap.forEach(doc =>
-        {
-            const archiveRef = db.doc(
-                `courts/${courtId}/archive/${archiveId}/events/${doc.id}`
-            );
-            archiveBatch.set(archiveRef, {
-                ...doc.data(),
-                archivedAt: FieldValue.serverTimestamp(),
-                resetBy: request.auth?.uid || "system"
-            });
-        });
-        await archiveBatch.commit();
-
-        // Delete events
-        const deleteBatch = db.batch();
-        eventsSnap.forEach(doc => deleteBatch.delete(doc.ref));
-        checkpointsSnap.forEach(doc => deleteBatch.delete(doc.ref));
-        await deleteBatch.commit();
-
-        // Reset score. Include explicit null sentinels for the ordering fields so
-        // that any in-flight Cloud Function invocation for a pre-reset event — whose
-        // event document has already been deleted — cannot corrupt the fresh score
-        // (the tx.get(eventRef) existence check in onEventCreate will bail early,
-        // but writing nulls here also clears any stale baseline timestamp that would
-        // make a late CF fall through the orderComparison guard).
-        await db.doc(`courts/${courtId}/score/current`).set({
-            ...toLiveScorePayload(defaultScore(scoringOptions)),
-            lastProcessedEventId: null,
-            lastProcessedCreatedAt: null
-        });
-
-        const courtUpdates = {
-            scoreVersion: nextScoreVersion,
-            scoringOptions,
-            scoringMode: scoringOptions.scoringMode
-        };
-
-        // Skip the write when the password is unchanged so connected clients do not
-        // see a password-change event (which would switch them to spectate mode).
-        if (trimmedPassword && trimmedPassword !== courtData.password)
-        {
-            courtUpdates.password = trimmedPassword;
-        }
-
-        if (deepReset)
-        {
-            courtUpdates.teamNames = { ...DEFAULT_TEAM_NAMES };
-            courtUpdates.playerNames = { ...DEFAULT_PLAYER_NAMES };
-        }
-
-        if (Object.keys(courtUpdates).length > 0)
-        {
-            await courtRef.set(courtUpdates, { merge: true });
-        }
-
-        return {
-            success: true,
-            archivedId: archiveId,
-            scoreVersion: nextScoreVersion,
-            scoringMode: scoringOptions.scoringMode,
-            scoringOptions
-        };
+  if (trimmedPassword) {
+    if (trimmedPassword.length < 4) {
+      throw new Error("Password must be at least 4 characters.");
     }
-);
+
+    if (trimmedPassword === courtId) {
+      throw new Error("Password must be different from court name.");
+    }
+  }
+
+  const scoringOptions = buildScoringOptions({
+    ...(courtData.scoringOptions || {}),
+    ...(incomingScoringOptions || {}),
+    scoringMode: scoringMode || courtData.scoringMode || courtData.scoringOptions?.scoringMode,
+  });
+  const nextScoreVersion = normalizeScoreVersion(courtData.scoreVersion) + 1;
+
+  const eventsRef = db.collection(`courts/${courtId}/events`);
+  const eventsSnap = await eventsRef.get();
+  const checkpointsRef = db.collection(`courts/${courtId}/${SCORE_CHECKPOINTS_COLLECTION}`);
+  const checkpointsSnap = await checkpointsRef.get();
+  const archiveId = new Date().toISOString();
+
+  const archiveBatch = db.batch();
+  eventsSnap.forEach((doc) => {
+    const archiveRef = db.doc(`courts/${courtId}/archive/${archiveId}/events/${doc.id}`);
+    archiveBatch.set(archiveRef, {
+      ...doc.data(),
+      archivedAt: FieldValue.serverTimestamp(),
+      resetBy: request.auth?.uid || "system",
+    });
+  });
+  await archiveBatch.commit();
+
+  // Delete events
+  const deleteBatch = db.batch();
+  eventsSnap.forEach((doc) => deleteBatch.delete(doc.ref));
+  checkpointsSnap.forEach((doc) => deleteBatch.delete(doc.ref));
+  await deleteBatch.commit();
+
+  // Reset score. Include explicit null sentinels for the ordering fields so
+  // that any in-flight Cloud Function invocation for a pre-reset event — whose
+  // event document has already been deleted — cannot corrupt the fresh score
+  // (the tx.get(eventRef) existence check in onEventCreate will bail early,
+  // but writing nulls here also clears any stale baseline timestamp that would
+  // make a late CF fall through the orderComparison guard).
+  await db.doc(`courts/${courtId}/score/current`).set({
+    ...toLiveScorePayload(defaultScore(scoringOptions)),
+    lastProcessedEventId: null,
+    lastProcessedCreatedAt: null,
+  });
+
+  const courtUpdates = {
+    scoreVersion: nextScoreVersion,
+    scoringOptions,
+    scoringMode: scoringOptions.scoringMode,
+  };
+
+  // Skip the write when the password is unchanged so connected clients do not
+  // see a password-change event (which would switch them to spectate mode).
+  if (trimmedPassword && trimmedPassword !== courtData.password) {
+    courtUpdates.password = trimmedPassword;
+  }
+
+  if (deepReset) {
+    courtUpdates.teamNames = { ...DEFAULT_TEAM_NAMES };
+    courtUpdates.playerNames = { ...DEFAULT_PLAYER_NAMES };
+  }
+
+  if (Object.keys(courtUpdates).length > 0) {
+    await courtRef.set(courtUpdates, { merge: true });
+  }
+
+  return {
+    success: true,
+    archivedId: archiveId,
+    scoreVersion: nextScoreVersion,
+    scoringMode: scoringOptions.scoringMode,
+    scoringOptions,
+  };
+});
 
 // -----------------------------
 // Update scoring options and replay events
 // -----------------------------
-exports.updateScoringOptions = onCall(
-    { region: REGION },
-    async (request) =>
-    {
-        const { courtId, scoringOptions: incomingScoringOptions, scoringMode } = request.data;
-        if (!courtId) throw new Error("Missing courtId");
+exports.updateScoringOptions = onCall({ region: REGION }, async (request) => {
+  const { courtId, scoringOptions: incomingScoringOptions, scoringMode } = request.data;
+  if (!courtId) throw new Error("Missing courtId");
 
-        const courtRef = db.doc(`courts/${courtId}`);
-        const scoreRef = db.doc(`courts/${courtId}/score/current`);
-        const eventsRef = db
-            .collection(`courts/${courtId}/events`)
-            .orderBy("createdAt", "asc")
-            .orderBy(FieldPath.documentId(), "asc");
+  const courtRef = db.doc(`courts/${courtId}`);
+  const scoreRef = db.doc(`courts/${courtId}/score/current`);
+  const eventsRef = db
+    .collection(`courts/${courtId}/events`)
+    .orderBy("createdAt", "asc")
+    .orderBy(FieldPath.documentId(), "asc");
 
-        const courtSnap = await courtRef.get();
-        if (!courtSnap.exists)
-        {
-            throw new Error("Court not found");
-        }
+  const courtSnap = await courtRef.get();
+  if (!courtSnap.exists) {
+    throw new Error("Court not found");
+  }
 
-        const courtData = courtSnap.data() || {};
-        const normalizedOptions = buildScoringOptions({
-            ...(courtData.scoringOptions || {}),
-            ...(incomingScoringOptions || {}),
-            scoringMode: scoringMode || courtData.scoringMode || courtData.scoringOptions?.scoringMode
-        });
-        await courtRef.set({ scoringOptions: normalizedOptions, scoringMode: normalizedOptions.scoringMode }, { merge: true });
+  const courtData = courtSnap.data() || {};
+  const normalizedOptions = buildScoringOptions({
+    ...(courtData.scoringOptions || {}),
+    ...(incomingScoringOptions || {}),
+    scoringMode: scoringMode || courtData.scoringMode || courtData.scoringOptions?.scoringMode,
+  });
+  await courtRef.set(
+    { scoringOptions: normalizedOptions, scoringMode: normalizedOptions.scoringMode },
+    { merge: true },
+  );
 
-        const activeScoreVersion = normalizeScoreVersion(courtData.scoreVersion);
-        const eventsSnap = await eventsRef.get();
-        const events = eventsSnap.docs
-            .map((doc) => ({ id: doc.id, ...doc.data() }))
-            .filter((event) =>
-                !SCORING_EVENTS.has(event.eventType) ||
-                normalizeScoreVersion(event.scoreVersion) === activeScoreVersion);
-        const replayedScore = replayEvents(events, normalizedOptions);
+  const activeScoreVersion = normalizeScoreVersion(courtData.scoreVersion);
+  const eventsSnap = await eventsRef.get();
+  const events = eventsSnap.docs
+    .map((doc) => ({ id: doc.id, ...doc.data() }))
+    .filter(
+      (event) =>
+        !SCORING_EVENTS.has(event.eventType) ||
+        normalizeScoreVersion(event.scoreVersion) === activeScoreVersion,
+    );
+  const replayedScore = replayEvents(events, normalizedOptions);
 
-        const lastEventId = events.length > 0 ? events[events.length - 1].id : null;
-        const lastEventCreatedAt = events.length > 0
-            ? (events[events.length - 1].createdAt || null)
-            : null;
-        await scoreRef.set({
-            ...toLiveScorePayload(replayedScore),
-            lastEventId,
-            lastProcessedEventId: lastEventId,
-            lastProcessedCreatedAt: lastEventCreatedAt,
-            updatedAt: FieldValue.serverTimestamp()
-        });
+  const lastEventId = events.length > 0 ? events[events.length - 1].id : null;
+  const lastEventCreatedAt = events.length > 0 ? events[events.length - 1].createdAt || null : null;
+  await scoreRef.set({
+    ...toLiveScorePayload(replayedScore),
+    lastEventId,
+    lastProcessedEventId: lastEventId,
+    lastProcessedCreatedAt: lastEventCreatedAt,
+    updatedAt: FieldValue.serverTimestamp(),
+  });
 
-        const checkpointsRef = db.collection(`courts/${courtId}/${SCORE_CHECKPOINTS_COLLECTION}`);
-        const checkpointsSnap = await checkpointsRef.get();
-        const checkpointDeleteBatch = db.batch();
-        checkpointsSnap.forEach((docSnap) => checkpointDeleteBatch.delete(docSnap.ref));
-        await checkpointDeleteBatch.commit();
+  const checkpointsRef = db.collection(`courts/${courtId}/${SCORE_CHECKPOINTS_COLLECTION}`);
+  const checkpointsSnap = await checkpointsRef.get();
+  const checkpointDeleteBatch = db.batch();
+  checkpointsSnap.forEach((docSnap) => checkpointDeleteBatch.delete(docSnap.ref));
+  await checkpointDeleteBatch.commit();
 
-        if (lastEventId && lastEventCreatedAt)
-        {
-            await checkpointsRef.doc().set(
-                buildCheckpointPayload(replayedScore, normalizedOptions, lastEventId, lastEventCreatedAt)
-            );
-        }
+  if (lastEventId && lastEventCreatedAt) {
+    await checkpointsRef
+      .doc()
+      .set(
+        buildCheckpointPayload(replayedScore, normalizedOptions, lastEventId, lastEventCreatedAt),
+      );
+  }
 
-        return {
-            success: true,
-            scoringOptions: normalizedOptions,
-            scoringMode: normalizedOptions.scoringMode,
-            mode: normalizedOptions.scoringMode,
-            score: replayedScore
-        };
-    }
-);
+  return {
+    success: true,
+    scoringOptions: normalizedOptions,
+    scoringMode: normalizedOptions.scoringMode,
+    mode: normalizedOptions.scoringMode,
+    score: replayedScore,
+  };
+});
 
 // -----------------------------
 // Get detailed score (replay)
@@ -1354,387 +1298,339 @@ exports.updateScoringOptions = onCall(
 // stats and momentum payloads are derived from. Shared by the getDetailedScore
 // callable (scoreboard app), the public /stats/{courtId} stats endpoint (OBS
 // overlay stat cards) and the public /momentum/{courtId} momentum endpoint.
-async function replayCourtAnalytics(courtId)
-{
-    const courtSnap = await db.doc(`courts/${courtId}`).get();
-    const courtExists = courtSnap.exists;
-    const courtData = courtExists ? courtSnap.data() : {};
-    const scoringOptions = buildScoringOptions({
-        ...(courtData.scoringOptions || {}),
-        scoringMode: courtData.scoringMode || courtData.scoringOptions?.scoringMode
-    });
-    const normalizedOptions = normalizeScoringOptions(scoringOptions);
+async function replayCourtAnalytics(courtId) {
+  const courtSnap = await db.doc(`courts/${courtId}`).get();
+  const courtExists = courtSnap.exists;
+  const courtData = courtExists ? courtSnap.data() : {};
+  const scoringOptions = buildScoringOptions({
+    ...(courtData.scoringOptions || {}),
+    scoringMode: courtData.scoringMode || courtData.scoringOptions?.scoringMode,
+  });
+  const normalizedOptions = normalizeScoringOptions(scoringOptions);
 
-    const playerNames = {
-        A1: typeof courtData?.playerNames?.A1 === "string" ? courtData.playerNames.A1 : "",
-        A2: typeof courtData?.playerNames?.A2 === "string" ? courtData.playerNames.A2 : "",
-        B1: typeof courtData?.playerNames?.B1 === "string" ? courtData.playerNames.B1 : "",
-        B2: typeof courtData?.playerNames?.B2 === "string" ? courtData.playerNames.B2 : ""
-    };
+  const playerNames = {
+    A1: typeof courtData?.playerNames?.A1 === "string" ? courtData.playerNames.A1 : "",
+    A2: typeof courtData?.playerNames?.A2 === "string" ? courtData.playerNames.A2 : "",
+    B1: typeof courtData?.playerNames?.B1 === "string" ? courtData.playerNames.B1 : "",
+    B2: typeof courtData?.playerNames?.B2 === "string" ? courtData.playerNames.B2 : "",
+  };
 
-    const eventsSnap = await db
-        .collection(`courts/${courtId}/events`)
-        .orderBy("createdAt", "asc")
-        .orderBy(FieldPath.documentId(), "asc")
-        .get();
+  const eventsSnap = await db
+    .collection(`courts/${courtId}/events`)
+    .orderBy("createdAt", "asc")
+    .orderBy(FieldPath.documentId(), "asc")
+    .get();
 
-    // Use only scoring events so details replay mirrors score/current logic,
-    // including the stale-scoreVersion guard applied by onEventCreate.
-    const activeScoreVersion = normalizeScoreVersion(courtData.scoreVersion);
-    const events = eventsSnap.docs
-        .map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }))
-        .filter((event) =>
-            SCORING_EVENTS.has(event.eventType) &&
-            normalizeScoreVersion(event.scoreVersion) === activeScoreVersion);
+  // Use only scoring events so details replay mirrors score/current logic,
+  // including the stale-scoreVersion guard applied by onEventCreate.
+  const activeScoreVersion = normalizeScoreVersion(courtData.scoreVersion);
+  const events = eventsSnap.docs
+    .map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }))
+    .filter(
+      (event) =>
+        SCORING_EVENTS.has(event.eventType) &&
+        normalizeScoreVersion(event.scoreVersion) === activeScoreVersion,
+    );
 
-    let score = defaultScore(normalizedOptions);
+  let score = defaultScore(normalizedOptions);
 
-    // Derived analytics streams (for momentum/stats UI)
-    let pointHistory = [];     // ["A", "B", ...]
-    let setPointMarkers = [];  // 1-based point index where a set is completed
+  // Derived analytics streams (for momentum/stats UI)
+  let pointHistory = []; // ["A", "B", ...]
+  let setPointMarkers = []; // 1-based point index where a set is completed
 
-    for (const event of events)
-    {
-        const oldSetsA = score.A.sets;
-        const oldSetsB = score.B.sets;
-        const oldTotalPoints = (Number(score.A.totalPoints) || 0) + (Number(score.B.totalPoints) || 0);
+  for (const event of events) {
+    const oldSetsA = score.A.sets;
+    const oldSetsB = score.B.sets;
+    const oldTotalPoints = (Number(score.A.totalPoints) || 0) + (Number(score.B.totalPoints) || 0);
 
-        score = applyEvent(score, event, normalizedOptions);
+    score = applyEvent(score, event, normalizedOptions);
 
-        const newTotalPoints = (Number(score.A.totalPoints) || 0) + (Number(score.B.totalPoints) || 0);
-        const pointApplied = newTotalPoints > oldTotalPoints;
+    const newTotalPoints = (Number(score.A.totalPoints) || 0) + (Number(score.B.totalPoints) || 0);
+    const pointApplied = newTotalPoints > oldTotalPoints;
 
-        if (event.eventType === "RESET")
-        {
-            pointHistory = [];
-            setPointMarkers = [];
-            continue;
-        }
-
-        if (event.eventType === "UNDO")
-        {
-            // Only pop pointHistory if the undo actually reversed a point.
-            // If history was empty, the engine returns the score unchanged
-            // (totalPoints stays the same), so we must not pop a real entry.
-            const pointActuallyUndone = newTotalPoints < oldTotalPoints;
-            if (pointActuallyUndone && pointHistory.length > 0)
-            {
-                pointHistory.pop();
-            }
-            while (
-                setPointMarkers.length > 0 &&
-                setPointMarkers[setPointMarkers.length - 1] > pointHistory.length
-            )
-            {
-                setPointMarkers.pop();
-            }
-            continue;
-        }
-
-        if (pointApplied && event.eventType === "POINT_TEAM_A")
-        {
-            pointHistory.push("A");
-        }
-        else if (pointApplied && event.eventType === "POINT_TEAM_B")
-        {
-            pointHistory.push("B");
-        }
-
-        const setCompleted = score.A.sets > oldSetsA || score.B.sets > oldSetsB;
-        if (pointApplied && setCompleted)
-        {
-            setPointMarkers.push(pointHistory.length);
-        }
+    if (event.eventType === "RESET") {
+      pointHistory = [];
+      setPointMarkers = [];
+      continue;
     }
 
-    return {
-        courtExists,
-        score,
-        normalizedOptions,
-        playerNames,
-        pointHistory,
-        setPointMarkers
-    };
+    if (event.eventType === "UNDO") {
+      // Only pop pointHistory if the undo actually reversed a point.
+      // If history was empty, the engine returns the score unchanged
+      // (totalPoints stays the same), so we must not pop a real entry.
+      const pointActuallyUndone = newTotalPoints < oldTotalPoints;
+      if (pointActuallyUndone && pointHistory.length > 0) {
+        pointHistory.pop();
+      }
+      while (
+        setPointMarkers.length > 0 &&
+        setPointMarkers[setPointMarkers.length - 1] > pointHistory.length
+      ) {
+        setPointMarkers.pop();
+      }
+      continue;
+    }
+
+    if (pointApplied && event.eventType === "POINT_TEAM_A") {
+      pointHistory.push("A");
+    } else if (pointApplied && event.eventType === "POINT_TEAM_B") {
+      pointHistory.push("B");
+    }
+
+    const setCompleted = score.A.sets > oldSetsA || score.B.sets > oldSetsB;
+    if (pointApplied && setCompleted) {
+      setPointMarkers.push(pointHistory.length);
+    }
+  }
+
+  return {
+    courtExists,
+    score,
+    normalizedOptions,
+    playerNames,
+    pointHistory,
+    setPointMarkers,
+  };
 }
 
 // Scores, per-set rows and aggregate stats. The point-by-point momentum
 // streams deliberately live in buildMomentumData instead: they are the
 // heaviest part of the payload and the only part every consumer can render
 // later, so keeping them out lets the score tables paint immediately.
-async function buildDetailedScoreData(courtId)
-{
-    const {
-        courtExists,
-        score,
-        normalizedOptions,
-        playerNames,
-        pointHistory
-    } = await replayCourtAnalytics(courtId);
+async function buildDetailedScoreData(courtId) {
+  const { courtExists, score, normalizedOptions, playerNames, pointHistory } =
+    await replayCourtAnalytics(courtId);
 
-    // Canonical source for per-set rows: completedSets from scorer state.
-    // This guarantees details table aligns with score/current.
-    const setScores = Array.isArray(score.completedSets)
-        ? score.completedSets.map((set) => ({
-            A: Number(set?.A) || 0,
-            B: Number(set?.B) || 0,
-            tiebreakPoints: set?.tiebreakPoints || null
-        }))
-        : [];
+  // Canonical source for per-set rows: completedSets from scorer state.
+  // This guarantees details table aligns with score/current.
+  const setScores = Array.isArray(score.completedSets)
+    ? score.completedSets.map((set) => ({
+        A: Number(set?.A) || 0,
+        B: Number(set?.B) || 0,
+        tiebreakPoints: set?.tiebreakPoints || null,
+      }))
+    : [];
 
-    const currentSetGames = {
-        A: Number(score.A.games) || 0,
-        B: Number(score.B.games) || 0
-    };
+  const currentSetGames = {
+    A: Number(score.A.games) || 0,
+    B: Number(score.B.games) || 0,
+  };
 
-    return {
-        courtExists,
-        payload: {
-            sets: setScores,
-            currentGames: currentSetGames,
-            points: {
-                A: Number(score.A.points) || 0,
-                B: Number(score.B.points) || 0
-            },
-            setsA: Number(score.A.sets) || 0,
-            setsB: Number(score.B.sets) || 0,
-            scoringMode: normalizedOptions.scoringMode,
-            matchComplete: Boolean(score.matchComplete),
-            playerNames,
-            advancedStats: computeAdvancedStats(pointHistory, normalizedOptions)
-        }
-    };
+  return {
+    courtExists,
+    payload: {
+      sets: setScores,
+      currentGames: currentSetGames,
+      points: {
+        A: Number(score.A.points) || 0,
+        B: Number(score.B.points) || 0,
+      },
+      setsA: Number(score.A.sets) || 0,
+      setsB: Number(score.B.sets) || 0,
+      scoringMode: normalizedOptions.scoringMode,
+      matchComplete: Boolean(score.matchComplete),
+      playerNames,
+      advancedStats: computeAdvancedStats(pointHistory, normalizedOptions),
+    },
+  };
 }
 
 // Everything the momentum graph draws and nothing else. The overlay's momentum
 // card and the scoreboard's match-details graph both read this single payload,
 // so the two renderers cannot drift apart.
-async function buildMomentumData(courtId)
-{
-    const {
-        courtExists,
-        score,
-        normalizedOptions,
-        pointHistory,
-        setPointMarkers
-    } = await replayCourtAnalytics(courtId);
+async function buildMomentumData(courtId) {
+  const { courtExists, score, normalizedOptions, pointHistory, setPointMarkers } =
+    await replayCourtAnalytics(courtId);
 
-    const momentumData = computeMomentumTimeline(pointHistory, normalizedOptions);
+  const momentumData = computeMomentumTimeline(pointHistory, normalizedOptions);
 
-    return {
-        courtExists,
-        payload: {
-            pointHistory,
-            momentumTimeline: momentumData.timeline,
-            setPointMarkers,
-            gameMarkers: momentumData.gameMarkers,
-            totalPoints: pointHistory.length,
-            scoringMode: normalizedOptions.scoringMode,
-            matchComplete: Boolean(score.matchComplete)
-        }
-    };
+  return {
+    courtExists,
+    payload: {
+      pointHistory,
+      momentumTimeline: momentumData.timeline,
+      setPointMarkers,
+      gameMarkers: momentumData.gameMarkers,
+      totalPoints: pointHistory.length,
+      scoringMode: normalizedOptions.scoringMode,
+      matchComplete: Boolean(score.matchComplete),
+    },
+  };
 }
 
-exports.getDetailedScore = onCall(
-    { region: REGION },
-    async (request) =>
-    {
-        const { courtId } = request.data;
-        if (!courtId) throw new Error("Missing courtId");
+exports.getDetailedScore = onCall({ region: REGION }, async (request) => {
+  const { courtId } = request.data;
+  if (!courtId) throw new Error("Missing courtId");
 
-        const { payload } = await buildDetailedScoreData(courtId);
-        return payload;
-    }
-);
+  const { payload } = await buildDetailedScoreData(courtId);
+  return payload;
+});
 
 // -----------------------------
 // POST an event from ESP32 etc
 // -----------------------------
-exports.postEvent = onRequest(
-    { region: "africa-south1" },
-    async (req, res) =>
-    {
-        try
-        {
-            if (req.method !== "POST")
-            {
-                return sendJson(res, 405, { success: false, error: "Method not allowed" });
-            }
-
-            const { deviceId, eventType, courtId: targetCourtId, registeringDeviceId } = req.body || {};
-
-            if (!deviceId || !eventType)
-            {
-                return sendJson(res, 400, {
-                    success: false,
-                    error: "Missing fields: both a deviceId and an eventType are required."
-                });
-            }
-
-            if (!SUPPORTED_EVENTS.has(eventType))
-            {
-                return sendJson(res, 400, {
-                    success: false,
-                    error: "Invalid eventType: " + eventType
-                });
-            }
-
-            const actingDevice = await requireDevice(deviceId);
-            if (!actingDevice)
-            {
-                return sendJson(res, 400, {
-                    success: false,
-                    error: "Device not found for deviceId: " + deviceId
-                });
-            }
-
-            const actingCourtId = actingDevice.data.courtId || null;
-
-            if (eventType === "SPECTATE")
-            {
-                if (!targetCourtId)
-                {
-                    return sendJson(res, 400, {
-                        success: false,
-                        error: "Missing field: courtId is required for SPECTATE."
-                    });
-                }
-
-                const targetCourtRef = db.doc(`courts/${targetCourtId}`);
-                const targetCourtSnap = await targetCourtRef.get();
-                if (!targetCourtSnap.exists)
-                {
-                    return sendJson(res, 400, {
-                        success: false,
-                        error: "Court not found for courtId: " + targetCourtId
-                    });
-                }
-
-                await actingDevice.ref.set({ courtId: targetCourtId }, { merge: true });
-
-                const eventId = await appendCourtEvent(targetCourtId, {
-                    eventType,
-                    createdBy: deviceId,
-                    sourceCourtId: actingCourtId,
-                    targetCourtId,
-                    actorDeviceId: deviceId
-                });
-
-                return sendJson(res, 200, {
-                    success: true,
-                    eventId,
-                    courtId: targetCourtId,
-                    deviceId
-                });
-            }
-
-            if (eventType === "REGISTER")
-            {
-                if (!registeringDeviceId)
-                {
-                    return sendJson(res, 400, {
-                        success: false,
-                        error: "Missing field: registeringDeviceId is required for REGISTER."
-                    });
-                }
-
-                if (!actingCourtId)
-                {
-                    return sendJson(res, 400, {
-                        success: false,
-                        error: "Associated court not found for deviceId: " + deviceId
-                    });
-                }
-
-                await db.doc(`devices/${registeringDeviceId}`).set(
-                    { courtId: actingCourtId },
-                    { merge: true }
-                );
-
-                const eventId = await appendCourtEvent(actingCourtId, {
-                    eventType,
-                    createdBy: deviceId,
-                    actorDeviceId: deviceId,
-                    registeringDeviceId,
-                    targetCourtId: actingCourtId
-                });
-
-                return sendJson(res, 200, {
-                    success: true,
-                    eventId,
-                    courtId: actingCourtId,
-                    deviceId,
-                    registeringDeviceId
-                });
-            }
-
-            if (!actingCourtId)
-            {
-                return sendJson(res, 400, {
-                    success: false,
-                    error: "Associated court not found for deviceId: " + deviceId
-                });
-            }
-
-            // Stamp scoring events with the court's active scoreVersion. Without
-            // it, onEventCreate normalizes the missing field to 0 and silently
-            // skips every device-posted point/undo as "stale" once the court has
-            // been reset at least once — the scoreboard then never updates.
-            const actingCourtSnap = await db.doc(`courts/${actingCourtId}`).get();
-            const actingCourtData = actingCourtSnap.exists ? actingCourtSnap.data() : {};
-
-            const eventId = await appendCourtEvent(actingCourtId, {
-                eventType,
-                createdBy: deviceId,
-                actorDeviceId: deviceId,
-                scoreVersion: normalizeScoreVersion(actingCourtData.scoreVersion)
-            });
-
-            return sendJson(res, 200, { success: true, eventId });
-
-        } catch (err)
-        {
-            console.error(err);
-            return sendJson(res, 500, { success: false, error: "Error" });
-        }
+exports.postEvent = onRequest({ region: "africa-south1" }, async (req, res) => {
+  try {
+    if (req.method !== "POST") {
+      return sendJson(res, 405, { success: false, error: "Method not allowed" });
     }
-);
+
+    const { deviceId, eventType, courtId: targetCourtId, registeringDeviceId } = req.body || {};
+
+    if (!deviceId || !eventType) {
+      return sendJson(res, 400, {
+        success: false,
+        error: "Missing fields: both a deviceId and an eventType are required.",
+      });
+    }
+
+    if (!SUPPORTED_EVENTS.has(eventType)) {
+      return sendJson(res, 400, {
+        success: false,
+        error: "Invalid eventType: " + eventType,
+      });
+    }
+
+    const actingDevice = await requireDevice(deviceId);
+    if (!actingDevice) {
+      return sendJson(res, 400, {
+        success: false,
+        error: "Device not found for deviceId: " + deviceId,
+      });
+    }
+
+    const actingCourtId = actingDevice.data.courtId || null;
+
+    if (eventType === "SPECTATE") {
+      if (!targetCourtId) {
+        return sendJson(res, 400, {
+          success: false,
+          error: "Missing field: courtId is required for SPECTATE.",
+        });
+      }
+
+      const targetCourtRef = db.doc(`courts/${targetCourtId}`);
+      const targetCourtSnap = await targetCourtRef.get();
+      if (!targetCourtSnap.exists) {
+        return sendJson(res, 400, {
+          success: false,
+          error: "Court not found for courtId: " + targetCourtId,
+        });
+      }
+
+      await actingDevice.ref.set({ courtId: targetCourtId }, { merge: true });
+
+      const eventId = await appendCourtEvent(targetCourtId, {
+        eventType,
+        createdBy: deviceId,
+        sourceCourtId: actingCourtId,
+        targetCourtId,
+        actorDeviceId: deviceId,
+      });
+
+      return sendJson(res, 200, {
+        success: true,
+        eventId,
+        courtId: targetCourtId,
+        deviceId,
+      });
+    }
+
+    if (eventType === "REGISTER") {
+      if (!registeringDeviceId) {
+        return sendJson(res, 400, {
+          success: false,
+          error: "Missing field: registeringDeviceId is required for REGISTER.",
+        });
+      }
+
+      if (!actingCourtId) {
+        return sendJson(res, 400, {
+          success: false,
+          error: "Associated court not found for deviceId: " + deviceId,
+        });
+      }
+
+      await db
+        .doc(`devices/${registeringDeviceId}`)
+        .set({ courtId: actingCourtId }, { merge: true });
+
+      const eventId = await appendCourtEvent(actingCourtId, {
+        eventType,
+        createdBy: deviceId,
+        actorDeviceId: deviceId,
+        registeringDeviceId,
+        targetCourtId: actingCourtId,
+      });
+
+      return sendJson(res, 200, {
+        success: true,
+        eventId,
+        courtId: actingCourtId,
+        deviceId,
+        registeringDeviceId,
+      });
+    }
+
+    if (!actingCourtId) {
+      return sendJson(res, 400, {
+        success: false,
+        error: "Associated court not found for deviceId: " + deviceId,
+      });
+    }
+
+    // Stamp scoring events with the court's active scoreVersion. Without
+    // it, onEventCreate normalizes the missing field to 0 and silently
+    // skips every device-posted point/undo as "stale" once the court has
+    // been reset at least once — the scoreboard then never updates.
+    const actingCourtSnap = await db.doc(`courts/${actingCourtId}`).get();
+    const actingCourtData = actingCourtSnap.exists ? actingCourtSnap.data() : {};
+
+    const eventId = await appendCourtEvent(actingCourtId, {
+      eventType,
+      createdBy: deviceId,
+      actorDeviceId: deviceId,
+      scoreVersion: normalizeScoreVersion(actingCourtData.scoreVersion),
+    });
+
+    return sendJson(res, 200, { success: true, eventId });
+  } catch (err) {
+    console.error(err);
+    return sendJson(res, 500, { success: false, error: "Error" });
+  }
+});
 
 // Per-courtId response cache shared by the public read-only endpoints: hold a
 // built response for a TTL, drop the oldest entry once the map is full. Keeps
 // polling clients and request floods off Firestore.
-function createApiResponseCache(ttlMs, maxEntries)
-{
-    const entries = new Map();
+function createApiResponseCache(ttlMs, maxEntries) {
+  const entries = new Map();
 
-    return {
-        get(courtId)
-        {
-            const entry = entries.get(courtId);
-            if (!entry) return null;
+  return {
+    get(courtId) {
+      const entry = entries.get(courtId);
+      if (!entry) return null;
 
-            if (Date.now() > entry.expiresAt)
-            {
-                entries.delete(courtId);
-                return null;
-            }
+      if (Date.now() > entry.expiresAt) {
+        entries.delete(courtId);
+        return null;
+      }
 
-            return entry;
-        },
-        set(courtId, status, body)
-        {
-            if (entries.size >= maxEntries)
-            {
-                const oldestKey = entries.keys().next().value;
-                entries.delete(oldestKey);
-            }
+      return entry;
+    },
+    set(courtId, status, body) {
+      if (entries.size >= maxEntries) {
+        const oldestKey = entries.keys().next().value;
+        entries.delete(oldestKey);
+      }
 
-            entries.set(courtId, {
-                status,
-                body,
-                expiresAt: Date.now() + ttlMs
-            });
-        }
-    };
+      entries.set(courtId, {
+        status,
+        body,
+        expiresAt: Date.now() + ttlMs,
+      });
+    },
+  };
 }
 
 // -----------------------------
@@ -1747,211 +1643,190 @@ const scoreApiCache = createApiResponseCache(4 * 1000, 500);
 
 const SCORE_API_POINT_LABELS = ["0", "15", "30", "40"];
 
-function buildScorePointsDisplay(points, scoringOptions, inTiebreak)
-{
-    const numericPoints = Number(points) || 0;
-    const options = normalizeScoringOptions(scoringOptions);
-    const usesNumericPoints = options.scoringMode === "straight" ||
-        options.scoringMode === "tiebreakTen" ||
-        Boolean(inTiebreak);
+function buildScorePointsDisplay(points, scoringOptions, inTiebreak) {
+  const numericPoints = Number(points) || 0;
+  const options = normalizeScoringOptions(scoringOptions);
+  const usesNumericPoints =
+    options.scoringMode === "straight" ||
+    options.scoringMode === "tiebreakTen" ||
+    Boolean(inTiebreak);
 
-    if (usesNumericPoints)
-    {
-        return String(numericPoints);
-    }
+  if (usesNumericPoints) {
+    return String(numericPoints);
+  }
 
-    if (numericPoints === 4)
-    {
-        return "Ad";
-    }
+  if (numericPoints === 4) {
+    return "Ad";
+  }
 
-    return SCORE_API_POINT_LABELS[numericPoints] ?? String(numericPoints);
+  return SCORE_API_POINT_LABELS[numericPoints] ?? String(numericPoints);
 }
 
 // Path prefixes the hosting rewrites use for the public read-only APIs.
 const SCORE_API_REWRITE_PREFIXES = new Set(["a", "r", "s", "m"]);
 
-function extractScoreApiCourtId(reqPath)
-{
-    const segments = String(reqPath || "")
-        .split("/")
-        .filter(Boolean)
-        .map((segment) =>
-        {
-            try
-            {
-                return decodeURIComponent(segment);
-            }
-            catch (_err)
-            {
-                return segment;
-            }
-        });
+function extractScoreApiCourtId(reqPath) {
+  const segments = String(reqPath || "")
+    .split("/")
+    .filter(Boolean)
+    .map((segment) => {
+      try {
+        return decodeURIComponent(segment);
+      } catch (_err) {
+        return segment;
+      }
+    });
 
-    // With the hosting rewrite the path looks like /score/{courtId}, /revision/{courtId},
-    // /stats/{courtId} or /momentum/{courtId}; when the function URL is hit directly the
-    // courtId is simply the last segment.
-    let courtId;
-    if (SCORE_API_REWRITE_PREFIXES.has(segments[0]))
-    {
-        courtId = segments.length >= 2 ? segments[segments.length - 1] : null;
-    }
-    else
-    {
-        courtId = segments.length ? segments[segments.length - 1] : null;
-    }
+  // With the hosting rewrite the path looks like /score/{courtId}, /revision/{courtId},
+  // /stats/{courtId} or /momentum/{courtId}; when the function URL is hit directly the
+  // courtId is simply the last segment.
+  let courtId;
+  if (SCORE_API_REWRITE_PREFIXES.has(segments[0])) {
+    courtId = segments.length >= 2 ? segments[segments.length - 1] : null;
+  } else {
+    courtId = segments.length ? segments[segments.length - 1] : null;
+  }
 
-    if (!courtId || courtId.length > 64)
-    {
-        return null;
-    }
+  if (!courtId || courtId.length > 64) {
+    return null;
+  }
 
-    return courtId;
+  return courtId;
 }
 
 // The revision is a content fingerprint of everything the public score payload
 // exposes. Unlike a timestamp it cannot collide when two updates land in the
 // same millisecond, and unlike scoreVersion alone it also changes when a reset
 // rewrites team/player names or when scoreVersion is rolled back by a restore.
-function computeScoreRevision(body)
-{
-    const { fetchedAt: _ignored, revision: _alsoIgnored, ...fingerprintSource } = body || {};
-    return crypto
-        .createHash("sha1")
-        .update(JSON.stringify(fingerprintSource))
-        .digest("hex")
-        .slice(0, 16);
+function computeScoreRevision(body) {
+  const { fetchedAt: _ignored, revision: _alsoIgnored, ...fingerprintSource } = body || {};
+  return crypto
+    .createHash("sha1")
+    .update(JSON.stringify(fingerprintSource))
+    .digest("hex")
+    .slice(0, 16);
 }
 
-async function buildCourtScoreResponse(courtId)
-{
-    const cached = scoreApiCache.get(courtId);
-    if (cached)
-    {
-        return { status: cached.status, body: cached.body };
-    }
+async function buildCourtScoreResponse(courtId) {
+  const cached = scoreApiCache.get(courtId);
+  if (cached) {
+    return { status: cached.status, body: cached.body };
+  }
 
-    const [courtSnap, scoreSnap] = await Promise.all([
-        db.doc(`courts/${courtId}`).get(),
-        db.doc(`courts/${courtId}/score/current`).get()
-    ]);
+  const [courtSnap, scoreSnap] = await Promise.all([
+    db.doc(`courts/${courtId}`).get(),
+    db.doc(`courts/${courtId}/score/current`).get(),
+  ]);
 
-    if (!courtSnap.exists)
-    {
-        const notFoundBody = { success: false, error: "Court not found." };
-        scoreApiCache.set(courtId, 404, notFoundBody);
-        return { status: 404, body: notFoundBody };
-    }
+  if (!courtSnap.exists) {
+    const notFoundBody = { success: false, error: "Court not found." };
+    scoreApiCache.set(courtId, 404, notFoundBody);
+    return { status: 404, body: notFoundBody };
+  }
 
-    const courtData = courtSnap.data() || {};
-    const rawScore = scoreSnap.exists ? scoreSnap.data() : null;
-    const scoringOptions = buildScoringOptions({
-        ...(courtData.scoringOptions || {}),
-        ...(rawScore?.scoringOptions || {}),
-        scoringMode: rawScore?.scoringOptions?.scoringMode || courtData.scoringMode
-    });
-    const score = rawScore || defaultScore(scoringOptions);
-    const inTiebreak = Boolean(score.inTiebreak);
+  const courtData = courtSnap.data() || {};
+  const rawScore = scoreSnap.exists ? scoreSnap.data() : null;
+  const scoringOptions = buildScoringOptions({
+    ...(courtData.scoringOptions || {}),
+    ...(rawScore?.scoringOptions || {}),
+    scoringMode: rawScore?.scoringOptions?.scoringMode || courtData.scoringMode,
+  });
+  const score = rawScore || defaultScore(scoringOptions);
+  const inTiebreak = Boolean(score.inTiebreak);
 
-    const body = {
-        success: true,
-        courtId,
-        teamNames: {
-            A: courtData.teamNames?.A || DEFAULT_TEAM_NAMES.A,
-            B: courtData.teamNames?.B || DEFAULT_TEAM_NAMES.B
-        },
-        playerNames: {
-            A1: courtData.playerNames?.A1 || "",
-            A2: courtData.playerNames?.A2 || "",
-            B1: courtData.playerNames?.B1 || "",
-            B2: courtData.playerNames?.B2 || ""
-        },
-        scoringOptions,
-        scoringMode: scoringOptions.scoringMode,
-        teams: {
-            A: {
-                sets: Number(score.A?.sets) || 0,
-                games: Number(score.A?.games) || 0,
-                points: Number(score.A?.points) || 0,
-                pointsDisplay: buildScorePointsDisplay(score.A?.points, scoringOptions, inTiebreak)
-            },
-            B: {
-                sets: Number(score.B?.sets) || 0,
-                games: Number(score.B?.games) || 0,
-                points: Number(score.B?.points) || 0,
-                pointsDisplay: buildScorePointsDisplay(score.B?.points, scoringOptions, inTiebreak)
-            }
-        },
-        completedSets: Array.isArray(score.completedSets) ? score.completedSets : [],
-        inTiebreak,
-        // Silver deuce only becomes a deciding point after the first deuce
-        // cycle, so overlays need the cycle count to label it correctly.
-        deuceCycles: Number(score.deuceCycles) || 0,
-        // Only the match tiebreak has a defined end; other modes play an open
-        // number of sets/points, so a stale persisted flag must not leak out.
-        matchComplete: scoringOptions.scoringMode === "tiebreakTen" && Boolean(score.matchComplete),
-        server: getCurrentServerLabel({ ...score, scoringOptions }),
-        scoreVersion: normalizeScoreVersion(courtData.scoreVersion)
-    };
+  const body = {
+    success: true,
+    courtId,
+    teamNames: {
+      A: courtData.teamNames?.A || DEFAULT_TEAM_NAMES.A,
+      B: courtData.teamNames?.B || DEFAULT_TEAM_NAMES.B,
+    },
+    playerNames: {
+      A1: courtData.playerNames?.A1 || "",
+      A2: courtData.playerNames?.A2 || "",
+      B1: courtData.playerNames?.B1 || "",
+      B2: courtData.playerNames?.B2 || "",
+    },
+    scoringOptions,
+    scoringMode: scoringOptions.scoringMode,
+    teams: {
+      A: {
+        sets: Number(score.A?.sets) || 0,
+        games: Number(score.A?.games) || 0,
+        points: Number(score.A?.points) || 0,
+        pointsDisplay: buildScorePointsDisplay(score.A?.points, scoringOptions, inTiebreak),
+      },
+      B: {
+        sets: Number(score.B?.sets) || 0,
+        games: Number(score.B?.games) || 0,
+        points: Number(score.B?.points) || 0,
+        pointsDisplay: buildScorePointsDisplay(score.B?.points, scoringOptions, inTiebreak),
+      },
+    },
+    completedSets: Array.isArray(score.completedSets) ? score.completedSets : [],
+    inTiebreak,
+    // Silver deuce only becomes a deciding point after the first deuce
+    // cycle, so overlays need the cycle count to label it correctly.
+    deuceCycles: Number(score.deuceCycles) || 0,
+    // Only the match tiebreak has a defined end; other modes play an open
+    // number of sets/points, so a stale persisted flag must not leak out.
+    matchComplete: scoringOptions.scoringMode === "tiebreakTen" && Boolean(score.matchComplete),
+    server: getCurrentServerLabel({ ...score, scoringOptions }),
+    scoreVersion: normalizeScoreVersion(courtData.scoreVersion),
+  };
 
-    body.revision = computeScoreRevision(body);
-    body.fetchedAt = new Date().toISOString();
+  body.revision = computeScoreRevision(body);
+  body.fetchedAt = new Date().toISOString();
 
-    scoreApiCache.set(courtId, 200, body);
-    return { status: 200, body };
+  scoreApiCache.set(courtId, 200, body);
+  return { status: 200, body };
 }
 
-function prepareScoreApiRequest(req, res, cacheSeconds)
-{
-    res.set("Access-Control-Allow-Origin", "*");
-    res.set("Access-Control-Allow-Methods", "GET, OPTIONS");
+function prepareScoreApiRequest(req, res, cacheSeconds) {
+  res.set("Access-Control-Allow-Origin", "*");
+  res.set("Access-Control-Allow-Methods", "GET, OPTIONS");
 
-    if (req.method === "OPTIONS")
-    {
-        res.status(204).send("");
-        return null;
-    }
+  if (req.method === "OPTIONS") {
+    res.status(204).send("");
+    return null;
+  }
 
-    if (req.method !== "GET")
-    {
-        res.set("Cache-Control", "no-store");
-        sendJson(res, 405, { success: false, error: "Method not allowed" });
-        return null;
-    }
+  if (req.method !== "GET") {
+    res.set("Cache-Control", "no-store");
+    sendJson(res, 405, { success: false, error: "Method not allowed" });
+    return null;
+  }
 
-    // Let the Firebase Hosting CDN absorb repeat requests: at most one
-    // origin hit per courtId per TTL window regardless of client volume.
-    res.set("Cache-Control", `public, max-age=${cacheSeconds}, s-maxage=${cacheSeconds}`);
-    return true;
+  // Let the Firebase Hosting CDN absorb repeat requests: at most one
+  // origin hit per courtId per TTL window regardless of client volume.
+  res.set("Cache-Control", `public, max-age=${cacheSeconds}, s-maxage=${cacheSeconds}`);
+  return true;
 }
 
 exports.getCourtScore = onRequest(
-    { region: HOSTING_REWRITE_REGION, maxInstances: 2 },
-    async (req, res) =>
-    {
-        if (!prepareScoreApiRequest(req, res, 4))
-        {
-            return;
-        }
-
-        try
-        {
-            const courtId = extractScoreApiCourtId(req.path);
-            if (!courtId)
-            {
-                return sendJson(res, 400, { success: false, error: "Missing or invalid courtId. Use /score/{courtId}." });
-            }
-
-            const { status, body } = await buildCourtScoreResponse(courtId);
-            return sendJson(res, status, body);
-        }
-        catch (err)
-        {
-            console.error("getCourtScore failed:", err);
-            res.set("Cache-Control", "no-store");
-            return sendJson(res, 500, { success: false, error: "Error" });
-        }
+  { region: HOSTING_REWRITE_REGION, maxInstances: 2 },
+  async (req, res) => {
+    if (!prepareScoreApiRequest(req, res, 4)) {
+      return;
     }
+
+    try {
+      const courtId = extractScoreApiCourtId(req.path);
+      if (!courtId) {
+        return sendJson(res, 400, {
+          success: false,
+          error: "Missing or invalid courtId. Use /score/{courtId}.",
+        });
+      }
+
+      const { status, body } = await buildCourtScoreResponse(courtId);
+      return sendJson(res, status, body);
+    } catch (err) {
+      console.error("getCourtScore failed:", err);
+      res.set("Cache-Control", "no-store");
+      return sendJson(res, 500, { success: false, error: "Error" });
+    }
+  },
 );
 
 // -----------------------------
@@ -1962,42 +1837,38 @@ exports.getCourtScore = onRequest(
 // from cache without extra Firestore reads.
 // -----------------------------
 exports.getCourtScoreRevision = onRequest(
-    { region: HOSTING_REWRITE_REGION, maxInstances: 2 },
-    async (req, res) =>
-    {
-        if (!prepareScoreApiRequest(req, res, 4))
-        {
-            return;
-        }
-
-        try
-        {
-            const courtId = extractScoreApiCourtId(req.path);
-            if (!courtId)
-            {
-                return sendJson(res, 400, { success: false, error: "Missing or invalid courtId. Use /revision/{courtId}." });
-            }
-
-            const { status, body } = await buildCourtScoreResponse(courtId);
-
-            if (status !== 200)
-            {
-                return sendJson(res, status, body);
-            }
-
-            return sendJson(res, 200, {
-                success: true,
-                courtId,
-                revision: body.revision
-            });
-        }
-        catch (err)
-        {
-            console.error("getCourtScoreRevision failed:", err);
-            res.set("Cache-Control", "no-store");
-            return sendJson(res, 500, { success: false, error: "Error" });
-        }
+  { region: HOSTING_REWRITE_REGION, maxInstances: 2 },
+  async (req, res) => {
+    if (!prepareScoreApiRequest(req, res, 4)) {
+      return;
     }
+
+    try {
+      const courtId = extractScoreApiCourtId(req.path);
+      if (!courtId) {
+        return sendJson(res, 400, {
+          success: false,
+          error: "Missing or invalid courtId. Use /revision/{courtId}.",
+        });
+      }
+
+      const { status, body } = await buildCourtScoreResponse(courtId);
+
+      if (status !== 200) {
+        return sendJson(res, status, body);
+      }
+
+      return sendJson(res, 200, {
+        success: true,
+        courtId,
+        revision: body.revision,
+      });
+    } catch (err) {
+      console.error("getCourtScoreRevision failed:", err);
+      res.set("Cache-Control", "no-store");
+      return sendJson(res, 500, { success: false, error: "Error" });
+    }
+  },
 );
 
 // -----------------------------
@@ -2010,55 +1881,50 @@ exports.getCourtScoreRevision = onRequest(
 const statsApiCache = createApiResponseCache(10 * 1000, 200);
 
 exports.getCourtStats = onRequest(
-    { region: HOSTING_REWRITE_REGION, maxInstances: 2 },
-    async (req, res) =>
-    {
-        if (!prepareScoreApiRequest(req, res, 10))
-        {
-            return;
-        }
-
-        try
-        {
-            const courtId = extractScoreApiCourtId(req.path);
-            if (!courtId)
-            {
-                return sendJson(res, 400, { success: false, error: "Missing or invalid courtId. Use /stats/{courtId}." });
-            }
-
-            const cached = statsApiCache.get(courtId);
-            if (cached)
-            {
-                return sendJson(res, cached.status, cached.body);
-            }
-
-            const { courtExists, payload } = await buildDetailedScoreData(courtId);
-
-            if (!courtExists)
-            {
-                const notFoundBody = { success: false, error: "Court not found." };
-                statsApiCache.set(courtId, 404, notFoundBody);
-                return sendJson(res, 404, notFoundBody);
-            }
-
-            const body = {
-                success: true,
-                courtId,
-                ...payload,
-                totalPoints: payload.advancedStats?.matchStats?.totalPoints ?? 0,
-                fetchedAt: new Date().toISOString()
-            };
-
-            statsApiCache.set(courtId, 200, body);
-            return sendJson(res, 200, body);
-        }
-        catch (err)
-        {
-            console.error("getCourtStats failed:", err);
-            res.set("Cache-Control", "no-store");
-            return sendJson(res, 500, { success: false, error: "Error" });
-        }
+  { region: HOSTING_REWRITE_REGION, maxInstances: 2 },
+  async (req, res) => {
+    if (!prepareScoreApiRequest(req, res, 10)) {
+      return;
     }
+
+    try {
+      const courtId = extractScoreApiCourtId(req.path);
+      if (!courtId) {
+        return sendJson(res, 400, {
+          success: false,
+          error: "Missing or invalid courtId. Use /stats/{courtId}.",
+        });
+      }
+
+      const cached = statsApiCache.get(courtId);
+      if (cached) {
+        return sendJson(res, cached.status, cached.body);
+      }
+
+      const { courtExists, payload } = await buildDetailedScoreData(courtId);
+
+      if (!courtExists) {
+        const notFoundBody = { success: false, error: "Court not found." };
+        statsApiCache.set(courtId, 404, notFoundBody);
+        return sendJson(res, 404, notFoundBody);
+      }
+
+      const body = {
+        success: true,
+        courtId,
+        ...payload,
+        totalPoints: payload.advancedStats?.matchStats?.totalPoints ?? 0,
+        fetchedAt: new Date().toISOString(),
+      };
+
+      statsApiCache.set(courtId, 200, body);
+      return sendJson(res, 200, body);
+    } catch (err) {
+      console.error("getCourtStats failed:", err);
+      res.set("Cache-Control", "no-store");
+      return sendJson(res, 500, { success: false, error: "Error" });
+    }
+  },
 );
 
 // -----------------------------
@@ -2072,52 +1938,47 @@ exports.getCourtStats = onRequest(
 const momentumApiCache = createApiResponseCache(5 * 1000, 200);
 
 exports.getCourtMomentum = onRequest(
-    { region: HOSTING_REWRITE_REGION, maxInstances: 2 },
-    async (req, res) =>
-    {
-        if (!prepareScoreApiRequest(req, res, 5))
-        {
-            return;
-        }
-
-        try
-        {
-            const courtId = extractScoreApiCourtId(req.path);
-            if (!courtId)
-            {
-                return sendJson(res, 400, { success: false, error: "Missing or invalid courtId. Use /momentum/{courtId}." });
-            }
-
-            const cached = momentumApiCache.get(courtId);
-            if (cached)
-            {
-                return sendJson(res, cached.status, cached.body);
-            }
-
-            const { courtExists, payload } = await buildMomentumData(courtId);
-
-            if (!courtExists)
-            {
-                const notFoundBody = { success: false, error: "Court not found." };
-                momentumApiCache.set(courtId, 404, notFoundBody);
-                return sendJson(res, 404, notFoundBody);
-            }
-
-            const body = {
-                success: true,
-                courtId,
-                ...payload,
-                fetchedAt: new Date().toISOString()
-            };
-
-            momentumApiCache.set(courtId, 200, body);
-            return sendJson(res, 200, body);
-        }
-        catch (err)
-        {
-            console.error("getCourtMomentum failed:", err);
-            res.set("Cache-Control", "no-store");
-            return sendJson(res, 500, { success: false, error: "Error" });
-        }
+  { region: HOSTING_REWRITE_REGION, maxInstances: 2 },
+  async (req, res) => {
+    if (!prepareScoreApiRequest(req, res, 5)) {
+      return;
     }
+
+    try {
+      const courtId = extractScoreApiCourtId(req.path);
+      if (!courtId) {
+        return sendJson(res, 400, {
+          success: false,
+          error: "Missing or invalid courtId. Use /momentum/{courtId}.",
+        });
+      }
+
+      const cached = momentumApiCache.get(courtId);
+      if (cached) {
+        return sendJson(res, cached.status, cached.body);
+      }
+
+      const { courtExists, payload } = await buildMomentumData(courtId);
+
+      if (!courtExists) {
+        const notFoundBody = { success: false, error: "Court not found." };
+        momentumApiCache.set(courtId, 404, notFoundBody);
+        return sendJson(res, 404, notFoundBody);
+      }
+
+      const body = {
+        success: true,
+        courtId,
+        ...payload,
+        fetchedAt: new Date().toISOString(),
+      };
+
+      momentumApiCache.set(courtId, 200, body);
+      return sendJson(res, 200, body);
+    } catch (err) {
+      console.error("getCourtMomentum failed:", err);
+      res.set("Cache-Control", "no-store");
+      return sendJson(res, 500, { success: false, error: "Error" });
+    }
+  },
 );

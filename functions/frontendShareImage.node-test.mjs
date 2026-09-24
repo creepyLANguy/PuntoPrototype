@@ -6,7 +6,10 @@ const source = readFileSync(new URL("../app/js/script.js", import.meta.url), "ut
 const liveStyles = readFileSync(new URL("../app/css/style.css", import.meta.url), "utf8");
 
 test("interactive details UI is excluded before capture and by the serializer", () => {
-  assert.match(source, /querySelectorAll\('\.dm-close, \.dm-share-btn, \.dm-details-panel, \.dm-empty-state, \.dm-error-state'\)/);
+  assert.match(
+    source,
+    /querySelectorAll\('\.dm-close, \.dm-share-btn, \.dm-details-panel, \.dm-empty-state, \.dm-error-state'\)/,
+  );
   assert.match(source, /'dm-details-panel'/);
 });
 
@@ -84,11 +87,17 @@ test("QR footer is vertically centered between score details and image bottom", 
   assert.match(source, /\(cloneRect\.height - scoreBottom - footerRect\.height\) \/ 2/);
   assert.match(source, /const desiredFooterTop = scoreBottom \+ verticalGap/);
   assert.match(source, /const additionalMargin = desiredFooterTop - footerTop/);
-  assert.match(source, /footerPanel\.style\.marginTop = `\$\{Math\.max\(0, additionalMargin\)\}px`/);
+  assert.match(
+    source,
+    /footerPanel\.style\.marginTop = `\$\{Math\.max\(0, additionalMargin\)\}px`/,
+  );
 });
 
 test("visible QR URL omits the protocol while the QR payload keeps the full URL", () => {
-  assert.match(source, /const qrUrl = courtId \? `\$\{appOrigin\}\/c\/\$\{encodeURIComponent\(courtId\)\}`/);
+  assert.match(
+    source,
+    /const qrUrl = courtId \? `\$\{appOrigin\}\/c\/\$\{encodeURIComponent\(courtId\)\}`/,
+  );
   assert.match(source, /text: qrUrl/);
   assert.match(source, /footerUrl\.textContent = qrUrl\.replace\(\/\^https\?:\\\/\\\/\/i, ''\)/);
 });
@@ -147,14 +156,16 @@ test("QR is generated off-DOM and composited directly onto the final canvas", ()
 });
 
 test("QR compositing happens after the smoothed card downsample and before PNG encoding", () => {
-  const exportStartIndex = source.indexOf("async function cacheShareableScoreCard(generation = shareableScoreCardGeneration)");
+  const exportStartIndex = source.indexOf(
+    "async function cacheShareableScoreCard(generation = shareableScoreCardGeneration)",
+  );
   const downsampleIndex = source.indexOf(
     "outputContext.drawImage(\n        highResolutionImage,",
-    exportStartIndex
+    exportStartIndex,
   );
   const qrCompositeIndex = source.indexOf(
     "drawPixelAlignedQr(outputContext, qrGenerator, qrX, qrY, qrFinalSize);",
-    exportStartIndex
+    exportStartIndex,
   );
   const pngEncodeIndex = source.indexOf("outputCanvas.toBlob(", exportStartIndex);
 

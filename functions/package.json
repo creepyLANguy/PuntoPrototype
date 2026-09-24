@@ -7,7 +7,10 @@
     "start": "npm run shell",
     "deploy": "firebase deploy --only functions",
     "logs": "firebase functions:log",
-    "test": "jest && node --test scoringGoldenMaster.node-test.mjs frontendScoreSync.node-test.mjs frontendScoreboard.node-test.mjs frontendModes.node-test.mjs frontendLifecycle.node-test.mjs frontendUndo.node-test.mjs frontendMatchDetails.node-test.mjs frontendOverlay.node-test.mjs frontendPlayRoute.node-test.mjs frontendCourtRoute.node-test.mjs frontendCourtPassword.node-test.mjs frontendDirectPlayerJoin.node-test.mjs frontendJoinPlayerIcon.node-test.mjs frontendShareImage.node-test.mjs frontendQrPanelResize.node-test.mjs frontendEngagementAnimations.node-test.mjs endpointRoutes.node-test.mjs"
+    "test": "jest && node --test scoringGoldenMaster.node-test.mjs frontendScoreSync.node-test.mjs frontendScoreboard.node-test.mjs frontendModes.node-test.mjs frontendLifecycle.node-test.mjs frontendUndo.node-test.mjs frontendMatchDetails.node-test.mjs frontendOverlay.node-test.mjs frontendPlayRoute.node-test.mjs frontendCourtRoute.node-test.mjs frontendCourtPassword.node-test.mjs frontendDirectPlayerJoin.node-test.mjs frontendJoinPlayerIcon.node-test.mjs frontendShareImage.node-test.mjs frontendQrPanelResize.node-test.mjs frontendEngagementAnimations.node-test.mjs endpointRoutes.node-test.mjs",
+    "lint": "eslint .",
+    "format:check": "prettier --check \"**/*.{js,mjs}\"",
+    "format": "prettier --write \"**/*.{js,mjs}\""
   },
   "engines": {
     "node": "22"
@@ -19,7 +22,9 @@
   },
   "devDependencies": {
     "jest": "^30.4.2",
-    "jsdom": "^26.1.0"
+    "jsdom": "^26.1.0",
+    "eslint": "^10.11.0",
+    "prettier": "^3.9.9"
   },
   "private": true
 }

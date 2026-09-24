@@ -20,14 +20,13 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
 
-import
-{
+import {
   firestoreState,
   resetFirestoreState,
   seedDoc,
   writeDoc,
   flushBackendWork,
-  getBackendScore
+  getBackendScore,
 } from "./frontendHarness/mockFirestoreState.mjs";
 
 const require = createRequire(import.meta.url);
@@ -36,27 +35,27 @@ const { getCurrentServerLabel, normalizeScoringOptions } = require("./scoringEng
 const here = path.dirname(fileURLToPath(import.meta.url));
 const FIXTURES_DIR = path.resolve(here, "..", "test", "fixtures", "scoring");
 
-function loadFixtures()
-{
+function loadFixtures() {
   return fs
     .readdirSync(FIXTURES_DIR)
     .filter((name) => name.endsWith(".json"))
     .sort()
-    .map((file) => ({ file, ...JSON.parse(fs.readFileSync(path.join(FIXTURES_DIR, file), "utf8")) }));
+    .map((file) => ({
+      file,
+      ...JSON.parse(fs.readFileSync(path.join(FIXTURES_DIR, file), "utf8")),
+    }));
 }
 
-function pickTeam(team = {})
-{
+function pickTeam(team = {}) {
   return {
     points: Number(team.points) || 0,
     games: Number(team.games) || 0,
     sets: Number(team.sets) || 0,
-    totalPoints: Number(team.totalPoints) || 0
+    totalPoints: Number(team.totalPoints) || 0,
   };
 }
 
-function project(score)
-{
+function project(score) {
   return {
     A: pickTeam(score.A),
     B: pickTeam(score.B),
@@ -65,7 +64,7 @@ function project(score)
       B: Number(set.B) || 0,
       tiebreakPoints: set.tiebreakPoints
         ? { A: Number(set.tiebreakPoints.A) || 0, B: Number(set.tiebreakPoints.B) || 0 }
-        : null
+        : null,
     })),
     inTiebreak: Boolean(score.inTiebreak),
     deuceCycles: Number(score.deuceCycles) || 0,
@@ -73,15 +72,14 @@ function project(score)
     lastPointTeam: score.lastPointTeam ?? null,
     lastGameTeam: score.lastGameTeam ?? null,
     lastSetTeam: score.lastSetTeam ?? null,
-    server: getCurrentServerLabel(score)
+    server: getCurrentServerLabel(score),
   };
 }
 
 // Feed a fixture's events into the mock backend the same way the client does:
 // each event is written to courts/<id>/events/<eventId> at the court's active
 // scoreVersion, and the backend reduces them into the authoritative score.
-function runThroughBackend(fixture)
-{
+function runThroughBackend(fixture) {
   resetFirestoreState();
   firestoreState.backendEnabled = false; // defer so events process in written order
 
@@ -91,16 +89,15 @@ function runThroughBackend(fixture)
     name: courtId,
     scoreVersion: 0,
     scoringMode: options.scoringMode,
-    scoringOptions: options
+    scoringOptions: options,
   });
 
-  fixture.events.forEach((event, index) =>
-  {
+  fixture.events.forEach((event, index) => {
     const eventId = event.id || `evt-${index + 1}`;
     writeDoc(`courts/${courtId}/events/${eventId}`, {
       eventType: event.eventType,
       scoreVersion: 0,
-      createdAt: event.createdAt
+      createdAt: event.createdAt,
     });
   });
 
@@ -109,14 +106,11 @@ function runThroughBackend(fixture)
   return getBackendScore(courtId);
 }
 
-for (const fixture of loadFixtures())
-{
-  test(`golden master (live backend): ${fixture.name}`, () =>
-  {
+for (const fixture of loadFixtures()) {
+  test(`golden master (live backend): ${fixture.name}`, () => {
     const score = runThroughBackend(fixture);
 
-    if (fixture.events.length === 0)
-    {
+    if (fixture.events.length === 0) {
       // No events were processed, so the backend never wrote a score. The
       // canonical empty-match expectation is covered by the jest suite; here we
       // only assert the pipeline produced nothing to reduce.

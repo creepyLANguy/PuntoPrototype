@@ -15,7 +15,7 @@ const overlayPath = path.join(
   path.dirname(fileURLToPath(import.meta.url)),
   "..",
   "app",
-  "overlay.html"
+  "overlay.html",
 );
 
 const COURT_ID = "bnrm";
@@ -31,14 +31,14 @@ const SCORE_PAYLOAD = {
   scoringMode: "standard",
   teams: {
     A: { sets: 0, games: 1, points: 2, pointsDisplay: "30" },
-    B: { sets: 0, games: 0, points: 1, pointsDisplay: "15" }
+    B: { sets: 0, games: 0, points: 1, pointsDisplay: "15" },
   },
   completedSets: [],
   inTiebreak: false,
   deuceCycles: 0,
   matchComplete: false,
   server: "A1",
-  scoreVersion: 0
+  scoreVersion: 0,
 };
 
 const MOMENTUM_PAYLOAD = {
@@ -50,27 +50,27 @@ const MOMENTUM_PAYLOAD = {
   gameMarkers: [5],
   totalPoints: 6,
   scoringMode: "standard",
-  matchComplete: false
+  matchComplete: false,
 };
 
 // jsdom ships no canvas backend, so the graph draws into a context that
 // swallows every call. These tests are about the card's states, not its pixels.
-function makeNoopCanvasContext()
-{
-  return new Proxy({}, {
-    get: (_target, prop) =>
+function makeNoopCanvasContext() {
+  return new Proxy(
+    {},
     {
-      if (prop === Symbol.toPrimitive) return () => 0;
-      return () => makeNoopCanvasContext();
+      get: (_target, prop) => {
+        if (prop === Symbol.toPrimitive) return () => 0;
+        return () => makeNoopCanvasContext();
+      },
+      set: () => true,
     },
-    set: () => true
-  });
+  );
 }
 
 // Booted per test: the overlay reads localStorage and the query string once at
 // startup, so each scenario needs its own page.
-async function bootOverlay({ search = "", stored = null, momentumResponse = "ok" } = {})
-{
+async function bootOverlay({ search = "", stored = null, momentumResponse = "ok" } = {}) {
   const errors = [];
   const virtualConsole = new VirtualConsole();
   virtualConsole.on("jsdomError", (err) => errors.push("jsdomError: " + err.message));
@@ -83,45 +83,45 @@ async function bootOverlay({ search = "", stored = null, momentumResponse = "ok"
     runScripts: "dangerously",
     pretendToBeVisual: true,
     virtualConsole,
-    beforeParse(window)
-    {
-      if (stored)
-      {
+    beforeParse(window) {
+      if (stored) {
         window.localStorage.setItem(STORAGE_KEY, JSON.stringify(stored));
       }
 
       window.HTMLCanvasElement.prototype.getContext = () => makeNoopCanvasContext();
-      window.Path2D = function Path2D() { return makeNoopCanvasContext(); };
+      window.Path2D = function Path2D() {
+        return makeNoopCanvasContext();
+      };
 
-      window.fetch = async (url) =>
-      {
+      window.fetch = async (url) => {
         const target = String(url);
         requested.push(target);
 
-        if (!target.includes("/momentum/"))
-        {
+        if (!target.includes("/momentum/")) {
           return { ok: true, status: 200, json: async () => SCORE_PAYLOAD };
         }
 
-        if (releaseMomentum)
-        {
-          await new Promise((resolve) => { releaseMomentum = resolve; });
+        if (releaseMomentum) {
+          await new Promise((resolve) => {
+            releaseMomentum = resolve;
+          });
         }
 
-        if (momentumResponse === "html")
-        {
+        if (momentumResponse === "html") {
           // What an undeployed hosting rewrite actually returns: a 200 with the
           // SPA's index.html, which json() cannot parse.
           return {
             ok: true,
             status: 200,
-            json: async () => { throw new SyntaxError("Unexpected token <"); }
+            json: async () => {
+              throw new SyntaxError("Unexpected token <");
+            },
           };
         }
 
         return { ok: true, status: 200, json: async () => MOMENTUM_PAYLOAD };
       };
-    }
+    },
   });
 
   await settle(50);
@@ -132,28 +132,26 @@ async function bootOverlay({ search = "", stored = null, momentumResponse = "ok"
     errors,
     requested,
     $: (id) => dom.window.document.getElementById(id),
-    holdMomentum: () => { releaseMomentum = () => {}; },
-    releaseMomentum: () =>
-    {
+    holdMomentum: () => {
+      releaseMomentum = () => {};
+    },
+    releaseMomentum: () => {
       const resolve = releaseMomentum;
       releaseMomentum = null;
       resolve();
-    }
+    },
   };
 }
 
-function settle(ms = 30)
-{
+function settle(ms = 30) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function cssVar(window, name)
-{
+function cssVar(window, name) {
   return window.document.documentElement.style.getPropertyValue(name);
 }
 
-test("one slider drives the scale of both the stat and momentum cards", async () =>
-{
+test("one slider drives the scale of both the stat and momentum cards", async () => {
   const page = await bootOverlay();
 
   assert.equal(page.$("setMomentumScale"), null, "the momentum-only slider is gone");
@@ -169,8 +167,7 @@ test("one slider drives the scale of both the stat and momentum cards", async ()
 
   // Both cards resolve their type size from the same variable.
   const overlayCss = readFileSync(overlayPath, "utf8");
-  ["\\.stat-card \\{", "\\.momentum-card \\{"].forEach((selector) =>
-  {
+  ["\\.stat-card \\{", "\\.momentum-card \\{"].forEach((selector) => {
     const block = new RegExp(selector + "[^}]*}").exec(overlayCss)[0];
     assert.match(block, /--ov-stats-scale/, selector + " uses the shared scale");
     assert.match(block, /--ov-stats-width/, selector + " uses the shared width");
@@ -179,8 +176,7 @@ test("one slider drives the scale of both the stat and momentum cards", async ()
   page.dom.window.close();
 });
 
-test("the width slider drives both cards and persists", async () =>
-{
+test("the width slider drives both cards and persists", async () => {
   const page = await bootOverlay();
 
   const slider = page.$("setStatsWidth");
@@ -199,8 +195,7 @@ test("the width slider drives both cards and persists", async () =>
   page.dom.window.close();
 });
 
-test("a stored momentumScale is adopted as statsScale", async () =>
-{
+test("a stored momentumScale is adopted as statsScale", async () => {
   const page = await bootOverlay({ stored: { momentumScale: 1.4 } });
 
   assert.equal(cssVar(page.window, "--ov-stats-scale"), "1.4");
@@ -212,8 +207,7 @@ test("a stored momentumScale is adopted as statsScale", async () =>
   page.dom.window.close();
 });
 
-test("a momentumScale share URL still applies", async () =>
-{
+test("a momentumScale share URL still applies", async () => {
   const page = await bootOverlay({ search: "?momentumScale=0.8" });
 
   assert.equal(cssVar(page.window, "--ov-stats-scale"), "0.8");
@@ -221,19 +215,27 @@ test("a momentumScale share URL still applies", async () =>
   page.dom.window.close();
 });
 
-test("the momentum card loads from /momentum/{courtId} and swaps the loader for the graph", async () =>
-{
+test("the momentum card loads from /momentum/{courtId} and swaps the loader for the graph", async () => {
   const page = await bootOverlay();
   page.holdMomentum();
 
   page.$("momentumBtn").dispatchEvent(new page.window.Event("click", { bubbles: true }));
 
-  assert.equal(page.$("momentumCard").classList.contains("hidden"), false,
-    "the card is on screen before the request resolves");
-  assert.equal(page.$("momentumLoading").classList.contains("hidden"), false,
-    "the loader runs while the payload is pending");
-  assert.equal(page.$("momentumCanvas").classList.contains("hidden"), true,
-    "the canvas stays hidden while the payload is pending");
+  assert.equal(
+    page.$("momentumCard").classList.contains("hidden"),
+    false,
+    "the card is on screen before the request resolves",
+  );
+  assert.equal(
+    page.$("momentumLoading").classList.contains("hidden"),
+    false,
+    "the loader runs while the payload is pending",
+  );
+  assert.equal(
+    page.$("momentumCanvas").classList.contains("hidden"),
+    true,
+    "the canvas stays hidden while the payload is pending",
+  );
 
   page.releaseMomentum();
   await settle();
@@ -244,26 +246,28 @@ test("the momentum card loads from /momentum/{courtId} and swaps the loader for 
 
   assert.ok(
     page.requested.some((url) => url.endsWith("/momentum/" + COURT_ID)),
-    "momentum came from the momentum endpoint, saw: " + JSON.stringify(page.requested)
+    "momentum came from the momentum endpoint, saw: " + JSON.stringify(page.requested),
   );
   assert.ok(
     !page.requested.some((url) => url.includes("/stats/")),
-    "the stats endpoint is not used for momentum"
+    "the stats endpoint is not used for momentum",
   );
 
   assert.deepEqual(page.errors, []);
   page.dom.window.close();
 });
 
-test("an undeployed momentum endpoint says so instead of showing an empty card", async () =>
-{
+test("an undeployed momentum endpoint says so instead of showing an empty card", async () => {
   const page = await bootOverlay({ momentumResponse: "html" });
 
   page.$("momentumBtn").dispatchEvent(new page.window.Event("click", { bubbles: true }));
   await settle(60);
 
-  assert.equal(page.$("momentumCard").classList.contains("hidden"), false,
-    "the card stays up so the failure is visible");
+  assert.equal(
+    page.$("momentumCard").classList.contains("hidden"),
+    false,
+    "the card stays up so the failure is visible",
+  );
   assert.equal(page.$("momentumMessage").classList.contains("hidden"), false);
   assert.equal(page.$("momentumMessage").textContent, "Momentum unavailable.");
   assert.equal(page.$("momentumLoading").classList.contains("hidden"), true);

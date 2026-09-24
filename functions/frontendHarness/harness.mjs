@@ -7,15 +7,14 @@ import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { JSDOM } from "jsdom";
 
-import
-{
+import {
   firestoreState,
   resetFirestoreState,
   seedDoc,
   writeDoc,
   flushBackendWork,
   getBackendScore,
-  callableHandlers
+  callableHandlers,
 } from "./mockFirestoreState.mjs";
 
 register("./loaderHooks.mjs", import.meta.url);
@@ -28,48 +27,66 @@ const scriptPath = path.join(repoRoot, "app", "js", "script.js");
 
 let booted = false;
 
-function installGlobals(dom)
-{
+function installGlobals(dom) {
   const { window } = dom;
 
   // Browser API stubs missing from jsdom.
-  window.matchMedia = window.matchMedia || ((query) => ({
-    matches: false,
-    media: query,
-    addEventListener: () => {},
-    removeEventListener: () => {},
-    addListener: () => {},
-    removeListener: () => {}
-  }));
+  window.matchMedia =
+    window.matchMedia ||
+    ((query) => ({
+      matches: false,
+      media: query,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      addListener: () => {},
+      removeListener: () => {},
+    }));
 
-  window.ResizeObserver = window.ResizeObserver || class
-  {
-    observe() {}
-    unobserve() {}
-    disconnect() {}
-  };
+  window.ResizeObserver =
+    window.ResizeObserver ||
+    class {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    };
 
   window.__audioTestState = { contexts: 0, resumeCalls: 0, starts: 0 };
-  window.AudioContext = class
-  {
-    constructor() { this.state = "suspended"; this.destination = {}; window.__audioTestState.contexts += 1; }
-    async resume() { window.__audioTestState.resumeCalls += 1; this.state = "running"; }
-    async decodeAudioData() { return {}; }
-    createBufferSource() { return { connect: () => {}, start: () => { window.__audioTestState.starts += 1; } }; }
+  window.AudioContext = class {
+    constructor() {
+      this.state = "suspended";
+      this.destination = {};
+      window.__audioTestState.contexts += 1;
+    }
+    async resume() {
+      window.__audioTestState.resumeCalls += 1;
+      this.state = "running";
+    }
+    async decodeAudioData() {
+      return {};
+    }
+    createBufferSource() {
+      return {
+        connect: () => {},
+        start: () => {
+          window.__audioTestState.starts += 1;
+        },
+      };
+    }
   };
 
   window.fetch = async () => ({
     ok: true,
     arrayBuffer: async () => new ArrayBuffer(0),
     json: async () => ({}),
-    text: async () => ""
+    text: async () => "",
   });
 
   window.navigator.wakeLock = {
-    request: async () => ({ release: async () => {}, addEventListener: () => {} })
+    request: async () => ({ release: async () => {}, addEventListener: () => {} }),
   };
 
-  window.HTMLElement.prototype.scrollIntoView = window.HTMLElement.prototype.scrollIntoView || (() => {});
+  window.HTMLElement.prototype.scrollIntoView =
+    window.HTMLElement.prototype.scrollIntoView || (() => {});
 
   const globalsToExpose = {
     window,
@@ -93,25 +110,24 @@ function installGlobals(dom)
     File: window.File,
     FileReader: window.FileReader,
     fetch: window.fetch,
-    alert: () => {}
+    alert: () => {},
   };
 
-  for (const [name, value] of Object.entries(globalsToExpose))
-  {
+  for (const [name, value] of Object.entries(globalsToExpose)) {
     Object.defineProperty(globalThis, name, { value, configurable: true, writable: true });
   }
 
   Object.defineProperty(globalThis, "navigator", {
     value: window.navigator,
-    configurable: true
+    configurable: true,
   });
 }
 
-export async function bootFrontend({ url = "https://padel.test/" } = {})
-{
-  if (booted)
-  {
-    throw new Error("The frontend can only be booted once per process; drive it via helpers instead.");
+export async function bootFrontend({ url = "https://padel.test/" } = {}) {
+  if (booted) {
+    throw new Error(
+      "The frontend can only be booted once per process; drive it via helpers instead.",
+    );
   }
   booted = true;
 
@@ -119,7 +135,7 @@ export async function bootFrontend({ url = "https://padel.test/" } = {})
   const dom = new JSDOM(html, {
     url,
     pretendToBeVisual: true,
-    runScripts: "outside-only"
+    runScripts: "outside-only",
   });
 
   installGlobals(dom);
@@ -133,7 +149,7 @@ export async function bootFrontend({ url = "https://padel.test/" } = {})
   await import(pathToFileURL(scriptPath).href);
 
   dom.window.document.dispatchEvent(
-    new dom.window.Event("DOMContentLoaded", { bubbles: true, cancelable: false })
+    new dom.window.Event("DOMContentLoaded", { bubbles: true, cancelable: false }),
   );
 
   // Let startup navigation settle.
@@ -143,31 +159,24 @@ export async function bootFrontend({ url = "https://padel.test/" } = {})
 }
 
 // Flushes microtasks + pending timers up to the given real-time budget.
-export async function settle(ms = 25)
-{
-  for (let i = 0; i < 10; i++)
-  {
+export async function settle(ms = 25) {
+  for (let i = 0; i < 10; i++) {
     await new Promise((resolve) => setTimeout(resolve, 0));
   }
-  if (ms > 0)
-  {
+  if (ms > 0) {
     await new Promise((resolve) => setTimeout(resolve, ms));
   }
-  for (let i = 0; i < 10; i++)
-  {
+  for (let i = 0; i < 10; i++) {
     await new Promise((resolve) => setTimeout(resolve, 0));
   }
 }
 
-export async function waitFor(predicate, { timeoutMs = 3000, label = "condition" } = {})
-{
+export async function waitFor(predicate, { timeoutMs = 3000, label = "condition" } = {}) {
   const startedAt = Date.now();
-  for (;;)
-  {
+  for (;;) {
     const value = predicate();
     if (value) return value;
-    if (Date.now() - startedAt > timeoutMs)
-    {
+    if (Date.now() - startedAt > timeoutMs) {
       throw new Error(`Timed out waiting for ${label}`);
     }
     await settle(10);
@@ -180,13 +189,11 @@ export async function waitFor(predicate, { timeoutMs = 3000, label = "condition"
 
 export const ADMIN_SKELETON_KEY = "test-skeleton-key";
 
-export function seedBaseData()
-{
+export function seedBaseData() {
   seedDoc("admin/goodies", { skeletonKey: ADMIN_SKELETON_KEY });
 }
 
-export function seedCourt(courtId, overrides = {})
-{
+export function seedCourt(courtId, overrides = {}) {
   const court = {
     name: courtId,
     password: "pw",
@@ -196,23 +203,21 @@ export function seedCourt(courtId, overrides = {})
     scoringOptions: {
       scoringMode: "standard",
       deuceMode: "standard",
-      tiebreakMode: "sixAllSeven"
+      tiebreakMode: "sixAllSeven",
     },
     teamNames: { A: "Team A", B: "Team B" },
     playerNames: { A1: "", A2: "", B1: "", B2: "" },
-    ...overrides
+    ...overrides,
   };
   seedDoc(`courts/${courtId}`, court);
   return court;
 }
 
-export function pushScoreSnapshot(courtId, score)
-{
+export function pushScoreSnapshot(courtId, score) {
   writeDoc(`courts/${courtId}/score/current`, score);
 }
 
-export function makeScore(overrides = {})
-{
+export function makeScore(overrides = {}) {
   return {
     A: { points: 0, games: 0, sets: 0, totalPoints: 0 },
     B: { points: 0, games: 0, sets: 0, totalPoints: 0 },
@@ -226,23 +231,22 @@ export function makeScore(overrides = {})
     scoringOptions: {
       scoringMode: "standard",
       deuceMode: "standard",
-      tiebreakMode: "sixAllSeven"
+      tiebreakMode: "sixAllSeven",
     },
-    ...overrides
+    ...overrides,
   };
 }
 
-export async function joinCourtAsPlayer(document, courtId, password = "pw")
-{
-  const playButton = [...document.querySelectorAll(".menu-btn")]
-    .find((btn) => btn.textContent.trim() === "Play");
+export async function joinCourtAsPlayer(document, courtId, password = "pw") {
+  const playButton = [...document.querySelectorAll(".menu-btn")].find(
+    (btn) => btn.textContent.trim() === "Play",
+  );
   if (!playButton) throw new Error("Play menu button not found");
   playButton.click();
 
-  await waitFor(
-    () => document.querySelector(`#playCourtList [data-court-id="${courtId}"]`),
-    { label: `court '${courtId}' in play list` }
-  );
+  await waitFor(() => document.querySelector(`#playCourtList [data-court-id="${courtId}"]`), {
+    label: `court '${courtId}' in play list`,
+  });
 
   document.querySelector(`#playCourtList [data-court-id="${courtId}"]`).click();
   await settle();
@@ -250,32 +254,29 @@ export async function joinCourtAsPlayer(document, courtId, password = "pw")
   document.getElementById("playCourtPassword").value = password;
   document.getElementById("enterCourtBtn").click();
 
-  await waitFor(
-    () => document.getElementById("scoreboardPage").style.display !== "none",
-    { label: "scoreboard page to be shown" }
-  );
+  await waitFor(() => document.getElementById("scoreboardPage").style.display !== "none", {
+    label: "scoreboard page to be shown",
+  });
   await settle();
 }
 
-export function getRenderedScore(document)
-{
+export function getRenderedScore(document) {
   return {
     pointsA: document.getElementById("pointsA").textContent,
     pointsB: document.getElementById("pointsB").textContent,
     gamesA: document.querySelectorAll("#gamesA .game-dot.filled").length,
     gamesB: document.querySelectorAll("#gamesB .game-dot.filled").length,
     setsA: document.querySelectorAll("#setsA .set-dot.filled").length,
-    setsB: document.querySelectorAll("#setsB .set-dot.filled").length
+    setsB: document.querySelectorAll("#setsB .set-dot.filled").length,
   };
 }
 
-export
-{
+export {
   firestoreState,
   resetFirestoreState,
   seedDoc,
   writeDoc,
   flushBackendWork,
   getBackendScore,
-  callableHandlers
+  callableHandlers,
 };

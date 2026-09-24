@@ -4,13 +4,11 @@
 // hands to the real library, which is otherwise invisible from the DOM.
 export const toBlobCalls = [];
 
-export function resetToBlobCalls()
-{
+export function resetToBlobCalls() {
   toBlobCalls.length = 0;
 }
 
-export async function toBlob(node, options)
-{
+export async function toBlob(node, options) {
   toBlobCalls.push({ node, options });
   return new Blob(["mock-image"], { type: "image/png" });
 }

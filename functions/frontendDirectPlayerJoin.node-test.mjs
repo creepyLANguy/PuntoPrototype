@@ -1,20 +1,18 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import
-{
+import {
   bootFrontend,
   seedBaseData,
   seedCourt,
   waitFor,
-  settle
+  settle,
 } from "./frontendHarness/harness.mjs";
 
 let document;
 let window;
 
-test.before(async () =>
-{
+test.before(async () => {
   seedBaseData();
   seedCourt("directplayer", { name: "Direct Player Court" });
 
@@ -23,34 +21,32 @@ test.before(async () =>
   window = dom.window;
 
   await waitFor(
-    () => document.getElementById("playPage").style.display !== "none"
-      && document.querySelector("#playCourtList .court-item.active"),
-    { label: "direct player join prompt" }
+    () =>
+      document.getElementById("playPage").style.display !== "none" &&
+      document.querySelector("#playCourtList .court-item.active"),
+    { label: "direct player join prompt" },
   );
   await settle(30);
 });
 
-test("/p/<court> autofocuses the player password field", () =>
-{
+test("/p/<court> autofocuses the player password field", () => {
   assert.equal(document.activeElement?.id, "playCourtPassword");
 });
 
-test("/p/<court> player submit primes and plays the join sound", async () =>
-{
+test("/p/<court> player submit primes and plays the join sound", async () => {
   const passwordInput = document.getElementById("playCourtPassword");
   passwordInput.value = "pw";
 
   document.getElementById("enterCourtBtn").click();
 
-  await waitFor(
-    () => document.getElementById("scoreboardPage").style.display !== "none",
-    { label: "player scoreboard to be shown" }
-  );
-  await waitFor(
-    () => window.__audioTestState.starts === 1,
-    { label: "direct player join sound" }
-  );
+  await waitFor(() => document.getElementById("scoreboardPage").style.display !== "none", {
+    label: "player scoreboard to be shown",
+  });
+  await waitFor(() => window.__audioTestState.starts === 1, { label: "direct player join sound" });
 
-  assert.ok(window.__audioTestState.resumeCalls > 0, "the AudioContext should be resumed from the submit gesture");
+  assert.ok(
+    window.__audioTestState.resumeCalls > 0,
+    "the AudioContext should be resumed from the submit gesture",
+  );
   assert.equal(window.__audioTestState.starts, 1);
 });
