@@ -33,7 +33,7 @@ See firebase-environments.md.
 ### Function regions
 
 - africa-south1: callable functions, postEvent and onEventCreate.
-- europe-west1: public JSON Hosting rewrites /a, /r, /s and /m.
+- europe-west1: public JSON Hosting rewrites /a, /r, /stats and /m.
 
 ## API compatibility policy
 
@@ -63,10 +63,10 @@ revision is an opaque equality token. Consumers must compare it for equality/ine
 
 The current API does not advertise a hard per-client rate limit. Recommended polling is:
 
-1. Poll /r/{courtId} about every 2 seconds for interactive displays.
-2. Fetch /a/{courtId} when revision changes.
-3. Fetch /s/{courtId} at boundaries or on demand.
-4. Fetch /m/{courtId} only when momentum is displayed/refreshed.
+1. Poll /revision/{courtId} about every 2 seconds for interactive displays.
+2. Fetch /score/{courtId} when revision changes.
+3. Fetch /stats/{courtId} at boundaries or on demand.
+4. Fetch /momentum/{courtId} only when momentum is displayed/refreshed.
 
 A future rate limit should return 429 with a stable error code and, where practical, Retry-After.
 
@@ -97,10 +97,10 @@ The OpenAPI document remains the canonical machine-readable HTTP contract.
 | /b, /b/{courtId} | Canonical OBS overlay |
 | /o, /overlay, /broadcast and aliases | Overlay aliases |
 | /nfc, /nfc/** | NFC utility |
-| /a/{courtId} | Live score JSON |
-| /r/{courtId} | Revision JSON |
-| /s/{courtId} | Match statistics JSON |
-| /m/{courtId} | Momentum JSON |
+| /score/{courtId} | Live score JSON |
+| /revision/{courtId} | Revision JSON |
+| /stats/{courtId} | Match statistics JSON |
+| /momentum/{courtId} | Momentum JSON |
 
 Hosting rewrites are deployment concerns; the public API contract is maintained separately in the OpenAPI document.
 
