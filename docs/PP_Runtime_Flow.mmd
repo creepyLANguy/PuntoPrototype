@@ -13,57 +13,62 @@ config:
 
 sequenceDiagram
     autonumber
-    participant B as Browser
-    participant D as ESP32 device
-    participant I as Ingest
-    participant E as Events
-    participant T as Trigger
-    participant G as Engine
-    participant S as Score
-    participant P as Public
-    participant O as Overlay
-    participant K as Callable resetCourt
+    participant B as Browser app
+    participant D as External device
+    participant F as Firestore
+    participant I as postEvent
+    participant T as onEventCreate
+    participant G as Scoring engine
+    participant S as score/current
+    participant A as Public API
+    participant O as Overlay / read client
+    participant K as Callable functions
 
     alt Browser scoring action
-        B->>E: addDoc(event with scoreVersion)
-    else ESP32 device action
-        D->>I: POST event
-        I->>E: append event with server timestamp
+        B->>F: addDoc courts/{courtId}/events/{eventId}
+    else External device action
+        D->>I: POST /postEvent
+        I->>F: append event + server timestamp
     end
 
-    E-->>T: Document created
-    T->>T: Read court, event and score in transaction
-    T->>T: Reject stale version or duplicate event
-    alt Event is out of order or undo needs full history
-        T->>G: Replay applicable event log
+    F-->>T: Event document created
+    T->>F: Read court + event + score/current in transaction
+    T->>T: Check scoreVersion and event ordering
+
+    alt Out-of-order event or UNDO
+        T->>G: Full event-history replay
     else Normal scoring event
-        T->>G: Apply event
+        T->>G: Apply/replay scoring state
     end
+
     G-->>T: Materialized score
-    T->>S: Transactional update
+    T->>F: Write score/current
+    T->>F: Write checkpoint when required
+    F-->>S: Updated live score document
     S-->>B: onSnapshot live score
 
-    opt Public scoreboard or overlay
-        rect rgb(224, 242, 241)
-        Note over P,O: Public read path
-        O->>P: GET /r/{courtId}
-        P->>S: Read current score
-        P-->>O: Revision and score payload
-        O->>P: GET /s or /m/{courtId}
-        P->>E: Replay for stats or momentum
-        P-->>O: Cached derived payload
-        end
+    opt Public scoreboard / overlay
+        O->>A: GET /r/{courtId}
+        A->>S: Read current score
+        A-->>O: Revision payload
+
+        O->>A: GET /a/{courtId}
+        A->>S: Read current score
+        A-->>O: Live score payload
+
+        O->>A: GET /s or /m/{courtId}
+        A->>F: Replay active court event history
+        A-->>O: Statistics / momentum payload
     end
 
     opt Callable resetCourt
-        rect rgb(255, 243, 224)
-        Note over C,S: Reset path
         B->>K: httpsCallable resetCourt
-        K->>E: Archive and delete current events
-        K->>S: Clear score/current
-        K->>K: Increment court scoreVersion
-        end
+        K->>F: Archive active events
+        K->>F: Delete active events + checkpoints
+        K->>F: Reset score/current
+        K->>F: Increment court scoreVersion
     end
 
-Note over G,S: Modes: standard, straight, tiebreakTen
-Note over D,I: Device auth and replay hardening is a separate production requirement
+    Note over K,F: Current callable handlers do not perform explicit request.auth authorization checks
+    Note over D,I: Current device identity is deviceId/binding only; HMAC + freshness + idempotency are production targets
+    Note over F,S: score/current is derived state; courts/{courtId}/events is the authoritative scoring history

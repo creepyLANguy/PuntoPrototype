@@ -2,88 +2,73 @@
 
 ## Current endpoint
 
-`POST /postEvent` is the hardware ingestion endpoint. It runs in `africa-south1` and is called at the Firebase callable-function HTTP URL rather than through Hosting.
+POST /postEvent is the hardware/device ingestion endpoint. It is an HTTP Cloud Function in africa-south1, not a Firebase callable function, and it is called directly at the Cloud Functions URL rather than through a Hosting rewrite.
 
-```http
-POST https://africa-south1-<projectId>.cloudfunctions.net/postEvent
-Content-Type: application/json
-```
+    POST https://africa-south1-<projectId>.cloudfunctions.net/postEvent
+    Content-Type: application/json
 
 ## Current request contract
 
 | Field | Required | Values |
 |---|---|---|
-| `deviceId` | yes | Existing device identifier |
-| `eventType` | yes | `POINT_TEAM_A`, `POINT_TEAM_B`, `UNDO`, `RESET`, `SPECTATE`, `REGISTER` |
-| `courtId` | SPECTATE | Target court |
-| `registeringDeviceId` | REGISTER | Device being registered |
+| deviceId | yes | Existing device identifier |
+| eventType | yes | POINT_TEAM_A, POINT_TEAM_B, UNDO, RESET, SPECTATE, REGISTER |
+| courtId | SPECTATE | Target court |
+| registeringDeviceId | REGISTER | Device being registered |
 
-Scoring events are written to the device's currently bound court and stamped with the active `scoreVersion`.
+For scoring events, the server looks up the device's current court binding and stamps the event with the court's current scoreVersion.
+
+The current implementation does not require callers to provide eventId, timestamp, nonce or signature. Firestore creates the event document ID when the event is appended.
 
 ## Current success response
 
-```json
-{ "success": true, "eventId": "aBc123" }
-```
+    { "success": true, "eventId": "aBc123" }
 
-SPECTATE returns the resulting court/device binding. REGISTER returns the resulting court/device/registering-device information.
+SPECTATE returns the resulting target court/device binding. REGISTER returns the resulting court/device/registering-device information.
 
 ## Current errors
 
-- `400`: validation, unknown device/court, missing binding, or missing event-specific field.
-- `405`: wrong HTTP method.
-- `500`: generic server error.
+- 400: validation, unknown device/court, missing binding or missing event-specific field.
+- 405: wrong HTTP method.
+- 500: generic server error.
 
-## Critical production issue
+## Current security boundary
 
-The current endpoint is unauthenticated and uses `deviceId` as the caller identity. A device identifier is therefore effectively a bearer credential. This is acceptable only for controlled testing and is not a sufficient production security boundary.
+The current endpoint uses deviceId as the device identity and then checks devices/{deviceId} for its current court binding. There is no cryptographic signature, timestamp freshness check, nonce, client-generated event ID or retry-safe idempotency protocol in the current endpoint.
 
-The target protocol is specified in [`../device-protocol.md`](../device-protocol.md).
+A discovered deviceId is therefore effectively a bearer credential. This is suitable only for controlled testing and is not a sufficient production security boundary.
 
-## P0 migration contract
+## Production target
 
-A production implementation should support:
+A production implementation should support a request shape such as:
 
-```json
-{
-  "deviceId": "device-123",
-  "eventId": "evt-01J...",
-  "timestamp": "2026-09-03T10:15:00.000Z",
-  "nonce": "...",
-  "eventType": "POINT_TEAM_A",
-  "courtId": "bnrm",
-  "signature": "..."
-}
-```
+    {
+      "deviceId": "device-123",
+      "eventId": "evt-01J...",
+      "timestamp": "2026-09-03T10:15:00.000Z",
+      "nonce": "...",
+      "eventType": "POINT_TEAM_A",
+      "courtId": "bnrm",
+      "signature": "..."
+    }
 
-The exact cryptographic algorithm should be selected and implemented consistently on ESP32 and server; HMAC-SHA-256 with a unique per-device secret is the preferred simple baseline for this hardware architecture.
-
-The server must verify:
+The server should verify:
 
 1. Device exists and is enabled.
 2. Signature covers a canonical representation of the request.
 3. Timestamp is inside an allowed clock-skew window.
 4. Nonce/eventId has not already been accepted.
 5. Event is authorized for the device's current binding.
-6. Event is applied at most once.
+6. The event is applied at most once.
 
-### Idempotency
+See device-protocol.md for the full target protocol.
 
-Network retries must not score the same physical button press twice. `eventId` must be generated once on the device before transmission and reused for retries. The server must atomically record accepted IDs and return the original result for a duplicate.
+## Idempotency target
 
-### REGISTER and SPECTATE authorization
+For production, the device should create one eventId per physical action, persist it until acknowledgement and reuse it for retries. The server should atomically deduplicate the eventId.
 
-These operations change device state and must not be treated as ordinary score events. Authorization must explicitly identify who/what is permitted to bind a device, validate target courts, and define concurrent rebinding behaviour. Last-write-wins must not silently transfer control between unrelated parties.
+REGISTER and SPECTATE should have explicit authorization and deterministic concurrent-rebinding rules.
 
-### Rate limiting
+## Rate limiting target
 
-Apply per-device and global abuse limits. Return `429` with a stable error code and `Retry-After` when appropriate.
-
-## ESP32 retry guidance
-
-- Generate one `eventId` per physical event.
-- Persist the pending event until a successful acknowledgement is received.
-- Retry with bounded exponential backoff.
-- Never generate a new event ID merely because a network request failed.
-- Treat a duplicate/idempotent acknowledgement as success.
-- Treat authentication, authorization and validation failures as non-retryable until configuration changes.
+Apply per-device and global abuse limits and return 429 with a stable error code and Retry-After where appropriate.

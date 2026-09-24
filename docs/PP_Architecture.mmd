@@ -5,264 +5,126 @@ config:
 
 flowchart LR
 
-        classDef hardware fill:#E8F5E9,stroke:#2E7D32,stroke-width:2px,color:#1B5E20,font-weight:bold;
-        classDef firebase fill:#FFF3E0,stroke:#E65100,stroke-width:2px,color:#BF360C,font-weight:bold;
-        classDef web fill:#E3F2FD,stroke:#1565C0,stroke-width:2px,color:#0D47A1,font-weight:bold;
-        classDef broadcast fill:#E0F2F1,stroke:#00695C,stroke-width:2px,color:#004D40,font-weight:bold;
-        classDef user fill:#F3E5F5,stroke:#7B1FA2,stroke-width:2px,color:#4A148C,font-weight:bold;
-        classDef delivery fill:#ECEFF1,stroke:#455A64,stroke-width:2px,color:#263238,font-weight:bold;
-        classDef operations fill:#FFFDE7,stroke:#FBC02D,stroke-width:2px,color:#F57F17,font-weight:bold;
-        classDef primary fill:#FFF8E1,stroke:#C62828,stroke-width:4px,color:#7F0000,font-weight:bold;
-        classDef legendHardware fill:#E8F5E9,stroke:#2E7D32,color:#1B5E20;
-        classDef legendFirebase fill:#FFF3E0,stroke:#E65100,color:#BF360C;
-        classDef legendWeb fill:#E3F2FD,stroke:#1565C0,color:#0D47A1;
-        classDef legendFuture fill:#FAFAFA,stroke:#9E9E9E,stroke-dasharray:5 5,color:#616161;
-        classDef future fill:#FAFAFA,stroke:#9E9E9E,stroke-width:1px,stroke-dasharray:5 5,color:#616161;
+    classDef current fill:#E3F2FD,stroke:#1565C0,stroke-width:2px,color:#0D47A1,font-weight:bold;
+    classDef firebase fill:#FFF3E0,stroke:#E65100,stroke-width:2px,color:#BF360C,font-weight:bold;
+    classDef data fill:#E8F5E9,stroke:#2E7D32,stroke-width:2px,color:#1B5E20,font-weight:bold;
+    classDef delivery fill:#ECEFF1,stroke:#455A64,stroke-width:2px,color:#263238,font-weight:bold;
+    classDef product fill:#FCE4EC,stroke:#C2185B,stroke-width:2px,color:#880E4F,font-weight:bold;
+    classDef future fill:#FAFAFA,stroke:#9E9E9E,stroke-width:1px,stroke-dasharray:5 5,color:#616161;
 
-    %% =========================================================
-    %% PADEL PUSH™ - TECHNICAL ARCHITECTURE
-    %% =========================================================
-
-    subgraph COURT["Court Hardware"]
-        
-        Beacon["Beacon<br/>ESP32 firmware<br/>beacon.ino"]
-        Pulse["Pulse<br/>ESP32 firmware<br/>pulse.ino"]
-        Hub["Hub<br/>ESP32 firmware + PN532 NFC<br/>hub.ino"]
-        Portal["Portal<br/>portal.ino<br/>painlessMesh TODO"]
-
-        WiFi["Court Wi-Fi"]
-
-        Beacon --> WiFi
-        Pulse --> WiFi
-        Hub --> WiFi
-
-        NFCReader["NFC reader"]
-        NFCReader --> Hub
+    subgraph CLIENTS["Current client surfaces"]
+        WebApp["Padel Push™ web app<br/>app/index.html<br/>app/js/script.js"]
+        Overlay["OBS / broadcast overlay<br/>app/overlay.html"]
+        NFC["NFC utility<br/>nfc/index.html"]
+        DeviceClient["External device clients<br/>POST /postEvent<br/>firmware is not in this repository"]
     end
 
+    subgraph FIREBASE["Firebase runtime"]
+        Hosting["Firebase Hosting<br/>static files + rewrites"]
 
-    subgraph FIREBASE["Firebase Platform"]
-
-        Hosting["Firebase Hosting<br/>Static web application"]
-
-        HTTP["HTTP Cloud Function<br/>postEvent<br/>africa-south1<br/>deviceId auth; HMAC hardening planned"]
+        Ingestion["postEvent<br/>HTTP Cloud Function<br/>africa-south1<br/>deviceId/binding identity only"]
 
         Callable["Callable Cloud Functions<br/>africa-south1"]
         Reset["resetCourt"]
         Options["updateScoringOptions"]
         Details["getDetailedScore"]
-        PublicAPI["Public HTTP read functions<br/>europe-west1<br/>/a /r /s /m"]
 
-        Callable --> Reset
-        Callable --> Options
-        Callable --> Details
+        PublicAPI["Public HTTP read functions<br/>europe-west1<br/>getCourtScore<br/>getCourtScoreRevision<br/>getCourtStats<br/>getCourtMomentum"]
 
-        Firestore[("Cloud Firestore")]
-
-        Courts["courts/{courtId}<br/>Court configuration"]
-        Events[("courts/{courtId}/events<br/>Immutable match events")]
-        CurrentScore[("courts/{courtId}/score/current<br/>Current live score")]
-        Checkpoints[("courts/{courtId}/scoreCheckpoints<br/>Replay checkpoints")]
-        Devices["devices/{deviceId}<br/>Device registration"]
-        Archive[("courts/{courtId}/archive/{resetId}/events<br/>Reset archives")]
-
-        Firestore --- Courts
-        Firestore --- Events
-        Firestore --- CurrentScore
-        Firestore --- Checkpoints
-        Firestore --- Devices
-        Firestore --- Archive
-
-        Trigger["Firestore trigger<br/>onEventCreate"]
-
+        Trigger["Firestore trigger<br/>onEventCreate<br/>africa-south1"]
         Scoring["Scoring engine<br/>scoringEngine.js"]
-
-        HTTP --> Events
-        Events --> Trigger
-        Trigger --> Scoring
-        Scoring --> CurrentScore
-        Scoring --> Checkpoints
-
-        Reset --> Events
-        Reset --> CurrentScore
-        Reset --> Archive
-        Options --> Events
-        Options --> CurrentScore
-        Details --> Events
-        Details --> Events
-        PublicAPI --> CurrentScore
-        PublicAPI --> Events
     end
 
-
-    subgraph OVERLAY["Broadcast Surface"]
-        Overlay["OBS overlay<br/>app/overlay.html"]
-        Overlay -->|"GET /r/{courtId}, /a/{courtId}<br/>GET /s/{courtId}, /m/{courtId}"| PublicAPI
+    subgraph FIRESTORE["Cloud Firestore"]
+        Court["courts/{courtId}<br/>configuration + active match state"]
+        Events[("courts/{courtId}/events/{eventId}<br/>append-only events")]
+        Score[("courts/{courtId}/score/current<br/>materialized live score")]
+        Checkpoints[("courts/{courtId}/scoreCheckpoints/{id}<br/>replay accelerators")]
+        Archives[("courts/{courtId}/archive/{archiveId}/events<br/>reset archives")]
+        Devices[("devices/{deviceId}<br/>device binding")]
     end
 
-    subgraph WEB["Web Application"]
-
-        WebApp["Padel Push™ Web App<br/>app/index.html<br/>app/js/script.js"]
-
-        Scoreboard["Live scoreboard"]
-        Play["Play / scoring controls"]
-        Spectate["Spectator view"]
-        Admin["Admin dashboard"]
-        CourtSetup["Court creation and setup"]
-        DeviceAdmin["Device assignment and management"]
-        QR["QR code generation"]
-        NFCWeb["Browser NFC interaction"]
-
-        WebApp --> Scoreboard
-        WebApp --> Play
-        WebApp --> Spectate
-        WebApp --> Admin
-        WebApp --> CourtSetup
-        WebApp --> DeviceAdmin
-        WebApp --> QR
-        WebApp --> NFCWeb
+    subgraph PRODUCT["Device concepts represented by the current product site"]
+        Pulse["Pulse"]
+        Beacon["Beacon"]
+        Hub["Hub"]
     end
 
-
-    subgraph USERS["Users"]
-        Player["Players"]
-        Spectator["Spectators"]
-        ClubOperator["Club operators"]
-        Administrator["System administrators"]
+    subgraph DELIVERY["Current delivery"]
+        Repo["Git repository"]
+        Tests["Functions Jest + Node integration tests"]
+        Staging["Non-main branch deployment<br/>staging project / preview"]
+        Production["main deployment<br/>production project"]
+        Rules["firestore.rules + firestore.indexes.json<br/>tracked in repo; not deployed by current CI workflow"]
     end
 
-
-    subgraph DELIVERY["Software Delivery"]
-
-        Repository["Source repository<br/>Firmware • Web • Functions"]
-        Tests["Automated tests<br/>functions/*.test.js"]
-        Deploy["Firebase deployment"]
-        Staging["Staging Firebase environment"]
-        Production["Production Firebase environment"]
-
-        Repository --> Tests
-        Tests --> Deploy
-        Deploy --> Staging
-        Deploy --> Production
+    subgraph FUTURE["Not implemented in current repository"]
+        HardwareFW["Physical-device firmware source"]
+        Hmac["HMAC/device-secret auth<br/>freshness + replay protection"]
+        MatchModel["First-class match/tournament model"]
+        Analytics["Commercial analytics / billing"]
     end
-
-
-    subgraph OPERATIONS["Operations"]
-
-        Monitoring["Monitoring and logs"]
-        Diagnostics["Device diagnostics"]
-        Support["Technical support"]
-        Provisioning["Wi-Fi and device provisioning"]
-
-        Monitoring --> Support
-        Diagnostics --> Support
-        Provisioning --> Diagnostics
-    end
-
-
-    %% =========================================================
-    %% DEVICE RUNTIME FLOWS
-    %% =========================================================
-
-    Beacon -->|"HTTPS POST event"| HTTP
-    Pulse -->|"HTTPS POST event"| HTTP
-    Hub -->|"HTTPS POST event"| HTTP
-
-    Hub -. "NFC configuration and tag reading" .-> NFCReader
-    Hub -->|"REGISTER via postEvent"| HTTP
-
-    Portal -. "Future court gateway role" .-> WiFi
-
-
-    %% =========================================================
-    %% WEB RUNTIME FLOWS
-    %% =========================================================
 
     Hosting --> WebApp
+    Hosting --> Overlay
+    Hosting --> NFC
 
-    WebApp -->|"onSnapshot listener"| CurrentScore
-    CurrentScore -->|"Live score updates"| WebApp
+    WebApp -->|"direct Firestore reads/writes"| Court
+    WebApp -->|"addDoc events"| Events
+    WebApp -->|"onSnapshot"| Score
+    WebApp -->|"callable"| Reset
+    WebApp -->|"callable"| Options
+    WebApp -->|"callable"| Details
+    WebApp -->|"device reads/updates"| Devices
 
-    WebApp -->|"Add scoring / operational events"| Events
-    WebApp -->|"Admin operations"| Callable
-    WebApp -->|"Court and device reads/writes"| Firestore
+    DeviceClient -->|"POST"| Ingestion
+    Ingestion -->|"append + server timestamp"| Events
 
-    WebApp -. "QR links and court access" .-> QR
-    WebApp -. "Supported browser NFC interaction" .-> NFCWeb
+    Events --> Trigger
+    Trigger --> Scoring
+    Scoring --> Score
+    Scoring --> Checkpoints
 
+    Reset --> Court
+    Reset --> Events
+    Reset --> Score
+    Reset --> Checkpoints
+    Reset --> Archives
 
-    %% =========================================================
-    %% USER FLOWS
-    %% =========================================================
+    Options --> Court
+    Options --> Events
+    Options --> Score
+    Options --> Checkpoints
 
-    Player --> Play
-    Player --> NFCWeb
-    Player --> QR
+    Details --> Court
+    Details --> Events
 
-    Spectator --> Spectate
-    ClubOperator --> Admin
-    Administrator --> Admin
+    PublicAPI --> Score
+    PublicAPI --> Events
+    Overlay -->|"GET /a /r /s /m"| PublicAPI
 
+    Repo --> Tests
+    Tests --> Staging
+    Tests --> Production
+    Repo -. "manual/explicit deployment" .-> Rules
 
-    %% =========================================================
-    %% DEPLOYMENT FLOWS
-    %% =========================================================
+    Pulse -. "product concept / no firmware source here" .-> HardwareFW
+    Beacon -. "product concept / no firmware source here" .-> HardwareFW
+    Hub -. "product concept / no firmware source here" .-> HardwareFW
+    Ingestion -. "production target" .-> Hmac
+    Court -. "future product architecture" .-> MatchModel
+    Score -. "future" .-> Analytics
 
-    Staging -. "Validated release" .-> Production
-    Production -. "Hosts" .-> Hosting
-    Production -. "Deploys Firestore rules/indexes" .-> Firestore
+    class WebApp,Overlay,NFC,DeviceClient current
+    class Hosting,Ingestion,Callable,Reset,Options,Details,PublicAPI,Trigger,Scoring firebase
+    class Court,Events,Score,Checkpoints,Archives,Devices data
+    class Pulse,Beacon,Hub product
+    class Repo,Tests,Staging,Production,Rules delivery
+    class HardwareFW,Hmac,MatchModel,Analytics future
 
-
-    %% =========================================================
-    %% OPERATIONS FLOWS
-    %% =========================================================
-
-    Production -. "Logs and runtime health" .-> Monitoring
-    Devices -. "Status and diagnostics" .-> Diagnostics
-    Provisioning -. "Configures" .-> Beacon
-    Provisioning -. "Configures" .-> Pulse
-    Provisioning -. "Configures" .-> Hub
-
-
-    %% =========================================================
-    %% OPTIONAL / FUTURE INTEGRATIONS
-    %% =========================================================
-
-    subgraph FUTURE["Optional / Future Integrations"]
-        Streaming["OBS / vMix / streaming platform"]
-        Analytics["Club analytics"]
-        Billing["Billing and subscriptions"]
-    end
-
-    subgraph LEGEND["Diagram key"]
-        LegendHardware["Implemented hardware"]
-        LegendFirebase["Implemented platform"]
-        LegendWeb["Implemented web surface"]
-        LegendFuture["Future or optional"]
-    end
-
-    CurrentScore -. "Future reporting" .-> Analytics
-    Admin -. "Future commercial controls" .-> Billing
-
-    class Beacon,Pulse,Hub,WiFi,NFCReader hardware
-    class Hosting,HTTP,Callable,Reset,Options,Details,PublicAPI,Firestore,Courts,Events,CurrentScore,Checkpoints,Archive,Devices,Trigger,Scoring firebase
-    class WebApp,Scoreboard,Play,Spectate,Admin,CourtSetup,DeviceAdmin,QR,NFCWeb web
-    class Player,Spectator,ClubOperator,Administrator user
-    class Repository,Tests,Deploy,Staging,Production delivery
-    class Monitoring,Diagnostics,Support,Provisioning operations
-    class Portal,Streaming,Analytics,Billing future
-    class HTTP,Events,Trigger,Scoring,CurrentScore primary
-    class LegendHardware legendHardware;
-    class LegendFirebase legendFirebase;
-    class LegendWeb legendWeb;
-    class LegendFuture legendFuture;
-
-    style COURT fill:#F1F8E9,stroke:#33691E,stroke-width:2px;
+    style CLIENTS fill:#E8EAF6,stroke:#1A237E,stroke-width:2px;
     style FIREBASE fill:#FFF8E1,stroke:#FF6F00,stroke-width:2px;
-    style OVERLAY fill:#E0F2F1,stroke:#00695C,stroke-width:2px;
-    style WEB fill:#E8EAF6,stroke:#1A237E,stroke-width:2px;
-    style USERS fill:#F3E5F5,stroke:#4A148C,stroke-width:2px;
+    style FIRESTORE fill:#F1F8E9,stroke:#33691E,stroke-width:2px;
+    style PRODUCT fill:#FCE4EC,stroke:#AD1457,stroke-width:2px;
     style DELIVERY fill:#ECEFF1,stroke:#263238,stroke-width:2px;
-    style OPERATIONS fill:#FFFDE7,stroke:#F57F17,stroke-width:2px;
     style FUTURE fill:#FAFAFA,stroke:#9E9E9E,stroke-dasharray:5 5;
-    style LEGEND fill:#FFFFFF,stroke:#607D8B,stroke-width:1px;

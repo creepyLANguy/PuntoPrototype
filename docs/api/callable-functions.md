@@ -1,75 +1,63 @@
 # Callable functions
 
-First-party Firebase callable functions run in `africa-south1`. These are application/admin surfaces, not the public read-only HTTP API.
+First-party Firebase callable functions run in africa-south1. These are app/admin surfaces, separate from the public read-only HTTP API.
 
 ## Invocation
 
-```js
-const functions = getFunctions(app, "africa-south1");
-const resetCourt = httpsCallable(functions, "resetCourt");
-const result = await resetCourt({ courtId, deepReset: false });
-```
+    const functions = getFunctions(app, "africa-south1");
+    const resetCourt = httpsCallable(functions, "resetCourt");
+    const result = await resetCourt({ courtId, deepReset: false });
 
-## Functions
+## Current functions
 
-### `resetCourt`
+### resetCourt
 
-Archives the current event log, clears the live score and increments `scoreVersion`.
+Archives the current event log, clears the live score/checkpoints and increments scoreVersion.
 
-Request:
+Request fields currently accepted include:
 
-- `courtId` — required.
-- `deepReset` — optional boolean; when true resets team/player names.
-- `newPassword` — optional; non-empty values must be at least 4 characters and differ from `courtId`.
-- `requirePassword` — optional boolean; true requires `newPassword`.
-- `scoringMode` — optional scoring-mode enum.
-- `scoringOptions` — optional scoring configuration.
+- courtId — required.
+- deepReset — optional boolean; when true resets team/player names.
+- newPassword — optional.
+- requirePassword — optional boolean.
+- scoringMode — optional.
+- scoringOptions — optional.
 
-Response:
+The function writes the new court scoring configuration and optionally the password/team/player changes.
 
-```json
-{
-  "success": true,
-  "archivedId": "2026-09-03T10:15:00.000Z",
-  "scoreVersion": 3,
-  "scoringMode": "standard",
-  "scoringOptions": {}
-}
-```
+### updateScoringOptions
 
-### `updateScoringOptions`
+Persists scoring configuration and replays the active court event history under the new rules. Existing checkpoints are deleted and a new checkpoint is written when there is active history.
 
-Persists scoring configuration and replays the complete event history under the new rules. The checkpoint stream is rebuilt.
+Request: courtId, scoringOptions and scoringMode.
 
-Request: `courtId`, `scoringOptions`, `scoringMode`.
+### getDetailedScore
 
-Response includes `success`, `scoringOptions`, `scoringMode`, `mode` and `score`.
+Request: { courtId }.
 
-### `getDetailedScore`
+Replays the active court event history and returns detailed match statistics data for the scoreboard app.
 
-Request: `{ courtId }`.
+## Firestore trigger: onEventCreate
 
-Returns the detailed statistics payload equivalent to `/s/{courtId}` without its `success`, `courtId`, `totalPoints` and `fetchedAt` wrappers. Unlike `/s`, it is uncached.
+onEventCreate is not callable. It consumes courts/{courtId}/events/{eventId} and maintains courts/{courtId}/score/current.
 
-## Firestore trigger: `onEventCreate`
+Current invariants include:
 
-`onEventCreate` is not callable. It consumes `courts/{courtId}/events/{eventId}` and maintains `courts/{courtId}/score/current`.
+- Non-scoring events do not change score/current.
+- Events from an older scoreVersion are ignored.
+- Late/out-of-order events trigger replay.
+- UNDO uses full-history replay where required.
+- RESET archives/deletes the active event stream and checkpoints and reinitializes score/current.
+- Trigger retries are enabled; event processing is designed to be deterministic and idempotent with respect to repeated delivery.
 
-Important invariants:
+## Current authorization note
 
-- Non-scoring events do not change the score.
-- Events from an old `scoreVersion` are ignored.
-- Late/out-of-order events trigger a full replay.
-- `UNDO` bypasses checkpoint shortcuts and replays as required.
-- `RESET` archives/deletes the event stream and checkpoints and zeroes the score.
-- Retries are expected; event processing must be idempotent.
+The current implementations of resetCourt, updateScoringOptions and getDetailedScore do not perform explicit request.auth checks in functions/index.js.
 
-## Callable error contract
+Do not treat possession of a courtId as proof that the caller is authorized to mutate or inspect that court. Application-level authorization is a production-hardening requirement.
 
-First-party clients should use Firebase callable error codes rather than matching human-readable messages. A migration should standardize domain errors such as `invalid-argument`, `not-found`, `permission-denied`, `already-exists`, `failed-precondition`, `resource-exhausted` and `internal`.
+## Error handling
 
-Do not expose Firestore paths, stack traces, credentials or internal exception text to clients.
+First-party clients should use Firebase callable error codes rather than matching human-readable error strings.
 
-## Authorization requirements
-
-Any callable that mutates court configuration must enforce application-level authorization. A public client must not be able to reset, reconfigure or administer an arbitrary court solely by knowing its ID.
+Production hardening should standardize domain errors such as invalid-argument, not-found, permission-denied, already-exists, failed-precondition, resource-exhausted and internal without exposing Firestore paths, stack traces, credentials or exception internals.

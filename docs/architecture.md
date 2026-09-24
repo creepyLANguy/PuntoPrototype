@@ -1,69 +1,93 @@
 # API architecture
 
-## Logical surfaces
+## Current implementation
 
-The request-to-score lifecycle is visualized in [`Mermaid/PP_Runtime_Flow.mmd`](../Mermaid/PP_Runtime_Flow.mmd).
+The repository is currently **court-centric**. A court document is the configuration and active match container; there is no separate match document or public match identifier in the current implementation.
 
-```text
-Browser / OBS / third-party consumers
-        │
-        ├── GET /a /r /s /m ──> Firebase Hosting ──> public functions
-        │                                      └── Firestore read/replay
-        │
-ESP32 devices
-        │
-        └── POST /postEvent ──> device ingestion ──> Firestore events
-                                                   └── onEventCreate
-                                                        └── score/current
+The runtime sequence is visualized in [PP_Runtime_Flow.mmd](PP_Runtime_Flow.mmd).
 
-First-party web app
-        └── Firebase callable functions ──> authenticated/authorized mutation logic
-```
+    Browser web app
+      |-- Firebase Web SDK -> courts/{courtId}
+      |-- Firebase Web SDK -> devices/{deviceId}
+      |-- Firebase Web SDK -> courts/{courtId}/events/{eventId}
+      |-- onSnapshot <- courts/{courtId}/score/current
+      |-- callable -> resetCourt / updateScoringOptions / getDetailedScore
+      |
+      +-- public URLs /c/{courtId}, /p/{courtId}, /b and related Hosting routes
 
-## Trust boundaries
+    External device clients
+      |-- POST /postEvent (HTTP Cloud Function, africa-south1)
+      +-- append event -> courts/{courtId}/events/{eventId}
 
-1. **Public read boundary:** live score/statistics are deliberately public and unauthenticated.
-2. **Device mutation boundary:** hardware can create score events and change bindings; this requires cryptographic authentication and replay protection for production.
-3. **Application mutation boundary:** callable functions change court state and require user/application authorization.
-4. **Persistence boundary:** Cloud Functions use Admin SDK and must enforce authorization themselves because Firestore rules do not protect Admin SDK writes.
+    onEventCreate (Cloud Function, africa-south1)
+      |-- reads court configuration + event log
+      |-- applies/replays scoring rules
+      |-- writes courts/{courtId}/score/current
+      +-- writes replay checkpoints when useful
+
+    Public JSON consumers / OBS
+      |-- /a/{courtId} -> current score
+      |-- /r/{courtId} -> revision token
+      |-- /s/{courtId} -> replayed statistics
+      +-- /m/{courtId} -> replayed momentum
+
+Firebase Hosting rewrites the public /a, /r, /s and /m paths to read functions running in europe-west1. The device ingestion, callable functions and event trigger run in africa-south1.
+
+## Current data and mutation boundaries
+
+- The web app uses the Firebase Web SDK directly for court reads, court creation/edit/delete, device reads/updates, event writes and score listeners.
+- Callable functions currently present are resetCourt, updateScoringOptions and getDetailedScore.
+- The current callable handlers do **not** perform an explicit request.auth authorization check in functions/index.js. Authorization is therefore a production-hardening requirement, not an implemented guarantee.
+- The public JSON endpoints are intentionally unauthenticated read surfaces.
+- postEvent currently identifies a device through its deviceId and current device/court binding. The cryptographic HMAC, freshness, nonce and client-generated idempotency protocol described elsewhere in the docs is a target, not the current implementation.
+- Cloud Functions use the Admin SDK, so Firestore security rules do not constrain those Admin SDK writes.
+- firestore.rules is explicitly documented in the repository as an emulator-only open ruleset. The deployment workflow currently deploys Functions and Hosting, not Firestore rules or indexes.
 
 ## Cache architecture
 
 Public endpoints use two cache layers:
 
-- Hosting/CDN HTTP caching with endpoint-specific TTLs.
-- Per-court in-memory function-instance caches.
+- Firebase Hosting/CDN HTTP caching.
+- Per-court in-memory function caches.
 
-Current TTLs: `/a` 4s, `/r` 4s, `/s` 10s, `/m` 5s.
+Current implementation TTLs:
 
-The `/r` endpoint exists to avoid repeatedly transferring full score payloads. A changed revision causes a client to request `/a`.
+- /a: 4 seconds
+- /r: 4 seconds
+- /s: 10 seconds
+- /m: 5 seconds
+
+The /r endpoint exists so polling clients can detect a changed revision before fetching the larger /a payload.
 
 ## Replay architecture
 
-The event log is the source of scoring history. `score/current` is a materialized current-state view. Checkpoints accelerate replay but are not authoritative history.
+The event log is the authoritative scoring history for the active court. courts/{courtId}/score/current is a materialized view used for live display. scoreCheckpoints are replay accelerators and can be discarded/rebuilt.
 
-A reset increments `scoreVersion`, archives the previous event stream and clears current checkpoints. Stale events from an earlier version are ignored.
+RESET handling currently:
 
-## Failure model
+1. archives the current event stream under courts/{courtId}/archive/{archiveId}/events/{eventId};
+2. deletes the active events and checkpoints;
+3. resets score/current;
+4. increments courts/{courtId}.scoreVersion.
 
-Network retries, duplicate event delivery and out-of-order Firestore trigger execution are expected. Event processing must therefore be deterministic and idempotent.
+Events whose scoreVersion no longer matches the court are ignored.
 
-A public read client should tolerate stale cached data for the documented TTL and retry transient `5xx`/`429` responses with bounded backoff.
+UNDO and out-of-order events trigger full-history replay where required. Normal scoring uses the newest compatible checkpoint when it can do so safely.
 
-## Observability requirements
+## Failure behaviour
 
-Production telemetry should record:
+The event trigger runs with retries enabled and uses transactions around score processing. Duplicate delivery, rapid concurrent writes and out-of-order events are explicitly handled by replay and scoreVersion checks.
 
-- request/function latency;
-- HTTP status and stable error code;
-- endpoint/function name;
-- environment and region;
-- court ID where appropriate;
-- event ID for device mutations;
-- correlation/request ID.
+Public consumers should tolerate short-lived cached data and retry transient HTTP failures with bounded backoff.
 
-Never log device secrets, signatures, passwords, raw NFC credentials or full request bodies containing credentials.
+## Current observability
+
+The repository currently relies on console debug/error logging in the Functions runtime and does not show a dedicated request-correlation or telemetry layer.
+
+For production hardening, telemetry should include function/endpoint latency, status/error code, environment/region, court ID where appropriate, event ID for device mutations and a request/correlation ID. Credentials and sensitive provisioning material must never be logged.
 
 ## Rate limiting
 
-Read endpoints currently have no published hard client quota. Device ingestion must have per-device and global abuse controls before production exposure. If public read limits are introduced, document them as part of the HTTP contract and return `429` consistently.
+The current public read API has no published client quota. Device ingestion also has no implemented per-device/global rate limiter in the current repository.
+
+Production hardening should add abuse controls to device ingestion and document any public read quota together with its 429 response behaviour.
