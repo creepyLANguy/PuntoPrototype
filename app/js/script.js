@@ -8807,10 +8807,10 @@ async function cacheShareableScoreCard(generation = shareableScoreCardGeneration
     const footerTop = footerRect.top - cloneRect.top;
     const verticalGap = Math.max(
       0,
-      (cloneRect.height - scoreBottom - footerRect.height) / 2
+      Math.round((cloneRect.height - scoreBottom - footerRect.height) / 2)
     );
-    const desiredFooterTop = scoreBottom + verticalGap;
-    const additionalMargin = desiredFooterTop - footerTop;
+    const desiredFooterTop = Math.round(scoreBottom + verticalGap);
+    const additionalMargin = Math.round(desiredFooterTop - footerTop);
 
     footerPanel.style.marginTop = `${Math.max(0, additionalMargin)}px`;
   }
