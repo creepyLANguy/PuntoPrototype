@@ -198,6 +198,39 @@ test("the momentum portion stays hidden until its payload arrives", async () =>
   );
 });
 
+test("long final-column stats values tighten the label column just enough", async () =>
+{
+  const table = document.querySelector("#dmStatsTeam .dm-stats-table");
+  assert.ok(table, "stats table should be rendered");
+
+  const window = document.defaultView;
+  table.getBoundingClientRect = () => ({ width: 300 });
+
+  const primaryCells = Array.from(table.querySelectorAll("tbody .dm-st-val:nth-child(2)"));
+  const secondaryCells = Array.from(table.querySelectorAll("tbody .dm-st-val:nth-child(3)"));
+
+  primaryCells.forEach(cell =>
+  {
+    Object.defineProperty(cell, "scrollWidth", { configurable: true, value: 108 });
+  });
+  secondaryCells.forEach(cell =>
+  {
+    Object.defineProperty(cell, "scrollWidth", { configurable: true, value: 125 });
+  });
+
+  window.dispatchEvent(new window.Event("resize"));
+
+  assert.equal(table.style.getPropertyValue("--dm-st-primary-width"), "36%");
+  assert.ok(
+    Number.parseFloat(table.style.getPropertyValue("--dm-st-secondary-width")) > 36,
+    "the overflowing final column should receive the extra width"
+  );
+  assert.ok(
+    Number.parseFloat(table.style.getPropertyValue("--dm-st-label-width")) < 28,
+    "the label column should surrender only the required space"
+  );
+});
+
 test("a match with no momentum data keeps the panel hidden", async () =>
 {
   momentumPayload = EMPTY_MOMENTUM;
