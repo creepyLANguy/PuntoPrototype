@@ -53,7 +53,7 @@ async function poll(courtId) {
 setInterval(() => poll("bnrm").catch(console.error), 2000);
 ```
 
-Always store the `revision` returned with the `/a` response. Do not assume the `/r` value that triggered a request still represents the fetched score if an update occurred during the request.
+Always store the `revision` returned with the `/score` response. Do not assume the `/revision` value that triggered a request still represents the fetched score if an update occurred during the request.
 
 ## `/score/{courtId}` response
 
