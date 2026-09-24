@@ -2525,7 +2525,7 @@
         return data;
       }
 
-      // The point-by-point momentum streams come from /m/{courtId} and nowhere
+      // The point-by-point momentum streams come from /momentum/{courtId} and nowhere
       // else, so this is the momentum card's only data source.
       async function fetchMomentum(force) {
         if (!isDebugCourt && !courtId) {
