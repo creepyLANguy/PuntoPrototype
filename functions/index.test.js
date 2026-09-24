@@ -1099,7 +1099,7 @@ describe("getCourtStats", () =>
     expect(res.payload.advancedStats.matchStats.totalPoints).toBe(5);
     expect(res.payload.playerNames.A1).toBe("Ann");
 
-    // The per-point momentum streams belong to /m/{courtId} alone.
+    // The per-point momentum streams belong to /momentum/{courtId} alone.
     expect(res.payload.pointHistory).toBeUndefined();
     expect(res.payload.momentumTimeline).toBeUndefined();
     expect(res.payload.setPointMarkers).toBeUndefined();
