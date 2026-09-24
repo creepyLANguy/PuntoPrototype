@@ -7,6 +7,6 @@ export const firebaseConfigs = {
     apiKey: "mock-api-key",
     authDomain: "mock.firebaseapp.com",
     projectId: "mock-project",
-    appId: "mock-app-id"
-  }
+    appId: "mock-app-id",
+  },
 };

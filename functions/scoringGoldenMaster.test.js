@@ -31,40 +31,36 @@ const {
   applyEvent,
   replayEvents,
   getCurrentServerLabel,
-  normalizeScoringOptions
+  normalizeScoringOptions,
 } = require("./scoringEngine");
 
 const FIXTURES_DIR = path.resolve(__dirname, "..", "test", "fixtures", "scoring");
 
-function loadFixtures()
-{
+function loadFixtures() {
   const files = fs
     .readdirSync(FIXTURES_DIR)
     .filter((name) => name.endsWith(".json"))
     .sort();
 
-  return files.map((file) =>
-  {
+  return files.map((file) => {
     const fixture = JSON.parse(fs.readFileSync(path.join(FIXTURES_DIR, file), "utf8"));
     return { file, ...fixture };
   });
 }
 
-function pickTeam(team = {})
-{
+function pickTeam(team = {}) {
   return {
     points: Number(team.points) || 0,
     games: Number(team.games) || 0,
     sets: Number(team.sets) || 0,
-    totalPoints: Number(team.totalPoints) || 0
+    totalPoints: Number(team.totalPoints) || 0,
   };
 }
 
 // The externally-relevant, engine-authoritative projection of a score. Volatile
 // / replay-only fields (history, lastEventId, scoringOptions echo, updatedAt)
 // are intentionally excluded - only what a consumer relies on is asserted.
-function project(score)
-{
+function project(score) {
   return {
     A: pickTeam(score.A),
     B: pickTeam(score.B),
@@ -73,7 +69,7 @@ function project(score)
       B: Number(set.B) || 0,
       tiebreakPoints: set.tiebreakPoints
         ? { A: Number(set.tiebreakPoints.A) || 0, B: Number(set.tiebreakPoints.B) || 0 }
-        : null
+        : null,
     })),
     inTiebreak: Boolean(score.inTiebreak),
     deuceCycles: Number(score.deuceCycles) || 0,
@@ -81,22 +77,19 @@ function project(score)
     lastPointTeam: score.lastPointTeam ?? null,
     lastGameTeam: score.lastGameTeam ?? null,
     lastSetTeam: score.lastSetTeam ?? null,
-    server: getCurrentServerLabel(score)
+    server: getCurrentServerLabel(score),
   };
 }
 
 // --- orchestration paths --------------------------------------------------
 
-function pathReplay(events, options)
-{
+function pathReplay(events, options) {
   return project(replayEvents(events, options));
 }
 
-function pathIncremental(events, options)
-{
+function pathIncremental(events, options) {
   let score = defaultScore(options);
-  for (const event of events)
-  {
+  for (const event of events) {
     score = applyEvent(score, event, options);
   }
   return project(score);
@@ -104,11 +97,9 @@ function pathIncremental(events, options)
 
 // Replay [0, split) to a resume state, then continue with applyEvent. Returns
 // one projection per split point (0..events.length inclusive).
-function pathSegmentedAt(events, options, split)
-{
+function pathSegmentedAt(events, options, split) {
   let score = replayEvents(events.slice(0, split), options);
-  for (const event of events.slice(split))
-  {
+  for (const event of events.slice(split)) {
     score = applyEvent(score, event, options);
   }
   return project(score);
@@ -116,18 +107,14 @@ function pathSegmentedAt(events, options, split)
 
 const fixtures = loadFixtures();
 
-describe("scoring golden master", () =>
-{
-  test("fixtures directory is present and non-empty", () =>
-  {
+describe("scoring golden master", () => {
+  test("fixtures directory is present and non-empty", () => {
     expect(fixtures.length).toBeGreaterThan(0);
   });
 
-  test("fixture names are unique and match their filename", () =>
-  {
+  test("fixture names are unique and match their filename", () => {
     const seen = new Set();
-    for (const fixture of fixtures)
-    {
+    for (const fixture of fixtures) {
       expect(typeof fixture.name).toBe("string");
       expect(`${fixture.name}.json`).toBe(fixture.file);
       expect(seen.has(fixture.name)).toBe(false);
@@ -135,37 +122,28 @@ describe("scoring golden master", () =>
     }
   });
 
-  describe.each(fixtures.map((fixture) => [fixture.name, fixture]))(
-    "%s",
-    (_name, fixture) =>
-    {
-      const options = normalizeScoringOptions(fixture.options);
-      const events = fixture.events;
+  describe.each(fixtures.map((fixture) => [fixture.name, fixture]))("%s", (_name, fixture) => {
+    const options = normalizeScoringOptions(fixture.options);
+    const events = fixture.events;
 
-      test("options normalise to a valid scoring configuration", () =>
-      {
-        expect(["standard", "straight", "tiebreakTen"]).toContain(options.scoringMode);
-        expect(["standard", "golden", "silver", "star"]).toContain(options.deuceMode);
-        expect(["off", "sixAllSeven", "sixAllTen"]).toContain(options.tiebreakMode);
-      });
+    test("options normalise to a valid scoring configuration", () => {
+      expect(["standard", "straight", "tiebreakTen"]).toContain(options.scoringMode);
+      expect(["standard", "golden", "silver", "star"]).toContain(options.deuceMode);
+      expect(["off", "sixAllSeven", "sixAllTen"]).toContain(options.tiebreakMode);
+    });
 
-      test("replay path reproduces expected", () =>
-      {
-        expect(pathReplay(events, options)).toEqual(fixture.expected);
-      });
+    test("replay path reproduces expected", () => {
+      expect(pathReplay(events, options)).toEqual(fixture.expected);
+    });
 
-      test("incremental path reproduces expected", () =>
-      {
-        expect(pathIncremental(events, options)).toEqual(fixture.expected);
-      });
+    test("incremental path reproduces expected", () => {
+      expect(pathIncremental(events, options)).toEqual(fixture.expected);
+    });
 
-      test("segmented (checkpoint-resumed) path reproduces expected at every split", () =>
-      {
-        for (let split = 0; split <= events.length; split++)
-        {
-          expect(pathSegmentedAt(events, options, split)).toEqual(fixture.expected);
-        }
-      });
-    }
-  );
+    test("segmented (checkpoint-resumed) path reproduces expected at every split", () => {
+      for (let split = 0; split <= events.length; split++) {
+        expect(pathSegmentedAt(events, options, split)).toEqual(fixture.expected);
+      }
+    });
+  });
 });

@@ -1,23 +1,19 @@
-const {
-  DEFAULT_SCORING_OPTIONS,
-  replayEvents,
-  toLiveScorePayload
-} = require("./scoringEngine");
+const { DEFAULT_SCORING_OPTIONS, replayEvents, toLiveScorePayload } = require("./scoringEngine");
 
 let mockDb = null;
 
 jest.mock("firebase-functions/v2/firestore", () => ({
-  onDocumentCreated: (_config, handler) => handler
+  onDocumentCreated: (_config, handler) => handler,
 }));
 
 jest.mock("firebase-functions/v2/https", () => ({
   onCall: (_config, handler) => handler,
-  onRequest: (_config, handler) => handler
+  onRequest: (_config, handler) => handler,
 }));
 
 jest.mock("firebase-admin", () => ({
   initializeApp: jest.fn(),
-  firestore: () => mockDb
+  firestore: () => mockDb,
 }));
 
 // index.js takes FieldPath/FieldValue from the modular entry point rather than
@@ -25,26 +21,23 @@ jest.mock("firebase-admin", () => ({
 // latter. Mock the same surface the production classes expose.
 jest.mock("firebase-admin/firestore", () => ({
   FieldPath: {
-    documentId: () => "__name__"
+    documentId: () => "__name__",
   },
   FieldValue: {
-    serverTimestamp: () => ({ __serverTimestamp: true })
-  }
+    serverTimestamp: () => ({ __serverTimestamp: true }),
+  },
 }));
 
-function timestamp(seconds, nanoseconds = 0)
-{
+function timestamp(seconds, nanoseconds = 0) {
   return { seconds, nanoseconds };
 }
 
-function comparePrimitive(left, right)
-{
+function comparePrimitive(left, right) {
   if (left === right) return 0;
   return left < right ? -1 : 1;
 }
 
-function compareTimestamp(left, right)
-{
+function compareTimestamp(left, right) {
   if (!left && !right) return 0;
   if (!left) return -1;
   if (!right) return 1;
@@ -54,92 +47,77 @@ function compareTimestamp(left, right)
   return comparePrimitive(left.nanoseconds, right.nanoseconds);
 }
 
-function compareValue(left, right)
-{
-  if (left && right && typeof left.seconds === "number" && typeof right.seconds === "number")
-  {
+function compareValue(left, right) {
+  if (left && right && typeof left.seconds === "number" && typeof right.seconds === "number") {
     return compareTimestamp(left, right);
   }
 
   return comparePrimitive(left, right);
 }
 
-class FakeFirestore
-{
-  constructor(initialDocs = {})
-  {
+class FakeFirestore {
+  constructor(initialDocs = {}) {
     this.docs = new Map(
-      Object.entries(initialDocs).map(([path, data]) => [path, structuredClone(data)])
+      Object.entries(initialDocs).map(([path, data]) => [path, structuredClone(data)]),
     );
   }
 
-  doc(path)
-  {
+  doc(path) {
     const store = this;
     return {
       kind: "doc",
       path,
       id: path.split("/").pop(),
       get: async () => store.getDocSnapshot(path),
-      set: async (data, options = {}) =>
-      {
+      set: async (data, options = {}) => {
         const existing = store.docs.get(path);
-        const next = options.merge && existing !== undefined
-          ? { ...structuredClone(existing), ...structuredClone(data) }
-          : structuredClone(data);
+        const next =
+          options.merge && existing !== undefined
+            ? { ...structuredClone(existing), ...structuredClone(data) }
+            : structuredClone(data);
         store.docs.set(path, next);
-      }
+      },
     };
   }
 
-  collection(path)
-  {
+  collection(path) {
     return new FakeQuery(this, path);
   }
 
-  batch()
-  {
+  batch() {
     const store = this;
     const ops = [];
     return {
       set: (ref, data) => ops.push({ type: "set", path: ref.path, data: structuredClone(data) }),
       delete: (ref) => ops.push({ type: "delete", path: ref.path }),
-      commit: async () =>
-      {
-        ops.forEach((op) =>
-        {
-          if (op.type === "delete")
-          {
+      commit: async () => {
+        ops.forEach((op) => {
+          if (op.type === "delete") {
             store.docs.delete(op.path);
             return;
           }
           store.docs.set(op.path, op.data);
         });
-      }
+      },
     };
   }
 
-  async runTransaction(callback)
-  {
+  async runTransaction(callback) {
     const writes = [];
     const tx = {
       get: async (target) => this.getTarget(target),
-      set: (ref, data) =>
-      {
+      set: (ref, data) => {
         writes.push({ type: "set", path: ref.path, data: structuredClone(data) });
       },
-      delete: (ref) =>
-      {
+      delete: (ref) => {
         writes.push({ type: "delete", path: ref.path });
-      }
+      },
     };
 
     await callback(tx);
 
-    writes.forEach((write) =>
-    {
-      if (write.type === "delete")
-      {
+    writes.forEach((write) => {
+      if (write.type === "delete") {
         this.docs.delete(write.path);
         return;
       }
@@ -148,49 +126,44 @@ class FakeFirestore
     });
   }
 
-  async getTarget(target)
-  {
-    if (target.kind === "doc")
-    {
+  async getTarget(target) {
+    if (target.kind === "doc") {
       return this.getDocSnapshot(target.path);
     }
 
     return this.getQuerySnapshot(target);
   }
 
-  getDocSnapshot(path)
-  {
+  getDocSnapshot(path) {
     const data = this.docs.get(path);
     return {
       exists: data !== undefined,
       id: path.split("/").pop(),
       ref: this.doc(path),
-      data: () => (data === undefined ? undefined : structuredClone(data))
+      data: () => (data === undefined ? undefined : structuredClone(data)),
     };
   }
 
-  getQuerySnapshot(query)
-  {
+  getQuerySnapshot(query) {
     const prefix = `${query.path}/`;
     let docs = [...this.docs.entries()]
       .filter(([path]) => path.startsWith(prefix) && !path.slice(prefix.length).includes("/"))
       .map(([path, data]) => ({
         id: path.slice(prefix.length),
         path,
-        data: structuredClone(data)
+        data: structuredClone(data),
       }));
 
-    if (query.orders.length > 0)
-    {
-      docs.sort((left, right) =>
-      {
-        for (const order of query.orders)
-        {
+    if (query.orders.length > 0) {
+      docs.sort((left, right) => {
+        for (const order of query.orders) {
           const field = order.field === "__name__" ? "id" : order.field;
           const directionFactor = order.direction === "desc" ? -1 : 1;
-          const comparison = compareValue(left[field] ?? left.data[field], right[field] ?? right.data[field]);
-          if (comparison !== 0)
-          {
+          const comparison = compareValue(
+            left[field] ?? left.data[field],
+            right[field] ?? right.data[field],
+          );
+          if (comparison !== 0) {
             return comparison * directionFactor;
           }
         }
@@ -199,12 +172,9 @@ class FakeFirestore
       });
     }
 
-    if (query.startAfterValues)
-    {
-      docs = docs.filter((doc) =>
-      {
-        for (let i = 0; i < query.orders.length; i++)
-        {
+    if (query.startAfterValues) {
+      docs = docs.filter((doc) => {
+        for (let i = 0; i < query.orders.length; i++) {
           const order = query.orders[i];
           const field = order.field === "__name__" ? "id" : order.field;
           const directionFactor = order.direction === "desc" ? -1 : 1;
@@ -220,8 +190,7 @@ class FakeFirestore
       });
     }
 
-    if (typeof query.limitCount === "number")
-    {
+    if (typeof query.limitCount === "number") {
       docs = docs.slice(0, query.limitCount);
     }
 
@@ -229,27 +198,23 @@ class FakeFirestore
       docs: docs.map((doc) => ({
         id: doc.id,
         ref: this.doc(doc.path),
-        data: () => structuredClone(doc.data)
+        data: () => structuredClone(doc.data),
       })),
-      forEach: (callback) =>
-      {
-        docs.forEach((doc) =>
-        {
+      forEach: (callback) => {
+        docs.forEach((doc) => {
           callback({
             id: doc.id,
             ref: this.doc(doc.path),
-            data: () => structuredClone(doc.data)
+            data: () => structuredClone(doc.data),
           });
         });
-      }
+      },
     };
   }
 }
 
-class FakeQuery
-{
-  constructor(db, path, orders = [], startAfterValues = null, limitCount = null)
-  {
+class FakeQuery {
+  constructor(db, path, orders = [], startAfterValues = null, limitCount = null) {
     this.kind = "query";
     this.db = db;
     this.path = path;
@@ -258,68 +223,47 @@ class FakeQuery
     this.limitCount = limitCount;
   }
 
-  orderBy(field, direction = "asc")
-  {
+  orderBy(field, direction = "asc") {
     return new FakeQuery(
       this.db,
       this.path,
       [...this.orders, { field, direction }],
       this.startAfterValues,
-      this.limitCount
+      this.limitCount,
     );
   }
 
-  startAfter(...values)
-  {
-    return new FakeQuery(
-      this.db,
-      this.path,
-      this.orders,
-      values,
-      this.limitCount
-    );
+  startAfter(...values) {
+    return new FakeQuery(this.db, this.path, this.orders, values, this.limitCount);
   }
 
-  limit(count)
-  {
-    return new FakeQuery(
-      this.db,
-      this.path,
-      this.orders,
-      this.startAfterValues,
-      count
-    );
+  limit(count) {
+    return new FakeQuery(this.db, this.path, this.orders, this.startAfterValues, count);
   }
 
-  doc(id)
-  {
+  doc(id) {
     this.db.autoIdCounter = (this.db.autoIdCounter || 0) + 1;
     const docId = id || `auto-${this.db.autoIdCounter}`;
     return this.db.doc(`${this.path}/${docId}`);
   }
 
-  async get()
-  {
+  async get() {
     return this.db.getQuerySnapshot(this);
   }
 }
 
-describe("onEventCreate", () =>
-{
+describe("onEventCreate", () => {
   let consoleDebugSpy;
 
-  beforeEach(() =>
-  {
+  beforeEach(() => {
     consoleDebugSpy = jest.spyOn(console, "debug").mockImplementation(() => {});
   });
 
-  afterEach(() =>
-  {
+  afterEach(() => {
     consoleDebugSpy.mockRestore();
   });
 
-  test("fully replays delayed point events that sort before the latest checkpoint", async () =>
-  {
+  test("fully replays delayed point events that sort before the latest checkpoint", async () => {
     const courtId = "court-1";
     const scorePath = `courts/${courtId}/score/current`;
     const courtPath = `courts/${courtId}`;
@@ -329,51 +273,61 @@ describe("onEventCreate", () =>
     const e1 = { id: "e1", eventType: "POINT_TEAM_A", createdAt: timestamp(1), scoreVersion: 0 };
     const e2 = { id: "e2", eventType: "POINT_TEAM_A", createdAt: timestamp(2), scoreVersion: 0 };
     const e3 = { id: "e3", eventType: "POINT_TEAM_A", createdAt: timestamp(3), scoreVersion: 0 };
-    const delayed = { id: "e0", eventType: "POINT_TEAM_A", createdAt: timestamp(3, 500), scoreVersion: 0 };
+    const delayed = {
+      id: "e0",
+      eventType: "POINT_TEAM_A",
+      createdAt: timestamp(3, 500),
+      scoreVersion: 0,
+    };
     const e4 = { id: "e4", eventType: "POINT_TEAM_B", createdAt: timestamp(4), scoreVersion: 0 };
     const e5 = { id: "e5", eventType: "POINT_TEAM_B", createdAt: timestamp(5), scoreVersion: 0 };
 
-    const checkpointScore = toLiveScorePayload(replayEvents([e1, e2, e3, e4], DEFAULT_SCORING_OPTIONS));
-    const persistedScore = toLiveScorePayload(replayEvents([e1, e2, e3, e4, e5], DEFAULT_SCORING_OPTIONS));
-    const fullReplayScore = toLiveScorePayload(replayEvents([e1, e2, e3, delayed, e4, e5], DEFAULT_SCORING_OPTIONS));
+    const checkpointScore = toLiveScorePayload(
+      replayEvents([e1, e2, e3, e4], DEFAULT_SCORING_OPTIONS),
+    );
+    const persistedScore = toLiveScorePayload(
+      replayEvents([e1, e2, e3, e4, e5], DEFAULT_SCORING_OPTIONS),
+    );
+    const fullReplayScore = toLiveScorePayload(
+      replayEvents([e1, e2, e3, delayed, e4, e5], DEFAULT_SCORING_OPTIONS),
+    );
 
     mockDb = new FakeFirestore({
       [courtPath]: {
         scoreVersion: 0,
         scoringMode: DEFAULT_SCORING_OPTIONS.scoringMode,
-        scoringOptions: DEFAULT_SCORING_OPTIONS
+        scoringOptions: DEFAULT_SCORING_OPTIONS,
       },
       [scorePath]: {
         ...persistedScore,
         lastEventId: "e5",
         lastProcessedEventId: "e5",
-        lastProcessedCreatedAt: e5.createdAt
+        lastProcessedCreatedAt: e5.createdAt,
       },
       [`${checkpointsPath}/cp1`]: {
         score: checkpointScore,
         scoringOptions: DEFAULT_SCORING_OPTIONS,
         lastEventId: "e4",
-        lastCreatedAt: e4.createdAt
+        lastCreatedAt: e4.createdAt,
       },
       [`${eventsPath}/e1`]: e1,
       [`${eventsPath}/e2`]: e2,
       [`${eventsPath}/e3`]: e3,
       [`${eventsPath}/e0`]: delayed,
       [`${eventsPath}/e4`]: e4,
-      [`${eventsPath}/e5`]: e5
+      [`${eventsPath}/e5`]: e5,
     });
 
     let onEventCreate;
-    jest.isolateModules(() =>
-    {
+    jest.isolateModules(() => {
       ({ onEventCreate } = require("./index"));
     });
 
     await onEventCreate({
       params: { courtId, eventId: delayed.id },
       data: {
-        data: () => structuredClone(delayed)
-      }
+        data: () => structuredClone(delayed),
+      },
     });
 
     const nextScore = mockDb.docs.get(scorePath);
@@ -387,8 +341,7 @@ describe("onEventCreate", () =>
     expect(nextScore.lastProcessedCreatedAt).toEqual(e5.createdAt);
   });
 
-  test("replays ignore scoring events left over from an older scoreVersion", async () =>
-  {
+  test("replays ignore scoring events left over from an older scoreVersion", async () => {
     const courtId = "court-1";
     const scorePath = `courts/${courtId}/score/current`;
     const courtPath = `courts/${courtId}`;
@@ -397,43 +350,57 @@ describe("onEventCreate", () =>
     // A stale event written in-flight against the pre-reset scoreVersion must
     // not pollute the full-replay path, mirroring the direct-path guard.
     const stale = { id: "s1", eventType: "POINT_TEAM_B", createdAt: timestamp(1), scoreVersion: 0 };
-    const fresh1 = { id: "f1", eventType: "POINT_TEAM_A", createdAt: timestamp(2), scoreVersion: 1 };
-    const delayed = { id: "f0", eventType: "POINT_TEAM_A", createdAt: timestamp(2, 500), scoreVersion: 1 };
-    const fresh2 = { id: "f2", eventType: "POINT_TEAM_A", createdAt: timestamp(3), scoreVersion: 1 };
+    const fresh1 = {
+      id: "f1",
+      eventType: "POINT_TEAM_A",
+      createdAt: timestamp(2),
+      scoreVersion: 1,
+    };
+    const delayed = {
+      id: "f0",
+      eventType: "POINT_TEAM_A",
+      createdAt: timestamp(2, 500),
+      scoreVersion: 1,
+    };
+    const fresh2 = {
+      id: "f2",
+      eventType: "POINT_TEAM_A",
+      createdAt: timestamp(3),
+      scoreVersion: 1,
+    };
 
     const expectedScore = toLiveScorePayload(
-      replayEvents([fresh1, delayed, fresh2], DEFAULT_SCORING_OPTIONS)
+      replayEvents([fresh1, delayed, fresh2], DEFAULT_SCORING_OPTIONS),
     );
 
     mockDb = new FakeFirestore({
       [courtPath]: {
         scoreVersion: 1,
         scoringMode: DEFAULT_SCORING_OPTIONS.scoringMode,
-        scoringOptions: DEFAULT_SCORING_OPTIONS
+        scoringOptions: DEFAULT_SCORING_OPTIONS,
       },
       [scorePath]: {
         ...toLiveScorePayload(replayEvents([fresh1, fresh2], DEFAULT_SCORING_OPTIONS)),
         lastEventId: "f2",
         lastProcessedEventId: "f2",
-        lastProcessedCreatedAt: fresh2.createdAt
+        lastProcessedCreatedAt: fresh2.createdAt,
       },
       [`${eventsPath}/s1`]: stale,
       [`${eventsPath}/f1`]: fresh1,
       [`${eventsPath}/f0`]: delayed,
-      [`${eventsPath}/f2`]: fresh2
+      [`${eventsPath}/f2`]: fresh2,
     });
 
     let onEventCreate;
-    jest.isolateModules(() =>
-    {
+    jest.isolateModules(() => {
       ({ onEventCreate } = require("./index"));
     });
 
     await onEventCreate({
       params: { courtId, eventId: delayed.id },
       data: {
-        data: () => structuredClone(delayed)
-      }
+        data: () => structuredClone(delayed),
+      },
     });
 
     const nextScore = mockDb.docs.get(scorePath);
@@ -444,47 +411,39 @@ describe("onEventCreate", () =>
   });
 });
 
-describe("onEventCreate - undo vs checkpoints", () =>
-{
+describe("onEventCreate - undo vs checkpoints", () => {
   let consoleDebugSpy;
 
-  beforeEach(() =>
-  {
+  beforeEach(() => {
     consoleDebugSpy = jest.spyOn(console, "debug").mockImplementation(() => {});
   });
 
-  afterEach(() =>
-  {
+  afterEach(() => {
     consoleDebugSpy.mockRestore();
   });
 
   // 24 straight points for A = a 6-0 set in standard scoring; the final point
   // (p023) is the set-winning point where production writes a checkpoint.
-  function buildSetWinPointEvents(startSeconds = 1)
-  {
+  function buildSetWinPointEvents(startSeconds = 1) {
     const events = [];
-    for (let i = 0; i < 24; i++)
-    {
+    for (let i = 0; i < 24; i++) {
       events.push({
         id: `p${String(i).padStart(3, "0")}`,
         eventType: "POINT_TEAM_A",
         createdAt: timestamp(startSeconds + i),
-        scoreVersion: 0
+        scoreVersion: 0,
       });
     }
     return events;
   }
 
-  function seedEventDocs(state, eventsPath, events)
-  {
-    events.forEach((event) =>
-    {
+  function seedEventDocs(state, eventsPath, events) {
+    events.forEach((event) => {
       state[`${eventsPath}/${event.id}`] = event;
     });
   }
 
-  test("a point after an undo at a checkpoint boundary does not resurrect the undone set", async () =>
-  {
+  test("a point after an undo at a checkpoint boundary does not resurrect the undone set", async () => {
     const courtId = "court-undo-1";
     const scorePath = `courts/${courtId}/score/current`;
     const courtPath = `courts/${courtId}`;
@@ -493,49 +452,55 @@ describe("onEventCreate - undo vs checkpoints", () =>
 
     const setEvents = buildSetWinPointEvents();
     const undoEvent = { id: "u1", eventType: "UNDO", createdAt: timestamp(25), scoreVersion: 0 };
-    const nextPoint = { id: "z1", eventType: "POINT_TEAM_B", createdAt: timestamp(26), scoreVersion: 0 };
+    const nextPoint = {
+      id: "z1",
+      eventType: "POINT_TEAM_B",
+      createdAt: timestamp(26),
+      scoreVersion: 0,
+    };
 
     // State as production leaves it after the undo was correctly processed:
     // the set-completion checkpoint still sits exactly at the undone point.
     const checkpointScore = toLiveScorePayload(replayEvents(setEvents, DEFAULT_SCORING_OPTIONS));
-    const postUndoScore = toLiveScorePayload(replayEvents([...setEvents, undoEvent], DEFAULT_SCORING_OPTIONS));
+    const postUndoScore = toLiveScorePayload(
+      replayEvents([...setEvents, undoEvent], DEFAULT_SCORING_OPTIONS),
+    );
     const expectedScore = toLiveScorePayload(
-      replayEvents([...setEvents, undoEvent, nextPoint], DEFAULT_SCORING_OPTIONS)
+      replayEvents([...setEvents, undoEvent, nextPoint], DEFAULT_SCORING_OPTIONS),
     );
 
     const initialState = {
       [courtPath]: {
         scoreVersion: 0,
         scoringMode: DEFAULT_SCORING_OPTIONS.scoringMode,
-        scoringOptions: DEFAULT_SCORING_OPTIONS
+        scoringOptions: DEFAULT_SCORING_OPTIONS,
       },
       [scorePath]: {
         ...postUndoScore,
         lastEventId: "u1",
         lastProcessedEventId: "u1",
-        lastProcessedCreatedAt: undoEvent.createdAt
+        lastProcessedCreatedAt: undoEvent.createdAt,
       },
       [`${checkpointsPath}/cp1`]: {
         score: checkpointScore,
         scoringOptions: DEFAULT_SCORING_OPTIONS,
         lastEventId: "p023",
-        lastCreatedAt: timestamp(24)
-      }
+        lastCreatedAt: timestamp(24),
+      },
     };
     seedEventDocs(initialState, eventsPath, [...setEvents, undoEvent, nextPoint]);
     mockDb = new FakeFirestore(initialState);
 
     let onEventCreate;
-    jest.isolateModules(() =>
-    {
+    jest.isolateModules(() => {
       ({ onEventCreate } = require("./index"));
     });
 
     await onEventCreate({
       params: { courtId, eventId: nextPoint.id },
       data: {
-        data: () => structuredClone(nextPoint)
-      }
+        data: () => structuredClone(nextPoint),
+      },
     });
 
     const nextScore = mockDb.docs.get(scorePath);
@@ -550,8 +515,7 @@ describe("onEventCreate - undo vs checkpoints", () =>
     expect(nextScore.completedSets).toEqual([]);
   });
 
-  test("processing an UNDO writes a fresh checkpoint anchored at the undo event", async () =>
-  {
+  test("processing an UNDO writes a fresh checkpoint anchored at the undo event", async () => {
     const courtId = "court-undo-2";
     const scorePath = `courts/${courtId}/score/current`;
     const courtPath = `courts/${courtId}`;
@@ -567,35 +531,34 @@ describe("onEventCreate - undo vs checkpoints", () =>
       [courtPath]: {
         scoreVersion: 0,
         scoringMode: DEFAULT_SCORING_OPTIONS.scoringMode,
-        scoringOptions: DEFAULT_SCORING_OPTIONS
+        scoringOptions: DEFAULT_SCORING_OPTIONS,
       },
       [scorePath]: {
         ...postSetScore,
         lastEventId: "p023",
         lastProcessedEventId: "p023",
-        lastProcessedCreatedAt: timestamp(24)
+        lastProcessedCreatedAt: timestamp(24),
       },
       [`${checkpointsPath}/cp1`]: {
         score: postSetScore,
         scoringOptions: DEFAULT_SCORING_OPTIONS,
         lastEventId: "p023",
-        lastCreatedAt: timestamp(24)
-      }
+        lastCreatedAt: timestamp(24),
+      },
     };
     seedEventDocs(initialState, eventsPath, [...setEvents, undoEvent]);
     mockDb = new FakeFirestore(initialState);
 
     let onEventCreate;
-    jest.isolateModules(() =>
-    {
+    jest.isolateModules(() => {
       ({ onEventCreate } = require("./index"));
     });
 
     await onEventCreate({
       params: { courtId, eventId: undoEvent.id },
       data: {
-        data: () => structuredClone(undoEvent)
-      }
+        data: () => structuredClone(undoEvent),
+      },
     });
 
     const nextScore = mockDb.docs.get(scorePath);
@@ -617,8 +580,7 @@ describe("onEventCreate - undo vs checkpoints", () =>
     expect(undoCheckpoint.score.history).toBeUndefined();
   });
 
-  test("undo after a scoring-mode change is not resurrected by the next point", async () =>
-  {
+  test("undo after a scoring-mode change is not resurrected by the next point", async () => {
     const courtId = "court-undo-3";
     const scorePath = `courts/${courtId}/score/current`;
     const courtPath = `courts/${courtId}`;
@@ -632,22 +594,21 @@ describe("onEventCreate - undo vs checkpoints", () =>
       [courtPath]: {
         scoreVersion: 0,
         scoringMode: DEFAULT_SCORING_OPTIONS.scoringMode,
-        scoringOptions: DEFAULT_SCORING_OPTIONS
+        scoringOptions: DEFAULT_SCORING_OPTIONS,
       },
       [scorePath]: {
         ...toLiveScorePayload(replayEvents([e1, e2, e3], DEFAULT_SCORING_OPTIONS)),
         lastEventId: "e3",
         lastProcessedEventId: "e3",
-        lastProcessedCreatedAt: e3.createdAt
-      }
+        lastProcessedCreatedAt: e3.createdAt,
+      },
     };
     seedEventDocs(initialState, eventsPath, [e1, e2, e3]);
     mockDb = new FakeFirestore(initialState);
 
     let onEventCreate;
     let updateScoringOptions;
-    jest.isolateModules(() =>
-    {
+    jest.isolateModules(() => {
       ({ onEventCreate, updateScoringOptions } = require("./index"));
     });
 
@@ -657,8 +618,12 @@ describe("onEventCreate - undo vs checkpoints", () =>
       data: {
         courtId,
         scoringMode: "straight",
-        scoringOptions: { scoringMode: "straight", deuceMode: "standard", tiebreakMode: "sixAllSeven" }
-      }
+        scoringOptions: {
+          scoringMode: "straight",
+          deuceMode: "standard",
+          tiebreakMode: "sixAllSeven",
+        },
+      },
     });
 
     expect(mockDb.docs.get(scorePath).A.points).toBe(3);
@@ -670,21 +635,26 @@ describe("onEventCreate - undo vs checkpoints", () =>
     await onEventCreate({
       params: { courtId, eventId: undoEvent.id },
       data: {
-        data: () => structuredClone(undoEvent)
-      }
+        data: () => structuredClone(undoEvent),
+      },
     });
 
     expect(mockDb.docs.get(scorePath).A.points).toBe(2);
 
     // The next point must build on the undone score, not resurrect the
     // undone point from the checkpoint boundary.
-    const nextPoint = { id: "z1", eventType: "POINT_TEAM_B", createdAt: timestamp(6), scoreVersion: 0 };
+    const nextPoint = {
+      id: "z1",
+      eventType: "POINT_TEAM_B",
+      createdAt: timestamp(6),
+      scoreVersion: 0,
+    };
     mockDb.docs.set(`${eventsPath}/z1`, structuredClone(nextPoint));
     await onEventCreate({
       params: { courtId, eventId: nextPoint.id },
       data: {
-        data: () => structuredClone(nextPoint)
-      }
+        data: () => structuredClone(nextPoint),
+      },
     });
 
     const finalScore = mockDb.docs.get(scorePath);
@@ -693,10 +663,8 @@ describe("onEventCreate - undo vs checkpoints", () =>
   });
 });
 
-describe("postEvent", () =>
-{
-  test("stamps device scoring events with the court's active scoreVersion", async () =>
-  {
+describe("postEvent", () => {
+  test("stamps device scoring events with the court's active scoreVersion", async () => {
     const courtId = "court-1";
     const deviceId = "device-1";
 
@@ -705,40 +673,42 @@ describe("postEvent", () =>
       [`courts/${courtId}`]: {
         scoreVersion: 3,
         scoringMode: DEFAULT_SCORING_OPTIONS.scoringMode,
-        scoringOptions: DEFAULT_SCORING_OPTIONS
-      }
+        scoringOptions: DEFAULT_SCORING_OPTIONS,
+      },
     });
 
     let postEvent;
-    jest.isolateModules(() =>
-    {
+    jest.isolateModules(() => {
       ({ postEvent } = require("./index"));
     });
 
     const res = {
       statusCode: null,
       payload: null,
-      status(code) { this.statusCode = code; return this; },
-      json(body) { this.payload = body; return this; }
+      status(code) {
+        this.statusCode = code;
+        return this;
+      },
+      json(body) {
+        this.payload = body;
+        return this;
+      },
     };
 
-    await postEvent(
-      { method: "POST", body: { deviceId, eventType: "POINT_TEAM_A" } },
-      res
-    );
+    await postEvent({ method: "POST", body: { deviceId, eventType: "POINT_TEAM_A" } }, res);
 
     expect(res.statusCode).toBe(200);
     expect(res.payload.success).toBe(true);
 
-    const eventEntry = [...mockDb.docs.entries()]
-      .find(([path]) => path.startsWith(`courts/${courtId}/events/`));
+    const eventEntry = [...mockDb.docs.entries()].find(([path]) =>
+      path.startsWith(`courts/${courtId}/events/`),
+    );
     expect(eventEntry).toBeDefined();
     expect(eventEntry[1].eventType).toBe("POINT_TEAM_A");
     expect(eventEntry[1].scoreVersion).toBe(3);
   });
 
-  test("stamps scoreVersion 0 when the court has never been reset", async () =>
-  {
+  test("stamps scoreVersion 0 when the court has never been reset", async () => {
     const courtId = "court-2";
     const deviceId = "device-2";
 
@@ -746,77 +716,90 @@ describe("postEvent", () =>
       [`devices/${deviceId}`]: { courtId },
       [`courts/${courtId}`]: {
         scoringMode: DEFAULT_SCORING_OPTIONS.scoringMode,
-        scoringOptions: DEFAULT_SCORING_OPTIONS
-      }
+        scoringOptions: DEFAULT_SCORING_OPTIONS,
+      },
     });
 
     let postEvent;
-    jest.isolateModules(() =>
-    {
+    jest.isolateModules(() => {
       ({ postEvent } = require("./index"));
     });
 
     const res = {
       statusCode: null,
       payload: null,
-      status(code) { this.statusCode = code; return this; },
-      json(body) { this.payload = body; return this; }
+      status(code) {
+        this.statusCode = code;
+        return this;
+      },
+      json(body) {
+        this.payload = body;
+        return this;
+      },
     };
 
-    await postEvent(
-      { method: "POST", body: { deviceId, eventType: "UNDO" } },
-      res
-    );
+    await postEvent({ method: "POST", body: { deviceId, eventType: "UNDO" } }, res);
 
     expect(res.statusCode).toBe(200);
 
-    const eventEntry = [...mockDb.docs.entries()]
-      .find(([path]) => path.startsWith(`courts/${courtId}/events/`));
+    const eventEntry = [...mockDb.docs.entries()].find(([path]) =>
+      path.startsWith(`courts/${courtId}/events/`),
+    );
     expect(eventEntry).toBeDefined();
     expect(eventEntry[1].scoreVersion).toBe(0);
   });
 });
 
-describe("getCourtScore", () =>
-{
-  function makeRes()
-  {
+describe("getCourtScore", () => {
+  function makeRes() {
     return {
       statusCode: null,
       payload: null,
       headers: {},
-      status(code) { this.statusCode = code; return this; },
-      json(body) { this.payload = body; return this; },
-      set(name, value) { this.headers[name] = value; return this; },
-      send(body) { this.payload = body; return this; }
+      status(code) {
+        this.statusCode = code;
+        return this;
+      },
+      json(body) {
+        this.payload = body;
+        return this;
+      },
+      set(name, value) {
+        this.headers[name] = value;
+        return this;
+      },
+      send(body) {
+        this.payload = body;
+        return this;
+      },
     };
   }
 
-  test("returns the current score with display labels, server, and CDN cache headers", async () =>
-  {
+  test("returns the current score with display labels, server, and CDN cache headers", async () => {
     const courtId = "court-1";
-    const score = toLiveScorePayload(replayEvents(
-      [
-        { id: "e1", eventType: "POINT_TEAM_A", createdAt: timestamp(1) },
-        { id: "e2", eventType: "POINT_TEAM_A", createdAt: timestamp(2) },
-        { id: "e3", eventType: "POINT_TEAM_A", createdAt: timestamp(3) }
-      ],
-      DEFAULT_SCORING_OPTIONS
-    ));
+    const score = toLiveScorePayload(
+      replayEvents(
+        [
+          { id: "e1", eventType: "POINT_TEAM_A", createdAt: timestamp(1) },
+          { id: "e2", eventType: "POINT_TEAM_A", createdAt: timestamp(2) },
+          { id: "e3", eventType: "POINT_TEAM_A", createdAt: timestamp(3) },
+        ],
+        DEFAULT_SCORING_OPTIONS,
+      ),
+    );
 
     mockDb = new FakeFirestore({
       [`courts/${courtId}`]: {
         teamNames: { A: "Smashers", B: "Lobbers" },
         playerNames: { A1: "Ann", A2: "Al", B1: "Bo", B2: "Bea" },
         scoringMode: DEFAULT_SCORING_OPTIONS.scoringMode,
-        scoringOptions: DEFAULT_SCORING_OPTIONS
+        scoringOptions: DEFAULT_SCORING_OPTIONS,
       },
-      [`courts/${courtId}/score/current`]: score
+      [`courts/${courtId}/score/current`]: score,
     });
 
     let getCourtScore;
-    jest.isolateModules(() =>
-    {
+    jest.isolateModules(() => {
       ({ getCourtScore } = require("./index"));
     });
 
@@ -838,13 +821,11 @@ describe("getCourtScore", () =>
     expect(res.headers["Cache-Control"]).toBe("public, max-age=4, s-maxage=4");
   });
 
-  test("returns 404 for an unknown court", async () =>
-  {
+  test("returns 404 for an unknown court", async () => {
     mockDb = new FakeFirestore({});
 
     let getCourtScore;
-    jest.isolateModules(() =>
-    {
+    jest.isolateModules(() => {
       ({ getCourtScore } = require("./index"));
     });
 
@@ -855,21 +836,19 @@ describe("getCourtScore", () =>
     expect(res.payload.success).toBe(false);
   });
 
-  test("serves repeat requests from the in-memory cache instead of Firestore", async () =>
-  {
+  test("serves repeat requests from the in-memory cache instead of Firestore", async () => {
     const courtId = "court-cache";
 
     mockDb = new FakeFirestore({
       [`courts/${courtId}`]: {
         teamNames: { A: "First", B: "Second" },
         scoringMode: DEFAULT_SCORING_OPTIONS.scoringMode,
-        scoringOptions: DEFAULT_SCORING_OPTIONS
-      }
+        scoringOptions: DEFAULT_SCORING_OPTIONS,
+      },
     });
 
     let getCourtScore;
-    jest.isolateModules(() =>
-    {
+    jest.isolateModules(() => {
       ({ getCourtScore } = require("./index"));
     });
 
@@ -887,13 +866,11 @@ describe("getCourtScore", () =>
     expect(second.payload.teamNames.A).toBe("First");
   });
 
-  test("rejects requests without a usable courtId", async () =>
-  {
+  test("rejects requests without a usable courtId", async () => {
     mockDb = new FakeFirestore({});
 
     let getCourtScore;
-    jest.isolateModules(() =>
-    {
+    jest.isolateModules(() => {
       ({ getCourtScore } = require("./index"));
     });
 
@@ -904,27 +881,27 @@ describe("getCourtScore", () =>
     expect(res.payload.success).toBe(false);
   });
 
-  test("revision endpoint returns a tiny payload that tracks score changes", async () =>
-  {
+  test("revision endpoint returns a tiny payload that tracks score changes", async () => {
     const courtId = "court-rev";
     const baseCourt = {
       teamNames: { A: "Smashers", B: "Lobbers" },
       scoringMode: DEFAULT_SCORING_OPTIONS.scoringMode,
-      scoringOptions: DEFAULT_SCORING_OPTIONS
+      scoringOptions: DEFAULT_SCORING_OPTIONS,
     };
 
     mockDb = new FakeFirestore({
       [`courts/${courtId}`]: baseCourt,
-      [`courts/${courtId}/score/current`]: toLiveScorePayload(replayEvents(
-        [{ id: "e1", eventType: "POINT_TEAM_A", createdAt: timestamp(1) }],
-        DEFAULT_SCORING_OPTIONS
-      ))
+      [`courts/${courtId}/score/current`]: toLiveScorePayload(
+        replayEvents(
+          [{ id: "e1", eventType: "POINT_TEAM_A", createdAt: timestamp(1) }],
+          DEFAULT_SCORING_OPTIONS,
+        ),
+      ),
     });
 
     let getCourtScore;
     let getCourtScoreRevision;
-    jest.isolateModules(() =>
-    {
+    jest.isolateModules(() => {
       ({ getCourtScore, getCourtScoreRevision } = require("./index"));
     });
 
@@ -940,16 +917,20 @@ describe("getCourtScore", () =>
     await getCourtScore({ method: "GET", path: `/score/${courtId}` }, scoreRes);
     expect(scoreRes.payload.revision).toBe(revisionRes.payload.revision);
 
-    mockDb.docs.set(`courts/${courtId}/score/current`, toLiveScorePayload(replayEvents(
-      [
-        { id: "e1", eventType: "POINT_TEAM_A", createdAt: timestamp(1) },
-        { id: "e2", eventType: "POINT_TEAM_B", createdAt: timestamp(2) }
-      ],
-      DEFAULT_SCORING_OPTIONS
-    )));
+    mockDb.docs.set(
+      `courts/${courtId}/score/current`,
+      toLiveScorePayload(
+        replayEvents(
+          [
+            { id: "e1", eventType: "POINT_TEAM_A", createdAt: timestamp(1) },
+            { id: "e2", eventType: "POINT_TEAM_B", createdAt: timestamp(2) },
+          ],
+          DEFAULT_SCORING_OPTIONS,
+        ),
+      ),
+    );
 
-    jest.isolateModules(() =>
-    {
+    jest.isolateModules(() => {
       ({ getCourtScoreRevision } = require("./index"));
     });
 
@@ -958,29 +939,29 @@ describe("getCourtScore", () =>
     expect(changedRes.payload.revision).not.toBe(revisionRes.payload.revision);
   });
 
-  test("ignores a stale matchComplete flag for non-tiebreakTen scores", async () =>
-  {
+  test("ignores a stale matchComplete flag for non-tiebreakTen scores", async () => {
     const courtId = "court-stale-complete";
     const staleScore = {
-      ...toLiveScorePayload(replayEvents(
-        [{ id: "e1", eventType: "POINT_TEAM_A", createdAt: timestamp(1) }],
-        DEFAULT_SCORING_OPTIONS
-      )),
+      ...toLiveScorePayload(
+        replayEvents(
+          [{ id: "e1", eventType: "POINT_TEAM_A", createdAt: timestamp(1) }],
+          DEFAULT_SCORING_OPTIONS,
+        ),
+      ),
       // e.g. persisted before the court switched away from tiebreakTen
-      matchComplete: true
+      matchComplete: true,
     };
 
     mockDb = new FakeFirestore({
       [`courts/${courtId}`]: {
         scoringMode: DEFAULT_SCORING_OPTIONS.scoringMode,
-        scoringOptions: DEFAULT_SCORING_OPTIONS
+        scoringOptions: DEFAULT_SCORING_OPTIONS,
       },
-      [`courts/${courtId}/score/current`]: staleScore
+      [`courts/${courtId}/score/current`]: staleScore,
     });
 
     let getCourtScore;
-    jest.isolateModules(() =>
-    {
+    jest.isolateModules(() => {
       ({ getCourtScore } = require("./index"));
     });
 
@@ -991,13 +972,15 @@ describe("getCourtScore", () =>
     expect(res.payload.matchComplete).toBe(false);
   });
 
-  test("still reports matchComplete for tiebreakTen scores", async () =>
-  {
+  test("still reports matchComplete for tiebreakTen scores", async () => {
     const courtId = "court-tb-complete";
-    const tiebreakOptions = { scoringMode: "tiebreakTen", deuceMode: "standard", tiebreakMode: "sixAllSeven" };
+    const tiebreakOptions = {
+      scoringMode: "tiebreakTen",
+      deuceMode: "standard",
+      tiebreakMode: "sixAllSeven",
+    };
     const events = [];
-    for (let i = 0; i < 10; i++)
-    {
+    for (let i = 0; i < 10; i++) {
       events.push({ id: `e${i}`, eventType: "POINT_TEAM_A", createdAt: timestamp(i + 1) });
     }
     const completedScore = toLiveScorePayload(replayEvents(events, tiebreakOptions));
@@ -1005,14 +988,13 @@ describe("getCourtScore", () =>
     mockDb = new FakeFirestore({
       [`courts/${courtId}`]: {
         scoringMode: "tiebreakTen",
-        scoringOptions: tiebreakOptions
+        scoringOptions: tiebreakOptions,
       },
-      [`courts/${courtId}/score/current`]: completedScore
+      [`courts/${courtId}/score/current`]: completedScore,
     });
 
     let getCourtScore;
-    jest.isolateModules(() =>
-    {
+    jest.isolateModules(() => {
       ({ getCourtScore } = require("./index"));
     });
 
@@ -1023,13 +1005,11 @@ describe("getCourtScore", () =>
     expect(res.payload.matchComplete).toBe(true);
   });
 
-  test("revision endpoint reports 404 for an unknown court", async () =>
-  {
+  test("revision endpoint reports 404 for an unknown court", async () => {
     mockDb = new FakeFirestore({});
 
     let getCourtScoreRevision;
-    jest.isolateModules(() =>
-    {
+    jest.isolateModules(() => {
       ({ getCourtScoreRevision } = require("./index"));
     });
 
@@ -1041,30 +1021,39 @@ describe("getCourtScore", () =>
   });
 });
 
-describe("getCourtStats", () =>
-{
-  function makeRes()
-  {
+describe("getCourtStats", () => {
+  function makeRes() {
     return {
       statusCode: null,
       payload: null,
       headers: {},
-      status(code) { this.statusCode = code; return this; },
-      json(body) { this.payload = body; return this; },
-      set(name, value) { this.headers[name] = value; return this; },
-      send(body) { this.payload = body; return this; }
+      status(code) {
+        this.statusCode = code;
+        return this;
+      },
+      json(body) {
+        this.payload = body;
+        return this;
+      },
+      set(name, value) {
+        this.headers[name] = value;
+        return this;
+      },
+      send(body) {
+        this.payload = body;
+        return this;
+      },
     };
   }
 
-  test("replays the event stream into aggregate stats without the point-by-point streams", async () =>
-  {
+  test("replays the event stream into aggregate stats without the point-by-point streams", async () => {
     const courtId = "court-stats";
     const events = [
       { eventType: "POINT_TEAM_A", createdAt: timestamp(1) },
       { eventType: "POINT_TEAM_A", createdAt: timestamp(2) },
       { eventType: "POINT_TEAM_B", createdAt: timestamp(3) },
       { eventType: "POINT_TEAM_A", createdAt: timestamp(4) },
-      { eventType: "POINT_TEAM_A", createdAt: timestamp(5) }
+      { eventType: "POINT_TEAM_A", createdAt: timestamp(5) },
     ];
 
     const seed = {
@@ -1072,18 +1061,16 @@ describe("getCourtStats", () =>
         teamNames: { A: "Smashers", B: "Lobbers" },
         playerNames: { A1: "Ann", A2: "Al", B1: "Bo", B2: "Bea" },
         scoringMode: DEFAULT_SCORING_OPTIONS.scoringMode,
-        scoringOptions: DEFAULT_SCORING_OPTIONS
-      }
+        scoringOptions: DEFAULT_SCORING_OPTIONS,
+      },
     };
-    events.forEach((event, index) =>
-    {
+    events.forEach((event, index) => {
       seed[`courts/${courtId}/events/e${index + 1}`] = event;
     });
     mockDb = new FakeFirestore(seed);
 
     let getCourtStats;
-    jest.isolateModules(() =>
-    {
+    jest.isolateModules(() => {
       ({ getCourtStats } = require("./index"));
     });
 
@@ -1108,20 +1095,18 @@ describe("getCourtStats", () =>
     expect(res.headers["Cache-Control"]).toBe("public, max-age=10, s-maxage=10");
   });
 
-  test("serves repeat requests from the in-memory cache instead of replaying events", async () =>
-  {
+  test("serves repeat requests from the in-memory cache instead of replaying events", async () => {
     const courtId = "court-stats-cache";
     mockDb = new FakeFirestore({
       [`courts/${courtId}`]: {
         scoringMode: DEFAULT_SCORING_OPTIONS.scoringMode,
-        scoringOptions: DEFAULT_SCORING_OPTIONS
+        scoringOptions: DEFAULT_SCORING_OPTIONS,
       },
-      [`courts/${courtId}/events/e1`]: { eventType: "POINT_TEAM_A", createdAt: timestamp(1) }
+      [`courts/${courtId}/events/e1`]: { eventType: "POINT_TEAM_A", createdAt: timestamp(1) },
     });
 
     let getCourtStats;
-    jest.isolateModules(() =>
-    {
+    jest.isolateModules(() => {
       ({ getCourtStats } = require("./index"));
     });
 
@@ -1131,7 +1116,10 @@ describe("getCourtStats", () =>
     expect(first.payload.totalPoints).toBe(1);
 
     // New events land; the cached aggregate must still be returned within the TTL.
-    mockDb.docs.set(`courts/${courtId}/events/e2`, { eventType: "POINT_TEAM_B", createdAt: timestamp(2) });
+    mockDb.docs.set(`courts/${courtId}/events/e2`, {
+      eventType: "POINT_TEAM_B",
+      createdAt: timestamp(2),
+    });
 
     const second = makeRes();
     await getCourtStats({ method: "GET", path: `/stats/${courtId}` }, second);
@@ -1139,13 +1127,11 @@ describe("getCourtStats", () =>
     expect(second.payload.totalPoints).toBe(1);
   });
 
-  test("returns 404 for an unknown court", async () =>
-  {
+  test("returns 404 for an unknown court", async () => {
     mockDb = new FakeFirestore({});
 
     let getCourtStats;
-    jest.isolateModules(() =>
-    {
+    jest.isolateModules(() => {
       ({ getCourtStats } = require("./index"));
     });
 
@@ -1157,47 +1143,54 @@ describe("getCourtStats", () =>
   });
 });
 
-describe("getCourtMomentum", () =>
-{
-  function makeRes()
-  {
+describe("getCourtMomentum", () => {
+  function makeRes() {
     return {
       statusCode: null,
       payload: null,
       headers: {},
-      status(code) { this.statusCode = code; return this; },
-      json(body) { this.payload = body; return this; },
-      set(name, value) { this.headers[name] = value; return this; },
-      send(body) { this.payload = body; return this; }
+      status(code) {
+        this.statusCode = code;
+        return this;
+      },
+      json(body) {
+        this.payload = body;
+        return this;
+      },
+      set(name, value) {
+        this.headers[name] = value;
+        return this;
+      },
+      send(body) {
+        this.payload = body;
+        return this;
+      },
     };
   }
 
-  test("returns the point-by-point momentum streams for the court", async () =>
-  {
+  test("returns the point-by-point momentum streams for the court", async () => {
     const courtId = "court-momentum";
     const events = [
       { eventType: "POINT_TEAM_A", createdAt: timestamp(1) },
       { eventType: "POINT_TEAM_A", createdAt: timestamp(2) },
       { eventType: "POINT_TEAM_B", createdAt: timestamp(3) },
       { eventType: "POINT_TEAM_A", createdAt: timestamp(4) },
-      { eventType: "POINT_TEAM_A", createdAt: timestamp(5) }
+      { eventType: "POINT_TEAM_A", createdAt: timestamp(5) },
     ];
 
     const seed = {
       [`courts/${courtId}`]: {
         scoringMode: DEFAULT_SCORING_OPTIONS.scoringMode,
-        scoringOptions: DEFAULT_SCORING_OPTIONS
-      }
+        scoringOptions: DEFAULT_SCORING_OPTIONS,
+      },
     };
-    events.forEach((event, index) =>
-    {
+    events.forEach((event, index) => {
       seed[`courts/${courtId}/events/e${index + 1}`] = event;
     });
     mockDb = new FakeFirestore(seed);
 
     let getCourtMomentum;
-    jest.isolateModules(() =>
-    {
+    jest.isolateModules(() => {
       ({ getCourtMomentum } = require("./index"));
     });
 
@@ -1212,8 +1205,7 @@ describe("getCourtMomentum", () =>
 
     // One value per played point, so the graph can pair them up 1:1.
     expect(res.payload.momentumTimeline).toHaveLength(5);
-    res.payload.momentumTimeline.forEach((value) =>
-    {
+    res.payload.momentumTimeline.forEach((value) => {
       expect(typeof value).toBe("number");
       expect(value).toBeGreaterThanOrEqual(-100);
       expect(value).toBeLessThanOrEqual(100);
@@ -1226,20 +1218,18 @@ describe("getCourtMomentum", () =>
     expect(res.headers["Cache-Control"]).toBe("public, max-age=5, s-maxage=5");
   });
 
-  test("serves repeat requests from the in-memory cache instead of replaying events", async () =>
-  {
+  test("serves repeat requests from the in-memory cache instead of replaying events", async () => {
     const courtId = "court-momentum-cache";
     mockDb = new FakeFirestore({
       [`courts/${courtId}`]: {
         scoringMode: DEFAULT_SCORING_OPTIONS.scoringMode,
-        scoringOptions: DEFAULT_SCORING_OPTIONS
+        scoringOptions: DEFAULT_SCORING_OPTIONS,
       },
-      [`courts/${courtId}/events/e1`]: { eventType: "POINT_TEAM_A", createdAt: timestamp(1) }
+      [`courts/${courtId}/events/e1`]: { eventType: "POINT_TEAM_A", createdAt: timestamp(1) },
     });
 
     let getCourtMomentum;
-    jest.isolateModules(() =>
-    {
+    jest.isolateModules(() => {
       ({ getCourtMomentum } = require("./index"));
     });
 
@@ -1249,7 +1239,10 @@ describe("getCourtMomentum", () =>
     expect(first.payload.totalPoints).toBe(1);
 
     // A new event lands; the cached payload must still be returned inside the TTL.
-    mockDb.docs.set(`courts/${courtId}/events/e2`, { eventType: "POINT_TEAM_B", createdAt: timestamp(2) });
+    mockDb.docs.set(`courts/${courtId}/events/e2`, {
+      eventType: "POINT_TEAM_B",
+      createdAt: timestamp(2),
+    });
 
     const second = makeRes();
     await getCourtMomentum({ method: "GET", path: `/momentum/${courtId}` }, second);
@@ -1257,13 +1250,11 @@ describe("getCourtMomentum", () =>
     expect(second.payload.totalPoints).toBe(1);
   });
 
-  test("returns 404 for an unknown court", async () =>
-  {
+  test("returns 404 for an unknown court", async () => {
     mockDb = new FakeFirestore({});
 
     let getCourtMomentum;
-    jest.isolateModules(() =>
-    {
+    jest.isolateModules(() => {
       ({ getCourtMomentum } = require("./index"));
     });
 
@@ -1275,32 +1266,28 @@ describe("getCourtMomentum", () =>
   });
 });
 
-describe("resetCourt - password handling", () =>
-{
+describe("resetCourt - password handling", () => {
   const courtId = "reset-court";
 
-  function seedCourtDb(overrides = {})
-  {
+  function seedCourtDb(overrides = {}) {
     mockDb = new FakeFirestore({
       [`courts/${courtId}`]: {
         password: "oldpw",
         scoreVersion: 2,
         scoringMode: DEFAULT_SCORING_OPTIONS.scoringMode,
         scoringOptions: DEFAULT_SCORING_OPTIONS,
-        ...overrides
-      }
+        ...overrides,
+      },
     });
 
     let resetCourt;
-    jest.isolateModules(() =>
-    {
+    jest.isolateModules(() => {
       ({ resetCourt } = require("./index"));
     });
     return resetCourt;
   }
 
-  test("a blank password leaves the existing court password untouched", async () =>
-  {
+  test("a blank password leaves the existing court password untouched", async () => {
     const resetCourt = seedCourtDb();
 
     const result = await resetCourt({ data: { courtId, deepReset: false } });
@@ -1310,8 +1297,7 @@ describe("resetCourt - password handling", () =>
     expect(result.scoreVersion).toBe(3);
   });
 
-  test("a whitespace-only password is treated as blank, not as a change", async () =>
-  {
+  test("a whitespace-only password is treated as blank, not as a change", async () => {
     const resetCourt = seedCourtDb();
 
     await resetCourt({ data: { courtId, newPassword: "   " } });
@@ -1319,8 +1305,7 @@ describe("resetCourt - password handling", () =>
     expect(mockDb.docs.get(`courts/${courtId}`).password).toBe("oldpw");
   });
 
-  test("a new password replaces the old one", async () =>
-  {
+  test("a new password replaces the old one", async () => {
     const resetCourt = seedCourtDb();
 
     await resetCourt({ data: { courtId, newPassword: "brandnew" } });
@@ -1330,18 +1315,15 @@ describe("resetCourt - password handling", () =>
 
   // Records the payload of every set() on the court document, so a test can assert
   // on what the client-visible write actually contained.
-  function captureCourtWrites()
-  {
+  function captureCourtWrites() {
     const writes = [];
     const originalDoc = mockDb.doc.bind(mockDb);
-    mockDb.doc = (path) =>
-    {
+    mockDb.doc = (path) => {
       const ref = originalDoc(path);
       if (path !== `courts/${courtId}`) return ref;
 
       const originalSet = ref.set;
-      ref.set = async (data, options) =>
-      {
+      ref.set = async (data, options) => {
         writes.push(data);
         return originalSet(data, options);
       };
@@ -1350,8 +1332,7 @@ describe("resetCourt - password handling", () =>
     return writes;
   }
 
-  test("re-submitting the current password is not written back", async () =>
-  {
+  test("re-submitting the current password is not written back", async () => {
     const resetCourt = seedCourtDb();
     const courtWrites = captureCourtWrites();
 
@@ -1364,8 +1345,7 @@ describe("resetCourt - password handling", () =>
     courtWrites.forEach((write) => expect(write).not.toHaveProperty("password"));
   });
 
-  test("a blank password writes no password field at all", async () =>
-  {
+  test("a blank password writes no password field at all", async () => {
     const resetCourt = seedCourtDb();
     const courtWrites = captureCourtWrites();
 
@@ -1374,8 +1354,7 @@ describe("resetCourt - password handling", () =>
     courtWrites.forEach((write) => expect(write).not.toHaveProperty("password"));
   });
 
-  test("an actual password change is written to the court document", async () =>
-  {
+  test("an actual password change is written to the court document", async () => {
     const resetCourt = seedCourtDb();
     const courtWrites = captureCourtWrites();
 
@@ -1384,36 +1363,35 @@ describe("resetCourt - password handling", () =>
     expect(courtWrites.some((write) => write.password === "brandnew")).toBe(true);
   });
 
-  test("a supplied password shorter than 4 characters is rejected", async () =>
-  {
+  test("a supplied password shorter than 4 characters is rejected", async () => {
     const resetCourt = seedCourtDb();
 
-    await expect(resetCourt({ data: { courtId, newPassword: "abc" } }))
-      .rejects.toThrow("Password must be at least 4 characters.");
+    await expect(resetCourt({ data: { courtId, newPassword: "abc" } })).rejects.toThrow(
+      "Password must be at least 4 characters.",
+    );
     expect(mockDb.docs.get(`courts/${courtId}`).password).toBe("oldpw");
   });
 
-  test("a supplied password equal to the court id is rejected", async () =>
-  {
+  test("a supplied password equal to the court id is rejected", async () => {
     const resetCourt = seedCourtDb();
 
-    await expect(resetCourt({ data: { courtId, newPassword: courtId } }))
-      .rejects.toThrow("Password must be different from court name.");
+    await expect(resetCourt({ data: { courtId, newPassword: courtId } })).rejects.toThrow(
+      "Password must be different from court name.",
+    );
   });
 
-  test("requirePassword still makes a password mandatory", async () =>
-  {
+  test("requirePassword still makes a password mandatory", async () => {
     const resetCourt = seedCourtDb();
 
-    await expect(resetCourt({ data: { courtId, requirePassword: true } }))
-      .rejects.toThrow("Password must be at least 4 characters.");
+    await expect(resetCourt({ data: { courtId, requirePassword: true } })).rejects.toThrow(
+      "Password must be at least 4 characters.",
+    );
   });
 
-  test("a deep reset with a blank password still restores names and keeps the password", async () =>
-  {
+  test("a deep reset with a blank password still restores names and keeps the password", async () => {
     const resetCourt = seedCourtDb({
       teamNames: { A: "Reds", B: "Blues" },
-      playerNames: { A1: "Ann", A2: "Bob", B1: "Cy", B2: "Dee" }
+      playerNames: { A1: "Ann", A2: "Bob", B1: "Cy", B2: "Dee" },
     });
 
     await resetCourt({ data: { courtId, deepReset: true } });

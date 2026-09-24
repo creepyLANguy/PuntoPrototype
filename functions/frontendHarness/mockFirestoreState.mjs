@@ -13,24 +13,22 @@ export const SERVER_TIMESTAMP_SENTINEL = Symbol("serverTimestamp");
 
 let timestampCounter = 0;
 
-function nextTimestamp()
-{
+function nextTimestamp() {
   timestampCounter += 1;
   return { seconds: timestampCounter, nanoseconds: 0 };
 }
 
 export const firestoreState = {
-  docs: new Map(),          // path -> plain data object
-  listeners: new Map(),     // path -> Set of { onNext, onError }
+  docs: new Map(), // path -> plain data object
+  listeners: new Map(), // path -> Set of { onNext, onError }
   autoId: 0,
-  backendEnabled: true,     // set false to defer backend score processing
+  backendEnabled: true, // set false to defer backend score processing
   pendingBackendWork: [],
   // per-court authoritative score incl. history (like the CF replay would produce)
-  backendScores: new Map()
+  backendScores: new Map(),
 };
 
-export function resetFirestoreState()
-{
+export function resetFirestoreState() {
   firestoreState.docs.clear();
   firestoreState.listeners.clear();
   firestoreState.autoId = 0;
@@ -40,21 +38,16 @@ export function resetFirestoreState()
   timestampCounter = 0;
 }
 
-function materialize(value)
-{
-  if (value === SERVER_TIMESTAMP_SENTINEL)
-  {
+function materialize(value) {
+  if (value === SERVER_TIMESTAMP_SENTINEL) {
     return nextTimestamp();
   }
-  if (Array.isArray(value))
-  {
+  if (Array.isArray(value)) {
     return value.map(materialize);
   }
-  if (value && typeof value === "object")
-  {
+  if (value && typeof value === "object") {
     const out = {};
-    for (const [key, entry] of Object.entries(value))
-    {
+    for (const [key, entry] of Object.entries(value)) {
       out[key] = materialize(entry);
     }
     return out;
@@ -62,15 +55,12 @@ function materialize(value)
   return value;
 }
 
-function cloneValue(value)
-{
+function cloneValue(value) {
   if (value === SERVER_TIMESTAMP_SENTINEL) return value;
   if (Array.isArray(value)) return value.map(cloneValue);
-  if (value && typeof value === "object")
-  {
+  if (value && typeof value === "object") {
     const out = {};
-    for (const [key, entry] of Object.entries(value))
-    {
+    for (const [key, entry] of Object.entries(value)) {
       out[key] = cloneValue(entry);
     }
     return out;
@@ -78,50 +68,43 @@ function cloneValue(value)
   return value;
 }
 
-export function makeSnapshot(path, data)
-{
+export function makeSnapshot(path, data) {
   const id = path.split("/").pop();
   return {
     id,
     exists: () => data !== undefined,
-    data: () => (data === undefined ? undefined : structuredClone(data))
+    data: () => (data === undefined ? undefined : structuredClone(data)),
   };
 }
 
-export function notifyListeners(path)
-{
+export function notifyListeners(path) {
   const listeners = firestoreState.listeners.get(path);
   if (!listeners) return;
   const data = firestoreState.docs.get(path);
-  for (const listener of [...listeners])
-  {
+  for (const listener of [...listeners]) {
     queueMicrotask(() => listener.onNext(makeSnapshot(path, data)));
   }
 }
 
-export function writeDoc(path, data)
-{
+export function writeDoc(path, data) {
   firestoreState.docs.set(path, materialize(cloneValue(data)));
   notifyListeners(path);
   maybeProcessBackend(path);
 }
 
-export function mergeDoc(path, data)
-{
+export function mergeDoc(path, data) {
   const existing = firestoreState.docs.get(path) || {};
   firestoreState.docs.set(path, { ...existing, ...materialize(cloneValue(data)) });
   notifyListeners(path);
   maybeProcessBackend(path);
 }
 
-export function deleteDocAt(path)
-{
+export function deleteDocAt(path) {
   firestoreState.docs.delete(path);
   notifyListeners(path);
 }
 
-export function seedDoc(path, data)
-{
+export function seedDoc(path, data) {
   firestoreState.docs.set(path, materialize(cloneValue(data)));
 }
 
@@ -129,8 +112,7 @@ export function seedDoc(path, data)
 // Simulated scoring backend (mirrors functions/index.js onEventCreate)
 // ---------------------------------------------------------------------------
 
-function maybeProcessBackend(path)
-{
+function maybeProcessBackend(path) {
   const match = path.match(/^courts\/([^/]+)\/events\/([^/]+)$/);
   if (!match) return;
 
@@ -140,8 +122,7 @@ function maybeProcessBackend(path)
 
   const work = () => processScoringEvent(courtId, eventId, event);
 
-  if (!firestoreState.backendEnabled)
-  {
+  if (!firestoreState.backendEnabled) {
     firestoreState.pendingBackendWork.push(work);
     return;
   }
@@ -150,34 +131,30 @@ function maybeProcessBackend(path)
   queueMicrotask(work);
 }
 
-export function flushBackendWork()
-{
+export function flushBackendWork() {
   const pending = firestoreState.pendingBackendWork;
   firestoreState.pendingBackendWork = [];
   pending.forEach((work) => work());
 }
 
-function processScoringEvent(courtId, eventId, event)
-{
+function processScoringEvent(courtId, eventId, event) {
   const courtPath = `courts/${courtId}`;
   const scorePath = `courts/${courtId}/score/current`;
   const courtData = firestoreState.docs.get(courtPath) || {};
 
   const activeOptions = scoringEngine.normalizeScoringOptions({
     ...(courtData.scoringOptions || {}),
-    scoringMode: courtData.scoringMode || courtData.scoringOptions?.scoringMode
+    scoringMode: courtData.scoringMode || courtData.scoringOptions?.scoringMode,
   });
 
   const activeScoreVersion = Number(courtData.scoreVersion) || 0;
   const eventScoreVersion = Number(event.scoreVersion) || 0;
-  if (eventScoreVersion !== activeScoreVersion)
-  {
+  if (eventScoreVersion !== activeScoreVersion) {
     return; // stale event, exactly like the CF skips it
   }
 
   let score = firestoreState.backendScores.get(courtId);
-  if (!score)
-  {
+  if (!score) {
     score = scoringEngine.defaultScore(activeOptions);
   }
 
@@ -187,22 +164,19 @@ function processScoringEvent(courtId, eventId, event)
   writeDoc(scorePath, {
     ...scoringEngine.toLiveScorePayload(score),
     lastEventId: eventId,
-    updatedAt: nextTimestamp()
+    updatedAt: nextTimestamp(),
   });
 }
 
-export function getBackendScore(courtId)
-{
+export function getBackendScore(courtId) {
   return firestoreState.backendScores.get(courtId);
 }
 
-export function setBackendScore(courtId, score)
-{
+export function setBackendScore(courtId, score) {
   firestoreState.backendScores.set(courtId, score);
 }
 
-export function nextAutoId()
-{
+export function nextAutoId() {
   firestoreState.autoId += 1;
   return `auto-${firestoreState.autoId}`;
 }

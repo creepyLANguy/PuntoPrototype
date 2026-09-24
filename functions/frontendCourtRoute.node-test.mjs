@@ -2,17 +2,15 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import
-{
+import {
   bootFrontend,
   seedBaseData,
   seedCourt,
   waitFor,
-  settle
+  settle,
 } from "./frontendHarness/harness.mjs";
 
-test("/c opens the spectator selection screen without a court id", async () =>
-{
+test("/c opens the spectator selection screen without a court id", async () => {
   seedBaseData();
   seedCourt("rootcourt", { name: "Root Court" });
 
@@ -20,9 +18,10 @@ test("/c opens the spectator selection screen without a court id", async () =>
   const document = dom.window.document;
 
   await waitFor(
-    () => document.getElementById("spectatePage").style.display !== "none"
-      && document.querySelector("#spectateCourtList .court-item"),
-    { label: "spectate page and court list from /c" }
+    () =>
+      document.getElementById("spectatePage").style.display !== "none" &&
+      document.querySelector("#spectateCourtList .court-item"),
+    { label: "spectate page and court list from /c" },
   );
   await settle(30);
 

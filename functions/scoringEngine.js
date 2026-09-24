@@ -7,41 +7,35 @@ const TIEBREAK_MODES = new Set(["off", "sixAllSeven", "sixAllTen"]);
 const DEFAULT_SCORING_OPTIONS = {
   scoringMode: "standard",
   deuceMode: "standard",
-  tiebreakMode: "sixAllSeven"
+  tiebreakMode: "sixAllSeven",
 };
 
-function clone(value)
-{
+function clone(value) {
   return structuredClone(value);
 }
 
-function normalizeScoringOptions(options = {})
-{
+function normalizeScoringOptions(options = {}) {
   const normalized = {
     ...DEFAULT_SCORING_OPTIONS,
-    ...(options || {})
+    ...(options || {}),
   };
 
-  if (!SCORING_MODES.has(normalized.scoringMode))
-  {
+  if (!SCORING_MODES.has(normalized.scoringMode)) {
     normalized.scoringMode = DEFAULT_SCORING_OPTIONS.scoringMode;
   }
 
-  if (!DEUCE_MODES.has(normalized.deuceMode))
-  {
+  if (!DEUCE_MODES.has(normalized.deuceMode)) {
     normalized.deuceMode = DEFAULT_SCORING_OPTIONS.deuceMode;
   }
 
-  if (!TIEBREAK_MODES.has(normalized.tiebreakMode))
-  {
+  if (!TIEBREAK_MODES.has(normalized.tiebreakMode)) {
     normalized.tiebreakMode = DEFAULT_SCORING_OPTIONS.tiebreakMode;
   }
 
   return normalized;
 }
 
-function defaultScore(scoringOptions = DEFAULT_SCORING_OPTIONS)
-{
+function defaultScore(scoringOptions = DEFAULT_SCORING_OPTIONS) {
   return {
     A: { points: 0, games: 0, sets: 0, totalPoints: 0 },
     B: { points: 0, games: 0, sets: 0, totalPoints: 0 },
@@ -54,15 +48,13 @@ function defaultScore(scoringOptions = DEFAULT_SCORING_OPTIONS)
     matchComplete: false,
     completedSets: [],
     scoringOptions: normalizeScoringOptions(scoringOptions),
-    history: []
+    history: [],
   };
 }
 
-function getCompletedMatchGames(score)
-{
+function getCompletedMatchGames(score) {
   const completedSets = Array.isArray(score.completedSets) ? score.completedSets : [];
-  const completedGames = completedSets.reduce((sum, set) =>
-  {
+  const completedGames = completedSets.reduce((sum, set) => {
     const setA = Number(set.A) || 0;
     const setB = Number(set.B) || 0;
     return sum + setA + setB;
@@ -71,22 +63,19 @@ function getCompletedMatchGames(score)
   return completedGames + (Number(score.A.games) || 0) + (Number(score.B.games) || 0);
 }
 
-function getGameServerLabel(totalCompletedGames)
-{
+function getGameServerLabel(totalCompletedGames) {
   const servingTeam = totalCompletedGames % 2 === 0 ? "A" : "B";
   const serviceRotationIndex = Math.floor(totalCompletedGames / 2);
   const playerNumber = serviceRotationIndex % 2 === 0 ? "1" : "2";
   return `${servingTeam}${playerNumber}`;
 }
 
-function getTiebreakServerLabel(score)
-{
+function getTiebreakServerLabel(score) {
   const totalCompletedGames = getCompletedMatchGames(score);
   const startingServer = getGameServerLabel(totalCompletedGames);
   const totalPoints = (Number(score.A.points) || 0) + (Number(score.B.points) || 0);
 
-  if (totalPoints === 0)
-  {
+  if (totalPoints === 0) {
     return startingServer;
   }
 
@@ -100,29 +89,26 @@ function getTiebreakServerLabel(score)
   return `${servingTeam}${playerNumber}`;
 }
 
-function getCurrentServerLabel(score)
-{
+function getCurrentServerLabel(score) {
   const options = normalizeScoringOptions(score.scoringOptions);
-  if (options.scoringMode === "straight")
-  {
+  if (options.scoringMode === "straight") {
     return null;
   }
 
   const totalCompletedGames = getCompletedMatchGames(score);
-  const isStandardTiebreak = options.scoringMode === "standard" &&
+  const isStandardTiebreak =
+    options.scoringMode === "standard" &&
     (score.inTiebreak || (score.A.games === 6 && score.B.games === 6));
   const isMatchTiebreak = options.scoringMode === "tiebreakTen";
 
-  if (isStandardTiebreak || isMatchTiebreak)
-  {
+  if (isStandardTiebreak || isMatchTiebreak) {
     return getTiebreakServerLabel(score);
   }
 
   return getGameServerLabel(totalCompletedGames);
 }
 
-function normalizeScore(score, scoringOptions)
-{
+function normalizeScore(score, scoringOptions) {
   const normalizedOptions = normalizeScoringOptions(scoringOptions || score?.scoringOptions);
   const base = defaultScore(normalizedOptions);
   const merged = {
@@ -130,7 +116,7 @@ function normalizeScore(score, scoringOptions)
     ...(score || {}),
     A: { ...base.A, ...(score?.A || {}) },
     B: { ...base.B, ...(score?.B || {}) },
-    scoringOptions: normalizedOptions
+    scoringOptions: normalizedOptions,
   };
 
   if (!Array.isArray(merged.history)) merged.history = [];
@@ -143,31 +129,26 @@ function normalizeScore(score, scoringOptions)
   // ("tiebreakTen"). Standard and straight modes have no fixed set/point
   // target - a match can go on indefinitely - so a stale flag (e.g. carried
   // over from a scoring-mode change) must never block or end scoring there.
-  if (normalizedOptions.scoringMode !== "tiebreakTen")
-  {
+  if (normalizedOptions.scoringMode !== "tiebreakTen") {
     merged.matchComplete = false;
   }
 
   return merged;
 }
 
-function applyEvent(score, event, scoringOptions)
-{
+function applyEvent(score, event, scoringOptions) {
   const options = normalizeScoringOptions(scoringOptions || score?.scoringOptions);
 
-  if (event.eventType === "RESET")
-  {
+  if (event.eventType === "RESET") {
     return {
       ...defaultScore(options),
-      lastEventId: event.id || event.eventId || null
+      lastEventId: event.id || event.eventId || null,
     };
   }
 
-  if (event.eventType === "UNDO")
-  {
+  if (event.eventType === "UNDO") {
     const undoneScore = undo(score, options);
-    if (event.id || event.eventId)
-    {
+    if (event.id || event.eventId) {
       undoneScore.lastEventId = event.id || event.eventId;
     }
     return undoneScore;
@@ -177,8 +158,7 @@ function applyEvent(score, event, scoringOptions)
 
   // Only the match tiebreak has a defined end; normalizeScore already clears
   // the flag for every other mode, so this guard can never fire there.
-  if (options.scoringMode === "tiebreakTen" && newScore.matchComplete)
-  {
+  if (options.scoringMode === "tiebreakTen" && newScore.matchComplete) {
     return newScore;
   }
 
@@ -186,13 +166,11 @@ function applyEvent(score, event, scoringOptions)
   delete snapshot.history;
   newScore.history.push(snapshot);
 
-  if (newScore.history.length > historyThreshold)
-  {
+  if (newScore.history.length > historyThreshold) {
     newScore.history.shift();
   }
 
-  switch (event.eventType)
-  {
+  switch (event.eventType) {
     case "POINT_TEAM_A":
       awardPoint(newScore, "A", "B", options);
       break;
@@ -206,18 +184,15 @@ function applyEvent(score, event, scoringOptions)
       break;
   }
 
-  if (event.id || event.eventId)
-  {
+  if (event.id || event.eventId) {
     newScore.lastEventId = event.id || event.eventId;
   }
 
   return newScore;
 }
 
-function undo(score, scoringOptions)
-{
-  if (!score.history || score.history.length === 0)
-  {
+function undo(score, scoringOptions) {
+  if (!score.history || score.history.length === 0) {
     return normalizeScore(score, scoringOptions);
   }
 
@@ -228,25 +203,21 @@ function undo(score, scoringOptions)
   return normalizeScore(newScore, newScore.scoringOptions);
 }
 
-function awardPoint(score, scoringTeam, otherTeam, options)
-{
+function awardPoint(score, scoringTeam, otherTeam, options) {
   score.lastPointTeam = scoringTeam;
   score[scoringTeam].totalPoints = (score[scoringTeam].totalPoints || 0) + 1;
 
-  if (options.scoringMode === "straight")
-  {
+  if (options.scoringMode === "straight") {
     score[scoringTeam].points++;
     return;
   }
 
-  if (options.scoringMode === "tiebreakTen")
-  {
+  if (options.scoringMode === "tiebreakTen") {
     awardTiebreakPoint(score, scoringTeam, otherTeam, 10, true);
     return;
   }
 
-  if (isTiebreakGame(score, options))
-  {
+  if (isTiebreakGame(score, options)) {
     score.inTiebreak = true;
     awardTiebreakPoint(score, scoringTeam, otherTeam, getTiebreakTarget(options), false);
     return;
@@ -255,31 +226,28 @@ function awardPoint(score, scoringTeam, otherTeam, options)
   awardRegularGamePoint(score, scoringTeam, otherTeam, options);
 }
 
-function awardRegularGamePoint(score, scoringTeam, otherTeam, options)
-{
+function awardRegularGamePoint(score, scoringTeam, otherTeam, options) {
   const team = score[scoringTeam];
   const opponent = score[otherTeam];
 
-  if (team.points < 3)
-  {
+  if (team.points < 3) {
     team.points++;
     return;
   }
 
-  if (team.points >= 3 && opponent.points < 3)
-  {
+  if (team.points >= 3 && opponent.points < 3) {
     winGame(score, scoringTeam, otherTeam);
     return;
   }
 
-  if (team.points === 3 && opponent.points === 3)
-  {
+  if (team.points === 3 && opponent.points === 3) {
     // Golden: every deuce is sudden death. Silver: sudden death after one
     // cancelled advantage. Star: sudden death after two cancelled advantages.
-    if (options.deuceMode === "golden" ||
+    if (
+      options.deuceMode === "golden" ||
       (options.deuceMode === "silver" && score.deuceCycles > 0) ||
-      (options.deuceMode === "star" && score.deuceCycles >= 2))
-    {
+      (options.deuceMode === "star" && score.deuceCycles >= 2)
+    ) {
       winGame(score, scoringTeam, otherTeam);
       return;
     }
@@ -288,24 +256,20 @@ function awardRegularGamePoint(score, scoringTeam, otherTeam, options)
     return;
   }
 
-  if (team.points === 4)
-  {
+  if (team.points === 4) {
     winGame(score, scoringTeam, otherTeam);
     return;
   }
 
-  if (opponent.points === 4)
-  {
+  if (opponent.points === 4) {
     opponent.points = 3;
-    if (options.deuceMode === "silver" || options.deuceMode === "star")
-    {
+    if (options.deuceMode === "silver" || options.deuceMode === "star") {
       score.deuceCycles++;
     }
   }
 }
 
-function winGame(score, scoringTeam, otherTeam)
-{
+function winGame(score, scoringTeam, otherTeam) {
   const team = score[scoringTeam];
   const opponent = score[otherTeam];
 
@@ -316,18 +280,16 @@ function winGame(score, scoringTeam, otherTeam)
   team.points = 0;
   opponent.points = 0;
 
-  if (team.games >= 6 && (team.games - opponent.games) >= 2)
-  {
+  if (team.games >= 6 && team.games - opponent.games >= 2) {
     completeSet(score, scoringTeam);
   }
 }
 
-function completeSet(score, scoringTeam, tiebreakPoints = null)
-{
+function completeSet(score, scoringTeam, tiebreakPoints = null) {
   score.completedSets.push({
     A: score.A.games,
     B: score.B.games,
-    tiebreakPoints
+    tiebreakPoints,
   });
 
   score[scoringTeam].sets++;
@@ -340,30 +302,25 @@ function completeSet(score, scoringTeam, tiebreakPoints = null)
   score.inTiebreak = false;
 }
 
-function isTiebreakGame(score, options)
-{
+function isTiebreakGame(score, options) {
   if (options.tiebreakMode === "off") return false;
   return score.inTiebreak || (score.A.games === 6 && score.B.games === 6);
 }
 
-function getTiebreakTarget(options)
-{
+function getTiebreakTarget(options) {
   return options.tiebreakMode === "sixAllTen" ? 10 : 7;
 }
 
-function awardTiebreakPoint(score, scoringTeam, otherTeam, target, isMatchTiebreak)
-{
+function awardTiebreakPoint(score, scoringTeam, otherTeam, target, isMatchTiebreak) {
   const team = score[scoringTeam];
   const opponent = score[otherTeam];
 
   team.points++;
 
-  if (team.points >= target && (team.points - opponent.points) >= 2)
-  {
+  if (team.points >= target && team.points - opponent.points >= 2) {
     score.lastGameTeam = scoringTeam;
 
-    if (isMatchTiebreak)
-    {
+    if (isMatchTiebreak) {
       score[scoringTeam].sets = 1;
       score.lastSetTeam = scoringTeam;
       score.matchComplete = true;
@@ -372,7 +329,7 @@ function awardTiebreakPoint(score, scoringTeam, otherTeam, target, isMatchTiebre
 
     const tiebreakPoints = {
       A: score.A.points,
-      B: score.B.points
+      B: score.B.points,
     };
 
     team.games++;
@@ -380,13 +337,11 @@ function awardTiebreakPoint(score, scoringTeam, otherTeam, target, isMatchTiebre
   }
 }
 
-function replayEvents(events, scoringOptions = DEFAULT_SCORING_OPTIONS)
-{
+function replayEvents(events, scoringOptions = DEFAULT_SCORING_OPTIONS) {
   const options = normalizeScoringOptions(scoringOptions);
   let score = defaultScore(options);
 
-  events.forEach((event) =>
-  {
+  events.forEach((event) => {
     score = applyEvent(score, event, options);
   });
 
@@ -394,10 +349,8 @@ function replayEvents(events, scoringOptions = DEFAULT_SCORING_OPTIONS)
 }
 
 // Strips the (potentially large, replay-only) undo stack before a score is persisted.
-function toLiveScorePayload(score)
-{
-  if (!score || typeof score !== "object")
-  {
+function toLiveScorePayload(score) {
+  if (!score || typeof score !== "object") {
     return score;
   }
 
@@ -405,18 +358,15 @@ function toLiveScorePayload(score)
   return liveScore;
 }
 
-function getEventOrderingTuple(event)
-{
+function getEventOrderingTuple(event) {
   const createdAt = event?.createdAt || null;
   const id = typeof event?.id === "string" ? event.id : null;
   return { createdAt, id };
 }
 
 // Returns <0/0/>0 like a comparator, or null when either side lacks ordering info.
-function compareEventOrder(leftCreatedAt, leftId, rightCreatedAt, rightId)
-{
-  if (!leftCreatedAt || !rightCreatedAt)
-  {
+function compareEventOrder(leftCreatedAt, leftId, rightCreatedAt, rightId) {
+  if (!leftCreatedAt || !rightCreatedAt) {
     return null;
   }
 
@@ -426,35 +376,34 @@ function compareEventOrder(leftCreatedAt, leftId, rightCreatedAt, rightId)
   const nanosDiff = leftCreatedAt.nanoseconds - rightCreatedAt.nanoseconds;
   if (nanosDiff !== 0) return nanosDiff;
 
-  if (!leftId || !rightId)
-  {
+  if (!leftId || !rightId) {
     return null;
   }
 
   return leftId.localeCompare(rightId);
 }
 
-function scoreEquivalent(leftScore, rightScore)
-{
+function scoreEquivalent(leftScore, rightScore) {
   if (!leftScore || !rightScore) return false;
 
   const leftCompletedSets = Array.isArray(leftScore.completedSets) ? leftScore.completedSets : [];
-  const rightCompletedSets = Array.isArray(rightScore.completedSets) ? rightScore.completedSets : [];
+  const rightCompletedSets = Array.isArray(rightScore.completedSets)
+    ? rightScore.completedSets
+    : [];
 
-  if (leftCompletedSets.length !== rightCompletedSets.length)
-  {
+  if (leftCompletedSets.length !== rightCompletedSets.length) {
     return false;
   }
 
-  for (let i = 0; i < leftCompletedSets.length; i++)
-  {
+  for (let i = 0; i < leftCompletedSets.length; i++) {
     const leftSet = leftCompletedSets[i] || {};
     const rightSet = rightCompletedSets[i] || {};
     if ((Number(leftSet.A) || 0) !== (Number(rightSet.A) || 0)) return false;
     if ((Number(leftSet.B) || 0) !== (Number(rightSet.B) || 0)) return false;
   }
 
-  return (Number(leftScore.A?.points) || 0) === (Number(rightScore.A?.points) || 0) &&
+  return (
+    (Number(leftScore.A?.points) || 0) === (Number(rightScore.A?.points) || 0) &&
     (Number(leftScore.B?.points) || 0) === (Number(rightScore.B?.points) || 0) &&
     (Number(leftScore.A?.games) || 0) === (Number(rightScore.A?.games) || 0) &&
     (Number(leftScore.B?.games) || 0) === (Number(rightScore.B?.games) || 0) &&
@@ -464,12 +413,13 @@ function scoreEquivalent(leftScore, rightScore)
     (Number(leftScore.B?.totalPoints) || 0) === (Number(rightScore.B?.totalPoints) || 0) &&
     Boolean(leftScore.inTiebreak) === Boolean(rightScore.inTiebreak) &&
     (Number(leftScore.deuceCycles) || 0) === (Number(rightScore.deuceCycles) || 0) &&
-    Boolean(leftScore.matchComplete) === Boolean(rightScore.matchComplete);
+    Boolean(leftScore.matchComplete) === Boolean(rightScore.matchComplete)
+  );
 }
 
-function didSetCountIncrease(previousScore, nextScore)
-{
-  const previousSets = (Number(previousScore?.A?.sets) || 0) + (Number(previousScore?.B?.sets) || 0);
+function didSetCountIncrease(previousScore, nextScore) {
+  const previousSets =
+    (Number(previousScore?.A?.sets) || 0) + (Number(previousScore?.B?.sets) || 0);
   const nextSets = (Number(nextScore?.A?.sets) || 0) + (Number(nextScore?.B?.sets) || 0);
   return nextSets > previousSets;
 }
@@ -488,5 +438,5 @@ module.exports = {
   getEventOrderingTuple,
   compareEventOrder,
   scoreEquivalent,
-  didSetCountIncrease
+  didSetCountIncrease,
 };

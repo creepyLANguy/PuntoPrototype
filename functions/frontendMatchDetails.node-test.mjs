@@ -5,8 +5,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import
-{
+import {
   bootFrontend,
   seedBaseData,
   seedCourt,
@@ -15,7 +14,7 @@ import
   makeScore,
   waitFor,
   settle,
-  callableHandlers
+  callableHandlers,
 } from "./frontendHarness/harness.mjs";
 
 const COURT_ID = "courtdetails";
@@ -30,27 +29,28 @@ let momentumPayload = null;
 
 // jsdom ships no canvas backend, so the graph gets a context that swallows
 // every 2D call. The assertions are about the panel's states, not its pixels.
-function makeNoopCanvasContext()
-{
-  return new Proxy({}, {
-    get: (_target, prop) =>
+function makeNoopCanvasContext() {
+  return new Proxy(
+    {},
     {
-      if (prop === Symbol.toPrimitive) return () => 0;
-      return () => makeNoopCanvasContext();
+      get: (_target, prop) => {
+        if (prop === Symbol.toPrimitive) return () => 0;
+        return () => makeNoopCanvasContext();
+      },
+      set: () => true,
     },
-    set: () => true
-  });
+  );
 }
 
-function holdMomentumResponses()
-{
+function holdMomentumResponses() {
   let resolve;
-  const promise = new Promise((r) => { resolve = r; });
+  const promise = new Promise((r) => {
+    resolve = r;
+  });
   momentumGate = { promise, resolve };
 }
 
-function releaseMomentumResponses()
-{
+function releaseMomentumResponses() {
   const gate = momentumGate;
   momentumGate = null;
   gate.resolve();
@@ -68,13 +68,13 @@ const DETAILED_SCORE = {
   advancedStats: {
     teamStats: {
       A: { pointsWon: 40, longestScoringStreak: 4 },
-      B: { pointsWon: 31, longestScoringStreak: 3 }
+      B: { pointsWon: 31, longestScoringStreak: 3 },
     },
     servePlayerStats: {},
     matchStats: { totalPoints: 71, deuceGames: 1 },
     scoringMode: "standard",
-    deuceMode: "standard"
-  }
+    deuceMode: "standard",
+  },
 };
 
 const PLAYED_MOMENTUM = {
@@ -86,7 +86,7 @@ const PLAYED_MOMENTUM = {
   gameMarkers: [6],
   totalPoints: 6,
   scoringMode: "standard",
-  matchComplete: false
+  matchComplete: false,
 };
 
 const EMPTY_MOMENTUM = {
@@ -98,11 +98,10 @@ const EMPTY_MOMENTUM = {
   gameMarkers: [],
   totalPoints: 0,
   scoringMode: "standard",
-  matchComplete: false
+  matchComplete: false,
 };
 
-test.before(async () =>
-{
+test.before(async () => {
   seedBaseData();
   seedCourt(COURT_ID, { teamNames: { A: "Smashers", B: "Lobbers" } });
 
@@ -111,7 +110,9 @@ test.before(async () =>
   document = window.document;
 
   window.HTMLCanvasElement.prototype.getContext = () => makeNoopCanvasContext();
-  window.Path2D = function Path2D() { return makeNoopCanvasContext(); };
+  window.Path2D = function Path2D() {
+    return makeNoopCanvasContext();
+  };
   globalThis.Path2D = window.Path2D;
 
   momentumPayload = PLAYED_MOMENTUM;
@@ -120,24 +121,21 @@ test.before(async () =>
   callableHandlers.set("getDetailedScore", async () => ({ data: DETAILED_SCORE }));
 
   const baseFetch = window.fetch;
-  const momentumFetch = async (url, options) =>
-  {
-    if (!String(url).includes("/momentum/"))
-    {
+  const momentumFetch = async (url, options) => {
+    if (!String(url).includes("/momentum/")) {
       return baseFetch(url, options);
     }
 
     momentumRequests.push(String(url));
 
-    if (momentumGate)
-    {
+    if (momentumGate) {
       await momentumGate.promise;
     }
 
     return {
       ok: true,
       status: 200,
-      json: async () => momentumPayload
+      json: async () => momentumPayload,
     };
   };
 
@@ -145,26 +143,27 @@ test.before(async () =>
   globalThis.fetch = momentumFetch;
 
   await joinCourtAsPlayer(document, COURT_ID);
-  pushScoreSnapshot(COURT_ID, makeScore({
-    A: { points: 2, games: 2, sets: 1, totalPoints: 40 },
-    B: { points: 1, games: 1, sets: 0, totalPoints: 31 },
-    completedSets: [{ A: 6, B: 4, tiebreakPoints: null }]
-  }));
+  pushScoreSnapshot(
+    COURT_ID,
+    makeScore({
+      A: { points: 2, games: 2, sets: 1, totalPoints: 40 },
+      B: { points: 1, games: 1, sets: 0, totalPoints: 31 },
+      completedSets: [{ A: 6, B: 4, tiebreakPoints: null }],
+    }),
+  );
   await settle();
 });
 
-test("the details tables render while the momentum payload is still in flight", async () =>
-{
+test("the details tables render while the momentum payload is still in flight", async () => {
   holdMomentumResponses();
   momentumRequests = [];
 
   document.getElementById("detailsBtn").click();
 
   // The set breakdown does not wait for the momentum endpoint.
-  await waitFor(
-    () => document.querySelectorAll("#dmBody tr").length === 2,
-    { label: "set breakdown rows" }
-  );
+  await waitFor(() => document.querySelectorAll("#dmBody tr").length === 2, {
+    label: "set breakdown rows",
+  });
   assert.equal(document.getElementById("detailsSetsA").textContent, "1");
   assert.equal(document.getElementById("detailsSetsB").textContent, "0");
   assert.equal(document.getElementById("detailsLoading").classList.contains("hidden"), true);
@@ -173,13 +172,12 @@ test("the details tables render while the momentum payload is still in flight", 
   assert.match(momentumRequests[0], new RegExp(`/momentum/${COURT_ID}$`));
 });
 
-test("stat columns are fitted when the detailed panel is expanded after rendering", async () =>
-{
+test("stat columns are fitted when the detailed panel is expanded after rendering", async () => {
   DETAILED_SCORE.playerNames = {
     A1: "Very Long Player Name",
     A2: "",
     B1: "Another Very Long Player Name",
-    B2: ""
+    B2: "",
   };
 
   // Open again with the panel collapsed. The render-time fit is expected to see
@@ -187,28 +185,46 @@ test("stat columns are fitted when the detailed panel is expanded after renderin
   // real measurement after the hidden attribute is removed.
   document.getElementById("detailsBtn").click();
 
-  await waitFor(
-    () => document.querySelector("#dmStatsTeam .dm-stats-table") !== null,
-    { label: "stats table for fit test" }
-  );
+  await waitFor(() => document.querySelector("#dmStatsTeam .dm-stats-table") !== null, {
+    label: "stats table for fit test",
+  });
 
   const table = document.querySelector("#dmStatsTeam .dm-stats-table");
-  table.getBoundingClientRect = () => ({ width: 300, height: 0, top: 0, left: 0, right: 300, bottom: 0 });
+  table.getBoundingClientRect = () => ({
+    width: 300,
+    height: 0,
+    top: 0,
+    left: 0,
+    right: 300,
+    bottom: 0,
+  });
 
   const primaryContents = Array.from(
-    table.querySelectorAll("tbody .dm-st-val:nth-child(2) .dm-st-value-content")
+    table.querySelectorAll("tbody .dm-st-val:nth-child(2) .dm-st-value-content"),
   );
   const secondaryContents = Array.from(
-    table.querySelectorAll("tbody .dm-st-val:nth-child(3) .dm-st-value-content")
+    table.querySelectorAll("tbody .dm-st-val:nth-child(3) .dm-st-value-content"),
   );
 
-  primaryContents.forEach(content =>
-  {
-    content.getBoundingClientRect = () => ({ width: 108, height: 0, top: 0, left: 0, right: 108, bottom: 0 });
+  primaryContents.forEach((content) => {
+    content.getBoundingClientRect = () => ({
+      width: 108,
+      height: 0,
+      top: 0,
+      left: 0,
+      right: 108,
+      bottom: 0,
+    });
   });
-  secondaryContents.forEach(content =>
-  {
-    content.getBoundingClientRect = () => ({ width: 132, height: 0, top: 0, left: 0, right: 132, bottom: 0 });
+  secondaryContents.forEach((content) => {
+    content.getBoundingClientRect = () => ({
+      width: 132,
+      height: 0,
+      top: 0,
+      left: 0,
+      right: 132,
+      bottom: 0,
+    });
   });
 
   document.getElementById("dmDetailsToggle").click();
@@ -217,20 +233,19 @@ test("stat columns are fitted when the detailed panel is expanded after renderin
   assert.equal(document.getElementById("dmDetailsContent").hidden, false);
   assert.ok(
     Number.parseFloat(table.style.getPropertyValue("--dm-st-secondary-width")) > 36,
-    "the overflowing secondary column should receive extra width after expansion"
+    "the overflowing secondary column should receive extra width after expansion",
   );
   assert.ok(
     Number.parseFloat(table.style.getPropertyValue("--dm-st-label-width")) < 28,
-    "the label column should give up only the required space"
+    "the label column should give up only the required space",
   );
 });
 
-test("the momentum portion stays hidden until its payload arrives", async () =>
-{
+test("the momentum portion stays hidden until its payload arrives", async () => {
   assert.equal(
     document.getElementById("dmMomentumWrap").classList.contains("hidden"),
     true,
-    "no momentum heading should appear while the payload is still pending"
+    "no momentum heading should appear while the payload is still pending",
   );
 
   // The rest of the expanded details is already usable in the meantime.
@@ -238,20 +253,18 @@ test("the momentum portion stays hidden until its payload arrives", async () =>
 
   releaseMomentumResponses();
 
-  await waitFor(
-    () => !document.getElementById("dmMomentumWrap").classList.contains("hidden"),
-    { label: "momentum panel to appear with its graph" }
-  );
+  await waitFor(() => !document.getElementById("dmMomentumWrap").classList.contains("hidden"), {
+    label: "momentum panel to appear with its graph",
+  });
 
   assert.equal(
     document.getElementById("dmMomentumCanvas").classList.contains("hidden"),
     false,
-    "the panel appears with the canvas already showing"
+    "the panel appears with the canvas already showing",
   );
 });
 
-test("long final-column stats values tighten the label column just enough", async () =>
-{
+test("long final-column stats values tighten the label column just enough", async () => {
   const table = document.querySelector("#dmStatsTeam .dm-stats-table");
   assert.ok(table, "stats table should be rendered");
 
@@ -261,12 +274,10 @@ test("long final-column stats values tighten the label column just enough", asyn
   const primaryCells = Array.from(table.querySelectorAll("tbody .dm-st-val:nth-child(2)"));
   const secondaryCells = Array.from(table.querySelectorAll("tbody .dm-st-val:nth-child(3)"));
 
-  primaryCells.forEach(cell =>
-  {
+  primaryCells.forEach((cell) => {
     Object.defineProperty(cell, "scrollWidth", { configurable: true, value: 108 });
   });
-  secondaryCells.forEach(cell =>
-  {
+  secondaryCells.forEach((cell) => {
     Object.defineProperty(cell, "scrollWidth", { configurable: true, value: 125 });
   });
 
@@ -275,33 +286,31 @@ test("long final-column stats values tighten the label column just enough", asyn
   assert.equal(table.style.getPropertyValue("--dm-st-primary-width"), "36%");
   assert.ok(
     Number.parseFloat(table.style.getPropertyValue("--dm-st-secondary-width")) > 36,
-    "the overflowing final column should receive the extra width"
+    "the overflowing final column should receive the extra width",
   );
   assert.ok(
     Number.parseFloat(table.style.getPropertyValue("--dm-st-label-width")) < 28,
-    "the label column should surrender only the required space"
+    "the label column should surrender only the required space",
   );
 });
 
-test("a match with no momentum data keeps the panel hidden", async () =>
-{
+test("a match with no momentum data keeps the panel hidden", async () => {
   momentumPayload = EMPTY_MOMENTUM;
   momentumRequests = [];
 
   // A new point invalidates the cached details and momentum, so the open modal
   // refreshes both from scratch.
-  pushScoreSnapshot(COURT_ID, makeScore({
-    A: { points: 3, games: 2, sets: 1, totalPoints: 41 },
-    B: { points: 1, games: 1, sets: 0, totalPoints: 31 },
-    completedSets: [{ A: 6, B: 4, tiebreakPoints: null }]
-  }));
+  pushScoreSnapshot(
+    COURT_ID,
+    makeScore({
+      A: { points: 3, games: 2, sets: 1, totalPoints: 41 },
+      B: { points: 1, games: 1, sets: 0, totalPoints: 31 },
+      completedSets: [{ A: 6, B: 4, tiebreakPoints: null }],
+    }),
+  );
 
-  await waitFor(
-    () => momentumRequests.length > 0,
-    { label: "momentum refetch after a new point" }
-  );
-  await waitFor(
-    () => document.getElementById("dmMomentumWrap").classList.contains("hidden"),
-    { label: "momentum panel to close for an empty timeline" }
-  );
+  await waitFor(() => momentumRequests.length > 0, { label: "momentum refetch after a new point" });
+  await waitFor(() => document.getElementById("dmMomentumWrap").classList.contains("hidden"), {
+    label: "momentum panel to close for an empty timeline",
+  });
 });

@@ -4,8 +4,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import
-{
+import {
   ADMIN_SKELETON_KEY,
   bootFrontend,
   seedBaseData,
@@ -15,7 +14,7 @@ import
   settle,
   firestoreState,
   callableHandlers,
-  writeDoc
+  writeDoc,
 } from "./frontendHarness/harness.mjs";
 
 let document;
@@ -23,54 +22,45 @@ let document;
 // Every newPassword the UI handed to the resetCourt callable, in call order.
 const resetCalls = [];
 
-function isSpectating()
-{
+function isSpectating() {
   return document.body.classList.contains("spectating-mode");
 }
 
-function courtDoc(courtId)
-{
+function courtDoc(courtId) {
   return firestoreState.docs.get(`courts/${courtId}`);
 }
 
 // Simulates another device changing the court password out from under us.
-function changePasswordRemotely(courtId, password)
-{
+function changePasswordRemotely(courtId, password) {
   writeDoc(`courts/${courtId}`, { ...courtDoc(courtId), password });
 }
 
 // Non-admins are ejected from a private court, which is the cleanest way to get
 // back to the menu so the next test can join a different court.
-async function returnToMenu(courtId)
-{
+async function returnToMenu(courtId) {
   writeDoc(`courts/${courtId}`, { ...courtDoc(courtId), status: "private" });
-  await waitFor(
-    () => document.getElementById("menuPage").style.display !== "none",
-    { label: `menu page after ${courtId} went private` }
-  );
+  await waitFor(() => document.getElementById("menuPage").style.display !== "none", {
+    label: `menu page after ${courtId} went private`,
+  });
 }
 
-async function openResetModal()
-{
+async function openResetModal() {
   document.getElementById("settingsBtn").click();
   await settle(10);
   document.getElementById("resetSettingsBtn").click();
-  await waitFor(
-    () => !document.getElementById("resetModal").classList.contains("hidden"),
-    { label: "reset modal" }
-  );
+  await waitFor(() => !document.getElementById("resetModal").classList.contains("hidden"), {
+    label: "reset modal",
+  });
 }
 
-test.before(async () =>
-{
+test.before(async () => {
   seedBaseData();
   seedCourt("pwcourt");
   seedCourt("adminpwcourt");
   // A realistic court password: at least 4 characters, as the reset dialog requires.
   seedCourt("resetpwcourt", { password: "curpw123" });
 
-  callableHandlers.set("resetCourt", async ({ courtId, newPassword }) =>
-  {
+  callableHandlers.set("resetCourt", async ({ courtId, newPassword }) => {
     resetCalls.push(newPassword);
 
     const court = courtDoc(courtId) || {};
@@ -81,7 +71,7 @@ test.before(async () =>
     writeDoc(`courts/${courtId}`, {
       ...court,
       scoreVersion,
-      password: trimmed && trimmed !== court.password ? trimmed : court.password
+      password: trimmed && trimmed !== court.password ? trimmed : court.password,
     });
 
     return { data: { scoreVersion } };
@@ -91,8 +81,7 @@ test.before(async () =>
   document = dom.window.document;
 });
 
-test("a player is switched to spectate when the court password changes", async () =>
-{
+test("a player is switched to spectate when the court password changes", async () => {
   await joinCourtAsPlayer(document, "pwcourt");
   assert.equal(isSpectating(), false, "joins as a player");
 
@@ -104,28 +93,25 @@ test("a player is switched to spectate when the court password changes", async (
   await returnToMenu("pwcourt");
 });
 
-test("a player is NOT switched to spectate when the court doc changes but the password does not", async () =>
-{
+test("a player is NOT switched to spectate when the court doc changes but the password does not", async () => {
   await joinCourtAsPlayer(document, "adminpwcourt");
   assert.equal(isSpectating(), false);
 
   // A rename of the teams must not be mistaken for a password change.
   writeDoc("courts/adminpwcourt", {
     ...courtDoc("adminpwcourt"),
-    teamNames: { A: "Reds", B: "Blues" }
+    teamNames: { A: "Reds", B: "Blues" },
   });
 
-  await waitFor(
-    () => document.querySelector("#teamA .name-text").textContent === "Reds",
-    { label: "team name update applied" }
-  );
+  await waitFor(() => document.querySelector("#teamA .name-text").textContent === "Reds", {
+    label: "team name update applied",
+  });
   assert.equal(isSpectating(), false, "unrelated court update must not demote the player");
 
   await returnToMenu("adminpwcourt");
 });
 
-test("an admin who entered with the skeleton key keeps playing through a password change", async () =>
-{
+test("an admin who entered with the skeleton key keeps playing through a password change", async () => {
   seedCourt("adminkeycourt");
   await joinCourtAsPlayer(document, "adminkeycourt", ADMIN_SKELETON_KEY);
   assert.equal(isSpectating(), false, "admin joins as a player");
@@ -141,8 +127,7 @@ test("an admin who entered with the skeleton key keeps playing through a passwor
   await returnToMenu("adminkeycourt");
 });
 
-test("a blank reset password keeps the existing court password", async () =>
-{
+test("a blank reset password keeps the existing court password", async () => {
   await joinCourtAsPlayer(document, "resetpwcourt", "curpw123");
   resetCalls.length = 0;
 
@@ -150,10 +135,9 @@ test("a blank reset password keeps the existing court password", async () =>
   document.getElementById("resetCourtPassword").value = "";
   document.getElementById("confirmReset").click();
 
-  await waitFor(
-    () => document.getElementById("resetModal").classList.contains("hidden"),
-    { label: "reset modal closed" }
-  );
+  await waitFor(() => document.getElementById("resetModal").classList.contains("hidden"), {
+    label: "reset modal closed",
+  });
 
   assert.equal(resetCalls.length, 1);
   assert.equal(resetCalls[0], null, "a blank field sends no new password");
@@ -161,18 +145,16 @@ test("a blank reset password keeps the existing court password", async () =>
   assert.equal(isSpectating(), false, "the resetting player keeps playing");
 });
 
-test("re-entering the current password is not treated as a change", async () =>
-{
+test("re-entering the current password is not treated as a change", async () => {
   resetCalls.length = 0;
 
   await openResetModal();
   document.getElementById("resetCourtPassword").value = "curpw123";
   document.getElementById("shallowReset").click();
 
-  await waitFor(
-    () => document.getElementById("resetModal").classList.contains("hidden"),
-    { label: "reset modal closed" }
-  );
+  await waitFor(() => document.getElementById("resetModal").classList.contains("hidden"), {
+    label: "reset modal closed",
+  });
 
   assert.equal(resetCalls.length, 1);
   assert.equal(resetCalls[0], null, "the unchanged password is not sent as a new one");
@@ -180,8 +162,7 @@ test("re-entering the current password is not treated as a change", async () =>
   assert.equal(isSpectating(), false);
 });
 
-test("a too-short reset password is rejected without resetting", async () =>
-{
+test("a too-short reset password is rejected without resetting", async () => {
   resetCalls.length = 0;
 
   await openResetModal();
@@ -193,25 +174,20 @@ test("a too-short reset password is rejected without resetting", async () =>
   assert.equal(
     document.getElementById("resetModal").classList.contains("hidden"),
     false,
-    "the modal stays open"
+    "the modal stays open",
   );
-  assert.match(
-    document.getElementById("resetPasswordError").textContent,
-    /at least 4 characters/
-  );
+  assert.match(document.getElementById("resetPasswordError").textContent, /at least 4 characters/);
 });
 
-test("a genuinely new reset password is sent and applied", async () =>
-{
+test("a genuinely new reset password is sent and applied", async () => {
   resetCalls.length = 0;
 
   document.getElementById("resetCourtPassword").value = "freshpw";
   document.getElementById("shallowReset").click();
 
-  await waitFor(
-    () => document.getElementById("resetModal").classList.contains("hidden"),
-    { label: "reset modal closed" }
-  );
+  await waitFor(() => document.getElementById("resetModal").classList.contains("hidden"), {
+    label: "reset modal closed",
+  });
 
   assert.deepEqual(resetCalls, ["freshpw"]);
   assert.equal(courtDoc("resetpwcourt").password, "freshpw");
