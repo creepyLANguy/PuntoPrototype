@@ -1,7 +1,7 @@
 import BRAND from "./brand.mjs";
 import { app, db } from "./firebase.js";
 import { applyActiveScoreSnapshot } from "./scoreSync.mjs";
-import { toBlob } from "https://esm.sh/html-to-image@1.11.13";
+import { renderShareCardSvgToPngBlob } from "./shareImageSvg.mjs";
 
 import
 {
@@ -8433,8 +8433,8 @@ async function cacheShareableScoreCard(generation = shareableScoreCardGeneration
   const SHARE_IMAGE_SCORE_PANEL_WIDTH = 720;
   const SHARE_IMAGE_QR_PANEL_WIDTH = 720;
   const SHARE_IMAGE_QR_LEFT_OFFSET = 104;
-  const SHARE_IMAGE_SCALE = 2;
-  const footerHeight = 96 * SHARE_IMAGE_SCALE;
+  const SHARE_IMAGE_RASTER_SCALE = 3;
+  const footerHeight = 192;
 
   const clone = element.cloneNode(true);
 
@@ -8461,6 +8461,9 @@ async function cacheShareableScoreCard(generation = shareableScoreCardGeneration
   {
     shareLogo.style.width = `144px`;
     shareLogo.style.height = `144px`;
+    shareLogo.src = watermarkLogoDataUrl;
+    shareLogo.removeAttribute('srcset');
+    shareLogo.style.filter = 'none';
   }
 
   if (shareHeader)
@@ -8828,30 +8831,32 @@ async function cacheShareableScoreCard(generation = shareableScoreCardGeneration
   let blob = null;
   try
   {
-    // Render at 2x internally so text and vector-like edges are rasterized
-    // with more samples, then downsample to the original 1080x1350 output.
-    const highResolutionBlob = await toBlob(clone, {
+    // Convert the fully laid-out share card into native SVG geometry first.
+    // Rasterise that SVG at exactly 3x, then downsample once to the final
+    // 1080x1350 PNG dimensions.
+    blob = await renderShareCardSvgToPngBlob({
+      root: clone,
       width: SHARE_IMAGE_WIDTH,
       height: SHARE_IMAGE_HEIGHT,
-      canvasWidth: SHARE_IMAGE_WIDTH,
-      canvasHeight: SHARE_IMAGE_HEIGHT,
-      pixelRatio: 2,
+      scale: SHARE_IMAGE_RASTER_SCALE,
       backgroundColor: cardBackground,
-      filter: (node) => inclusions(node),
+      filter: inclusions,
+      qrGenerator,
+      qrElement: qrMount
     });
 
-    if (!highResolutionBlob)
+    if (!blob)
     {
-      throw new Error('Failed to generate high-resolution image');
+      throw new Error('Failed to generate SVG-rendered image');
     }
 
-    const highResolutionImage = new Image();
-    const highResolutionUrl = URL.createObjectURL(highResolutionBlob);
+    const renderedImage = new Image();
+    const renderedUrl = URL.createObjectURL(blob);
 
     try
     {
-      highResolutionImage.src = highResolutionUrl;
-      await highResolutionImage.decode();
+      renderedImage.src = renderedUrl;
+      await renderedImage.decode();
 
       const outputCanvas = document.createElement('canvas');
       outputCanvas.width = SHARE_IMAGE_WIDTH;
@@ -8866,21 +8871,20 @@ async function cacheShareableScoreCard(generation = shareableScoreCardGeneration
       outputContext.imageSmoothingEnabled = true;
       outputContext.imageSmoothingQuality = 'high';
       outputContext.drawImage(
-        highResolutionImage,
+        renderedImage,
         0,
         0,
-        highResolutionImage.naturalWidth,
-        highResolutionImage.naturalHeight,
+        renderedImage.naturalWidth,
+        renderedImage.naturalHeight,
         0,
         0,
         SHARE_IMAGE_WIDTH,
         SHARE_IMAGE_HEIGHT
       );
 
-      // QR is intentionally rendered last. The rest of the card can benefit
-      // from the high-quality smoothed downsample, while the QR is placed
-      // directly into the final 1080x1350 raster with integer-aligned module
-      // boundaries and no intermediate image resampling.
+      // The SVG contains a vector QR as part of the full card, but the final
+      // PNG gets one last QR-only pass so every module remains an integer
+      // number of final-image pixels with image smoothing disabled.
       if (qrGenerator)
       {
         const cloneRect = clone.getBoundingClientRect();
@@ -8895,17 +8899,18 @@ async function cacheShareableScoreCard(generation = shareableScoreCardGeneration
       blob = await new Promise((resolve, reject) =>
       {
         outputCanvas.toBlob(
-          generatedBlob => generatedBlob ? resolve(generatedBlob) : reject(new Error('Failed to encode output image')),
+          generatedBlob => generatedBlob
+            ? resolve(generatedBlob)
+            : reject(new Error('Failed to encode final share image')),
           'image/png'
         );
       });
     }
     finally
     {
-      URL.revokeObjectURL(highResolutionUrl);
+      URL.revokeObjectURL(renderedUrl);
     }
-  }
-  finally
+  }  finally
   {
     staging.remove();
   }
