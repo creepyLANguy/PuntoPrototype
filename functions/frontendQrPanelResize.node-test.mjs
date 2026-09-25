@@ -19,7 +19,7 @@ test("QR panel interaction stays frame-synced and compositor-driven", () => {
   const pointerMoveStart = source.indexOf(
     '    document.addEventListener("pointermove", (event) =>',
   );
-  const pointerMoveEnd = source.indexOf('    const stopInteractionFromPointer', pointerMoveStart);
+  const pointerMoveEnd = source.indexOf("    const stopInteractionFromPointer", pointerMoveStart);
   assert.ok(pointerMoveStart >= 0 && pointerMoveEnd > pointerMoveStart);
   const pointerMoveBlock = source.slice(pointerMoveStart, pointerMoveEnd);
   assert.doesNotMatch(pointerMoveBlock, /getBoundingClientRect\(\)/);
