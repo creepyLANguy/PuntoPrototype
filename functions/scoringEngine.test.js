@@ -12,6 +12,11 @@ const {
   scoreEquivalent,
   didSetCountIncrease,
 } = require("./scoringEngine");
+const {
+  compareEventRecordOrder,
+  isEventAfterOrder,
+} = require("./domain/events/ordering");
+
 
 // Helper: apply N points to a team
 function awardPoints(score, team, count, options = DEFAULT_SCORING_OPTIONS) {
@@ -1067,5 +1072,44 @@ describe("didSetCountIncrease", () => {
   test("handles missing/undefined scores safely", () => {
     expect(didSetCountIncrease(undefined, undefined)).toBe(false);
     expect(didSetCountIncrease(null, defaultScore())).toBe(false);
+  });
+});
+
+
+describe("replay event record ordering", () => {
+  const ts = (seconds, nanoseconds = 0) => ({ seconds, nanoseconds });
+
+  test("orders equal timestamps by event id deterministically", () => {
+    const first = { id: "evt-a", createdAt: ts(10) };
+    const second = { id: "evt-b", createdAt: ts(10) };
+
+    expect(compareEventRecordOrder(first, second)).toBeLessThan(0);
+    expect(compareEventRecordOrder(second, first)).toBeGreaterThan(0);
+  });
+
+  test("orders timestamps before applying the id tie-break", () => {
+    const earlier = { id: "evt-z", createdAt: ts(9, 999) };
+    const later = { id: "evt-a", createdAt: ts(10) };
+
+    expect(compareEventRecordOrder(earlier, later)).toBeLessThan(0);
+    expect(compareEventRecordOrder(later, earlier)).toBeGreaterThan(0);
+  });
+
+  test("checkpoint cursor excludes the checkpoint event and resumes same-timestamp events", () => {
+    const checkpoint = ts(20);
+    const checkpointId = "evt-m";
+
+    expect(isEventAfterOrder({ id: "evt-l", createdAt: checkpoint }, checkpoint, checkpointId)).toBe(
+      false,
+    );
+    expect(isEventAfterOrder({ id: "evt-m", createdAt: checkpoint }, checkpoint, checkpointId)).toBe(
+      false,
+    );
+    expect(isEventAfterOrder({ id: "evt-n", createdAt: checkpoint }, checkpoint, checkpointId)).toBe(
+      true,
+    );
+    expect(isEventAfterOrder({ id: "evt-a", createdAt: ts(21) }, checkpoint, checkpointId)).toBe(
+      true,
+    );
   });
 });
