@@ -1859,15 +1859,18 @@ body.light-mode .scoring-field select:focus-visible {
   box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.08);
 }
 
-.scoring-field.is-disabled {
+.scoring-field.is-disabled,
+.form-group.is-disabled {
   opacity: 0.82;
 }
 
-.scoring-field.is-disabled > span {
+.scoring-field.is-disabled > span,
+.form-group.is-disabled > label {
   opacity: 0.62;
 }
 
-.scoring-field.is-disabled > span::after {
+.scoring-field.is-disabled > span::after,
+.form-group.is-disabled > label::after {
   content: "Not applicable";
   display: block;
   margin-top: 3px;
@@ -1878,7 +1881,8 @@ body.light-mode .scoring-field select:focus-visible {
   opacity: 0.82;
 }
 
-.scoring-field select:disabled {
+.scoring-field select:disabled,
+.form-group.is-disabled .select-wrapper select:disabled {
   opacity: 0.48;
   cursor: not-allowed;
   border-style: dashed;
@@ -1886,14 +1890,24 @@ body.light-mode .scoring-field select:focus-visible {
   filter: grayscale(0.7);
 }
 
-body.light-mode .scoring-field select:disabled {
+.form-group.is-disabled .select-wrapper::after {
+  color: rgba(255, 255, 255, 0.38);
+}
+
+body.light-mode .scoring-field select:disabled,
+body.light-mode .form-group.is-disabled .select-wrapper select:disabled {
   background: rgba(0, 0, 0, 0.025);
   border-color: rgba(0, 0, 0, 0.26);
   filter: grayscale(0.65);
 }
 
-body.light-mode .scoring-field.is-disabled > span::after {
+body.light-mode .scoring-field.is-disabled > span::after,
+body.light-mode .form-group.is-disabled > label::after {
   color: rgba(0, 0, 0, 0.62);
+}
+
+body.light-mode .form-group.is-disabled .select-wrapper::after {
+  color: rgba(0, 0, 0, 0.38);
 }
 
 .scoring-status {
