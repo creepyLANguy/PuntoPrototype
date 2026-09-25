@@ -320,9 +320,15 @@ async function loadContract() {
         "utf8",
       );
 
-      const { validate: validateOpenApi } = require("@scalar/openapi-validator");
-      const { validate: validateResponse } = require("@scalar/json-schema-validator");
-      const { parse } = require("yaml");
+      const [
+        { validate: validateOpenApi },
+        { validate: validateResponse },
+        { parse },
+      ] = await Promise.all([
+        import("@scalar/openapi-validator"),
+        import("@scalar/json-schema-validator"),
+        import("yaml"),
+      ]);
 
       const document = parse(openapiSource);
       const openapiResult = await validateOpenApi(document);
