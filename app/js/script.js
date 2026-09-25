@@ -1818,7 +1818,7 @@ document.addEventListener("DOMContentLoaded", () =>
     {
       select.disabled = disabled;
 
-      const field = select.closest(".scoring-field");
+      const field = select.closest(".scoring-field, .form-group");
       if (field)
       {
         field.classList.toggle("is-disabled", disabled);
@@ -1850,6 +1850,12 @@ document.addEventListener("DOMContentLoaded", () =>
         elements.editCourtDeuceMode,
         elements.editCourtTiebreakMode
       ));
+
+    syncCourtScoringRuleControlsDisabled(
+      elements.editCourtScoringMode,
+      elements.editCourtDeuceMode,
+      elements.editCourtTiebreakMode
+    );
   }
 
   // ADMIN DASHBOARD SEARCH & FILTER
