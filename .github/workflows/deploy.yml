@@ -59,7 +59,7 @@ jobs:
         run: npm test --prefix functions
 
       - name: Install Firebase CLI
-        run: npm install --global firebase-tools@latest
+        run: npm install --global firebase-tools@15.30.2
 
       - name: Show Firebase CLI version
         run: firebase --version
@@ -108,7 +108,7 @@ jobs:
         run: npm test --prefix functions
 
       - name: Install Firebase CLI
-        run: npm install --global firebase-tools@latest
+        run: npm install --global firebase-tools@15.30.2
 
       - name: Show Firebase CLI version
         run: firebase --version
