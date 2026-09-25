@@ -4347,6 +4347,8 @@ document.addEventListener("DOMContentLoaded", () =>
     // reads, so the interaction stays on the compositor path.
     let parentWidth = 0;
     let parentHeight = 0;
+    let parentLeft = 0;
+    let parentTop = 0;
     let baseLeft = 0;
     let baseTop = 0;
     let panelWidth = 0;
@@ -4389,13 +4391,17 @@ document.addEventListener("DOMContentLoaded", () =>
       if (interactionMode === "drag" && nextLeft !== null && nextTop !== null)
       {
         panel.style.transform =
-          `translate3d(${nextLeft - baseLeft}px, ${nextTop - baseTop}px, 0)`;
+          "translate3d(" +
+          (nextLeft - baseLeft) +
+          "px, " +
+          (nextTop - baseTop) +
+          "px, 0)";
         return;
       }
 
       if (interactionMode === "resize" && nextScale !== null)
       {
-        panel.style.transform = `scale(${nextScale})`;
+        panel.style.transform = "scale(" + nextScale + ")";
       }
     };
 
@@ -4419,11 +4425,11 @@ document.addEventListener("DOMContentLoaded", () =>
       return {
         left: Math.min(
           maxLeft,
-          Math.max(0, clientX - dragOffsetX)
+          Math.max(0, clientX - parentLeft - dragOffsetX)
         ),
         top: Math.min(
           maxTop,
-          Math.max(0, clientY - dragOffsetY)
+          Math.max(0, clientY - parentTop - dragOffsetY)
         )
       };
     };
@@ -4450,8 +4456,7 @@ document.addEventListener("DOMContentLoaded", () =>
     {
       if (interactionMode === "drag")
       {
-        const position = calculateDragPosition(clientX, clientY);
-        scheduleQrPanelFrame(position);
+        scheduleQrPanelFrame(calculateDragPosition(clientX, clientY));
         return;
       }
 
@@ -4490,40 +4495,23 @@ document.addEventListener("DOMContentLoaded", () =>
         queueInteractionPosition(event.clientX, event.clientY);
       }
 
-      flushScheduledFrame();
-
       const finalLeft = pendingLeft;
       const finalTop = pendingTop;
       const finalScale = pendingScale;
 
-      // The pending values are consumed by applyPendingQrPanelFrame(), so derive
-      // the committed geometry from the current transform inputs instead.
+      flushScheduledFrame();
+
       if (modeAtStop === "drag")
       {
-        const committedLeft = finalLeft !== null ? finalLeft : baseLeft;
-        const committedTop = finalTop !== null ? finalTop : baseTop;
-
-        panel.style.left = `${committedLeft}px`;
-        panel.style.top = `${committedTop}px`;
+        panel.style.left = (finalLeft !== null ? finalLeft : baseLeft) + "px";
+        panel.style.top = (finalTop !== null ? finalTop : baseTop) + "px";
       }
       else if (modeAtStop === "resize")
       {
-        const scale = finalScale !== null
-          ? finalScale
-          : (() =>
-          {
-            const transform = getComputedStyle(panel).transform;
-            if (!transform || transform === "none")
-            {
-              return 1;
-            }
-
-            const match = transform.match(/^matrix\\(([^,]+)/);
-            return match ? Number.parseFloat(match[1]) || 1 : 1;
-          })();
-
-        panel.style.width = `${resizeStartWidth * scale}px`;
-        panel.style.height = `${resizeStartWidth * resizeAspectRatio * scale}px`;
+        const scale = finalScale !== null ? finalScale : 1;
+        panel.style.width = (resizeStartWidth * scale) + "px";
+        panel.style.height =
+          (resizeStartWidth * resizeAspectRatio * scale) + "px";
       }
 
       panel.style.transform = "";
@@ -4533,6 +4521,8 @@ document.addEventListener("DOMContentLoaded", () =>
       pointerId = null;
       parentWidth = 0;
       parentHeight = 0;
+      parentLeft = 0;
+      parentTop = 0;
 
       if (releasedPointerId !== null && panel.hasPointerCapture?.(releasedPointerId))
       {
@@ -4568,6 +4558,8 @@ document.addEventListener("DOMContentLoaded", () =>
 
       parentWidth = currentParentRect.width;
       parentHeight = currentParentRect.height;
+      parentLeft = currentParentRect.left;
+      parentTop = currentParentRect.top;
       panelWidth = currentPanelRect.width;
       panelHeight = currentPanelRect.height;
       baseLeft = currentPanelRect.left - currentParentRect.left;
@@ -4576,8 +4568,8 @@ document.addEventListener("DOMContentLoaded", () =>
 
       panel.style.right = "auto";
       panel.style.bottom = "auto";
-      panel.style.left = `${baseLeft}px`;
-      panel.style.top = `${baseTop}px`;
+      panel.style.left = baseLeft + "px";
+      panel.style.top = baseTop + "px";
       panel.style.transformOrigin = "top left";
 
       if (isResizeAction)
