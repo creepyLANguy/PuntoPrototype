@@ -2,10 +2,14 @@ const { db, FieldValue } = require("../infrastructure/firebase");
 const { buildScoringOptions } = require("../domain/scoring/modes");
 const { toLiveScorePayload, defaultScore } = require("../domain/scoring/engine");
 const { normalizeScoreVersion } = require("../domain/events/validation");
-const { SCORE_CHECKPOINTS_COLLECTION, DEFAULT_TEAM_NAMES, DEFAULT_PLAYER_NAMES, REGION } = require("../services/constants");
+const {
+  SCORE_CHECKPOINTS_COLLECTION,
+  DEFAULT_TEAM_NAMES,
+  DEFAULT_PLAYER_NAMES,
+  REGION,
+} = require("../services/constants");
 
 async function resetCourt(request) {
-
   const {
     courtId,
     deepReset,
@@ -108,7 +112,6 @@ async function resetCourt(request) {
     scoringMode: scoringOptions.scoringMode,
     scoringOptions,
   };
-
 }
 
 module.exports = { resetCourt, REGION };

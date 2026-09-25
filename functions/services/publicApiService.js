@@ -2,7 +2,11 @@ const crypto = require("crypto");
 
 const { db } = require("../infrastructure/firebase");
 
-const { defaultScore, normalizeScoringOptions, getCurrentServerLabel } = require("../domain/scoring/engine");
+const {
+  defaultScore,
+  normalizeScoringOptions,
+  getCurrentServerLabel,
+} = require("../domain/scoring/engine");
 
 const { createApiResponseCache } = require("../infrastructure/cache");
 const { buildScoringOptions } = require("../domain/scoring/modes");
@@ -175,4 +179,12 @@ const statsApiCache = createApiResponseCache(10 * 1000, 200);
 
 const momentumApiCache = createApiResponseCache(5 * 1000, 200);
 
-module.exports = { buildCourtScoreResponse, prepareScoreApiRequest, scoreApiCache, statsApiCache, momentumApiCache, extractScoreApiCourtId, computeScoreRevision };
+module.exports = {
+  buildCourtScoreResponse,
+  prepareScoreApiRequest,
+  scoreApiCache,
+  statsApiCache,
+  momentumApiCache,
+  extractScoreApiCourtId,
+  computeScoreRevision,
+};

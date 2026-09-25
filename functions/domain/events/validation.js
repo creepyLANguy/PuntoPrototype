@@ -6,7 +6,18 @@ function normalizeScoreVersion(value) {
   return Number.isInteger(value) && value >= 0 ? value : 0;
 }
 
-function isSupportedEventType(eventType) { return SUPPORTED_EVENTS.has(eventType); }
-function isScoringEventType(eventType) { return SCORING_EVENTS.has(eventType); }
+function isSupportedEventType(eventType) {
+  return SUPPORTED_EVENTS.has(eventType);
+}
+function isScoringEventType(eventType) {
+  return SCORING_EVENTS.has(eventType);
+}
 
-module.exports = { SCORING_EVENTS, OPERATIONAL_EVENTS, SUPPORTED_EVENTS, normalizeScoreVersion, isSupportedEventType, isScoringEventType };
+module.exports = {
+  SCORING_EVENTS,
+  OPERATIONAL_EVENTS,
+  SUPPORTED_EVENTS,
+  normalizeScoreVersion,
+  isSupportedEventType,
+  isScoringEventType,
+};

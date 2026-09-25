@@ -1,5 +1,10 @@
 const { db } = require("../infrastructure/firebase");
-const { defaultScore, applyEvent, normalizeScoringOptions, compareEventOrder } = require("../domain/scoring/engine");
+const {
+  defaultScore,
+  applyEvent,
+  normalizeScoringOptions,
+  compareEventOrder,
+} = require("../domain/scoring/engine");
 const { SCORING_EVENTS, normalizeScoreVersion } = require("../domain/events/validation");
 const {
   getPersistedScoreOrder,
@@ -41,10 +46,7 @@ function collectApplicableScoringEvents(eventsSnap, targetScoreVersion, afterOrd
 
     // startAt() can only resume at createdAt, so the event id is applied as
     // the deterministic in-memory tie-break for events sharing that timestamp.
-    if (
-      afterOrder &&
-      !isEventAfterOrder(event, afterOrder.createdAt, afterOrder.eventId)
-    ) {
+    if (afterOrder && !isEventAfterOrder(event, afterOrder.createdAt, afterOrder.eventId)) {
       return;
     }
 
@@ -162,4 +164,11 @@ async function replayScoreFromEventsExcluding(
   };
 }
 
-module.exports = { buildScoringEventsQuery, collectApplicableScoringEvents, replayScoreFromEvents, replayScoreFromEventsExcluding, getPersistedScoreOrder, resolveReplayOrdering };
+module.exports = {
+  buildScoringEventsQuery,
+  collectApplicableScoringEvents,
+  replayScoreFromEvents,
+  replayScoreFromEventsExcluding,
+  getPersistedScoreOrder,
+  resolveReplayOrdering,
+};

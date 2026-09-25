@@ -12,11 +12,7 @@ const {
   scoreEquivalent,
   didSetCountIncrease,
 } = require("./scoringEngine");
-const {
-  compareEventRecordOrder,
-  isEventAfterOrder,
-} = require("./domain/events/ordering");
-
+const { compareEventRecordOrder, isEventAfterOrder } = require("./domain/events/ordering");
 
 // Helper: apply N points to a team
 function awardPoints(score, team, count, options = DEFAULT_SCORING_OPTIONS) {
@@ -1075,7 +1071,6 @@ describe("didSetCountIncrease", () => {
   });
 });
 
-
 describe("replay event record ordering", () => {
   const ts = (seconds, nanoseconds = 0) => ({ seconds, nanoseconds });
 
@@ -1099,15 +1094,15 @@ describe("replay event record ordering", () => {
     const checkpoint = ts(20);
     const checkpointId = "evt-m";
 
-    expect(isEventAfterOrder({ id: "evt-l", createdAt: checkpoint }, checkpoint, checkpointId)).toBe(
-      false,
-    );
-    expect(isEventAfterOrder({ id: "evt-m", createdAt: checkpoint }, checkpoint, checkpointId)).toBe(
-      false,
-    );
-    expect(isEventAfterOrder({ id: "evt-n", createdAt: checkpoint }, checkpoint, checkpointId)).toBe(
-      true,
-    );
+    expect(
+      isEventAfterOrder({ id: "evt-l", createdAt: checkpoint }, checkpoint, checkpointId),
+    ).toBe(false);
+    expect(
+      isEventAfterOrder({ id: "evt-m", createdAt: checkpoint }, checkpoint, checkpointId),
+    ).toBe(false);
+    expect(
+      isEventAfterOrder({ id: "evt-n", createdAt: checkpoint }, checkpoint, checkpointId),
+    ).toBe(true);
     expect(isEventAfterOrder({ id: "evt-a", createdAt: ts(21) }, checkpoint, checkpointId)).toBe(
       true,
     );

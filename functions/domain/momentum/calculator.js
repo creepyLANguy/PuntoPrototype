@@ -1,6 +1,10 @@
-const { defaultScore, applyEvent, getCurrentServerLabel, normalizeScoringOptions } = require("../scoring/engine");
+const {
+  defaultScore,
+  applyEvent,
+  getCurrentServerLabel,
+  normalizeScoringOptions,
+} = require("../scoring/engine");
 const { isTeamOnGamePoint } = require("../scoring/helpers");
-
 
 const MOMENTUM_CONFIG = Object.freeze({
   decayPerPoint: 0.94,

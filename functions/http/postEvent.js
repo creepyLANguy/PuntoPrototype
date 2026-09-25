@@ -1,11 +1,17 @@
 const { db } = require("../infrastructure/firebase");
 const { requireDevice, appendCourtEvent } = require("../services/eventService");
-const { SCORING_EVENTS, OPERATIONAL_EVENTS, SUPPORTED_EVENTS, normalizeScoreVersion } = require("../domain/events/validation");
+const {
+  SCORING_EVENTS,
+  OPERATIONAL_EVENTS,
+  SUPPORTED_EVENTS,
+  normalizeScoreVersion,
+} = require("../domain/events/validation");
 
-function sendJson(res, status, body) { return res.status(status).json(body); }
+function sendJson(res, status, body) {
+  return res.status(status).json(body);
+}
 
 async function postEvent(req, res) {
-
   try {
     if (req.method !== "POST") {
       return sendJson(res, 405, { success: false, error: "Method not allowed" });
@@ -134,7 +140,6 @@ async function postEvent(req, res) {
     console.error(err);
     return sendJson(res, 500, { success: false, error: "Error" });
   }
-
 }
 
 module.exports = { postEvent };

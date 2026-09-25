@@ -1,9 +1,10 @@
-const { defaultScore, applyEvent, getCurrentServerLabel, normalizeScoringOptions } = require("../scoring/engine");
+const {
+  defaultScore,
+  applyEvent,
+  getCurrentServerLabel,
+  normalizeScoringOptions,
+} = require("../scoring/engine");
 const { isTeamOnGamePoint } = require("../scoring/helpers");
-
-
-
-
 
 function createTeamStatsBucket() {
   return {

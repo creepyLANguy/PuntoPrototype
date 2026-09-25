@@ -7,7 +7,6 @@ const { normalizeScoreVersion } = require("../domain/events/validation");
 const { SCORING_EVENTS } = require("../domain/events/validation");
 
 async function updateScoringOptions(request) {
-
   const { courtId, scoringOptions: incomingScoringOptions, scoringMode } = request.data;
   if (!courtId) throw new Error("Missing courtId");
 
@@ -76,7 +75,6 @@ async function updateScoringOptions(request) {
     mode: normalizedOptions.scoringMode,
     score: replayedScore,
   };
-
 }
 
 module.exports = { updateScoringOptions, REGION };

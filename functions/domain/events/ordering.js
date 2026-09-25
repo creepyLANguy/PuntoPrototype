@@ -23,12 +23,7 @@ function resolveReplayOrdering(replayResult, existingScore = {}, fallbackOrder =
 }
 
 function compareEventRecordOrder(left, right) {
-  const ordered = compareEventOrder(
-    left?.createdAt,
-    left?.id,
-    right?.createdAt,
-    right?.id,
-  );
+  const ordered = compareEventOrder(left?.createdAt, left?.id, right?.createdAt, right?.id);
 
   if (ordered !== null) {
     return ordered;

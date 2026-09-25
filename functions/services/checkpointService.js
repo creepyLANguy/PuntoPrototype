@@ -1,5 +1,10 @@
 const { db, FieldValue } = require("../infrastructure/firebase");
-const { normalizeScoringOptions, compareEventOrder, defaultScore, toLiveScorePayload } = require("../domain/scoring/engine");
+const {
+  normalizeScoringOptions,
+  compareEventOrder,
+  defaultScore,
+  toLiveScorePayload,
+} = require("../domain/scoring/engine");
 const { SCORE_CHECKPOINTS_COLLECTION } = require("./constants");
 
 async function getLatestCheckpoint(tx, courtId, options) {
