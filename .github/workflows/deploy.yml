@@ -53,7 +53,7 @@ jobs:
         run: npm run lint --prefix functions
 
       - name: Run Functions format check
-        run: npm run format --prefix functions && git diff -- functions/frontendQrPanelResize.node-test.mjs
+        run: npm run format:check --prefix functions
 
       - name: Run Functions test suite
         run: npm test --prefix functions
