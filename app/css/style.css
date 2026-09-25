@@ -389,6 +389,13 @@ body.light-mode .menu-btn:hover {
   opacity: 0.75;
 }
 
+.court-qr-panel.qr-panel-interacting {
+  will-change: transform;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: none;
+}
+
 .court-qr-code {
   position: relative;
   width: 100%;
