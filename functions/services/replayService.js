@@ -1,4 +1,4 @@
-const { db, FieldPath } = require("../infrastructure/firebase");
+const { db } = require("../infrastructure/firebase");
 const { defaultScore, applyEvent, normalizeScoringOptions, compareEventOrder } = require("../domain/scoring/engine");
 const { SCORING_EVENTS, normalizeScoreVersion } = require("../domain/events/validation");
 const {
