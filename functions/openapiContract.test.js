@@ -7,11 +7,7 @@ const {
   replayEvents,
   toLiveScorePayload,
 } = require("./domain/scoring/engine");
-const {
-  scoreApiCache,
-  statsApiCache,
-  momentumApiCache,
-} = require("./services/publicApiService");
+const { scoreApiCache, statsApiCache, momentumApiCache } = require("./services/publicApiService");
 
 var mockDb = null;
 
@@ -76,8 +72,7 @@ class FakeFirestore {
     let docs = [...this.docs.entries()]
       .filter(
         ([documentPath]) =>
-          documentPath.startsWith(prefix) &&
-          !documentPath.slice(prefix.length).includes("/"),
+          documentPath.startsWith(prefix) && !documentPath.slice(prefix.length).includes("/"),
       )
       .map(([documentPath, data]) => ({
         id: documentPath.slice(prefix.length),
@@ -87,10 +82,8 @@ class FakeFirestore {
     for (let index = query.orders.length - 1; index >= 0; index -= 1) {
       const order = query.orders[index];
       docs.sort((left, right) => {
-        const leftValue =
-          order.field === "__name__" ? left.id : left.data[order.field];
-        const rightValue =
-          order.field === "__name__" ? right.id : right.data[order.field];
+        const leftValue = order.field === "__name__" ? left.id : left.data[order.field];
+        const rightValue = order.field === "__name__" ? right.id : right.data[order.field];
 
         const comparison = compareValues(leftValue, rightValue);
         return order.direction === "desc" ? -comparison : comparison;
@@ -124,10 +117,7 @@ class FakeQuery {
   }
 
   orderBy(field, direction = "asc") {
-    return new FakeQuery(this.db, this.path, [
-      ...this.orders,
-      { field, direction },
-    ]);
+    return new FakeQuery(this.db, this.path, [...this.orders, { field, direction }]);
   }
 
   get() {
@@ -136,16 +126,8 @@ class FakeQuery {
 }
 
 function compareValues(left, right) {
-  if (
-    left &&
-    right &&
-    typeof left.seconds === "number" &&
-    typeof right.seconds === "number"
-  ) {
-    return (
-      left.seconds - right.seconds ||
-      (left.nanoseconds || 0) - (right.nanoseconds || 0)
-    );
+  if (left && right && typeof left.seconds === "number" && typeof right.seconds === "number") {
+    return left.seconds - right.seconds || (left.nanoseconds || 0) - (right.nanoseconds || 0);
   }
 
   if (left === right) {
@@ -259,10 +241,9 @@ function resolveLocalRefs(value, document, stack = []) {
 
   if (typeof value.$ref === "string") {
     if (stack.includes(value.$ref)) {
-      throw new Error(`Circular OpenAPI response schema reference: ${[
-        ...stack,
-        value.$ref,
-      ].join(" -> ")}`);
+      throw new Error(
+        `Circular OpenAPI response schema reference: ${[...stack, value.$ref].join(" -> ")}`,
+      );
     }
 
     const target = getJsonPointer(document, value.$ref);
@@ -274,10 +255,7 @@ function resolveLocalRefs(value, document, stack = []) {
   }
 
   return Object.fromEntries(
-    Object.entries(value).map(([key, child]) => [
-      key,
-      resolveLocalRefs(child, document, stack),
-    ]),
+    Object.entries(value).map(([key, child]) => [key, resolveLocalRefs(child, document, stack)]),
   );
 }
 
@@ -320,15 +298,12 @@ async function loadContract() {
         "utf8",
       );
 
-      const [
-        { validate: validateOpenApi },
-        { validate: validateResponse },
-        { parse },
-      ] = await Promise.all([
-        import("@scalar/openapi-validator"),
-        import("@scalar/json-schema-validator"),
-        import("yaml"),
-      ]);
+      const [{ validate: validateOpenApi }, { validate: validateResponse }, { parse }] =
+        await Promise.all([
+          import("@scalar/openapi-validator"),
+          import("@scalar/json-schema-validator"),
+          import("yaml"),
+        ]);
 
       const document = parse(openapiSource);
       const openapiResult = await validateOpenApi(document);
@@ -361,11 +336,7 @@ function formatErrors(errors) {
   return JSON.stringify(errors || [], null, 2);
 }
 
-async function assertSuccessfulResponseMatchesContract(
-  contract,
-  route,
-  response,
-) {
+async function assertSuccessfulResponseMatchesContract(contract, route, response) {
   assert.equal(response.statusCode, 200);
 
   const result = contract.validateResponse(
@@ -402,13 +373,9 @@ describe("public API OpenAPI contract", () => {
   test("the OpenAPI document is valid and all local references resolve", () => {
     expect(contract.document.openapi).toBe("3.1.0");
     expect(contract.document.paths["/score/{courtId}"]).toBeDefined();
-    expect(
-      contract.document.paths["/revision/{courtId}"],
-    ).toBeDefined();
+    expect(contract.document.paths["/revision/{courtId}"]).toBeDefined();
     expect(contract.document.paths["/stats/{courtId}"]).toBeDefined();
-    expect(
-      contract.document.paths["/momentum/{courtId}"],
-    ).toBeDefined();
+    expect(contract.document.paths["/momentum/{courtId}"]).toBeDefined();
   });
 
   test.each([
@@ -455,19 +422,7 @@ describe("public API OpenAPI contract", () => {
         deuceMode: "star",
         tiebreakMode: "sixAllSeven",
       },
-      events: makeEvents([
-        "A",
-        "A",
-        "A",
-        "B",
-        "B",
-        "B",
-        "A",
-        "B",
-        "A",
-        "B",
-        "A",
-      ]),
+      events: makeEvents(["A", "A", "A", "B", "B", "B", "A", "B", "A", "B", "A"]),
       court: {},
     },
     {
@@ -503,9 +458,7 @@ describe("public API OpenAPI contract", () => {
     {
       name: "completed set and server rotation",
       options: DEFAULT_SCORING_OPTIONS,
-      events: makeEvents([
-        ...Array.from({ length: 8 }, () => "A"),
-      ]),
+      events: makeEvents([...Array.from({ length: 8 }, () => "A")]),
       court: {},
     },
     {
@@ -516,19 +469,12 @@ describe("public API OpenAPI contract", () => {
         teamNames: { A: "Team A", B: "Team B" },
       },
     },
-  ])(
-    "validates the /score response for $name",
-    async ({ options, events, court }) => {
-      resetEnvironment(makeSeed("bnrm", options, events, court));
-      const response = await invoke(getCourtScore, "/score/bnrm");
+  ])("validates the /score response for $name", async ({ options, events, court }) => {
+    resetEnvironment(makeSeed("bnrm", options, events, court));
+    const response = await invoke(getCourtScore, "/score/bnrm");
 
-      await assertSuccessfulResponseMatchesContract(
-        contract,
-        "/score/{courtId}",
-        response,
-      );
-    },
-  );
+    await assertSuccessfulResponseMatchesContract(contract, "/score/{courtId}", response);
+  });
 
   test("validates /revision and preserves the advertised score revision", async () => {
     const events = makeEvents(["A", "A", "A"]);
@@ -540,11 +486,7 @@ describe("public API OpenAPI contract", () => {
     );
 
     const revision = await invoke(getCourtScoreRevision, "/revision/bnrm");
-    await assertSuccessfulResponseMatchesContract(
-      contract,
-      "/revision/{courtId}",
-      revision,
-    );
+    await assertSuccessfulResponseMatchesContract(contract, "/revision/{courtId}", revision);
 
     const score = await invoke(getCourtScore, "/score/bnrm");
     expect(score.payload.revision).toBe(revision.payload.revision);
@@ -558,11 +500,7 @@ describe("public API OpenAPI contract", () => {
     );
 
     const emptyStats = await invoke(getCourtStats, "/stats/bnrm");
-    await assertSuccessfulResponseMatchesContract(
-      contract,
-      "/stats/{courtId}",
-      emptyStats,
-    );
+    await assertSuccessfulResponseMatchesContract(contract, "/stats/{courtId}", emptyStats);
 
     const events = makeEvents(["A", "A", "B", "A", "A"]);
     resetEnvironment(
@@ -572,11 +510,7 @@ describe("public API OpenAPI contract", () => {
     );
 
     const populatedStats = await invoke(getCourtStats, "/stats/bnrm");
-    await assertSuccessfulResponseMatchesContract(
-      contract,
-      "/stats/{courtId}",
-      populatedStats,
-    );
+    await assertSuccessfulResponseMatchesContract(contract, "/stats/{courtId}", populatedStats);
     expect(populatedStats.payload.totalPoints).toBe(5);
   });
 
@@ -585,11 +519,7 @@ describe("public API OpenAPI contract", () => {
     resetEnvironment(makeSeed("bnrm", DEFAULT_SCORING_OPTIONS, events));
 
     const momentum = await invoke(getCourtMomentum, "/momentum/bnrm");
-    await assertSuccessfulResponseMatchesContract(
-      contract,
-      "/momentum/{courtId}",
-      momentum,
-    );
+    await assertSuccessfulResponseMatchesContract(contract, "/momentum/{courtId}", momentum);
 
     expect(momentum.payload.pointHistory).toEqual(["A", "A", "B", "A", "A"]);
     expect(momentum.payload.momentumTimeline).toHaveLength(5);
