@@ -33,6 +33,20 @@ The runtime sequence is visualized in [PP_Runtime_Flow.mmd](PP_Runtime_Flow.mmd)
 
 Firebase Hosting rewrites the public /score, /revision, /stats and /momentum paths to read functions running in europe-west1. The device ingestion, callable functions and event trigger run in africa-south1.
 
+## Functions module boundaries
+
+The Cloud Functions implementation is intentionally split between composition, domain logic, and infrastructure:
+
+- `functions/index.js` is the Firebase composition root. It registers triggers, callable functions and HTTP functions but does not contain scoring, replay, statistics or HTTP-domain implementation.
+- `functions/domain/scoring/` contains scoring rules and scoring-option helpers. `functions/scoringEngine.js` remains as a compatibility facade for existing imports/tests.
+- `functions/domain/events/` contains event-type validation and ordering helpers.
+- `functions/domain/stats/` and `functions/domain/momentum/` contain the pure statistics and momentum calculators.
+- `functions/services/` contains score-event persistence, replay, checkpoint, analytics, device-event and public API orchestration.
+- `functions/callables/`, `functions/http/` and `functions/triggers/` contain the thin Firebase entry handlers.
+- `functions/infrastructure/` centralizes Firebase Admin access and shared API-cache behaviour.
+
+This decomposition is deliberately independent of the future first-class match/tournament model. The current court-scoped Firestore model remains unchanged.
+
 ## Current data and mutation boundaries
 
 - The web app uses the Firebase Web SDK directly for court reads, court creation/edit/delete, device reads/updates, event writes and score listeners.

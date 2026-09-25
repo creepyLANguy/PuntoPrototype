@@ -172,21 +172,24 @@ class FakeFirestore {
       });
     }
 
-    if (query.startAfterValues) {
+    if (query.startAfterValues || query.startAtValues) {
+      const startValues = query.startAfterValues || query.startAtValues;
+      const inclusive = Boolean(query.startAtValues);
+
       docs = docs.filter((doc) => {
         for (let i = 0; i < query.orders.length; i++) {
           const order = query.orders[i];
           const field = order.field === "__name__" ? "id" : order.field;
           const directionFactor = order.direction === "desc" ? -1 : 1;
           const docValue = doc[field] ?? doc.data[field];
-          const boundaryValue = query.startAfterValues[i];
+          const boundaryValue = startValues[i];
           const comparison = compareValue(docValue, boundaryValue) * directionFactor;
 
           if (comparison > 0) return true;
           if (comparison < 0) return false;
         }
 
-        return false;
+        return inclusive;
       });
     }
 
@@ -214,12 +217,20 @@ class FakeFirestore {
 }
 
 class FakeQuery {
-  constructor(db, path, orders = [], startAfterValues = null, limitCount = null) {
+  constructor(
+    db,
+    path,
+    orders = [],
+    startAfterValues = null,
+    startAtValues = null,
+    limitCount = null,
+  ) {
     this.kind = "query";
     this.db = db;
     this.path = path;
     this.orders = orders;
     this.startAfterValues = startAfterValues;
+    this.startAtValues = startAtValues;
     this.limitCount = limitCount;
   }
 
@@ -229,16 +240,42 @@ class FakeQuery {
       this.path,
       [...this.orders, { field, direction }],
       this.startAfterValues,
+      this.startAtValues,
       this.limitCount,
     );
   }
 
   startAfter(...values) {
-    return new FakeQuery(this.db, this.path, this.orders, values, this.limitCount);
+    return new FakeQuery(
+      this.db,
+      this.path,
+      this.orders,
+      values,
+      this.startAtValues,
+      this.limitCount,
+    );
+  }
+
+  startAt(...values) {
+    return new FakeQuery(
+      this.db,
+      this.path,
+      this.orders,
+      this.startAfterValues,
+      values,
+      this.limitCount,
+    );
   }
 
   limit(count) {
-    return new FakeQuery(this.db, this.path, this.orders, this.startAfterValues, count);
+    return new FakeQuery(
+      this.db,
+      this.path,
+      this.orders,
+      this.startAfterValues,
+      this.startAtValues,
+      count,
+    );
   }
 
   doc(id) {
