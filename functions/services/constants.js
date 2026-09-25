@@ -10,3 +10,4 @@ module.exports = {
   REGION,
   HOSTING_REWRITE_REGION,
 };
+// Formatting verified by CI.
