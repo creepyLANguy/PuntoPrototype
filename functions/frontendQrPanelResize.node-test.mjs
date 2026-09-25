@@ -16,7 +16,9 @@ test("QR panel interaction stays frame-synced and compositor-driven", () => {
   assert.match(source, /const stopInteraction =/);
   assert.doesNotMatch(source, /new ResizeObserver\(/);
 
-  const pointerMoveStart = source.indexOf('    document.addEventListener("pointermove", (event) =>');
+  const pointerMoveStart = source.indexOf(
+    '    document.addEventListener("pointermove", (event) =>',
+  );
   const pointerMoveEnd = source.indexOf('    const stopInteractionFromPointer', pointerMoveStart);
   assert.ok(pointerMoveStart >= 0 && pointerMoveEnd > pointerMoveStart);
   const pointerMoveBlock = source.slice(pointerMoveStart, pointerMoveEnd);
@@ -42,8 +44,14 @@ test("QR panel uses the custom pointer interaction instead of native CSS resize"
 });
 
 test("QR interaction disables expensive paint effects while active", () => {
-  assert.match(styles, /\.court-qr-panel\.qr-panel-interacting\s*\{[\s\S]*?will-change:\s*transform;/);
-  assert.match(styles, /\.court-qr-panel\.qr-panel-interacting\s*\{[\s\S]*?backdrop-filter:\s*none;/);
+  assert.match(
+    styles,
+    /\.court-qr-panel\.qr-panel-interacting\s*\{[\s\S]*?will-change:\s*transform;/,
+  );
+  assert.match(
+    styles,
+    /\.court-qr-panel\.qr-panel-interacting\s*\{[\s\S]*?backdrop-filter:\s*none;/,
+  );
   assert.match(styles, /\.court-qr-panel\.qr-panel-interacting\s*\{[\s\S]*?box-shadow:\s*none;/);
 });
 
