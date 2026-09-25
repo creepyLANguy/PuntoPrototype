@@ -19,6 +19,6 @@ jobs:
       - name: Install dependencies
         working-directory: functions
         run: npm ci
-      - name: Run tests
+      - name: Run unit, frontend, and OpenAPI contract tests
         working-directory: functions
         run: npm test
