@@ -59,9 +59,9 @@ test("QR panel pull tab looks and behaves like a resize handle", () => {
   assert.match(styles, /\.pull-tab\s*\{[\s\S]*?opacity:\s*0\.2;/);
   assert.match(styles, /\.pull-tab\s*\{[\s\S]*?repeating-linear-gradient\(/);
   const pullTabStripePattern = new RegExp(
-    String.raw`\\.pull-tab\\s*\\{[\\s\\S]*?transparent 0 4px,` +
-      String.raw`[\\s\\S]*?rgba\\(255, 255, 255, 0\\.9\\) 4px 6px,` +
-      String.raw`[\\s\\S]*?transparent 6px 8px`,
+    String.raw`\.pull-tab\s*\{[\s\S]*?transparent 0 4px,` +
+      String.raw`[\s\S]*?rgba\(255, 255, 255, 0\.9\) 4px 6px,` +
+      String.raw`[\s\S]*?transparent 6px 8px`,
   );
   assert.match(styles, pullTabStripePattern);
   assert.match(styles, /\.pull-tab\s*\{[\s\S]*?cursor:\s*nwse-resize;/);
