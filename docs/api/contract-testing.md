@@ -76,3 +76,17 @@ CI should fail when:
 - security/idempotency regression tests fail.
 
 The API spec and tests should be updated in the same pull request as implementation changes.
+
+## Executable contract enforcement
+
+The executable response-contract suite lives in `functions/openapiContract.test.js` and is included automatically by the existing Jest command invoked by `npm test` and GitHub Actions.
+
+The suite:
+
+- validates `docs/api/openapi.yaml` as an OpenAPI 3.1 document and resolves its local references;
+- exercises representative successful `/score`, `/revision`, `/stats`, and `/momentum` responses;
+- covers standard, straight, match-tiebreak and set-tiebreak states, golden/silver/star deuce modes, server rotation, completed sets, empty player names, zero-denominator statistics, and momentum markers;
+- validates each successful response body against the corresponding schema from the OpenAPI document; and
+- contains a negative control proving that an incompatible enum is rejected by the validator.
+
+The validator dependencies are pinned in `functions/package.json` and `functions/package-lock.json` so CI continues to use `npm ci` with reproducible test dependencies.
