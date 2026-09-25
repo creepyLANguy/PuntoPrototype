@@ -4342,13 +4342,17 @@ document.addEventListener("DOMContentLoaded", () =>
 
     let interactionMode = null;
     let pointerId = null;
-    let parentRect = null;
+
+    // Geometry is captured once at pointerdown. Pointermove never performs layout
+    // reads, so the interaction stays on the compositor path.
+    let parentWidth = 0;
+    let parentHeight = 0;
+    let baseLeft = 0;
+    let baseTop = 0;
     let panelWidth = 0;
     let panelHeight = 0;
     let dragOffsetX = 0;
     let dragOffsetY = 0;
-    let resizeLeft = 0;
-    let resizeTop = 0;
     let resizeStartX = 0;
     let resizeStartY = 0;
     let resizeStartWidth = 0;
@@ -4356,8 +4360,7 @@ document.addEventListener("DOMContentLoaded", () =>
 
     let pendingLeft = null;
     let pendingTop = null;
-    let pendingWidth = null;
-    let pendingHeight = null;
+    let pendingScale = null;
     let framePending = false;
 
     const cancelScheduledFrame = () =>
@@ -4377,41 +4380,30 @@ document.addEventListener("DOMContentLoaded", () =>
 
       const nextLeft = pendingLeft;
       const nextTop = pendingTop;
-      const nextWidth = pendingWidth;
-      const nextHeight = pendingHeight;
+      const nextScale = pendingScale;
 
       pendingLeft = null;
       pendingTop = null;
-      pendingWidth = null;
-      pendingHeight = null;
+      pendingScale = null;
 
-      if (nextLeft !== null)
+      if (interactionMode === "drag" && nextLeft !== null && nextTop !== null)
       {
-        panel.style.left = nextLeft + "px";
+        panel.style.transform =
+          `translate3d(${nextLeft - baseLeft}px, ${nextTop - baseTop}px, 0)`;
+        return;
       }
 
-      if (nextTop !== null)
+      if (interactionMode === "resize" && nextScale !== null)
       {
-        panel.style.top = nextTop + "px";
-      }
-
-      if (nextWidth !== null)
-      {
-        panel.style.width = nextWidth + "px";
-      }
-
-      if (nextHeight !== null)
-      {
-        panel.style.height = nextHeight + "px";
+        panel.style.transform = `scale(${nextScale})`;
       }
     };
 
-    const scheduleQrPanelFrame = ({ left = null, top = null, width = null, height = null } = {}) =>
+    const scheduleQrPanelFrame = ({ left = null, top = null, scale = null } = {}) =>
     {
       if (left !== null) pendingLeft = left;
       if (top !== null) pendingTop = top;
-      if (width !== null) pendingWidth = width;
-      if (height !== null) pendingHeight = height;
+      if (scale !== null) pendingScale = scale;
 
       if (!framePending)
       {
@@ -4419,29 +4411,27 @@ document.addEventListener("DOMContentLoaded", () =>
       }
     };
 
-    const getParentRect = () => elements.scoreboardPage.getBoundingClientRect();
-
     const calculateDragPosition = (clientX, clientY) =>
     {
-      const maxLeft = Math.max(0, parentRect.width - panelWidth);
-      const maxTop = Math.max(0, parentRect.height - panelHeight);
+      const maxLeft = Math.max(0, parentWidth - panelWidth);
+      const maxTop = Math.max(0, parentHeight - panelHeight);
 
       return {
         left: Math.min(
           maxLeft,
-          Math.max(0, clientX - parentRect.left - dragOffsetX)
+          Math.max(0, clientX - dragOffsetX)
         ),
         top: Math.min(
           maxTop,
-          Math.max(0, clientY - parentRect.top - dragOffsetY)
+          Math.max(0, clientY - dragOffsetY)
         )
       };
     };
 
-    const calculateResize = (clientX, clientY) =>
+    const calculateResizeScale = (clientX, clientY) =>
     {
-      const maxWidthByRightEdge = parentRect.width - resizeLeft - 8;
-      const maxWidthByBottomEdge = (parentRect.height - resizeTop - 8) / resizeAspectRatio;
+      const maxWidthByRightEdge = parentWidth - baseLeft - 8;
+      const maxWidthByBottomEdge = (parentHeight - baseTop - 8) / resizeAspectRatio;
       const maxWidth = Math.max(
         72,
         Math.min(maxWidthByRightEdge, maxWidthByBottomEdge)
@@ -4449,13 +4439,11 @@ document.addEventListener("DOMContentLoaded", () =>
 
       const deltaX = clientX - resizeStartX;
       const deltaY = clientY - resizeStartY;
-      const requestedWidth = resizeStartWidth + Math.max(deltaX, deltaY / resizeAspectRatio);
+      const requestedWidth =
+        resizeStartWidth + Math.max(deltaX, deltaY / resizeAspectRatio);
       const width = Math.max(72, Math.min(maxWidth, requestedWidth));
 
-      return {
-        width,
-        height: width * resizeAspectRatio
-      };
+      return resizeStartWidth > 0 ? width / resizeStartWidth : 1;
     };
 
     const queueInteractionPosition = (clientX, clientY) =>
@@ -4469,12 +4457,22 @@ document.addEventListener("DOMContentLoaded", () =>
 
       if (interactionMode === "resize")
       {
-        const size = calculateResize(clientX, clientY);
         scheduleQrPanelFrame({
-          width: size.width,
-          height: size.height
+          scale: calculateResizeScale(clientX, clientY)
         });
       }
+    };
+
+    const flushScheduledFrame = () =>
+    {
+      if (!framePending)
+      {
+        return;
+      }
+
+      window.cancelAnimationFrame(framePending);
+      framePending = false;
+      applyPendingQrPanelFrame();
     };
 
     const stopInteraction = (event = null) =>
@@ -4484,7 +4482,7 @@ document.addEventListener("DOMContentLoaded", () =>
         return;
       }
 
-      const wasResizing = interactionMode === "resize";
+      const modeAtStop = interactionMode;
       const releasedPointerId = pointerId;
 
       if (event)
@@ -4492,17 +4490,49 @@ document.addEventListener("DOMContentLoaded", () =>
         queueInteractionPosition(event.clientX, event.clientY);
       }
 
-      if (framePending)
+      flushScheduledFrame();
+
+      const finalLeft = pendingLeft;
+      const finalTop = pendingTop;
+      const finalScale = pendingScale;
+
+      // The pending values are consumed by applyPendingQrPanelFrame(), so derive
+      // the committed geometry from the current transform inputs instead.
+      if (modeAtStop === "drag")
       {
-        window.cancelAnimationFrame(framePending);
-        framePending = false;
-        applyPendingQrPanelFrame();
+        const committedLeft = finalLeft !== null ? finalLeft : baseLeft;
+        const committedTop = finalTop !== null ? finalTop : baseTop;
+
+        panel.style.left = `${committedLeft}px`;
+        panel.style.top = `${committedTop}px`;
       }
+      else if (modeAtStop === "resize")
+      {
+        const scale = finalScale !== null
+          ? finalScale
+          : (() =>
+          {
+            const transform = getComputedStyle(panel).transform;
+            if (!transform || transform === "none")
+            {
+              return 1;
+            }
+
+            const match = transform.match(/^matrix\\(([^,]+)/);
+            return match ? Number.parseFloat(match[1]) || 1 : 1;
+          })();
+
+        panel.style.width = `${resizeStartWidth * scale}px`;
+        panel.style.height = `${resizeStartWidth * resizeAspectRatio * scale}px`;
+      }
+
+      panel.style.transform = "";
+      panel.classList.remove("dragging", "resizing", "qr-panel-interacting");
 
       interactionMode = null;
       pointerId = null;
-      parentRect = null;
-      panel.classList.remove("dragging", "resizing");
+      parentWidth = 0;
+      parentHeight = 0;
 
       if (releasedPointerId !== null && panel.hasPointerCapture?.(releasedPointerId))
       {
@@ -4516,7 +4546,7 @@ document.addEventListener("DOMContentLoaded", () =>
         }
       }
 
-      if (wasResizing)
+      if (modeAtStop === "resize")
       {
         clampCourtQrPanelToViewport();
       }
@@ -4529,46 +4559,44 @@ document.addEventListener("DOMContentLoaded", () =>
         return;
       }
 
-      const currentParentRect = getParentRect();
+      const currentParentRect = elements.scoreboardPage.getBoundingClientRect();
       const currentPanelRect = panel.getBoundingClientRect();
       const resizeHandleZone = 28;
-      const isResizeAction = event.clientX >= currentPanelRect.right - resizeHandleZone &&
+      const isResizeAction =
+        event.clientX >= currentPanelRect.right - resizeHandleZone &&
         event.clientY >= currentPanelRect.bottom - resizeHandleZone;
 
-      parentRect = currentParentRect;
+      parentWidth = currentParentRect.width;
+      parentHeight = currentParentRect.height;
       panelWidth = currentPanelRect.width;
       panelHeight = currentPanelRect.height;
+      baseLeft = currentPanelRect.left - currentParentRect.left;
+      baseTop = currentPanelRect.top - currentParentRect.top;
       pointerId = event.pointerId;
+
+      panel.style.right = "auto";
+      panel.style.bottom = "auto";
+      panel.style.left = `${baseLeft}px`;
+      panel.style.top = `${baseTop}px`;
+      panel.style.transformOrigin = "top left";
 
       if (isResizeAction)
       {
         interactionMode = "resize";
-        resizeLeft = currentPanelRect.left - parentRect.left;
-        resizeTop = currentPanelRect.top - parentRect.top;
         resizeStartX = event.clientX;
         resizeStartY = event.clientY;
         resizeStartWidth = currentPanelRect.width;
         resizeAspectRatio = currentPanelRect.width > 0
           ? currentPanelRect.height / currentPanelRect.width
           : 1.24;
-
-        panel.style.bottom = "auto";
-        panel.style.right = "auto";
-        panel.style.left = resizeLeft + "px";
-        panel.style.top = resizeTop + "px";
-        panel.classList.add("resizing");
+        panel.classList.add("resizing", "qr-panel-interacting");
       }
       else
       {
         interactionMode = "drag";
         dragOffsetX = event.clientX - currentPanelRect.left;
         dragOffsetY = event.clientY - currentPanelRect.top;
-
-        panel.style.bottom = "auto";
-        panel.style.right = "auto";
-        panel.style.left = (currentPanelRect.left - parentRect.left) + "px";
-        panel.style.top = (currentPanelRect.top - parentRect.top) + "px";
-        panel.classList.add("dragging");
+        panel.classList.add("dragging", "qr-panel-interacting");
       }
 
       panel.setPointerCapture(event.pointerId);
