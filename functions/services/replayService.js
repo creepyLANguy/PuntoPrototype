@@ -1,17 +1,28 @@
 const { db, FieldPath } = require("../infrastructure/firebase");
 const { defaultScore, applyEvent, normalizeScoringOptions, compareEventOrder } = require("../domain/scoring/engine");
 const { SCORING_EVENTS, normalizeScoreVersion } = require("../domain/events/validation");
-const { getPersistedScoreOrder, resolveReplayOrdering } = require("../domain/events/ordering");
+const {
+  getPersistedScoreOrder,
+  resolveReplayOrdering,
+  compareEventRecordOrder,
+  isEventAfterOrder,
+} = require("../domain/events/ordering");
 const { getLatestCheckpoint } = require("./checkpointService");
 
-function buildScoringEventsQuery(courtId) {
-  return db
-    .collection(`courts/${courtId}/events`)
-    .orderBy("createdAt", "asc")
-    .orderBy(FieldPath.documentId(), "asc");
+function buildScoringEventsQuery(courtId, startAtCreatedAt = null) {
+  let query = db.collection(`courts/${courtId}/events`).orderBy("createdAt", "asc");
+
+  // Keep the Firestore query on a single indexed field. The deterministic
+  // (createdAt, eventId) tie-break is applied in memory below, avoiding a
+  // production-only composite-index dependency.
+  if (startAtCreatedAt) {
+    query = query.startAt(startAtCreatedAt);
+  }
+
+  return query;
 }
 
-function collectApplicableScoringEvents(eventsSnap, targetScoreVersion) {
+function collectApplicableScoringEvents(eventsSnap, targetScoreVersion, afterOrder = null) {
   const events = [];
 
   eventsSnap.forEach((docSnap) => {
@@ -26,9 +37,21 @@ function collectApplicableScoringEvents(eventsSnap, targetScoreVersion) {
       return;
     }
 
-    events.push({ id: docSnap.id, ...data });
+    const event = { id: docSnap.id, ...data };
+
+    // startAt() can only resume at createdAt, so the event id is applied as
+    // the deterministic in-memory tie-break for events sharing that timestamp.
+    if (
+      afterOrder &&
+      !isEventAfterOrder(event, afterOrder.createdAt, afterOrder.eventId)
+    ) {
+      return;
+    }
+
+    events.push(event);
   });
 
+  events.sort(compareEventRecordOrder);
   return events;
 }
 
@@ -42,12 +65,21 @@ async function replayScoreFromEvents(tx, courtId, options, useCheckpoint, active
   if (useCheckpoint) {
     checkpoint = await getLatestCheckpoint(tx, courtId, activeOptions);
     if (checkpoint) {
-      query = query.startAfter(checkpoint.data.lastCreatedAt, checkpoint.data.lastEventId);
+      query = buildScoringEventsQuery(courtId, checkpoint.data.lastCreatedAt);
     }
   }
 
   const eventsSnap = await tx.get(query);
-  let applicableEvents = collectApplicableScoringEvents(eventsSnap, targetScoreVersion);
+  let applicableEvents = collectApplicableScoringEvents(
+    eventsSnap,
+    targetScoreVersion,
+    checkpoint
+      ? {
+          createdAt: checkpoint.data.lastCreatedAt,
+          eventId: checkpoint.data.lastEventId,
+        }
+      : null,
+  );
 
   // A checkpoint snapshot has its history stripped (see toLiveScorePayload),
   // so an UNDO event in the tail would replay against an empty undo stack
