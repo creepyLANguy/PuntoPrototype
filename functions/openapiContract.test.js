@@ -223,6 +223,87 @@ async function invoke(handler, route) {
 
 let contractPromise;
 
+function getJsonPointer(document, ref) {
+  if (typeof ref !== "string" || !ref.startsWith("#/")) {
+    throw new Error(`Only local OpenAPI references are supported by the contract test: ${ref}`);
+  }
+
+  return ref
+    .slice(2)
+    .split("/")
+    .map((segment) => segment.replace(/~1/g, "/").replace(/~0/g, "~"))
+    .reduce((current, segment) => {
+      if (current === undefined || current === null) {
+        return undefined;
+      }
+      return current[segment];
+    }, document);
+}
+
+function resolveLocalRefs(value, document, stack = []) {
+  if (Array.isArray(value)) {
+    return value.map((entry) => resolveLocalRefs(entry, document, stack));
+  }
+
+  if (!value || typeof value !== "object") {
+    return value;
+  }
+
+  if (typeof value.$ref === "string") {
+    if (stack.includes(value.$ref)) {
+      throw new Error(`Circular OpenAPI response schema reference: ${[
+        ...stack,
+        value.$ref,
+      ].join(" -> ")}`);
+    }
+
+    const target = getJsonPointer(document, value.$ref);
+    if (target === undefined) {
+      throw new Error(`OpenAPI reference does not resolve: ${value.$ref}`);
+    }
+
+    return resolveLocalRefs(target, document, [...stack, value.$ref]);
+  }
+
+  return Object.fromEntries(
+    Object.entries(value).map(([key, child]) => [
+      key,
+      resolveLocalRefs(child, document, stack),
+    ]),
+  );
+}
+
+function assertAllLocalReferencesResolve(document) {
+  const missing = [];
+
+  function visit(value) {
+    if (Array.isArray(value)) {
+      value.forEach(visit);
+      return;
+    }
+
+    if (!value || typeof value !== "object") {
+      return;
+    }
+
+    if (typeof value.$ref === "string") {
+      try {
+        getJsonPointer(document, value.$ref);
+        if (getJsonPointer(document, value.$ref) === undefined) {
+          missing.push(value.$ref);
+        }
+      } catch (_error) {
+        missing.push(value.$ref);
+      }
+    }
+
+    Object.values(value).forEach(visit);
+  }
+
+  visit(document);
+  assert.deepEqual(missing, []);
+}
+
 async function loadContract() {
   if (!contractPromise) {
     contractPromise = (async () => {
@@ -231,29 +312,29 @@ async function loadContract() {
         "utf8",
       );
 
-      const [{ validate: validateOpenApi, dereference }, { validate }] =
-        await Promise.all([
-          import("@scalar/openapi-parser"),
-          import("@scalar/json-schema-validator"),
-        ]);
+      const [
+        { validate: validateOpenApi },
+        { validate: validateResponse },
+        { parse },
+      ] = await Promise.all([
+        import("@scalar/openapi-validator"),
+        import("@scalar/json-schema-validator"),
+        import("yaml"),
+      ]);
 
-      const openapiResult = await validateOpenApi(openapiSource);
+      const document = parse(openapiSource);
+      const openapiResult = await validateOpenApi(document);
       assert.equal(
         openapiResult.valid,
         true,
         `OpenAPI document failed validation:\\n${formatErrors(openapiResult.errors)}`,
       );
 
-      const dereferenceResult = await dereference(openapiSource);
-      assert.equal(
-        (dereferenceResult.errors || []).length,
-        0,
-        `OpenAPI references failed to resolve:\\n${formatErrors(dereferenceResult.errors)}`,
-      );
+      assertAllLocalReferencesResolve(document);
 
       return {
-        document: dereferenceResult.schema,
-        validateResponse: validate,
+        document,
+        validateResponse,
       };
     })();
   }
@@ -262,9 +343,10 @@ async function loadContract() {
 }
 
 function getResponseSchema(document, route) {
-  return document.paths[route].get.responses["200"].content[
-    "application/json"
-  ].schema;
+  return resolveLocalRefs(
+    document.paths[route].get.responses["200"].content["application/json"].schema,
+    document,
+  );
 }
 
 function formatErrors(errors) {
