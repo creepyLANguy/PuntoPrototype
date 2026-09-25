@@ -13,12 +13,20 @@ const {
   momentumApiCache,
 } = require("./services/publicApiService");
 
-let mockDb = null;
+var mockDb = null;
 
 jest.mock("./infrastructure/firebase", () => ({
-  get db() {
-    return mockDb;
-  },
+  db: new Proxy(
+    {},
+    {
+      get(_target, property) {
+        if (!mockDb) {
+          throw new Error("Firebase test database has not been initialised");
+        }
+        return mockDb[property];
+      },
+    },
+  ),
   FieldPath: {
     documentId: () => "__name__",
   },
