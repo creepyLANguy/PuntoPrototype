@@ -1859,8 +1859,41 @@ body.light-mode .scoring-field select:focus-visible {
   box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.08);
 }
 
+.scoring-field.is-disabled {
+  opacity: 0.82;
+}
+
+.scoring-field.is-disabled > span {
+  opacity: 0.62;
+}
+
+.scoring-field.is-disabled > span::after {
+  content: "Not applicable";
+  display: block;
+  margin-top: 3px;
+  font-size: 0.64rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  opacity: 0.82;
+}
+
 .scoring-field select:disabled {
-  opacity: 0.5;
+  opacity: 0.48;
+  cursor: not-allowed;
+  border-style: dashed;
+  background: rgba(255, 255, 255, 0.035);
+  filter: grayscale(0.7);
+}
+
+body.light-mode .scoring-field select:disabled {
+  background: rgba(0, 0, 0, 0.025);
+  border-color: rgba(0, 0, 0, 0.26);
+  filter: grayscale(0.65);
+}
+
+body.light-mode .scoring-field.is-disabled > span::after {
+  color: rgba(0, 0, 0, 0.62);
 }
 
 .scoring-status {
