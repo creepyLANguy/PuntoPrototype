@@ -143,27 +143,16 @@ async function replayScoreFromEventsExcluding(
   const query = buildScoringEventsQuery(courtId);
 
   const eventsSnap = await tx.get(query);
+  const applicableEvents = collectApplicableScoringEvents(eventsSnap, targetScoreVersion).filter(
+    (event) => event.id !== excludedEventId,
+  );
   let lastEventId = null;
   let lastCreatedAt = null;
 
-  eventsSnap.forEach((docSnap) => {
-    const data = docSnap.data() || {};
-    if (!SCORING_EVENTS.has(data.eventType)) {
-      return;
-    }
-
-    if (normalizeScoreVersion(data.scoreVersion) !== targetScoreVersion) {
-      return;
-    }
-
-    if (docSnap.id === excludedEventId) {
-      return;
-    }
-
-    const event = { id: docSnap.id, ...data };
+  applicableEvents.forEach((event) => {
     replayedScore = applyEvent(replayedScore, event, activeOptions);
-    lastEventId = docSnap.id;
-    lastCreatedAt = data.createdAt || lastCreatedAt;
+    lastEventId = event.id;
+    lastCreatedAt = event.createdAt || lastCreatedAt;
   });
 
   return {
