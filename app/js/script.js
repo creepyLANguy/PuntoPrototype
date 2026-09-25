@@ -3143,13 +3143,16 @@ document.addEventListener("DOMContentLoaded", () =>
     if (elements.editCourtDeuceMode)
     {
       elements.editCourtDeuceMode.value = scoringOptions.deuceMode;
-      elements.editCourtDeuceMode.disabled = scoringOptions.scoringMode !== "standard";
     }
     if (elements.editCourtTiebreakMode)
     {
       elements.editCourtTiebreakMode.value = scoringOptions.tiebreakMode;
-      elements.editCourtTiebreakMode.disabled = scoringOptions.scoringMode !== "standard";
     }
+    syncCourtScoringRuleControlsDisabled(
+      elements.editCourtScoringMode,
+      elements.editCourtDeuceMode,
+      elements.editCourtTiebreakMode
+    );
 
     elements.adminDashboardPage.style.display = "none";
     elements.editCourtPage.style.display = "flex";
