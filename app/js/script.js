@@ -1805,13 +1805,26 @@ document.addEventListener("DOMContentLoaded", () =>
   submitOnEnter(elements.editCourtTiebreakMode, elements.saveEditBtn);
   submitFormOnEnter(elements.editCourtPage);
 
-  // Deuce and tiebreak rules only apply to games-and-sets scoring; grey the selectors out otherwise.
+  // Deuce and tiebreak rules only apply to games-and-sets scoring; explicitly
+  // mark those controls as not applicable whenever another scoring format is selected.
   function syncCourtScoringRuleControlsDisabled(scoringSelect, deuceSelect, tiebreakSelect)
   {
     if (!scoringSelect) return;
+
     const disabled = scoringSelect.value !== "standard";
-    if (deuceSelect) deuceSelect.disabled = disabled;
-    if (tiebreakSelect) tiebreakSelect.disabled = disabled;
+    const controlledSelects = [deuceSelect, tiebreakSelect].filter(Boolean);
+
+    controlledSelects.forEach(select =>
+    {
+      select.disabled = disabled;
+
+      const field = select.closest(".scoring-field");
+      if (field)
+      {
+        field.classList.toggle("is-disabled", disabled);
+        field.setAttribute("aria-disabled", String(disabled));
+      }
+    });
   }
 
   if (elements.courtScoringMode)
