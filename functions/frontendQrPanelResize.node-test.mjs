@@ -58,9 +58,9 @@ test("QR interaction disables expensive paint effects while active", () => {
 test("QR panel pull tab looks and behaves like a resize handle", () => {
   assert.match(styles, /\.pull-tab\s*\{[\s\S]*?opacity:\s*0\.2;/);
   assert.match(styles, /\.pull-tab\s*\{[\s\S]*?repeating-linear-gradient\(/);
-  assert.match(styles, /transparent 0 4px,/);
-  assert.match(styles, /rgba\\(255, 255, 255, 0\\.9\\) 4px 6px,/);
-  assert.match(styles, /transparent 6px 8px/);
+  assert.ok(styles.includes("transparent 0 4px,"));
+  assert.ok(styles.includes("rgba(255, 255, 255, 0.9) 4px 6px,"));
+  assert.ok(styles.includes("transparent 6px 8px"));
   assert.match(styles, /\.pull-tab\s*\{[\s\S]*?cursor:\s*nwse-resize;/);
   assert.match(styles, /\.court-qr-panel:hover\s+\.pull-tab\s*\{[\s\S]*?opacity:\s*0\.75;/);
   assert.match(source, /const resizeHandleZone = 28;/);
