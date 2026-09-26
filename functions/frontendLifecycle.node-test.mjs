@@ -103,6 +103,7 @@ test("Changeover changes Beacon handling while Switch views remains visual-only"
   const changeoverTile = document.getElementById("changeoverTile");
   assert.notEqual(changeoverTile.style.display, "none");
   assert.equal(changeoverTile.querySelector("span").textContent, "Changeover");
+  assert.notEqual(document.getElementById("changeoverFloatingBtn").style.display, "none");
 
   const switchViewsButton = document.getElementById("swapBtn");
   assert.equal(switchViewsButton.closest(".setting-item").querySelector("span").textContent, "Switch views");
@@ -121,7 +122,13 @@ test("Changeover changes Beacon handling while Switch views remains visual-only"
 
   await waitFor(
     () => firestoreState.docs.get("courts/lifecourt").beaconSidesSwapped === true,
-    { label: "Beacon changeover enabled" },
+    { label: "Beacon changeover enabled from settings" },
+  );
+
+  document.getElementById("changeoverFloatingBtn").click();
+  await waitFor(
+    () => firestoreState.docs.get("courts/lifecourt").beaconSidesSwapped === false,
+    { label: "Beacon changeover disabled from floating control" },
   );
 });
 
@@ -209,5 +216,6 @@ test("spectator sees live score updates pushed by other devices", async () => {
   assert.equal(document.getElementById("addPointA").style.pointerEvents, "none");
   assert.equal(document.getElementById("addPointB").style.pointerEvents, "none");
   assert.equal(document.getElementById("changeoverBtn").style.display, "none");
+  assert.equal(document.getElementById("changeoverFloatingBtn").style.display, "none");
   assert.equal(document.getElementById("changeoverTile").style.display, "none");
 });
