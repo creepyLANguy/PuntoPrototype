@@ -40,6 +40,11 @@ jobs:
           PUBLIC_ORIGIN: https://www.padelpush.co.za
         run: node scripts/configure-public-origin.mjs
 
+      - name: Configure public function redirects
+        env:
+          FIREBASE_PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID_PRODUCTION }}
+        run: node scripts/configure-public-function-redirects.mjs
+
       - uses: actions/setup-node@v5
         with:
           node-version: 22
@@ -97,6 +102,11 @@ jobs:
         env:
           PUBLIC_ORIGIN: https://qa.padelpush.co.za
         run: node scripts/configure-public-origin.mjs
+
+      - name: Configure public function redirects
+        env:
+          FIREBASE_PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID_STAGING }}
+        run: node scripts/configure-public-function-redirects.mjs
 
       - uses: actions/setup-node@v5
         with:
