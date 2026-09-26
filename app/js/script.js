@@ -1401,6 +1401,7 @@ document.addEventListener("DOMContentLoaded", () =>
     backBtn: $("backBtn"),
     swapBtn: $("swapBtn"),
     changeoverBtn: $("changeoverBtn"),
+    changeoverTile: $("changeoverTile"),
     muteBtn: $("muteBtn"),
     fullscreenBtn: $("fullscreenBtn"),
     fullscreenLabel: $("fullscreenLabel"),
@@ -4725,6 +4726,7 @@ document.addEventListener("DOMContentLoaded", () =>
     // Hide player-only tiles in the settings modal
     if (elements.editPlayersTile) elements.editPlayersTile.style.display = "none";
     if (elements.resetSettingsTile) elements.resetSettingsTile.style.display = "none";
+    if (elements.changeoverTile) elements.changeoverTile.style.display = "none";
     if (elements.switchToSpectateTile) elements.switchToSpectateTile.style.display = "none";
 
     if (elements.joinCourtTile) elements.joinCourtTile.style.display = "";
@@ -4752,6 +4754,7 @@ document.addEventListener("DOMContentLoaded", () =>
     // Restore player-only tiles in the settings modal
     if (elements.editPlayersTile) elements.editPlayersTile.style.display = "";
     if (elements.resetSettingsTile) elements.resetSettingsTile.style.display = "";
+    if (elements.changeoverTile) elements.changeoverTile.style.display = "";
     if (elements.switchToSpectateTile) elements.switchToSpectateTile.style.display = "";
 
     if (elements.joinCourtTile) elements.joinCourtTile.style.display = "none";
