@@ -127,7 +127,12 @@ class FakeFirestore {
         return;
       }
 
-      this.docs.set(write.path, write.data);
+      const existing = this.docs.get(write.path);
+      const next =
+        write.options?.merge && existing !== undefined
+          ? { ...structuredClone(existing), ...structuredClone(write.data) }
+          : structuredClone(write.data);
+      this.docs.set(write.path, next);
     });
   }
 
