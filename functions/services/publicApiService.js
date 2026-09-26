@@ -51,7 +51,7 @@ function extractScoreApiCourtId(reqPath) {
       }
     });
 
-  // With the hosting rewrite the path looks like /score/{courtId}, /revision/{courtId},
+  // With the Hosting redirect the public path looks like /score/{courtId}, /revision/{courtId},
   // /stats/{courtId} or /momentum/{courtId}; when the function URL is hit directly the
   // courtId is simply the last segment.
   let courtId;
