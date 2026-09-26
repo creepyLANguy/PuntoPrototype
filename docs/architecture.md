@@ -31,7 +31,7 @@ The runtime sequence is visualized in [PP_Runtime_Flow.mmd](PP_Runtime_Flow.mmd)
       |-- /stats/{courtId} -> replayed statistics
       +-- /momentum/{courtId} -> replayed momentum
 
-Firebase Hosting rewrites the public /score, /revision, /stats and /momentum paths to read functions running in europe-west1. The device ingestion, callable functions and event trigger run in africa-south1.
+All current Cloud Functions run in `africa-south1` (Johannesburg): device ingestion, callable functions, Firestore event processing, and the public JSON read endpoints. Firebase Hosting remains a global CDN; its rewrites route the public JSON paths to the Johannesburg Functions.
 
 ## Functions module boundaries
 
