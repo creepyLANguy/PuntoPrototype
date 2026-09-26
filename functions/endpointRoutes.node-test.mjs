@@ -29,13 +29,15 @@ test("canonical full-word read endpoints redirect to Johannesburg functions", ()
   for (const [source, functionId] of expected) {
     const redirect = findRedirect(source);
     assert.equal(redirect?.type, 307);
+
     const destination = new URL(redirect.destination);
     assert.equal(destination.protocol, "https:");
-    assert.ok(\
-      destination.hostname === "africa-south1-__firebase_project_id__.cloudfunctions.net" ||\
-        /^africa-south1-[a-z0-9-]+\.cloudfunctions\.net$/.test(destination.hostname),\
-      `unexpected Johannesburg function hostname: ${destination.hostname}`\
-    );
+
+    const isJohannesburgFunction =
+      destination.hostname === "africa-south1-__firebase_project_id__.cloudfunctions.net" ||
+      /^africa-south1-[a-z0-9-]+\.cloudfunctions\.net$/.test(destination.hostname);
+
+    assert.equal(isJohannesburgFunction, true, `unexpected Johannesburg function hostname: ${destination.hostname}`);
     assert.equal(destination.pathname, `/${functionId}/:courtId`);
   }
 });
