@@ -12,7 +12,7 @@ if (!base)
 async function request(path)
 {
   const url = base + path;
-  const response = await fetch(url, { redirect: 'manual', cache: 'no-store' });
+  const response = await fetch(url, { redirect: 'follow', cache: 'no-store' });
   return {
     url,
     status: response.status,
