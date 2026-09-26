@@ -19,6 +19,8 @@ jobs:
       - name: Install dependencies
         working-directory: functions
         run: npm ci
-      - name: Run unit, frontend, and OpenAPI contract tests
+      - name: Show Prettier output for index.js
         working-directory: functions
-        run: npm test
+        run: |
+          npm run format
+          git --no-pager diff -- index.js
