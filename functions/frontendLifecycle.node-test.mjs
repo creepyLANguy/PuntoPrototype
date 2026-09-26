@@ -106,7 +106,10 @@ test("Changeover changes Beacon handling while Switch views remains visual-only"
   assert.notEqual(document.getElementById("changeoverFloatingBtn").style.display, "none");
 
   const switchViewsButton = document.getElementById("swapBtn");
-  assert.equal(switchViewsButton.closest(".setting-item").querySelector("span").textContent, "Switch views");
+  assert.equal(
+    switchViewsButton.closest(".setting-item").querySelector("span").textContent,
+    "Switch views",
+  );
 
   document.getElementById("swapBtn").click();
   assert.equal(document.querySelector(".scoreboard").classList.contains("swapped"), true);
