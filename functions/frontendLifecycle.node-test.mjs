@@ -125,6 +125,9 @@ test("Changeover changes Beacon handling while Switch views remains visual-only"
     { label: "Beacon changeover enabled from settings" },
   );
 
+  document.getElementById("closeSettingsBtn").click();
+  await settle(10);
+
   document.getElementById("changeoverFloatingBtn").click();
   await waitFor(
     () => firestoreState.docs.get("courts/lifecourt").beaconSidesSwapped === false,
