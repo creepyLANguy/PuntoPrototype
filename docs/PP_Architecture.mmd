@@ -20,7 +20,7 @@ flowchart LR
     end
 
     subgraph FIREBASE["Firebase runtime"]
-        Hosting["Firebase Hosting<br/>static files + rewrites"]
+        Hosting["Firebase Hosting<br/>static files + public API redirects"]
 
         Ingestion["postEvent<br/>HTTP Cloud Function<br/>africa-south1<br/>deviceId/binding identity only"]
 
