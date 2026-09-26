@@ -43,10 +43,11 @@ async function postEvent(req, res) {
     }
 
     const actingCourtId = actingDevice.data.courtId || null;
-    const deviceSku = normalizeDeviceSku(requestedDeviceSku) || normalizeDeviceSku(actingDevice.data.deviceSKU);
+    const requestDeviceSku = normalizeDeviceSku(requestedDeviceSku);
+    const deviceSku = requestDeviceSku || normalizeDeviceSku(actingDevice.data.deviceSKU);
 
-    if (requestedDeviceSku && requestedDeviceSku !== actingDevice.data.deviceSKU) {
-      await actingDevice.ref.set({ deviceSKU: requestedDeviceSku }, { merge: true });
+    if (requestDeviceSku && requestDeviceSku !== actingDevice.data.deviceSKU) {
+      await actingDevice.ref.set({ deviceSKU: requestDeviceSku }, { merge: true });
     }
 
     if (eventType === "SPECTATE") {
