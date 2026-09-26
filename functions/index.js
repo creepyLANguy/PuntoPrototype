@@ -5,7 +5,7 @@ const { resetCourt } = require("./callables/resetCourt");
 const { updateScoringOptions } = require("./callables/updateScoringOptions");
 const { getDetailedScore } = require("./callables/getDetailedScore");
 
-const { REGION, HOSTING_REWRITE_REGION } = require("./services/constants");
+const { REGION } = require("./services/constants");
 const { postEvent } = require("./http/postEvent");
 const { getCourtScore } = require("./http/getCourtScore");
 const { getCourtScoreRevision } = require("./http/getCourtScoreRevision");
@@ -21,21 +21,21 @@ exports.getDetailedScore = onCall({ region: REGION }, getDetailedScore);
 exports.postEvent = onRequest({ region: REGION }, postEvent);
 
 exports.getCourtScore = onRequest(
-  { region: HOSTING_REWRITE_REGION, maxInstances: 2 },
+  { region: REGION, maxInstances: 2 },
   getCourtScore,
 );
 
 exports.getCourtScoreRevision = onRequest(
-  { region: HOSTING_REWRITE_REGION, maxInstances: 2 },
+  { region: REGION, maxInstances: 2 },
   getCourtScoreRevision,
 );
 
 exports.getCourtStats = onRequest(
-  { region: HOSTING_REWRITE_REGION, maxInstances: 2 },
+  { region: REGION, maxInstances: 2 },
   getCourtStats,
 );
 
 exports.getCourtMomentum = onRequest(
-  { region: HOSTING_REWRITE_REGION, maxInstances: 2 },
+  { region: REGION, maxInstances: 2 },
   getCourtMomentum,
 );
