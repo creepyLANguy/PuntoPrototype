@@ -67,28 +67,28 @@
         "source": "/score/**",
         "function": {
           "functionId": "getCourtScore",
-          "region": "europe-west1"
+          "region": "africa-south1"
         }
       },
       {
         "source": "/revision/**",
         "function": {
           "functionId": "getCourtScoreRevision",
-          "region": "europe-west1"
+          "region": "africa-south1"
         }
       },
       {
         "source": "/stats/**",
         "function": {
           "functionId": "getCourtStats",
-          "region": "europe-west1"
+          "region": "africa-south1"
         }
       },
       {
         "source": "/momentum/**",
         "function": {
           "functionId": "getCourtMomentum",
-          "region": "europe-west1"
+          "region": "africa-south1"
         }
       },
       {
