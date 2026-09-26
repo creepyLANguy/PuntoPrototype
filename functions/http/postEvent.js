@@ -18,7 +18,13 @@ async function postEvent(req, res) {
       return sendJson(res, 405, { success: false, error: "Method not allowed" });
     }
 
-    const { deviceId, eventType, courtId: targetCourtId, registeringDeviceId, deviceSKU: requestedDeviceSku } = req.body || {};
+    const {
+      deviceId,
+      eventType,
+      courtId: targetCourtId,
+      registeringDeviceId,
+      deviceSKU: requestedDeviceSku,
+    } = req.body || {};
 
     if (!deviceId || !eventType) {
       return sendJson(res, 400, {
