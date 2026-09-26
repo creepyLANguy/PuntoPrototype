@@ -20,13 +20,22 @@ exports.getDetailedScore = onCall({ region: REGION }, getDetailedScore);
 
 exports.postEvent = onRequest({ region: REGION, invoker: "public" }, postEvent);
 
-exports.getCourtScore = onRequest({ region: REGION, maxInstances: 2, invoker: "public" }, getCourtScore);
+exports.getCourtScore = onRequest(
+  { region: REGION, maxInstances: 2, invoker: "public" },
+  getCourtScore,
+);
 
 exports.getCourtScoreRevision = onRequest(
   { region: REGION, maxInstances: 2, invoker: "public" },
   getCourtScoreRevision,
 );
 
-exports.getCourtStats = onRequest({ region: REGION, maxInstances: 2, invoker: "public" }, getCourtStats);
+exports.getCourtStats = onRequest(
+  { region: REGION, maxInstances: 2, invoker: "public" },
+  getCourtStats,
+);
 
-exports.getCourtMomentum = onRequest({ region: REGION, maxInstances: 2, invoker: "public" }, getCourtMomentum);
+exports.getCourtMomentum = onRequest(
+  { region: REGION, maxInstances: 2, invoker: "public" },
+  getCourtMomentum,
+);
