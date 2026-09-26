@@ -69,8 +69,12 @@ jobs:
           FIREBASE_PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID_PRODUCTION }}
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN_PRODUCTION }}
         run: |
+          # The repository is authoritative for the Functions codebase. --force is required in CI
+          # when an intentionally relocated/removed function (for example the former
+          # europe-west1 public read functions) exists in the deployed Firebase project.
           firebase deploy \
             --only functions,hosting \
+            --force \
             --project "$FIREBASE_PROJECT_ID" \
             --token "$FIREBASE_TOKEN"
 
@@ -118,8 +122,12 @@ jobs:
           FIREBASE_PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID_STAGING }}
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN_STAGING }}
         run: |
+          # The repository is authoritative for the Functions codebase. --force is required in CI
+          # when an intentionally relocated/removed function (for example the former
+          # europe-west1 public read functions) exists in the deployed Firebase project.
           firebase deploy \
             --only functions,hosting \
+            --force \
             --project "$FIREBASE_PROJECT_ID" \
             --token "$FIREBASE_TOKEN"
 
