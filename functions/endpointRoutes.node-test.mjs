@@ -29,12 +29,10 @@ test("canonical full-word read endpoints redirect to Johannesburg functions", ()
   for (const [source, functionId] of expected) {
     const redirect = findRedirect(source);
     assert.equal(redirect?.type, 307);
-    assert.match(
-      redirect?.destination || "",
-      new RegExp(
-        `^https://africa-south1-[a-z0-9-]+\\\\.cloudfunctions\\\\.net/${functionId}/:courtId$`,
-      ),
-    );
+    const destination = new URL(redirect.destination);
+    assert.equal(destination.protocol, "https:");
+    assert.match(destination.hostname, /^africa-south1-[a-z0-9-]+\.cloudfunctions\.net$/);
+    assert.equal(destination.pathname, `/${functionId}/:courtId`);
   }
 });
 
