@@ -26,6 +26,18 @@ test.before(async () => {
   seedCourt("lifecourt");
   seedCourt("watchcourt", { teamNames: { A: "Reds", B: "Blues" } });
 
+  callableHandlers.set("changeoverCourt", async ({ courtId, beaconSidesSwapped }) => {
+    const courtPath = `courts/${courtId}`;
+    const court = firestoreState.docs.get(courtPath) || {};
+
+    writeDoc(courtPath, {
+      ...court,
+      beaconSidesSwapped,
+    });
+
+    return { data: { courtId, beaconSidesSwapped } };
+  });
+
   // Mimic the resetCourt Cloud Function: zero the score, clear the event log,
   // bump the court's scoreVersion so pre-reset events become stale.
   callableHandlers.set("resetCourt", async ({ courtId, newPassword }) => {
@@ -44,6 +56,7 @@ test.before(async () => {
       ...court,
       scoreVersion,
       password: newPassword || court.password,
+      beaconSidesSwapped: false,
     });
     pushScoreSnapshot(courtId, makeScore());
 
@@ -80,6 +93,38 @@ test("set win: winning a set fills a set dot and shows the celebration overlay",
   overlay.click(); // dismiss
 });
 
+test("Changeover changes Beacon handling while Switch views remains visual-only", async () => {
+  const courtBefore = firestoreState.docs.get("courts/lifecourt");
+  assert.equal(courtBefore.beaconSidesSwapped, false);
+
+  document.getElementById("settingsBtn").click();
+  await settle(10);
+
+  const changeoverTile = document.getElementById("changeoverTile");
+  assert.notEqual(changeoverTile.style.display, "none");
+  assert.equal(changeoverTile.querySelector("span").textContent, "Changeover");
+
+  const switchViewsButton = document.getElementById("swapBtn");
+  assert.equal(switchViewsButton.closest(".setting-item").querySelector("span").textContent, "Switch views");
+
+  document.getElementById("swapBtn").click();
+  assert.equal(document.querySelector(".scoreboard").classList.contains("swapped"), true);
+  assert.equal(
+    firestoreState.docs.get("courts/lifecourt").beaconSidesSwapped,
+    false,
+    "Switch views must not change backend Beacon handling",
+  );
+
+  document.getElementById("settingsBtn").click();
+  await settle(10);
+  document.getElementById("changeoverBtn").click();
+
+  await waitFor(
+    () => firestoreState.docs.get("courts/lifecourt").beaconSidesSwapped === true,
+    { label: "Beacon changeover enabled" },
+  );
+});
+
 test("shallow reset through the UI zeroes the scoreboard", async () => {
   document.getElementById("settingsBtn").click();
   await settle(10);
@@ -95,6 +140,7 @@ test("shallow reset through the UI zeroes the scoreboard", async () => {
     () => getRenderedScore(document).setsA === 0 && getRenderedScore(document).pointsA === "0",
     { label: "scoreboard zeroed after reset" },
   );
+  assert.equal(firestoreState.docs.get("courts/lifecourt").beaconSidesSwapped, false);
 });
 
 test("CORE: scoring still works after a reset bumps the scoreVersion", async () => {
@@ -162,4 +208,6 @@ test("spectator sees live score updates pushed by other devices", async () => {
   assert.equal(document.getElementById("undoBtn").style.display, "none");
   assert.equal(document.getElementById("addPointA").style.pointerEvents, "none");
   assert.equal(document.getElementById("addPointB").style.pointerEvents, "none");
+  assert.equal(document.getElementById("changeoverBtn").style.display, "none");
+  assert.equal(document.getElementById("changeoverTile").style.display, "none");
 });
