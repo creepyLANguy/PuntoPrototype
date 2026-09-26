@@ -32,6 +32,12 @@ export async function resetCourt(courtId, deepReset = false, newPassword = null,
   return result;
 }
 
+async function requestBeaconChangeover(courtId, beaconSidesSwapped)
+{
+  const changeoverFn = httpsCallable(functions, "changeoverCourt");
+  return changeoverFn({ courtId, beaconSidesSwapped });
+}
+
 document.addEventListener("DOMContentLoaded", () =>
 {
 
@@ -589,6 +595,7 @@ document.addEventListener("DOMContentLoaded", () =>
   let pendingLocalPasswordUpdate = null;
   let currentCourtStatus = null;
   let currentScoreVersion = 0;
+  let beaconSidesSwapped = false;
   let currentScoringOptions = { ...DEFAULT_SCORING_OPTIONS };
   let currentRawTeamNames = { ...DEFAULT_TEAM_NAMES };
   let currentPlayerNames = { ...DEFAULT_PLAYER_NAMES };
@@ -1223,7 +1230,13 @@ document.addEventListener("DOMContentLoaded", () =>
     updateItem(elements.muteBtn, muted, "Muted", "Mute");
     updateItem(elements.waveToggleScoreboardBtn, isWavesEnabled, "Waves on", "Waves off");
     updateItem(elements.fullscreenBtn, Boolean(getFullscreenElement()), "Exit full", "Fullscreen");
-    updateItem(elements.swapBtn, document.querySelector(".scoreboard")?.classList.contains("swapped"), "Swapped", "Swap sides");
+    updateItem(
+      elements.swapBtn,
+      document.querySelector(".scoreboard")?.classList.contains("swapped"),
+      "Views switched",
+      "Switch views",
+    );
+    updateItem(elements.changeoverBtn, beaconSidesSwapped, "Changeover on", "Changeover");
     updateItem(elements.serverToggleBtn, isServerBadgeVisible, "Server on", "Server off");
   }
 
@@ -1387,6 +1400,7 @@ document.addEventListener("DOMContentLoaded", () =>
     undoBtn: $("undoBtn"),
     backBtn: $("backBtn"),
     swapBtn: $("swapBtn"),
+    changeoverBtn: $("changeoverBtn"),
     muteBtn: $("muteBtn"),
     fullscreenBtn: $("fullscreenBtn"),
     fullscreenLabel: $("fullscreenLabel"),
@@ -3811,6 +3825,7 @@ document.addEventListener("DOMContentLoaded", () =>
       password: courtPass,
       createdAt: serverTimestamp(),
       scoreVersion: 0,
+      beaconSidesSwapped: false,
       teamNames: { A: "Team A", B: "Team B" },
       playerNames: { ...DEFAULT_PLAYER_NAMES },
       status: elements.courtStatus.value,
@@ -3964,6 +3979,7 @@ document.addEventListener("DOMContentLoaded", () =>
     currentCourtPassword = data.password;
     currentCourtStatus = data.status;
     currentScoreVersion = Number(data.scoreVersion) || 0;
+    beaconSidesSwapped = data.beaconSidesSwapped === true;
     currentRawTeamNames = normalizeTeamNames(data.teamNames || {});
     currentPlayerNames = normalizePlayerNames(data.playerNames || {});
     currentScoringOptions = normalizeScoringOptions({
@@ -3974,6 +3990,7 @@ document.addEventListener("DOMContentLoaded", () =>
     updateServerIndicator();
     syncScoringControls();
     renderCourtQr(courtId);
+    syncSettingsTiles();
 
     if (muted)
     {
@@ -4700,6 +4717,7 @@ document.addEventListener("DOMContentLoaded", () =>
     $("addPointB").style.pointerEvents = "none";
 
     elements.undoBtn.style.display = "none";
+    if (elements.changeoverBtn) elements.changeoverBtn.style.display = "none";
     if (elements.sep1) elements.sep1.style.display = "none";
     if (elements.sep2) elements.sep2.style.display = "none";
     if (elements.sep3) elements.sep3.style.display = "none";
@@ -4726,6 +4744,7 @@ document.addEventListener("DOMContentLoaded", () =>
 
     // Use "" to let CSS (flex) decide display, not "inline-block"
     elements.undoBtn.style.display = "";
+    if (elements.changeoverBtn) elements.changeoverBtn.style.display = "";
     if (elements.sep1) elements.sep1.style.display = "";
     if (elements.sep2) elements.sep2.style.display = "";
     if (elements.sep3) elements.sep3.style.display = "";
@@ -5950,6 +5969,8 @@ document.addEventListener("DOMContentLoaded", () =>
       {
         currentScoreVersion = result.data.scoreVersion;
       }
+      beaconSidesSwapped = false;
+      syncSettingsTiles();
 
       elements.resetCourtPassword.value = "";
       elements.resetModal.classList.add("hidden");
@@ -6000,6 +6021,8 @@ document.addEventListener("DOMContentLoaded", () =>
       {
         currentScoreVersion = result.data.scoreVersion;
       }
+      beaconSidesSwapped = false;
+      syncSettingsTiles();
 
       elements.resetCourtPassword.value = "";
       elements.resetModal.classList.add("hidden");
@@ -6099,6 +6122,36 @@ document.addEventListener("DOMContentLoaded", () =>
     }
 
     syncSettingsTiles();
+  });
+
+  elements.changeoverBtn.addEventListener("click", async () =>
+  {
+    if (!currentCourtId || isSpectating) return;
+
+    const nextBeaconSidesSwapped = !beaconSidesSwapped;
+
+    try
+    {
+      elements.changeoverBtn.disabled = true;
+      await requestBeaconChangeover(currentCourtId, nextBeaconSidesSwapped);
+      beaconSidesSwapped = nextBeaconSidesSwapped;
+      syncSettingsTiles();
+      showToast(
+        nextBeaconSidesSwapped
+          ? "Changeover active. Beacon sides are now reversed."
+          : "Beacon side mapping restored.",
+        TOAST_TYPES.SUCCESS,
+      );
+    }
+    catch (error)
+    {
+      console.error("Changeover failed:", error);
+      showToast("Changeover failed.", TOAST_TYPES.ERROR);
+    }
+    finally
+    {
+      elements.changeoverBtn.disabled = false;
+    }
   });
 
   // =====================================================
@@ -7771,6 +7824,8 @@ document.addEventListener("DOMContentLoaded", () =>
       currentCourtPassword = data.password;
       currentCourtStatus = data.status;
       currentScoreVersion = Number(data.scoreVersion) || 0;
+      beaconSidesSwapped = data.beaconSidesSwapped === true;
+      syncSettingsTiles();
 
       const nextScoringOptions = normalizeScoringOptions({
         ...(data.scoringOptions || {}),
