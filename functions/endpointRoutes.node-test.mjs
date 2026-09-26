@@ -29,9 +29,42 @@ test("canonical full-word read endpoints redirect to Johannesburg functions", ()
   for (const [source, functionId] of expected) {
     const redirect = findRedirect(source);
     assert.equal(redirect?.type, 307);
-    assert.equal(
-      redirect?.destination,
-      `https://africa-south1-__FIREBASE_PROJECT_ID__.cloudfunctions.net/${functionId}/:courtId`,
+    assert.match(
+      redirect?.destination || "",
+      new RegExp(
+        `^https://africa-south1-[a-z0-9-]+\\\\.cloudfunctions\\\\.net/${functionId}/:courtId// Hosting-route regression tests for the public endpoint rename.
+import assert from "node:assert/strict";
+import test from "node:test";
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const firebase = JSON.parse(fs.readFileSync(path.join(root, "firebase.json"), "utf8"));
+const redirects = firebase.hosting.redirects || [];
+const rewrites = firebase.hosting.rewrites || [];
+
+function findRedirect(source) {
+  return redirects.find((redirect) => redirect.source === source) || null;
+}
+
+function findSource(source) {
+  return rewrites.find((rewrite) => rewrite.source === source) || null;
+}
+
+test("canonical full-word read endpoints redirect to Johannesburg functions", () => {
+  const expected = [
+    ["/score/:courtId", "getCourtScore"],
+    ["/revision/:courtId", "getCourtScoreRevision"],
+    ["/stats/:courtId", "getCourtStats"],
+    ["/momentum/:courtId", "getCourtMomentum"],
+  ];
+
+  for (const [source, functionId] of expected) {
+    const redirect = findRedirect(source);
+    assert.equal(redirect?.type, 307);
+,
+      ),
     );
   }
 });
