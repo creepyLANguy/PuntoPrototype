@@ -19,6 +19,16 @@ jobs:
       - name: Install dependencies
         working-directory: functions
         run: npm ci
+      - name: Diagnose public API 403
+        run: |
+          set -x
+          echo '--- custom domain ---'
+          curl -sS -i -L --max-redirs 5 https://www.padelpush.co.za/score/zzzz || true
+          echo '--- direct Cloud Function URL ---'
+          curl -sS -i https://getcourtscore-2gk7uqy6da-bq.a.run.app/zzzz || true
+          echo '--- Firebase Hosting domain ---'
+          curl -sS -i -L --max-redirs 5 https://punto-8888.web.app/score/zzzz || true
+
       - name: Run unit, frontend, and OpenAPI contract tests
         working-directory: functions
         run: npm test
