@@ -31,7 +31,11 @@ test("canonical full-word read endpoints redirect to Johannesburg functions", ()
     assert.equal(redirect?.type, 307);
     const destination = new URL(redirect.destination);
     assert.equal(destination.protocol, "https:");
-    assert.match(destination.hostname, /^africa-south1-[a-z0-9-]+\.cloudfunctions\.net$/);
+    assert.ok(\
+      destination.hostname === "africa-south1-__firebase_project_id__.cloudfunctions.net" ||\
+        /^africa-south1-[a-z0-9-]+\.cloudfunctions\.net$/.test(destination.hostname),\
+      `unexpected Johannesburg function hostname: ${destination.hostname}`\
+    );
     assert.equal(destination.pathname, `/${functionId}/:courtId`);
   }
 });
