@@ -171,8 +171,13 @@
             <span id="fullscreenLabel">Fullscreen</span>
           </div>
           <div class="setting-item">
-            <button id="swapBtn" class="floating-btn modal-btn" title="Swap sides">⇆</button>
-            <span>Swap sides</span>
+            <button id="swapBtn" class="floating-btn modal-btn" title="Switch views">⇆</button>
+            <span>Switch views</span>
+          </div>
+          <div class="setting-item player-only-tile" id="changeoverTile">
+            <button id="changeoverBtn" class="floating-btn modal-btn" title="Changeover"
+              aria-label="Changeover">↔</button>
+            <span>Changeover</span>
           </div>
           <div class="setting-item" id="obsOverlayTile">
             <button id="obsOverlayBtn" class="floating-btn modal-btn" title="Open OBS score overlay">📺</button>
@@ -886,6 +891,8 @@
           <div id="sep1" class="btn-separator type-sep"></div>
 
           <button id="undoBtn" class="floating-btn" title="Undo">↩</button>
+          <button id="changeoverBtn" class="floating-btn player-only-control" title="Changeover"
+            aria-label="Changeover">↔</button>
           <button id="settingsBtn" class="floating-btn" title="Options">⛭</button>
 
           <div id="sep2" class="btn-separator type-sep"></div>
