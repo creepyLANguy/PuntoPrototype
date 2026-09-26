@@ -103,7 +103,7 @@ The OpenAPI document remains the canonical machine-readable HTTP contract.
 | /stats/{courtId} | Match statistics JSON |
 | /momentum/{courtId} | Momentum JSON |
 
-Hosting rewrites are deployment concerns; the public API contract is maintained separately in the OpenAPI document.
+Hosting routing is a deployment concern; the public API contract is maintained separately in the OpenAPI document. The canonical `/score`, `/revision`, `/stats` and `/momentum` paths are redirected by Firebase Hosting to their Johannesburg Cloud Function URLs.
 
 ## Change management
 
