@@ -1401,6 +1401,7 @@ document.addEventListener("DOMContentLoaded", () =>
     backBtn: $("backBtn"),
     swapBtn: $("swapBtn"),
     changeoverBtn: $("changeoverBtn"),
+    changeoverFloatingBtn: $("changeoverFloatingBtn"),
     changeoverTile: $("changeoverTile"),
     muteBtn: $("muteBtn"),
     fullscreenBtn: $("fullscreenBtn"),
@@ -4719,6 +4720,7 @@ document.addEventListener("DOMContentLoaded", () =>
 
     elements.undoBtn.style.display = "none";
     if (elements.changeoverBtn) elements.changeoverBtn.style.display = "none";
+    if (elements.changeoverFloatingBtn) elements.changeoverFloatingBtn.style.display = "none";
     if (elements.sep1) elements.sep1.style.display = "none";
     if (elements.sep2) elements.sep2.style.display = "none";
     if (elements.sep3) elements.sep3.style.display = "none";
@@ -4747,6 +4749,7 @@ document.addEventListener("DOMContentLoaded", () =>
     // Use "" to let CSS (flex) decide display, not "inline-block"
     elements.undoBtn.style.display = "";
     if (elements.changeoverBtn) elements.changeoverBtn.style.display = "";
+    if (elements.changeoverFloatingBtn) elements.changeoverFloatingBtn.style.display = "";
     if (elements.sep1) elements.sep1.style.display = "";
     if (elements.sep2) elements.sep2.style.display = "";
     if (elements.sep3) elements.sep3.style.display = "";
@@ -6127,7 +6130,7 @@ document.addEventListener("DOMContentLoaded", () =>
     syncSettingsTiles();
   });
 
-  elements.changeoverBtn.addEventListener("click", async () =>
+  async function performBeaconChangeover(button)
   {
     if (!currentCourtId || isSpectating) return;
 
@@ -6135,7 +6138,9 @@ document.addEventListener("DOMContentLoaded", () =>
 
     try
     {
-      elements.changeoverBtn.disabled = true;
+      if (elements.changeoverBtn) elements.changeoverBtn.disabled = true;
+      if (elements.changeoverFloatingBtn) elements.changeoverFloatingBtn.disabled = true;
+
       await requestBeaconChangeover(currentCourtId, nextBeaconSidesSwapped);
       beaconSidesSwapped = nextBeaconSidesSwapped;
       syncSettingsTiles();
@@ -6153,8 +6158,19 @@ document.addEventListener("DOMContentLoaded", () =>
     }
     finally
     {
-      elements.changeoverBtn.disabled = false;
+      if (elements.changeoverBtn) elements.changeoverBtn.disabled = false;
+      if (elements.changeoverFloatingBtn) elements.changeoverFloatingBtn.disabled = false;
     }
+  }
+
+  elements.changeoverBtn.addEventListener("click", () =>
+  {
+    void performBeaconChangeover(elements.changeoverBtn);
+  });
+
+  elements.changeoverFloatingBtn.addEventListener("click", () =>
+  {
+    void performBeaconChangeover(elements.changeoverFloatingBtn);
   });
 
   // =====================================================
