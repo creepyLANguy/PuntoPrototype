@@ -11,7 +11,7 @@
     "lint": "eslint .",
     "format:check": "prettier --check \"**/*.{js,mjs}\"",
     "format": "prettier --write \"**/*.{js,mjs}\"",
-    "prepare": "node -e \"require('child_process').execFileSync('git',['-C','..','config','core.hooksPath','.githooks'],{stdio:'inherit'}); require('fs').chmodSync('../.githooks/pre-commit',0o755)\""
+    "prepare": "node -e \"const fs=require('fs'); const cp=require('child_process'); const hook='../.githooks/pre-commit'; if(fs.existsSync('../.git') && fs.existsSync(hook)){ cp.execFileSync('git',['-C','..','config','core.hooksPath','.githooks'],{stdio:'inherit'}); fs.chmodSync(hook,0o755); }\""
   },
   "engines": {
     "node": "22"
