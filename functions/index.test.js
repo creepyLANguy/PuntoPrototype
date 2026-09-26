@@ -106,8 +106,13 @@ class FakeFirestore {
     const writes = [];
     const tx = {
       get: async (target) => this.getTarget(target),
-      set: (ref, data) => {
-        writes.push({ type: "set", path: ref.path, data: structuredClone(data) });
+      set: (ref, data, options = {}) => {
+        writes.push({
+          type: "set",
+          path: ref.path,
+          data: structuredClone(data),
+          options: structuredClone(options),
+        });
       },
       delete: (ref) => {
         writes.push({ type: "delete", path: ref.path });
@@ -122,7 +127,12 @@ class FakeFirestore {
         return;
       }
 
-      this.docs.set(write.path, write.data);
+      const existing = this.docs.get(write.path);
+      const next =
+        write.options?.merge && existing !== undefined
+          ? { ...structuredClone(existing), ...structuredClone(write.data) }
+          : structuredClone(write.data);
+      this.docs.set(write.path, next);
     });
   }
 
@@ -745,6 +755,107 @@ describe("postEvent", () => {
     expect(eventEntry[1].scoreVersion).toBe(3);
   });
 
+  test("swaps Beacon point events only when court changeover is active", async () => {
+    const courtId = "court-beacon";
+    const deviceId = "beacon-1";
+
+    mockDb = new FakeFirestore({
+      [`devices/${deviceId}`]: { courtId, deviceSKU: "Beacon" },
+      [`courts/${courtId}`]: {
+        scoreVersion: 4,
+        beaconSidesSwapped: true,
+        scoringMode: DEFAULT_SCORING_OPTIONS.scoringMode,
+        scoringOptions: DEFAULT_SCORING_OPTIONS,
+      },
+    });
+
+    let postEvent;
+    jest.isolateModules(() => {
+      ({ postEvent } = require("./index"));
+    });
+
+    const makeRes = () => ({
+      statusCode: null,
+      payload: null,
+      status(code) {
+        this.statusCode = code;
+        return this;
+      },
+      json(body) {
+        this.payload = body;
+        return this;
+      },
+    });
+
+    const pointA = makeRes();
+    await postEvent(
+      { method: "POST", body: { deviceId, eventType: "POINT_TEAM_A", deviceSKU: "Beacon" } },
+      pointA,
+    );
+
+    const pointB = makeRes();
+    await postEvent(
+      { method: "POST", body: { deviceId, eventType: "POINT_TEAM_B", deviceSKU: "Beacon" } },
+      pointB,
+    );
+
+    const events = [...mockDb.docs.entries()]
+      .filter(([path]) => path.startsWith(`courts/${courtId}/events/`))
+      .map(([, data]) => data);
+
+    expect(events.map((event) => event.eventType)).toEqual([
+      "POINT_TEAM_B",
+      "POINT_TEAM_A",
+    ]);
+    expect(events.every((event) => event.beaconSidesSwapped === true)).toBe(true);
+    expect(events[0].sourceEventType).toBe("POINT_TEAM_A");
+    expect(events[1].sourceEventType).toBe("POINT_TEAM_B");
+  });
+
+  test("changeover does not invert Pulse events", async () => {
+    const courtId = "court-pulse";
+    const deviceId = "pulse-1";
+
+    mockDb = new FakeFirestore({
+      [`devices/${deviceId}`]: { courtId, deviceSKU: "Pulse" },
+      [`courts/${courtId}`]: {
+        scoreVersion: 1,
+        beaconSidesSwapped: true,
+        scoringMode: DEFAULT_SCORING_OPTIONS.scoringMode,
+        scoringOptions: DEFAULT_SCORING_OPTIONS,
+      },
+    });
+
+    let postEvent;
+    jest.isolateModules(() => {
+      ({ postEvent } = require("./index"));
+    });
+
+    const res = {
+      statusCode: null,
+      payload: null,
+      status(code) {
+        this.statusCode = code;
+        return this;
+      },
+      json(body) {
+        this.payload = body;
+        return this;
+      },
+    };
+
+    await postEvent(
+      { method: "POST", body: { deviceId, eventType: "POINT_TEAM_A", deviceSKU: "Pulse" } },
+      res,
+    );
+
+    const eventEntry = [...mockDb.docs.entries()].find(([path]) =>
+      path.startsWith(`courts/${courtId}/events/`),
+    );
+    expect(eventEntry[1].eventType).toBe("POINT_TEAM_A");
+    expect(eventEntry[1].sourceEventType).toBeUndefined();
+  });
+
   test("stamps scoreVersion 0 when the court has never been reset", async () => {
     const courtId = "court-2";
     const deviceId = "device-2";
@@ -784,6 +895,66 @@ describe("postEvent", () => {
     );
     expect(eventEntry).toBeDefined();
     expect(eventEntry[1].scoreVersion).toBe(0);
+  });
+});
+
+describe("changeoverCourt", () => {
+  test("sets the requested Beacon side mapping without altering other court fields", async () => {
+    const courtId = "changeover-court";
+    mockDb = new FakeFirestore({
+      [`courts/${courtId}`]: {
+        name: "Changeover",
+        scoreVersion: 7,
+        beaconSidesSwapped: false,
+        status: "open",
+      },
+    });
+
+    let changeoverCourt;
+    jest.isolateModules(() => {
+      ({ changeoverCourt } = require("./index"));
+    });
+
+    const result = await changeoverCourt({
+      data: { courtId, beaconSidesSwapped: true },
+    });
+
+    expect(result).toEqual({
+      success: true,
+      courtId,
+      beaconSidesSwapped: true,
+    });
+    expect(mockDb.docs.get(`courts/${courtId}`)).toEqual({
+      name: "Changeover",
+      scoreVersion: 7,
+      beaconSidesSwapped: true,
+      status: "open",
+    });
+  });
+
+  test("rejects a missing court and invalid changeover value", async () => {
+    mockDb = new FakeFirestore({});
+
+    let changeoverCourt;
+    jest.isolateModules(() => {
+      ({ changeoverCourt } = require("./index"));
+    });
+
+    await expect(
+      changeoverCourt({ data: { courtId: "missing", beaconSidesSwapped: true } }),
+    ).rejects.toThrow("Court not found");
+
+    mockDb = new FakeFirestore({
+      "courts/invalid-changeover": { status: "open" },
+    });
+
+    jest.isolateModules(() => {
+      ({ changeoverCourt } = require("./index"));
+    });
+
+    await expect(
+      changeoverCourt({ data: { courtId: "invalid-changeover", beaconSidesSwapped: "true" } }),
+    ).rejects.toThrow("beaconSidesSwapped must be a boolean");
   });
 });
 
@@ -1323,6 +1494,14 @@ describe("resetCourt - password handling", () => {
     });
     return resetCourt;
   }
+
+  test("reset always restores default Beacon side handling", async () => {
+    const resetCourt = seedCourtDb({ beaconSidesSwapped: true });
+
+    await resetCourt({ data: { courtId, deepReset: false } });
+
+    expect(mockDb.docs.get(`courts/${courtId}`).beaconSidesSwapped).toBe(false);
+  });
 
   test("a blank password leaves the existing court password untouched", async () => {
     const resetCourt = seedCourtDb();

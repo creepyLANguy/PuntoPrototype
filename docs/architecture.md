@@ -11,13 +11,14 @@ The runtime sequence is visualized in [PP_Runtime_Flow.mmd](PP_Runtime_Flow.mmd)
       |-- Firebase Web SDK -> devices/{deviceId}
       |-- Firebase Web SDK -> courts/{courtId}/events/{eventId}
       |-- onSnapshot <- courts/{courtId}/score/current
-      |-- callable -> resetCourt / updateScoringOptions / getDetailedScore
+      |-- callable -> resetCourt / changeoverCourt / updateScoringOptions / getDetailedScore
       |
       +-- public URLs /c/{courtId}, /p/{courtId}, /overlay and related Hosting routes
 
     External device clients
       |-- POST /postEvent (HTTP Cloud Function, africa-south1)
-      +-- append event -> courts/{courtId}/events/{eventId}
+      |-- Beacon point events are inverted when courts/{courtId}.beaconSidesSwapped is true
+      +-- append effective event -> courts/{courtId}/events/{eventId}
 
     onEventCreate (Cloud Function, africa-south1)
       |-- reads court configuration + event log
@@ -50,7 +51,7 @@ This decomposition is deliberately independent of the future first-class match/t
 ## Current data and mutation boundaries
 
 - The web app uses the Firebase Web SDK directly for court reads, court creation/edit/delete, device reads/updates, event writes and score listeners.
-- Callable functions currently present are resetCourt, updateScoringOptions and getDetailedScore.
+- Callable functions currently present are resetCourt, changeoverCourt, updateScoringOptions and getDetailedScore.
 - The current callable handlers do **not** perform an explicit request.auth authorization check in functions/index.js. Authorization is therefore a production-hardening requirement, not an implemented guarantee.
 - The public JSON endpoints are intentionally unauthenticated read surfaces.
 - postEvent currently identifies a device through its deviceId and current device/court binding. The cryptographic HMAC, freshness, nonce and client-generated idempotency protocol described elsewhere in the docs is a target, not the current implementation.
@@ -85,6 +86,8 @@ RESET handling currently:
 4. increments courts/{courtId}.scoreVersion.
 
 Events whose scoreVersion no longer matches the court are ignored.
+
+The `beaconSidesSwapped` court flag is reset to `false` on every RESET, so each new match begins with the default physical Beacon-to-team mapping.
 
 UNDO and out-of-order events trigger full-history replay where required. Normal scoring uses the newest compatible checkpoint when it can do so safely.
 

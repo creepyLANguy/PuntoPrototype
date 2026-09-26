@@ -2,6 +2,7 @@ const { onCall, onRequest } = require("firebase-functions/v2/https");
 
 const { onEventCreate } = require("./triggers/onEventCreate");
 const { resetCourt } = require("./callables/resetCourt");
+const { changeoverCourt } = require("./callables/changeoverCourt");
 const { updateScoringOptions } = require("./callables/updateScoringOptions");
 const { getDetailedScore } = require("./callables/getDetailedScore");
 
@@ -15,6 +16,7 @@ const { getCourtMomentum } = require("./http/getCourtMomentum");
 exports.onEventCreate = onEventCreate;
 
 exports.resetCourt = onCall({ region: REGION }, resetCourt);
+exports.changeoverCourt = onCall({ region: REGION }, changeoverCourt);
 exports.updateScoringOptions = onCall({ region: REGION }, updateScoringOptions);
 exports.getDetailedScore = onCall({ region: REGION }, getDetailedScore);
 

@@ -25,6 +25,14 @@ Request fields currently accepted include:
 
 The function writes the new court scoring configuration and optionally the password/team/player changes.
 
+### changeoverCourt
+
+Sets the court's Beacon side mapping explicitly. A value of `true` means physical Beacon readings for Team A/B are interpreted for the opposite logical team; `false` restores the default mapping.
+
+Request: `{ courtId, beaconSidesSwapped }`, where `beaconSidesSwapped` is required and must be boolean.
+
+This changes court configuration only; it does not alter or replay already-recorded scoring events. Each device event is interpreted using the court mapping active when that event is ingested.
+
 ### updateScoringOptions
 
 Persists scoring configuration and replays the active court event history under the new rules. Existing checkpoints are deleted and a new checkpoint is written when there is active history.
