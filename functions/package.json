@@ -10,7 +10,8 @@
     "test": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js && node --test scoringGoldenMaster.node-test.mjs frontendScoreSync.node-test.mjs frontendScoreboard.node-test.mjs frontendModes.node-test.mjs frontendLifecycle.node-test.mjs frontendUndo.node-test.mjs frontendMatchDetails.node-test.mjs frontendOverlay.node-test.mjs frontendPlayRoute.node-test.mjs frontendCourtRoute.node-test.mjs frontendCourtPassword.node-test.mjs frontendDirectPlayerJoin.node-test.mjs frontendJoinPlayerIcon.node-test.mjs frontendShareImage.node-test.mjs frontendQrPanelResize.node-test.mjs frontendEngagementAnimations.node-test.mjs endpointRoutes.node-test.mjs",
     "lint": "eslint .",
     "format:check": "prettier --check \"**/*.{js,mjs}\"",
-    "format": "prettier --write \"**/*.{js,mjs}\""
+    "format": "prettier --write \"**/*.{js,mjs}\"",
+    "prepare": "git -C .. config core.hooksPath .githooks && chmod +x ../.githooks/pre-commit"
   },
   "engines": {
     "node": "22"
