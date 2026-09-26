@@ -7,17 +7,33 @@ import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const firebase = JSON.parse(fs.readFileSync(path.join(root, "firebase.json"), "utf8"));
+const redirects = firebase.hosting.redirects || [];
 const rewrites = firebase.hosting.rewrites || [];
+
+function findRedirect(source) {
+  return redirects.find((redirect) => redirect.source === source) || null;
+}
 
 function findSource(source) {
   return rewrites.find((rewrite) => rewrite.source === source) || null;
 }
 
-test("canonical full-word read endpoints are deployed", () => {
-  assert.equal(findSource("/score/**")?.function?.functionId, "getCourtScore");
-  assert.equal(findSource("/revision/**")?.function?.functionId, "getCourtScoreRevision");
-  assert.equal(findSource("/stats/**")?.function?.functionId, "getCourtStats");
-  assert.equal(findSource("/momentum/**")?.function?.functionId, "getCourtMomentum");
+test("canonical full-word read endpoints redirect to Johannesburg functions", () => {
+  const expected = [
+    ["/score/:courtId", "getCourtScore"],
+    ["/revision/:courtId", "getCourtScoreRevision"],
+    ["/stats/:courtId", "getCourtStats"],
+    ["/momentum/:courtId", "getCourtMomentum"],
+  ];
+
+  for (const [source, functionId] of expected) {
+    const redirect = findRedirect(source);
+    assert.equal(redirect?.type, 307);
+    assert.equal(
+      redirect?.destination,
+      `https://africa-south1-__FIREBASE_PROJECT_ID__.cloudfunctions.net/${functionId}/:courtId`,
+    );
+  }
 });
 
 test("canonical overlay route is deployed", () => {
