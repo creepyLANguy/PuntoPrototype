@@ -84,4 +84,6 @@ If Firebase Analytics is added later, keep staging analytics disabled or send st
 
 The repository tracks `firestore.rules` and `firestore.indexes.json`. The current Firebase deployment workflow deploys only Hosting and Functions (`--only functions,hosting`). Changes to Firestore rules or indexes are therefore not automatically deployed by this workflow and require an explicit Firestore deployment step when they are ready for release.
 
+The deployment prepares the Firebase Hosting configuration with the target project's ID before deployment. The public JSON API paths use Hosting redirects to the Johannesburg Cloud Function URLs because `africa-south1` is not a supported Firebase Hosting function-rewrite region. The Functions/Hosting deployment also runs non-interactively with Firebase CLI `--force`. This is intentional: the repository is the authoritative source for the `default` Functions codebase, so when a function is intentionally removed or relocated, CI must be allowed to remove the obsolete deployed resource rather than aborting on the deletion confirmation prompt.
+
 Storage rules are not currently tracked in this repository.

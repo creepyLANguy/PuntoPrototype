@@ -20,7 +20,7 @@ flowchart LR
     end
 
     subgraph FIREBASE["Firebase runtime"]
-        Hosting["Firebase Hosting<br/>static files + rewrites"]
+        Hosting["Firebase Hosting<br/>static files + public API redirects"]
 
         Ingestion["postEvent<br/>HTTP Cloud Function<br/>africa-south1<br/>deviceId/binding identity only"]
 
@@ -29,7 +29,7 @@ flowchart LR
         Options["updateScoringOptions"]
         Details["getDetailedScore"]
 
-        PublicAPI["Public HTTP read functions<br/>europe-west1<br/>getCourtScore<br/>getCourtScoreRevision<br/>getCourtStats<br/>getCourtMomentum"]
+        PublicAPI["Public HTTP read functions<br/>africa-south1<br/>getCourtScore<br/>getCourtScoreRevision<br/>getCourtStats<br/>getCourtMomentum"]
 
         Trigger["Firestore trigger<br/>onEventCreate<br/>africa-south1"]
         Scoring["Scoring engine<br/>scoringEngine.js"]

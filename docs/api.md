@@ -30,10 +30,11 @@ The public API and current web app are **court-scoped**. There is no first-class
 
 See firebase-environments.md.
 
-### Function regions
+### Function region
 
-- africa-south1: callable functions, postEvent and onEventCreate.
-- europe-west1: public JSON Hosting rewrites /score, /revision, /stats and /momentum.
+All Cloud Functions are deployed to `africa-south1` (Johannesburg), including callable functions, device ingestion, the Firestore event trigger, and the public JSON read functions used by Firebase Hosting rewrites.
+
+Firebase Hosting remains global/CDN-based; the region applies to the functions that receive rewritten public API requests.
 
 ## API compatibility policy
 
@@ -102,7 +103,7 @@ The OpenAPI document remains the canonical machine-readable HTTP contract.
 | /stats/{courtId} | Match statistics JSON |
 | /momentum/{courtId} | Momentum JSON |
 
-Hosting rewrites are deployment concerns; the public API contract is maintained separately in the OpenAPI document.
+Hosting routing is a deployment concern; the public API contract is maintained separately in the OpenAPI document. The canonical `/score`, `/revision`, `/stats` and `/momentum` paths are redirected by Firebase Hosting to their Johannesburg Cloud Function URLs.
 
 ## Change management
 

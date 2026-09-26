@@ -5,6 +5,28 @@
   },
   "hosting": {
     "public": ".",
+    "redirects": [
+      {
+        "source": "/score/:courtId",
+        "destination": "https://africa-south1-__FIREBASE_PROJECT_ID__.cloudfunctions.net/getCourtScore/:courtId",
+        "type": 307
+      },
+      {
+        "source": "/revision/:courtId",
+        "destination": "https://africa-south1-__FIREBASE_PROJECT_ID__.cloudfunctions.net/getCourtScoreRevision/:courtId",
+        "type": 307
+      },
+      {
+        "source": "/stats/:courtId",
+        "destination": "https://africa-south1-__FIREBASE_PROJECT_ID__.cloudfunctions.net/getCourtStats/:courtId",
+        "type": 307
+      },
+      {
+        "source": "/momentum/:courtId",
+        "destination": "https://africa-south1-__FIREBASE_PROJECT_ID__.cloudfunctions.net/getCourtMomentum/:courtId",
+        "type": 307
+      }
+    ],
     "ignore": [
       "firebase.json",
       "**/.*",
@@ -62,34 +84,6 @@
       {
         "source": "/p/**",
         "destination": "/app/index.html"
-      },
-      {
-        "source": "/score/**",
-        "function": {
-          "functionId": "getCourtScore",
-          "region": "europe-west1"
-        }
-      },
-      {
-        "source": "/revision/**",
-        "function": {
-          "functionId": "getCourtScoreRevision",
-          "region": "europe-west1"
-        }
-      },
-      {
-        "source": "/stats/**",
-        "function": {
-          "functionId": "getCourtStats",
-          "region": "europe-west1"
-        }
-      },
-      {
-        "source": "/momentum/**",
-        "function": {
-          "functionId": "getCourtMomentum",
-          "region": "europe-west1"
-        }
       },
       {
         "source": "/overlay",

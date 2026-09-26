@@ -18,14 +18,14 @@ flowchart LR
     end
 
     subgraph FIREBASE["Firebase runtime"]
-        Hosting["Firebase Hosting<br/>web app + overlay + NFC utility"]
+        Hosting["Firebase Hosting<br/>web app + overlay + NFC utility<br/>public API redirects"]
         Ingestion["postEvent<br/>HTTP / africa-south1"]
         Events[("courts/{courtId}/events/{eventId}<br/>Event history")]
         Trigger["onEventCreate<br/>africa-south1"]
         Scoring["scoringEngine.js"]
         LiveState[("courts/{courtId}/score/current<br/>Materialized score")]
         Callable["Callable functions<br/>resetCourt<br/>updateScoringOptions<br/>getDetailedScore"]
-        PublicAPI["Public read functions<br/>europe-west1<br/>/a /r /s /m"]
+        PublicAPI["Public read functions<br/>africa-south1<br/>/a /r /s /m"]
     end
 
     subgraph DATA["Firestore model"]
