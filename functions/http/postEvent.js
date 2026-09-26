@@ -1,5 +1,6 @@
 const { db } = require("../infrastructure/firebase");
 const { requireDevice, appendCourtEvent } = require("../services/eventService");
+const { mapBeaconEventType, normalizeDeviceSku } = require("../services/beaconService");
 const {
   SCORING_EVENTS,
   OPERATIONAL_EVENTS,
@@ -17,7 +18,7 @@ async function postEvent(req, res) {
       return sendJson(res, 405, { success: false, error: "Method not allowed" });
     }
 
-    const { deviceId, eventType, courtId: targetCourtId, registeringDeviceId } = req.body || {};
+    const { deviceId, eventType, courtId: targetCourtId, registeringDeviceId, deviceSKU: requestedDeviceSku } = req.body || {};
 
     if (!deviceId || !eventType) {
       return sendJson(res, 400, {
@@ -42,6 +43,11 @@ async function postEvent(req, res) {
     }
 
     const actingCourtId = actingDevice.data.courtId || null;
+    const deviceSku = normalizeDeviceSku(requestedDeviceSku) || normalizeDeviceSku(actingDevice.data.deviceSKU);
+
+    if (requestedDeviceSku && requestedDeviceSku !== actingDevice.data.deviceSKU) {
+      await actingDevice.ref.set({ deviceSKU: requestedDeviceSku }, { merge: true });
+    }
 
     if (eventType === "SPECTATE") {
       if (!targetCourtId) {
@@ -128,11 +134,20 @@ async function postEvent(req, res) {
     const actingCourtSnap = await db.doc(`courts/${actingCourtId}`).get();
     const actingCourtData = actingCourtSnap.exists ? actingCourtSnap.data() : {};
 
-    const eventId = await appendCourtEvent(actingCourtId, {
+    const effectiveEventType = mapBeaconEventType(
       eventType,
+      deviceSku,
+      actingCourtData.beaconSidesSwapped === true,
+    );
+
+    const eventId = await appendCourtEvent(actingCourtId, {
+      eventType: effectiveEventType,
       createdBy: deviceId,
       actorDeviceId: deviceId,
       scoreVersion: normalizeScoreVersion(actingCourtData.scoreVersion),
+      ...(effectiveEventType !== eventType
+        ? { sourceEventType: eventType, beaconSidesSwapped: true }
+        : {}),
     });
 
     return sendJson(res, 200, { success: true, eventId });
