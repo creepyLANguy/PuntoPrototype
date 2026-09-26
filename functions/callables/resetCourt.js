@@ -88,6 +88,8 @@ async function resetCourt(request) {
     scoreVersion: nextScoreVersion,
     scoringOptions,
     scoringMode: scoringOptions.scoringMode,
+    // A reset starts a new match with the physical Beacon/team mapping restored.
+    beaconSidesSwapped: false,
   };
 
   // Skip the write when the password is unchanged so connected clients do not
