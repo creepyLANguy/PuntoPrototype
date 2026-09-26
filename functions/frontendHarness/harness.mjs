@@ -199,6 +199,7 @@ export function seedCourt(courtId, overrides = {}) {
     password: "pw",
     status: "open",
     scoreVersion: 0,
+    beaconSidesSwapped: false,
     scoringMode: "standard",
     scoringOptions: {
       scoringMode: "standard",
