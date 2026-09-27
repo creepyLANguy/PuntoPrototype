@@ -17,7 +17,10 @@ const ALLOWED_BROWSER_ORIGINS = new Set([
 ]);
 
 function applyCors(req, res) {
-  const origin = req.get("Origin");
+  const origin =
+    typeof req.get === "function"
+      ? req.get("Origin")
+      : req.headers?.origin || req.headers?.Origin;
   if (origin && ALLOWED_BROWSER_ORIGINS.has(origin)) {
     res.set("Access-Control-Allow-Origin", origin);
     res.set("Vary", "Origin");
