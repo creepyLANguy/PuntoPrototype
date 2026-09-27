@@ -3363,6 +3363,15 @@ document.addEventListener("DOMContentLoaded", () =>
     });
   }
 
+  const deviceHarnessBtn = $("deviceHarnessBtn");
+  if (deviceHarnessBtn)
+  {
+    deviceHarnessBtn.addEventListener("click", () =>
+    {
+      window.open("/device-harness/index.html", "_blank");
+    });
+  }
+
   elements.activateNfcBtn.addEventListener("click", async () =>
   {
     await initNfc();
