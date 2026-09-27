@@ -651,6 +651,15 @@ document.addEventListener("DOMContentLoaded", () =>
 
   updateMobileDeviceClass();
 
+  const courtQrLogoImage = typeof window.Image === "function"
+    ? new window.Image()
+    : null;
+  if (courtQrLogoImage)
+  {
+    courtQrLogoImage.decoding = "async";
+    courtQrLogoImage.src = "/media/logo.svg";
+  }
+
   const TEAM_COLOUR_STORAGE_KEY = "punto_team_colours";
 
   let isLightMode = localStorage.getItem("theme") === "light";
@@ -4158,7 +4167,7 @@ document.addEventListener("DOMContentLoaded", () =>
 
     const parentRect = elements.scoreboardPage.getBoundingClientRect();
     const safeGap = 8;
-    const minSize = 72;
+    const minSize = 130;
     const panelAspectRatio = 1.24;
 
     const maxWidth = Math.max(minSize, parentRect.width - safeGap * 2);
@@ -4173,16 +4182,10 @@ document.addEventListener("DOMContentLoaded", () =>
       maxAllowedWidth,
       Math.max(minAllowedWidth, panelRectNow.width)
     );
-    const nextHeight = nextWidth * panelAspectRatio;
 
     if (Math.abs(panelRectNow.width - nextWidth) > 0.25)
     {
       panel.style.width = `${nextWidth}px`;
-    }
-
-    if (Math.abs(panelRectNow.height - nextHeight) > 0.25)
-    {
-      panel.style.height = `${nextHeight}px`;
     }
 
     const panelRect = panel.getBoundingClientRect();
@@ -4252,7 +4255,94 @@ document.addEventListener("DOMContentLoaded", () =>
     return Math.max(256, panelWidth - 24);
   }
 
-  function createCourtQrSvg(qrUrl)
+  function getCourtQrContentSize()
+  {
+    if (!elements.courtQrCode)
+    {
+      return 256;
+    }
+
+    const rect = elements.courtQrCode.getBoundingClientRect();
+    const computedStyle = window.getComputedStyle(elements.courtQrCode);
+    const paddingLeft = Number.parseFloat(computedStyle.paddingLeft) || 0;
+    const paddingRight = Number.parseFloat(computedStyle.paddingRight) || 0;
+    const contentWidth = rect.width - paddingLeft - paddingRight;
+
+    return Math.max(72, Math.floor(contentWidth));
+  }
+
+  function drawCourtQrLogo(context, size)
+  {
+    const logoSize = size * 0.4;
+    const logoX = (size - logoSize) / 2;
+    const logoY = logoX;
+
+    context.clearRect(0, 0, size, size);
+    context.fillStyle = "#000000";
+    context.beginPath();
+    context.arc(size / 2, size / 2, logoSize / 2, 0, Math.PI * 2);
+    context.fill();
+
+    const logoImage = courtQrLogoImage;
+    if (logoImage?.complete && logoImage.naturalWidth > 0)
+    {
+      const imageInset = logoSize * 0.07;
+      context.imageSmoothingEnabled = true;
+      context.drawImage(
+        logoImage,
+        logoX + imageInset,
+        logoY + imageInset,
+        logoSize * 0.86,
+        logoSize * 0.86
+      );
+      context.imageSmoothingEnabled = false;
+    }
+  }
+
+  function createCourtQrLogoCanvas(size)
+  {
+    const canvas = document.createElement("canvas");
+    let context = null;
+
+    try
+    {
+      context = canvas.getContext("2d", {
+        alpha: true,
+        desynchronized: true
+      });
+    }
+    catch
+    {
+      return null;
+    }
+
+    if (!context)
+    {
+      return null;
+    }
+
+    canvas.className = "court-qr-logo-canvas";
+    canvas.width = size;
+    canvas.height = size;
+    canvas.setAttribute("aria-hidden", "true");
+
+    drawCourtQrLogo(context, size);
+
+    if (courtQrLogoImage && !(courtQrLogoImage.complete && courtQrLogoImage.naturalWidth > 0))
+    {
+      courtQrLogoImage.addEventListener("load", () =>
+      {
+        if (canvas.isConnected)
+        {
+          drawCourtQrLogo(context, size);
+        }
+      }, { once: true });
+    }
+
+    return canvas;
+  }
+
+  function createCourtQrCanvas(qrUrl)
   {
     if (!window.QRCode || !qrUrl)
     {
@@ -4276,78 +4366,59 @@ document.addEventListener("DOMContentLoaded", () =>
       return null;
     }
 
-    const svgNamespace = "http://www.w3.org/2000/svg";
-    const xlinkNamespace = "http://www.w3.org/1999/xlink";
-    const svg = document.createElementNS(svgNamespace, "svg");
-    svg.setAttribute("viewBox", `0 0 ${moduleCount} ${moduleCount}`);
-    svg.setAttribute("width", "100%");
-    svg.setAttribute("height", "100%");
-    svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
-    svg.setAttribute("aria-hidden", "true");
+    const qrCssSize = getCourtQrContentSize();
+    const devicePixelRatio = Math.max(1, window.devicePixelRatio || 1);
+    const backingSize = Math.max(512, Math.round(qrCssSize * devicePixelRatio));
+    const canvas = document.createElement("canvas");
+    let context = null;
 
-    const background = document.createElementNS(svgNamespace, "rect");
-    background.setAttribute("x", "0");
-    background.setAttribute("y", "0");
-    background.setAttribute("width", String(moduleCount));
-    background.setAttribute("height", String(moduleCount));
-    background.setAttribute("fill", "#ffffff");
-    svg.appendChild(background);
+    try
+    {
+      context = canvas.getContext("2d", {
+        alpha: false,
+        desynchronized: true
+      });
+    }
+    catch
+    {
+      return null;
+    }
 
-    const qrGroup = document.createElementNS(svgNamespace, "g");
-    qrGroup.setAttribute("fill", "#000000");
-    qrGroup.setAttribute("shape-rendering", "crispEdges");
+    if (!context)
+    {
+      return null;
+    }
+
+    canvas.className = "court-qr-canvas";
+    canvas.width = backingSize;
+    canvas.height = backingSize;
+    canvas.setAttribute("aria-hidden", "true");
+
+    context.imageSmoothingEnabled = false;
+    context.fillStyle = "#ffffff";
+    context.fillRect(0, 0, backingSize, backingSize);
+
+    const moduleScale = backingSize / moduleCount;
+    context.fillStyle = "#000000";
 
     for (let row = 0; row < moduleCount; row += 1)
     {
-      let runStart = -1;
-
-      for (let column = 0; column <= moduleCount; column += 1)
+      for (let column = 0; column < moduleCount; column += 1)
       {
-        const dark = column < moduleCount && matrix.isDark(row, column);
-
-        if (dark && runStart < 0)
+        if (!matrix.isDark(row, column))
         {
-          runStart = column;
           continue;
         }
 
-        if (!dark && runStart >= 0)
-        {
-          const module = document.createElementNS(svgNamespace, "rect");
-          module.setAttribute("x", String(runStart));
-          module.setAttribute("y", String(row));
-          module.setAttribute("width", String(column - runStart));
-          module.setAttribute("height", "1");
-          qrGroup.appendChild(module);
-          runStart = -1;
-        }
+        const x0 = Math.round(column * moduleScale);
+        const y0 = Math.round(row * moduleScale);
+        const x1 = Math.round((column + 1) * moduleScale);
+        const y1 = Math.round((row + 1) * moduleScale);
+        context.fillRect(x0, y0, x1 - x0, y1 - y0);
       }
     }
 
-    svg.appendChild(qrGroup);
-
-    const logoSize = moduleCount * 0.4;
-    const logoX = (moduleCount - logoSize) / 2;
-    const logoY = logoX;
-
-    const logoBackground = document.createElementNS(svgNamespace, "circle");
-    logoBackground.setAttribute("cx", String(moduleCount / 2));
-    logoBackground.setAttribute("cy", String(moduleCount / 2));
-    logoBackground.setAttribute("r", String(logoSize / 2));
-    logoBackground.setAttribute("fill", "#000000");
-    svg.appendChild(logoBackground);
-
-    const logoImage = document.createElementNS(svgNamespace, "image");
-    logoImage.setAttribute("x", String(logoX + logoSize * 0.07));
-    logoImage.setAttribute("y", String(logoY + logoSize * 0.07));
-    logoImage.setAttribute("width", String(logoSize * 0.86));
-    logoImage.setAttribute("height", String(logoSize * 0.86));
-    logoImage.setAttribute("preserveAspectRatio", "xMidYMid meet");
-    logoImage.setAttribute("href", "/media/logo.svg");
-    logoImage.setAttributeNS(xlinkNamespace, "xlink:href", "/media/logo.svg");
-    svg.appendChild(logoImage);
-
-    return svg;
+    return canvas;
   }
 
   function initializeCourtQrPanelInteractions()
@@ -4363,7 +4434,8 @@ document.addEventListener("DOMContentLoaded", () =>
     let pointerId = null;
 
     // Geometry is captured once at pointerdown. Pointermove never performs layout
-    // reads, so the interaction stays on the compositor path.
+    // reads; drag uses the compositor path, while resize updates one width value
+    // per animation frame so the preview matches the committed layout.
     let parentWidth = 0;
     let parentHeight = 0;
     let parentLeft = 0;
@@ -4381,19 +4453,8 @@ document.addEventListener("DOMContentLoaded", () =>
 
     let pendingLeft = null;
     let pendingTop = null;
-    let pendingScale = null;
+    let pendingWidth = null;
     let framePending = false;
-
-    const cancelScheduledFrame = () =>
-    {
-      if (!framePending)
-      {
-        return;
-      }
-
-      window.cancelAnimationFrame(framePending);
-      framePending = false;
-    };
 
     const applyPendingQrPanelFrame = () =>
     {
@@ -4401,11 +4462,11 @@ document.addEventListener("DOMContentLoaded", () =>
 
       const nextLeft = pendingLeft;
       const nextTop = pendingTop;
-      const nextScale = pendingScale;
+      const nextWidth = pendingWidth;
 
       pendingLeft = null;
       pendingTop = null;
-      pendingScale = null;
+      pendingWidth = null;
 
       if (interactionMode === "drag" && nextLeft !== null && nextTop !== null)
       {
@@ -4418,17 +4479,17 @@ document.addEventListener("DOMContentLoaded", () =>
         return;
       }
 
-      if (interactionMode === "resize" && nextScale !== null)
+      if (interactionMode === "resize" && nextWidth !== null)
       {
-        panel.style.transform = "scale(" + nextScale + ")";
+        panel.style.width = nextWidth + "px";
       }
     };
 
-    const scheduleQrPanelFrame = ({ left = null, top = null, scale = null } = {}) =>
+    const scheduleQrPanelFrame = ({ left = null, top = null, width = null } = {}) =>
     {
       if (left !== null) pendingLeft = left;
       if (top !== null) pendingTop = top;
-      if (scale !== null) pendingScale = scale;
+      if (width !== null) pendingWidth = width;
 
       if (!framePending)
       {
@@ -4453,12 +4514,12 @@ document.addEventListener("DOMContentLoaded", () =>
       };
     };
 
-    const calculateResizeScale = (clientX, clientY) =>
+    const calculateResizeWidth = (clientX, clientY) =>
     {
       const maxWidthByRightEdge = parentWidth - baseLeft - 8;
       const maxWidthByBottomEdge = (parentHeight - baseTop - 8) / resizeAspectRatio;
       const maxWidth = Math.max(
-        72,
+        130,
         Math.min(maxWidthByRightEdge, maxWidthByBottomEdge)
       );
 
@@ -4466,9 +4527,8 @@ document.addEventListener("DOMContentLoaded", () =>
       const deltaY = clientY - resizeStartY;
       const requestedWidth =
         resizeStartWidth + Math.max(deltaX, deltaY / resizeAspectRatio);
-      const width = Math.max(72, Math.min(maxWidth, requestedWidth));
 
-      return resizeStartWidth > 0 ? width / resizeStartWidth : 1;
+      return Math.max(130, Math.min(maxWidth, requestedWidth));
     };
 
     const queueInteractionPosition = (clientX, clientY) =>
@@ -4482,7 +4542,7 @@ document.addEventListener("DOMContentLoaded", () =>
       if (interactionMode === "resize")
       {
         scheduleQrPanelFrame({
-          scale: calculateResizeScale(clientX, clientY)
+          width: calculateResizeWidth(clientX, clientY)
         });
       }
     };
@@ -4516,7 +4576,6 @@ document.addEventListener("DOMContentLoaded", () =>
 
       const finalLeft = pendingLeft;
       const finalTop = pendingTop;
-      const finalScale = pendingScale;
 
       flushScheduledFrame();
 
@@ -4524,13 +4583,6 @@ document.addEventListener("DOMContentLoaded", () =>
       {
         panel.style.left = (finalLeft !== null ? finalLeft : baseLeft) + "px";
         panel.style.top = (finalTop !== null ? finalTop : baseTop) + "px";
-      }
-      else if (modeAtStop === "resize")
-      {
-        const scale = finalScale !== null ? finalScale : 1;
-        panel.style.width = (resizeStartWidth * scale) + "px";
-        panel.style.height =
-          (resizeStartWidth * resizeAspectRatio * scale) + "px";
       }
 
       panel.style.transform = "";
@@ -4655,7 +4707,7 @@ document.addEventListener("DOMContentLoaded", () =>
       return;
     }
 
-    elements.courtQrCode.classList.remove("has-svg-qr");
+    elements.courtQrCode.classList.remove("has-canvas-qr");
     elements.courtQrCode.innerHTML = "";
     elements.courtQrLabel.textContent = "";
     elements.courtQrPanel.classList.add("hidden");
@@ -4679,14 +4731,21 @@ document.addEventListener("DOMContentLoaded", () =>
     elements.courtQrPanel.classList.remove("hidden");
     clampCourtQrPanelToViewport();
 
-    elements.courtQrCode.classList.remove("has-svg-qr");
+    elements.courtQrCode.classList.remove("has-canvas-qr");
     elements.courtQrCode.innerHTML = "";
 
-    const qrSvg = createCourtQrSvg(qrUrl);
-    if (qrSvg)
+    const qrCanvas = createCourtQrCanvas(qrUrl);
+    const qrLogoCanvas = qrCanvas
+      ? createCourtQrLogoCanvas(qrCanvas.width)
+      : null;
+
+    if (qrCanvas)
     {
-      elements.courtQrCode.classList.add("has-svg-qr");
-      elements.courtQrCode.appendChild(qrSvg);
+      elements.courtQrCode.classList.add("has-canvas-qr");
+      elements.courtQrCode.replaceChildren(
+        qrCanvas,
+        ...(qrLogoCanvas ? [qrLogoCanvas] : [])
+      );
     }
     else
     {
