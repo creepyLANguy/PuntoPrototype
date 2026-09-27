@@ -50,6 +50,14 @@ function projectIdForEnvironment() {
   return config.projectId || "unknown-project";
 }
 
+function postEventUrl() {
+  const projectId = projectIdForEnvironment();
+  if (!projectId || projectId === "unknown-project") {
+    throw new Error("Firebase project ID is not available for the active environment.");
+  }
+  return "https://africa-south1-" + projectId + ".cloudfunctions.net/postEvent";
+}
+
 function firebaseEnvironmentMatchesHost() {
   const configured = firebaseEnvironmentConfig.activeFirebaseEnvironment;
   if (state.environment === "production") return configured === "production";
@@ -371,7 +379,7 @@ async function executeDeviceRequest(body, label) {
     const traceId = newId();
     const request = {
       method: "POST",
-      url: globalThis.location.origin + "/device-api/postEvent",
+      url: postEventUrl(),
       headers: { "Content-Type": "application/json" },
       body
     };
@@ -475,7 +483,7 @@ async function transportRequest(body, injection) {
     timer = setTimeout(() => controller.abort(), Number(injection.timeoutMs) || 3000);
   }
 
-  const response = await fetch("/device-api/postEvent", {
+  const response = await fetch(postEventUrl(), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
@@ -485,7 +493,7 @@ async function transportRequest(body, injection) {
   if (timer) clearTimeout(timer);
 
   if (injection.mode === "duplicate") {
-    const duplicate = await fetch("/device-api/postEvent", {
+    const duplicate = await fetch(postEventUrl(), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
@@ -498,7 +506,7 @@ async function transportRequest(body, injection) {
       summary: "Duplicate request",
       detail: "Second identical POST was sent to the real backend.",
       code: duplicate.status,
-      request: { method: "POST", url: globalThis.location.origin + "/device-api/postEvent", headers: { "Content-Type": "application/json" }, body },
+      request: { method: "POST", url: postEventUrl(), headers: { "Content-Type": "application/json" }, body },
       response: { status: duplicate.status, body: await duplicate.json().catch(() => null) },
       simulator: { environment: state.environment, failureMode: injection.mode }
     });
