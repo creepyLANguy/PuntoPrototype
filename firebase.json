@@ -126,13 +126,6 @@
         "destination": "/device-harness/index.html"
       },
       {
-        "source": "/device-api/postEvent",
-        "function": {
-          "functionId": "postEvent",
-          "region": "africa-south1"
-        }
-      },
-      {
         "source": "**",
         "destination": "/index.html"
       }
