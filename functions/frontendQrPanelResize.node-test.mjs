@@ -111,7 +111,7 @@ test("QR resize uses the same committed width and height model during preview an
 test("QR resize does not use a transform-only preview that can diverge on release", () => {
   assert.doesNotMatch(
     source,
-    /if \(interactionMode === "resize" && nextScale !== null\)[\s\S]{0,350}panel\.style\.transform = "scale\("/,
+    /interactionMode === "resize"[\s\S]{0,350}style\.transform = "scale\("/,
   );
   assert.doesNotMatch(source, /setProperty\(["']--qr-panel-scale["']/);
   assert.doesNotMatch(source, /resizeStartPanelScale/);
