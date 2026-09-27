@@ -44,11 +44,29 @@ async function main()
 {
   const appMarker = 'Padel Push™ - Live Scoreboard';
   const overlayMarker = 'Padel Push™ — Score Overlay';
+  const deviceHarnessMarker = 'Device Test Harness';
 
   for (const path of ['/score/zzzz', '/revision/zzzz', '/stats/zzzz', '/momentum/zzzz'])
   {
     assertJsonError(await request(path), path);
   }
+
+  assertHtml(await request('/device-harness/index.html'), deviceHarnessMarker, '/device-harness/index.html');
+
+  const deviceApiResponse = await fetch(base + '/device-api/postEvent', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      deviceId: '__device_harness_route_probe__',
+      eventType: 'POINT_TEAM_A',
+      deviceSKU: 'Pulse'
+    })
+  });
+
+  assert.equal(deviceApiResponse.status, 400, 'device-api/postEvent: expected backend validation for unknown probe device');
+  const deviceApiPayload = await deviceApiResponse.json();
+  assert.equal(deviceApiPayload.success, false, 'device-api/postEvent: expected structured backend error');
+  assert.match(deviceApiPayload.error || '', /Device not found/i, 'device-api/postEvent: expected request to reach postEvent');
 
   for (const path of ['/overlay', '/overlay/zzzz', '/broadcast', '/broadcast/zzzz'])
   {
