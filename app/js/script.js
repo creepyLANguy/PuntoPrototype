@@ -4299,6 +4299,13 @@ document.addEventListener("DOMContentLoaded", () =>
     }
   }
 
+  function getCourtQrBackingSize()
+  {
+    const cssSize = getCourtQrContentSize();
+    const devicePixelRatio = Math.max(1, window.devicePixelRatio || 1);
+    return Math.max(512, Math.round(cssSize * devicePixelRatio));
+  }
+
   function createCourtQrLogoCanvas(size)
   {
     const canvas = document.createElement("canvas");
@@ -4342,6 +4349,34 @@ document.addEventListener("DOMContentLoaded", () =>
     return canvas;
   }
 
+  function rerasterizeCourtQrLogoAtCurrentSize()
+  {
+    const canvas = elements.courtQrCode?.querySelector(".court-qr-logo-canvas");
+
+    if (!canvas || !courtQrLogoImage?.complete || courtQrLogoImage.naturalWidth <= 0)
+    {
+      return;
+    }
+
+    const backingSize = getCourtQrBackingSize();
+
+    if (canvas.width === backingSize && canvas.height === backingSize)
+    {
+      return;
+    }
+
+    canvas.width = backingSize;
+    canvas.height = backingSize;
+
+    const context = canvas.getContext("2d");
+    if (!context)
+    {
+      return;
+    }
+
+    drawCourtQrLogo(context, backingSize);
+  }
+
   function createCourtQrCanvas(qrUrl)
   {
     if (!window.QRCode || !qrUrl)
@@ -4366,9 +4401,7 @@ document.addEventListener("DOMContentLoaded", () =>
       return null;
     }
 
-    const qrCssSize = getCourtQrContentSize();
-    const devicePixelRatio = Math.max(1, window.devicePixelRatio || 1);
-    const backingSize = Math.max(512, Math.round(qrCssSize * devicePixelRatio));
+    const backingSize = getCourtQrBackingSize();
     const canvas = document.createElement("canvas");
     let context = null;
 
@@ -4610,6 +4643,7 @@ document.addEventListener("DOMContentLoaded", () =>
       if (modeAtStop === "resize")
       {
         clampCourtQrPanelToViewport();
+        rerasterizeCourtQrLogoAtCurrentSize();
       }
     };
 
