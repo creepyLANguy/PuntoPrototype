@@ -4332,10 +4332,19 @@ document.addEventListener("DOMContentLoaded", () =>
     const devicePixelRatio = Math.max(1, window.devicePixelRatio || 1);
     const backingSize = Math.max(512, Math.round(qrCssSize * devicePixelRatio));
     const canvas = document.createElement("canvas");
-    const context = canvas.getContext("2d", {
-      alpha: false,
-      desynchronized: true
-    });
+    let context = null;
+
+    try
+    {
+      context = canvas.getContext("2d", {
+        alpha: false,
+        desynchronized: true
+      });
+    }
+    catch
+    {
+      return null;
+    }
 
     if (!context)
     {
