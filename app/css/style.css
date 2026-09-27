@@ -361,12 +361,11 @@ body.light-mode .menu-btn:hover {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: calc(8px * var(--qr-panel-scale, 1));
+  gap: 8px;
   padding: 12px;
   width: 160px;
   min-width: 130px;
   aspect-ratio: 1 / 1.24;
-  --qr-panel-scale: 1;
   border-radius: 12px;
   border-bottom-right-radius: 0%;
   background: color-mix(in srgb, var(--waveColour), transparent 90%);
@@ -389,8 +388,11 @@ body.light-mode .menu-btn:hover {
   opacity: 0.75;
 }
 
-.court-qr-panel.qr-panel-interacting {
+.court-qr-panel.dragging {
   will-change: transform;
+}
+
+.court-qr-panel.qr-panel-interacting {
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
   box-shadow: none;
