@@ -18,9 +18,7 @@ const ALLOWED_BROWSER_ORIGINS = new Set([
 
 function applyCors(req, res) {
   const origin =
-    typeof req.get === "function"
-      ? req.get("Origin")
-      : req.headers?.origin || req.headers?.Origin;
+    typeof req.get === "function" ? req.get("Origin") : req.headers?.origin || req.headers?.Origin;
 
   if (typeof res.set !== "function") {
     return;
