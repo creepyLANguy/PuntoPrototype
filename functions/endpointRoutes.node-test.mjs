@@ -18,7 +18,7 @@ function findSource(source) {
   return rewrites.find((rewrite) => rewrite.source === source) || null;
 }
 
-test("canonical full-word read endpoints redirect to Johannesburg functions", () => {
+test("canonical full-word read endpoints rewrite internally to the public API functions", () => {
   const expected = [
     ["/score/:courtId", "getCourtScore"],
     ["/revision/:courtId", "getCourtScoreRevision"],
@@ -26,23 +26,13 @@ test("canonical full-word read endpoints redirect to Johannesburg functions", ()
     ["/momentum/:courtId", "getCourtMomentum"],
   ];
 
+  assert.deepEqual(firebase.hosting.redirects || [], []);
+
   for (const [source, functionId] of expected) {
-    const redirect = findRedirect(source);
-    assert.equal(redirect?.type, 307);
-
-    const destination = new URL(redirect.destination);
-    assert.equal(destination.protocol, "https:");
-
-    const isJohannesburgFunction =
-      destination.hostname === "africa-south1-__firebase_project_id__.cloudfunctions.net" ||
-      /^africa-south1-[a-z0-9-]+\.cloudfunctions\.net$/.test(destination.hostname);
-
-    assert.equal(
-      isJohannesburgFunction,
-      true,
-      `unexpected Johannesburg function hostname: ${destination.hostname}`,
-    );
-    assert.equal(destination.pathname, `/${functionId}/:courtId`);
+    const rewrite = findSource(source);
+    assert.equal(rewrite?.function?.functionId, functionId);
+    assert.equal(rewrite?.function?.region, "europe-west1");
+    assert.equal(findRedirect(source), null);
   }
 });
 
