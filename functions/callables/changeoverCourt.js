@@ -19,11 +19,7 @@ async function changeoverCourt(request) {
     }
 
     nextValue = beaconSidesSwapped;
-    tx.set(
-      courtRef,
-      { beaconSidesSwapped: nextValue },
-      { merge: true },
-    );
+    tx.set(courtRef, { beaconSidesSwapped: nextValue }, { merge: true });
   });
 
   return {
