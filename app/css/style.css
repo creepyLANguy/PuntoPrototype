@@ -404,33 +404,6 @@ body.light-mode .menu-btn:hover {
   box-sizing: border-box;
 }
 
-.court-qr-code::after {
-  content: "";
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 40%;
-  height: 40%;
-  transform: translate(-50%, -50%);
-  border-radius: 50%;
-  background: #000 url("/media/logo.svg") center / 86% no-repeat;
-  z-index: 2;
-  pointer-events: none;
-}
-
-.court-qr-code.has-svg-qr::after {
-  display: none;
-}
-
-.court-qr-code > svg {
-  width: 100% !important;
-  height: 100% !important;
-  display: block;
-}
-
-.court-qr-code > svg > g {
-  shape-rendering: crispEdges;
-}
 
 .court-qr-code img,
 .court-qr-code canvas {
