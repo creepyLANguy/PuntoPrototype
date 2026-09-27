@@ -4182,16 +4182,10 @@ document.addEventListener("DOMContentLoaded", () =>
       maxAllowedWidth,
       Math.max(minAllowedWidth, panelRectNow.width)
     );
-    const nextHeight = nextWidth * panelAspectRatio;
 
     if (Math.abs(panelRectNow.width - nextWidth) > 0.25)
     {
       panel.style.width = `${nextWidth}px`;
-    }
-
-    if (Math.abs(panelRectNow.height - nextHeight) > 0.25)
-    {
-      panel.style.height = `${nextHeight}px`;
     }
 
     const panelRect = panel.getBoundingClientRect();
@@ -4440,7 +4434,8 @@ document.addEventListener("DOMContentLoaded", () =>
     let pointerId = null;
 
     // Geometry is captured once at pointerdown. Pointermove never performs layout
-    // reads, so the interaction stays on the compositor path.
+    // reads; drag uses the compositor path, while resize updates one width value
+    // per animation frame so the preview matches the committed layout.
     let parentWidth = 0;
     let parentHeight = 0;
     let parentLeft = 0;
@@ -4458,19 +4453,8 @@ document.addEventListener("DOMContentLoaded", () =>
 
     let pendingLeft = null;
     let pendingTop = null;
-    let pendingScale = null;
+    let pendingWidth = null;
     let framePending = false;
-
-    const cancelScheduledFrame = () =>
-    {
-      if (!framePending)
-      {
-        return;
-      }
-
-      window.cancelAnimationFrame(framePending);
-      framePending = false;
-    };
 
     const applyPendingQrPanelFrame = () =>
     {
@@ -4478,11 +4462,11 @@ document.addEventListener("DOMContentLoaded", () =>
 
       const nextLeft = pendingLeft;
       const nextTop = pendingTop;
-      const nextScale = pendingScale;
+      const nextWidth = pendingWidth;
 
       pendingLeft = null;
       pendingTop = null;
-      pendingScale = null;
+      pendingWidth = null;
 
       if (interactionMode === "drag" && nextLeft !== null && nextTop !== null)
       {
@@ -4495,19 +4479,17 @@ document.addEventListener("DOMContentLoaded", () =>
         return;
       }
 
-      if (interactionMode === "resize" && nextScale !== null)
+      if (interactionMode === "resize" && nextWidth !== null)
       {
-        panel.style.width = (resizeStartWidth * nextScale) + "px";
-        panel.style.height =
-          (resizeStartWidth * resizeAspectRatio * nextScale) + "px";
+        panel.style.width = nextWidth + "px";
       }
     };
 
-    const scheduleQrPanelFrame = ({ left = null, top = null, scale = null } = {}) =>
+    const scheduleQrPanelFrame = ({ left = null, top = null, width = null } = {}) =>
     {
       if (left !== null) pendingLeft = left;
       if (top !== null) pendingTop = top;
-      if (scale !== null) pendingScale = scale;
+      if (width !== null) pendingWidth = width;
 
       if (!framePending)
       {
@@ -4532,12 +4514,12 @@ document.addEventListener("DOMContentLoaded", () =>
       };
     };
 
-    const calculateResizeScale = (clientX, clientY) =>
+    const calculateResizeWidth = (clientX, clientY) =>
     {
       const maxWidthByRightEdge = parentWidth - baseLeft - 8;
       const maxWidthByBottomEdge = (parentHeight - baseTop - 8) / resizeAspectRatio;
       const maxWidth = Math.max(
-        72,
+        130,
         Math.min(maxWidthByRightEdge, maxWidthByBottomEdge)
       );
 
@@ -4545,13 +4527,8 @@ document.addEventListener("DOMContentLoaded", () =>
       const deltaY = clientY - resizeStartY;
       const requestedWidth =
         resizeStartWidth + Math.max(deltaX, deltaY / resizeAspectRatio);
-      const resizeMinWidth = 130;
-      const width = Math.max(
-        resizeMinWidth,
-        Math.min(maxWidth, requestedWidth)
-      );
 
-      return resizeStartWidth > 0 ? width / resizeStartWidth : 1;
+      return Math.max(130, Math.min(maxWidth, requestedWidth));
     };
 
     const queueInteractionPosition = (clientX, clientY) =>
@@ -4565,7 +4542,7 @@ document.addEventListener("DOMContentLoaded", () =>
       if (interactionMode === "resize")
       {
         scheduleQrPanelFrame({
-          scale: calculateResizeScale(clientX, clientY)
+          width: calculateResizeWidth(clientX, clientY)
         });
       }
     };
@@ -4599,7 +4576,6 @@ document.addEventListener("DOMContentLoaded", () =>
 
       const finalLeft = pendingLeft;
       const finalTop = pendingTop;
-      const finalScale = pendingScale;
 
       flushScheduledFrame();
 
@@ -4607,13 +4583,6 @@ document.addEventListener("DOMContentLoaded", () =>
       {
         panel.style.left = (finalLeft !== null ? finalLeft : baseLeft) + "px";
         panel.style.top = (finalTop !== null ? finalTop : baseTop) + "px";
-      }
-      else if (modeAtStop === "resize")
-      {
-        const scale = finalScale !== null ? finalScale : 1;
-        panel.style.width = (resizeStartWidth * scale) + "px";
-        panel.style.height =
-          (resizeStartWidth * resizeAspectRatio * scale) + "px";
       }
 
       panel.style.transform = "";
@@ -4641,23 +4610,6 @@ document.addEventListener("DOMContentLoaded", () =>
       if (modeAtStop === "resize")
       {
         clampCourtQrPanelToViewport();
-
-        if (currentCourtId)
-        {
-          const refreshedQrUrl = buildCourtQrUrl(currentCourtId);
-          const refreshedQrCanvas = createCourtQrCanvas(refreshedQrUrl);
-          const refreshedQrLogoCanvas = refreshedQrCanvas
-            ? createCourtQrLogoCanvas(refreshedQrCanvas.width)
-            : null;
-
-          if (refreshedQrCanvas)
-          {
-            elements.courtQrCode.replaceChildren(
-              refreshedQrCanvas,
-              ...(refreshedQrLogoCanvas ? [refreshedQrLogoCanvas] : [])
-            );
-          }
-        }
       }
     };
 
