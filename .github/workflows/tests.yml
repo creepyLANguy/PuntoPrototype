@@ -19,6 +19,12 @@ jobs:
       - name: Install dependencies
         working-directory: functions
         run: npm ci
+      - name: Show canonical postEvent formatting
+        working-directory: functions
+        run: |
+          npx prettier --write http/postEvent.js
+          git diff -- http/postEvent.js
+          exit 1
       - name: Run Functions format check
         working-directory: functions
         run: npm run format:check
