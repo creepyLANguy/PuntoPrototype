@@ -12,11 +12,16 @@ POST /postEvent is the hardware/device ingestion endpoint. It is an HTTP Cloud F
 | Field | Required | Values |
 |---|---|---|
 | deviceId | yes | Existing device identifier |
+| deviceSKU | no | Device family identifier (currently Beacon or Pulse) |
 | eventType | yes | POINT_TEAM_A, POINT_TEAM_B, UNDO, RESET, SPECTATE, REGISTER |
 | courtId | SPECTATE | Target court |
 | registeringDeviceId | REGISTER | Device being registered |
 
 For scoring events, the server looks up the device's current court binding and stamps the event with the court's current scoreVersion.
+
+When the bound court has `beaconSidesSwapped: true`, Team A/B point events from a device identified as `Beacon` are inverted at ingestion. The stored scoring event contains the effective `eventType`, plus `sourceEventType` and `beaconSidesSwapped: true` for auditability. `Pulse` events are not inverted.
+
+Beacon and Pulse firmware include `deviceSKU` in new event payloads so the server can keep this distinction explicit. Existing firmware must be updated to participate in Beacon Changeover behavior.
 
 The current implementation does not require callers to provide eventId, timestamp, nonce or signature. Firestore creates the event document ID when the event is appended.
 

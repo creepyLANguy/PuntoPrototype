@@ -26,6 +26,7 @@ The current frontend creates court documents with fields including:
 - scoringMode
 - scoringOptions
 - scoreVersion
+- beaconSidesSwapped
 
 The three frontend status values are:
 
@@ -55,7 +56,7 @@ Operational events also exist:
 - SPECTATE
 - REGISTER
 
-Event documents can contain eventType, createdBy, createdAt, scoreVersion, actorDeviceId, sourceCourtId, targetCourtId and registeringDeviceId, depending on the operation.
+Event documents can contain eventType, createdBy, createdAt, scoreVersion, actorDeviceId, sourceCourtId, targetCourtId and registeringDeviceId, depending on the operation. Beacon events inverted during Changeover also retain sourceEventType and beaconSidesSwapped for auditability.
 
 Client/device event IDs are currently assigned by Firestore document creation. The production target described in the device protocol instead requires the originating device/client to create and persist an eventId.
 
