@@ -123,19 +123,17 @@ test("Changeover changes Beacon handling while Switch views remains visual-only"
   await settle(10);
   document.getElementById("changeoverBtn").click();
 
-  await waitFor(
-    () => firestoreState.docs.get("courts/lifecourt").beaconSidesSwapped === true,
-    { label: "Beacon changeover enabled from settings" },
-  );
+  await waitFor(() => firestoreState.docs.get("courts/lifecourt").beaconSidesSwapped === true, {
+    label: "Beacon changeover enabled from settings",
+  });
 
   document.getElementById("closeSettingsBtn").click();
   await settle(10);
 
   document.getElementById("changeoverFloatingBtn").click();
-  await waitFor(
-    () => firestoreState.docs.get("courts/lifecourt").beaconSidesSwapped === false,
-    { label: "Beacon changeover disabled from floating control" },
-  );
+  await waitFor(() => firestoreState.docs.get("courts/lifecourt").beaconSidesSwapped === false, {
+    label: "Beacon changeover disabled from floating control",
+  });
 });
 
 test("shallow reset through the UI zeroes the scoreboard", async () => {
