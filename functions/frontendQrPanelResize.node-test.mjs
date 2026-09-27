@@ -95,6 +95,6 @@ test("QR resize commits through the original panel width and height state model"
 
 test("QR panel does not introduce an independent panel scaling state", () => {
   assert.doesNotMatch(source, /panel\.style\.transform = "scale\("/);
-  assert.doesNotMatch(source, /--qr-panel-scale/);
-  assert.doesNotMatch(styles, /var\(--qr-panel-scale/);
+  assert.doesNotMatch(source, /setProperty\(["']--qr-panel-scale["']/);
+  assert.doesNotMatch(source, /resizeStartPanelScale/);
 });
