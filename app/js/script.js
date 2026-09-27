@@ -651,6 +651,15 @@ document.addEventListener("DOMContentLoaded", () =>
 
   updateMobileDeviceClass();
 
+  const courtQrLogoImage = typeof window.Image === "function"
+    ? new window.Image()
+    : null;
+  if (courtQrLogoImage)
+  {
+    courtQrLogoImage.decoding = "async";
+    courtQrLogoImage.src = "/media/logo.svg";
+  }
+
   const TEAM_COLOUR_STORAGE_KEY = "punto_team_colours";
 
   let isLightMode = localStorage.getItem("theme") === "light";
@@ -4252,7 +4261,50 @@ document.addEventListener("DOMContentLoaded", () =>
     return Math.max(256, panelWidth - 24);
   }
 
-  function createCourtQrSvg(qrUrl)
+  function getCourtQrContentSize()
+  {
+    if (!elements.courtQrCode)
+    {
+      return 256;
+    }
+
+    const rect = elements.courtQrCode.getBoundingClientRect();
+    const computedStyle = window.getComputedStyle(elements.courtQrCode);
+    const paddingLeft = Number.parseFloat(computedStyle.paddingLeft) || 0;
+    const paddingRight = Number.parseFloat(computedStyle.paddingRight) || 0;
+    const contentWidth = rect.width - paddingLeft - paddingRight;
+
+    return Math.max(72, Math.floor(contentWidth));
+  }
+
+  function drawCourtQrLogo(context, size)
+  {
+    const logoSize = size * 0.4;
+    const logoX = (size - logoSize) / 2;
+    const logoY = logoX;
+
+    context.fillStyle = "#000000";
+    context.beginPath();
+    context.arc(size / 2, size / 2, logoSize / 2, 0, Math.PI * 2);
+    context.fill();
+
+    const logoImage = courtQrLogoImage;
+    if (logoImage?.complete && logoImage.naturalWidth > 0)
+    {
+      const imageInset = logoSize * 0.07;
+      context.imageSmoothingEnabled = true;
+      context.drawImage(
+        logoImage,
+        logoX + imageInset,
+        logoY + imageInset,
+        logoSize * 0.86,
+        logoSize * 0.86
+      );
+      context.imageSmoothingEnabled = false;
+    }
+  }
+
+  function createCourtQrCanvas(qrUrl)
   {
     if (!window.QRCode || !qrUrl)
     {
@@ -4276,78 +4328,60 @@ document.addEventListener("DOMContentLoaded", () =>
       return null;
     }
 
-    const svgNamespace = "http://www.w3.org/2000/svg";
-    const xlinkNamespace = "http://www.w3.org/1999/xlink";
-    const svg = document.createElementNS(svgNamespace, "svg");
-    svg.setAttribute("viewBox", `0 0 ${moduleCount} ${moduleCount}`);
-    svg.setAttribute("width", "100%");
-    svg.setAttribute("height", "100%");
-    svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
-    svg.setAttribute("aria-hidden", "true");
+    const qrCssSize = getCourtQrContentSize();
+    const devicePixelRatio = Math.max(1, window.devicePixelRatio || 1);
+    const backingSize = Math.max(512, Math.round(qrCssSize * devicePixelRatio));
+    const canvas = document.createElement("canvas");
+    const context = canvas.getContext("2d", {
+      alpha: false,
+      desynchronized: true
+    });
 
-    const background = document.createElementNS(svgNamespace, "rect");
-    background.setAttribute("x", "0");
-    background.setAttribute("y", "0");
-    background.setAttribute("width", String(moduleCount));
-    background.setAttribute("height", String(moduleCount));
-    background.setAttribute("fill", "#ffffff");
-    svg.appendChild(background);
+    if (!context)
+    {
+      return null;
+    }
 
-    const qrGroup = document.createElementNS(svgNamespace, "g");
-    qrGroup.setAttribute("fill", "#000000");
-    qrGroup.setAttribute("shape-rendering", "crispEdges");
+    canvas.className = "court-qr-canvas";
+    canvas.width = backingSize;
+    canvas.height = backingSize;
+    canvas.setAttribute("aria-hidden", "true");
+
+    context.imageSmoothingEnabled = false;
+    context.fillStyle = "#ffffff";
+    context.fillRect(0, 0, backingSize, backingSize);
+
+    const moduleScale = backingSize / moduleCount;
+    context.fillStyle = "#000000";
 
     for (let row = 0; row < moduleCount; row += 1)
     {
-      let runStart = -1;
-
-      for (let column = 0; column <= moduleCount; column += 1)
+      for (let column = 0; column < moduleCount; column += 1)
       {
-        const dark = column < moduleCount && matrix.isDark(row, column);
-
-        if (dark && runStart < 0)
+        if (!matrix.isDark(row, column))
         {
-          runStart = column;
           continue;
         }
 
-        if (!dark && runStart >= 0)
-        {
-          const module = document.createElementNS(svgNamespace, "rect");
-          module.setAttribute("x", String(runStart));
-          module.setAttribute("y", String(row));
-          module.setAttribute("width", String(column - runStart));
-          module.setAttribute("height", "1");
-          qrGroup.appendChild(module);
-          runStart = -1;
-        }
+        const x0 = Math.round(column * moduleScale);
+        const y0 = Math.round(row * moduleScale);
+        const x1 = Math.round((column + 1) * moduleScale);
+        const y1 = Math.round((row + 1) * moduleScale);
+        context.fillRect(x0, y0, x1 - x0, y1 - y0);
       }
     }
 
-    svg.appendChild(qrGroup);
+    drawCourtQrLogo(context, backingSize);
 
-    const logoSize = moduleCount * 0.4;
-    const logoX = (moduleCount - logoSize) / 2;
-    const logoY = logoX;
+    if (courtQrLogoImage && !(courtQrLogoImage.complete && courtQrLogoImage.naturalWidth > 0))
+    {
+      courtQrLogoImage.addEventListener("load", () =>
+      {
+        drawCourtQrLogo(context, backingSize);
+      }, { once: true });
+    }
 
-    const logoBackground = document.createElementNS(svgNamespace, "circle");
-    logoBackground.setAttribute("cx", String(moduleCount / 2));
-    logoBackground.setAttribute("cy", String(moduleCount / 2));
-    logoBackground.setAttribute("r", String(logoSize / 2));
-    logoBackground.setAttribute("fill", "#000000");
-    svg.appendChild(logoBackground);
-
-    const logoImage = document.createElementNS(svgNamespace, "image");
-    logoImage.setAttribute("x", String(logoX + logoSize * 0.07));
-    logoImage.setAttribute("y", String(logoY + logoSize * 0.07));
-    logoImage.setAttribute("width", String(logoSize * 0.86));
-    logoImage.setAttribute("height", String(logoSize * 0.86));
-    logoImage.setAttribute("preserveAspectRatio", "xMidYMid meet");
-    logoImage.setAttribute("href", "/media/logo.svg");
-    logoImage.setAttributeNS(xlinkNamespace, "xlink:href", "/media/logo.svg");
-    svg.appendChild(logoImage);
-
-    return svg;
+    return canvas;
   }
 
   function initializeCourtQrPanelInteractions()
@@ -4558,6 +4592,15 @@ document.addEventListener("DOMContentLoaded", () =>
       if (modeAtStop === "resize")
       {
         clampCourtQrPanelToViewport();
+
+        if (currentCourtId)
+        {
+          const refreshedQrCanvas = createCourtQrCanvas(buildCourtQrUrl(currentCourtId));
+          if (refreshedQrCanvas)
+          {
+            elements.courtQrCode.replaceChildren(refreshedQrCanvas);
+          }
+        }
       }
     };
 
@@ -4655,7 +4698,7 @@ document.addEventListener("DOMContentLoaded", () =>
       return;
     }
 
-    elements.courtQrCode.classList.remove("has-svg-qr");
+    elements.courtQrCode.classList.remove("has-canvas-qr");
     elements.courtQrCode.innerHTML = "";
     elements.courtQrLabel.textContent = "";
     elements.courtQrPanel.classList.add("hidden");
@@ -4679,14 +4722,14 @@ document.addEventListener("DOMContentLoaded", () =>
     elements.courtQrPanel.classList.remove("hidden");
     clampCourtQrPanelToViewport();
 
-    elements.courtQrCode.classList.remove("has-svg-qr");
+    elements.courtQrCode.classList.remove("has-canvas-qr");
     elements.courtQrCode.innerHTML = "";
 
-    const qrSvg = createCourtQrSvg(qrUrl);
-    if (qrSvg)
+    const qrCanvas = createCourtQrCanvas(qrUrl);
+    if (qrCanvas)
     {
-      elements.courtQrCode.classList.add("has-svg-qr");
-      elements.courtQrCode.appendChild(qrSvg);
+      elements.courtQrCode.classList.add("has-canvas-qr");
+      elements.courtQrCode.appendChild(qrCanvas);
     }
     else
     {
