@@ -61,20 +61,37 @@ async function main()
 
   assertHtml(await request('/device-harness/index.html'), deviceHarnessMarker, '/device-harness/index.html');
 
+  const expectedOrigin = new URL(base).origin;
+
+  const deviceApiPreflight = await fetch(deviceApiUrl, {
+    method: 'OPTIONS',
+    headers: {
+      Origin: expectedOrigin,
+      'Access-Control-Request-Method': 'POST',
+      'Access-Control-Request-Headers': 'content-type'
+    }
+  });
+
+  assert.equal(deviceApiPreflight.status, 204, 'postEvent: expected CORS preflight to succeed');
+  assert.equal(
+    deviceApiPreflight.headers.get('access-control-allow-origin'),
+    expectedOrigin,
+    'postEvent: expected the deployment origin to be explicitly allowed by CORS'
+  );
+
   const deviceApiResponse = await fetch(deviceApiUrl, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       deviceId: '__device_harness_route_probe__',
-      eventType: 'POINT_TEAM_A',
-      deviceSKU: 'Pulse'
+      eventType: '__INVALID_DEVICE_HARNESS_PROBE__'
     })
   });
 
-  assert.equal(deviceApiResponse.status, 400, 'postEvent: expected backend validation for unknown probe device');
+  assert.equal(deviceApiResponse.status, 400, 'postEvent: expected invalid-event validation from the deployed function');
   const deviceApiPayload = await deviceApiResponse.json();
   assert.equal(deviceApiPayload.success, false, 'postEvent: expected structured backend error');
-  assert.match(deviceApiPayload.error || '', /Device not found/i, 'postEvent: expected request to reach the deployed Johannesburg function');
+  assert.match(deviceApiPayload.error || '', /Invalid eventType/i, 'postEvent: expected the request to reach the deployed Johannesburg function');
 
   for (const path of ['/overlay', '/overlay/zzzz', '/broadcast', '/broadcast/zzzz'])
   {
