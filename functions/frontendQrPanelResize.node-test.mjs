@@ -35,6 +35,12 @@ test("court QR is rendered to a pixel-snapped canvas with the logo baked into th
   assert.match(source, /const x0 = Math\.round\(column \* moduleScale\)/);
   assert.match(source, /const x1 = Math\.round\(\(column \+ 1\) \* moduleScale\)/);
   assert.match(source, /canvas\.className = "court-qr-canvas"/);
+  assert.match(source, /canvas\.className = "court-qr-logo-canvas"/);
+  assert.match(source, /createCourtQrLogoCanvas\(qrCanvas\.width\)/);
+  assert.match(source, /replaceChildren\(/);
+  assert.match(styles, /\.court-qr-code > \.court-qr-canvas[\s\S]*?image-rendering: pixelated;/);
+  assert.match(styles, /\.court-qr-code > \.court-qr-logo-canvas[\s\S]*?image-rendering: auto;/);
+  assert.match(styles, /\.court-qr-code > canvas[\s\S]*?position: absolute;/);
   assert.match(source, /function drawCourtQrLogo\(context, size\)/);
   assert.match(source, /context\.arc\(size \/ 2, size \/ 2/);
   assert.match(source, /context\.drawImage\(/);
