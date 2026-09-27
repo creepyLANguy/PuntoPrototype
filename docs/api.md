@@ -32,7 +32,9 @@ See firebase-environments.md.
 
 ### Function region
 
-All Cloud Functions are deployed to `africa-south1` (Johannesburg), including callable functions, device ingestion, the Firestore event trigger, and the public JSON read functions used by Firebase Hosting rewrites.
+Core Cloud Functions are deployed to `africa-south1` (Johannesburg), including callable functions, device ingestion, and the Firestore event trigger. The four public JSON read functions are deployed to both `africa-south1` and `europe-west1`; Firebase Hosting internally rewrites the public API paths to the `europe-west1` instances because Hosting function rewrites do not support `africa-south1`.
+
+Firebase Hosting remains global/CDN-based. Public API requests stay on the Hosting origin instead of issuing a client-visible redirect to a `cloudfunctions.net` URL.
 
 Firebase Hosting remains global/CDN-based; the region applies to the functions that receive rewritten public API requests.
 
@@ -103,7 +105,7 @@ The OpenAPI document remains the canonical machine-readable HTTP contract.
 | /stats/{courtId} | Match statistics JSON |
 | /momentum/{courtId} | Momentum JSON |
 
-Hosting routing is a deployment concern; the public API contract is maintained separately in the OpenAPI document. The canonical `/score`, `/revision`, `/stats` and `/momentum` paths are redirected by Firebase Hosting to their Johannesburg Cloud Function URLs.
+Hosting routing is a deployment concern; the public API contract is maintained separately in the OpenAPI document. The canonical `/score`, `/revision`, `/stats` and `/momentum` paths are rewritten internally by Firebase Hosting to the supported `europe-west1` public-function region.
 
 ## Change management
 
