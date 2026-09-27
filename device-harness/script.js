@@ -30,7 +30,8 @@ const state = {
   failure: {
     mode: "none",
     latencyMs: 1500,
-    timeoutMs: 3000
+    timeoutMs: 3000,
+    armed: false
   }
 };
 
@@ -370,7 +371,9 @@ function traceCodeClass(code) {
 async function executeDeviceRequest(body, label) {
   if (!requireMutationAccess()) return null;
 
-  const injection = { ...state.failure };
+  const injection = state.failure.armed
+    ? { ...state.failure }
+    : { mode: "none", latencyMs: state.failure.latencyMs, timeoutMs: state.failure.timeoutMs, armed: false };
   const attempts = 2;
   let finalResult = null;
 
@@ -450,6 +453,7 @@ async function executeDeviceRequest(body, label) {
   }
 
   state.failure.mode = "none";
+  state.failure.armed = false;
   updateFailureUi();
   if (finalResult?.payload?.eventId) {
     await waitForEventPropagation(finalResult.payload.eventId);
@@ -781,15 +785,23 @@ function init() {
   $("latencyMs").addEventListener("input", (event) => state.failure.latencyMs = Number(event.target.value) || 0);
   $("timeoutMs").addEventListener("input", (event) => state.failure.timeoutMs = Number(event.target.value) || 3000);
   $("networkResetBtn").addEventListener("click", () => {
-    state.failure = { mode: "none", latencyMs: 1500, timeoutMs: 3000 };
+    state.failure = { mode: "none", latencyMs: 1500, timeoutMs: 3000, armed: false };
     $("failureMode").value = "none";
     $("latencyMs").value = "1500";
     $("timeoutMs").value = "3000";
+    $("failNextBtn").textContent = "Arm next failure";
     updateFailureUi();
   });
   $("failNextBtn").addEventListener("click", () => {
-    $("failureMode").focus();
-    showToast("Choose the failure mode; it is consumed by the next request and cleared automatically.", "info");
+    const mode = $("failureMode").value;
+    if (mode === "none") {
+      showToast("Select a failure mode first.", "error");
+      $("failureMode").focus();
+      return;
+    }
+    state.failure.armed = true;
+    showToast("Armed: " + mode + " will apply to the next device request only.", "info");
+    $("failNextBtn").textContent = "Failure armed";
   });
   $("courtSelect").addEventListener("change", () => {
     state.selectedCourtId = $("courtSelect").value;
