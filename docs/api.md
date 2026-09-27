@@ -36,7 +36,6 @@ Core Cloud Functions are deployed to `africa-south1` (Johannesburg), including c
 
 Firebase Hosting remains global/CDN-based. Public API requests stay on the Hosting origin instead of issuing a client-visible redirect to a `cloudfunctions.net` URL.
 
-Firebase Hosting remains global/CDN-based; the region applies to the functions that receive rewritten public API requests.
 
 ## API compatibility policy
 
