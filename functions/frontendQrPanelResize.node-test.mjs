@@ -11,8 +11,8 @@ test("QR panel interaction stays frame-synced", () => {
   assert.match(source, /const scheduleQrPanelFrame =/);
   assert.match(source, /window\.requestAnimationFrame\(applyPendingQrPanelFrame\)/);
   assert.match(source, /panel\.style\.transform =/);
-  assert.match(source, /panel\.style\.width = \(resizeStartWidth \* nextScale\) \+ "px"/);
-  assert.match(source, /panel\.style\.height =/);
+  assert.match(source, /panel\.style\.width = nextWidth \+ "px"/);
+  assert.doesNotMatch(source, /panel\.style\.height =/);
   assert.match(source, /panel\.classList\.add\("resizing", "qr-panel-interacting"\)/);
   assert.match(source, /panel\.classList\.add\("dragging", "qr-panel-interacting"\)/);
   assert.match(source, /const stopInteraction =/);
