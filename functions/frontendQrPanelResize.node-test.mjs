@@ -107,15 +107,15 @@ test("QR resize updates one width value per animation frame", () => {
 });
 
 test("QR resize leaves QR canvases in place on release", () => {
-  assert.match(source, /if \(modeAtStop === "resize"\)\s*\{\s*clampCourtQrPanelToViewport\(\);\s*\}/);
+  assert.match(
+    source,
+    /if \(modeAtStop === "resize"\)\s*\{\s*clampCourtQrPanelToViewport\(\);\s*\}/,
+  );
   assert.doesNotMatch(source, /elements\.courtQrCode\.replaceChildren\(\s*refreshedQrCanvas/);
 });
 
 test("QR resize keeps the compositor hint on drag only", () => {
-  assert.match(
-    styles,
-    /\.court-qr-panel\.dragging\s*\{[\s\S]*?will-change:\s*transform;/,
-  );
+  assert.match(styles, /\.court-qr-panel\.dragging\s*\{[\s\S]*?will-change:\s*transform;/);
   assert.doesNotMatch(
     styles,
     /\.court-qr-panel\.qr-panel-interacting\s*\{[\s\S]*?will-change:\s*transform;/,
