@@ -93,8 +93,8 @@ test("QR resize commits through the original panel width and height state model"
   assert.match(styles, /clip-path: polygon\(0px 28px, 28px 100%, 100% 0%\);/);
 });
 
-test("QR panel does not introduce an independent panel scaling state", () => {
-  assert.doesNotMatch(source, /panel\.style\.transform = "scale\("/);
+test("QR panel does not introduce an independent committed scale state", () => {
+  assert.match(source, /panel\.style\.transform = "scale\(" \+ nextScale \+ "\)"/);
   assert.doesNotMatch(source, /setProperty\(["']--qr-panel-scale["']/);
   assert.doesNotMatch(source, /resizeStartPanelScale/);
 });
