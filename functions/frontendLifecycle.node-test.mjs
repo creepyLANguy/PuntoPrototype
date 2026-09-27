@@ -103,7 +103,7 @@ test("Changeover changes Beacon handling while Switch views remains visual-only"
   const changeoverTile = document.getElementById("changeoverTile");
   assert.notEqual(changeoverTile.style.display, "none");
   assert.equal(changeoverTile.querySelector("span").textContent, "Changeover");
-  assert.notEqual(document.getElementById("changeoverFloatingBtn").style.display, "none");
+  assert.equal(document.getElementById("changeoverFloatingBtn"), null);
 
   const switchViewsButton = document.getElementById("swapBtn");
   assert.equal(
@@ -119,21 +119,22 @@ test("Changeover changes Beacon handling while Switch views remains visual-only"
     "Switch views must not change backend Beacon handling",
   );
 
-  document.getElementById("settingsBtn").click();
-  await settle(10);
   document.getElementById("changeoverBtn").click();
 
   await waitFor(() => firestoreState.docs.get("courts/lifecourt").beaconSidesSwapped === true, {
     label: "Beacon changeover enabled from settings",
   });
+  await waitFor(() => document.getElementById("changeoverBtn").disabled === false, {
+    label: "Changeover button re-enabled",
+  });
+
+  document.getElementById("changeoverBtn").click();
+  await waitFor(() => firestoreState.docs.get("courts/lifecourt").beaconSidesSwapped === false, {
+    label: "Beacon changeover disabled from settings",
+  });
 
   document.getElementById("closeSettingsBtn").click();
   await settle(10);
-
-  document.getElementById("changeoverFloatingBtn").click();
-  await waitFor(() => firestoreState.docs.get("courts/lifecourt").beaconSidesSwapped === false, {
-    label: "Beacon changeover disabled from floating control",
-  });
 });
 
 test("shallow reset through the UI zeroes the scoreboard", async () => {
@@ -220,6 +221,6 @@ test("spectator sees live score updates pushed by other devices", async () => {
   assert.equal(document.getElementById("addPointA").style.pointerEvents, "none");
   assert.equal(document.getElementById("addPointB").style.pointerEvents, "none");
   assert.equal(document.getElementById("changeoverBtn").style.display, "none");
-  assert.equal(document.getElementById("changeoverFloatingBtn").style.display, "none");
+  assert.equal(document.getElementById("changeoverFloatingBtn"), null);
   assert.equal(document.getElementById("changeoverTile").style.display, "none");
 });
