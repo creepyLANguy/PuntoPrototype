@@ -5,7 +5,7 @@ const { resetCourt } = require("./callables/resetCourt");
 const { updateScoringOptions } = require("./callables/updateScoringOptions");
 const { getDetailedScore } = require("./callables/getDetailedScore");
 
-const { REGION } = require("./services/constants");
+const { REGION, PUBLIC_API_REGIONS } = require("./services/constants");
 const { postEvent } = require("./http/postEvent");
 const { getCourtScore } = require("./http/getCourtScore");
 const { getCourtScoreRevision } = require("./http/getCourtScoreRevision");
@@ -21,21 +21,21 @@ exports.getDetailedScore = onCall({ region: REGION }, getDetailedScore);
 exports.postEvent = onRequest({ region: REGION, invoker: "public" }, postEvent);
 
 exports.getCourtScore = onRequest(
-  { region: REGION, maxInstances: 2, invoker: "public" },
+  { region: PUBLIC_API_REGIONS, maxInstances: 2, invoker: "public" },
   getCourtScore,
 );
 
 exports.getCourtScoreRevision = onRequest(
-  { region: REGION, maxInstances: 2, invoker: "public" },
+  { region: PUBLIC_API_REGIONS, maxInstances: 2, invoker: "public" },
   getCourtScoreRevision,
 );
 
 exports.getCourtStats = onRequest(
-  { region: REGION, maxInstances: 2, invoker: "public" },
+  { region: PUBLIC_API_REGIONS, maxInstances: 2, invoker: "public" },
   getCourtStats,
 );
 
 exports.getCourtMomentum = onRequest(
-  { region: REGION, maxInstances: 2, invoker: "public" },
+  { region: PUBLIC_API_REGIONS, maxInstances: 2, invoker: "public" },
   getCourtMomentum,
 );
