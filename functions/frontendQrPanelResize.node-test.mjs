@@ -62,13 +62,10 @@ test("QR panel uses the custom pointer interaction instead of native CSS resize"
 test("QR interaction disables expensive paint effects while active", () => {
   assert.match(
     styles,
-    /\.court-qr-panel\.qr-panel-interacting\s*\{[\s\S]*?will-change:\s*transform;/,
-  );
-  assert.match(
-    styles,
     /\.court-qr-panel\.qr-panel-interacting\s*\{[\s\S]*?backdrop-filter:\s*none;/,
   );
   assert.match(styles, /\.court-qr-panel\.qr-panel-interacting\s*\{[\s\S]*?box-shadow:\s*none;/);
+  assert.match(styles, /\.court-qr-panel\.dragging\s*\{[\s\S]*?will-change:\s*transform;/);
 });
 
 test("QR panel pull tab looks and behaves like a resize handle", () => {
@@ -91,28 +88,36 @@ test("QR panel keeps the original corner resize element", () => {
   assert.match(source, /const resizeHandleZone = 28;/);
 });
 
-test("QR resize uses the same committed width and height model during preview and release", () => {
+test("QR resize updates one width value per animation frame", () => {
   assert.doesNotMatch(source, /resizeStartPanelScale/);
-  assert.doesNotMatch(source, /--qr-panel-scale/);
-  assert.match(source, /panel\.style\.width = \(resizeStartWidth \* nextScale\) \+ "px"/);
-  assert.match(source, /panel\.style\.height =/);
-  assert.match(source, /panel\.style\.width = \(resizeStartWidth \* scale\) \+ "px"/);
+  assert.match(source, /const calculateResizeWidth =/);
+  assert.match(source, /const nextWidth = pendingWidth/);
+  assert.match(source, /panel\.style\.width = nextWidth \+ "px"/);
+  assert.doesNotMatch(source, /panel\.style\.height =/);
   assert.match(source, /panel\.style\.transform = ""/);
-  assert.match(source, /const refreshedQrCanvas = createCourtQrCanvas\(refreshedQrUrl\)/);
+  assert.doesNotMatch(source, /createCourtQrCanvas\(refreshedQrUrl\)/);
+  assert.doesNotMatch(source, /createCourtQrLogoCanvas\(refreshedQrCanvas\.width\)/);
   assert.match(styles, /padding: 12px;/);
   assert.match(styles, /gap: 8px;/);
   assert.match(styles, /border-radius: 12px;/);
   assert.match(styles, /width: 28px;/);
   assert.match(styles, /clip-path: polygon\(0px 28px, 28px 100%, 100% 0%\);/);
   assert.match(styles, /min-width: 130px;/);
-  assert.match(source, /const resizeMinWidth = 130;/);
+  assert.doesNotMatch(styles, /--qr-panel-scale/);
 });
 
-test("QR resize does not use a transform-only preview that can diverge on release", () => {
-  assert.doesNotMatch(
-    source,
-    /interactionMode === "resize"[\s\S]{0,350}style\.transform = "scale\("/,
+test("QR resize leaves QR canvases in place on release", () => {
+  assert.match(source, /if \(modeAtStop === "resize"\)\s*\{\s*clampCourtQrPanelToViewport\(\);\s*\}/);
+  assert.doesNotMatch(source, /elements\.courtQrCode\.replaceChildren\(\s*refreshedQrCanvas/);
+});
+
+test("QR resize keeps the compositor hint on drag only", () => {
+  assert.match(
+    styles,
+    /\.court-qr-panel\.dragging\s*\{[\s\S]*?will-change:\s*transform;/,
   );
-  assert.doesNotMatch(source, /setProperty\(["']--qr-panel-scale["']/);
-  assert.doesNotMatch(source, /resizeStartPanelScale/);
+  assert.doesNotMatch(
+    styles,
+    /\.court-qr-panel\.qr-panel-interacting\s*\{[\s\S]*?will-change:\s*transform;/,
+  );
 });
