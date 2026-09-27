@@ -4167,7 +4167,7 @@ document.addEventListener("DOMContentLoaded", () =>
 
     const parentRect = elements.scoreboardPage.getBoundingClientRect();
     const safeGap = 8;
-    const minSize = 72;
+    const minSize = 130;
     const panelAspectRatio = 1.24;
 
     const maxWidth = Math.max(minSize, parentRect.width - safeGap * 2);
@@ -4497,7 +4497,9 @@ document.addEventListener("DOMContentLoaded", () =>
 
       if (interactionMode === "resize" && nextScale !== null)
       {
-        panel.style.transform = "scale(" + nextScale + ")";
+        panel.style.width = (resizeStartWidth * nextScale) + "px";
+        panel.style.height =
+          (resizeStartWidth * resizeAspectRatio * nextScale) + "px";
       }
     };
 
@@ -4543,7 +4545,11 @@ document.addEventListener("DOMContentLoaded", () =>
       const deltaY = clientY - resizeStartY;
       const requestedWidth =
         resizeStartWidth + Math.max(deltaX, deltaY / resizeAspectRatio);
-      const width = Math.max(72, Math.min(maxWidth, requestedWidth));
+      const resizeMinWidth = 130;
+      const width = Math.max(
+        resizeMinWidth,
+        Math.min(maxWidth, requestedWidth)
+      );
 
       return resizeStartWidth > 0 ? width / resizeStartWidth : 1;
     };
