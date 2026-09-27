@@ -74,9 +74,13 @@ test("QR panel pull tab looks and behaves like a resize handle", () => {
   assert.match(source, /const resizeHandleZone = 28;/);
 });
 
-test("legacy CSS logo overlay is disabled when the SVG QR is active", () => {
-  assert.match(styles, /\.court-qr-code\.has-svg-qr::after\s*\{\s*display: none;/);
-  assert.match(styles, /\.court-qr-code > svg\s*\{/);
+test("QR panel keeps the original corner resize element", () => {
+  assert.match(styles, /\.pull-tab\s*\{/);
+  assert.match(styles, /width: 28px;/);
+  assert.match(styles, /height: 28px;/);
+  assert.match(styles, /clip-path: polygon\(0px 28px, 28px 100%, 100% 0%\);/);
+  assert.match(styles, /cursor: nwse-resize;/);
+  assert.match(source, /const resizeHandleZone = 28;/);
 });
 
 test("QR resize commits through the original panel width and height state model", () => {
