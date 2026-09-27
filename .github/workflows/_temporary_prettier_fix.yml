@@ -1,0 +1,36 @@
+name: Temporary Prettier Fix
+
+on:
+  push:
+    branches:
+      - fix/deploy-prettier
+
+permissions:
+  contents: write
+
+jobs:
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: functions/package-lock.json
+
+      - run: npm ci --prefix functions
+      - run: npm run format --prefix functions
+
+      - name: Commit formatted files and remove temporary workflow
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add functions/callables/changeoverCourt.js functions/frontendLifecycle.node-test.mjs functions/index.test.js
+          git commit -m "chore: format functions" || true
+          git rm .github/workflows/_temporary_prettier_fix.yml
+          git commit -m "chore: remove temporary formatting workflow"
+          git push
