@@ -1045,11 +1045,32 @@ document.addEventListener("DOMContentLoaded", () =>
     {
       document.body.style.setProperty("--teamAcolour", customColours.A);
       document.body.style.setProperty("--teamBcolour", customColours.B);
+      updateAdminToolButtonTextColours(customColours);
       return;
     }
 
+    const defaultColours = DEFAULT_TEAM_COLOURS[activeTheme];
     document.body.style.removeProperty("--teamAcolour");
     document.body.style.removeProperty("--teamBcolour");
+    updateAdminToolButtonTextColours(defaultColours);
+  }
+
+  function updateAdminToolButtonTextColours(colours)
+  {
+    if (!colours?.A || !colours?.B) return;
+
+    const nfcToolButton = document.getElementById("nfcToolBtn");
+    const deviceHarnessButton = document.getElementById("deviceHarnessBtn");
+
+    if (nfcToolButton)
+    {
+      nfcToolButton.style.color = getReadableTextColourForBackground(colours.B);
+    }
+
+    if (deviceHarnessButton)
+    {
+      deviceHarnessButton.style.color = getReadableTextColourForBackground(colours.A);
+    }
   }
 
   function setTeamColour(team, colour)
@@ -1175,6 +1196,14 @@ document.addEventListener("DOMContentLoaded", () =>
   {
     const averageLuminance = (getRelativeLuminance(colours.A) + getRelativeLuminance(colours.B)) / 2;
     return averageLuminance > 0.45 ? "#000000" : "#ffffff";
+  }
+
+  function getReadableTextColourForBackground(hexColour)
+  {
+    const luminance = getRelativeLuminance(hexColour);
+    const whiteContrast = 1.05 / (luminance + 0.05);
+    const blackContrast = (luminance + 0.05) / 0.05;
+    return whiteContrast >= blackContrast ? "#ffffff" : "#000000";
   }
 
   function getRelativeLuminance(hexColour)
