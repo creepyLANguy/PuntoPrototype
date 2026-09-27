@@ -454,6 +454,7 @@ async function executeDeviceRequest(body, label) {
 
   state.failure.mode = "none";
   state.failure.armed = false;
+  $("failNextBtn").textContent = "Arm next failure";
   updateFailureUi();
   if (finalResult?.payload?.eventId) {
     await waitForEventPropagation(finalResult.payload.eventId);
