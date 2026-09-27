@@ -711,6 +711,46 @@ describe("onEventCreate - undo vs checkpoints", () => {
 });
 
 describe("postEvent", () => {
+  test("serves CORS preflight for the Device Lab origins without touching Firestore", async () => {
+    mockDb = new FakeFirestore({});
+
+    let postEvent;
+    jest.isolateModules(() => {
+      ({ postEvent } = require("./index"));
+    });
+
+    const headers = {};
+    const res = {
+      statusCode: null,
+      body: null,
+      status(code) {
+        this.statusCode = code;
+        return this;
+      },
+      set(key, value) {
+        headers[key] = value;
+        return this;
+      },
+      send(body) {
+        this.body = body;
+        return this;
+      },
+    };
+
+    await postEvent(
+      {
+        method: "OPTIONS",
+        headers: { origin: "https://qa.padelpush.co.za" },
+      },
+      res,
+    );
+
+    expect(res.statusCode).toBe(204);
+    expect(headers["Access-Control-Allow-Origin"]).toBe("https://qa.padelpush.co.za");
+    expect(headers["Access-Control-Allow-Methods"]).toBe("POST, OPTIONS");
+    expect(headers["Access-Control-Allow-Headers"]).toBe("Content-Type");
+  });
+
   test("stamps device scoring events with the court's active scoreVersion", async () => {
     const courtId = "court-1";
     const deviceId = "device-1";

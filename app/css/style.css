@@ -4346,6 +4346,16 @@ body.light-mode .activate-nfc-btn:hover {
   filter: brightness(1.25);
 }
 
+#deviceHarnessBtn {
+  background: var(--teamAcolour);
+  border-color: var(--teamAcolour);
+  color: #fff;
+}
+
+#deviceHarnessBtn:hover {
+  filter: brightness(1.25);
+}
+
 @media (orientation: landscape) and (max-height: 520px) {
   .admin-dashboard-header {
     margin-bottom: 6px;

@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <base href="/device-harness/" />
+  <title>Device Test Harness | Padel Push™</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="productionGate" class="gate hidden">
+    <div class="gate-card">
+      <div class="eyebrow">LIVE PRODUCTION</div>
+      <h1>Production device simulation</h1>
+      <p>This harness will send real device events into the production Padel Push backend and can change live court state.</p>
+      <label class="check-row">
+        <input id="productionAck" type="checkbox" />
+        <span>I understand that these actions affect production data.</span>
+      </label>
+      <button id="productionEnableBtn" class="btn danger" disabled>Enable production mutations</button>
+      <a href="../app/" class="link-btn">Back to Admin</a>
+    </div>
+  </div>
+
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar">
+      <div class="brand">
+        <div class="brand-mark">PP</div>
+        <div>
+          <div class="brand-title">Padel Push™</div>
+          <div class="brand-subtitle">Device Test Harness</div>
+        </div>
+      </div>
+
+      <div class="sidebar-heading">Devices <span id="deviceCount">0</span></div>
+      <div id="deviceList" class="device-list"></div>
+
+      <button id="addVirtualDeviceBtn" class="btn brand-btn">+ Add virtual device</button>
+      <a href="../app/" class="back-link">← Back to Admin</a>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div>
+          <div class="eyebrow">REAL BACKEND</div>
+          <h1>Device Test Harness</h1>
+          <p>Simulate Hub, Beacon and Pulse without physical hardware.</p>
+        </div>
+        <div class="top-actions">
+          <div id="environmentBadge" class="env-badge">Detecting environment…</div>
+          <select id="courtSelect" class="select"></select>
+          <button id="clearTraceBtn" class="btn secondary">Clear trace</button>
+        </div>
+      </header>
+
+      <section class="status-grid">
+        <div class="stat-card"><span>Environment</span><strong id="envValue">—</strong></div>
+        <div class="stat-card"><span>Backend path</span><strong>/device-api/postEvent</strong></div>
+        <div class="stat-card"><span>Region</span><strong>africa-south1</strong></div>
+        <div class="stat-card"><span>Selected device</span><strong id="selectedDeviceValue">—</strong></div>
+        <div class="stat-card"><span>Selected court</span><strong id="selectedCourtValue">—</strong></div>
+      </section>
+
+      <section class="workspace">
+        <div class="left-column">
+          <section class="panel device-panel">
+            <div class="panel-header">
+              <div>
+                <div class="eyebrow">DEVICE</div>
+                <h2 id="deviceTitle">No device selected</h2>
+              </div>
+              <div id="deviceStatus" class="status-pill">—</div>
+            </div>
+            <div id="deviceIdentity" class="identity-grid"></div>
+
+            <div class="panel-divider"></div>
+            <div class="section-title-row">
+              <h3>Local device state</h3>
+              <span>Session-only simulator state</span>
+            </div>
+            <div id="localStatePanel" class="local-state-grid"></div>
+
+            <div class="panel-divider"></div>
+            <div class="section-title-row">
+              <h3>Device controls</h3>
+              <span>Mirrors the current firmware behaviour</span>
+            </div>
+            <div id="deviceControls" class="controls-grid"></div>
+            <div id="controlHint" class="hint"></div>
+          </section>
+
+          <section class="panel trace-panel">
+            <div class="panel-header compact">
+              <div>
+                <div class="eyebrow">OBSERVABILITY</div>
+                <h2>Network trace</h2>
+              </div>
+              <div class="trace-actions">
+                <button id="failNextBtn" class="btn warning">Arm next failure</button>
+                <button id="networkResetBtn" class="btn secondary">Reset injection</button>
+              </div>
+            </div>
+
+            <div class="failure-panel">
+              <div class="failure-main">
+                <label>
+                  Failure mode
+                  <select id="failureMode" class="select">
+                    <option value="none">Healthy</option>
+                    <option value="latency">Artificial latency</option>
+                    <option value="timeout">Timeout</option>
+                    <option value="connection_reset">Connection reset / dropped request</option>
+                    <option value="http_500">Synthetic HTTP 500</option>
+                    <option value="http_401">Synthetic HTTP 401</option>
+                    <option value="http_403">Synthetic HTTP 403</option>
+                    <option value="malformed">Malformed JSON response</option>
+                    <option value="duplicate">Duplicate next request</option>
+                  </select>
+                </label>
+                <label id="latencyControl" class="hidden">
+                  Latency
+                  <input id="latencyMs" class="number-input" type="number" min="0" max="15000" step="100" value="1500" />
+                  <span class="inline-unit">ms</span>
+                </label>
+                <label id="timeoutControl" class="hidden">
+                  Timeout
+                  <input id="timeoutMs" class="number-input" type="number" min="100" max="15000" step="100" value="3000" />
+                  <span class="inline-unit">ms</span>
+                </label>
+              </div>
+              <div class="failure-description" id="failureDescription">
+                Normal requests are sent to the real backend.
+              </div>
+            </div>
+
+            <div id="traceList" class="trace-list"></div>
+          </section>
+        </div>
+
+        <div class="right-column">
+          <section class="panel court-panel">
+            <div class="panel-header compact">
+              <div>
+                <div class="eyebrow">LIVE FIRESTORE STATE</div>
+                <h2 id="courtTitle">No court selected</h2>
+              </div>
+              <div class="live-pill">● LIVE</div>
+            </div>
+            <div id="courtMeta" class="court-meta"></div>
+            <div id="scoreState" class="score-state"></div>
+            <div class="panel-divider"></div>
+            <div class="section-title-row">
+              <h3>Recent court events</h3>
+              <span>Latest 20</span>
+            </div>
+            <div id="courtEvents" class="court-events"></div>
+          </section>
+
+          <section class="panel request-panel">
+            <div class="panel-header compact">
+              <div>
+                <div class="eyebrow">REQUEST / RESPONSE</div>
+                <h2>Selected exchange</h2>
+              </div>
+              <span id="selectedTraceTime" class="muted">—</span>
+            </div>
+            <pre id="exchangeDetail" class="code-block">Select a trace entry.</pre>
+          </section>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <dialog id="deviceDialog" class="dialog">
+    <form method="dialog" id="deviceForm">
+      <div class="panel-header compact">
+        <div>
+          <div class="eyebrow">VIRTUAL HARDWARE</div>
+          <h2>Add virtual device</h2>
+        </div>
+        <button value="cancel" class="icon-btn" aria-label="Close">×</button>
+      </div>
+      <label>Device ID
+        <input id="virtualDeviceId" class="text-input" required placeholder="SIM-HUB-001" />
+      </label>
+      <label>Type
+        <select id="virtualDeviceSku" class="select" required>
+          <option>Hub</option>
+          <option>Beacon</option>
+          <option>Pulse</option>
+        </select>
+      </label>
+      <label>Mapped court
+        <select id="virtualDeviceCourt" class="select" required></select>
+      </label>
+      <div class="dialog-actions">
+        <button value="cancel" class="btn secondary">Cancel</button>
+        <button id="createVirtualDeviceBtn" value="default" class="btn brand-btn">Create device</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="actionDialog" class="dialog">
+    <form method="dialog" id="actionForm">
+      <div class="panel-header compact">
+        <div>
+          <div class="eyebrow">ACTION PARAMETERS</div>
+          <h2 id="actionDialogTitle">Device action</h2>
+        </div>
+        <button value="cancel" class="icon-btn" aria-label="Close">×</button>
+      </div>
+      <div id="actionDialogBody"></div>
+      <div class="dialog-actions">
+        <button value="cancel" class="btn secondary">Cancel</button>
+        <button id="actionConfirmBtn" value="default" class="btn brand-btn">Send action</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script type="module" src="script.js"></script>
+</body>
+</html>

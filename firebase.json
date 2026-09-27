@@ -118,6 +118,14 @@
         "destination": "/nfc/index.html"
       },
       {
+        "source": "/device-harness",
+        "destination": "/device-harness/index.html"
+      },
+      {
+        "source": "/device-harness/**",
+        "destination": "/device-harness/index.html"
+      },
+      {
         "source": "**",
         "destination": "/index.html"
       }

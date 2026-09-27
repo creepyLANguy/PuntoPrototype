@@ -8,6 +8,7 @@ on:
       - "app/**"
       - "nfc/**"
       - "media/**"
+      - "device-harness/**"
       - "scripts/**"
       - "firebase.json"
       - ".firebaserc"
@@ -83,7 +84,9 @@ jobs:
             --token "$FIREBASE_TOKEN"
 
       - name: Smoke-test public endpoints
-        run: node scripts/smoke-test-public-routes.mjs https://www.padelpush.co.za
+        env:
+          FIREBASE_PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID_PRODUCTION }}
+        run: node scripts/smoke-test-public-routes.mjs https://www.padelpush.co.za "$FIREBASE_PROJECT_ID"
 
   deploy_staging:
     if: github.event_name == 'push' && github.ref != 'refs/heads/main'
@@ -141,4 +144,6 @@ jobs:
             --token "$FIREBASE_TOKEN"
 
       - name: Smoke-test public endpoints
-        run: node scripts/smoke-test-public-routes.mjs https://qa.padelpush.co.za
+        env:
+          FIREBASE_PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID_STAGING }}
+        run: node scripts/smoke-test-public-routes.mjs https://qa.padelpush.co.za "$FIREBASE_PROJECT_ID"
