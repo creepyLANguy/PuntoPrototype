@@ -1410,7 +1410,6 @@ document.addEventListener("DOMContentLoaded", () =>
     backBtn: $("backBtn"),
     swapBtn: $("swapBtn"),
     changeoverBtn: $("changeoverBtn"),
-    changeoverFloatingBtn: $("changeoverFloatingBtn"),
     changeoverTile: $("changeoverTile"),
     muteBtn: $("muteBtn"),
     fullscreenBtn: $("fullscreenBtn"),
@@ -6223,7 +6222,7 @@ document.addEventListener("DOMContentLoaded", () =>
     syncSettingsTiles();
   });
 
-  async function performBeaconChangeover(button)
+  async function performBeaconChangeover()
   {
     if (!currentCourtId || isSpectating) return;
 
@@ -6232,7 +6231,6 @@ document.addEventListener("DOMContentLoaded", () =>
     try
     {
       if (elements.changeoverBtn) elements.changeoverBtn.disabled = true;
-      if (elements.changeoverFloatingBtn) elements.changeoverFloatingBtn.disabled = true;
 
       await requestBeaconChangeover(currentCourtId, nextBeaconSidesSwapped);
       beaconSidesSwapped = nextBeaconSidesSwapped;
@@ -6252,18 +6250,12 @@ document.addEventListener("DOMContentLoaded", () =>
     finally
     {
       if (elements.changeoverBtn) elements.changeoverBtn.disabled = false;
-      if (elements.changeoverFloatingBtn) elements.changeoverFloatingBtn.disabled = false;
     }
   }
 
   elements.changeoverBtn.addEventListener("click", () =>
   {
-    void performBeaconChangeover(elements.changeoverBtn);
-  });
-
-  elements.changeoverFloatingBtn.addEventListener("click", () =>
-  {
-    void performBeaconChangeover(elements.changeoverFloatingBtn);
+    void performBeaconChangeover();
   });
 
   // =====================================================
