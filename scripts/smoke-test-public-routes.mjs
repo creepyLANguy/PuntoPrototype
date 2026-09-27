@@ -3,11 +3,19 @@
 import assert from 'node:assert/strict';
 
 const base = (process.argv[2] || '').replace(/\/$/, '');
+const firebaseProjectId = process.argv[3] || '';
 
 if (!base)
 {
-  throw new Error('Usage: node scripts/smoke-test-public-routes.mjs <public-origin>');
+  throw new Error('Usage: node scripts/smoke-test-public-routes.mjs <public-origin> <firebase-project-id>');
 }
+
+if (!firebaseProjectId)
+{
+  throw new Error('A Firebase project ID is required so the smoke test can probe the real Johannesburg postEvent function.');
+}
+
+const deviceApiUrl = 'https://africa-south1-' + firebaseProjectId + '.cloudfunctions.net/postEvent';
 
 async function request(path)
 {
@@ -53,7 +61,7 @@ async function main()
 
   assertHtml(await request('/device-harness/index.html'), deviceHarnessMarker, '/device-harness/index.html');
 
-  const deviceApiResponse = await fetch(base + '/device-api/postEvent', {
+  const deviceApiResponse = await fetch(deviceApiUrl, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -63,10 +71,10 @@ async function main()
     })
   });
 
-  assert.equal(deviceApiResponse.status, 400, 'device-api/postEvent: expected backend validation for unknown probe device');
+  assert.equal(deviceApiResponse.status, 400, 'postEvent: expected backend validation for unknown probe device');
   const deviceApiPayload = await deviceApiResponse.json();
-  assert.equal(deviceApiPayload.success, false, 'device-api/postEvent: expected structured backend error');
-  assert.match(deviceApiPayload.error || '', /Device not found/i, 'device-api/postEvent: expected request to reach postEvent');
+  assert.equal(deviceApiPayload.success, false, 'postEvent: expected structured backend error');
+  assert.match(deviceApiPayload.error || '', /Device not found/i, 'postEvent: expected request to reach the deployed Johannesburg function');
 
   for (const path of ['/overlay', '/overlay/zzzz', '/broadcast', '/broadcast/zzzz'])
   {
