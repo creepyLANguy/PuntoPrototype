@@ -22,3 +22,7 @@ jobs:
       - name: Run unit, frontend, and OpenAPI contract tests
         working-directory: functions
         run: npm test
+      - name: Validate Device Lab browser modules
+        run: |
+          node --check device-harness/script.js
+          node --check device-harness/device-profiles.js
