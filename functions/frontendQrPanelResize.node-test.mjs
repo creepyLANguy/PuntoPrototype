@@ -27,13 +27,21 @@ test("QR panel interaction stays frame-synced and compositor-driven", () => {
   assert.doesNotMatch(pointerMoveBlock, /clientHeight/);
 });
 
-test("court QR is rendered as one SVG tree containing both QR modules and logo", () => {
-  assert.match(source, /function createCourtQrSvg\(qrUrl\)/);
+test("court QR is rendered to a pixel-snapped canvas with the logo baked into the same surface", () => {
+  assert.match(source, /function createCourtQrCanvas\(qrUrl\)/);
   assert.match(source, /matrix = qr\?\._oQRCode/);
-  assert.match(source, /setAttribute\("shape-rendering", "crispEdges"\)/);
-  assert.match(source, /logoBackground = document\.createElementNS/);
-  assert.match(source, /logoImage = document\.createElementNS/);
-  assert.match(source, /logoImage\.setAttribute\("href", "\/media\/logo\.svg"\)/);
+  assert.match(source, /const devicePixelRatio = Math\.max\(1, window\.devicePixelRatio \|\| 1\)/);
+  assert.match(source, /context\.imageSmoothingEnabled = false/);
+  assert.match(source, /const x0 = Math\.round\(column \* moduleScale\)/);
+  assert.match(source, /const x1 = Math\.round\(\(column \+ 1\) \* moduleScale\)/);
+  assert.match(source, /canvas\.className = "court-qr-canvas"/);
+  assert.match(source, /function drawCourtQrLogo\(context, size\)/);
+  assert.match(source, /context\.arc\(size \/ 2, size \/ 2/);
+  assert.match(source, /context\.drawImage\(/);
+  assert.match(source, /courtQrLogoImage = typeof window\.Image === "function"/);
+  assert.doesNotMatch(source, /function createCourtQrSvg\(qrUrl\)/);
+  assert.doesNotMatch(styles, /\.court-qr-code::after/);
+  assert.doesNotMatch(styles, /\.court-qr-code > svg/);
 });
 
 test("QR panel uses the custom pointer interaction instead of native CSS resize", () => {
@@ -69,4 +77,24 @@ test("QR panel pull tab looks and behaves like a resize handle", () => {
 test("legacy CSS logo overlay is disabled when the SVG QR is active", () => {
   assert.match(styles, /\.court-qr-code\.has-svg-qr::after\s*\{\s*display: none;/);
   assert.match(styles, /\.court-qr-code > svg\s*\{/);
+});
+
+test("QR resize commits through the original panel width and height state model", () => {
+  assert.doesNotMatch(source, /resizeStartPanelScale/);
+  assert.doesNotMatch(source, /--qr-panel-scale/);
+  assert.match(source, /panel\.style\.width = \(resizeStartWidth \* scale\) \+ "px"/);
+  assert.match(source, /panel\.style\.height =/);
+  assert.match(source, /panel\.style\.transform = ""/);
+  assert.match(source, /const refreshedQrCanvas = createCourtQrCanvas\(buildCourtQrUrl\(currentCourtId\)\)/);
+  assert.match(styles, /padding: 12px;/);
+  assert.match(styles, /gap: 8px;/);
+  assert.match(styles, /border-radius: 12px;/);
+  assert.match(styles, /width: 28px;/);
+  assert.match(styles, /clip-path: polygon\(0px 28px, 28px 100%, 100% 0%\);/);
+});
+
+test("QR panel does not introduce an independent panel scaling state", () => {
+  assert.doesNotMatch(source, /panel\.style\.transform = "scale\("/);
+  assert.doesNotMatch(source, /--qr-panel-scale/);
+  assert.doesNotMatch(styles, /var\(--qr-panel-scale/);
 });
