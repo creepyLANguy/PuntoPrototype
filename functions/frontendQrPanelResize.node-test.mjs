@@ -6,11 +6,13 @@ const source = readFileSync(new URL("../app/js/script.js", import.meta.url), "ut
 const styles = readFileSync(new URL("../app/css/style.css", import.meta.url), "utf8");
 const brand = readFileSync(new URL("../app/js/brand.mjs", import.meta.url), "utf8");
 
-test("QR panel interaction stays frame-synced and compositor-driven", () => {
+test("QR panel interaction stays frame-synced", () => {
   assert.match(source, /function initializeCourtQrPanelInteractions\(\)/);
   assert.match(source, /const scheduleQrPanelFrame =/);
   assert.match(source, /window\.requestAnimationFrame\(applyPendingQrPanelFrame\)/);
   assert.match(source, /panel\.style\.transform =/);
+  assert.match(source, /panel\.style\.width = \(resizeStartWidth \* nextScale\) \+ "px"/);
+  assert.match(source, /panel\.style\.height =/);
   assert.match(source, /panel\.classList\.add\("resizing", "qr-panel-interacting"\)/);
   assert.match(source, /panel\.classList\.add\("dragging", "qr-panel-interacting"\)/);
   assert.match(source, /const stopInteraction =/);
@@ -89,22 +91,28 @@ test("QR panel keeps the original corner resize element", () => {
   assert.match(source, /const resizeHandleZone = 28;/);
 });
 
-test("QR resize commits through the original panel width and height state model", () => {
+test("QR resize uses the same committed width and height model during preview and release", () => {
   assert.doesNotMatch(source, /resizeStartPanelScale/);
   assert.doesNotMatch(source, /--qr-panel-scale/);
-  assert.match(source, /panel\.style\.width = \(resizeStartWidth \* scale\) \+ "px"/);
+  assert.match(source, /panel\.style\.width = \(resizeStartWidth \* nextScale\) \+ "px"/);
   assert.match(source, /panel\.style\.height =/);
+  assert.match(source, /panel\.style\.width = \(resizeStartWidth \* scale\) \+ "px"/);
   assert.match(source, /panel\.style\.transform = ""/);
-  assert.match(source, /const refreshedQrCanvas = createCourtQrCanvas\(buildCourtQrUrl\(currentCourtId\)\)/);
+  assert.match(source, /const refreshedQrCanvas = createCourtQrCanvas\(refreshedQrUrl\)/);
   assert.match(styles, /padding: 12px;/);
   assert.match(styles, /gap: 8px;/);
   assert.match(styles, /border-radius: 12px;/);
   assert.match(styles, /width: 28px;/);
   assert.match(styles, /clip-path: polygon\(0px 28px, 28px 100%, 100% 0%\);/);
+  assert.match(styles, /min-width: 130px;/);
+  assert.match(source, /const resizeMinWidth = 130;/);
 });
 
-test("QR panel does not introduce an independent committed scale state", () => {
-  assert.match(source, /panel\.style\.transform = "scale\(" \+ nextScale \+ "\)"/);
+test("QR resize does not use a transform-only preview that can diverge on release", () => {
+  assert.doesNotMatch(
+    source,
+    /interactionMode === "resize"[\s\S]{0,350}style\.transform = "scale\("/,
+  );
   assert.doesNotMatch(source, /setProperty\(["']--qr-panel-scale["']/);
   assert.doesNotMatch(source, /resizeStartPanelScale/);
 });
