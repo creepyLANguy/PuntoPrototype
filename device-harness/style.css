@@ -145,3 +145,7 @@ h1, h2, h3, p { margin: 0; }
   .controls-grid { grid-template-columns: 1fr; }
   .trace-row { grid-template-columns: 70px 65px minmax(0,1fr) 40px; padding-left: 12px; padding-right: 12px; }
 }
+.toast { position: fixed; right: 22px; bottom: 22px; z-index: 120; max-width: 420px; padding: 11px 14px; border-radius: 10px; background: #111827; color: #fff; box-shadow: 0 15px 40px rgba(0,0,0,.2); font-size: 11px; font-weight: 800; }
+.toast.error { background: #991b1b; }
+.toast.success { background: #166534; }
+.toast.info { background: #1e3a8a; }
