@@ -106,12 +106,28 @@ test("QR resize updates one width value per animation frame", () => {
   assert.doesNotMatch(styles, /--qr-panel-scale/);
 });
 
-test("QR resize leaves QR canvases in place on release", () => {
+test("QR resize leaves QR canvases in place on release and rerasterizes only the logo", () => {
+  assert.match(source, /function getCourtQrBackingSize\(\)/);
+  assert.match(source, /const backingSize = getCourtQrBackingSize\(\);/);
+  assert.match(source, /function rerasterizeCourtQrLogoAtCurrentSize\(\)/);
+  assert.match(source, /elements\.courtQrCode\?\.querySelector\("\.court-qr-logo-canvas"\)/);
+  assert.match(source, /if \(canvas\.width === backingSize && canvas\.height === backingSize\)/);
+  assert.match(source, /canvas\.width = backingSize;/);
+  assert.match(source, /canvas\.height = backingSize;/);
+  assert.match(source, /drawCourtQrLogo\(context, backingSize\);/);
   assert.match(
     source,
-    /if \(modeAtStop === "resize"\)\s*\{\s*clampCourtQrPanelToViewport\(\);\s*\}/,
+    /if \(modeAtStop === "resize"\)\s*\{\s*clampCourtQrPanelToViewport\(\);\s*rerasterizeCourtQrLogoAtCurrentSize\(\);\s*\}/,
   );
   assert.doesNotMatch(source, /elements\.courtQrCode\.replaceChildren\(\s*refreshedQrCanvas/);
+
+  const pointerMoveStart = source.indexOf(
+    '    document.addEventListener("pointermove", (event) =>',
+  );
+  const pointerMoveEnd = source.indexOf("    const stopInteractionFromPointer", pointerMoveStart);
+  assert.ok(pointerMoveStart >= 0 && pointerMoveEnd > pointerMoveStart);
+  const pointerMoveBlock = source.slice(pointerMoveStart, pointerMoveEnd);
+  assert.doesNotMatch(pointerMoveBlock, /rerasterizeCourtQrLogoAtCurrentSize/);
 });
 
 test("QR resize keeps the compositor hint on drag only", () => {
