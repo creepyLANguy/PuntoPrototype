@@ -8,12 +8,36 @@ const {
   normalizeScoreVersion,
 } = require("../domain/events/validation");
 
+const ALLOWED_BROWSER_ORIGINS = new Set([
+  "https://qa.padelpush.co.za",
+  "https://www.padelpush.co.za",
+  "https://padelpush.co.za",
+  "http://localhost:5000",
+  "http://127.0.0.1:5000",
+]);
+
+function applyCors(req, res) {
+  const origin = req.get("Origin");
+  if (origin && ALLOWED_BROWSER_ORIGINS.has(origin)) {
+    res.set("Access-Control-Allow-Origin", origin);
+    res.set("Vary", "Origin");
+  }
+  res.set("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.set("Access-Control-Allow-Headers", "Content-Type");
+}
+
 function sendJson(res, status, body) {
   return res.status(status).json(body);
 }
 
 async function postEvent(req, res) {
+  applyCors(req, res);
+
   try {
+    if (req.method === "OPTIONS") {
+      return res.status(204).send("");
+    }
+
     if (req.method !== "POST") {
       return sendJson(res, 405, { success: false, error: "Method not allowed" });
     }
