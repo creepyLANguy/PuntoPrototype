@@ -843,10 +843,7 @@ describe("postEvent", () => {
       .filter(([path]) => path.startsWith(`courts/${courtId}/events/`))
       .map(([, data]) => data);
 
-    expect(events.map((event) => event.eventType)).toEqual([
-      "POINT_TEAM_B",
-      "POINT_TEAM_A",
-    ]);
+    expect(events.map((event) => event.eventType)).toEqual(["POINT_TEAM_B", "POINT_TEAM_A"]);
     expect(events.every((event) => event.beaconSidesSwapped === true)).toBe(true);
     expect(events[0].sourceEventType).toBe("POINT_TEAM_A");
     expect(events[1].sourceEventType).toBe("POINT_TEAM_B");
