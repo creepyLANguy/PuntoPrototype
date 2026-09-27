@@ -19,9 +19,6 @@ jobs:
       - name: Install dependencies
         working-directory: functions
         run: npm ci
-      - name: Format QR resize regression test in CI scratch
-        working-directory: functions
-        run: npx prettier --write frontendQrPanelResize.node-test.mjs && cat frontendQrPanelResize.node-test.mjs
       - name: Run Functions format check
         working-directory: functions
         run: npm run format:check
