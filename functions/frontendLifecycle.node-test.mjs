@@ -20,6 +20,7 @@ import {
 
 let document;
 let window;
+let changeoverEventCounter = 0;
 
 test.before(async () => {
   seedBaseData();
@@ -29,13 +30,17 @@ test.before(async () => {
   callableHandlers.set("changeoverCourt", async ({ courtId, beaconSidesSwapped }) => {
     const courtPath = `courts/${courtId}`;
     const court = firestoreState.docs.get(courtPath) || {};
+    const changeoverEventId = `changeover-${++changeoverEventCounter}`;
 
     writeDoc(courtPath, {
       ...court,
       beaconSidesSwapped,
+      changeoverEvent: {
+        id: changeoverEventId,
+      },
     });
 
-    return { data: { courtId, beaconSidesSwapped } };
+    return { data: { courtId, beaconSidesSwapped, changeoverEventId } };
   });
 
   // Mimic the resetCourt Cloud Function: zero the score, clear the event log,
@@ -93,7 +98,7 @@ test("set win: winning a set fills a set dot and shows the celebration overlay",
   overlay.click(); // dismiss
 });
 
-test("Changeover changes Beacon handling while Switch views remains visual-only", async () => {
+test("Changeover flips the local view and Beacon handling for all clients", async () => {
   const courtBefore = firestoreState.docs.get("courts/lifecourt");
   assert.equal(courtBefore.beaconSidesSwapped, false);
 
@@ -116,21 +121,35 @@ test("Changeover changes Beacon handling while Switch views remains visual-only"
   assert.equal(
     firestoreState.docs.get("courts/lifecourt").beaconSidesSwapped,
     false,
-    "Switch views must not change backend Beacon handling",
+    "Switch views must remain visual-only",
   );
 
+  // Changeover must invert whatever view is currently active on this device.
   document.getElementById("changeoverBtn").click();
 
-  await waitFor(() => firestoreState.docs.get("courts/lifecourt").beaconSidesSwapped === true, {
-    label: "Beacon changeover enabled from settings",
+  await waitFor(() => firestoreState.docs.get("courts/lifecourt").beaconSidesSwapped === false, {
+    label: "Beacon mapping follows the current view on changeover",
+  });
+  await waitFor(() => document.querySelector(".scoreboard").classList.contains("swapped") === false, {
+    label: "Changeover flips the current view",
   });
   await waitFor(() => document.getElementById("changeoverBtn").disabled === false, {
     label: "Changeover button re-enabled",
   });
 
+  assert.equal(
+    switchViewsButton.closest(".setting-item").classList.contains("active"),
+    false,
+    "Switch views option state follows the flipped view",
+  );
+
+  // A second changeover flips back from the current local state.
   document.getElementById("changeoverBtn").click();
-  await waitFor(() => firestoreState.docs.get("courts/lifecourt").beaconSidesSwapped === false, {
-    label: "Beacon changeover disabled from settings",
+  await waitFor(() => firestoreState.docs.get("courts/lifecourt").beaconSidesSwapped === true, {
+    label: "Second changeover reverses Beacon mapping",
+  });
+  await waitFor(() => document.querySelector(".scoreboard").classList.contains("swapped") === true, {
+    label: "Second changeover flips the local view back",
   });
 
   document.getElementById("closeSettingsBtn").click();
