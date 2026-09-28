@@ -57,7 +57,7 @@ let lastChangeoverEventId = null;
 
 function getCurrentCourtId()
 {
-  return window.history.state?.courtId || null;
+  return window.history.state?.viewState?.courtId || window.history.state?.courtId || null;
 }
 
 function showChangeoverToast()
