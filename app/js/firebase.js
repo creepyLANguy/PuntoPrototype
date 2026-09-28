@@ -126,7 +126,6 @@ function handleChangeoverEvent(event)
   lastChangeoverEventId = eventId;
   triggerSwitchViews();
   showChangeoverToast();
-  playClashSound();
 }
 
 function attachChangeoverListener()
@@ -190,6 +189,10 @@ function installChangeoverBehaviour()
         courtId,
         beaconSidesSwapped: nextSwapped,
       });
+
+      // This is deliberately local-only: remote devices only receive the
+      // changeover event through Firestore and must not play the sound.
+      playClashSound();
 
       const eventId = result.data?.changeoverEventId;
       // The listener normally handles this first. This fallback makes the
