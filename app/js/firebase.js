@@ -52,6 +52,7 @@ const CHANGEOVER_TOAST = "Changeover has happened";
 const CLASH_SOUND_URL = "media/sfx/clash.mp3";
 let changeoverUnsubscribe = null;
 let activeChangeoverCourtId = null;
+let changeoverListenerInitialized = false;
 let lastChangeoverEventId = null;
 
 function getCurrentCourtId()
@@ -134,6 +135,7 @@ function attachChangeoverListener()
   changeoverUnsubscribe?.();
   changeoverUnsubscribe = null;
   activeChangeoverCourtId = courtId;
+  changeoverListenerInitialized = false;
   lastChangeoverEventId = null;
 
   changeoverUnsubscribe = onSnapshot(
@@ -143,16 +145,18 @@ function attachChangeoverListener()
       if (!snapshot.exists()) return;
 
       const event = snapshot.data()?.changeoverEvent;
-      if (!event?.id) return;
 
-      // The first snapshot establishes the current event without replaying an
-      // old changeover after a page reload or court switch.
-      if (lastChangeoverEventId === null)
+      if (!changeoverListenerInitialized)
       {
-        lastChangeoverEventId = event.id;
+        // Establish the baseline without replaying an old changeover after a
+        // page reload or court switch. This also works when the court has no
+        // changeoverEvent field yet.
+        changeoverListenerInitialized = true;
+        lastChangeoverEventId = event?.id || null;
         return;
       }
 
+      if (!event?.id) return;
       handleChangeoverEvent(event);
     },
     (error) => console.error("Changeover listener failed", error),
