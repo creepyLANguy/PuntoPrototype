@@ -141,6 +141,33 @@ test("Changeover flips the local view and Beacon handling for all clients", asyn
       label: "Changeover flips the current view",
     },
   );
+
+  assert.equal(
+    window.__clashAudioTestState.starts,
+    1,
+    "successful local changeover plays exactly one clash sound",
+  );
+
+  // Simulate another device broadcasting a completed changeover. It must
+  // update this device's view without producing a local clash sound.
+  const remoteCourt = firestoreState.docs.get("courts/lifecourt");
+  writeDoc("courts/lifecourt", {
+    ...remoteCourt,
+    changeoverEvent: { id: "remote-changeover-1" },
+  });
+
+  await waitFor(
+    () =>
+      document.querySelector(".scoreboard").classList.contains("swapped") === true,
+    {
+      label: "remote changeover flips local view",
+    },
+  );
+  assert.equal(
+    window.__clashAudioTestState.starts,
+    1,
+    "remote changeover broadcast must not play the clash sound",
+  );
   await waitFor(() => document.getElementById("changeoverBtn").disabled === false, {
     label: "Changeover button re-enabled",
   });
@@ -166,6 +193,27 @@ test("Changeover flips the local view and Beacon handling for all clients", asyn
       label: "Second changeover flips the local view back",
     },
   );
+
+  assert.equal(
+    window.__clashAudioTestState.starts,
+    2,
+    "each successful local changeover plays one clash sound",
+  );
+
+  // A successful local changeover while muted must not play the sound.
+  document.getElementById("muteBtn").click();
+  assert.equal(document.getElementById("muteBtn").getAttribute("aria-pressed"), "true");
+  document.getElementById("changeoverBtn").click();
+  await waitFor(() => document.getElementById("changeoverBtn").disabled === false, {
+    label: "muted changeover completed",
+  });
+  assert.equal(
+    window.__clashAudioTestState.starts,
+    2,
+    "muted local changeover must not play the clash sound",
+  );
+  document.getElementById("muteBtn").click();
+  assert.equal(document.getElementById("muteBtn").getAttribute("aria-pressed"), "false");
 
   document.getElementById("closeSettingsBtn").click();
   await settle(10);
