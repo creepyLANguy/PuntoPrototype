@@ -37,7 +37,6 @@ async function changeoverCourt(request) {
     success: true,
     courtId,
     beaconSidesSwapped: nextValue,
-    changeoverEventId,
   };
 }
 
