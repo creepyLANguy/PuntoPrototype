@@ -128,13 +128,15 @@ test("Changeover flips the local view and Beacon handling for all clients", asyn
   document.getElementById("changeoverBtn").click();
 
   await waitFor(
-    () => firestoreState.docs.get("courts/lifecourt").beaconSidesSwapped === false,
+    () =>
+      firestoreState.docs.get("courts/lifecourt").beaconSidesSwapped === false,
     {
       label: "Beacon mapping follows the current view on changeover",
     },
   );
   await waitFor(
-    () => document.querySelector(".scoreboard").classList.contains("swapped") === false,
+    () =>
+      document.querySelector(".scoreboard").classList.contains("swapped") === false,
     {
       label: "Changeover flips the current view",
     },
@@ -152,7 +154,8 @@ test("Changeover flips the local view and Beacon handling for all clients", asyn
   // A second changeover flips back from the current local state.
   document.getElementById("changeoverBtn").click();
   await waitFor(
-    () => firestoreState.docs.get("courts/lifecourt").beaconSidesSwapped === true,
+    () =>
+      firestoreState.docs.get("courts/lifecourt").beaconSidesSwapped === true,
     {
       label: "Second changeover reverses Beacon mapping",
     },
@@ -215,12 +218,9 @@ test("spectator sees live score updates pushed by other devices", async () => {
   assert.ok(spectateButton, "Spectate menu button exists");
   spectateButton.click();
 
-  await waitFor(
-    () => document.querySelector(`#spectateCourtList [data-court-name="watchcourt"]`),
-    {
-      label: "watchcourt in spectate list",
-    },
-  );
+  await waitFor(() => document.querySelector(`#spectateCourtList [data-court-name="watchcourt"]`), {
+    label: "watchcourt in spectate list",
+  });
   document.querySelector(`#spectateCourtList [data-court-name="watchcourt"]`).click();
 
   await waitFor(() => document.getElementById("scoreboardPage").style.display !== "none", {
