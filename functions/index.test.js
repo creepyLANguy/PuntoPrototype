@@ -966,6 +966,10 @@ describe("changeoverCourt", () => {
       scoreVersion: 7,
       beaconSidesSwapped: true,
       status: "open",
+      changeoverEvent: {
+        id: "auto-1",
+        createdAt: { __serverTimestamp: true },
+      },
     });
   });
 
