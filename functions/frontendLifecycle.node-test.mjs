@@ -151,6 +151,12 @@ test("Changeover flips the local view and Beacon handling for all clients", asyn
     "successful local changeover plays exactly one clash sound",
   );
 
+  assert.equal(
+    switchViewsButton.closest(".setting-item").classList.contains("active"),
+    false,
+    "Switch views option state follows the local changeover",
+  );
+
   // Simulate another device broadcasting a completed changeover. It must
   // update this device's view without producing a local clash sound.
   const remoteCourt = firestoreState.docs.get("courts/lifecourt");
@@ -177,8 +183,8 @@ test("Changeover flips the local view and Beacon handling for all clients", asyn
 
   assert.equal(
     switchViewsButton.closest(".setting-item").classList.contains("active"),
-    false,
-    "Switch views option state follows the flipped view",
+    true,
+    "Switch views option state follows the remote changeover",
   );
 
   // A second changeover flips back from the current local state.
