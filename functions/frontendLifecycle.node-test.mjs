@@ -127,12 +127,18 @@ test("Changeover flips the local view and Beacon handling for all clients", asyn
   // Changeover must invert whatever view is currently active on this device.
   document.getElementById("changeoverBtn").click();
 
-  await waitFor(() => firestoreState.docs.get("courts/lifecourt").beaconSidesSwapped === false, {
-    label: "Beacon mapping follows the current view on changeover",
-  });
-  await waitFor(() => document.querySelector(".scoreboard").classList.contains("swapped") === false, {
-    label: "Changeover flips the current view",
-  });
+  await waitFor(
+    () => firestoreState.docs.get("courts/lifecourt").beaconSidesSwapped === false,
+    {
+      label: "Beacon mapping follows the current view on changeover",
+    },
+  );
+  await waitFor(
+    () => document.querySelector(".scoreboard").classList.contains("swapped") === false,
+    {
+      label: "Changeover flips the current view",
+    },
+  );
   await waitFor(() => document.getElementById("changeoverBtn").disabled === false, {
     label: "Changeover button re-enabled",
   });
@@ -145,12 +151,18 @@ test("Changeover flips the local view and Beacon handling for all clients", asyn
 
   // A second changeover flips back from the current local state.
   document.getElementById("changeoverBtn").click();
-  await waitFor(() => firestoreState.docs.get("courts/lifecourt").beaconSidesSwapped === true, {
-    label: "Second changeover reverses Beacon mapping",
-  });
-  await waitFor(() => document.querySelector(".scoreboard").classList.contains("swapped") === true, {
-    label: "Second changeover flips the local view back",
-  });
+  await waitFor(
+    () => firestoreState.docs.get("courts/lifecourt").beaconSidesSwapped === true,
+    {
+      label: "Second changeover reverses Beacon mapping",
+    },
+  );
+  await waitFor(
+    () => document.querySelector(".scoreboard").classList.contains("swapped") === true,
+    {
+      label: "Second changeover flips the local view back",
+    },
+  );
 
   document.getElementById("closeSettingsBtn").click();
   await settle(10);
@@ -203,9 +215,12 @@ test("spectator sees live score updates pushed by other devices", async () => {
   assert.ok(spectateButton, "Spectate menu button exists");
   spectateButton.click();
 
-  await waitFor(() => document.querySelector(`#spectateCourtList [data-court-name="watchcourt"]`), {
-    label: "watchcourt in spectate list",
-  });
+  await waitFor(
+    () => document.querySelector(`#spectateCourtList [data-court-name="watchcourt"]`),
+    {
+      label: "watchcourt in spectate list",
+    },
+  );
   document.querySelector(`#spectateCourtList [data-court-name="watchcourt"]`).click();
 
   await waitFor(() => document.getElementById("scoreboardPage").style.display !== "none", {
