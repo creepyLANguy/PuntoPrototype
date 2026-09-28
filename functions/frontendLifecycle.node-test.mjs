@@ -142,6 +142,9 @@ test("Changeover flips the local view and Beacon handling for all clients", asyn
     },
   );
 
+  await waitFor(() => document.getElementById("changeoverBtn").disabled === false, {
+    label: "local changeover success response completed",
+  });
   assert.equal(
     window.__clashAudioTestState.starts,
     1,
@@ -194,6 +197,9 @@ test("Changeover flips the local view and Beacon handling for all clients", asyn
     },
   );
 
+  await waitFor(() => document.getElementById("changeoverBtn").disabled === false, {
+    label: "second local changeover success response completed",
+  });
   assert.equal(
     window.__clashAudioTestState.starts,
     2,
