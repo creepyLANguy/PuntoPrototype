@@ -78,6 +78,8 @@ function playClashSound()
   const muteButton = document.getElementById("muteBtn");
   if (muteButton?.getAttribute("aria-pressed") === "true") return;
 
+  if (typeof Audio !== "function") return;
+
   const audio = new Audio(CLASH_SOUND_URL);
   audio.volume = 1;
   void audio.play().catch(() => {});
