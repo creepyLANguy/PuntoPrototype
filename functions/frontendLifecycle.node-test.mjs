@@ -187,19 +187,21 @@ test("Changeover flips the local view and Beacon handling for all clients", asyn
     "Switch views option state follows the remote changeover",
   );
 
-  // A second changeover flips back from the current local state.
+  // A second local changeover now starts from the remote device's
+  // view state: swapped=true with Beacon mapping=false, so it flips back
+  // to swapped=false and keeps the backend Beacon mapping=false.
   document.getElementById("changeoverBtn").click();
   await waitFor(
     () =>
-      firestoreState.docs.get("courts/lifecourt").beaconSidesSwapped === true,
+      firestoreState.docs.get("courts/lifecourt").beaconSidesSwapped === false,
     {
-      label: "Second changeover reverses Beacon mapping",
+      label: "Second local changeover preserves Beacon mapping",
     },
   );
   await waitFor(
-    () => document.querySelector(".scoreboard").classList.contains("swapped") === true,
+    () => document.querySelector(".scoreboard").classList.contains("swapped") === false,
     {
-      label: "Second changeover flips the local view back",
+      label: "Second local changeover flips the local view back",
     },
   );
 
