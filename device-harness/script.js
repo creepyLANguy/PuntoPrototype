@@ -151,9 +151,21 @@ async function unlockHarness() {
 
 function detectEnvironment() {
   const host = globalThis.location.hostname;
+
   if (host === "www.padelpush.co.za" || host === "padelpush.co.za") return "production";
   if (host === "qa.padelpush.co.za") return "staging";
-  return "development";
+
+  // Local development instances intentionally use the staging backend.
+  // This keeps locally hosted harness sessions safe while exercising the
+  // same non-production Firebase project as the QA environment.
+  if (
+    host === "localhost" ||
+    host === "127.0.0.1" ||
+    host === "::1" ||
+    host === "[::1]"
+  ) return "staging";
+
+  return "staging";
 }
 
 function projectIdForEnvironment() {
