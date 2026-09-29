@@ -10,6 +10,10 @@
 <body>
   <div id="adminGate" class="gate">
     <div class="gate-card">
+      <div class="gate-top-actions">
+        <a href="/admin" class="gate-back-link">← Admin</a>
+        <button id="themeToggleGateBtn" class="icon-btn theme-icon-btn" type="button" aria-label="Toggle theme" title="Toggle theme">🌓</button>
+      </div>
       <div class="eyebrow">ADMIN ACCESS</div>
       <h1>Device Test Harness</h1>
       <p>Enter the Padel Push admin password to access this tool.</p>
@@ -23,7 +27,6 @@
       />
       <div id="adminPasswordError" class="gate-error" role="alert"></div>
       <button id="adminUnlockBtn" class="btn brand-btn" type="button">Unlock harness</button>
-      <a href="../app/" class="link-btn">Back to Admin</a>
     </div>
   </div>
 
@@ -37,7 +40,7 @@
         <span>I understand that these actions affect production data.</span>
       </label>
       <button id="productionEnableBtn" class="btn danger" disabled>Enable production mutations</button>
-      <a href="../app/" class="link-btn">Back to Admin</a>
+      <a href="/admin" class="link-btn">Back to Admin</a>
     </div>
   </div>
 
@@ -55,7 +58,12 @@
       <div id="deviceList" class="device-list"></div>
 
       <button id="addVirtualDeviceBtn" class="btn brand-btn">+ Add virtual device</button>
-      <a href="../app/" class="back-link">← Back to Admin</a>
+
+      <div class="sidebar-actions">
+        <button id="themeToggleBtn" class="btn secondary sidebar-action" type="button" aria-label="Toggle theme">🌓 Theme</button>
+        <a href="/admin" class="back-link">← Back to Admin</a>
+        <button id="logoutBtn" class="btn danger sidebar-action" type="button">Log out</button>
+      </div>
     </aside>
 
     <main class="main">
