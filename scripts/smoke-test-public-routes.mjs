@@ -59,7 +59,15 @@ async function main()
     assertJsonError(await request(path), path);
   }
 
-  assertHtml(await request('/device-harness/index.html'), deviceHarnessMarker, '/device-harness/index.html');
+  for (const path of ['/harness', '/app/harness', '/device-harness', '/device-harness/index.html'])
+  {
+    assertHtml(await request(path), deviceHarnessMarker, path);
+  }
+
+  for (const path of ['/admin', '/app/admin'])
+  {
+    assertHtml(await request(path), appMarker, path);
+  }
 
   const expectedOrigin = new URL(base).origin;
 
