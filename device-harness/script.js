@@ -36,7 +36,65 @@ const state = {
 };
 
 const els = {};
+const ADMIN_SESSION_STORAGE_KEY = "padelPushAdminUnlocked";
+
 function $(id) { return document.getElementById(id); }
+
+function hasAdminSession() {
+  try {
+    return sessionStorage.getItem(ADMIN_SESSION_STORAGE_KEY) === "true";
+  } catch {
+    return false;
+  }
+}
+
+async function getAdminPassword() {
+  const adminRef = doc(db, "admin", "goodies");
+  const adminSnap = await getDoc(adminRef);
+  const data = adminSnap.data();
+  if (!data || !data.skeletonKey) {
+    throw new Error("Admin config missing or skeletonKey not found.");
+  }
+  return data.skeletonKey;
+}
+
+async function unlockHarness() {
+  const passwordInput = $("adminPassword");
+  const unlockButton = $("adminUnlockBtn");
+  const error = $("adminPasswordError");
+  const password = passwordInput.value.trim();
+
+  error.textContent = "";
+  if (!password) {
+    error.textContent = "Admin password cannot be empty.";
+    passwordInput.focus();
+    return;
+  }
+
+  unlockButton.disabled = true;
+  try {
+    const adminPassword = await getAdminPassword();
+    if (password !== adminPassword) {
+      error.textContent = "Incorrect admin password.";
+      passwordInput.value = "";
+      passwordInput.focus();
+      return;
+    }
+
+    try {
+      sessionStorage.setItem(ADMIN_SESSION_STORAGE_KEY, "true");
+    } catch (storageError) {
+      console.warn("Unable to persist admin session state.", storageError);
+    }
+
+    $("adminGate").classList.add("hidden");
+    initHarness();
+  } catch (err) {
+    error.textContent = "Admin config error: " + (err?.message || String(err));
+  } finally {
+    unlockButton.disabled = false;
+  }
+}
 
 function detectEnvironment() {
   const host = globalThis.location.hostname;
@@ -777,7 +835,7 @@ function escapeHtml(value) {
 
 function delay(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
 
-function init() {
+function initHarness() {
   els.deviceList = $("deviceList");
   $("environmentBadge").title = "Firebase environment: " + String(firebaseEnvironmentConfig.activeFirebaseEnvironment || "unknown");
   $("courtSelect").addEventListener("change", (event) => selectCourt(event.target.value));
@@ -835,6 +893,25 @@ function init() {
 
   if (state.environment === "production") {
     $("productionGate").classList.remove("hidden");
+  }
+}
+
+function init() {
+  $("adminUnlockBtn").addEventListener("click", () => {
+    void unlockHarness();
+  });
+
+  $("adminPassword").addEventListener("keydown", (event) => {
+    if (event.key !== "Enter") return;
+    event.preventDefault();
+    void unlockHarness();
+  });
+
+  if (hasAdminSession()) {
+    $("adminGate").classList.add("hidden");
+    initHarness();
+  } else {
+    $("adminPassword").focus();
   }
 }
 
