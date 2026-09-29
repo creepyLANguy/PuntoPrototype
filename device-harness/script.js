@@ -38,8 +38,58 @@ const state = {
 const els = {};
 const ADMIN_SESSION_STORAGE_KEY = "padelPushAdminUnlocked";
 const ADMIN_LOGOUT_SIGNAL_KEY = "padelPushAdminLogoutSignal";
+const HARNESS_THEME_STORAGE_KEY = "puntoDeviceHarnessTheme";
 
 function $(id) { return document.getElementById(id); }
+
+function getStoredTheme() {
+  try {
+    return localStorage.getItem(HARNESS_THEME_STORAGE_KEY) === "dark" ? "dark" : "light";
+  } catch {
+    return "light";
+  }
+}
+
+function applyTheme(theme) {
+  const resolvedTheme = theme === "dark" ? "dark" : "light";
+  document.body.classList.toggle("dark", resolvedTheme === "dark");
+
+  try {
+    localStorage.setItem(HARNESS_THEME_STORAGE_KEY, resolvedTheme);
+  } catch (storageError) {
+    console.warn("Unable to persist harness theme.", storageError);
+  }
+
+  const buttons = [$("themeToggleBtn"), $("themeToggleGateBtn")].filter(Boolean);
+  const isDark = resolvedTheme === "dark";
+  buttons.forEach((button) => {
+    button.textContent = isDark ? "☀ Light" : "🌙 Dark";
+    button.title = isDark ? "Switch to light theme" : "Switch to dark theme";
+    button.setAttribute("aria-label", button.title);
+    button.setAttribute("aria-pressed", String(isDark));
+  });
+}
+
+function toggleTheme() {
+  const nextTheme = document.body.classList.contains("dark") ? "light" : "dark";
+  applyTheme(nextTheme);
+}
+
+function endAdminSession() {
+  try {
+    sessionStorage.removeItem(ADMIN_SESSION_STORAGE_KEY);
+  } catch (storageError) {
+    console.warn("Unable to clear admin session state.", storageError);
+  }
+
+  try {
+    localStorage.setItem(ADMIN_LOGOUT_SIGNAL_KEY, String(Date.now()));
+  } catch (storageError) {
+    console.warn("Unable to broadcast admin logout.", storageError);
+  }
+
+  window.location.href = "/admin";
+}
 
 function hasAdminSession() {
   try {
@@ -898,6 +948,8 @@ function initHarness() {
 }
 
 function init() {
+  applyTheme(getStoredTheme());
+
   window.addEventListener("storage", (event) => {
     if (event.key !== ADMIN_LOGOUT_SIGNAL_KEY) return;
 
@@ -910,8 +962,12 @@ function init() {
       console.warn("Unable to clear admin session state.", storageError);
     }
 
-    window.location.reload();
+    window.location.href = "/admin";
   });
+
+  $("themeToggleBtn")?.addEventListener("click", toggleTheme);
+  $("themeToggleGateBtn")?.addEventListener("click", toggleTheme);
+  $("logoutBtn")?.addEventListener("click", endAdminSession);
 
   $("adminUnlockBtn").addEventListener("click", () => {
     void unlockHarness();
