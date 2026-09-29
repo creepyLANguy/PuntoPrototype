@@ -295,3 +295,37 @@ h1, h2, h3, p { margin: 0; }
 .link-btn:hover {
   text-decoration: underline;
 }
+
+.brand-btn:hover,
+.brand-btn:focus-visible {
+  background: var(--brand-strong);
+  border-color: var(--brand-strong);
+  color: var(--ink);
+}
+
+.btn.danger:hover,
+.btn.danger:focus-visible {
+  background: #b91c1c;
+  border-color: #b91c1c;
+}
+
+body.dark .btn:hover,
+body.dark .btn:focus-visible,
+body.dark .select:hover,
+body.dark .text-input:hover,
+body.dark .number-input:hover {
+  border-color: #44536a;
+}
+
+body.dark .brand-btn:hover,
+body.dark .brand-btn:focus-visible {
+  background: var(--brand-strong);
+  border-color: var(--brand-strong);
+  color: var(--ink);
+}
+
+body.dark .btn.danger:hover,
+body.dark .btn.danger:focus-visible {
+  background: #b91c1c;
+  border-color: #b91c1c;
+}
