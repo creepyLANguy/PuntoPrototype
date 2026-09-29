@@ -1,95 +1,79 @@
----
-config:
-    theme: base
----
-
 flowchart LR
+    classDef user fill:#F3E5F5,stroke:#7B1FA2,stroke-width:2px,color:#4A148C
+    classDef client fill:#E3F2FD,stroke:#1565C0,stroke-width:2px,color:#0D47A1
+    classDef backend fill:#FFF3E0,stroke:#E65100,stroke-width:2px,color:#BF360C
+    classDef data fill:#E8F5E9,stroke:#2E7D32,stroke-width:2px,color:#1B5E20
+    classDef device fill:#FCE4EC,stroke:#C2185B,stroke-width:2px,color:#880E4F
 
-    classDef client fill:#E3F2FD,stroke:#1565C0,stroke-width:2px,color:#0D47A1,font-weight:bold;
-    classDef firebase fill:#FFF3E0,stroke:#E65100,stroke-width:2px,color:#BF360C,font-weight:bold;
-    classDef data fill:#E8F5E9,stroke:#2E7D32,stroke-width:2px,color:#1B5E20,font-weight:bold;
-    classDef user fill:#F3E5F5,stroke:#7B1FA2,stroke-width:2px,color:#4A148C,font-weight:bold;
-    classDef future fill:#FAFAFA,stroke:#9E9E9E,stroke-width:1px,stroke-dasharray:5 5,color:#616161;
-
-    subgraph CLIENTS["Current client surfaces"]
-        WebApp["Browser web app<br/>app/index.html + script.js<br/>direct Firestore + callable functions"]
-        Device["External device client<br/>POST /postEvent<br/>firmware is outside this repo"]
-        Overlay["OBS / public read client<br/>app/overlay.html"]
+    subgraph PEOPLE["Users"]
+        PLAYER["Player"]
+        OPERATOR["Club / court operator"]
+        SPECTATOR["Spectator"]
+        BROADCAST["Broadcast / integration consumer"]
     end
 
-    subgraph FIREBASE["Firebase runtime"]
-        Hosting["Firebase Hosting<br/>web app + overlay + NFC utility<br/>public API redirects"]
-        Ingestion["postEvent<br/>HTTP / africa-south1"]
-        Events[("courts/{courtId}/events/{eventId}<br/>Event history")]
-        Trigger["onEventCreate<br/>africa-south1"]
-        Scoring["scoringEngine.js"]
-        LiveState[("courts/{courtId}/score/current<br/>Materialized score")]
-        Callable["Callable functions<br/>resetCourt<br/>updateScoringOptions<br/>getDetailedScore"]
-        PublicAPI["Public read functions<br/>africa-south1<br/>/a /r /s /m"]
+    subgraph CLIENTS["Current clients"]
+        APP["Web app"]
+        HUB["Hub"]
+        BEACON["Beacon"]
+        PULSE["Pulse"]
+        OVERLAY["Overlay"]
     end
 
-    subgraph DATA["Firestore model"]
-        Court["courts/{courtId}"]
-        Checkpoints[("scoreCheckpoints")]
-        Archives[("archive/{archiveId}/events")]
-        Devices[("devices/{deviceId}")]
+    subgraph SERVER["Firebase"]
+        POST["POST /postEvent"]
+        TRIGGER["onEventCreate"]
+        SCORE["Scoring engine"]
+        CALLABLE["Callable functions"]
+        API["Public read API"]
     end
 
-    subgraph USERS["Users"]
-        Player["Players"]
-        Club["Club operators"]
-        Spectator["Spectators"]
+    subgraph DATA["Firestore"]
+        COURT["Court configuration"]
+        EVENTS["Event stream"]
+        LIVE["Current score"]
+        CHECK["Checkpoints"]
+        ARCHIVE["Reset archives"]
+        DEVICES["Device bindings"]
     end
 
-    subgraph FUTURE["Outside current repo / future hardening"]
-        Hmac["Cryptographic device auth + replay protection"]
-        Match["Separate match/tournament entities"]
-        Analytics["Club analytics / billing"]
-    end
+    PLAYER --> APP
+    OPERATOR --> APP
+    OPERATOR --> HUB
+    OPERATOR --> BEACON
+    OPERATOR --> PULSE
+    SPECTATOR --> OVERLAY
+    BROADCAST --> OVERLAY
 
-    Hosting --> WebApp
-    Hosting --> Overlay
+    APP --> COURT
+    APP --> EVENTS
+    APP --> LIVE
+    APP --> CALLABLE
+    APP --> DEVICES
 
-    Player --> WebApp
-    Club --> WebApp
-    Spectator --> Overlay
+    HUB --> POST
+    BEACON --> POST
+    PULSE --> POST
+    POST --> DEVICES
+    POST --> EVENTS
 
-    WebApp -->|"addDoc scoring/operational event"| Events
-    WebApp -->|"onSnapshot"| LiveState
-    WebApp -->|"court/device reads and writes"| Court
-    WebApp -->|"device binding reads/updates"| Devices
-    WebApp -->|"reset/options/details"| Callable
+    EVENTS --> TRIGGER
+    TRIGGER --> SCORE
+    SCORE --> LIVE
+    SCORE --> CHECK
 
-    Device -->|"HTTP POST"| Ingestion
-    Ingestion -->|"append event + server timestamp"| Events
+    CALLABLE --> COURT
+    CALLABLE --> EVENTS
+    CALLABLE --> LIVE
+    CALLABLE --> CHECK
+    CALLABLE --> ARCHIVE
 
-    Events --> Trigger
-    Trigger --> Scoring
-    Scoring --> LiveState
-    Scoring --> Checkpoints
+    OVERLAY --> API
+    API --> LIVE
+    API --> EVENTS
 
-    Callable -->|"Admin SDK"| Court
-    Callable -->|"archive/reset/replay"| Events
-    Callable --> LiveState
-    Callable --> Checkpoints
-    Callable --> Archives
-
-    Overlay -->|"GET /r /a /s /m"| PublicAPI
-    PublicAPI --> LiveState
-    PublicAPI --> Events
-
-    Device -. "Production target" .-> Hmac
-    Court -. "Not implemented" .-> Match
-    LiveState -. "Future" .-> Analytics
-
-    class WebApp,Device,Overlay client
-    class Hosting,Ingestion,Trigger,Scoring,Callable,PublicAPI firebase
-    class Events,LiveState,Court,Checkpoints,Archives,Devices data
-    class Player,Club,Spectator user
-    class Hmac,Match,Analytics future
-
-    style CLIENTS fill:#E8EAF6,stroke:#1A237E,stroke-width:2px;
-    style FIREBASE fill:#FFF8E1,stroke:#FF6F00,stroke-width:2px;
-    style DATA fill:#F1F8E9,stroke:#33691E,stroke-width:2px;
-    style USERS fill:#F3E5F5,stroke:#4A148C,stroke-width:2px;
-    style FUTURE fill:#FAFAFA,stroke:#9E9E9E,stroke-dasharray:5 5;
+    class PLAYER,OPERATOR,SPECTATOR,BROADCAST user
+    class APP,OVERLAY client
+    class HUB,BEACON,PULSE device
+    class POST,TRIGGER,SCORE,CALLABLE,API backend
+    class COURT,EVENTS,LIVE,CHECK,ARCHIVE,DEVICES data

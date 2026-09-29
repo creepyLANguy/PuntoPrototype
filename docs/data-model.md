@@ -1,6 +1,6 @@
 # Firestore data model
 
-This is the current implementation reference. The model is **court-centric**: the active scoring state and its event history live underneath a court. The repository currently has no separate matches collection/document and no matchId field.
+This is the current implementation reference. The model is court-centric: the active scoring state and its event history live underneath a court. The repository currently has no separate matches collection/document and no matchId field.
 
 The collection relationships are visualized in [PP_Data_Model.mmd](PP_Data_Model.mmd).
 
@@ -11,7 +11,7 @@ The collection relationships are visualized in [PP_Data_Model.mmd](PP_Data_Model
 | courts/{courtId}/events/{eventId} | Append-only scoring and device event history |
 | courts/{courtId}/scoreCheckpoints/{id} | Replay accelerators |
 | courts/{courtId}/archive/{archiveId}/events/{eventId} | Archived events from resets |
-| devices/{deviceId} | Device identity and current court binding |
+| devices/{deviceId} | Device identity, SKU and current court binding |
 
 ## Court document
 
@@ -27,6 +27,7 @@ The current frontend creates court documents with fields including:
 - scoringOptions
 - scoreVersion
 - beaconSidesSwapped
+- changeoverEvent
 
 The three frontend status values are:
 
@@ -36,9 +37,24 @@ The three frontend status values are:
 
 The court document also acts as the container for the currently active match configuration. A separate match entity is not present.
 
+### Beacon changeover state
+
+beaconSidesSwapped is a court-level setting used only when new Beacon scoring events are ingested.
+
+changeoverEvent stores the most recent changeover marker. It is a notification/audit marker for clients; it does not rewrite existing scoring events.
+
+RESET restores beaconSidesSwapped to false.
+
 ## Current score document
 
-courts/{courtId}/score/current is derived state produced by the scoring engine. It contains the current A/B score state, completed-set information, scoring options, match-complete/tiebreak state and processing metadata such as the last processed event and update timestamp.
+courts/{courtId}/score/current is derived state produced by the scoring engine. It contains the current A/B score state, completed-set information, scoring options, match-complete/tiebreak state and processing metadata.
+
+Important processing fields include:
+
+- lastEventId
+- lastProcessedEventId
+- lastProcessedCreatedAt
+- updatedAt
 
 This document is not the source of truth for historical scoring; it can be reconstructed from the event stream.
 
@@ -56,26 +72,68 @@ Operational events also exist:
 - SPECTATE
 - REGISTER
 
-Event documents can contain eventType, createdBy, createdAt, scoreVersion, actorDeviceId, sourceCourtId, targetCourtId and registeringDeviceId, depending on the operation. Beacon events inverted during Changeover also retain sourceEventType and beaconSidesSwapped for auditability.
+Depending on the source and operation, event documents can contain:
 
-Client/device event IDs are currently assigned by Firestore document creation. The production target described in the device protocol instead requires the originating device/client to create and persist an eventId.
+- eventType
+- createdBy
+- createdAt
+- scoreVersion
+- actorDeviceId
+- sourceCourtId
+- targetCourtId
+- registeringDeviceId
+- sourceEventType
+- beaconSidesSwapped
+
+For an inverted Beacon scoring event, sourceEventType preserves what the physical device reported, while eventType stores the effective logical scoring event.
 
 ## Checkpoints
 
-Checkpoint documents contain the materialized score snapshot plus replay metadata such as scoringOptions, totalPoints, setsCompleted, lastEventId, lastCreatedAt and updatedAt.
+Checkpoint documents contain a materialized score snapshot plus replay metadata such as:
+
+- scoringOptions
+- totalPoints
+- setsCompleted
+- lastEventId
+- lastCreatedAt
+- updatedAt
 
 They are optimizations only. The event stream remains authoritative.
 
 ## Reset archives
 
-Reset archives are stored below an archiveId path segment generated from the reset timestamp. Archived event documents retain the original event fields plus archivedAt and resetBy.
+RESET archives the active event stream below:
 
-The current implementation therefore preserves prior scoring events across RESET, but it does not yet expose a first-class archived match entity or matchId.
+courts/{courtId}/archive/{archiveId}/events/{eventId}
+
+Archived events retain their original event fields plus archive metadata such as archivedAt and resetBy.
+
+The implementation therefore preserves prior scoring evidence across RESET, but does not expose a first-class archived match entity or matchId.
 
 ## Devices
 
-The current application and device ingestion paths use devices/{deviceId} primarily to determine whether a device exists and which court it is currently bound to. The current implementation does not implement the production device credential model described in device-protocol.md.
+devices/{deviceId} represents the current relationship between a physical/logical device and a court.
+
+Current device families are:
+
+- Hub
+- Beacon
+- Pulse
+
+The current implementation primarily uses:
+
+- deviceId
+- deviceSKU
+- courtId
+
+The device record is also the current lookup point used by postEvent to determine the acting device's court binding.
+
+The production credential model described in device-protocol.md is not yet implemented.
+
+## Security and data ownership boundary
+
+Cloud Functions use the Firebase Admin SDK for server-side data access. Current callable handlers do not enforce an explicit request.auth role check, so the Firestore data model must not be interpreted as a complete authorisation model.
 
 ## Indexes
 
-firestore.indexes.json currently contains no composite indexes. Queries should continue to be checked against that file before adding new multi-field orderings or filters.
+firestore.indexes.json currently contains no composite indexes. New multi-field filters/orderings must be checked against the current index deployment process.

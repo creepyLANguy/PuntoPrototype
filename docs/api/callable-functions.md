@@ -1,12 +1,6 @@
 # Callable functions
 
-First-party Firebase callable functions run in africa-south1. These are app/admin surfaces, separate from the public read-only HTTP API.
-
-## Invocation
-
-    const functions = getFunctions(app, "africa-south1");
-    const resetCourt = httpsCallable(functions, "resetCourt");
-    const result = await resetCourt({ courtId, deepReset: false });
+First-party Firebase callable functions run in africa-south1. They are used by the application for scoring/court administration operations and are separate from the public read-only HTTP API.
 
 ## Current functions
 
@@ -23,19 +17,23 @@ Request fields currently accepted include:
 - scoringMode — optional.
 - scoringOptions — optional.
 
-The function writes the new court scoring configuration and optionally the password/team/player changes.
+A reset also restores beaconSidesSwapped to false so the next scoring session starts with the default Beacon mapping.
 
 ### changeoverCourt
 
-Sets the court's Beacon side mapping explicitly. A value of `true` means physical Beacon readings for Team A/B are interpreted for the opposite logical team; `false` restores the default mapping.
+Sets the court's Beacon side mapping explicitly.
 
-Request: `{ courtId, beaconSidesSwapped }`, where `beaconSidesSwapped` is required and must be boolean.
+Request:
 
-This changes court configuration only; it does not alter or replay already-recorded scoring events. Each device event is interpreted using the court mapping active when that event is ingested.
+{ courtId, beaconSidesSwapped }
+
+A value of true means physical Beacon Team A/B input is interpreted for the opposite logical team. false restores the default mapping.
+
+The function updates court configuration and writes a changeoverEvent marker. It does not rewrite already-recorded scoring events.
 
 ### updateScoringOptions
 
-Persists scoring configuration and replays the active court event history under the new rules. Existing checkpoints are deleted and a new checkpoint is written when there is active history.
+Persists scoring configuration and replays the active court event history under the new rules. Existing checkpoints are removed/rebuilt as required.
 
 Request: courtId, scoringOptions and scoringMode.
 
@@ -43,29 +41,41 @@ Request: courtId, scoringOptions and scoringMode.
 
 Request: { courtId }.
 
-Replays the active court event history and returns detailed match statistics data for the scoreboard app.
+Replays the active court event history and returns detailed match statistics for the scoreboard app.
 
 ## Firestore trigger: onEventCreate
 
-onEventCreate is not callable. It consumes courts/{courtId}/events/{eventId} and maintains courts/{courtId}/score/current.
+onEventCreate is not callable. It consumes:
+
+courts/{courtId}/events/{eventId}
+
+and maintains:
+
+courts/{courtId}/score/current
 
 Current invariants include:
 
-- Non-scoring events do not change score/current.
-- Events from an older scoreVersion are ignored.
-- Late/out-of-order events trigger replay.
-- UNDO uses full-history replay where required.
-- RESET archives/deletes the active event stream and checkpoints and reinitializes score/current.
-- Trigger retries are enabled; event processing is designed to be deterministic and idempotent with respect to repeated delivery.
+- non-scoring events do not change score/current;
+- events from an older scoreVersion are ignored;
+- late/out-of-order events trigger replay;
+- UNDO uses full-history replay where required;
+- RESET archives/deletes the active event stream and checkpoints and reinitializes score/current;
+- trigger retries are enabled.
 
-## Current authorization note
+## Current authorization status
 
-The current implementations of resetCourt, updateScoringOptions and getDetailedScore do not perform explicit request.auth checks in functions/index.js.
+The current callable implementations do not perform explicit request.auth checks in the Firebase function layer.
 
-Do not treat possession of a courtId as proof that the caller is authorized to mutate or inspect that court. Application-level authorization is a production-hardening requirement.
+Therefore:
+
+- courtId is not proof of authorisation;
+- the current admin UI is not equivalent to a secure server-side RBAC system;
+- callable mutation access must be treated as a production-hardening item.
+
+See roles-and-responsibilities.md for the intended organisational boundaries.
 
 ## Error handling
 
-First-party clients should use Firebase callable error codes rather than matching human-readable error strings.
+First-party clients should use Firebase callable error codes rather than matching human-readable strings.
 
 Production hardening should standardize domain errors such as invalid-argument, not-found, permission-denied, already-exists, failed-precondition, resource-exhausted and internal without exposing Firestore paths, stack traces, credentials or exception internals.
