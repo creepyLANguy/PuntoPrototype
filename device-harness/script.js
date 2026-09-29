@@ -62,10 +62,14 @@ function applyTheme(theme) {
     console.warn("Unable to persist harness theme.", storageError);
   }
 
-  const buttons = [$("themeToggleBtn"), $("themeToggleGateBtn")].filter(Boolean);
+  const buttons = [
+    $("themeToggleBtn"),
+    $("themeToggleGateBtn"),
+    $("themeToggleProductionGateBtn")
+  ].filter(Boolean);
   const isDark = resolvedTheme === "dark";
   buttons.forEach((button) => {
-    button.textContent = isDark ? "☀ Light" : "🌙 Dark";
+    button.textContent = isDark ? "☀️" : "🌙";
     button.title = isDark ? "Switch to light theme" : "Switch to dark theme";
     button.setAttribute("aria-label", button.title);
     button.setAttribute("aria-pressed", String(isDark));
@@ -90,7 +94,7 @@ function endAdminSession() {
     console.warn("Unable to broadcast admin logout.", storageError);
   }
 
-  window.location.href = "/admin";
+  window.location.href = "/";
 }
 
 function hasAdminSession() {
@@ -1171,7 +1175,7 @@ function init() {
       console.warn("Unable to clear admin session state.", storageError);
     }
 
-    window.location.href = "/admin";
+    window.location.href = "/";
   });
 
   $("themeToggleBtn")?.addEventListener("click", toggleTheme);
