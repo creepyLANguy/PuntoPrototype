@@ -76,6 +76,8 @@ document.addEventListener("DOMContentLoaded", () =>
   };
   const COOLDOWN_MS = 3000;
   const BACK_HOLD_MS = 550;
+  const ADMIN_SESSION_STORAGE_KEY = "padelPushAdminUnlocked";
+  const ADMIN_LOGOUT_SIGNAL_KEY = "padelPushAdminLogoutSignal";
   const UNDO_HOLD_MS = 550;
   const RESET_HOLD_MS = 1050;
   const LONG_PRESS_VIBRATION_MS = 200;
@@ -3372,7 +3374,7 @@ document.addEventListener("DOMContentLoaded", () =>
     {
       try
       {
-        sessionStorage.setItem("padelPushAdminUnlocked", "true");
+        sessionStorage.setItem(ADMIN_SESSION_STORAGE_KEY, "true");
       }
       catch (storageError)
       {
@@ -3397,6 +3399,24 @@ document.addEventListener("DOMContentLoaded", () =>
 
   elements.closeAdminDashboardBtn.addEventListener("click", () =>
   {
+    try
+    {
+      sessionStorage.removeItem(ADMIN_SESSION_STORAGE_KEY);
+    }
+    catch (storageError)
+    {
+      console.warn("Unable to clear admin session state.", storageError);
+    }
+
+    try
+    {
+      localStorage.setItem(ADMIN_LOGOUT_SIGNAL_KEY, String(Date.now()));
+    }
+    catch (storageError)
+    {
+      console.warn("Unable to broadcast admin logout.", storageError);
+    }
+
     isAdmin = false;
     void stepBackInApp(createViewState({ page: NAV_PAGES.MENU }));
   });
