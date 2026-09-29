@@ -16,7 +16,9 @@ import * as firebaseEnvironmentConfig from "../app/js/firebase-config.js";
 
 const state = {
   environment: detectEnvironment(),
+  environmentMismatch: false,
   devices: [],
+  devicesLoading: true,
   courts: [],
   selectedDeviceId: null,
   selectedCourtId: null,
@@ -208,13 +210,138 @@ function currentLocalState() {
 }
 
 function canMutate() {
+  if (state.environmentMismatch) return false;
   return state.environment !== "production" || state.productionEnabled;
 }
 
 function requireMutationAccess() {
+  if (state.environmentMismatch) {
+    showToast("Harness mutations are blocked because the Firebase environment does not match this hostname.", "error");
+    return false;
+  }
   if (canMutate()) return true;
   showToast("Production mutations are locked. Enable production mutations first.", "error");
   return false;
+}
+
+function getFocusableElements(container) {
+  return Array.from(container.querySelectorAll(
+    'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+  )).filter((element) => {
+    const style = globalThis.getComputedStyle(element);
+    return style.display !== "none" && style.visibility !== "hidden";
+  });
+}
+
+function focusDialogElement(dialog, preferredSelector = "") {
+  queueMicrotask(() => {
+    const preferred = preferredSelector ? dialog.querySelector(preferredSelector) : null;
+    const target = preferred || getFocusableElements(dialog)[0];
+    target?.focus();
+  });
+}
+
+function registerDialogAccessibility(dialog) {
+  dialog.addEventListener("keydown", (event) => {
+    if (event.key !== "Tab") return;
+    const focusables = getFocusableElements(dialog);
+    if (!focusables.length) return;
+
+    const first = focusables[0];
+    const last = focusables[focusables.length - 1];
+
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  });
+
+  dialog.addEventListener("close", () => {
+    const opener = dialog.__returnFocusElement;
+    dialog.__returnFocusElement = null;
+    if (opener?.isConnected) {
+      queueMicrotask(() => opener.focus());
+    }
+  });
+}
+
+function openHarnessDialog(dialog, preferredSelector = "") {
+  dialog.__returnFocusElement = document.activeElement instanceof HTMLElement
+    ? document.activeElement
+    : null;
+  dialog.showModal();
+  focusDialogElement(dialog, preferredSelector);
+}
+
+function registerGateAccessibility(gate, preferredSelector = "") {
+  gate.addEventListener("keydown", (event) => {
+    if (event.key !== "Tab") return;
+    const focusables = getFocusableElements(gate);
+    if (!focusables.length) return;
+
+    const first = focusables[0];
+    const last = focusables[focusables.length - 1];
+
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  });
+
+  gate.__focusPreferredSelector = preferredSelector;
+}
+
+function focusGate(gate) {
+  const preferred = gate.__focusPreferredSelector ? gate.querySelector(gate.__focusPreferredSelector) : null;
+  (preferred || getFocusableElements(gate)[0])?.focus();
+}
+
+function updateProductionGate() {
+  const gate = $("productionGate");
+  const warning = $("productionGateWarning");
+  const ack = $("productionAck");
+  const enableButton = $("productionEnableBtn");
+  const isProduction = state.environment === "production";
+  const mismatch = state.environmentMismatch;
+
+  gate.classList.toggle("hidden", !isProduction && !mismatch);
+  warning.classList.toggle("hidden", !mismatch);
+
+  if (mismatch) {
+    $("productionGateEyebrow").textContent = "CONFIGURATION BLOCKED";
+    $("productionGateTitle").textContent = "Environment configuration mismatch";
+    $("productionGateDescription").textContent =
+      "This harness cannot safely send mutations because the hostname and active Firebase environment do not match.";
+    warning.textContent =
+      "Correct the Firebase environment configuration before using this harness. Mutation controls remain disabled until the mismatch is resolved.";
+    ack.checked = false;
+    ack.disabled = true;
+    enableButton.disabled = true;
+    return;
+  }
+
+  $("productionGateEyebrow").textContent = "LIVE PRODUCTION";
+  $("productionGateTitle").textContent = "Production device simulation";
+  $("productionGateDescription").textContent =
+    "This harness will send real device events into the production Padel Push backend and can change live court state.";
+  warning.textContent = "";
+  ack.disabled = false;
+  enableButton.disabled = !ack.checked;
+}
+
+function openProductionGateIfNeeded() {
+  const shouldShow = state.environment === "production" || state.environmentMismatch;
+  $("productionGate").classList.toggle("hidden", !shouldShow);
+  if (shouldShow) {
+    updateProductionGate();
+    requestAnimationFrame(() => focusGate($("productionGate")));
+  }
 }
 
 function showToast(message, type = "info") {
@@ -238,11 +365,25 @@ async function loadCourts() {
 }
 
 async function loadDevices() {
-  const snapshot = await getDocs(collection(db, "devices"));
-  state.devices = snapshot.docs.map((item) => ({ id: item.id, ...item.data() }));
-  state.devices.sort((a, b) => a.id.localeCompare(b.id));
+  state.devicesLoading = true;
   renderDeviceList();
-  if (!state.selectedDeviceId && state.devices[0]) selectDevice(state.devices[0].id);
+
+  try {
+    const snapshot = await getDocs(collection(db, "devices"));
+    state.devices = snapshot.docs.map((item) => ({ id: item.id, ...item.data() }));
+    state.devices.sort((a, b) => a.id.localeCompare(b.id));
+    renderDeviceList();
+
+    if (!state.selectedDeviceId && state.devices[0]) {
+      await selectDevice(state.devices[0].id);
+    } else {
+      ensureSelectedDeviceVisible();
+    }
+  } finally {
+    state.devicesLoading = false;
+    renderDeviceList();
+    ensureSelectedDeviceVisible();
+  }
 }
 
 function renderCourtSelectors() {
@@ -260,6 +401,12 @@ function renderCourtSelectors() {
 
 function renderDeviceList() {
   $("deviceCount").textContent = String(state.devices.length);
+
+  if (state.devicesLoading) {
+    $("deviceList").innerHTML = '<div class="hint">Loading devices…</div>';
+    return;
+  }
+
   $("deviceList").innerHTML = state.devices.length ? state.devices.map((device) => {
     const sku = normaliseSku(device.deviceSKU);
     const virtual = device.isVirtual === true;
@@ -268,13 +415,36 @@ function renderDeviceList() {
       '<div class="device-item-top"><span class="device-item-name">' + escapeHtml(sku) +
       '</span><span class="device-dot"></span></div>' +
       '<div class="device-item-meta">' + escapeHtml(device.id) + " · " +
-      escapeHtml(device.courtId || "unbound") + (virtual ? " · virtual" : " · physical") +
-      "</div></button>";
+      escapeHtml(device.courtId || "unbound") + '</div>' +
+      '<span class="device-type-badge ' + (virtual ? "virtual" : "physical") + '">' +
+      (virtual ? "VIRTUAL" : "PHYSICAL") + '</span></button>';
   }).join("") : '<div class="hint">No devices registered yet.</div>';
 
   document.querySelectorAll("[data-device-id]").forEach((button) => {
     button.addEventListener("click", () => selectDevice(button.dataset.deviceId));
   });
+}
+
+function ensureSelectedDeviceVisible() {
+  const selected = document.querySelector("[data-device-id].selected");
+  selected?.scrollIntoView({ block: "nearest" });
+}
+
+function updateDeviceListToggle() {
+  const toggle = $("deviceListToggle");
+  const list = $("deviceList");
+  if (!toggle || !list) return;
+
+  if (globalThis.matchMedia("(max-width: 820px)").matches) {
+    const expanded = !list.classList.contains("is-collapsed");
+    toggle.setAttribute("aria-expanded", String(expanded));
+    toggle.textContent = expanded ? "Hide list" : "Show list";
+    return;
+  }
+
+  list.classList.remove("is-collapsed");
+  toggle.setAttribute("aria-expanded", "true");
+  toggle.textContent = "Hide list";
 }
 
 async function selectDevice(deviceId) {
@@ -287,6 +457,7 @@ async function selectDevice(deviceId) {
     state.localStates.set(device.id, createInitialLocalState(normaliseSku(device.deviceSKU)));
   }
   renderAll();
+  requestAnimationFrame(ensureSelectedDeviceVisible);
   if (state.selectedCourtId) selectCourt(state.selectedCourtId);
 }
 
@@ -424,13 +595,24 @@ function renderCourtEvents(events) {
 }
 
 function updateEnvironmentUi() {
+  const mismatch = !firebaseEnvironmentMatchesHost();
+  const mismatchChanged = mismatch !== state.environmentMismatch;
+  state.environmentMismatch = mismatch;
+
   $("envValue").textContent = state.environment.toUpperCase();
-  $("environmentBadge").textContent = state.environment.toUpperCase();
-  $("environmentBadge").className = "env-badge " + state.environment;
-  if (!firebaseEnvironmentMatchesHost()) {
-    $("environmentBadge").textContent += " · CONFIG MISMATCH";
-    showToast("Firebase environment config does not match this hostname.", "error");
+  $("environmentBadge").textContent = mismatch
+    ? state.environment.toUpperCase() + " · CONFIG MISMATCH"
+    : state.environment.toUpperCase();
+  $("environmentBadge").className = "env-badge " + state.environment + (mismatch ? " mismatch" : "");
+  $("environmentBadge").title = mismatch
+    ? "Mutations blocked: Firebase environment does not match this hostname."
+    : "Firebase environment: " + String(firebaseEnvironmentConfig.activeFirebaseEnvironment || "unknown");
+
+  if (mismatchChanged && mismatch) {
+    showToast("Firebase environment config does not match this hostname. Mutations are blocked.", "error");
   }
+
+  updateProductionGate();
 }
 
 function addTrace(entry) {
@@ -762,7 +944,7 @@ function openNfcDialog() {
     '<label class="dialog-copy">Tag payload<input id="nfcPayload" class="text-input" value="EVENT: POINT_TEAM_A" /></label>' +
     '<div class="dialog-copy">The simulator applies the same EVENT / COURTID / DEVICEID field convention used by the Hub firmware.</div>';
   $("actionConfirmBtn").textContent = "Scan tag";
-  $("actionDialog").showModal();
+  openHarnessDialog($("actionDialog"), "#nfcPayload");
   $("actionConfirmBtn").onclick = (event) => {
     event.preventDefault();
     const payload = $("nfcPayload").value.trim();
@@ -816,7 +998,7 @@ function openOperationalDialog(controlId) {
       }, "Hub REGISTER");
     };
   }
-  $("actionDialog").showModal();
+  openHarnessDialog($("actionDialog"));
 }
 
 function extractTagField(tag, fieldName) {
@@ -921,19 +1103,36 @@ function initHarness() {
     if (!requireMutationAccess()) return;
     $("virtualDeviceId").value = "SIM-" + Math.random().toString(36).slice(2, 8).toUpperCase();
     renderCourtSelectors();
-    $("deviceDialog").showModal();
+    openHarnessDialog($("deviceDialog"), "#virtualDeviceId");
   });
   $("createVirtualDeviceBtn").addEventListener("click", (event) => {
     event.preventDefault();
     void createVirtualDevice();
   });
-  $("productionAck").addEventListener("change", (event) => $("productionEnableBtn").disabled = !event.target.checked);
+  registerDialogAccessibility($("deviceDialog"));
+  registerDialogAccessibility($("actionDialog"));
+  registerGateAccessibility($("adminGate"), "#adminPassword");
+  registerGateAccessibility($("productionGate"), "#productionAck");
+
+  $("deviceListToggle").addEventListener("click", () => {
+    const list = $("deviceList");
+    const collapsed = list.classList.toggle("is-collapsed");
+    $("deviceListToggle").setAttribute("aria-expanded", String(!collapsed));
+    $("deviceListToggle").textContent = collapsed ? "Show list" : "Hide list";
+  });
+  window.addEventListener("resize", updateDeviceListToggle);
+
+  $("productionAck").addEventListener("change", (event) => {
+    $("productionEnableBtn").disabled = state.environmentMismatch || !event.target.checked;
+  });
   $("productionEnableBtn").addEventListener("click", () => {
-    if (!$("productionAck").checked) return;
+    if (state.environmentMismatch || !$("productionAck").checked) return;
     state.productionEnabled = true;
     $("productionGate").classList.add("hidden");
+    showToast("Production mutations enabled.", "warning");
   });
 
+  updateDeviceListToggle();
   updateFailureUi();
   renderTrace();
   updateEnvironmentUi();
@@ -942,9 +1141,7 @@ function initHarness() {
     showToast("Failed to load courts/devices: " + (error?.message || error), "error");
   });
 
-  if (state.environment === "production") {
-    $("productionGate").classList.remove("hidden");
-  }
+  openProductionGateIfNeeded();
 }
 
 function init() {
@@ -967,6 +1164,7 @@ function init() {
 
   $("themeToggleBtn")?.addEventListener("click", toggleTheme);
   $("themeToggleGateBtn")?.addEventListener("click", toggleTheme);
+  $("themeToggleProductionGateBtn")?.addEventListener("click", toggleTheme);
   $("logoutBtn")?.addEventListener("click", endAdminSession);
 
   $("adminUnlockBtn").addEventListener("click", () => {
@@ -983,7 +1181,7 @@ function init() {
     $("adminGate").classList.add("hidden");
     initHarness();
   } else {
-    $("adminPassword").focus();
+    focusGate($("adminGate"));
   }
 }
 
