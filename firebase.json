@@ -102,6 +102,38 @@
         "destination": "/app/overlay.html"
       },
       {
+        "source": "/admin",
+        "destination": "/app/index.html"
+      },
+      {
+        "source": "/admin/**",
+        "destination": "/app/index.html"
+      },
+      {
+        "source": "/app/admin",
+        "destination": "/app/index.html"
+      },
+      {
+        "source": "/app/admin/**",
+        "destination": "/app/index.html"
+      },
+      {
+        "source": "/harness",
+        "destination": "/device-harness/index.html"
+      },
+      {
+        "source": "/harness/**",
+        "destination": "/device-harness/index.html"
+      },
+      {
+        "source": "/app/harness",
+        "destination": "/device-harness/index.html"
+      },
+      {
+        "source": "/app/harness/**",
+        "destination": "/device-harness/index.html"
+      },
+      {
         "source": "/app",
         "destination": "/app/index.html"
       },
