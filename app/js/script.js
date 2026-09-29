@@ -76,6 +76,8 @@ document.addEventListener("DOMContentLoaded", () =>
   };
   const COOLDOWN_MS = 3000;
   const BACK_HOLD_MS = 550;
+  const ADMIN_SESSION_STORAGE_KEY = "padelPushAdminUnlocked";
+  const ADMIN_LOGOUT_SIGNAL_KEY = "padelPushAdminLogoutSignal";
   const UNDO_HOLD_MS = 550;
   const RESET_HOLD_MS = 1050;
   const LONG_PRESS_VIBRATION_MS = 200;
@@ -604,6 +606,51 @@ document.addEventListener("DOMContentLoaded", () =>
 
   let isAdmin = false;
 
+  function hasAdminSession()
+  {
+    try
+    {
+      return sessionStorage.getItem(ADMIN_SESSION_STORAGE_KEY) === "true";
+    }
+    catch
+    {
+      return false;
+    }
+  }
+
+  function clearAdminSession()
+  {
+    try
+    {
+      sessionStorage.removeItem(ADMIN_SESSION_STORAGE_KEY);
+    }
+    catch (storageError)
+    {
+      console.warn("Unable to clear admin session state.", storageError);
+    }
+  }
+
+  function broadcastAdminLogout()
+  {
+    try
+    {
+      localStorage.setItem(ADMIN_LOGOUT_SIGNAL_KEY, String(Date.now()));
+    }
+    catch (storageError)
+    {
+      console.warn("Unable to broadcast admin logout.", storageError);
+    }
+  }
+
+  function endAdminSession()
+  {
+    clearAdminSession();
+    broadcastAdminLogout();
+    isAdmin = false;
+  }
+
+  isAdmin = hasAdminSession();
+
   // True when this device entered the current court with admin credentials (or from
   // the admin dashboard). Admins keep control of the court across password changes.
   let enteredCourtAsAdmin = false;
@@ -889,10 +936,21 @@ document.addEventListener("DOMContentLoaded", () =>
       : "";
   }
 
+  function isAdminRootPathname()
+  {
+    const pathname = window.location.pathname.replace(/\/+$/, "") || "/";
+    return pathname === "/admin" || pathname === "/app/admin";
+  }
+
   function buildUrlForViewState(viewState)
   {
     const state = normalizeViewState(viewState);
     const basePath = getAppBasePath();
+
+    if (isAdminProtectedPage(state.page))
+    {
+      return "/admin";
+    }
 
     if (state.page === NAV_PAGES.SCOREBOARD && state.courtId)
     {
@@ -2402,6 +2460,11 @@ document.addEventListener("DOMContentLoaded", () =>
       return createViewState({ page: NAV_PAGES.SPECTATE });
     }
 
+    if (isAdminRootPathname())
+    {
+      return createViewState({ page: NAV_PAGES.ADMIN_DASHBOARD });
+    }
+
     const courtId = getCourtIdFromPathname();
 
     if (courtId)
@@ -2706,7 +2769,14 @@ document.addEventListener("DOMContentLoaded", () =>
     try
     {
       const routeState = getViewStateFromLocation();
-      replaceNavigationState(createViewState({ page: NAV_PAGES.MENU }));
+      if (isAdminRootPathname())
+      {
+        replaceNavigationState(routeState);
+      }
+      else
+      {
+        replaceNavigationState(createViewState({ page: NAV_PAGES.MENU }));
+      }
 
       if (routeState.page === NAV_PAGES.SCOREBOARD && routeState.courtId)
       {
@@ -2741,6 +2811,16 @@ document.addEventListener("DOMContentLoaded", () =>
           pushNavigationState(getCurrentViewState());
           return;
         }
+      }
+      else if (
+        routeState.page === NAV_PAGES.ADMIN_DASHBOARD ||
+        routeState.page === NAV_PAGES.ADMIN_AUTH ||
+        isAdminRootPathname()
+      )
+      {
+        await restoreViewState(routeState);
+        pushNavigationState(getCurrentViewState());
+        return;
       }
       else if (routeState.page === NAV_PAGES.SPECTATE)
       {
@@ -3334,6 +3414,15 @@ document.addEventListener("DOMContentLoaded", () =>
 
   elements.adminLoginBtn.addEventListener("click", () =>
   {
+    if (isAdmin)
+    {
+      elements.menuPage.style.display = "none";
+      elements.adminDashboardPage.style.display = "flex";
+      displayAdminCourtList();
+      syncCurrentViewState("replace");
+      return;
+    }
+
     elements.menuPage.style.display = "none";
     elements.adminAuthPage.style.display = "flex";
     elements.adminAuthPassword.value = "";
@@ -3370,6 +3459,15 @@ document.addEventListener("DOMContentLoaded", () =>
 
     if (pass === skeleton)
     {
+      try
+      {
+        sessionStorage.setItem(ADMIN_SESSION_STORAGE_KEY, "true");
+      }
+      catch (storageError)
+      {
+        console.warn("Unable to persist admin session state.", storageError);
+      }
+
       isAdmin = true;
       elements.adminAuthPage.style.display = "none";
       elements.adminDashboardPage.style.display = "flex";
@@ -3388,8 +3486,22 @@ document.addEventListener("DOMContentLoaded", () =>
 
   elements.closeAdminDashboardBtn.addEventListener("click", () =>
   {
-    isAdmin = false;
+    endAdminSession();
     void stepBackInApp(createViewState({ page: NAV_PAGES.MENU }));
+  });
+
+  window.addEventListener("storage", (event) =>
+  {
+    if (event.key !== ADMIN_LOGOUT_SIGNAL_KEY) return;
+    if (!isAdmin) return;
+
+    clearAdminSession();
+    isAdmin = false;
+
+    if (isAdminProtectedViewVisible())
+    {
+      void stepBackInApp(createViewState({ page: NAV_PAGES.MENU }));
+    }
   });
 
   if (elements.nfcToolBtn)
@@ -3405,7 +3517,7 @@ document.addEventListener("DOMContentLoaded", () =>
   {
     deviceHarnessBtn.addEventListener("click", () =>
     {
-      window.open("/device-harness/index.html", "_blank");
+      window.open("/harness", "_blank");
     });
   }
 

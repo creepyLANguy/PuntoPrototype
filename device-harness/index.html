@@ -8,17 +8,43 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <div id="productionGate" class="gate hidden">
+  <div id="adminGate" class="gate">
     <div class="gate-card">
-      <div class="eyebrow">LIVE PRODUCTION</div>
-      <h1>Production device simulation</h1>
-      <p>This harness will send real device events into the production Padel Push backend and can change live court state.</p>
-      <label class="check-row">
+      <div class="gate-top-actions">
+        <a href="/admin" class="gate-back-link">← Admin</a>
+        <button id="themeToggleGateBtn" class="icon-btn theme-icon-btn" type="button" aria-label="Toggle theme" title="Toggle theme">🌓</button>
+      </div>
+      <div class="eyebrow">ADMIN ACCESS</div>
+      <h1>Device Test Harness</h1>
+      <p>Enter the Padel Push admin password to access this tool.</p>
+      <label for="adminPassword">Admin password</label>
+      <input
+        id="adminPassword"
+        class="text-input"
+        type="password"
+        autocomplete="current-password"
+        aria-describedby="adminPasswordError"
+      />
+      <div id="adminPasswordError" class="gate-error" role="alert"></div>
+      <button id="adminUnlockBtn" class="btn brand-btn" type="button">Unlock harness</button>
+    </div>
+  </div>
+
+  <div id="productionGate" class="gate hidden">
+    <div class="gate-card" role="dialog" aria-modal="true" aria-labelledby="productionGateTitle" aria-describedby="productionGateDescription">
+      <div class="gate-top-actions">
+        <a href="/admin" class="gate-back-link">← Admin</a>
+        <button id="themeToggleProductionGateBtn" class="icon-btn theme-icon-btn" type="button" aria-label="Toggle theme" title="Toggle theme">🌓</button>
+      </div>
+      <div class="eyebrow" id="productionGateEyebrow">LIVE PRODUCTION</div>
+      <h1 id="productionGateTitle">Production device simulation</h1>
+      <p id="productionGateDescription">This harness will send real device events into the production Padel Push backend and can change live court state.</p>
+      <div id="productionGateWarning" class="gate-warning" role="alert"></div>
+      <label class="check-row" for="productionAck">
         <input id="productionAck" type="checkbox" />
         <span>I understand that these actions affect production data.</span>
       </label>
-      <button id="productionEnableBtn" class="btn danger" disabled>Enable production mutations</button>
-      <a href="../app/" class="link-btn">Back to Admin</a>
+      <button id="productionEnableBtn" class="btn danger gate-primary-action" disabled>Enable production mutations</button>
     </div>
   </div>
 
@@ -32,11 +58,21 @@
         </div>
       </div>
 
-      <div class="sidebar-heading">Devices <span id="deviceCount">0</span></div>
-      <div id="deviceList" class="device-list"></div>
+      <div class="sidebar-heading-wrap">
+        <div class="sidebar-heading">Devices <span id="deviceCount">0</span></div>
+        <button id="deviceListToggle" class="device-list-toggle" type="button" aria-expanded="true" aria-controls="deviceList">
+          Hide list
+        </button>
+      </div>
+      <div id="deviceList" class="device-list"><div class="hint">Loading devices…</div></div>
 
       <button id="addVirtualDeviceBtn" class="btn brand-btn">+ Add virtual device</button>
-      <a href="../app/" class="back-link">← Back to Admin</a>
+
+      <div class="sidebar-actions">
+        <button id="themeToggleBtn" class="btn secondary sidebar-action" type="button" aria-label="Toggle theme">🌓 Theme</button>
+        <a href="/admin" class="back-link">← Back to Admin</a>
+        <button id="logoutBtn" class="btn danger sidebar-action" type="button">Log out</button>
+      </div>
     </aside>
 
     <main class="main">
@@ -171,12 +207,12 @@
     </main>
   </div>
 
-  <dialog id="deviceDialog" class="dialog">
+  <dialog id="deviceDialog" class="dialog" aria-labelledby="deviceDialogTitle">
     <form method="dialog" id="deviceForm">
       <div class="panel-header compact">
         <div>
           <div class="eyebrow">VIRTUAL HARDWARE</div>
-          <h2>Add virtual device</h2>
+          <h2 id="deviceDialogTitle">Add virtual device</h2>
         </div>
         <button value="cancel" class="icon-btn" aria-label="Close">×</button>
       </div>
@@ -200,7 +236,7 @@
     </form>
   </dialog>
 
-  <dialog id="actionDialog" class="dialog">
+  <dialog id="actionDialog" class="dialog" aria-labelledby="actionDialogTitle">
     <form method="dialog" id="actionForm">
       <div class="panel-header compact">
         <div>
