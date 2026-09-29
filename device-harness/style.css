@@ -19,6 +19,69 @@ body { margin: 0; background: var(--bg); color: var(--ink); font-family: Inter, 
 button, input, select { font: inherit; }
 button { cursor: pointer; }
 .hidden { display: none !important; }
+body.dark {
+  --bg: #0b1220;
+  --panel: #111827;
+  --ink: #f3f4f6;
+  --muted: #9aa7b8;
+  --line: #2a3648;
+  --shadow: 0 8px 30px rgba(0, 0, 0, .28);
+  color-scheme: dark;
+}
+body.dark .sidebar,
+body.dark .panel,
+body.dark .stat-card,
+body.dark .gate-card,
+body.dark .dialog {
+  background: var(--panel);
+  color: var(--ink);
+  border-color: var(--line);
+}
+body.dark .device-item,
+body.dark .identity-cell,
+body.dark .state-cell,
+body.dark .score-card,
+body.dark .control-btn,
+body.dark .btn,
+body.dark .select,
+body.dark .text-input,
+body.dark .failure-panel {
+  background: #172033;
+  color: var(--ink);
+  border-color: var(--line);
+}
+body.dark .device-item.selected,
+body.dark .trace-row:hover,
+body.dark .trace-row.selected,
+body.dark .control-btn:hover {
+  background: #202b3e;
+}
+body.dark .trace-row,
+body.dark .event-row {
+  border-color: var(--line);
+}
+body.dark .link-btn,
+body.dark .back-link,
+body.dark .gate-back-link {
+  color: #b8c6ff;
+}
+body.dark .gate-card p,
+body.dark .dialog-copy {
+  color: var(--muted);
+}
+body.dark .dialog::backdrop {
+  background: rgba(0, 0, 0, .72);
+}
+body.dark .env-badge {
+  background: #1d2740;
+}
+body.dark .failure-description,
+body.dark .hint,
+body.dark .court-meta,
+body.dark .section-title-row span,
+body.dark .muted {
+  color: var(--muted);
+}
 .app-shell { min-height: 100vh; display: grid; grid-template-columns: 280px minmax(0, 1fr); gap: 16px; padding: 16px; }
 .sidebar { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 22px 16px; display: flex; flex-direction: column; min-height: calc(100vh - 32px); box-shadow: var(--shadow); }
 .brand { display: flex; align-items: center; gap: 12px; padding: 4px 6px 22px; }
@@ -35,7 +98,9 @@ button { cursor: pointer; }
 .device-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); flex: 0 0 auto; }
 .brand-btn { background: var(--brand); border-color: var(--brand); color: var(--ink); font-weight: 800; }
 .sidebar .brand-btn { margin-top: 16px; }
-.back-link { margin-top: 14px; padding: 11px 6px; color: var(--navy); text-decoration: none; font-size: 13px; font-weight: 800; }
+.sidebar-actions { margin-top: auto; padding-top: 18px; display: grid; gap: 8px; }
+.sidebar-action { width: 100%; }
+.back-link { padding: 7px 6px; color: var(--navy); text-decoration: none; font-size: 13px; font-weight: 800; }
 .main { min-width: 0; }
 .topbar { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 20px 22px; display: flex; justify-content: space-between; gap: 18px; align-items: center; box-shadow: var(--shadow); }
 .eyebrow { color: var(--muted); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; font-weight: 900; }
@@ -113,7 +178,10 @@ h1, h2, h3, p { margin: 0; }
 .code-block { margin: 0 18px 18px; min-height: 320px; max-height: 540px; overflow: auto; background: #0b1222; color: #dbeafe; border-radius: 11px; padding: 14px; font: 10px/1.55 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; white-space: pre-wrap; }
 .muted { color: var(--muted); font-size: 9px; }
 .gate { position: fixed; inset: 0; z-index: 100; background: rgba(10,14,20,.72); display: grid; place-items: center; backdrop-filter: blur(6px); }
-.gate-card { width: min(460px, calc(100% - 32px)); background: #fff; border-radius: 16px; padding: 26px; box-shadow: 0 25px 70px rgba(0,0,0,.25); }
+.gate-card { width: min(460px, calc(100% - 32px)); background: #fff; border-radius: 16px; padding: 26px; box-shadow: 0 25px 70px rgba(0,0,0,.25); position: relative; }
+.gate-top-actions { display: flex; justify-content: flex-end; align-items: center; gap: 8px; min-height: 36px; margin: -8px -8px 10px 0; }
+.gate-back-link { color: var(--navy); text-decoration: none; font-size: 12px; font-weight: 800; }
+.theme-icon-btn { width: 36px; min-height: 36px; padding: 0; display: inline-grid; place-items: center; }
 .gate-card h1 { margin-top: 5px; font-size: 22px; }
 .gate-card p { margin-top: 8px; color: var(--muted); font-size: 12px; line-height: 1.5; }
 .gate-card label { display: block; margin-top: 18px; color: var(--muted); font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; }
