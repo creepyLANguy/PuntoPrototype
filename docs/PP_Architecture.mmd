@@ -1,130 +1,103 @@
----
-config:
-    theme: base
----
-
 flowchart LR
-
-    classDef current fill:#E3F2FD,stroke:#1565C0,stroke-width:2px,color:#0D47A1,font-weight:bold;
-    classDef firebase fill:#FFF3E0,stroke:#E65100,stroke-width:2px,color:#BF360C,font-weight:bold;
-    classDef data fill:#E8F5E9,stroke:#2E7D32,stroke-width:2px,color:#1B5E20,font-weight:bold;
-    classDef delivery fill:#ECEFF1,stroke:#455A64,stroke-width:2px,color:#263238,font-weight:bold;
-    classDef product fill:#FCE4EC,stroke:#C2185B,stroke-width:2px,color:#880E4F,font-weight:bold;
-    classDef future fill:#FAFAFA,stroke:#9E9E9E,stroke-width:1px,stroke-dasharray:5 5,color:#616161;
+    classDef client fill:#E3F2FD,stroke:#1565C0,stroke-width:2px,color:#0D47A1
+    classDef firebase fill:#FFF3E0,stroke:#E65100,stroke-width:2px,color:#BF360C
+    classDef data fill:#E8F5E9,stroke:#2E7D32,stroke-width:2px,color:#1B5E20
+    classDef device fill:#FCE4EC,stroke:#C2185B,stroke-width:2px,color:#880E4F
+    classDef delivery fill:#ECEFF1,stroke:#455A64,stroke-width:2px,color:#263238
+    classDef future fill:#FAFAFA,stroke:#777777,stroke-width:1px,stroke-dasharray:5 5,color:#444444
 
     subgraph CLIENTS["Current client surfaces"]
-        WebApp["Padel Push™ web app<br/>app/index.html<br/>app/js/script.js"]
-        Overlay["OBS / broadcast overlay<br/>app/overlay.html"]
+        WEB["Web app<br/>app/index.html + script.js"]
+        ADMIN["Admin routes<br/>/admin and /app/admin"]
+        OVERLAY["OBS / public overlay<br/>app/overlay.html"]
         NFC["NFC utility<br/>nfc/index.html"]
-        DeviceClient["External device clients<br/>POST /postEvent<br/>firmware is not in this repository"]
+        LAB["Device Lab / harness<br/>admin-gated"]
+    end
+
+    subgraph FIRMWARE["Current firmware repository"]
+        HUB["Hub<br/>NFC + control"]
+        BEACON["Beacon<br/>distance trigger"]
+        PULSE["Pulse<br/>button remote"]
     end
 
     subgraph FIREBASE["Firebase runtime"]
-        Hosting["Firebase Hosting<br/>static files + public API redirects"]
-
-        Ingestion["postEvent<br/>HTTP Cloud Function<br/>africa-south1<br/>deviceId/binding identity only"]
-
-        Callable["Callable Cloud Functions<br/>africa-south1"]
-        Reset["resetCourt"]
-        Options["updateScoringOptions"]
-        Details["getDetailedScore"]
-
-        PublicAPI["Public HTTP read functions<br/>africa-south1<br/>getCourtScore<br/>getCourtScoreRevision<br/>getCourtStats<br/>getCourtMomentum"]
-
-        Trigger["Firestore trigger<br/>onEventCreate<br/>africa-south1"]
-        Scoring["Scoring engine<br/>scoringEngine.js"]
+        HOST["Firebase Hosting"]
+        INGEST["postEvent<br/>HTTP Cloud Function"]
+        CALLABLE["Callable functions<br/>resetCourt / changeoverCourt / updateScoringOptions / getDetailedScore"]
+        TRIGGER["onEventCreate"]
+        SCORE["Scoring + replay services"]
+        PUBLIC["Public read functions"]
     end
 
-    subgraph FIRESTORE["Cloud Firestore"]
-        Court["courts/{courtId}<br/>configuration + active match state"]
-        Events[("courts/{courtId}/events/{eventId}<br/>append-only events")]
-        Score[("courts/{courtId}/score/current<br/>materialized live score")]
-        Checkpoints[("courts/{courtId}/scoreCheckpoints/{id}<br/>replay accelerators")]
-        Archives[("courts/{courtId}/archive/{archiveId}/events<br/>reset archives")]
-        Devices[("devices/{deviceId}<br/>device binding")]
-    end
-
-    subgraph PRODUCT["Device concepts represented by the current product site"]
-        Pulse["Pulse"]
-        Beacon["Beacon"]
-        Hub["Hub"]
+    subgraph DATA["Firestore"]
+        COURT["courts/{courtId}<br/>configuration + active match state"]
+        EVENTS["courts/{courtId}/events/{eventId}<br/>authoritative active event history"]
+        LIVE["courts/{courtId}/score/current<br/>derived live score"]
+        CHECK["scoreCheckpoints<br/>replay accelerators"]
+        ARCHIVE["archive/{archiveId}/events<br/>reset archives"]
+        DEVICES["devices/{deviceId}<br/>device identity + court binding"]
     end
 
     subgraph DELIVERY["Current delivery"]
-        Repo["Git repository"]
-        Tests["Functions Jest + Node integration tests"]
-        Staging["Non-main branch deployment<br/>staging project / preview"]
-        Production["main deployment<br/>production project"]
-        Rules["firestore.rules + firestore.indexes.json<br/>tracked in repo; not deployed by current CI workflow"]
+        REPO["GitHub repositories"]
+        TESTS["Automated tests / deploy gate"]
+        STAGING["non-main -> staging"]
+        PROD["main -> production"]
     end
 
-    subgraph FUTURE["Not implemented in current repository"]
-        HardwareFW["Physical-device firmware source"]
-        Hmac["HMAC/device-secret auth<br/>freshness + replay protection"]
-        MatchModel["First-class match/tournament model"]
-        Analytics["Commercial analytics / billing"]
+    subgraph NOT_IMPLEMENTED["Not yet implemented as production controls"]
+        AUTH["Cryptographic device authentication<br/>freshness / replay / idempotency"]
+        RBAC["Explicit callable request.auth RBAC"]
+        MATCH["First-class match/tournament model"]
+        MFG["Manufacturing / provisioning system"]
     end
 
-    Hosting --> WebApp
-    Hosting --> Overlay
-    Hosting --> NFC
+    HOST --> WEB
+    HOST --> ADMIN
+    HOST --> OVERLAY
+    HOST --> NFC
+    ADMIN --> LAB
 
-    WebApp -->|"direct Firestore reads/writes"| Court
-    WebApp -->|"addDoc events"| Events
-    WebApp -->|"onSnapshot"| Score
-    WebApp -->|"callable"| Reset
-    WebApp -->|"callable"| Options
-    WebApp -->|"callable"| Details
-    WebApp -->|"device reads/updates"| Devices
+    WEB --> COURT
+    WEB --> EVENTS
+    WEB --> LIVE
+    WEB --> CALLABLE
+    WEB --> DEVICES
 
-    DeviceClient -->|"POST"| Ingestion
-    Ingestion -->|"append + server timestamp"| Events
+    HUB --> INGEST
+    BEACON --> INGEST
+    PULSE --> INGEST
+    INGEST --> DEVICES
+    INGEST --> EVENTS
+    EVENTS --> TRIGGER
+    TRIGGER --> SCORE
+    SCORE --> LIVE
+    SCORE --> CHECK
 
-    Events --> Trigger
-    Trigger --> Scoring
-    Scoring --> Score
-    Scoring --> Checkpoints
+    CALLABLE --> COURT
+    CALLABLE --> EVENTS
+    CALLABLE --> LIVE
+    CALLABLE --> CHECK
+    CALLABLE --> ARCHIVE
 
-    Reset --> Court
-    Reset --> Events
-    Reset --> Score
-    Reset --> Checkpoints
-    Reset --> Archives
+    OVERLAY --> PUBLIC
+    PUBLIC --> LIVE
+    PUBLIC --> EVENTS
 
-    Options --> Court
-    Options --> Events
-    Options --> Score
-    Options --> Checkpoints
+    REPO --> TESTS
+    TESTS --> STAGING
+    REPO --> PROD
 
-    Details --> Court
-    Details --> Events
+    INGEST -. "production target" .-> AUTH
+    CALLABLE -. "production target" .-> RBAC
+    COURT -. "future architecture" .-> MATCH
+    HUB -. "business process outside repo" .-> MFG
+    BEACON -. "business process outside repo" .-> MFG
+    PULSE -. "business process outside repo" .-> MFG
 
-    PublicAPI --> Score
-    PublicAPI --> Events
-    Overlay -->|"GET /score /revision /stats /momentum"| PublicAPI
-
-    Repo --> Tests
-    Tests --> Staging
-    Tests --> Production
-    Repo -. "manual/explicit deployment" .-> Rules
-
-    Pulse -. "product concept / no firmware source here" .-> HardwareFW
-    Beacon -. "product concept / no firmware source here" .-> HardwareFW
-    Hub -. "product concept / no firmware source here" .-> HardwareFW
-    Ingestion -. "production target" .-> Hmac
-    Court -. "future product architecture" .-> MatchModel
-    Score -. "future" .-> Analytics
-
-    class WebApp,Overlay,NFC,DeviceClient current
-    class Hosting,Ingestion,Callable,Reset,Options,Details,PublicAPI,Trigger,Scoring firebase
-    class Court,Events,Score,Checkpoints,Archives,Devices data
-    class Pulse,Beacon,Hub product
-    class Repo,Tests,Staging,Production,Rules delivery
-    class HardwareFW,Hmac,MatchModel,Analytics future
-
-    style CLIENTS fill:#E8EAF6,stroke:#1A237E,stroke-width:2px;
-    style FIREBASE fill:#FFF8E1,stroke:#FF6F00,stroke-width:2px;
-    style FIRESTORE fill:#F1F8E9,stroke:#33691E,stroke-width:2px;
-    style PRODUCT fill:#FCE4EC,stroke:#AD1457,stroke-width:2px;
-    style DELIVERY fill:#ECEFF1,stroke:#263238,stroke-width:2px;
-    style FUTURE fill:#FAFAFA,stroke:#9E9E9E,stroke-dasharray:5 5;
+    class WEB,ADMIN,OVERLAY,NFC,LAB client
+    class HUB,BEACON,PULSE device
+    class HOST,INGEST,CALLABLE,TRIGGER,SCORE,PUBLIC firebase
+    class COURT,EVENTS,LIVE,CHECK,ARCHIVE,DEVICES data
+    class REPO,TESTS,STAGING,PROD delivery
+    class AUTH,RBAC,MATCH,MFG future
