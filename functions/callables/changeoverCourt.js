@@ -1,4 +1,4 @@
-const { db } = require("../infrastructure/firebase");
+const { db, FieldValue } = require("../infrastructure/firebase");
 
 async function changeoverCourt(request) {
   const { courtId, beaconSidesSwapped } = request.data || {};
@@ -9,6 +9,7 @@ async function changeoverCourt(request) {
   }
 
   const courtRef = db.doc(`courts/${courtId}`);
+  const changeoverEventId = db.collection("_changeoverEvents").doc().id;
   let nextValue;
 
   await db.runTransaction(async (tx) => {
@@ -19,13 +20,24 @@ async function changeoverCourt(request) {
     }
 
     nextValue = beaconSidesSwapped;
-    tx.set(courtRef, { beaconSidesSwapped: nextValue }, { merge: true });
+    tx.set(
+      courtRef,
+      {
+        beaconSidesSwapped: nextValue,
+        changeoverEvent: {
+          id: changeoverEventId,
+          createdAt: FieldValue.serverTimestamp(),
+        },
+      },
+      { merge: true },
+    );
   });
 
   return {
     success: true,
     courtId,
     beaconSidesSwapped: nextValue,
+    changeoverEventId,
   };
 }
 

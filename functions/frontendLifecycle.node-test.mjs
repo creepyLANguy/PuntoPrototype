@@ -20,6 +20,7 @@ import {
 
 let document;
 let window;
+let changeoverEventCounter = 0;
 
 test.before(async () => {
   seedBaseData();
@@ -29,13 +30,17 @@ test.before(async () => {
   callableHandlers.set("changeoverCourt", async ({ courtId, beaconSidesSwapped }) => {
     const courtPath = `courts/${courtId}`;
     const court = firestoreState.docs.get(courtPath) || {};
+    const changeoverEventId = `changeover-${++changeoverEventCounter}`;
 
     writeDoc(courtPath, {
       ...court,
       beaconSidesSwapped,
+      changeoverEvent: {
+        id: changeoverEventId,
+      },
     });
 
-    return { data: { courtId, beaconSidesSwapped } };
+    return { data: { courtId, beaconSidesSwapped, changeoverEventId } };
   });
 
   // Mimic the resetCourt Cloud Function: zero the score, clear the event log,
@@ -93,7 +98,7 @@ test("set win: winning a set fills a set dot and shows the celebration overlay",
   overlay.click(); // dismiss
 });
 
-test("Changeover changes Beacon handling while Switch views remains visual-only", async () => {
+test("Changeover flips the local view and Beacon handling for all clients", async () => {
   const courtBefore = firestoreState.docs.get("courts/lifecourt");
   assert.equal(courtBefore.beaconSidesSwapped, false);
 
@@ -116,22 +121,113 @@ test("Changeover changes Beacon handling while Switch views remains visual-only"
   assert.equal(
     firestoreState.docs.get("courts/lifecourt").beaconSidesSwapped,
     false,
-    "Switch views must not change backend Beacon handling",
+    "Switch views must remain visual-only",
   );
 
+  // Changeover must invert whatever view is currently active on this device.
   document.getElementById("changeoverBtn").click();
 
-  await waitFor(() => firestoreState.docs.get("courts/lifecourt").beaconSidesSwapped === true, {
-    label: "Beacon changeover enabled from settings",
+  await waitFor(
+    () =>
+      firestoreState.docs.get("courts/lifecourt").beaconSidesSwapped === false,
+    {
+      label: "Beacon mapping follows the current view on changeover",
+    },
+  );
+  await waitFor(
+    () =>
+      document.querySelector(".scoreboard").classList.contains("swapped") === false,
+    {
+      label: "Changeover flips the current view",
+    },
+  );
+
+  await waitFor(() => document.getElementById("changeoverBtn").disabled === false, {
+    label: "local changeover success response completed",
   });
+  assert.equal(
+    window.__clashAudioTestState.starts,
+    1,
+    "successful local changeover plays exactly one clash sound",
+  );
+
+  assert.equal(
+    switchViewsButton.closest(".setting-item").classList.contains("active"),
+    false,
+    "Switch views option state follows the local changeover",
+  );
+
+  // Simulate another device broadcasting a completed changeover. It must
+  // update this device's view without producing a local clash sound.
+  const remoteCourt = firestoreState.docs.get("courts/lifecourt");
+  writeDoc("courts/lifecourt", {
+    ...remoteCourt,
+    changeoverEvent: { id: "remote-changeover-1" },
+  });
+
+  await waitFor(
+    () =>
+      document.querySelector(".scoreboard").classList.contains("swapped") === true,
+    {
+      label: "remote changeover flips local view",
+    },
+  );
+  assert.equal(
+    window.__clashAudioTestState.starts,
+    1,
+    "remote changeover broadcast must not play the clash sound",
+  );
   await waitFor(() => document.getElementById("changeoverBtn").disabled === false, {
     label: "Changeover button re-enabled",
   });
 
+  assert.equal(
+    switchViewsButton.closest(".setting-item").classList.contains("active"),
+    true,
+    "Switch views option state follows the remote changeover",
+  );
+
+  // A second local changeover now starts from the remote device's
+  // view state: swapped=true with Beacon mapping=false, so it flips back
+  // to swapped=false and keeps the backend Beacon mapping=false.
   document.getElementById("changeoverBtn").click();
-  await waitFor(() => firestoreState.docs.get("courts/lifecourt").beaconSidesSwapped === false, {
-    label: "Beacon changeover disabled from settings",
+  await waitFor(
+    () =>
+      firestoreState.docs.get("courts/lifecourt").beaconSidesSwapped === false,
+    {
+      label: "Second local changeover preserves Beacon mapping",
+    },
+  );
+  await waitFor(
+    () => document.querySelector(".scoreboard").classList.contains("swapped") === false,
+    {
+      label: "Second local changeover flips the local view back",
+    },
+  );
+
+  await waitFor(() => document.getElementById("changeoverBtn").disabled === false, {
+    label: "second local changeover success response completed",
   });
+  assert.equal(
+    window.__clashAudioTestState.starts,
+    2,
+    "each successful local changeover plays one clash sound",
+  );
+
+  // A successful local changeover while muted must not play the sound.
+  document.getElementById("muteBtn").click();
+  assert.equal(document.getElementById("muteBtn").getAttribute("aria-pressed"), "true");
+  document.getElementById("changeoverBtn").click();
+  await waitFor(() => document.getElementById("changeoverBtn").disabled === false, {
+    label: "muted changeover completed",
+  });
+  assert.equal(
+    window.__clashAudioTestState.starts,
+    2,
+    "muted local changeover must not play the clash sound",
+  );
+  document.getElementById("muteBtn").click();
+  assert.equal(document.getElementById("muteBtn").getAttribute("aria-pressed"), "false");
 
   document.getElementById("closeSettingsBtn").click();
   await settle(10);

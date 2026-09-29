@@ -960,12 +960,17 @@ describe("changeoverCourt", () => {
       success: true,
       courtId,
       beaconSidesSwapped: true,
+      changeoverEventId: "auto-1",
     });
     expect(mockDb.docs.get(`courts/${courtId}`)).toEqual({
       name: "Changeover",
       scoreVersion: 7,
       beaconSidesSwapped: true,
       status: "open",
+      changeoverEvent: {
+        id: "auto-1",
+        createdAt: { __serverTimestamp: true },
+      },
     });
   });
 

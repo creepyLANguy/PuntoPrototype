@@ -51,6 +51,14 @@ function installGlobals(dom) {
     };
 
   window.__audioTestState = { contexts: 0, resumeCalls: 0, starts: 0 };
+  window.__clashAudioTestState = { starts: 0 };
+  window.Audio = class {
+    constructor() {}
+    play() {
+      window.__clashAudioTestState.starts += 1;
+      return Promise.resolve();
+    }
+  };
   window.AudioContext = class {
     constructor() {
       this.state = "suspended";
@@ -90,6 +98,7 @@ function installGlobals(dom) {
 
   const globalsToExpose = {
     window,
+    Audio: window.Audio,
     document: window.document,
     localStorage: window.localStorage,
     sessionStorage: window.sessionStorage,
