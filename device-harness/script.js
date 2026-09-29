@@ -37,6 +37,7 @@ const state = {
 
 const els = {};
 const ADMIN_SESSION_STORAGE_KEY = "padelPushAdminUnlocked";
+const ADMIN_LOGOUT_SIGNAL_KEY = "padelPushAdminLogoutSignal";
 
 function $(id) { return document.getElementById(id); }
 
@@ -897,6 +898,21 @@ function initHarness() {
 }
 
 function init() {
+  window.addEventListener("storage", (event) => {
+    if (event.key !== ADMIN_LOGOUT_SIGNAL_KEY) return;
+
+    try
+    {
+      sessionStorage.removeItem(ADMIN_SESSION_STORAGE_KEY);
+    }
+    catch (storageError)
+    {
+      console.warn("Unable to clear admin session state.", storageError);
+    }
+
+    window.location.reload();
+  });
+
   $("adminUnlockBtn").addEventListener("click", () => {
     void unlockHarness();
   });
