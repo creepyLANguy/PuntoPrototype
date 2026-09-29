@@ -1,81 +1,73 @@
----
-config:
-    theme: base
-    themeVariables:
-        actorBkg: '#E3F2FD'
-        actorBorder: '#1565C0'
-        actorTextColor: '#0D47A1'
-        signalColor: '#455A64'
-        signalTextColor: '#263238'
-        noteBkgColor: '#FFFDE7'
-        noteBorderColor: '#FBC02D'
----
-
 sequenceDiagram
     autonumber
-    participant B as Browser app
-    participant D as External device
-    participant F as Firestore
+    participant U as Player / Court Operator
+    participant B as Web app
+    participant D as Hub / Beacon / Pulse
     participant I as postEvent
+    participant F as Firestore
     participant T as onEventCreate
-    participant G as Scoring engine
+    participant G as Scoring / Replay
     participant S as score/current
-    participant A as Public API
-    participant O as Overlay / read client
-    participant H as Firebase Hosting
     participant K as Callable functions
+    participant O as Overlay / read client
+    participant A as Public API
 
     alt Browser scoring action
-        B->>F: addDoc courts/{courtId}/events/{eventId}
-    else External device action
+        U->>B: Score / undo in app
+        B->>F: Write court event
+    else Physical device action
+        U->>D: Physical action
         D->>I: POST /postEvent
-        I->>F: append event + server timestamp
+        I->>F: Append effective event
+    end
+
+    opt Beacon changeover active
+        I->>I: Apply beaconSidesSwapped for Beacon events
     end
 
     F-->>T: Event document created
-    T->>F: Read court + event + score/current in transaction
+    T->>F: Read court + event + current score
     T->>T: Check scoreVersion and event ordering
 
     alt Out-of-order event or UNDO
-        T->>G: Full event-history replay
-    else Normal scoring event
-        T->>G: Apply/replay scoring state
+        T->>G: Full active-history replay
+    else Normal scoring
+        T->>G: Apply event / checkpoint
     end
 
     G-->>T: Materialized score
     T->>F: Write score/current
     T->>F: Write checkpoint when required
-    F-->>S: Updated live score document
+    F-->>S: Updated live score
     S-->>B: onSnapshot live score
 
-    opt Public scoreboard / overlay
-        O->>H: GET /revision/{courtId}
-        H-->>A: 307 to africa-south1 function
-        O->>A: Follow redirect
+    opt Public scoreboard or overlay
+        O->>A: GET /revision/{courtId}
         A->>S: Read current score
         A-->>O: Revision payload
 
-        O->>H: GET /score/{courtId}
-        H-->>A: 307 to africa-south1 function
-        O->>A: Follow redirect
+        O->>A: GET /score/{courtId}
         A->>S: Read current score
         A-->>O: Live score payload
 
-        O->>H: GET /stats/{courtId} or /momentum/{courtId}
-        H-->>A: 307 to africa-south1 function
-        O->>A: Follow redirect
-        A->>F: Replay active court event history
-        A-->>O: Statistics / momentum payload
+        O->>A: GET /stats or /momentum
+        A->>F: Replay active court history
+        A-->>O: Derived payload
     end
 
-    opt Callable resetCourt
-        B->>K: httpsCallable resetCourt
+    opt Changeover
+        B->>K: changeoverCourt({courtId, beaconSidesSwapped})
+        K->>F: Update court mapping + changeoverEvent
+    end
+
+    opt RESET
+        B->>K: resetCourt
         K->>F: Archive active events
         K->>F: Delete active events + checkpoints
-        K->>F: Reset score/current
-        K->>F: Increment court scoreVersion
+        K->>F: Reset score/current and Beacon mapping
+        K->>F: Increment scoreVersion
     end
 
-    Note over K,F: Current callable handlers do not perform explicit request.auth authorization checks
-    Note over D,I: Current device identity is deviceId/binding only; HMAC + freshness + idempotency are production targets
-    Note over F,S: score/current is derived state; courts/{courtId}/events is the authoritative scoring history
+    Note over I,D: Current device identity is deviceId/binding. HMAC, freshness, replay protection and idempotency are production targets.
+    Note over K,F: Current callable handlers do not perform explicit request.auth checks.
+    Note over F,S: events are authoritative; score/current is derived state.
