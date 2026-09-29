@@ -2769,7 +2769,14 @@ document.addEventListener("DOMContentLoaded", () =>
     try
     {
       const routeState = getViewStateFromLocation();
-      replaceNavigationState(createViewState({ page: NAV_PAGES.MENU }));
+      if (isAdminRootPathname())
+      {
+        replaceNavigationState(routeState);
+      }
+      else
+      {
+        replaceNavigationState(createViewState({ page: NAV_PAGES.MENU }));
+      }
 
       if (routeState.page === NAV_PAGES.SCOREBOARD && routeState.courtId)
       {
@@ -3488,7 +3495,8 @@ document.addEventListener("DOMContentLoaded", () =>
     if (event.key !== ADMIN_LOGOUT_SIGNAL_KEY) return;
     if (!isAdmin) return;
 
-    endAdminSession();
+    clearAdminSession();
+    isAdmin = false;
 
     if (isAdminProtectedViewVisible())
     {
