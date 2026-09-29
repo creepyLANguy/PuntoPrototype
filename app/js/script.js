@@ -3370,6 +3370,15 @@ document.addEventListener("DOMContentLoaded", () =>
 
     if (pass === skeleton)
     {
+      try
+      {
+        sessionStorage.setItem("padelPushAdminUnlocked", "true");
+      }
+      catch (storageError)
+      {
+        console.warn("Unable to persist admin session state.", storageError);
+      }
+
       isAdmin = true;
       elements.adminAuthPage.style.display = "none";
       elements.adminDashboardPage.style.display = "flex";
