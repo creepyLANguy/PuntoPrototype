@@ -8,6 +8,25 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
+  <div id="adminGate" class="gate">
+    <div class="gate-card">
+      <div class="eyebrow">ADMIN ACCESS</div>
+      <h1>Device Test Harness</h1>
+      <p>Enter the Padel Push admin password to access this tool.</p>
+      <label for="adminPassword">Admin password</label>
+      <input
+        id="adminPassword"
+        class="text-input"
+        type="password"
+        autocomplete="current-password"
+        aria-describedby="adminPasswordError"
+      />
+      <div id="adminPasswordError" class="gate-error" role="alert"></div>
+      <button id="adminUnlockBtn" class="btn brand-btn" type="button">Unlock harness</button>
+      <a href="../app/" class="link-btn">Back to Admin</a>
+    </div>
+  </div>
+
   <div id="productionGate" class="gate hidden">
     <div class="gate-card">
       <div class="eyebrow">LIVE PRODUCTION</div>
