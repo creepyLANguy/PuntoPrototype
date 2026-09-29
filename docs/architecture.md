@@ -1,10 +1,12 @@
-# API architecture
+# Platform architecture
 
 ## Current implementation
 
-The repository is currently **court-centric**. A court document is the configuration and active match container; there is no separate match document or public match identifier in the current implementation.
+The repository is a court-centric scoring platform. A court document is the configuration and active match container; there is no separate match document or public matchId.
 
 The runtime sequence is visualized in [PP_Runtime_Flow.mmd](PP_Runtime_Flow.mmd).
+
+### Application and clients
 
     Browser web app
       |-- Firebase Web SDK -> courts/{courtId}
@@ -13,50 +15,83 @@ The runtime sequence is visualized in [PP_Runtime_Flow.mmd](PP_Runtime_Flow.mmd)
       |-- onSnapshot <- courts/{courtId}/score/current
       |-- callable -> resetCourt / changeoverCourt / updateScoringOptions / getDetailedScore
       |
-      +-- public URLs /c/{courtId}, /p/{courtId}, /overlay and related Hosting routes
+      +-- public routes /c/{courtId}, /p/{courtId}, /overlay, /nfc, /admin
 
-    External device clients
+    Physical devices
+      |-- firmware source -> ProtoSketches repository
       |-- POST /postEvent (HTTP Cloud Function, africa-south1)
-      |-- Beacon point events are inverted when courts/{courtId}.beaconSidesSwapped is true
-      +-- append effective event -> courts/{courtId}/events/{eventId}
+      |-- Beacon point events are mapped using courts/{courtId}.beaconSidesSwapped
+      +-- effective event -> courts/{courtId}/events/{eventId}
 
-    onEventCreate (Cloud Function, africa-south1)
-      |-- reads court configuration + event log
-      |-- applies/replays scoring rules
-      |-- writes courts/{courtId}/score/current
-      +-- writes replay checkpoints when useful
+    Device Lab
+      |-- admin-gated diagnostic harness
+      |-- local/branch workflows use staging
+      +-- explicit acknowledgement before production mutations
 
-    Public JSON consumers / OBS
-      |-- /score/{courtId} -> current score
-      |-- /revision/{courtId} -> revision token
-      |-- /stats/{courtId} -> replayed statistics
-      +-- /momentum/{courtId} -> replayed momentum
+### Firebase runtime
 
-All current Cloud Functions run in `africa-south1` (Johannesburg): device ingestion, callable functions, Firestore event processing, and the public JSON read endpoints. Firebase Hosting remains a global CDN; its public JSON paths redirect to the Johannesburg Functions because Firebase Hosting does not support a direct function rewrite to `africa-south1`.
+All current Cloud Functions run in africa-south1:
+
+- device ingestion (postEvent);
+- callable functions;
+- Firestore event trigger (onEventCreate);
+- public JSON read functions.
+
+Firebase Hosting remains global/CDN-based. Public JSON paths redirect to the Johannesburg functions because Firebase Hosting does not support a direct function rewrite to africa-south1.
+
+## Physical product boundary
+
+### Current repositories
+
+- PuntoPrototype: web application, admin tooling, backend, API, Device Lab and deployment configuration.
+- ProtoSketches: ESP32 firmware prototypes for Hub, Beacon and Pulse.
+
+### Outside the repositories
+
+The following are not yet managed end-to-end by the repositories:
+
+- production BOM and approved hardware revision;
+- PCB/Gerbers release control;
+- enclosure production drawings;
+- manufacturing execution;
+- serialisation/inventory system;
+- secure factory provisioning;
+- packaging/labels/fulfilment;
+- formal regulatory/compliance records.
+
+These are business/operations processes, not missing source-code modules.
 
 ## Functions module boundaries
 
-The Cloud Functions implementation is intentionally split between composition, domain logic, and infrastructure:
+The Cloud Functions implementation is separated between composition, domain logic and infrastructure:
 
-- `functions/index.js` is the Firebase composition root. It registers triggers, callable functions and HTTP functions but does not contain scoring, replay, statistics or HTTP-domain implementation.
-- `functions/domain/scoring/` contains scoring rules and scoring-option helpers. `functions/scoringEngine.js` remains as a compatibility facade for existing imports/tests.
-- `functions/domain/events/` contains event-type validation and ordering helpers.
-- `functions/domain/stats/` and `functions/domain/momentum/` contain the pure statistics and momentum calculators.
-- `functions/services/` contains score-event persistence, replay, checkpoint, analytics, device-event and public API orchestration.
-- `functions/callables/`, `functions/http/` and `functions/triggers/` contain the thin Firebase entry handlers.
-- `functions/infrastructure/` centralizes Firebase Admin access and shared API-cache behaviour.
-
-This decomposition is deliberately independent of the future first-class match/tournament model. The current court-scoped Firestore model remains unchanged.
+- functions/index.js is the Firebase composition root.
+- functions/domain/scoring/ contains scoring rules and scoring-option helpers.
+- functions/domain/events/ contains event validation and ordering.
+- functions/domain/stats/ and functions/domain/momentum/ contain pure analytics calculations.
+- functions/services/ contains persistence, replay, checkpoint, device-event and public API orchestration.
+- functions/callables/, functions/http/ and functions/triggers/ contain thin Firebase entry handlers.
+- functions/infrastructure/ centralizes Firebase Admin access and shared API-cache behaviour.
 
 ## Current data and mutation boundaries
 
 - The web app uses the Firebase Web SDK directly for court reads, court creation/edit/delete, device reads/updates, event writes and score listeners.
-- Callable functions currently present are resetCourt, changeoverCourt, updateScoringOptions and getDetailedScore.
-- The current callable handlers do **not** perform an explicit request.auth authorization check in functions/index.js. Authorization is therefore a production-hardening requirement, not an implemented guarantee.
+- Callable functions present are resetCourt, changeoverCourt, updateScoringOptions and getDetailedScore.
 - The public JSON endpoints are intentionally unauthenticated read surfaces.
-- postEvent currently identifies a device through its deviceId and current device/court binding. The cryptographic HMAC, freshness, nonce and client-generated idempotency protocol described elsewhere in the docs is a target, not the current implementation.
-- Cloud Functions use the Admin SDK, so Firestore security rules do not constrain those Admin SDK writes.
-- firestore.rules is explicitly documented in the repository as an emulator-only open ruleset. The deployment workflow currently deploys Functions and Hosting, not Firestore rules or indexes.
+- postEvent currently identifies a device through deviceId and its current devices/{deviceId}.courtId binding.
+- Cloud Functions use the Admin SDK, so Firestore security rules do not constrain those server-side writes.
+- The repository's Firestore rules are documented as emulator-only; the current CI deployment workflow deploys Hosting and Functions, not Firestore rules or indexes.
+- The current callable implementations do not perform explicit request.auth authorization checks.
+
+## Device behaviour boundaries
+
+| Device | Current firmware responsibility | Platform responsibility |
+|---|---|---|
+| Hub | NFC parsing, Wi-Fi configuration, operational commands, scoring controls | Validate/bind device, append events, update court state |
+| Beacon | Distance detection, team selection, scoring event transmission | Apply Beacon side mapping and scoring |
+| Pulse | Button input, local team selection, scoring/undo transmission | Interpret scoring event and update score |
+
+The shared event protocol is intentionally narrow; device-specific physical behaviour remains in firmware.
 
 ## Cache architecture
 
@@ -72,39 +107,32 @@ Current implementation TTLs:
 - /stats: 10 seconds
 - /momentum: 5 seconds
 
-The /revision endpoint exists so polling clients can detect a changed revision before fetching the larger /score payload.
+The /revision endpoint exists so polling clients can detect a changed score revision before fetching the larger score payload.
 
 ## Replay architecture
 
-The event log is the authoritative scoring history for the active court. courts/{courtId}/score/current is a materialized view used for live display. scoreCheckpoints are replay accelerators and can be discarded/rebuilt.
+The event log is the authoritative scoring history for the active court. courts/{courtId}/score/current is a materialized view for live display. Checkpoints are replay accelerators.
 
 RESET handling currently:
 
-1. archives the current event stream under courts/{courtId}/archive/{archiveId}/events/{eventId};
-2. deletes the active events and checkpoints;
+1. archives the current event stream;
+2. deletes active events and checkpoints;
 3. resets score/current;
-4. increments courts/{courtId}.scoreVersion.
+4. increments scoreVersion;
+5. resets beaconSidesSwapped to false.
 
-Events whose scoreVersion no longer matches the court are ignored.
+UNDO and out-of-order events trigger replay where required. Normal scoring uses a compatible checkpoint when safe.
 
-The `beaconSidesSwapped` court flag is reset to `false` on every RESET, so each new match begins with the default physical Beacon-to-team mapping.
+## Operational security status
 
-UNDO and out-of-order events trigger full-history replay where required. Normal scoring uses the newest compatible checkpoint when it can do so safely.
+The current repository is suitable as a controlled development/prototype platform but has explicit production-hardening work remaining:
 
-## Failure behaviour
+- cryptographic device authentication;
+- timestamp/nonce freshness;
+- client-generated event IDs and idempotency;
+- explicit callable authorization/RBAC;
+- rate limiting/abuse controls;
+- production telemetry/correlation;
+- formal manufacturing credential provisioning.
 
-The event trigger runs with retries enabled and uses transactions around score processing. Duplicate delivery, rapid concurrent writes and out-of-order events are explicitly handled by replay and scoreVersion checks.
-
-Public consumers should tolerate short-lived cached data and retry transient HTTP failures with bounded backoff.
-
-## Current observability
-
-The repository currently relies on console debug/error logging in the Functions runtime and does not show a dedicated request-correlation or telemetry layer.
-
-For production hardening, telemetry should include function/endpoint latency, status/error code, environment/region, court ID where appropriate, event ID for device mutations and a request/correlation ID. Credentials and sensitive provisioning material must never be logged.
-
-## Rate limiting
-
-The current public read API has no published client quota. Device ingestion also has no implemented per-device/global rate limiter in the current repository.
-
-Production hardening should add abuse controls to device ingestion and document any public read quota together with its 429 response behaviour.
+Those are documented targets, not current guarantees.
