@@ -165,7 +165,7 @@ function detectEnvironment() {
     host === "[::1]"
   ) return "staging";
 
-  return "staging";
+  return "development";
 }
 
 function projectIdForEnvironment() {
