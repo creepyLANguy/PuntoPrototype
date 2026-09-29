@@ -94,7 +94,7 @@ function endAdminSession() {
     console.warn("Unable to broadcast admin logout.", storageError);
   }
 
-  window.location.href = "/";
+  window.location.href = "/app";
 }
 
 function hasAdminSession() {
@@ -1175,7 +1175,7 @@ function init() {
       console.warn("Unable to clear admin session state.", storageError);
     }
 
-    window.location.href = "/";
+    window.location.href = "/app";
   });
 
   $("themeToggleBtn")?.addEventListener("click", toggleTheme);
