@@ -1,18 +1,3 @@
----
-config:
-    theme: base
-    themeVariables:
-        primaryColor: '#E3F2FD'
-        primaryBorderColor: '#1565C0'
-        primaryTextColor: '#0D47A1'
-        lineColor: '#455A64'
-        secondaryColor: '#FFF3E0'
-        tertiaryColor: '#E8F5E9'
----
-
-%% The model is court-centric. ARCHIVE is a path segment in
-%% courts/{courtId}/archive/{archiveId}/events, not a standalone document.
-
 erDiagram
     COURT {
         string courtId PK
@@ -25,6 +10,8 @@ erDiagram
         object scoringOptions
         object teamNames
         object playerNames
+        boolean beaconSidesSwapped
+        object changeoverEvent
     }
 
     SCORE_CURRENT {
@@ -35,6 +22,8 @@ erDiagram
         boolean inTiebreak
         boolean matchComplete
         string lastEventId
+        string lastProcessedEventId
+        timestamp lastProcessedCreatedAt
         timestamp updatedAt
     }
 
@@ -48,6 +37,8 @@ erDiagram
         string sourceCourtId
         string targetCourtId
         string registeringDeviceId
+        string sourceEventType
+        boolean beaconSidesSwapped
     }
 
     CHECKPOINT {
@@ -79,6 +70,7 @@ erDiagram
 
     DEVICE {
         string deviceId PK
+        string deviceSKU
         string courtId FK
     }
 
