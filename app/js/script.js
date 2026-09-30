@@ -4140,6 +4140,19 @@ document.addEventListener("DOMContentLoaded", () =>
     currentCourtStatus = data.status;
     currentScoreVersion = Number(data.scoreVersion) || 0;
     beaconSidesSwapped = data.beaconSidesSwapped === true;
+
+    // The court's active Beacon changeover is also the initial visual court
+    // orientation for a newly joined player or spectator. Keep the scoreboard
+    // and the Switch Views control aligned with that persisted state before
+    // any live changeover events arrive.
+    const scoreboard = document.querySelector(".scoreboard");
+    scoreboard?.classList.toggle("swapped", beaconSidesSwapped);
+    if (elements.swapBtn)
+    {
+      elements.swapBtn.textContent = beaconSidesSwapped ? "⇄" : "⇆";
+      elements.swapBtn.setAttribute("aria-pressed", String(beaconSidesSwapped));
+    }
+
     currentRawTeamNames = normalizeTeamNames(data.teamNames || {});
     currentPlayerNames = normalizePlayerNames(data.playerNames || {});
     currentScoringOptions = normalizeScoringOptions({
