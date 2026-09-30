@@ -6423,8 +6423,6 @@ document.addEventListener("DOMContentLoaded", () =>
   {
     if (!currentCourtId || isSpectating) return;
 
-    if (elements.settingsModal) elements.settingsModal.style.opacity = 0.5;
-
     const nextBeaconSidesSwapped = !beaconSidesSwapped;
 
     try
@@ -6455,7 +6453,6 @@ document.addEventListener("DOMContentLoaded", () =>
   elements.changeoverBtn.addEventListener("click", () =>
   {
     void performBeaconChangeover();
-    //if (elements.settingsModal) elements.settingsModal.disabled = false;
   });
 
   // =====================================================
