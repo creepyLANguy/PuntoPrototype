@@ -266,7 +266,7 @@ test("active changeover state is applied when a player joins and can be toggled 
   );
   assert.equal(
     document.getElementById("swapBtn").closest(".setting-item").querySelector("span").textContent,
-    "Views switched",
+    "Swap views *",
   );
   assert.equal(
     document.getElementById("swapBtn").getAttribute("aria-pressed"),

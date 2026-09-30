@@ -1330,8 +1330,8 @@ document.addEventListener("DOMContentLoaded", () =>
     updateItem(
       elements.swapBtn,
       document.querySelector(".scoreboard")?.classList.contains("swapped"),
-      "Views switched",
-      "Switch views",
+      "Swap views *",
+      "Swap views",
     );
     updateItem(elements.changeoverBtn, beaconSidesSwapped, "Changeover *", "Changeover");
     updateItem(elements.serverToggleBtn, isServerBadgeVisible, "Server on", "Server off");
@@ -6423,6 +6423,8 @@ document.addEventListener("DOMContentLoaded", () =>
   {
     if (!currentCourtId || isSpectating) return;
 
+    if (elements.settingsModal) elements.settingsModal.style.opacity = 0.5;
+
     const nextBeaconSidesSwapped = !beaconSidesSwapped;
 
     try
@@ -6453,6 +6455,7 @@ document.addEventListener("DOMContentLoaded", () =>
   elements.changeoverBtn.addEventListener("click", () =>
   {
     void performBeaconChangeover();
+    //if (elements.settingsModal) elements.settingsModal.disabled = false;
   });
 
   // =====================================================
