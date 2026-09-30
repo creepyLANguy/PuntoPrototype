@@ -1,64 +1,49 @@
 /* ==========================================================================
-   Padel Push — Modern UI Overhaul
-   Visual-only presentation layer. Existing scoring, Firebase and navigation
-   behaviour remain unchanged.
+   Padel Push — Modern Visual System
+   IMPORTANT: presentation layer only.
+   This file intentionally does NOT change layout primitives, element sizing,
+   positioning, tap zones, navigation, or application behaviour.
    ========================================================================== */
 
 :root {
-  --pp-bg: #050a0c;
-  --pp-bg-elevated: #0a1114;
-  --pp-panel: rgba(13, 22, 26, 0.82);
-  --pp-panel-strong: rgba(16, 27, 32, 0.96);
-  --pp-panel-soft: rgba(255, 255, 255, 0.055);
-  --pp-line: rgba(255, 255, 255, 0.09);
-  --pp-line-strong: rgba(255, 255, 255, 0.15);
-  --pp-text: #f6fbfa;
-  --pp-muted: #8fa3a6;
-  --pp-dim: #5f7478;
-  --pp-accent: #c8ff4a;
-  --pp-accent-soft: rgba(200, 255, 74, 0.14);
-  --pp-cyan: #63f5e8;
-  --pp-danger: #ff6b78;
-  --pp-warning: #ffcc66;
-  --pp-shadow-xl: 0 32px 90px rgba(0, 0, 0, 0.46);
-  --pp-shadow-lg: 0 18px 50px rgba(0, 0, 0, 0.35);
-  --pp-shadow-md: 0 12px 30px rgba(0, 0, 0, 0.26);
-  --pp-radius-xl: 30px;
-  --pp-radius-lg: 22px;
-  --pp-radius-md: 16px;
-  --pp-radius-sm: 12px;
-  --pp-fast: 150ms cubic-bezier(.2,.75,.2,1);
-  --pp-smooth: 320ms cubic-bezier(.2,.75,.2,1);
+  --pp-ink: #f4f8f7;
+  --pp-muted: #879b9e;
+  --pp-dim: #617477;
+  --pp-surface: rgba(14, 23, 27, .82);
+  --pp-surface-strong: rgba(10, 18, 22, .94);
+  --pp-surface-soft: rgba(255,255,255,.045);
+  --pp-border: rgba(255,255,255,.09);
+  --pp-border-strong: rgba(255,255,255,.16);
+  --pp-accent: #c9ff4a;
+  --pp-accent-2: #61e9dc;
+  --pp-danger: #ff737f;
+  --pp-warning: #ffd36a;
+  --pp-shadow: 0 24px 70px rgba(0,0,0,.32);
+  --pp-shadow-soft: 0 12px 30px rgba(0,0,0,.2);
+  --pp-radius: 18px;
+  --pp-radius-lg: 24px;
   --pp-display: "Outfit", "Inter", system-ui, sans-serif;
-  --pp-body: "Inter", system-ui, sans-serif;
 }
 
+/* --------------------------------------------------------------------------
+   GLOBAL SURFACE
+   -------------------------------------------------------------------------- */
+
 html {
-  background: var(--pp-bg);
+  background: #050a0c;
 }
 
 body {
-  min-height: 100vh;
   background:
-    radial-gradient(circle at 18% 8%, rgba(99, 245, 232, 0.08), transparent 28%),
-    radial-gradient(circle at 82% 18%, rgba(200, 255, 74, 0.06), transparent 24%),
+    radial-gradient(circle at 14% 8%, rgba(97,233,220,.065), transparent 26%),
+    radial-gradient(circle at 88% 12%, rgba(201,255,74,.045), transparent 23%),
     linear-gradient(180deg, #071013 0%, #040809 100%);
-  color: var(--pp-text);
-  font-family: var(--pp-body);
-  letter-spacing: -0.01em;
+  color: var(--pp-ink);
 }
 
-body::before {
-  position: fixed;
-  inset: 0;
-  background:
-    linear-gradient(rgba(255,255,255,0.018) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255,255,255,0.018) 1px, transparent 1px);
-  background-size: 48px 48px;
-  mask-image: linear-gradient(to bottom, rgba(0,0,0,.7), transparent 88%);
-  -webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,.7), transparent 88%);
-  opacity: .5;
-  z-index: -2;
+::selection {
+  background: rgba(201,255,74,.28);
+  color: #fff;
 }
 
 button,
@@ -66,20 +51,6 @@ input,
 select,
 textarea {
   font-family: inherit;
-}
-
-button {
-  transition:
-    transform var(--pp-fast),
-    background var(--pp-fast),
-    border-color var(--pp-fast),
-    box-shadow var(--pp-fast),
-    color var(--pp-fast),
-    opacity var(--pp-fast);
-}
-
-button:active {
-  transform: translateY(1px) scale(.985);
 }
 
 button:focus-visible,
@@ -90,329 +61,192 @@ textarea:focus-visible {
   outline-offset: 3px;
 }
 
-/* ==========================================================================
-   MENU / HOME
-   ========================================================================== */
+/* --------------------------------------------------------------------------
+   HOME / MENU
+   Existing layout remains intact; this only changes its visual skin.
+   -------------------------------------------------------------------------- */
 
 .menu-page {
-  min-height: 100svh;
-  justify-content: center;
-  padding: clamp(32px, 7vw, 90px) 24px;
-  gap: 12px;
-  overflow: hidden;
   background:
-    radial-gradient(circle at 50% 20%, rgba(99,245,232,.09), transparent 25%),
-    radial-gradient(circle at 50% 100%, rgba(200,255,74,.055), transparent 30%);
-}
-
-.menu-page::after {
-  inset: 6% 5% auto;
-  height: min(620px, 72vh);
-  z-index: -1;
-  border-radius: 50%;
-  background:
-    radial-gradient(circle, rgba(99,245,232,.08), transparent 62%),
-    conic-gradient(from 110deg, transparent 0 25%, rgba(200,255,74,.08) 38%, transparent 55% 100%);
-  filter: blur(12px);
-  animation: pp-orbit 18s linear infinite;
-}
-
-@keyframes pp-orbit {
-  to { transform: rotate(360deg); }
+    radial-gradient(circle at 50% 24%, rgba(97,233,220,.075), transparent 27%),
+    radial-gradient(circle at 50% 100%, rgba(201,255,74,.055), transparent 32%),
+    linear-gradient(180deg, rgba(0,0,0,0), rgba(0,0,0,.18));
 }
 
 .menu-page .logo {
-  width: clamp(130px, 22vw, 210px);
-  margin-top: 0;
   filter:
-    drop-shadow(0 0 24px rgba(99,245,232,.18))
-    drop-shadow(0 24px 42px rgba(0,0,0,.42));
-  animation: pp-logo-float 5s ease-in-out infinite;
-}
-
-@keyframes pp-logo-float {
-  0%,100% { transform: translateY(0) scale(1); }
-  50% { transform: translateY(-6px) scale(1.015); }
+    drop-shadow(0 0 26px rgba(97,233,220,.16))
+    drop-shadow(0 22px 40px rgba(0,0,0,.42));
 }
 
 .menu-page .app-title {
-  margin: 10px 0 0;
   font-family: var(--pp-display);
-  font-size: clamp(2.8rem, 8vw, 5.8rem);
   font-weight: 800;
-  line-height: .96;
-  letter-spacing: -0.065em;
-  color: #fff;
-  text-shadow: 0 12px 50px rgba(0,0,0,.55);
-}
-
-.menu-page .app-title::after {
-  content: "SMART COURT OS";
-  display: block;
-  margin-top: 14px;
-  font-family: var(--pp-body);
-  font-size: .62rem;
-  font-weight: 800;
-  letter-spacing: .28em;
-  color: var(--pp-accent);
-  opacity: .82;
+  letter-spacing: -.055em;
+  text-shadow: 0 15px 45px rgba(0,0,0,.4);
 }
 
 .menu-page .app-subtitle {
-  margin: 10px 0 26px;
   color: var(--pp-muted);
-  font-size: clamp(.95rem, 2vw, 1.12rem);
-  letter-spacing: .01em;
+  font-size: clamp(1rem, 3.5vw, 1.35rem);
 }
 
-.menu-buttons {
-  width: min(100%, 560px);
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 14px;
+.menu-page .app-subtitle::after {
+  content: "SMART COURT PLATFORM";
+  display: block;
+  margin-top: 12px;
+  color: var(--pp-accent);
+  font-family: Inter, system-ui, sans-serif;
+  font-size: .58em;
+  font-weight: 800;
+  letter-spacing: .28em;
+  opacity: .78;
 }
 
 .menu-btn {
-  min-height: 112px;
-  border: 1px solid var(--pp-line-strong);
-  border-radius: var(--pp-radius-lg);
+  border: 1px solid var(--pp-border-strong);
   background:
-    linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.025)),
-    rgba(10,18,21,.72);
+    linear-gradient(145deg, rgba(255,255,255,.08), rgba(255,255,255,.025)),
+    rgba(8, 16, 19, .72);
   color: #fff;
-  box-shadow: var(--pp-shadow-lg), inset 0 1px 0 rgba(255,255,255,.05);
+  box-shadow:
+    var(--pp-shadow-soft),
+    inset 0 1px 0 rgba(255,255,255,.05);
   backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
-  font-family: var(--pp-display);
-  font-size: 1.35rem;
-  font-weight: 700;
-  letter-spacing: -.025em;
-  position: relative;
-  overflow: hidden;
-}
-
-.menu-btn::before {
-  content: "";
-  position: absolute;
-  inset: 1px;
-  border-radius: inherit;
-  background: linear-gradient(135deg, rgba(99,245,232,.06), transparent 46%, rgba(200,255,74,.05));
-  pointer-events: none;
-}
-
-.menu-btn::after {
-  position: absolute;
-  right: 18px;
-  bottom: 14px;
-  content: "↗";
-  color: rgba(255,255,255,.42);
-  font-size: 1rem;
-}
-
-.menu-btn:hover {
-  transform: translateY(-3px);
-  border-color: rgba(200,255,74,.32);
-  box-shadow:
-    0 24px 50px rgba(0,0,0,.42),
-    0 0 0 1px rgba(200,255,74,.06),
-    inset 0 1px 0 rgba(255,255,255,.09);
 }
 
 .menu-btn:first-child {
+  border-color: rgba(201,255,74,.25);
   background:
-    linear-gradient(140deg, rgba(200,255,74,.15), rgba(99,245,232,.06) 55%, rgba(255,255,255,.025)),
-    rgba(10,18,21,.82);
+    linear-gradient(145deg, rgba(201,255,74,.12), rgba(97,233,220,.055)),
+    rgba(8, 16, 19, .78);
 }
 
-.menu-btn:first-child::before {
-  background: radial-gradient(circle at 20% 0%, rgba(200,255,74,.18), transparent 40%);
+.menu-btn:hover {
+  border-color: rgba(201,255,74,.42);
+  background:
+    linear-gradient(145deg, rgba(255,255,255,.11), rgba(255,255,255,.035)),
+    rgba(10, 19, 23, .82);
+  box-shadow:
+    0 18px 44px rgba(0,0,0,.34),
+    0 0 0 1px rgba(201,255,74,.045);
 }
 
-.menu-btn:first-child::after {
-  content: "PLAY";
-  color: var(--pp-accent);
-  font-size: .64rem;
-  letter-spacing: .18em;
-}
-
-@media (max-width: 620px) {
-  .menu-buttons { grid-template-columns: 1fr; }
-  .menu-btn { min-height: 78px; }
-}
-
-/* ==========================================================================
-   SHARED GLASS CONTROLS
-   ========================================================================== */
+/* --------------------------------------------------------------------------
+   GLOBAL CORNER CONTROLS
+   -------------------------------------------------------------------------- */
 
 .theme-toggle-btn,
-.floating-btn,
 .close-btn {
-  border: 1px solid rgba(255,255,255,.11);
+  border-color: var(--pp-border);
   background:
-    linear-gradient(180deg, rgba(255,255,255,.09), rgba(255,255,255,.035)),
-    rgba(8,15,18,.72);
-  color: rgba(255,255,255,.88);
+    linear-gradient(180deg, rgba(255,255,255,.085), rgba(255,255,255,.025)),
+    rgba(7, 14, 17, .72);
+  color: rgba(255,255,255,.86);
   box-shadow:
-    0 10px 24px rgba(0,0,0,.24),
-    inset 0 1px 0 rgba(255,255,255,.045);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+    0 10px 26px rgba(0,0,0,.22),
+    inset 0 1px 0 rgba(255,255,255,.04);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
 }
 
 .theme-toggle-btn:hover,
-.floating-btn:hover,
 .close-btn:hover {
-  border-color: rgba(99,245,232,.24);
-  background:
-    linear-gradient(180deg, rgba(255,255,255,.12), rgba(255,255,255,.05)),
-    rgba(12,22,26,.86);
+  border-color: rgba(97,233,220,.25);
   color: #fff;
-  box-shadow:
-    0 12px 28px rgba(0,0,0,.28),
-    0 0 0 1px rgba(99,245,232,.05);
-  transform: translateY(-2px);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.12), rgba(255,255,255,.045)),
+    rgba(10, 20, 24, .84);
 }
 
-.global-controls {
-  gap: 8px;
-  padding: 8px;
-  border: 1px solid rgba(255,255,255,.08);
-  border-radius: 18px;
-  background: rgba(7,13,16,.62);
-  box-shadow: 0 18px 48px rgba(0,0,0,.28);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
-}
-
-.global-controls .theme-toggle-btn,
-.home-link-btn {
-  width: 42px;
-  height: 42px;
-  border-radius: 14px;
-}
-
-.home-link-btn {
-  left: 18px;
-  top: 18px;
-}
-
-.global-controls {
-  right: 18px;
-  top: 18px;
-}
-
+/* Keep the existing menu geometry and only refine its surface. */
 .appearance-menu {
-  padding: 16px;
-  width: min(330px, calc(100vw - 32px));
-  border: 1px solid var(--pp-line-strong);
-  border-radius: 20px;
-  background: rgba(10,18,22,.95);
-  box-shadow: var(--pp-shadow-xl);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
+  border-color: var(--pp-border-strong);
+  background:
+    linear-gradient(145deg, rgba(255,255,255,.05), transparent 46%),
+    rgba(8, 16, 19, .96);
+  box-shadow: var(--pp-shadow);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
 }
 
 .appearance-menu-title,
 .appearance-panel-title {
   font-family: var(--pp-display);
-  font-weight: 700;
-  letter-spacing: -.02em;
-}
-
-.appearance-menu-title {
-  margin-bottom: 12px;
-  font-size: 1rem;
-}
-
-.theme-choice-group {
-  gap: 6px;
+  color: #fff;
+  letter-spacing: -.025em;
 }
 
 .theme-choice-btn {
-  min-height: 40px;
-  border-radius: 12px;
-  border: 1px solid var(--pp-line);
+  border-color: var(--pp-border);
   background: rgba(255,255,255,.035);
   color: var(--pp-muted);
-  font-weight: 700;
 }
 
 .theme-choice-btn:hover,
 .theme-choice-btn.active,
 .theme-choice-btn[aria-pressed="true"] {
-  color: var(--pp-text);
-  border-color: rgba(200,255,74,.32);
-  background: rgba(200,255,74,.1);
+  border-color: rgba(201,255,74,.28);
+  background: rgba(201,255,74,.09);
+  color: #f4ffe8;
 }
 
-.reset-theme-colours-btn {
-  border-radius: 10px;
-  border: 1px solid var(--pp-line);
-  background: transparent;
-  color: var(--pp-muted);
+.team-colour-btn {
+  border-color: rgba(255,255,255,.14);
+  box-shadow: 0 0 0 4px rgba(255,255,255,.025);
 }
 
-/* ==========================================================================
-   ALL SECONDARY PAGES / FORMS
-   ========================================================================== */
+/* --------------------------------------------------------------------------
+   FORMS / SECONDARY SCREENS
+   -------------------------------------------------------------------------- */
 
 .create-page {
-  min-height: 100svh;
-  padding: clamp(20px, 4vw, 60px) 18px;
   background:
-    radial-gradient(circle at 20% 10%, rgba(99,245,232,.055), transparent 26%),
-    radial-gradient(circle at 85% 80%, rgba(200,255,74,.045), transparent 30%);
+    radial-gradient(circle at 15% 8%, rgba(97,233,220,.045), transparent 26%),
+    radial-gradient(circle at 88% 85%, rgba(201,255,74,.04), transparent 28%);
 }
 
 .create-card,
 .settings-box,
 .player-names-box,
 .dm-box,
-.reset-box {
-  border: 1px solid var(--pp-line-strong);
-  border-radius: var(--pp-radius-xl);
+.reset-box,
+.admin-dashboard-container {
+  border-color: var(--pp-border-strong);
   background:
-    linear-gradient(135deg, rgba(255,255,255,.05), transparent 34%),
-    linear-gradient(180deg, rgba(14,24,28,.96), rgba(8,15,18,.97));
-  box-shadow: var(--pp-shadow-xl), inset 0 1px 0 rgba(255,255,255,.035);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-}
-
-.create-card {
-  width: min(100%, 620px);
-  padding: clamp(24px, 5vw, 42px);
+    linear-gradient(145deg, rgba(255,255,255,.05), transparent 38%),
+    linear-gradient(180deg, rgba(14,24,28,.96), rgba(7,14,17,.97));
+  box-shadow:
+    var(--pp-shadow),
+    inset 0 1px 0 rgba(255,255,255,.035);
 }
 
 .create-card h2,
 .settings-box h2,
-.player-names-box h2 {
-  margin: 0 0 8px;
+.player-names-box h2,
+.admin-dashboard-header h2 {
   font-family: var(--pp-display);
-  font-size: clamp(1.7rem, 4vw, 2.35rem);
   font-weight: 750;
   letter-spacing: -.045em;
   color: #fff;
 }
 
-.create-card > p,
+.create-card p,
 .player-names-copy,
-.reset-hint {
+.reset-hint,
+.settings-scoring,
+.scoring-status {
   color: var(--pp-muted);
 }
 
-.form-group {
-  gap: 8px;
-}
-
 .form-group label,
-.form-group > label,
 .form-group > span,
 .scoring-field > span {
-  color: #a9babc;
-  font-size: .78rem;
+  color: #a4b6b8;
+  font-size: .76rem;
   font-weight: 800;
-  letter-spacing: .075em;
+  letter-spacing: .08em;
   text-transform: uppercase;
 }
 
@@ -421,19 +255,12 @@ select,
 textarea,
 .select-wrapper select,
 .court-id-combo select {
-  min-height: 48px;
-  border: 1px solid rgba(255,255,255,.11);
-  border-radius: 12px;
+  border-color: rgba(255,255,255,.11);
   background:
-    linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.018)),
-    rgba(1,7,9,.72);
-  color: #f2f8f7;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.03);
-}
-
-input::placeholder,
-textarea::placeholder {
-  color: #607478;
+    linear-gradient(180deg, rgba(255,255,255,.038), rgba(255,255,255,.018)),
+    rgba(2,8,10,.72);
+  color: #f1f7f6;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.025);
 }
 
 input:hover,
@@ -442,150 +269,90 @@ textarea:hover {
   border-color: rgba(255,255,255,.18);
 }
 
-.primary-btn,
-.secondary-btn,
-.danger-btn,
-.alert-btn {
-  min-height: 48px;
-  border-radius: 13px;
-  border: 1px solid transparent;
-  padding: 0 18px;
-  font-weight: 800;
-  letter-spacing: -.015em;
+input::placeholder,
+textarea::placeholder {
+  color: #5f7478;
 }
 
 .primary-btn {
-  background: linear-gradient(135deg, #d7ff66, #b5f33a);
-  color: #081008;
+  border-color: rgba(201,255,74,.16);
+  background: linear-gradient(135deg, #d6ff68, #b6f43c);
+  color: #091009;
   box-shadow:
-    0 12px 26px rgba(170,240,60,.16),
-    inset 0 1px 0 rgba(255,255,255,.45);
+    0 12px 28px rgba(160,225,60,.14),
+    inset 0 1px 0 rgba(255,255,255,.42);
 }
 
 .primary-btn:hover {
-  filter: brightness(1.04);
-  transform: translateY(-2px);
+  filter: brightness(1.035);
   box-shadow:
-    0 18px 32px rgba(170,240,60,.2),
-    inset 0 1px 0 rgba(255,255,255,.5);
+    0 16px 34px rgba(160,225,60,.19),
+    inset 0 1px 0 rgba(255,255,255,.48);
 }
 
 .secondary-btn {
-  border-color: var(--pp-line);
+  border-color: var(--pp-border);
   background: rgba(255,255,255,.04);
-  color: #e5efee;
+  color: #e4edec;
 }
 
 .secondary-btn:hover {
-  border-color: rgba(99,245,232,.26);
-  background: rgba(99,245,232,.07);
+  border-color: rgba(97,233,220,.25);
+  background: rgba(97,233,220,.065);
 }
 
 .danger-btn {
-  border-color: rgba(255,107,120,.18);
-  background: rgba(255,107,120,.09);
-  color: #ffb1b8;
-}
-
-.danger-btn:hover {
-  border-color: rgba(255,107,120,.35);
-  background: rgba(255,107,120,.14);
-}
-
-.close-btn {
-  width: 42px;
-  height: 42px;
-  border-radius: 13px;
-  display: grid;
-  place-items: center;
+  border-color: rgba(255,115,127,.22);
+  color: #ffb4bb;
 }
 
 .reset-modal {
-  background: rgba(1,6,8,.72);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
+  background: rgba(1,5,7,.72);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
 }
 
-.alert-box,
-.reset-box,
-.settings-box,
-.player-names-box {
-  color: var(--pp-text);
+.setting-item,
+.player-team-panel,
+.appearance-panel,
+.scoring-field {
+  border-color: rgba(255,255,255,.07);
+  background: rgba(255,255,255,.028);
 }
 
-.alert-box p,
-.reset-box p {
-  color: var(--pp-muted);
+.setting-item:hover {
+  background: rgba(255,255,255,.06);
+  border-color: rgba(97,233,220,.16);
+  box-shadow: 0 10px 26px rgba(0,0,0,.16);
 }
 
-/* ==========================================================================
-   COURT LISTS / SEARCH
-   ========================================================================== */
-
-.court-list,
-.admin-court-list {
-  display: grid;
-  gap: 10px;
-}
+/* --------------------------------------------------------------------------
+   COURT LISTS / ADMIN
+   -------------------------------------------------------------------------- */
 
 .court-item {
-  border: 1px solid var(--pp-line);
-  border-radius: 15px;
-  background: rgba(255,255,255,.035);
-  color: var(--pp-text);
-  padding: 15px 16px;
-  transition: var(--pp-fast);
+  border-color: var(--pp-border);
+  background:
+    linear-gradient(145deg, rgba(255,255,255,.05), rgba(255,255,255,.02)),
+    rgba(7,14,17,.55);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.025);
 }
 
 .court-item:hover,
 .court-item.active {
-  transform: translateY(-2px);
-  border-color: rgba(99,245,232,.2);
-  background: rgba(99,245,232,.05);
-  box-shadow: 0 12px 26px rgba(0,0,0,.2);
-}
-
-/* ==========================================================================
-   ADMIN DASHBOARD
-   ========================================================================== */
-
-.admin-dashboard-container {
-  width: min(100%, 1320px);
-  border: 1px solid var(--pp-line-strong);
-  border-radius: var(--pp-radius-xl);
+  border-color: rgba(97,233,220,.22);
   background:
-    linear-gradient(145deg, rgba(255,255,255,.04), transparent 30%),
-    rgba(8,15,18,.9);
-  box-shadow: var(--pp-shadow-xl);
-  overflow: hidden;
-  backdrop-filter: blur(22px);
-  -webkit-backdrop-filter: blur(22px);
-}
-
-.admin-dashboard-header {
-  padding: 24px;
-  border-bottom: 1px solid var(--pp-line);
-}
-
-.admin-dashboard-header h2 {
-  font-family: var(--pp-display);
-  letter-spacing: -.04em;
+    linear-gradient(145deg, rgba(97,233,220,.07), rgba(255,255,255,.025)),
+    rgba(7,14,17,.66);
+  box-shadow: 0 12px 28px rgba(0,0,0,.2);
 }
 
 .admin-tabs {
-  padding: 12px 18px 0;
-  gap: 6px;
-  border-bottom: 1px solid var(--pp-line);
+  border-bottom-color: var(--pp-border);
 }
 
 .tab-btn {
-  min-height: 42px;
-  border: 0;
-  border-bottom: 2px solid transparent;
-  background: transparent;
   color: var(--pp-muted);
-  font-weight: 800;
-  padding: 0 14px;
 }
 
 .tab-btn:hover,
@@ -594,84 +361,43 @@ textarea:hover {
   border-bottom-color: var(--pp-accent);
 }
 
-.admin-dashboard-controls {
-  padding: 18px;
-  gap: 10px;
-}
-
-.admin-court-list {
-  padding: 0 18px 24px;
-}
-
 .admin-court-list > * {
-  border: 1px solid var(--pp-line);
-  border-radius: 16px;
-  background: rgba(255,255,255,.035);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.025);
+  border-color: var(--pp-border);
+  background: rgba(255,255,255,.03);
 }
 
-.header-actions {
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-/* ==========================================================================
-   SCOREBOARD — HERO PRESENTATION
-   ========================================================================== */
+/* --------------------------------------------------------------------------
+   SCOREBOARD — preserve the existing geometry completely
+   -------------------------------------------------------------------------- */
 
 #scoreboardPage {
-  min-height: 100svh;
   background:
-    radial-gradient(circle at 50% 45%, rgba(99,245,232,.045), transparent 34%),
-    linear-gradient(180deg, #04090b 0%, #020506 100%);
+    radial-gradient(circle at 50% 42%, rgba(97,233,220,.04), transparent 35%),
+    linear-gradient(180deg, #030809 0%, #020506 100%);
 }
 
 #scoreboardPage .wave-container {
-  opacity: .14;
-  filter: saturate(.7);
-}
-
-.scoreboard-body {
-  position: relative;
-  min-height: 100svh;
-  background:
-    radial-gradient(ellipse at center, rgba(255,255,255,.025), transparent 48%);
-}
-
-.scoreboard-body::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background:
-    linear-gradient(90deg, transparent 0 49.8%, rgba(255,255,255,.04) 50%, transparent 50.2%),
-    linear-gradient(180deg, rgba(99,245,232,.05), transparent 12%, transparent 88%, rgba(200,255,74,.035));
-  opacity: .7;
+  opacity: .18;
 }
 
 .sidebar-left {
-  border: 1px solid rgba(255,255,255,.06);
-  background: rgba(4,10,12,.62);
-  box-shadow: 0 18px 50px rgba(0,0,0,.25);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  z-index: 10;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.025), transparent),
+    rgba(4,10,12,.38);
+  border-color: rgba(255,255,255,.055);
+  box-shadow: 0 18px 45px rgba(0,0,0,.18);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 
 .scoreboard-branding {
-  gap: 9px;
-}
-
-.scoreboard-logo {
-  width: 30px;
-  filter: drop-shadow(0 4px 12px rgba(99,245,232,.16));
+  filter: drop-shadow(0 5px 18px rgba(97,233,220,.08));
 }
 
 .scoreboard-app-name {
   font-family: var(--pp-display);
-  font-size: .92rem;
-  font-weight: 750;
-  letter-spacing: -.02em;
+  font-weight: 700;
+  letter-spacing: -.025em;
 }
 
 .marquee-separator,
@@ -679,372 +405,142 @@ textarea:hover {
   color: var(--pp-dim);
 }
 
-.app {
-  position: relative;
-  z-index: 2;
-}
-
-.scoreboard {
-  position: relative;
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: clamp(10px, 1.6vw, 22px);
-  width: min(92vw, 1420px);
-  margin: 0 auto;
-  padding: clamp(18px, 4vw, 56px);
-  align-items: stretch;
-}
-
 .team {
-  position: relative;
-  min-height: min(64vh, 620px);
-  border-radius: 28px;
-  overflow: hidden;
-  border: 1px solid rgba(255,255,255,.11);
-  background:
-    radial-gradient(circle at 18% 15%, color-mix(in srgb, var(--teamAcolour) 18%, transparent), transparent 32%),
-    linear-gradient(145deg, rgba(255,255,255,.07), rgba(255,255,255,.02) 34%, rgba(3,8,10,.7)),
-    rgba(8,15,18,.72);
+  border-color: rgba(255,255,255,.09);
   box-shadow:
-    0 30px 70px rgba(0,0,0,.35),
-    inset 0 1px 0 rgba(255,255,255,.07);
-  isolation: isolate;
+    0 22px 55px rgba(0,0,0,.28),
+    inset 0 1px 0 rgba(255,255,255,.055);
+  background:
+    linear-gradient(145deg, rgba(255,255,255,.055), rgba(255,255,255,.018) 48%),
+    rgba(7,14,17,.7);
 }
 
-.team::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  border: 1px solid color-mix(in srgb, var(--teamAcolour) 22%, transparent);
-  opacity: .65;
-  pointer-events: none;
-}
-
-.team::after {
-  content: "";
-  position: absolute;
-  width: 62%;
-  aspect-ratio: 1;
-  top: -30%;
-  right: -22%;
-  border-radius: 50%;
-  background: color-mix(in srgb, var(--teamAcolour) 13%, transparent);
-  filter: blur(24px);
-  pointer-events: none;
-  z-index: -1;
+.team-a {
+  border-color: color-mix(in srgb, var(--teamAcolour) 74%, rgba(255,255,255,.14));
+  box-shadow:
+    0 22px 55px rgba(0,0,0,.28),
+    0 0 38px color-mix(in srgb, var(--teamAcolour) 6%, transparent),
+    inset 0 1px 0 rgba(255,255,255,.055);
 }
 
 .team-b {
-  background:
-    radial-gradient(circle at 82% 15%, color-mix(in srgb, var(--teamBcolour) 18%, transparent), transparent 32%),
-    linear-gradient(145deg, rgba(255,255,255,.07), rgba(255,255,255,.02) 34%, rgba(3,8,10,.7)),
-    rgba(8,15,18,.72);
+  border-color: color-mix(in srgb, var(--teamBcolour) 74%, rgba(255,255,255,.14));
+  box-shadow:
+    0 22px 55px rgba(0,0,0,.28),
+    0 0 38px color-mix(in srgb, var(--teamBcolour) 6%, transparent),
+    inset 0 1px 0 rgba(255,255,255,.055);
 }
 
-.team-b::before {
-  border-color: color-mix(in srgb, var(--teamBcolour) 22%, transparent);
-}
-
-.team-b::after {
-  left: -22%;
-  right: auto;
-  background: color-mix(in srgb, var(--teamBcolour) 13%, transparent);
-}
-
-.ref-zone {
-  position: absolute !important;
-  inset: 0 !important;
-  z-index: 3;
-  width: 100% !important;
-  height: 100% !important;
-  background: transparent !important;
-  border: 0 !important;
-  opacity: 1 !important;
-  cursor: pointer;
-  border-radius: inherit;
-}
-
-.team-name,
-.team .meta,
-.points-wrapper,
-.indicator,
-.server-badge,
-.critical-badge {
-  position: relative;
-  z-index: 4;
-  pointer-events: none;
-}
-
-.team-name {
-  margin: clamp(20px, 3vw, 36px) clamp(22px, 3vw, 46px) 0;
+.team .name-text {
   font-family: var(--pp-display);
-  font-size: clamp(1.4rem, 2.8vw, 3rem);
-  font-weight: 700;
-  letter-spacing: -.045em;
-  line-height: .98;
-  color: #fff;
+  letter-spacing: -.04em;
 }
 
-.team-name .name-text {
-  display: inline-block;
-  max-width: 92%;
-  overflow: hidden;
-  text-overflow: ellipsis;
+.row {
+  color: inherit;
 }
 
-.team-a .team-name {
-  color: color-mix(in srgb, var(--teamAcolour) 78%, #fff);
-}
-
-.team-b .team-name {
-  color: color-mix(in srgb, var(--teamBcolour) 78%, #fff);
-}
-
-.team .meta {
-  display: flex;
-  gap: 8px;
-  margin: 20px clamp(22px, 3vw, 46px) 0;
-}
-
-.team .meta .row {
-  display: grid;
-  grid-template-columns: auto auto;
-  gap: 7px;
-  min-width: 86px;
-  padding: 8px 11px;
-  border: 1px solid rgba(255,255,255,.08);
-  border-radius: 10px;
-  background: rgba(255,255,255,.035);
-  color: #829699;
-  font-size: .7rem;
-  text-transform: uppercase;
-  letter-spacing: .09em;
-  font-weight: 800;
-}
-
-.team .meta .row span:last-child {
-  color: #eef7f5;
-  font-variant-numeric: tabular-nums;
-}
-
-.points-wrapper {
-  position: absolute;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  padding-top: 36px;
+.row span:first-child {
+  color: rgba(255,255,255,.62);
 }
 
 .points {
   font-family: var(--pp-display);
-  font-size: clamp(8rem, 19vw, 16rem);
   font-weight: 800;
-  line-height: .78;
-  letter-spacing: -.09em;
-  color: #fff;
+  letter-spacing: -.075em;
+  text-shadow: 0 12px 40px rgba(0,0,0,.24);
+}
+
+.team-a .points {
   text-shadow:
-    0 14px 50px rgba(0,0,0,.38),
-    0 0 40px color-mix(in srgb, var(--teamAcolour) 10%, transparent);
-  font-variant-numeric: tabular-nums;
+    0 12px 40px rgba(0,0,0,.24),
+    0 0 26px color-mix(in srgb, var(--teamAcolour) 10%, transparent);
 }
 
 .team-b .points {
   text-shadow:
-    0 14px 50px rgba(0,0,0,.38),
-    0 0 40px color-mix(in srgb, var(--teamBcolour) 10%, transparent);
+    0 12px 40px rgba(0,0,0,.24),
+    0 0 26px color-mix(in srgb, var(--teamBcolour) 10%, transparent);
+}
+
+.team.score-animate {
+  filter: brightness(1.035);
+}
+
+.score-format-badge,
+.straight-total,
+.nfc-cooldown {
+  border-color: rgba(255,255,255,.1);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.055), rgba(255,255,255,.02)),
+    rgba(7,14,17,.72);
+  box-shadow: 0 10px 25px rgba(0,0,0,.18);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.score-format-badge {
+  color: var(--pp-muted);
 }
 
 .server-badge {
-  position: absolute;
-  right: 18px;
-  top: 18px;
-  padding: 6px 9px;
-  border-radius: 999px;
-  font-size: .62rem;
-  font-weight: 900;
-  letter-spacing: .11em;
-  text-transform: uppercase;
-  color: #071009;
-  background: var(--pp-accent);
-  box-shadow: 0 7px 18px rgba(200,255,74,.18);
+  color: var(--white);
+  text-shadow: 0 3px 15px rgba(0,0,0,.3);
 }
 
-.indicator {
-  position: absolute;
-  left: 24px;
-  bottom: 22px;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: currentColor;
-  color: rgba(255,255,255,.15);
-  box-shadow: 0 0 0 6px rgba(255,255,255,.03);
+.critical-badge {
+  filter: drop-shadow(0 0 10px currentColor);
 }
 
-.team-a .indicator { color: var(--teamAcolour); }
-.team-b .indicator { color: var(--teamBcolour); }
+/* --------------------------------------------------------------------------
+   FLOATING TOOLBAR — same placement and dimensions as the original
+   -------------------------------------------------------------------------- */
 
-.score-format-badge {
-  position: absolute;
-  top: 14px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 20;
-  padding: 8px 12px;
-  border: 1px solid rgba(255,255,255,.09);
-  border-radius: 999px;
-  background: rgba(7,13,16,.76);
-  color: var(--pp-muted);
-  font-size: .68rem;
-  font-weight: 800;
-  letter-spacing: .12em;
-  text-transform: uppercase;
-  backdrop-filter: blur(12px);
-}
-
-.nfc-cooldown {
-  z-index: 30;
-  border: 1px solid rgba(255,204,102,.2);
-  border-radius: 999px;
-  background: rgba(255,204,102,.08);
-  color: #ffd789;
-  padding: 7px 11px;
-  font-size: .68rem;
-  font-weight: 800;
-}
-
-/* Toolbar: turn it into a premium floating dock. */
 .floating-controls {
-  gap: 7px;
-  padding: 9px;
-  border: 1px solid rgba(255,255,255,.09);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.055), rgba(255,255,255,.02)),
+    rgba(6,12,15,.62);
   border-radius: 20px;
-  background: rgba(6,12,15,.78);
   box-shadow:
-    0 24px 60px rgba(0,0,0,.38),
+    0 18px 48px rgba(0,0,0,.27),
+    inset 0 1px 0 rgba(255,255,255,.045);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.floating-btn {
+  border-color: rgba(255,255,255,.15);
+  background: rgba(255,255,255,.025);
+  color: rgba(255,255,255,.68);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.035);
+}
+
+.floating-btn:hover {
+  border-color: rgba(97,233,220,.32);
+  background: rgba(97,233,220,.085);
+  color: #fff;
+  box-shadow:
+    0 8px 20px rgba(0,0,0,.2),
     inset 0 1px 0 rgba(255,255,255,.05);
-  backdrop-filter: blur(22px);
-  -webkit-backdrop-filter: blur(22px);
-}
-
-.floating-controls .floating-btn {
-  width: 44px;
-  height: 44px;
-  min-width: 44px;
-  border-radius: 14px;
-}
-
-.floating-controls .floating-btn[disabled] {
-  opacity: .35;
-}
-
-.btn-separator {
-  background: rgba(255,255,255,.08);
 }
 
 #detailsBtn:hover,
 #shareCourtBtn:hover {
   color: var(--pp-accent);
-  border-color: rgba(200,255,74,.2);
+  border-color: rgba(201,255,74,.3);
+  background: rgba(201,255,74,.06);
 }
 
-/* ==========================================================================
-   DETAILS / SETTINGS MODALS
-   ========================================================================== */
-
-.settings-box {
-  width: min(94vw, 880px);
-  padding: clamp(24px, 4vw, 38px);
+.btn-separator.type-sep {
+  background: rgba(255,255,255,.18);
 }
 
-.settings-grid {
-  gap: 9px;
-}
-
-.setting-item {
-  border: 1px solid rgba(255,255,255,.07);
-  border-radius: 15px;
-  background: rgba(255,255,255,.028);
-  padding: 11px;
-  transition: var(--pp-fast);
-}
-
-.setting-item:hover {
-  transform: translateY(-2px);
-  border-color: rgba(99,245,232,.16);
-  background: rgba(255,255,255,.045);
-}
-
-.modal-btn {
-  width: 50px;
-  height: 50px;
-  border-radius: 15px;
-  border: 1px solid rgba(255,255,255,.08);
-}
-
-.setting-item > span {
-  color: var(--pp-muted);
-  font-size: .72rem;
-  font-weight: 700;
-  margin-top: 6px;
-}
-
-.settings-scoring {
-  margin-top: 18px;
-  padding-top: 18px;
-  border-top: 1px solid var(--pp-line);
-}
-
-.settings-scoring h3 {
-  color: #fff;
-  font-family: var(--pp-display);
-}
-
-.scoring-field {
-  border: 1px solid rgba(255,255,255,.06);
-  border-radius: 13px;
-  padding: 11px 13px;
-  background: rgba(255,255,255,.025);
-}
-
-.scoring-status {
-  margin-top: 10px;
-  color: var(--pp-muted);
-}
-
-.player-team-panel,
-.appearance-panel {
-  border: 1px solid rgba(255,255,255,.075);
-  border-radius: 16px;
-  background: rgba(255,255,255,.028);
-  padding: 16px;
-}
-
-.player-team-panel h4 {
-  margin: 0 0 12px;
-  font-family: var(--pp-display);
-  color: #fff;
-}
-
-.dm-box {
-  width: min(94vw, 980px);
-  padding: clamp(18px, 4vw, 34px);
-  color: #fff;
-  overflow: hidden;
-}
-
-.dm-watermark {
-  opacity: .04;
-}
+/* --------------------------------------------------------------------------
+   DETAILS / SETTINGS / PLAYER MODALS
+   -------------------------------------------------------------------------- */
 
 .dm-header {
-  padding-bottom: 18px;
-  border-bottom: 1px solid var(--pp-line);
-}
-
-.dm-logo {
-  filter: drop-shadow(0 8px 20px rgba(99,245,232,.14));
+  border-bottom-color: var(--pp-border);
 }
 
 .dm-title {
@@ -1052,46 +548,20 @@ textarea:hover {
   letter-spacing: -.05em;
 }
 
-.dm-teams {
-  gap: 10px;
-  align-items: baseline;
-}
-
 .dm-name {
   font-family: var(--pp-display);
-  font-size: clamp(1.05rem, 3vw, 1.8rem);
-  font-weight: 700;
+  font-weight: 750;
 }
 
-.dm-overall {
-  margin: 16px 0 18px;
-}
-
-.dm-sets {
-  font-family: var(--pp-display);
-  font-weight: 800;
-  color: #fff;
-}
-
-.dm-table-wrap {
-  border: 1px solid var(--pp-line);
-  border-radius: 16px;
-  background: rgba(255,255,255,.02);
-  overflow: hidden;
+.dm-table-wrap,
+.dm-details-panel {
+  border-color: var(--pp-border);
+  background: rgba(255,255,255,.022);
 }
 
 .dm-table th,
 .dm-table td {
-  border-color: var(--pp-line);
-  padding: 12px 14px;
-}
-
-.dm-details-panel {
-  margin-top: 12px;
-  border: 1px solid var(--pp-line);
-  border-radius: 15px;
-  overflow: hidden;
-  background: rgba(255,255,255,.02);
+  border-color: var(--pp-border);
 }
 
 .dm-details-toggle {
@@ -1099,117 +569,133 @@ textarea:hover {
   color: #fff;
 }
 
-/* ==========================================================================
-   TOASTS / NOTIFICATIONS
-   ========================================================================== */
-
-.toast-container {
-  gap: 10px;
+.loading {
+  color: var(--pp-muted);
 }
-
-.toast,
-.toast-message {
-  border: 1px solid rgba(255,255,255,.1);
-  border-radius: 15px;
-  background:
-    linear-gradient(135deg, rgba(255,255,255,.07), transparent 60%),
-    rgba(8,16,19,.94);
-  color: #f2f8f7;
-  box-shadow: var(--pp-shadow-lg);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
-}
-
-.toast.success { border-color: rgba(200,255,74,.22); }
-.toast.error { border-color: rgba(255,107,120,.28); }
-.toast.warning { border-color: rgba(255,204,102,.24); }
-
-/* ==========================================================================
-   LOADING STATES
-   ========================================================================== */
 
 .app-loading-overlay,
 .scoreboard-loading {
   background:
-    radial-gradient(circle at center, rgba(14,27,32,.74), rgba(3,7,9,.96) 55%),
-    rgba(2,6,7,.95);
+    radial-gradient(circle at center, rgba(14,26,30,.72), rgba(2,6,7,.95) 58%),
+    rgba(2,6,7,.93);
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px);
+}
+
+.loading-logo {
+  filter: drop-shadow(0 0 24px rgba(97,233,220,.22));
+}
+
+.spinner {
+  border-color: rgba(255,255,255,.1);
+  border-top-color: var(--pp-accent);
+  border-right-color: var(--pp-accent-2);
+}
+
+.set-win-overlay {
+  background:
+    radial-gradient(circle at center, rgba(97,233,220,.08), transparent 34%),
+    rgba(2,7,9,.76);
   backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
 }
 
-.loading-logo {
-  width: 76px;
-  filter: drop-shadow(0 0 28px rgba(99,245,232,.28));
-}
-
-.spinner {
-  border-color: rgba(255,255,255,.11);
-  border-top-color: var(--pp-accent);
-  border-right-color: var(--pp-cyan);
-}
-
-.spinner-wrapper {
-  gap: 18px;
-}
-
-/* ==========================================================================
-   SET WIN / SCORE MOMENTS
-   ========================================================================== */
-
-.set-win-overlay {
-  background:
-    radial-gradient(circle at center, rgba(99,245,232,.1), transparent 32%),
-    rgba(2,7,9,.82);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-}
-
 .set-win-content {
-  padding: 34px 42px;
-  border: 1px solid rgba(255,255,255,.12);
-  border-radius: 28px;
+  border: 1px solid rgba(255,255,255,.11);
+  border-radius: var(--pp-radius-lg);
   background:
-    linear-gradient(135deg, rgba(255,255,255,.07), transparent 55%),
+    linear-gradient(145deg, rgba(255,255,255,.07), transparent 58%),
     rgba(8,16,19,.92);
-  box-shadow: var(--pp-shadow-xl);
-}
-
-.set-win-label {
-  color: var(--pp-accent);
-  letter-spacing: .22em;
-  text-transform: uppercase;
+  box-shadow: var(--pp-shadow);
 }
 
 .set-win-team-name {
   font-family: var(--pp-display);
   font-weight: 800;
-  letter-spacing: -.05em;
+  letter-spacing: -.045em;
 }
 
-/* ==========================================================================
-   LIGHT MODE — preserve the user's existing toggle, but make it premium too.
-   ========================================================================== */
+.set-win-label {
+  color: var(--pp-accent);
+  letter-spacing: .18em;
+}
+
+/* --------------------------------------------------------------------------
+   TOASTS / HARDWARE SURFACES
+   -------------------------------------------------------------------------- */
+
+.toast,
+.toast-message {
+  border-color: rgba(255,255,255,.1);
+  border-radius: 15px;
+  background:
+    linear-gradient(145deg, rgba(255,255,255,.06), transparent 60%),
+    rgba(8,16,19,.93);
+  box-shadow: var(--pp-shadow-soft);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.toast.success {
+  border-color: rgba(201,255,74,.22);
+}
+
+.toast.error {
+  border-color: rgba(255,115,127,.25);
+}
+
+.toast.warning {
+  border-color: rgba(255,211,106,.24);
+}
+
+.court-qr-panel {
+  border-color: rgba(255,255,255,.11);
+  background:
+    linear-gradient(145deg, rgba(255,255,255,.06), transparent 58%),
+    rgba(7,14,17,.86);
+  box-shadow: 0 18px 46px rgba(0,0,0,.3);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.court-qr-code {
+  box-shadow: 0 0 0 5px rgba(255,255,255,.045);
+}
+
+.activate-nfc-btn {
+  border-color: rgba(201,255,74,.25);
+  background:
+    linear-gradient(135deg, rgba(201,255,74,.12), rgba(97,233,220,.055)),
+    rgba(7,15,17,.9);
+  color: #efffd8;
+  box-shadow: 0 12px 30px rgba(0,0,0,.24);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.activate-nfc-btn:hover {
+  border-color: rgba(201,255,74,.4);
+  box-shadow: 0 15px 35px rgba(0,0,0,.28);
+}
+
+/* --------------------------------------------------------------------------
+   LIGHT MODE
+   Keep the app's existing functional colour mapping; only restyle surfaces.
+   -------------------------------------------------------------------------- */
 
 body.light-mode {
-  --pp-bg: #eef4f3;
-  --pp-panel: rgba(255,255,255,.82);
-  --pp-panel-strong: rgba(255,255,255,.96);
-  --pp-line: rgba(4,24,28,.1);
-  --pp-line-strong: rgba(4,24,28,.16);
-  --pp-text: #0d1c20;
-  --pp-muted: #597074;
-  --pp-dim: #76888b;
   background:
-    radial-gradient(circle at 20% 10%, rgba(80,181,171,.12), transparent 28%),
-    radial-gradient(circle at 82% 18%, rgba(150,195,50,.11), transparent 22%),
-    linear-gradient(180deg, #f6faf9 0%, #eaf1ef 100%);
+    radial-gradient(circle at 15% 8%, rgba(58,154,144,.08), transparent 26%),
+    radial-gradient(circle at 88% 12%, rgba(145,186,51,.07), transparent 24%),
+    linear-gradient(180deg, #f6faf9 0%, #e8efed 100%);
 }
 
-body.light-mode::before {
-  background:
-    linear-gradient(rgba(4,24,28,.028) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(4,24,28,.028) 1px, transparent 1px);
-  opacity: .65;
+body.light-mode .menu-page .app-title {
+  text-shadow: 0 12px 34px rgba(0,0,0,.1);
+}
+
+body.light-mode .menu-page .app-subtitle {
+  color: #587074;
 }
 
 body.light-mode .create-card,
@@ -1219,10 +705,10 @@ body.light-mode .dm-box,
 body.light-mode .reset-box,
 body.light-mode .admin-dashboard-container {
   background:
-    linear-gradient(135deg, rgba(255,255,255,.96), rgba(242,248,246,.95)),
+    linear-gradient(145deg, rgba(255,255,255,.97), rgba(242,248,246,.96)),
     #fff;
-  color: var(--pp-text);
-  box-shadow: 0 24px 70px rgba(45,73,76,.12);
+  border-color: rgba(9,31,34,.11);
+  box-shadow: 0 22px 60px rgba(40,70,72,.11);
 }
 
 body.light-mode input,
@@ -1231,260 +717,75 @@ body.light-mode textarea,
 body.light-mode .court-item,
 body.light-mode .setting-item,
 body.light-mode .player-team-panel,
-body.light-mode .appearance-panel {
-  background: rgba(255,255,255,.78);
-  color: #102124;
-  border-color: rgba(7,34,38,.12);
+body.light-mode .appearance-panel,
+body.light-mode .scoring-field {
+  background: rgba(255,255,255,.8);
+  color: #102224;
+  border-color: rgba(9,31,34,.12);
 }
 
-body.light-mode .menu-page .app-title,
-body.light-mode .create-card h2,
-body.light-mode .settings-box h2,
-body.light-mode .player-names-box h2,
-body.light-mode .admin-dashboard-header h2 {
-  color: #0a181b;
+body.light-mode input::placeholder,
+body.light-mode textarea::placeholder {
+  color: #829497;
 }
 
-body.light-mode .scoreboard-body,
-body.light-mode #scoreboardPage {
-  background:
-    radial-gradient(circle at center, rgba(76,150,144,.08), transparent 38%),
-    linear-gradient(180deg, #eff5f3 0%, #dce7e4 100%);
+body.light-mode .primary-btn {
+  box-shadow: 0 10px 24px rgba(102,153,39,.14);
 }
 
-body.light-mode .sidebar-left,
 body.light-mode .floating-controls,
+body.light-mode .floating-btn,
 body.light-mode .theme-toggle-btn,
-body.light-mode .floating-btn {
-  background: rgba(255,255,255,.72);
-  color: #183033;
-  border-color: rgba(7,34,38,.12);
+body.light-mode .close-btn {
+  border-color: rgba(9,31,34,.12);
+  background: rgba(255,255,255,.68);
+  color: #274346;
+  box-shadow: 0 10px 28px rgba(34,62,64,.09);
 }
 
-body.light-mode .team {
+body.light-mode .floating-btn:hover,
+body.light-mode .theme-toggle-btn:hover,
+body.light-mode .close-btn:hover {
+  border-color: rgba(9,31,34,.2);
+  background: rgba(255,255,255,.86);
+  color: #09191b;
+}
+
+body.light-mode .court-item:hover,
+body.light-mode .court-item.active {
+  background: rgba(90,175,166,.07);
+  border-color: rgba(34,118,108,.2);
+}
+
+body.light-mode .sidebar-left {
+  background: rgba(255,255,255,.38);
+  border-color: rgba(9,31,34,.06);
+}
+
+body.light-mode .set-win-content,
+body.light-mode .toast,
+body.light-mode .toast-message,
+body.light-mode .court-qr-panel {
   background:
-    linear-gradient(145deg, rgba(255,255,255,.86), rgba(245,249,248,.74)),
+    linear-gradient(145deg, rgba(255,255,255,.98), rgba(242,248,246,.96)),
     #fff;
-  box-shadow: 0 26px 70px rgba(52,79,81,.12);
+  color: #102224;
+  border-color: rgba(9,31,34,.11);
+  box-shadow: 0 22px 60px rgba(34,62,64,.12);
 }
 
-body.light-mode .team-name,
-body.light-mode .points,
-body.light-mode .scoreboard-app-name {
-  color: #0c1d20;
-  text-shadow: none;
-}
-
-body.light-mode .team .meta .row {
-  background: rgba(7,34,38,.035);
-  border-color: rgba(7,34,38,.08);
-}
-
-body.light-mode .team .meta .row span:last-child {
-  color: #112528;
-}
-
-body.light-mode .set-win-content {
-  background: rgba(255,255,255,.94);
-  color: #102124;
-}
-
-/* ==========================================================================
-   RESPONSIVE SCOREBOARD
-   ========================================================================== */
-
-@media (max-width: 900px) {
-  .scoreboard {
-    width: min(95vw, 720px);
-    padding: 18px;
-  }
-
-  .team {
-    min-height: 52vh;
-  }
-
-  .points {
-    font-size: clamp(6.6rem, 25vw, 10rem);
-  }
-}
-
-@media (orientation: portrait) {
-  .scoreboard {
-    grid-template-columns: 1fr;
-    width: min(94vw, 720px);
-    padding-top: 22px;
-    padding-bottom: 104px;
-  }
-
-  .team {
-    min-height: 34svh;
-  }
-
-  .team .meta {
-    margin-top: 12px;
-  }
-
-  .points-wrapper {
-    padding-top: 18px;
-  }
-
-  .points {
-    font-size: clamp(6rem, 29vw, 10rem);
-  }
-}
-
-@media (orientation: landscape) and (max-height: 620px) {
-  .scoreboard {
-    padding: 12px 16px 76px;
-  }
-
-  .team {
-    min-height: 68svh;
-  }
-
-  .team-name {
-    margin-top: 18px;
-  }
-
-  .team .meta {
-    margin-top: 12px;
-  }
-
-  .points-wrapper {
-    padding-top: 12px;
-  }
-
-  .points {
-    font-size: clamp(6rem, 18vw, 10rem);
-  }
-}
-
-@media (max-width: 560px) {
-  .global-controls {
-    top: 10px;
-    right: 10px;
-  }
-
-  .home-link-btn {
-    left: 10px;
-    top: 10px;
-  }
-
-  .theme-toggle-btn,
-  .floating-btn {
-    width: 38px;
-    height: 38px;
-  }
-
-  .floating-controls {
-    padding: 7px;
-    gap: 5px;
-    border-radius: 17px;
-  }
-
-  .floating-controls .floating-btn {
-    width: 40px;
-    height: 40px;
-    min-width: 40px;
-    border-radius: 12px;
-  }
-
-  .scoreboard {
-    width: 96vw;
-    gap: 10px;
-  }
-
-  .team {
-    border-radius: 22px;
-  }
-
-  .team-name {
-    margin: 17px 18px 0;
-    font-size: 1.2rem;
-  }
-
-  .team .meta {
-    margin: 10px 18px 0;
-  }
-
-  .team .meta .row {
-    min-width: 73px;
-    padding: 7px 8px;
-    font-size: .58rem;
-  }
-
-  .indicator {
-    left: 18px;
-    bottom: 18px;
-  }
-
-  .server-badge {
-    right: 14px;
-    top: 14px;
-  }
-}
+/* --------------------------------------------------------------------------
+   Accessibility / motion
+   -------------------------------------------------------------------------- */
 
 @media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: .001ms !important;
-    animation-iteration-count: 1 !important;
-    scroll-behavior: auto !important;
-    transition-duration: .001ms !important;
+  .menu-page .logo,
+  .menu-page .app-title,
+  .menu-page .app-subtitle,
+  .team,
+  .floating-btn,
+  .menu-btn {
+    animation: none !important;
+    transition: none !important;
   }
-}
-
-
-/* ==========================================================================
-   SECONDARY HARDWARE / CONNECTION SURFACES
-   ========================================================================== */
-
-.court-qr-panel {
-  border: 1px solid rgba(255,255,255,.11);
-  border-radius: 22px;
-  background:
-    linear-gradient(145deg, rgba(255,255,255,.07), transparent 48%),
-    rgba(7,14,17,.9);
-  box-shadow: 0 22px 60px rgba(0,0,0,.34);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-}
-
-.court-qr-code {
-  border-radius: 12px;
-  background: #fff;
-  box-shadow: 0 0 0 6px rgba(255,255,255,.05);
-}
-
-.court-qr-label {
-  color: var(--pp-muted);
-  font-family: var(--pp-display);
-  font-weight: 700;
-}
-
-.activate-nfc-btn {
-  border: 1px solid rgba(200,255,74,.22);
-  border-radius: 999px;
-  background:
-    linear-gradient(135deg, rgba(200,255,74,.18), rgba(99,245,232,.08)),
-    rgba(6,14,16,.9);
-  color: #f4ffe5;
-  box-shadow: 0 14px 34px rgba(0,0,0,.28), 0 0 0 1px rgba(200,255,74,.04);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  font-weight: 800;
-  letter-spacing: -.01em;
-}
-
-.activate-nfc-btn:hover {
-  border-color: rgba(200,255,74,.4);
-  box-shadow: 0 18px 38px rgba(0,0,0,.32), 0 0 26px rgba(200,255,74,.08);
-  transform: translateY(-2px);
-}
-
-/* Give the score change a little physicality without changing the JS-driven
-   scoring animation hooks that the existing stylesheet already defines. */
-.team .points {
-  transition: transform 220ms cubic-bezier(.2,.75,.2,1), text-shadow 220ms ease;
 }
