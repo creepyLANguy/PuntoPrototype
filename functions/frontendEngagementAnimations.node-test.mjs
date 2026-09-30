@@ -109,7 +109,19 @@ test("changeover button shows a pending spinner state while waiting", () => {
   );
   assert.match(
     source,
+    /const CHANGEOVER_SPINNER_MIN_DURATION_MS = 350;/,
+  );
+  assert.match(
+    source,
+    /const changeoverStartedAt = performance\.now\(\);/,
+  );
+  assert.match(
+    source,
     /setChangeoverPending\(true\);[\s\S]*?await requestBeaconChangeover/,
+  );
+  assert.match(
+    source,
+    /const remaining = Math\.max\(0, CHANGEOVER_SPINNER_MIN_DURATION_MS - elapsed\);/,
   );
   assert.match(
     source,
@@ -117,11 +129,15 @@ test("changeover button shows a pending spinner state while waiting", () => {
   );
   assert.match(
     styles,
-    /\.changeover-loading\s*\{[\s\S]*?color:\s*transparent\s*!important;[\s\S]*?pointer-events:\s*none;/,
+    /\.changeover-spinner\s*\{[\s\S]*?animation:\s*changeoverSpinner\s+0\.75s\s+linear\s+infinite;/,
   );
   assert.match(
     styles,
-    /\.changeover-loading::after\s*\{[\s\S]*?animation:\s*changeoverSpinner\s+0\.75s\s+linear\s+infinite;/,
+    /\.changeover-loading \.changeover-icon\s*\{[\s\S]*?visibility:\s*hidden;/,
+  );
+  assert.match(
+    styles,
+    /\.changeover-loading \.changeover-spinner\s*\{[\s\S]*?display:\s*block;/,
   );
 });
 
