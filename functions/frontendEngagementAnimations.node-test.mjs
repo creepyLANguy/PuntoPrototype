@@ -415,9 +415,9 @@ test("toast positioning is recalculated whenever the viewport changes", () => {
 
 
 test("toast positioning is re-synced when the scoreboard layout changes", () => {
-  assert.match(source, /new window\\.ResizeObserver\\(/);
-  assert.match(source, /new window\\.MutationObserver\\(/);
-  assert.match(source, /toastPositionMutationObserver\\.observe\\(scoreboardBody,[\\s\\S]*?subtree:\\s*true/);
+  assert.match(source, /new window\.ResizeObserver\(/);
+  assert.match(source, /new window\.MutationObserver\(/);
+  assert.match(source, /toastPositionMutationObserver\.observe\(scoreboardBody,[\s\S]*?subtree:\s*true/);
 });
 
 test("toast positioning reacts to floating-control layout changes", () => {
