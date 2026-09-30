@@ -102,6 +102,29 @@ test("toast stack reserves space around the responsive floating controls", () =>
   assert.match(source, /window\.addEventListener\("resize",[\s\S]*?updateToastContainerPosition\(\);/);
 });
 
+test("changeover button shows a pending spinner state while waiting", () => {
+  assert.match(
+    source,
+    /function setChangeoverPending\(isPending\)[\s\S]*?button\.classList\.toggle\("changeover-loading", isPending\)[\s\S]*?button\.disabled = isPending/,
+  );
+  assert.match(
+    source,
+    /setChangeoverPending\(true\);[\s\S]*?await requestBeaconChangeover/,
+  );
+  assert.match(
+    source,
+    /finally[\s\S]*?setChangeoverPending\(false\);/,
+  );
+  assert.match(
+    styles,
+    /\.changeover-loading\s*\{[\s\S]*?color:\s*transparent\s*!important;[\s\S]*?pointer-events:\s*none;/,
+  );
+  assert.match(
+    styles,
+    /\.changeover-loading::after\s*\{[\s\S]*?animation:\s*changeoverSpinner\s+0\.75s\s+linear\s+infinite;/,
+  );
+});
+
 test("engagement animations are disabled when reduced motion is requested", () => {
   assert.match(
     styles,
