@@ -3435,11 +3435,11 @@ body.light-mode .loading-logo {
 
   0%,
   100% {
-    transform: scale(0.7);
+    transform: scale(0.82);
   }
 
   50% {
-    transform: scale(1.3);
+    transform: scale(1.38);
   }
 }
 
@@ -4100,11 +4100,13 @@ body.light-mode .activate-nfc-btn:hover {
 
 .toast-container {
   position: fixed;
-  bottom: 20px;
-  left: 50%;
-  transform: translateX(-50%);
+  bottom: calc(var(--toast-bottom-offset, 20px) + env(safe-area-inset-bottom, 0px));
+  left: 16px;
+  right: 16px;
+  transform: none;
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 10px;
   z-index: 9999;
 }
@@ -5452,17 +5454,22 @@ body.light-mode .set-win-label {
 
 .toast-container {
   position: fixed;
-  bottom: 20px;
-  left: 50%;
-  transform: translateX(-50%);
+  bottom: calc(var(--toast-bottom-offset, 20px) + env(safe-area-inset-bottom, 0px));
+  left: 16px;
+  right: 16px;
+  transform: none;
   z-index: 10000;
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 10px;
   pointer-events: none;
 }
 
 .toast {
+  box-sizing: border-box;
+  width: min(420px, 100%);
+  min-width: min(200px, 100%);
   padding: 12px 24px;
   border-radius: 50px;
   background: rgba(0, 0, 0, 0.85);
@@ -5475,6 +5482,15 @@ body.light-mode .set-win-label {
   pointer-events: auto;
   min-width: 200px;
   text-align: center;
+}
+
+@media (orientation: landscape) {
+  .toast-container {
+    bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+    right: calc(var(--toast-right-offset, 20px) + env(safe-area-inset-right, 0px));
+    left: 16px;
+    transform: none;
+  }
 }
 
 @keyframes toastFadeIn {
