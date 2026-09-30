@@ -414,6 +414,91 @@ test("toast positioning is recalculated whenever the viewport changes", () => {
 });
 
 
+test("toast positioning is re-synced when the scoreboard layout changes", () => {
+  assert.match(source, /new window\.ResizeObserver\(/);
+  assert.match(source, /new window\.MutationObserver\(/);
+  assert.match(source, /toastPositionMutationObserver\.observe\(scoreboardBody,[\s\S]*?subtree:\s*true/);
+});
+
+test("toast positioning reacts to floating-control layout changes", () => {
+  let rect = {
+    top: 700,
+    left: 100,
+    width: 600,
+    height: 60,
+    right: 700,
+    bottom: 760,
+  };
+
+  const dom = new JSDOM(
+    '<div id="scoreboardPage"><div class="scoreboard-body"><div class="floating-controls"></div></div></div><div id="toastContainer"></div>',
+  );
+  const { document } = dom.window;
+  const controls = document.querySelector(".floating-controls");
+  const container = document.getElementById("toastContainer");
+  controls.getBoundingClientRect = () => ({ ...rect });
+
+  Object.defineProperty(dom.window, "innerWidth", { configurable: true, value: 1000 });
+  Object.defineProperty(dom.window, "innerHeight", { configurable: true, value: 800 });
+  dom.window.requestAnimationFrame = (callback) =>
+  {
+    callback();
+    return 1;
+  };
+
+  const resizeObservers = [];
+  const mutationObservers = [];
+  class TestResizeObserver
+  {
+    constructor(callback) { this.callback = callback; resizeObservers.push(this); }
+    observe() {}
+  }
+  class TestMutationObserver
+  {
+    constructor(callback) { this.callback = callback; mutationObservers.push(this); }
+    observe() {}
+  }
+  dom.window.ResizeObserver = TestResizeObserver;
+  dom.window.MutationObserver = TestMutationObserver;
+
+  const updateToastContainerPosition = vm.runInNewContext(
+    `(${extractFunction(source, "updateToastContainerPosition")})`,
+    { document, window: dom.window },
+  );
+
+  let toastPositionFrame = null;
+  let toastPositionObserversInitialized = false;
+  let toastPositionResizeObserver = null;
+  let toastPositionMutationObserver = null;
+
+  const initToastContainerPositionObservers = vm.runInNewContext(
+    `(${extractFunction(source, "initToastContainerPositionObservers")})`,
+    {
+      document,
+      window: dom.window,
+      toastPositionFrame,
+      toastPositionObserversInitialized,
+      toastPositionResizeObserver,
+      toastPositionMutationObserver,
+      scheduleToastContainerPositionUpdate: () => updateToastContainerPosition(),
+      updateToastContainerPosition,
+    },
+  );
+
+  initToastContainerPositionObservers();
+  assert.equal(resizeObservers.length, 1);
+  assert.equal(mutationObservers.length, 1);
+  assert.equal(container.style.getPropertyValue("--toast-bottom-offset"), "116px");
+
+  rect = { ...rect, top: 650, bottom: 710 };
+  resizeObservers[0].callback();
+  assert.equal(container.style.getPropertyValue("--toast-bottom-offset"), "166px");
+
+  rect = { ...rect, top: 600, bottom: 660 };
+  mutationObservers[0].callback();
+  assert.equal(container.style.getPropertyValue("--toast-bottom-offset"), "216px");
+});
+
 test("engagement animations are disabled when reduced motion is requested", () => {
   assert.match(
     styles,
