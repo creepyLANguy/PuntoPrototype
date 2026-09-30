@@ -1159,20 +1159,28 @@ body.light-mode .game-dot.filled {
 }
 
 .changeover-loading {
-  color: transparent !important;
   cursor: wait;
   pointer-events: none;
 }
 
-.changeover-loading::after {
-  content: "";
+.changeover-spinner {
+  display: none;
   position: absolute;
   width: 38%;
   height: 38%;
+  box-sizing: border-box;
   border: clamp(2px, 0.35vmin, 3px) solid #ccc;
   border-right-color: transparent;
   border-radius: 50%;
   animation: changeoverSpinner 0.75s linear infinite;
+}
+
+.changeover-loading .changeover-icon {
+  visibility: hidden;
+}
+
+.changeover-loading .changeover-spinner {
+  display: block;
 }
 
 @keyframes changeoverSpinner {
@@ -1181,7 +1189,7 @@ body.light-mode .game-dot.filled {
   }
 }
 
-body.light-mode .changeover-loading::after {
+body.light-mode .changeover-spinner {
   border-color: #666;
   border-right-color: transparent;
 }
