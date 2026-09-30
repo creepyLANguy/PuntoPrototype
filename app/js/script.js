@@ -84,6 +84,7 @@ document.addEventListener("DOMContentLoaded", () =>
 
   const TOAST_DURATION_MS = 3000;
 
+  
   const LOAD_SPINNER_DELAY_MS = 750;
 
   const LOADING_SPINNER_MIN_DURATION_MS = 750;
@@ -5843,10 +5844,45 @@ document.addEventListener("DOMContentLoaded", () =>
     }
   }
 
+  function updateToastContainerPosition()
+  {
+    const container = document.getElementById("toastContainer");
+    if (!container) return;
+
+    container.style.removeProperty("--toast-bottom-offset");
+    container.style.removeProperty("--toast-right-offset");
+
+    const controls = document.querySelector(".floating-controls");
+    if (!controls)
+    {
+      return;
+    }
+
+    const rect = controls.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0)
+    {
+      return;
+    }
+
+    const gap = 16;
+
+    if (rect.width >= rect.height)
+    {
+      const bottomOffset = Math.max(gap, window.innerHeight - rect.top + gap);
+      container.style.setProperty("--toast-bottom-offset", `${bottomOffset}px`);
+      return;
+    }
+
+    const rightOffset = Math.max(gap, window.innerWidth - rect.left + gap);
+    container.style.setProperty("--toast-right-offset", `${rightOffset}px`);
+  }
+
   function showToast(message, toastType = TOAST_TYPES.SUCCESS)
   {
     const container = document.getElementById("toastContainer");
     if (!container) return;
+
+    updateToastContainerPosition();
 
     const toast = document.createElement("div");
     toast.className = `toast ${toastType}`;
@@ -7796,6 +7832,7 @@ document.addEventListener("DOMContentLoaded", () =>
     document.querySelectorAll(".team-name .name-text")
       .forEach(fitTextToContainer);
     updateMarqueeScrolling();
+    updateToastContainerPosition();
     clampCourtQrPanelToViewport();
     syncCourtListFadeState(elements.playCourtList);
     syncCourtListFadeState(elements.spectateCourtList);
