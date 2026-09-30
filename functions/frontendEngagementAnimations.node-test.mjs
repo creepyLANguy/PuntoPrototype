@@ -89,17 +89,17 @@ test("expandable match details arrow pulses twice while collapsed and stops whil
 test("loading logo pulse uses the revised scale range", () => {
   assert.match(
     styles,
-    /@keyframes\\s+logoPulse\\s*\\{[\\s\\S]*?transform:\\s*scale\\(0\\.82\\);[\\s\\S]*?transform:\\s*scale\\(1\\.38\\);/,
+    /@keyframes\s+logoPulse\s*\{[\s\S]*?transform:\s*scale\(0\.82\);[\s\S]*?transform:\s*scale\(1\.38\);/,
   );
 });
 
 test("toast stack reserves space around the responsive floating controls", () => {
   assert.match(styles, /--toast-bottom-offset, 20px/);
   assert.match(styles, /--toast-right-offset, 20px/);
-  assert.match(styles, /@media\\s*\\(orientation:\\s*landscape\\)[\\s\\S]*?right:\\s*calc\\(var\\(--toast-right-offset/);
-  assert.match(source, /function updateToastContainerPosition\\(\\)/);
-  assert.match(source, /updateToastContainerPosition\\(\\);[\\s\\S]*?const toast = document\.createElement\\("div"\\);/);
-  assert.match(source, /window\.addEventListener\\("resize",[\\s\\S]*?updateToastContainerPosition\\(\\);/);
+  assert.match(styles, /@media\s*\(orientation:\s*landscape\)[\s\S]*?right:\s*calc\(var\(--toast-right-offset/);
+  assert.match(source, /function updateToastContainerPosition\(\)/);
+  assert.match(source, /updateToastContainerPosition\(\);[\s\S]*?const toast = document\.createElement\("div"\);/);
+  assert.match(source, /window\.addEventListener\("resize",[\s\S]*?updateToastContainerPosition\(\);/);
 });
 
 test("engagement animations are disabled when reduced motion is requested", () => {
