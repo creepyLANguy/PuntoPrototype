@@ -84,8 +84,7 @@ document.addEventListener("DOMContentLoaded", () =>
 
   const TOAST_DURATION_MS = 3000;
 
-  const CHANGEOVER_SPINNER_MIN_DURATION_MS = 350;
-
+  
   const LOAD_SPINNER_DELAY_MS = 750;
 
   const LOADING_SPINNER_MIN_DURATION_MS = 750;
@@ -6420,27 +6419,15 @@ document.addEventListener("DOMContentLoaded", () =>
     syncSettingsTiles();
   });
 
-  function setChangeoverPending(isPending)
-  {
-    const button = elements.changeoverBtn;
-    if (!button) return;
-
-    button.classList.toggle("changeover-loading", isPending);
-    button.disabled = isPending;
-    button.setAttribute("aria-busy", isPending ? "true" : "false");
-    button.setAttribute("aria-label", isPending ? "Changing over" : "Changeover");
-  }
-
   async function performBeaconChangeover()
   {
     if (!currentCourtId || isSpectating) return;
 
     const nextBeaconSidesSwapped = !beaconSidesSwapped;
-    const changeoverStartedAt = performance.now();
 
     try
     {
-      setChangeoverPending(true);
+      if (elements.changeoverBtn) elements.changeoverBtn.disabled = true;
 
       await requestBeaconChangeover(currentCourtId, nextBeaconSidesSwapped);
       beaconSidesSwapped = nextBeaconSidesSwapped;
@@ -6459,15 +6446,7 @@ document.addEventListener("DOMContentLoaded", () =>
     }
     finally
     {
-      const elapsed = performance.now() - changeoverStartedAt;
-      const remaining = Math.max(0, CHANGEOVER_SPINNER_MIN_DURATION_MS - elapsed);
-
-      if (remaining > 0)
-      {
-        await new Promise(resolve => window.setTimeout(resolve, remaining));
-      }
-
-      setChangeoverPending(false);
+      if (elements.changeoverBtn) elements.changeoverBtn.disabled = false;
     }
   }
 
