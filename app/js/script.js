@@ -6418,6 +6418,17 @@ document.addEventListener("DOMContentLoaded", () =>
     syncSettingsTiles();
   });
 
+  function setChangeoverPending(isPending)
+  {
+    const button = elements.changeoverBtn;
+    if (!button) return;
+
+    button.classList.toggle("changeover-loading", isPending);
+    button.disabled = isPending;
+    button.setAttribute("aria-busy", isPending ? "true" : "false");
+    button.setAttribute("aria-label", isPending ? "Changing over" : "Changeover");
+  }
+
   async function performBeaconChangeover()
   {
     if (!currentCourtId || isSpectating) return;
@@ -6426,7 +6437,7 @@ document.addEventListener("DOMContentLoaded", () =>
 
     try
     {
-      if (elements.changeoverBtn) elements.changeoverBtn.disabled = true;
+      setChangeoverPending(true);
 
       await requestBeaconChangeover(currentCourtId, nextBeaconSidesSwapped);
       beaconSidesSwapped = nextBeaconSidesSwapped;
@@ -6445,7 +6456,7 @@ document.addEventListener("DOMContentLoaded", () =>
     }
     finally
     {
-      if (elements.changeoverBtn) elements.changeoverBtn.disabled = false;
+      setChangeoverPending(false);
     }
   }
 
