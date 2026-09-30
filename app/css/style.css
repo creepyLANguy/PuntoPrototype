@@ -1158,41 +1158,6 @@ body.light-mode .game-dot.filled {
   opacity: 1;
 }
 
-.changeover-loading {
-  cursor: wait;
-  pointer-events: none;
-}
-
-.changeover-spinner {
-  display: none;
-  position: absolute;
-  width: 38%;
-  height: 38%;
-  box-sizing: border-box;
-  border: clamp(2px, 0.35vmin, 3px) solid #ccc;
-  border-right-color: transparent;
-  border-radius: 50%;
-  animation: changeoverSpinner 0.75s linear infinite;
-}
-
-.changeover-loading .changeover-icon {
-  visibility: hidden;
-}
-
-.changeover-loading .changeover-spinner {
-  display: block;
-}
-
-@keyframes changeoverSpinner {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-body.light-mode .changeover-spinner {
-  border-color: #666;
-  border-right-color: transparent;
-}
 
 body.light-mode .floating-btn {
   color: #666;
@@ -3471,11 +3436,11 @@ body.light-mode .loading-logo {
 
   0%,
   100% {
-    transform: scale(0.82);
+    transform: scale(0.7);
   }
 
   50% {
-    transform: scale(1.38);
+    transform: scale(1.3);
   }
 }
 
