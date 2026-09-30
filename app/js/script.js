@@ -84,6 +84,8 @@ document.addEventListener("DOMContentLoaded", () =>
 
   const TOAST_DURATION_MS = 3000;
 
+  const CHANGEOVER_SPINNER_MIN_DURATION_MS = 350;
+
   const LOAD_SPINNER_DELAY_MS = 750;
 
   const LOADING_SPINNER_MIN_DURATION_MS = 750;
@@ -6434,6 +6436,7 @@ document.addEventListener("DOMContentLoaded", () =>
     if (!currentCourtId || isSpectating) return;
 
     const nextBeaconSidesSwapped = !beaconSidesSwapped;
+    const changeoverStartedAt = performance.now();
 
     try
     {
@@ -6456,6 +6459,14 @@ document.addEventListener("DOMContentLoaded", () =>
     }
     finally
     {
+      const elapsed = performance.now() - changeoverStartedAt;
+      const remaining = Math.max(0, CHANGEOVER_SPINNER_MIN_DURATION_MS - elapsed);
+
+      if (remaining > 0)
+      {
+        await new Promise(resolve => window.setTimeout(resolve, remaining));
+      }
+
       setChangeoverPending(false);
     }
   }
