@@ -1158,6 +1158,29 @@ body.light-mode .game-dot.filled {
   opacity: 1;
 }
 
+.changeover-loading {
+  color: transparent !important;
+  cursor: wait;
+  pointer-events: none;
+}
+
+.changeover-loading::after {
+  content: "";
+  position: absolute;
+  width: 38%;
+  height: 38%;
+  border: clamp(2px, 0.35vmin, 3px) solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: changeoverSpinner 0.75s linear infinite;
+}
+
+@keyframes changeoverSpinner {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 body.light-mode .floating-btn {
   color: #666;
 }
