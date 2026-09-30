@@ -265,7 +265,7 @@ test("toast positioning reserves the correct right-side clearance in landscape",
 
 test("toast positioning enforces a minimum 16px clearance", () => {
   const portrait = createToastHarness({
-    top: 799,
+    top: 800,
     left: 0,
     width: 400,
     height: 40,
@@ -363,6 +363,7 @@ test("showToast recalculates positioning, appends a typed toast, and removes it 
         return 1;
       },
       window: harness.dom.window,
+      TOAST_DURATION_MS: 3000,
     },
   );
 
