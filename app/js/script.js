@@ -1333,7 +1333,7 @@ document.addEventListener("DOMContentLoaded", () =>
       "Views switched",
       "Switch views",
     );
-    updateItem(elements.changeoverBtn, beaconSidesSwapped, "Changeover on", "Changeover");
+    updateItem(elements.changeoverBtn, beaconSidesSwapped, "Changeover *", "Changeover");
     updateItem(elements.serverToggleBtn, isServerBadgeVisible, "Server on", "Server off");
   }
 
