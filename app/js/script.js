@@ -1331,7 +1331,7 @@ document.addEventListener("DOMContentLoaded", () =>
       elements.swapBtn,
       document.querySelector(".scoreboard")?.classList.contains("swapped"),
       "Swap views *",
-      "Swap views",
+      "Switch views",
     );
     updateItem(elements.changeoverBtn, beaconSidesSwapped, "Changeover *", "Changeover");
     updateItem(elements.serverToggleBtn, isServerBadgeVisible, "Server on", "Server off");
