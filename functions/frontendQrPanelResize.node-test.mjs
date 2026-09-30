@@ -6,6 +6,12 @@ const source = readFileSync(new URL("../app/js/script.js", import.meta.url), "ut
 const styles = readFileSync(new URL("../app/css/style.css", import.meta.url), "utf8");
 const brand = readFileSync(new URL("../app/js/brand.mjs", import.meta.url), "utf8");
 
+function getCssRuleBody(css, selector) {
+  const escapedSelector = selector.replace(/[.*+?^$()|[\]\\]/g, "\\$&");
+  const match = css.match(new RegExp(escapedSelector + "\\s*\\{([^}]*)\\}"));
+  assert.ok(match, "CSS rule not found: " + selector);
+  return match[1];
+}
 test("QR panel interaction stays frame-synced", () => {
   assert.match(source, /function initializeCourtQrPanelInteractions\(\)/);
   assert.match(source, /const scheduleQrPanelFrame =/);
@@ -131,9 +137,9 @@ test("QR resize leaves QR canvases in place on release and rerasterizes only the
 });
 
 test("QR resize keeps the compositor hint on drag only", () => {
-  assert.match(styles, /\.court-qr-panel\.dragging\s*\{[\s\S]*?will-change:\s*transform;/);
-  assert.doesNotMatch(
-    styles,
-    /\.court-qr-panel\.qr-panel-interacting\s*\{[\s\S]*?will-change:\s*transform;/,
-  );
+  const interactingRule = getCssRuleBody(styles, ".court-qr-panel.qr-panel-interacting");
+  const draggingRule = getCssRuleBody(styles, ".court-qr-panel.dragging");
+
+  assert.match(draggingRule, /will-change:\s*transform;/);
+  assert.doesNotMatch(interactingRule, /will-change:\s*transform;/);
 });
