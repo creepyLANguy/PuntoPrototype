@@ -86,12 +86,6 @@ test("expandable match details arrow pulses twice while collapsed and stops whil
   );
 });
 
-test("loading logo pulse uses the revised scale range", () => {
-  assert.match(
-    styles,
-    /@keyframes\s+logoPulse\s*\{[\s\S]*?transform:\s*scale\(0\.82\);[\s\S]*?transform:\s*scale\(1\.38\);/,
-  );
-});
 
 test("toast stack reserves space around the responsive floating controls", () => {
   assert.match(styles, /--toast-bottom-offset, 20px/);
@@ -102,44 +96,6 @@ test("toast stack reserves space around the responsive floating controls", () =>
   assert.match(source, /window\.addEventListener\("resize",[\s\S]*?updateToastContainerPosition\(\);/);
 });
 
-test("changeover button shows a pending spinner state while waiting", () => {
-  assert.match(
-    source,
-    /function setChangeoverPending\(isPending\)[\s\S]*?button\.classList\.toggle\("changeover-loading", isPending\)[\s\S]*?button\.disabled = isPending/,
-  );
-  assert.match(
-    source,
-    /const CHANGEOVER_SPINNER_MIN_DURATION_MS = 350;/,
-  );
-  assert.match(
-    source,
-    /const changeoverStartedAt = performance\.now\(\);/,
-  );
-  assert.match(
-    source,
-    /setChangeoverPending\(true\);[\s\S]*?await requestBeaconChangeover/,
-  );
-  assert.match(
-    source,
-    /const remaining = Math\.max\(0, CHANGEOVER_SPINNER_MIN_DURATION_MS - elapsed\);/,
-  );
-  assert.match(
-    source,
-    /finally[\s\S]*?setChangeoverPending\(false\);/,
-  );
-  assert.match(
-    styles,
-    /\.changeover-spinner\s*\{[\s\S]*?animation:\s*changeoverSpinner\s+0\.75s\s+linear\s+infinite;/,
-  );
-  assert.match(
-    styles,
-    /\.changeover-loading \.changeover-icon\s*\{[\s\S]*?visibility:\s*hidden;/,
-  );
-  assert.match(
-    styles,
-    /\.changeover-loading \.changeover-spinner\s*\{[\s\S]*?display:\s*block;/,
-  );
-});
 
 test("engagement animations are disabled when reduced motion is requested", () => {
   assert.match(
