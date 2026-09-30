@@ -84,7 +84,11 @@ document.addEventListener("DOMContentLoaded", () =>
 
   const TOAST_DURATION_MS = 3000;
 
-  
+  let toastPositionFrame = null;
+  let toastPositionObserversInitialized = false;
+  let toastPositionResizeObserver = null;
+  let toastPositionMutationObserver = null;
+
   const LOAD_SPINNER_DELAY_MS = 750;
 
   const LOADING_SPINNER_MIN_DURATION_MS = 750;
@@ -5844,6 +5848,70 @@ document.addEventListener("DOMContentLoaded", () =>
     }
   }
 
+  function scheduleToastContainerPositionUpdate()
+  {
+    if (toastPositionFrame !== null) return;
+
+    const requestFrame = window.requestAnimationFrame || ((callback) => window.setTimeout(callback, 0));
+    toastPositionFrame = requestFrame(() =>
+    {
+      toastPositionFrame = null;
+      updateToastContainerPosition();
+    });
+  }
+
+  function initToastContainerPositionObservers()
+  {
+    if (toastPositionObserversInitialized) return;
+    toastPositionObserversInitialized = true;
+
+    const scoreboardBody = document.querySelector(".scoreboard-body");
+    const scoreboardPage = document.getElementById("scoreboardPage");
+    const floatingControls = document.querySelector(".floating-controls");
+
+    if (typeof window.ResizeObserver === "function")
+    {
+      toastPositionResizeObserver = new window.ResizeObserver(() =>
+      {
+        scheduleToastContainerPositionUpdate();
+      });
+
+      [scoreboardPage, scoreboardBody, floatingControls]
+        .filter(Boolean)
+        .forEach((element) => toastPositionResizeObserver.observe(element));
+    }
+
+    if (typeof window.MutationObserver === "function")
+    {
+      toastPositionMutationObserver = new window.MutationObserver(() =>
+      {
+        scheduleToastContainerPositionUpdate();
+      });
+
+      if (scoreboardPage)
+      {
+        toastPositionMutationObserver.observe(scoreboardPage,
+        {
+          attributes: true,
+          attributeFilter: ["class", "style"],
+        });
+      }
+
+      if (scoreboardBody)
+      {
+        toastPositionMutationObserver.observe(scoreboardBody,
+        {
+          attributes: true,
+          attributeFilter: ["class", "style"],
+          childList: true,
+          subtree: true,
+        });
+      }
+    }
+
+    scheduleToastContainerPositionUpdate();
+  }
+
   function updateToastContainerPosition()
   {
     const container = document.getElementById("toastContainer");
@@ -7843,6 +7911,7 @@ document.addEventListener("DOMContentLoaded", () =>
   // INIT
   // =====================================================
 
+  initToastContainerPositionObservers();
   updateUI();
   initNfc();
 
