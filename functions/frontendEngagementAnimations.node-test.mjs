@@ -280,10 +280,10 @@ test("toast positioning enforces a minimum 16px clearance", () => {
   const landscape = createToastHarness(
     {
       top: 0,
-      left: 999,
+      left: 1000,
       width: 40,
       height: 400,
-      right: 1039,
+      right: 1040,
       bottom: 400,
     },
     { width: 1000, height: 600 },
