@@ -233,6 +233,65 @@ test("Changeover flips the local view and Beacon handling for all clients", asyn
   await settle(10);
 });
 
+test("active changeover state is applied when a player joins and can be toggled off", async () => {
+  document.getElementById("backBtn").click();
+  await waitFor(
+    () => !document.getElementById("confirmModal").classList.contains("hidden"),
+    { label: "exit confirm modal before rejoining" },
+  );
+  document.getElementById("confirmOkBtn").click();
+  await waitFor(() => document.getElementById("menuPage").style.display !== "none", {
+    label: "menu after leaving court",
+  });
+
+  const court = firestoreState.docs.get("courts/lifecourt");
+  writeDoc("courts/lifecourt", {
+    ...court,
+    beaconSidesSwapped: true,
+  });
+
+  await joinCourtAsPlayer(document, "lifecourt");
+
+  await waitFor(
+    () => document.querySelector(".scoreboard").classList.contains("swapped"),
+    { label: "active changeover applied to player scoreboard on join" },
+  );
+
+  document.getElementById("settingsBtn").click();
+  await settle(10);
+
+  assert.equal(
+    document.getElementById("changeoverTile").querySelector("span").textContent,
+    "Changeover on",
+  );
+  assert.equal(
+    document.getElementById("swapBtn").closest(".setting-item").querySelector("span").textContent,
+    "Views switched",
+  );
+  assert.equal(
+    document.getElementById("swapBtn").getAttribute("aria-pressed"),
+    "true",
+  );
+
+  document.getElementById("changeoverBtn").click();
+
+  await waitFor(
+    () => firestoreState.docs.get("courts/lifecourt").beaconSidesSwapped === false,
+    { label: "player toggles active changeover off" },
+  );
+  await waitFor(
+    () => document.querySelector(".scoreboard").classList.contains("swapped") === false,
+    { label: "player scoreboard returns to default after changeover toggle" },
+  );
+  await waitFor(
+    () => document.getElementById("changeoverTile").querySelector("span").textContent === "Changeover",
+    { label: "changeover tile returns to inactive state" },
+  );
+
+  document.getElementById("closeSettingsBtn").click();
+  await settle(10);
+});
+
 test("shallow reset through the UI zeroes the scoreboard", async () => {
   document.getElementById("settingsBtn").click();
   await settle(10);
@@ -271,6 +330,40 @@ test("court closed by admin kicks the player back to the menu", async () => {
     label: "menu page after closure",
   });
   assert.equal(document.getElementById("scoreboardPage").style.display, "none");
+});
+
+test("spectator joins with the court's active changeover visual state", async () => {
+  const court = firestoreState.docs.get("courts/watchcourt");
+  writeDoc("courts/watchcourt", {
+    ...court,
+    beaconSidesSwapped: true,
+  });
+
+  const spectateButton = [...document.querySelectorAll(".menu-btn")].find(
+    (btn) => btn.textContent.trim() === "Spectate",
+  );
+  assert.ok(spectateButton, "Spectate menu button exists");
+  spectateButton.click();
+
+  await waitFor(() => document.querySelector(`#spectateCourtList [data-court-name="watchcourt"]`), {
+    label: "watchcourt in spectate list",
+  });
+  document.querySelector(`#spectateCourtList [data-court-name="watchcourt"]`).click();
+
+  await waitFor(() => document.getElementById("scoreboardPage").style.display !== "none", {
+    label: "scoreboard shown for spectator",
+  });
+  await waitFor(
+    () => document.querySelector(".scoreboard").classList.contains("swapped"),
+    { label: "active changeover applied to spectator scoreboard on join" },
+  );
+
+  assert.equal(document.getElementById("changeoverBtn").style.display, "none");
+  assert.equal(document.getElementById("changeoverTile").style.display, "none");
+  assert.equal(
+    document.getElementById("swapBtn").getAttribute("aria-pressed"),
+    "true",
+  );
 });
 
 test("spectator sees live score updates pushed by other devices", async () => {
