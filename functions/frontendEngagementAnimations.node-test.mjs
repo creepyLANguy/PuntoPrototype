@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+import vm from "node:vm";
 import test from "node:test";
+import { JSDOM } from "jsdom";
 
 const styles = readFileSync(new URL("../app/css/style.css", import.meta.url), "utf8");
 const source = readFileSync(new URL("../app/js/script.js", import.meta.url), "utf8");
@@ -87,13 +89,327 @@ test("expandable match details arrow pulses twice while collapsed and stops whil
 });
 
 
-test("toast stack reserves space around the responsive floating controls", () => {
-  assert.match(styles, /--toast-bottom-offset, 20px/);
-  assert.match(styles, /--toast-right-offset, 20px/);
-  assert.match(styles, /@media\s*\(orientation:\s*landscape\)[\s\S]*?right:\s*calc\(var\(--toast-right-offset/);
-  assert.match(source, /function updateToastContainerPosition\(\)/);
-  assert.match(source, /updateToastContainerPosition\(\);[\s\S]*?const toast = document\.createElement\("div"\);/);
-  assert.match(source, /window\.addEventListener\("resize",[\s\S]*?updateToastContainerPosition\(\);/);
+function extractFunction(source, functionName)
+{
+  const signature = `function ${functionName}(`;
+  const start = source.indexOf(signature);
+  assert.notEqual(start, -1, `Could not find ${functionName}`);
+
+  const bodyStart = source.indexOf("{", start);
+  assert.notEqual(bodyStart, -1, `Could not find ${functionName} body`);
+
+  let depth = 0;
+  let quote = null;
+  let escaped = false;
+  let lineComment = false;
+  let blockComment = false;
+
+  for (let i = bodyStart; i < source.length; i++)
+  {
+    const char = source[i];
+    const next = source[i + 1];
+
+    if (lineComment)
+    {
+      if (char === "\n") lineComment = false;
+      continue;
+    }
+
+    if (blockComment)
+    {
+      if (char === "*" && next === "/")
+      {
+        blockComment = false;
+        i++;
+      }
+      continue;
+    }
+
+    if (quote)
+    {
+      if (escaped)
+      {
+        escaped = false;
+        continue;
+      }
+
+      if (char === "\\")
+      {
+        escaped = true;
+        continue;
+      }
+
+      if (char === quote)
+      {
+        quote = null;
+      }
+
+      continue;
+    }
+
+    if ((char === "'" || char === '"' || char === "`"))
+    {
+      quote = char;
+      continue;
+    }
+
+    if (char === "/" && next === "/")
+    {
+      lineComment = true;
+      i++;
+      continue;
+    }
+
+    if (char === "/" && next === "*")
+    {
+      blockComment = true;
+      i++;
+      continue;
+    }
+
+    if (char === "{")
+    {
+      depth++;
+      continue;
+    }
+
+    if (char === "}")
+    {
+      depth--;
+      if (depth === 0)
+      {
+        return source.slice(start, i + 1);
+      }
+    }
+  }
+
+  throw new Error(`Could not find end of ${functionName}`);
+}
+
+function createToastHarness(rect, viewport = { width: 1000, height: 800 })
+{
+  const dom = new JSDOM(`
+    <div id="toastContainer"></div>
+    <div class="floating-controls"></div>
+  `);
+
+  const { document } = dom.window;
+  const container = document.getElementById("toastContainer");
+  const controls = document.querySelector(".floating-controls");
+
+  Object.defineProperty(dom.window, "innerWidth", {
+    configurable: true,
+    value: viewport.width,
+  });
+  Object.defineProperty(dom.window, "innerHeight", {
+    configurable: true,
+    value: viewport.height,
+  });
+
+  controls.getBoundingClientRect = () => ({ ...rect });
+
+  const updateToastContainerPosition = vm.runInNewContext(
+    `(${extractFunction(source, "updateToastContainerPosition")})`,
+    {
+      document,
+      window: dom.window,
+    },
+  );
+
+  return {
+    dom,
+    document,
+    container,
+    controls,
+    updateToastContainerPosition,
+  };
+}
+
+test("toast positioning clears stale offsets before calculating a new position", () => {
+  const harness = createToastHarness({
+    top: 700,
+    left: 100,
+    width: 600,
+    height: 60,
+    right: 700,
+    bottom: 760,
+  });
+
+  harness.container.style.setProperty("--toast-bottom-offset", "999px");
+  harness.container.style.setProperty("--toast-right-offset", "888px");
+
+  harness.updateToastContainerPosition();
+
+  assert.equal(harness.container.style.getPropertyValue("--toast-bottom-offset"), "116px");
+  assert.equal(harness.container.style.getPropertyValue("--toast-right-offset"), "");
+});
+
+test("toast positioning reserves the correct right-side clearance in landscape", () => {
+  const harness = createToastHarness(
+    {
+      top: 50,
+      left: 900,
+      width: 70,
+      height: 500,
+      right: 970,
+      bottom: 550,
+    },
+    { width: 1000, height: 600 },
+  );
+
+  harness.updateToastContainerPosition();
+
+  assert.equal(harness.container.style.getPropertyValue("--toast-right-offset"), "116px");
+  assert.equal(harness.container.style.getPropertyValue("--toast-bottom-offset"), "");
+});
+
+test("toast positioning enforces a minimum 16px clearance", () => {
+  const portrait = createToastHarness({
+    top: 799,
+    left: 0,
+    width: 400,
+    height: 40,
+    right: 400,
+    bottom: 839,
+  });
+
+  portrait.updateToastContainerPosition();
+
+  assert.equal(portrait.container.style.getPropertyValue("--toast-bottom-offset"), "16px");
+
+  const landscape = createToastHarness(
+    {
+      top: 0,
+      left: 999,
+      width: 40,
+      height: 400,
+      right: 1039,
+      bottom: 400,
+    },
+    { width: 1000, height: 600 },
+  );
+
+  landscape.updateToastContainerPosition();
+
+  assert.equal(landscape.container.style.getPropertyValue("--toast-right-offset"), "16px");
+});
+
+test("toast positioning safely falls back to CSS defaults when controls are absent or not measurable", () => {
+  const dom = new JSDOM(`
+    <div id="toastContainer"></div>
+  `);
+  const { document } = dom.window;
+
+  const updateToastContainerPosition = vm.runInNewContext(
+    `(${extractFunction(source, "updateToastContainerPosition")})`,
+    {
+      document,
+      window: dom.window,
+    },
+  );
+
+  const container = document.getElementById("toastContainer");
+  container.style.setProperty("--toast-bottom-offset", "123px");
+  container.style.setProperty("--toast-right-offset", "456px");
+
+  updateToastContainerPosition();
+
+  assert.equal(container.style.getPropertyValue("--toast-bottom-offset"), "");
+  assert.equal(container.style.getPropertyValue("--toast-right-offset"), "");
+
+  const controls = document.createElement("div");
+  controls.className = "floating-controls";
+  controls.getBoundingClientRect = () => ({
+    top: 0,
+    left: 0,
+    width: 0,
+    height: 0,
+    right: 0,
+    bottom: 0,
+  });
+  document.body.appendChild(controls);
+
+  container.style.setProperty("--toast-bottom-offset", "123px");
+  container.style.setProperty("--toast-right-offset", "456px");
+
+  updateToastContainerPosition();
+
+  assert.equal(container.style.getPropertyValue("--toast-bottom-offset"), "");
+  assert.equal(container.style.getPropertyValue("--toast-right-offset"), "");
+});
+
+test("showToast recalculates positioning, appends a typed toast, and removes it after the toast duration", () => {
+  const harness = createToastHarness({
+    top: 700,
+    left: 100,
+    width: 600,
+    height: 60,
+    right: 700,
+    bottom: 760,
+  });
+
+  let timeoutCallback = null;
+  let timeoutDelay = null;
+
+  const showToast = vm.runInNewContext(
+    `(${extractFunction(source, "showToast")})`,
+    {
+      document: harness.document,
+      updateToastContainerPosition: harness.updateToastContainerPosition,
+      setTimeout: (callback, delay) =>
+      {
+        timeoutCallback = callback;
+        timeoutDelay = delay;
+        return 1;
+      },
+      window: harness.dom.window,
+    },
+  );
+
+  showToast("Saved", "success");
+
+  assert.equal(harness.container.children.length, 1);
+  assert.equal(harness.container.firstElementChild.textContent, "Saved");
+  assert.equal(harness.container.firstElementChild.className, "toast success");
+  assert.equal(timeoutDelay, 3000);
+  assert.equal(harness.container.style.getPropertyValue("--toast-bottom-offset"), "116px");
+  assert.equal(typeof timeoutCallback, "function");
+
+  timeoutCallback();
+
+  assert.equal(harness.container.children.length, 0);
+});
+
+test("toast CSS keeps stacked notifications centered with a 10px gap and responsive widths", () => {
+  const toastContainerBlocks = [...styles.matchAll(/\.toast-container\s*\{[\s\S]*?\n\}/g)].map(match => match[0]);
+  assert.ok(toastContainerBlocks.length >= 2, "both toast container definitions should remain covered");
+
+  for (const block of toastContainerBlocks.slice(0, 2))
+  {
+    assert.match(block, /display:\s*flex;/);
+    assert.match(block, /flex-direction:\s*column;/);
+    assert.match(block, /align-items:\s*center;/);
+    assert.match(block, /gap:\s*10px;/);
+    assert.match(block, /bottom:\s*calc\(var\(--toast-bottom-offset, 20px\)\s*\+\s*env\(safe-area-inset-bottom, 0px\)\);/);
+  }
+
+  assert.match(styles, /width:\s*min\(420px,\s*100%\);/);
+  assert.match(styles, /min-width:\s*min\(200px,\s*100%\);/);
+  assert.match(
+    styles,
+    /@media\s*\(orientation:\s*landscape\)[\s\S]*?right:\s*calc\(var\(--toast-right-offset, 20px\)\s*\+\s*env\(safe-area-inset-right, 0px\)\);/,
+  );
+});
+
+test("toast positioning is recalculated whenever the viewport changes", () => {
+  assert.match(
+    source,
+    /window\.addEventListener\("resize",[\s\S]*?updateToastContainerPosition\(\);/,
+  );
+  assert.match(
+    source,
+    /showToast\(message,[\s\S]*?updateToastContainerPosition\(\);/,
+  );
 });
 
 
