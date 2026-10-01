@@ -146,8 +146,12 @@ test("QR resize visibility is cached, logarithmic, and inactivity-aware", () => 
   assert.match(source, /refreshCourtQrResizeHandleVisibility/);
   assert.doesNotMatch(styles, /\.qr-resize-handle:hover\s*\{/);
 
+  const visibilityFunctionStart = source.indexOf(
+    "function initializeCourtQrResizeHandleVisibility()",
+  );
   const pointerMoveStart = source.indexOf(
     '    document.addEventListener("pointermove", (event) =>',
+    visibilityFunctionStart,
   );
   const pointerMoveEnd = source.indexOf("    refreshCourtQrResizeHandleVisibility =", pointerMoveStart);
   assert.ok(pointerMoveStart >= 0 && pointerMoveEnd > pointerMoveStart);
