@@ -4989,7 +4989,7 @@ document.addEventListener("DOMContentLoaded", () =>
     const handleUpdateIntervalMs = 40;
     const inactivityTimeoutMs = 3000;
     const maxHandleOpacity = 1;
-    const opacityStartTravelPercentage = 0.85;
+    const opacityStartTravelPercentage = 0.3;
     const logarithmicCurveStrength = 12;
 
     let lastPointerX = 0;
