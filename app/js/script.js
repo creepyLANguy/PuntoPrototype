@@ -4163,7 +4163,6 @@ document.addEventListener("DOMContentLoaded", () =>
     applyTeamNamesToScoreboard(resolveTeamNames(currentRawTeamNames, currentPlayerNames));
     updateServerIndicator();
     syncScoringControls();
-    renderCourtQr(courtId);
     syncSettingsTiles();
 
     if (muted)
@@ -4198,6 +4197,11 @@ document.addEventListener("DOMContentLoaded", () =>
 
     elements.scoreboardPage.style.display = "flex";
     document.body.classList.add("scoreboard-active");
+
+    // The QR panel geometry must be measured only after the scoreboard page
+    // is rendered. Measuring it while the parent is display:none produces a
+    // zero-sized cached rectangle and prevents initial proximity updates.
+    renderCourtQr(courtId);
 
     beginScoreboardLoading();
 
@@ -4935,19 +4939,6 @@ document.addEventListener("DOMContentLoaded", () =>
       panel.setPointerCapture(event.pointerId);
       event.preventDefault();
     }, { capture: true });
-
-    document.addEventListener("pointerdown", (event) =>
-    {
-      if (courtQrPanelVisible)
-      {
-        return;
-      }
-
-      lastPointerX = event.clientX;
-      lastPointerY = event.clientY;
-      hasPointerPosition = true;
-      lastPointerMoveTime = performance.now();
-    }, { passive: true });
 
     document.addEventListener("pointermove", (event) =>
     {
