@@ -4391,12 +4391,13 @@ document.addEventListener("DOMContentLoaded", () =>
       return;
     }
 
-    elements.courtQrPanel.style.left = "";
-    elements.courtQrPanel.style.top = "";
-    elements.courtQrPanel.style.bottom = "";
-    elements.courtQrPanel.style.right = "";
+    elements.courtQrPanel.style.left = "auto";
+    elements.courtQrPanel.style.top = "auto";
+    elements.courtQrPanel.style.bottom = "8px";
+    elements.courtQrPanel.style.right = "8px";
     elements.courtQrPanel.style.width = "";
     elements.courtQrPanel.style.height = "";
+    elements.courtQrPanel.style.transform = "";
     updateCourtQrPanelScale();
   }
 
@@ -4824,7 +4825,7 @@ document.addEventListener("DOMContentLoaded", () =>
       }
 
       panel.style.transform = "";
-      panel.classList.remove("dragging", "resizing", "qr-panel-interacting");
+      panel.classList.remove("dragging", "resizing", "qr-panel-resizing", "qr-panel-interacting");
 
       if (activeResizeHandle)
       {
@@ -4907,7 +4908,7 @@ document.addEventListener("DOMContentLoaded", () =>
           : 1.24;
         activeResizeHandle = resizeHandle;
         activeResizeHandle.classList.add("is-active");
-        panel.classList.add("resizing", "qr-panel-interacting");
+        panel.classList.add("resizing", "qr-panel-resizing", "qr-panel-interacting");
       }
       else
       {
