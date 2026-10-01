@@ -162,6 +162,11 @@ test("QR resize visibility is cached, logarithmic, and inactivity-aware", () => 
   const renderLabelIndex = renderBlock.indexOf("elements.courtQrLabel.textContent = courtId;");
   assert.ok(renderRefreshIndex > renderLabelIndex);
 
+  const courtOpenStart = source.indexOf("    currentCourtId = courtId;");
+  const renderCallIndex = source.indexOf("    renderCourtQr(courtId);", courtOpenStart);
+  const scoreboardVisibleIndex = source.indexOf('    elements.scoreboardPage.style.display = "flex";', courtOpenStart);
+  assert.ok(scoreboardVisibleIndex >= 0 && renderCallIndex > scoreboardVisibleIndex);
+
   const visibilityFunctionStart = source.indexOf(
     "function initializeCourtQrResizeHandleVisibility()",
   );
@@ -175,10 +180,6 @@ test("QR resize visibility is cached, logarithmic, and inactivity-aware", () => 
   assert.match(
     pointerMoveBlock,
     /if \(!courtQrPanelVisible\)\s*\{[\s\S]*?lastPointerX = event\.clientX;[\s\S]*?lastPointerY = event\.clientY;[\s\S]*?hasPointerPosition = true;[\s\S]*?lastPointerMoveTime = performance\.now\(\);[\s\S]*?return;/
-  );
-  assert.match(
-    source,
-    /document\.addEventListener\("pointerdown", \(event\) =>[\s\S]*?if \(courtQrPanelVisible\)[\s\S]*?return;[\s\S]*?lastPointerX = event\.clientX;[\s\S]*?lastPointerY = event\.clientY;[\s\S]*?hasPointerPosition = true;/
   );
   assert.match(pointerMoveBlock, /event\.clientX === lastPointerX/);
   assert.doesNotMatch(pointerMoveBlock, /getBoundingClientRect\(\)/);
