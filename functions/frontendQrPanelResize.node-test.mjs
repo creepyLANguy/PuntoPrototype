@@ -109,6 +109,8 @@ test("QR panel exposes four corner resize handles", () => {
 test("QR panel spawns from the bottom-right corner in every orientation", () => {
   assert.match(styles, /\.court-qr-panel\s*\{[\s\S]*?bottom:\s*8px;[\s\S]*?right:\s*8px;/);
   assert.match(source, /elements\.courtQrPanel\.style\.bottom = "8px";/);
+  assert.match(source, /courtQrPanelVisible = false;/);
+  assert.match(source, /courtQrPanelVisible = true;/);
   assert.match(source, /elements\.courtQrPanel\.style\.right = "8px";/);
   assert.match(
     source,
@@ -120,36 +122,41 @@ test("QR panel spawns from the bottom-right corner in every orientation", () => 
   assert.doesNotMatch(styles, /@media \(max-width: 768px\)[\s\S]*?\.court-qr-panel\s*\{[\s\S]*?display:\s*none\s*!important;/);
 });
 
-test("QR resize visibility is isolated, logarithmic, and inactivity-aware", () => {
+test("QR resize visibility is cached, logarithmic, and inactivity-aware", () => {
+  assert.match(source, /let courtQrPanelVisible = false;/);
+  assert.match(source, /let courtQrPanelGeometry = null;/);
   assert.match(source, /function initializeCourtQrResizeHandleVisibility\(\)/);
-  assert.match(source, /const handleUpdateIntervalMs = 40;/);
+  assert.match(source, /const cachePanelGeometry =/);
+  assert.match(source, /panel\.getBoundingClientRect\(\)/);
+  assert.match(source, /centerX: rect\.left \+ rect\.width \/ 2/);
+  assert.match(source, /centerY: rect\.top \+ rect\.height \/ 2/);
+  assert.match(source, /radius: Math\.max\(rect\.width, rect\.height\)/);
   assert.match(source, /const inactivityTimeoutMs = 3000;/);
-  assert.match(source, /const opacityStartTravelPercentage = 0\.70;/);
   assert.match(source, /const maxHandleOpacity = 1;/);
-  assert.match(source, /const centerX = rect\.left \+ rect\.width \/ 2/);
-  assert.match(source, /const centerY = rect\.top \+ rect\.height \/ 2/);
+  assert.match(source, /const opacityStartTravelPercentage = 0\.70;/);
   assert.match(source, /const distanceFromPanelCenter = Math\.hypot\(/);
-  assert.match(source, /const panelRadius = Math\.max\(rect\.width, rect\.height\)/);
-  assert.match(source, /distanceFromPanelCenter <= panelRadius/);
-  assert.match(source, /const effectiveDistance = distanceFromPanelCenter - panelRadius/);
-  assert.match(source, /const effectiveMaxDistance = distanceToScreenEdge - panelRadius/);
-  assert.match(source, /effectiveMaxDistance <= 0/);
-  assert.match(source, /effectiveDistance \/ effectiveMaxDistance/);
+  assert.match(source, /const effectiveDistance = distanceFromPanelCenter - geometry\.radius;/);
+  assert.match(source, /const effectiveMaxDistance = distanceToScreenEdge - geometry\.radius;/);
   assert.match(source, /Math\.log1p\(logarithmicCurveStrength \* travelPercentage\)/);
-  assert.match(
-    source,
-    /1 -[\s\S]*?Math\.log1p\(logarithmicCurveStrength \* travelPercentage\)/
-  );
   assert.match(source, /window\.setTimeout\(/);
-  assert.match(source, /!panel\.classList\.contains\("hidden"\)/);
-  assert.match(source, /getBoundingClientRect\(\)/);
-  assert.match(source, /isPointerWithinPanel/);
-  assert.match(source, /calculationsSuspended/);
-  assert.match(source, /isPanelInteractionActive/);
-  assert.match(source, /panel\.classList\.contains\("dragging"\)/);
-  assert.match(source, /--qr-handle-opacity/);
+  assert.match(source, /lastPointerMoveTime = performance\.now\(\)/);
+  assert.match(source, /if \(inactivityTimer\)/);
+  assert.match(source, /if \(!courtQrPanelVisible\)/);
+  assert.match(source, /if \(isPanelInteractionActive\(\)\)[\s\S]*?clearHandleUpdateTimer\(\)/);
   assert.match(source, /refreshCourtQrResizeHandleVisibility/);
   assert.doesNotMatch(styles, /\.qr-resize-handle:hover\s*\{/);
+
+  const pointerMoveStart = source.indexOf(
+    '    document.addEventListener("pointermove", (event) =>',
+  );
+  const pointerMoveEnd = source.indexOf("    refreshCourtQrResizeHandleVisibility =", pointerMoveStart);
+  assert.ok(pointerMoveStart >= 0 && pointerMoveEnd > pointerMoveStart);
+  const pointerMoveBlock = source.slice(pointerMoveStart, pointerMoveEnd);
+  assert.match(pointerMoveBlock, /if \(!courtQrPanelVisible\)\s*\{\s*return;/);
+  assert.match(pointerMoveBlock, /event\.clientX === lastPointerX/);
+  assert.doesNotMatch(pointerMoveBlock, /getBoundingClientRect\(\)/);
+  assert.doesNotMatch(pointerMoveBlock, /getClientRects\(\)/);
+  assert.doesNotMatch(pointerMoveBlock, /clearTimeout\(inactivityTimer\)/);
 });
 
 test("QR resize updates one corner geometry set per animation frame", () => {
