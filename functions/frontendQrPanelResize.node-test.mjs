@@ -4,6 +4,7 @@ import test from "node:test";
 
 const source = readFileSync(new URL("../app/js/script.js", import.meta.url), "utf8");
 const styles = readFileSync(new URL("../app/css/style.css", import.meta.url), "utf8");
+const markup = readFileSync(new URL("../app/index.html", import.meta.url), "utf8");
 const brand = readFileSync(new URL("../app/js/brand.mjs", import.meta.url), "utf8");
 
 function getCssRuleBody(css, selector) {
@@ -18,8 +19,14 @@ test("QR panel interaction stays frame-synced", () => {
   assert.match(source, /window\.requestAnimationFrame\(applyPendingQrPanelFrame\)/);
   assert.match(source, /panel\.style\.transform =/);
   assert.match(source, /panel\.style\.width = nextWidth \+ "px"/);
+  assert.match(source, /panel\.style\.left = nextLeft \+ "px"/);
+  assert.match(source, /panel\.style\.top = nextTop \+ "px"/);
+  assert.match(source, /const calculateResizeGeometry =/);
+  assert.match(source, /resizeCorner\.endsWith\("e"\)/);
+  assert.match(source, /resizeCorner\.startsWith\("s"\)/);
   assert.doesNotMatch(source, /panel\.style\.height =/);
   assert.match(source, /panel\.classList\.add\("resizing", "qr-panel-interacting"\)/);
+  assert.match(source, /event\.target\.closest\("\.qr-resize-handle"\)/);
   assert.match(source, /panel\.classList\.add\("dragging", "qr-panel-interacting"\)/);
   assert.match(source, /const stopInteraction =/);
   assert.doesNotMatch(source, /new ResizeObserver\(/);
@@ -74,27 +81,37 @@ test("QR interaction disables expensive paint effects while active", () => {
   assert.match(styles, /\.court-qr-panel\.dragging\s*\{[\s\S]*?will-change:\s*transform;/);
 });
 
-test("QR panel pull tab looks and behaves like a resize handle", () => {
-  assert.match(styles, /\.pull-tab\s*\{[\s\S]*?opacity:\s*0\.2;/);
-  assert.match(styles, /\.pull-tab\s*\{[\s\S]*?repeating-linear-gradient\(/);
-  assert.ok(styles.includes("transparent 0 4px,"));
-  assert.ok(styles.includes("rgba(255, 255, 255, 0.9) 4px 6px,"));
-  assert.ok(styles.includes("transparent 6px 8px"));
-  assert.match(styles, /\.pull-tab\s*\{[\s\S]*?cursor:\s*nwse-resize;/);
-  assert.match(styles, /\.court-qr-panel:hover\s+\.pull-tab\s*\{[\s\S]*?opacity:\s*0\.75;/);
-  assert.match(source, /const resizeHandleZone = 28;/);
+test("QR panel exposes four corner resize handles", () => {
+  assert.equal(markup.match(/class="qr-resize-handle/g)?.length, 4);
+  for (const corner of ["nw", "ne", "sw", "se"]) {
+    assert.match(markup, new RegExp('qr-resize-handle qr-resize-handle--' + corner));
+    assert.match(markup, new RegExp('data-corner="' + corner + '"'));
+  }
+
+  assert.match(styles, /\.qr-resize-handle\s*\{[\s\S]*?opacity:\s*var\(--qr-handle-opacity, 0\);/);
+  assert.match(styles, /\.qr-resize-handle--nw\s*\{[\s\S]*?cursor:\s*nwse-resize;/);
+  assert.match(styles, /\.qr-resize-handle--ne\s*\{[\s\S]*?cursor:\s*nesw-resize;/);
+  assert.match(styles, /\.qr-resize-handle--sw\s*\{[\s\S]*?cursor:\s*nesw-resize;/);
+  assert.match(styles, /\.qr-resize-handle--se\s*\{[\s\S]*?cursor:\s*nwse-resize;/);
+  assert.match(styles, /\.court-qr-panel\s*\{[\s\S]*?--qr-handle-opacity:\s*0;/);
+  assert.doesNotMatch(styles, /\.pull-tab\s*\{/);
 });
 
-test("QR panel keeps the original corner resize element", () => {
-  assert.match(styles, /\.pull-tab\s*\{/);
-  assert.match(styles, /width: 28px;/);
-  assert.match(styles, /height: 28px;/);
-  assert.match(styles, /clip-path: polygon\(0px 28px, 28px 100%, 100% 0%\);/);
-  assert.match(styles, /cursor: nwse-resize;/);
-  assert.match(source, /const resizeHandleZone = 28;/);
+test("QR panel spawns from the bottom-right corner", () => {
+  assert.match(styles, /\.court-qr-panel\s*\{[\s\S]*?bottom:\s*8px;[\s\S]*?right:\s*8px;/);
 });
 
-test("QR resize updates one width value per animation frame", () => {
+test("QR resize visibility is isolated and throttled", () => {
+  assert.match(source, /function initializeCourtQrResizeHandleVisibility\(\)/);
+  assert.match(source, /const handleUpdateIntervalMs = 40;/);
+  assert.match(source, /window\.setTimeout\(/);
+  assert.match(source, /!panel\.classList\.contains\("hidden"\)/);
+  assert.match(source, /getBoundingClientRect\(\)/);
+  assert.match(source, /--qr-handle-opacity/);
+  assert.match(source, /refreshCourtQrResizeHandleVisibility/);
+});
+
+test("QR resize updates one geometry value set per animation frame", () => {
   assert.doesNotMatch(source, /resizeStartPanelScale/);
   assert.match(source, /const calculateResizeWidth =/);
   assert.match(source, /const nextWidth = pendingWidth/);
@@ -110,6 +127,15 @@ test("QR resize updates one width value per animation frame", () => {
   assert.match(styles, /clip-path: polygon\(0px 28px, 28px 100%, 100% 0%\);/);
   assert.match(styles, /min-width: 130px;/);
   assert.doesNotMatch(styles, /--qr-panel-scale/);
+  assert.doesNotMatch(source, /const resizeHandleZone = 28;/);
+});
+
+test("QR resize keeps the QR canvas stable across all corner interactions", () => {
+  assert.match(source, /rerasterizeCourtQrLogoAtCurrentSize\(\);/);
+  assert.match(source, /resizeCorner = null;/);
+  assert.match(source, /activeResizeHandle\.classList\.add\("is-active"\)/);
+  assert.doesNotMatch(source, /createCourtQrCanvas\(refreshedQrUrl\)/);
+  assert.doesNotMatch(source, /createCourtQrLogoCanvas\(refreshedQrCanvas\.width\)/);
 });
 
 test("QR resize leaves QR canvases in place on release and rerasterizes only the logo", () => {
