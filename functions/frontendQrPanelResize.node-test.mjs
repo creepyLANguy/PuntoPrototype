@@ -25,7 +25,8 @@ test("QR panel interaction stays frame-synced", () => {
   assert.match(source, /resizeCorner\.endsWith\("e"\)/);
   assert.match(source, /resizeCorner\.startsWith\("s"\)/);
   assert.doesNotMatch(source, /panel\.style\.height =/);
-  assert.match(source, /panel\.classList\.add\("resizing", "qr-panel-interacting"\)/);
+  assert.match(source, /panel\.classList\.add\("resizing", "qr-panel-resizing", "qr-panel-interacting"\)/);
+  assert.match(source, /panel\.classList\.remove\("dragging", "resizing", "qr-panel-resizing", "qr-panel-interacting"\)/);
   assert.match(source, /event\.target\.closest\("\.qr-resize-handle"\)/);
   assert.match(source, /panel\.classList\.add\("dragging", "qr-panel-interacting"\)/);
   assert.match(source, /const stopInteraction =/);
@@ -134,8 +135,8 @@ test("QR resize updates one corner geometry set per animation frame", () => {
   assert.match(source, /panel\.style\.transform = ""/);
   assert.doesNotMatch(source, /createCourtQrCanvas\(refreshedQrUrl\)/);
   assert.doesNotMatch(source, /createCourtQrLogoCanvas\(refreshedQrCanvas\.width\)/);
-  assert.match(styles, /\.qr-resize-handle\s*\{[\s\S]*?width: 28px;/);
-  assert.match(styles, /\.qr-resize-handle\s*\{[\s\S]*?height: 28px;/);
+  assert.match(styles, /\.qr-resize-handle\s*\{[\s\S]*?width: 30px;/);
+  assert.match(styles, /\.qr-resize-handle\s*\{[\s\S]*?height: 30px;/);
   assert.match(styles, /\.qr-resize-handle--nw\s*\{[\s\S]*?clip-path:/);
   assert.match(styles, /\.qr-resize-handle--ne\s*\{[\s\S]*?clip-path:/);
   assert.match(styles, /\.qr-resize-handle--sw\s*\{[\s\S]*?clip-path:/);
