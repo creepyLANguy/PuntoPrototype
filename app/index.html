@@ -788,7 +788,14 @@
       <aside id="courtQrPanel" class="court-qr-panel hidden" aria-live="polite">
         <div id="courtQrCode" class="court-qr-code" aria-hidden="true"></div>
         <div id="courtQrLabel" class="court-qr-label"></div>
-        <div class="pull-tab"></div>
+        <button type="button" class="qr-resize-handle qr-resize-handle--nw" data-corner="nw"
+          aria-label="Resize QR panel from top left corner"></button>
+        <button type="button" class="qr-resize-handle qr-resize-handle--ne" data-corner="ne"
+          aria-label="Resize QR panel from top right corner"></button>
+        <button type="button" class="qr-resize-handle qr-resize-handle--sw" data-corner="sw"
+          aria-label="Resize QR panel from bottom left corner"></button>
+        <button type="button" class="qr-resize-handle qr-resize-handle--se" data-corner="se"
+          aria-label="Resize QR panel from bottom right corner"></button>
       </aside>
 
       <!-- ================= SCOREBOARD BODY ================= -->
