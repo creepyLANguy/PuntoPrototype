@@ -8676,6 +8676,60 @@ function isTextInputElement(el)
   return false;
 }
 
+const JOIN_MODAL_VIEWPORT_GUTTER_PX = 16;
+let joinModalViewportFrame = null;
+
+function positionJoinModalsForVisualViewport()
+{
+  if (joinModalViewportFrame !== null) return;
+
+  joinModalViewportFrame = requestAnimationFrame(() =>
+  {
+    joinModalViewportFrame = null;
+
+    const visualViewport = window.visualViewport;
+    const viewportTop = visualViewport?.offsetTop ?? window.scrollY;
+    const viewportHeight = visualViewport?.height ?? window.innerHeight;
+    const viewportBottom = viewportTop + viewportHeight;
+    const safeTop = viewportTop + JOIN_MODAL_VIEWPORT_GUTTER_PX;
+    const safeBottom = viewportBottom - JOIN_MODAL_VIEWPORT_GUTTER_PX;
+
+    ["playPage", "spectatePage"].forEach((pageId) =>
+    {
+      const page = document.getElementById(pageId);
+      const card = page?.querySelector(".create-card");
+      if (!card) return;
+
+      if (page.style.display === "none")
+      {
+        card.style.setProperty("--keyboard-shift-y", "0px");
+        return;
+      }
+
+      const rect = card.getBoundingClientRect();
+      if (rect.width === 0 && rect.height === 0)
+      {
+        card.style.setProperty("--keyboard-shift-y", "0px");
+        return;
+      }
+
+      const currentShift = parseFloat(card.style.getPropertyValue("--keyboard-shift-y")) || 0;
+      const baseTop = rect.top - currentShift;
+      const baseBottom = rect.bottom - currentShift;
+      const overlap = Math.max(0, baseBottom - safeBottom);
+      const maximumUpwardShift = Math.max(0, baseTop - safeTop);
+      const shift = Math.min(overlap, maximumUpwardShift);
+
+      card.style.setProperty("--keyboard-shift-y", (-shift) + "px");
+    });
+  });
+}
+
+function isJoinCourtInput(el)
+{
+  return Boolean(el?.closest?.("#playPage, #spectatePage"));
+}
+
 function isInputObscured(el)
 {
   if (!isTextInputElement(el)) return false;
@@ -8730,6 +8784,18 @@ document.addEventListener("focusin", (e) =>
   if (isTextInputElement(e.target))
   {
     scrollInputIntoViewIfNeeded(e.target);
+    if (isJoinCourtInput(e.target))
+    {
+      positionJoinModalsForVisualViewport();
+    }
+  }
+}, { capture: true, passive: true });
+
+document.addEventListener("focusout", (e) =>
+{
+  if (isTextInputElement(e.target) && isJoinCourtInput(e.target))
+  {
+    positionJoinModalsForVisualViewport();
   }
 }, { capture: true, passive: true });
 
@@ -8737,6 +8803,7 @@ if (window.visualViewport)
 {
   window.visualViewport.addEventListener("resize", () =>
   {
+    positionJoinModalsForVisualViewport();
     if (document.activeElement && isTextInputElement(document.activeElement))
     {
       scrollInputIntoViewIfNeeded(document.activeElement);
@@ -8745,6 +8812,7 @@ if (window.visualViewport)
 
   window.visualViewport.addEventListener("scroll", () =>
   {
+    positionJoinModalsForVisualViewport();
     if (document.activeElement && isTextInputElement(document.activeElement))
     {
       scrollInputIntoViewIfNeeded(document.activeElement);
@@ -8754,6 +8822,7 @@ if (window.visualViewport)
 
 window.addEventListener("resize", () =>
 {
+  positionJoinModalsForVisualViewport();
   if (document.activeElement && isTextInputElement(document.activeElement))
   {
     scrollInputIntoViewIfNeeded(document.activeElement);

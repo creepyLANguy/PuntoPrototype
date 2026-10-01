@@ -2991,6 +2991,7 @@ body.light-mode .md-team-name {
 
 .create-page {
   height: 100svh;
+  height: 100dvh;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -3004,6 +3005,8 @@ body.light-mode .md-team-name {
 #playPage {
   position: fixed;
   inset: 0;
+  height: 100svh;
+  height: 100dvh;
   z-index: 10000;
 }
 
@@ -3017,6 +3020,13 @@ body.light-mode .create-page {
   color: black;
 }
 
+#playPage .create-card,
+#spectatePage .create-card {
+  --keyboard-shift-y: 0px;
+  transform: translateY(var(--keyboard-shift-y));
+  will-change: transform;
+}
+
 .create-card {
   position: relative;
   width: clamp(280px, 85vw, 420px);
@@ -3028,7 +3038,8 @@ body.light-mode .create-page {
   flex-direction: column;
   gap: 15px;
   transition: all 0.3s ease;
-  max-height: 95svh;
+  max-height: calc(100svh - 32px);
+  max-height: calc(100dvh - 32px);
   overflow-y: auto;
 }
 
