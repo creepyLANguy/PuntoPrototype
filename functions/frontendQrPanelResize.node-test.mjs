@@ -125,6 +125,15 @@ test("QR resize visibility is isolated, logarithmic, and inactivity-aware", () =
   assert.match(source, /const handleUpdateIntervalMs = 40;/);
   assert.match(source, /const inactivityTimeoutMs = 3000;/);
   assert.match(source, /const opacityStartTravelPercentage = 0\.70;/);
+  assert.match(source, /const maxHandleOpacity = 1;/);
+  assert.match(source, /const closestPanelX = Math\.min\(/);
+  assert.match(source, /const closestPanelY = Math\.min\(/);
+  assert.match(source, /const distanceFromPanelEdge = Math\.hypot\(/);
+  assert.match(source, /const longestPanelSide = Math\.max\(rect\.width, rect\.height\)/);
+  assert.match(source, /const distanceToNearestScreenEdge = Math\.min\(/);
+  assert.match(source, /distanceToNearestScreenEdge <= longestPanelSide/);
+  assert.doesNotMatch(source, /const centerX = rect\.left \+ rect\.width \/ 2/);
+  assert.doesNotMatch(source, /const centerY = rect\.top \+ rect\.height \/ 2/);
   assert.match(source, /Math\.log1p\(logarithmicCurveStrength \* travelPercentage\)/);
   assert.match(
     source,
