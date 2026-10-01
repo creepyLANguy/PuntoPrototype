@@ -89,6 +89,13 @@ test("QR panel exposes four corner resize handles", () => {
   }
 
   assert.match(styles, /\.qr-resize-handle\s*\{[\s\S]*?opacity:\s*var\(--qr-handle-opacity, 0\);/);
+  assert.match(styles, /\.qr-resize-handle::before\s*\{[\s\S]*?border:\s*1\.5px solid currentColor;/);
+  assert.match(styles, /\.qr-resize-handle--nw::before\s*\{[\s\S]*?border-top-left-radius:\s*10px;/);
+  assert.match(styles, /\.qr-resize-handle--ne::before\s*\{[\s\S]*?border-top-right-radius:\s*10px;/);
+  assert.match(styles, /\.qr-resize-handle--sw::before\s*\{[\s\S]*?border-bottom-left-radius:\s*10px;/);
+  assert.match(styles, /\.qr-resize-handle--se::before\s*\{[\s\S]*?border-bottom-right-radius:\s*10px;/);
+  assert.match(styles, /\.court-qr-panel\.qr-panel-resizing\s*\{[\s\S]*?--qr-handle-opacity:\s*1;/);
+  assert.match(styles, /\.court-qr-panel\s*\{[\s\S]*?border-bottom-right-radius:\s*12px;/);
   assert.match(styles, /\.qr-resize-handle--nw\s*\{[\s\S]*?cursor:\s*nwse-resize;/);
   assert.match(styles, /\.qr-resize-handle--ne\s*\{[\s\S]*?cursor:\s*nesw-resize;/);
   assert.match(styles, /\.qr-resize-handle--sw\s*\{[\s\S]*?cursor:\s*nesw-resize;/);
@@ -97,8 +104,12 @@ test("QR panel exposes four corner resize handles", () => {
   assert.doesNotMatch(styles, /\.pull-tab\s*\{/);
 });
 
-test("QR panel spawns from the bottom-right corner", () => {
+test("QR panel spawns from the bottom-right corner in every orientation", () => {
   assert.match(styles, /\.court-qr-panel\s*\{[\s\S]*?bottom:\s*8px;[\s\S]*?right:\s*8px;/);
+  assert.match(source, /elements\.courtQrPanel\.style\.bottom = "8px";/);
+  assert.match(source, /elements\.courtQrPanel\.style\.right = "8px";/);
+  assert.doesNotMatch(styles, /@media \(orientation: landscape\)[\s\S]*?\.court-qr-panel\s*\{[\s\S]*?display:\s*none\s*!important;/);
+  assert.doesNotMatch(styles, /@media \(max-width: 768px\)[\s\S]*?\.court-qr-panel\s*\{[\s\S]*?display:\s*none\s*!important;/);
 });
 
 test("QR resize visibility is isolated and throttled", () => {
