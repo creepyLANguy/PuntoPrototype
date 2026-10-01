@@ -176,6 +176,10 @@ test("QR resize visibility is cached, logarithmic, and inactivity-aware", () => 
     pointerMoveBlock,
     /if \(!courtQrPanelVisible\)\s*\{[\s\S]*?lastPointerX = event\.clientX;[\s\S]*?lastPointerY = event\.clientY;[\s\S]*?hasPointerPosition = true;[\s\S]*?lastPointerMoveTime = performance\.now\(\);[\s\S]*?return;/
   );
+  assert.match(
+    source,
+    /document\.addEventListener\("pointerdown", \(event\) =>[\s\S]*?if \(courtQrPanelVisible\)[\s\S]*?return;[\s\S]*?lastPointerX = event\.clientX;[\s\S]*?lastPointerY = event\.clientY;[\s\S]*?hasPointerPosition = true;/
+  );
   assert.match(pointerMoveBlock, /event\.clientX === lastPointerX/);
   assert.doesNotMatch(pointerMoveBlock, /getBoundingClientRect\(\)/);
   assert.doesNotMatch(pointerMoveBlock, /getClientRects\(\)/);
