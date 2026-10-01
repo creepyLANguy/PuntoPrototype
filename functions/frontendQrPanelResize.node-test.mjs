@@ -95,6 +95,7 @@ test("QR panel exposes four corner resize handles", () => {
   assert.match(styles, /\.qr-resize-handle--sw::before\s*\{[\s\S]*?border-bottom-left-radius:\s*10px;/);
   assert.match(styles, /\.qr-resize-handle--se::before\s*\{[\s\S]*?border-bottom-right-radius:\s*10px;/);
   assert.match(styles, /\.court-qr-panel\.qr-panel-resizing\s*\{[\s\S]*?--qr-handle-opacity:\s*1;/);
+  assert.match(styles, /\.court-qr-panel\.qr-panel-resizing \.qr-resize-handle\s*\{[\s\S]*?opacity:\s*1 !important;/);
   assert.match(styles, /\.court-qr-panel\s*\{[\s\S]*?border-bottom-right-radius:\s*12px;/);
   assert.match(styles, /\.qr-resize-handle--nw\s*\{[\s\S]*?cursor:\s*nwse-resize;/);
   assert.match(styles, /\.qr-resize-handle--ne\s*\{[\s\S]*?cursor:\s*nesw-resize;/);
