@@ -137,10 +137,10 @@ test("QR resize updates one corner geometry set per animation frame", () => {
   assert.doesNotMatch(source, /createCourtQrLogoCanvas\(refreshedQrCanvas\.width\)/);
   assert.match(styles, /\.qr-resize-handle\s*\{[\s\S]*?width: 30px;/);
   assert.match(styles, /\.qr-resize-handle\s*\{[\s\S]*?height: 30px;/);
-  assert.match(styles, /\.qr-resize-handle--nw\s*\{[\s\S]*?clip-path:/);
-  assert.match(styles, /\.qr-resize-handle--ne\s*\{[\s\S]*?clip-path:/);
-  assert.match(styles, /\.qr-resize-handle--sw\s*\{[\s\S]*?clip-path:/);
-  assert.match(styles, /\.qr-resize-handle--se\s*\{[\s\S]*?clip-path:/);
+  assert.match(styles, /\.qr-resize-handle--nw\s*\{[\s\S]*?cursor:/);
+  assert.match(styles, /\.qr-resize-handle--ne\s*\{[\s\S]*?cursor:/);
+  assert.match(styles, /\.qr-resize-handle--sw\s*\{[\s\S]*?cursor:/);
+  assert.match(styles, /\.qr-resize-handle--se\s*\{[\s\S]*?cursor:/);
   assert.match(styles, /min-width: 130px;/);
   assert.doesNotMatch(styles, /--qr-panel-scale/);
   assert.doesNotMatch(source, /const resizeHandleZone = 28;/);
