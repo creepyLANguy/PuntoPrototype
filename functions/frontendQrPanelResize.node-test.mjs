@@ -112,8 +112,10 @@ test("QR panel spawns from the bottom-right corner in every orientation", () => 
   assert.match(source, /elements\.courtQrPanel\.style\.right = "8px";/);
   assert.match(
     source,
-    /if \(!Number\.isFinite\(currentLeft\) && !Number\.isFinite\(currentTop\)\)[\s\S]*?panel\.style\.left = "auto";[\s\S]*?panel\.style\.top = "auto";[\s\S]*?panel\.style\.right = .*?safeGap.*?panel\.style\.bottom = .*?safeGap/
+    /if \(!Number\.isFinite\(currentLeft\) && !Number\.isFinite\(currentTop\)\)[\s\S]*?panel\.style\.left = "auto";[\s\S]*?panel\.style\.top = "auto";/
   );
+  assert.match(source, /panel\.style\.right = \`\$\{safeGap\}px\`;/);
+  assert.match(source, /panel\.style\.bottom = \`\$\{safeGap\}px\`;/);
   assert.doesNotMatch(styles, /@media \(orientation: landscape\)[\s\S]*?\.court-qr-panel\s*\{[\s\S]*?display:\s*none\s*!important;/);
   assert.doesNotMatch(styles, /@media \(max-width: 768px\)[\s\S]*?\.court-qr-panel\s*\{[\s\S]*?display:\s*none\s*!important;/);
 });
