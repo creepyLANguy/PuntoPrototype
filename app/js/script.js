@@ -5277,7 +5277,7 @@ document.addEventListener("DOMContentLoaded", () =>
       scheduleHandleOpacityUpdate();
     }, { passive: true });
 
-    refreshCourtQrResizeHandleVisibility = () =>
+    refreshCourtQrResizeHandleVisibility = (startFreshVisibilityWindow = false) =>
     {
       if (!courtQrPanelVisible)
       {
@@ -5289,6 +5289,13 @@ document.addEventListener("DOMContentLoaded", () =>
       }
 
       cachePanelGeometry();
+
+      if (startFreshVisibilityWindow)
+      {
+        clearInactivityTimer();
+        lastPointerMoveTime = performance.now();
+      }
+
       calculationsSuspended = false;
       scheduleInactivityCheck();
       scheduleHandleOpacityUpdate();
@@ -5361,7 +5368,7 @@ document.addEventListener("DOMContentLoaded", () =>
     }
 
     elements.courtQrLabel.textContent = courtId;
-    refreshCourtQrResizeHandleVisibility?.();
+    refreshCourtQrResizeHandleVisibility?.(true);
   }
 
   function enableSpectateMode()
