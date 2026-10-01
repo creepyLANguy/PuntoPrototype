@@ -333,30 +333,123 @@ body.light-mode .menu-btn:hover {
   animation: scoreboardFadeIn 0.8s ease forwards;
 }
 
-.pull-tab {
+.qr-resize-handle
+{
   position: absolute;
-  right: 0;
-  bottom: 0;
-  width: 28px;
-  height: 28px;
-  background: repeating-linear-gradient(
-    135deg,
-    transparent 0 4px,
-    rgba(255, 255, 255, 0.9) 4px 6px,
-    transparent 6px 8px
-  );
-  clip-path: polygon(0px 28px, 28px 100%, 100% 0%);
-  opacity: 0.2;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  appearance: none;
+  -webkit-appearance: none;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.88);
+  opacity: var(--qr-handle-opacity, 0);
   pointer-events: auto;
-  cursor: nwse-resize;
-  z-index: 3;
+  touch-action: none;
+  z-index: 4;
 }
 
-.court-qr-panel {
+.qr-resize-handle::before
+{
+  content: "";
+  position: absolute;
+  width: 21px;
+  height: 21px;
+  box-sizing: border-box;
+  border: 1.5px solid currentColor;
+  pointer-events: none;
+  opacity: 0.9;
+}
+
+.qr-resize-handle--nw
+{
+  left: 2px;
+  top: 2px;
+  cursor: nwse-resize;
+}
+
+.qr-resize-handle--nw::before
+{
+  left: 0;
+  top: 0;
+  border-right: 0;
+  border-bottom: 0;
+  border-top-left-radius: 10px;
+}
+
+.qr-resize-handle--ne
+{
+  right: 2px;
+  top: 2px;
+  cursor: nesw-resize;
+}
+
+.qr-resize-handle--ne::before
+{
+  right: 0;
+  top: 0;
+  border-left: 0;
+  border-bottom: 0;
+  border-top-right-radius: 10px;
+}
+
+.qr-resize-handle--sw
+{
+  left: 2px;
+  bottom: 2px;
+  cursor: nesw-resize;
+}
+
+.qr-resize-handle--sw::before
+{
+  left: 0;
+  bottom: 0;
+  border-right: 0;
+  border-top: 0;
+  border-bottom-left-radius: 10px;
+}
+
+.qr-resize-handle--se
+{
+  right: 2px;
+  bottom: 2px;
+  cursor: nwse-resize;
+}
+
+.qr-resize-handle--se::before
+{
+  right: 0;
+  bottom: 0;
+  border-left: 0;
+  border-top: 0;
+  border-bottom-right-radius: 10px;
+}
+
+.court-qr-panel.qr-panel-resizing
+{
+  --qr-handle-opacity: 1;
+}
+
+.court-qr-panel.qr-panel-resizing .qr-resize-handle
+{
+  opacity: 1 !important;
+}
+
+body.light-mode .qr-resize-handle
+{
+  color: rgba(17, 24, 39, 0.72);
+}
+
+.court-qr-panel
+{
+  --qr-handle-opacity: 0;
   container-type: inline-size;
   position: absolute;
-  bottom: 0;
-  right: 0;
+  bottom: 8px;
+  right: 8px;
   z-index: 40;
   display: flex;
   flex-direction: column;
@@ -367,7 +460,7 @@ body.light-mode .menu-btn:hover {
   min-width: 130px;
   aspect-ratio: 1 / 1.24;
   border-radius: 12px;
-  border-bottom-right-radius: 0%;
+  border-bottom-right-radius: 12px;
   background: color-mix(in srgb, var(--waveColour), transparent 90%);
   backdrop-filter: blur(6px);
   box-shadow: 0 8px 18px rgba(0, 0, 0, 0.30);
@@ -383,22 +476,20 @@ body.light-mode .menu-btn:hover {
   cursor: grab;
 }
 
-
-.court-qr-panel:hover .pull-tab {
-  opacity: 0.75;
-}
-
-.court-qr-panel.dragging {
+.court-qr-panel.dragging
+{
   will-change: transform;
 }
 
-.court-qr-panel.qr-panel-interacting {
+.court-qr-panel.qr-panel-interacting
+{
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
   box-shadow: none;
 }
 
-.court-qr-code {
+.court-qr-code
+{
   position: relative;
   width: 100%;
   aspect-ratio: 1 / 1;
@@ -406,8 +497,8 @@ body.light-mode .menu-btn:hover {
   box-sizing: border-box;
 }
 
-
-.court-qr-code > canvas {
+.court-qr-code > canvas
+{
   position: absolute;
   inset: 0;
   width: 100% !important;
@@ -415,15 +506,18 @@ body.light-mode .menu-btn:hover {
   display: block;
 }
 
-.court-qr-code > .court-qr-canvas {
+.court-qr-code > .court-qr-canvas
+{
   image-rendering: pixelated;
 }
 
-.court-qr-code > .court-qr-logo-canvas {
+.court-qr-code > .court-qr-logo-canvas
+{
   image-rendering: auto;
 }
 
-.court-qr-label {
+.court-qr-label
+{
   width: 100%;
   flex: 1;
   display: flex;
@@ -447,12 +541,14 @@ body.light-mode .menu-btn:hover {
   font-family: inherit;
 }
 
-body.light-mode .court-qr-panel {
+body.light-mode .court-qr-panel
+{
   border-color: rgba(0, 0, 0, 0.2);
   background: rgba(255, 255, 255, 0.85);
 }
 
-body.light-mode .court-qr-label {
+body.light-mode .court-qr-label
+{
   color: #000;
   background: rgba(255, 255, 255, 0.5);
   border-radius: 8px;
@@ -2494,9 +2590,6 @@ body.light-mode .dm-table thead th {
 
 /* Compact landscape (mobile landscape) */
 @media (orientation: landscape) and (max-height: 500px) {
-  .court-qr-panel {
-    display: none !important;
-  }
 
   .dm-box {
     padding: 8px 12px 6px;
@@ -5447,10 +5540,6 @@ body.light-mode .set-win-label {
 @media (max-width: 768px) {
   .wave {
     height: 80%;
-  }
-
-  .court-qr-panel {
-    display: none !important;
   }
 }
 
