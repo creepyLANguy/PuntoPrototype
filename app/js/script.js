@@ -4876,6 +4876,7 @@ document.addEventListener("DOMContentLoaded", () =>
       }
 
       refreshCourtQrResizeHandleVisibility?.();
+    };
 
     panel.addEventListener("pointerdown", (event) =>
     {
