@@ -4356,16 +4356,26 @@ document.addEventListener("DOMContentLoaded", () =>
     const currentLeft = Number.parseFloat(panel.style.left);
     const currentTop = Number.parseFloat(panel.style.top);
 
-    const fallbackLeft = parentRect.width - panelRect.width - safeGap;
-    const fallbackTop = parentRect.height - panelRect.height - safeGap;
+    // Before the user has dragged or resized the panel, keep the CSS bottom/right
+    // anchor intact. This avoids a transient zero-sized scoreboard turning the
+    // initial fallback into the top-left corner.
+    if (!Number.isFinite(currentLeft) && !Number.isFinite(currentTop))
+    {
+      panel.style.left = "auto";
+      panel.style.top = "auto";
+      panel.style.right = `${safeGap}px`;
+      panel.style.bottom = `${safeGap}px`;
+      updateCourtQrPanelScale();
+      return;
+    }
 
     const nextLeft = Math.min(
       maxLeft,
-      Math.max(safeGap, Number.isFinite(currentLeft) ? currentLeft : fallbackLeft)
+      Math.max(safeGap, Number.isFinite(currentLeft) ? currentLeft : safeGap)
     );
     const nextTop = Math.min(
       maxTop,
-      Math.max(safeGap, Number.isFinite(currentTop) ? currentTop : fallbackTop)
+      Math.max(safeGap, Number.isFinite(currentTop) ? currentTop : safeGap)
     );
 
     if (!Number.isFinite(currentLeft) || Math.abs(currentLeft - nextLeft) > 0.25)
@@ -4969,17 +4979,27 @@ document.addEventListener("DOMContentLoaded", () =>
 
     const panel = elements.courtQrPanel;
     const handleUpdateIntervalMs = 40;
+    const inactivityTimeoutMs = 3000;
     const maxHandleOpacity = 0.75;
+    const opacityStartTravelPercentage = 0.70;
+    const logarithmicCurveStrength = 12;
 
     let lastPointerX = 0;
     let lastPointerY = 0;
     let hasPointerPosition = false;
     let updateTimer = 0;
+    let inactivityTimer = 0;
     let lastOpacity = -1;
+    let calculationsSuspended = false;
 
     const isPanelVisible = () =>
       !panel.classList.contains("hidden") &&
       panel.getClientRects().length > 0;
+
+    const isPanelInteractionActive = () =>
+      panel.classList.contains("dragging") ||
+      panel.classList.contains("resizing") ||
+      panel.classList.contains("qr-panel-interacting");
 
     const setHandleOpacity = (opacity) =>
     {
@@ -4997,15 +5017,87 @@ document.addEventListener("DOMContentLoaded", () =>
       );
     };
 
-    const calculateHandleOpacity = () =>
+    const clearHandleUpdateTimer = () =>
     {
+      if (updateTimer)
+      {
+        window.clearTimeout(updateTimer);
+        updateTimer = 0;
+      }
+    };
+
+    const isPointerWithinPanel = () =>
+    {
+      if (!hasPointerPosition || !isPanelVisible())
+      {
+        return false;
+      }
+
+      const rect = panel.getBoundingClientRect();
+      return (
+        lastPointerX >= rect.left &&
+        lastPointerX <= rect.right &&
+        lastPointerY >= rect.top &&
+        lastPointerY <= rect.bottom
+      );
+    };
+
+    const suspendHandleCalculations = () =>
+    {
+      calculationsSuspended = true;
+      clearHandleUpdateTimer();
+      setHandleOpacity(0);
+    };
+
+    const checkForPointerInactivity = () =>
+    {
+      inactivityTimer = 0;
+
       if (!isPanelVisible())
       {
+        calculationsSuspended = false;
         setHandleOpacity(0);
         return;
       }
 
-      if (!hasPointerPosition)
+      if (isPointerWithinPanel())
+      {
+        calculationsSuspended = false;
+        return;
+      }
+
+      suspendHandleCalculations();
+    };
+
+    const scheduleInactivityCheck = () =>
+    {
+      if (inactivityTimer)
+      {
+        window.clearTimeout(inactivityTimer);
+      }
+
+      inactivityTimer = window.setTimeout(
+        checkForPointerInactivity,
+        inactivityTimeoutMs
+      );
+    };
+
+    const calculateHandleOpacity = () =>
+    {
+      updateTimer = 0;
+
+      if (!isPanelVisible())
+      {
+        calculationsSuspended = false;
+        setHandleOpacity(0);
+        return;
+      }
+
+      if (
+        calculationsSuspended ||
+        isPanelInteractionActive() ||
+        !hasPointerPosition
+      )
       {
         return;
       }
@@ -5041,23 +5133,39 @@ document.addEventListener("DOMContentLoaded", () =>
       const travelPercentage = distanceToScreenEdge > 0
         ? Math.min(1, distanceFromCenter / distanceToScreenEdge)
         : 1;
-      const proximity = 1 - travelPercentage;
 
-      setHandleOpacity(maxHandleOpacity * proximity);
+      if (travelPercentage >= opacityStartTravelPercentage)
+      {
+        setHandleOpacity(0);
+        return;
+      }
+
+      const normalizedProximity =
+        (opacityStartTravelPercentage - travelPercentage) /
+        opacityStartTravelPercentage;
+      const logarithmicProximity =
+        Math.log1p(logarithmicCurveStrength * normalizedProximity) /
+        Math.log1p(logarithmicCurveStrength);
+
+      setHandleOpacity(maxHandleOpacity * logarithmicProximity);
     };
 
     const scheduleHandleOpacityUpdate = () =>
     {
-      if (!isPanelVisible() || updateTimer)
+      if (
+        !isPanelVisible() ||
+        calculationsSuspended ||
+        isPanelInteractionActive() ||
+        updateTimer
+      )
       {
         return;
       }
 
-      updateTimer = window.setTimeout(() =>
-      {
-        updateTimer = 0;
-        calculateHandleOpacity();
-      }, handleUpdateIntervalMs);
+      updateTimer = window.setTimeout(
+        calculateHandleOpacity,
+        handleUpdateIntervalMs
+      );
     };
 
     document.addEventListener("pointermove", (event) =>
@@ -5066,7 +5174,11 @@ document.addEventListener("DOMContentLoaded", () =>
       lastPointerY = event.clientY;
       hasPointerPosition = true;
 
-      if (isPanelVisible())
+      const interactionActive = isPanelInteractionActive();
+      calculationsSuspended = false;
+      scheduleInactivityCheck();
+
+      if (!interactionActive && isPanelVisible())
       {
         scheduleHandleOpacityUpdate();
       }
@@ -5076,11 +5188,18 @@ document.addEventListener("DOMContentLoaded", () =>
     {
       if (!isPanelVisible())
       {
+        clearHandleUpdateTimer();
         setHandleOpacity(0);
         return;
       }
 
-      scheduleHandleOpacityUpdate();
+      calculationsSuspended = false;
+      scheduleInactivityCheck();
+
+      if (!isPanelInteractionActive())
+      {
+        scheduleHandleOpacityUpdate();
+      }
     };
 
     hasInitializedQrResizeHandleVisibility = true;
