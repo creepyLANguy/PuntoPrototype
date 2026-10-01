@@ -5244,6 +5244,10 @@ document.addEventListener("DOMContentLoaded", () =>
     {
       if (!courtQrPanelVisible)
       {
+        lastPointerX = event.clientX;
+        lastPointerY = event.clientY;
+        hasPointerPosition = true;
+        lastPointerMoveTime = performance.now();
         return;
       }
 
@@ -5327,7 +5331,6 @@ document.addEventListener("DOMContentLoaded", () =>
     courtQrPanelVisible = true;
     elements.courtQrPanel.classList.remove("hidden");
     clampCourtQrPanelToViewport();
-    refreshCourtQrResizeHandleVisibility?.();
 
     elements.courtQrCode.classList.remove("has-canvas-qr");
     elements.courtQrCode.innerHTML = "";
@@ -5358,6 +5361,7 @@ document.addEventListener("DOMContentLoaded", () =>
     }
 
     elements.courtQrLabel.textContent = courtId;
+    refreshCourtQrResizeHandleVisibility?.();
   }
 
   function enableSpectateMode()
