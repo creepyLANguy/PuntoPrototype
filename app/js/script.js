@@ -5140,12 +5140,20 @@ document.addEventListener("DOMContentLoaded", () =>
         return;
       }
 
-      const normalizedProximity =
-        (opacityStartTravelPercentage - travelPercentage) /
-        opacityStartTravelPercentage;
-      const logarithmicProximity =
-        Math.log1p(logarithmicCurveStrength * normalizedProximity) /
-        Math.log1p(logarithmicCurveStrength);
+      // Use an inverse logarithmic curve so opacity remains near zero at
+      // the threshold, then rises increasingly quickly as the pointer
+      // approaches the panel center.
+      const logarithmicProximity = Math.max(
+        0,
+        Math.min(
+          1,
+          1 -
+            Math.log1p(logarithmicCurveStrength * travelPercentage) /
+            Math.log1p(
+              logarithmicCurveStrength * opacityStartTravelPercentage
+            )
+        )
+      );
 
       setHandleOpacity(maxHandleOpacity * logarithmicProximity);
     };
