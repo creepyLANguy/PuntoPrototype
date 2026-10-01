@@ -677,6 +677,8 @@ document.addEventListener("DOMContentLoaded", () =>
   let hasInitializedQrPanelInteractions = false;
   let hasInitializedQrResizeHandleVisibility = false;
   let refreshCourtQrResizeHandleVisibility = null;
+  let courtQrPanelVisible = false;
+  let courtQrPanelGeometry = null;
 
 
 
@@ -4872,7 +4874,8 @@ document.addEventListener("DOMContentLoaded", () =>
         clampCourtQrPanelToViewport();
         rerasterizeCourtQrLogoAtCurrentSize();
       }
-    };
+
+      refreshCourtQrResizeHandleVisibility?.();
 
     panel.addEventListener("pointerdown", (event) =>
     {
@@ -4987,19 +4990,32 @@ document.addEventListener("DOMContentLoaded", () =>
     let lastPointerX = 0;
     let lastPointerY = 0;
     let hasPointerPosition = false;
+    let lastPointerMoveTime = 0;
     let updateTimer = 0;
     let inactivityTimer = 0;
     let lastOpacity = -1;
     let calculationsSuspended = false;
 
-    const isPanelVisible = () =>
-      !panel.classList.contains("hidden") &&
-      panel.getClientRects().length > 0;
+    const cachePanelGeometry = () =>
+    {
+      if (!courtQrPanelVisible)
+      {
+        courtQrPanelGeometry = null;
+        return;
+      }
 
-    const isPanelInteractionActive = () =>
-      panel.classList.contains("dragging") ||
-      panel.classList.contains("resizing") ||
-      panel.classList.contains("qr-panel-interacting");
+      const rect = panel.getBoundingClientRect();
+
+      courtQrPanelGeometry = {
+        left: rect.left,
+        right: rect.right,
+        top: rect.top,
+        bottom: rect.bottom,
+        centerX: rect.left + rect.width / 2,
+        centerY: rect.top + rect.height / 2,
+        radius: Math.max(rect.width, rect.height)
+      };
+    };
 
     const setHandleOpacity = (opacity) =>
     {
@@ -5026,19 +5042,32 @@ document.addEventListener("DOMContentLoaded", () =>
       }
     };
 
+    const clearInactivityTimer = () =>
+    {
+      if (inactivityTimer)
+      {
+        window.clearTimeout(inactivityTimer);
+        inactivityTimer = 0;
+      }
+    };
+
+    const isPanelInteractionActive = () =>
+      panel.classList.contains("dragging") ||
+      panel.classList.contains("resizing") ||
+      panel.classList.contains("qr-panel-interacting");
+
     const isPointerWithinPanel = () =>
     {
-      if (!hasPointerPosition || !isPanelVisible())
+      if (!hasPointerPosition || !courtQrPanelVisible || !courtQrPanelGeometry)
       {
         return false;
       }
 
-      const rect = panel.getBoundingClientRect();
       return (
-        lastPointerX >= rect.left &&
-        lastPointerX <= rect.right &&
-        lastPointerY >= rect.top &&
-        lastPointerY <= rect.bottom
+        lastPointerX >= courtQrPanelGeometry.left &&
+        lastPointerX <= courtQrPanelGeometry.right &&
+        lastPointerY >= courtQrPanelGeometry.top &&
+        lastPointerY <= courtQrPanelGeometry.bottom
       );
     };
 
@@ -5053,10 +5082,26 @@ document.addEventListener("DOMContentLoaded", () =>
     {
       inactivityTimer = 0;
 
-      if (!isPanelVisible())
+      if (!courtQrPanelVisible)
       {
         calculationsSuspended = false;
         setHandleOpacity(0);
+        return;
+      }
+
+      if (isPanelInteractionActive())
+      {
+        return;
+      }
+
+      const elapsedSincePointerMove = performance.now() - lastPointerMoveTime;
+
+      if (elapsedSincePointerMove < inactivityTimeoutMs)
+      {
+        inactivityTimer = window.setTimeout(
+          checkForPointerInactivity,
+          inactivityTimeoutMs - elapsedSincePointerMove
+        );
         return;
       }
 
@@ -5071,14 +5116,25 @@ document.addEventListener("DOMContentLoaded", () =>
 
     const scheduleInactivityCheck = () =>
     {
-      if (inactivityTimer)
+      if (
+        !courtQrPanelVisible ||
+        !hasPointerPosition ||
+        isPanelInteractionActive() ||
+        inactivityTimer
+      )
       {
-        window.clearTimeout(inactivityTimer);
+        return;
       }
+
+      const elapsedSincePointerMove = performance.now() - lastPointerMoveTime;
+      const delay = Math.max(
+        0,
+        inactivityTimeoutMs - elapsedSincePointerMove
+      );
 
       inactivityTimer = window.setTimeout(
         checkForPointerInactivity,
-        inactivityTimeoutMs
+        delay
       );
     };
 
@@ -5086,44 +5142,36 @@ document.addEventListener("DOMContentLoaded", () =>
     {
       updateTimer = 0;
 
-      if (!isPanelVisible())
-      {
-        calculationsSuspended = false;
-        setHandleOpacity(0);
-        return;
-      }
-
       if (
+        !courtQrPanelVisible ||
         calculationsSuspended ||
         isPanelInteractionActive() ||
-        !hasPointerPosition
+        !hasPointerPosition ||
+        !courtQrPanelGeometry
       )
       {
         return;
       }
 
-      const rect = panel.getBoundingClientRect();
-      const centerX = rect.left + rect.width / 2;
-      const centerY = rect.top + rect.height / 2;
-      const deltaX = lastPointerX - centerX;
-      const deltaY = lastPointerY - centerY;
+      const geometry = courtQrPanelGeometry;
+      const deltaX = lastPointerX - geometry.centerX;
+      const deltaY = lastPointerY - geometry.centerY;
       const distanceFromPanelCenter = Math.hypot(deltaX, deltaY);
-      const panelRadius = Math.max(rect.width, rect.height);
 
       // Treat the longest panel side as the radius of a circular
       // interaction zone centered on the panel.
-      if (distanceFromPanelCenter <= panelRadius)
+      if (distanceFromPanelCenter <= geometry.radius)
       {
         setHandleOpacity(1);
         return;
       }
 
       const xScale = deltaX > 0
-        ? (window.innerWidth - centerX) / deltaX
-        : (-centerX) / deltaX;
+        ? (window.innerWidth - geometry.centerX) / deltaX
+        : (-geometry.centerX) / deltaX;
       const yScale = deltaY > 0
-        ? (window.innerHeight - centerY) / deltaY
-        : (-centerY) / deltaY;
+        ? (window.innerHeight - geometry.centerY) / deltaY
+        : (-geometry.centerY) / deltaY;
       const rayScale = Math.min(
         Number.isFinite(xScale) && xScale > 0 ? xScale : Infinity,
         Number.isFinite(yScale) && yScale > 0 ? yScale : Infinity
@@ -5135,8 +5183,8 @@ document.addEventListener("DOMContentLoaded", () =>
 
       // Measure all remaining distance from the outside of the circular
       // interaction zone rather than from the panel center.
-      const effectiveDistance = distanceFromPanelCenter - panelRadius;
-      const effectiveMaxDistance = distanceToScreenEdge - panelRadius;
+      const effectiveDistance = distanceFromPanelCenter - geometry.radius;
+      const effectiveMaxDistance = distanceToScreenEdge - geometry.radius;
 
       if (effectiveMaxDistance <= 0)
       {
@@ -5157,7 +5205,7 @@ document.addEventListener("DOMContentLoaded", () =>
 
       // Use an inverse logarithmic curve so opacity remains near zero at
       // the threshold, then rises increasingly quickly as the pointer
-      // approaches the panel center.
+      // approaches the panel interaction zone.
       const logarithmicProximity = Math.max(
         0,
         Math.min(
@@ -5176,7 +5224,7 @@ document.addEventListener("DOMContentLoaded", () =>
     const scheduleHandleOpacityUpdate = () =>
     {
       if (
-        !isPanelVisible() ||
+        !courtQrPanelVisible ||
         calculationsSuspended ||
         isPanelInteractionActive() ||
         updateTimer
@@ -5193,36 +5241,52 @@ document.addEventListener("DOMContentLoaded", () =>
 
     document.addEventListener("pointermove", (event) =>
     {
+      if (!courtQrPanelVisible)
+      {
+        return;
+      }
+
+      if (
+        event.clientX === lastPointerX &&
+        event.clientY === lastPointerY &&
+        hasPointerPosition
+      )
+      {
+        return;
+      }
+
       lastPointerX = event.clientX;
       lastPointerY = event.clientY;
       hasPointerPosition = true;
+      lastPointerMoveTime = performance.now();
 
-      const interactionActive = isPanelInteractionActive();
-      calculationsSuspended = false;
-      scheduleInactivityCheck();
-
-      if (!interactionActive && isPanelVisible())
+      if (isPanelInteractionActive())
       {
-        scheduleHandleOpacityUpdate();
-      }
-    }, { passive: true });
-
-    refreshCourtQrResizeHandleVisibility = () =>
-    {
-      if (!isPanelVisible())
-      {
+        calculationsSuspended = true;
         clearHandleUpdateTimer();
-        setHandleOpacity(0);
         return;
       }
 
       calculationsSuspended = false;
       scheduleInactivityCheck();
+      scheduleHandleOpacityUpdate();
+    }, { passive: true });
 
-      if (!isPanelInteractionActive())
+    refreshCourtQrResizeHandleVisibility = () =>
+    {
+      if (!courtQrPanelVisible)
       {
-        scheduleHandleOpacityUpdate();
+        clearHandleUpdateTimer();
+        clearInactivityTimer();
+        courtQrPanelGeometry = null;
+        setHandleOpacity(0);
+        return;
       }
+
+      cachePanelGeometry();
+      calculationsSuspended = false;
+      scheduleInactivityCheck();
+      scheduleHandleOpacityUpdate();
     };
 
     hasInitializedQrResizeHandleVisibility = true;
@@ -5236,6 +5300,7 @@ document.addEventListener("DOMContentLoaded", () =>
       return;
     }
 
+    courtQrPanelVisible = false;
     elements.courtQrCode.classList.remove("has-canvas-qr");
     elements.courtQrCode.innerHTML = "";
     elements.courtQrLabel.textContent = "";
@@ -5258,6 +5323,7 @@ document.addEventListener("DOMContentLoaded", () =>
     }
 
     const qrUrl = buildCourtQrUrl(courtId);
+    courtQrPanelVisible = true;
     elements.courtQrPanel.classList.remove("hidden");
     clampCourtQrPanelToViewport();
     refreshCourtQrResizeHandleVisibility?.();
@@ -8196,6 +8262,7 @@ document.addEventListener("DOMContentLoaded", () =>
     updateMarqueeScrolling();
     updateToastContainerPosition();
     clampCourtQrPanelToViewport();
+    refreshCourtQrResizeHandleVisibility?.();
     syncCourtListFadeState(elements.playCourtList);
     syncCourtListFadeState(elements.spectateCourtList);
   });
