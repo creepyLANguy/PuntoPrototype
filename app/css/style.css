@@ -428,11 +428,6 @@ body.light-mode .menu-btn:hover {
   border-bottom-right-radius: 10px;
 }
 
-.qr-resize-handle:hover
-{
-  opacity: 0.9;
-}
-
 .court-qr-panel.qr-panel-resizing
 {
   --qr-handle-opacity: 1;
