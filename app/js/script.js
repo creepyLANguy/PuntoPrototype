@@ -4936,6 +4936,19 @@ document.addEventListener("DOMContentLoaded", () =>
       event.preventDefault();
     }, { capture: true });
 
+    document.addEventListener("pointerdown", (event) =>
+    {
+      if (courtQrPanelVisible)
+      {
+        return;
+      }
+
+      lastPointerX = event.clientX;
+      lastPointerY = event.clientY;
+      hasPointerPosition = true;
+      lastPointerMoveTime = performance.now();
+    }, { passive: true });
+
     document.addEventListener("pointermove", (event) =>
     {
       if (!interactionMode || event.pointerId !== pointerId)
