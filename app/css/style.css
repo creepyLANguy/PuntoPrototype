@@ -438,6 +438,11 @@ body.light-mode .menu-btn:hover {
   --qr-handle-opacity: 1;
 }
 
+.court-qr-panel.qr-panel-resizing .qr-resize-handle
+{
+  opacity: 1 !important;
+}
+
 body.light-mode .qr-resize-handle
 {
   color: rgba(17, 24, 39, 0.72);
