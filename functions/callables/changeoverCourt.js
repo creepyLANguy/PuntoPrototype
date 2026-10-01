@@ -1,12 +1,9 @@
 const { db, FieldValue } = require("../infrastructure/firebase");
 
 async function changeoverCourt(request) {
-  const { courtId, beaconSidesSwapped } = request.data || {};
+  const { courtId } = request.data || {};
 
   if (!courtId) throw new Error("Missing courtId");
-  if (typeof beaconSidesSwapped !== "boolean") {
-    throw new Error("beaconSidesSwapped must be a boolean");
-  }
 
   const courtRef = db.doc(`courts/${courtId}`);
   const changeoverEventId = db.collection("_changeoverEvents").doc().id;
@@ -19,7 +16,9 @@ async function changeoverCourt(request) {
       throw new Error("Court not found");
     }
 
-    nextValue = beaconSidesSwapped;
+    const currentValue = courtSnap.data()?.beaconSidesSwapped === true;
+    nextValue = !currentValue;
+
     tx.set(
       courtRef,
       {

@@ -936,7 +936,7 @@ describe("postEvent", () => {
 });
 
 describe("changeoverCourt", () => {
-  test("sets the requested Beacon side mapping without altering other court fields", async () => {
+  test("atomically toggles the current Beacon side mapping without altering other court fields", async () => {
     const courtId = "changeover-court";
     mockDb = new FakeFirestore({
       [`courts/${courtId}`]: {
@@ -952,11 +952,11 @@ describe("changeoverCourt", () => {
       ({ changeoverCourt } = require("./index"));
     });
 
-    const result = await changeoverCourt({
-      data: { courtId, beaconSidesSwapped: true },
+    const firstResult = await changeoverCourt({
+      data: { courtId },
     });
 
-    expect(result).toEqual({
+    expect(firstResult).toEqual({
       success: true,
       courtId,
       beaconSidesSwapped: true,
@@ -972,9 +972,19 @@ describe("changeoverCourt", () => {
         createdAt: { __serverTimestamp: true },
       },
     });
+
+    const secondResult = await changeoverCourt({
+      data: { courtId },
+    });
+
+    expect(secondResult.success).toBe(true);
+    expect(secondResult.courtId).toBe(courtId);
+    expect(secondResult.beaconSidesSwapped).toBe(false);
+    expect(secondResult.changeoverEventId).toBe("auto-2");
+    expect(mockDb.docs.get(`courts/${courtId}`).beaconSidesSwapped).toBe(false);
   });
 
-  test("rejects a missing court and invalid changeover value", async () => {
+  test("rejects a missing court", async () => {
     mockDb = new FakeFirestore({});
 
     let changeoverCourt;
@@ -983,20 +993,8 @@ describe("changeoverCourt", () => {
     });
 
     await expect(
-      changeoverCourt({ data: { courtId: "missing", beaconSidesSwapped: true } }),
+      changeoverCourt({ data: { courtId: "missing" } }),
     ).rejects.toThrow("Court not found");
-
-    mockDb = new FakeFirestore({
-      "courts/invalid-changeover": { status: "open" },
-    });
-
-    jest.isolateModules(() => {
-      ({ changeoverCourt } = require("./index"));
-    });
-
-    await expect(
-      changeoverCourt({ data: { courtId: "invalid-changeover", beaconSidesSwapped: "true" } }),
-    ).rejects.toThrow("beaconSidesSwapped must be a boolean");
   });
 });
 
