@@ -32,12 +32,6 @@ export async function resetCourt(courtId, deepReset = false, newPassword = null,
   return result;
 }
 
-async function requestBeaconChangeover(courtId, beaconSidesSwapped)
-{
-  const changeoverFn = httpsCallable(functions, "changeoverCourt");
-  return changeoverFn({ courtId, beaconSidesSwapped });
-}
-
 document.addEventListener("DOMContentLoaded", () =>
 {
 
@@ -604,6 +598,15 @@ document.addEventListener("DOMContentLoaded", () =>
   let currentScoreVersion = 0;
   let beaconSidesSwapped = false;
   let currentScoringOptions = { ...DEFAULT_SCORING_OPTIONS };
+
+  // Changeover is a backend state transition. It also causes a blind local
+  // toggle of this client's changeover state and Switch Views state, without
+  // using either view state as an input to the other.
+  window.addEventListener("punto:changeover", () =>
+  {
+    beaconSidesSwapped = !beaconSidesSwapped;
+    syncSettingsTiles();
+  });
   let currentRawTeamNames = { ...DEFAULT_TEAM_NAMES };
   let currentPlayerNames = { ...DEFAULT_PLAYER_NAMES };
 
@@ -4146,18 +4149,6 @@ document.addEventListener("DOMContentLoaded", () =>
     currentScoreVersion = Number(data.scoreVersion) || 0;
     beaconSidesSwapped = data.beaconSidesSwapped === true;
 
-    // The court's active Beacon changeover is also the initial visual court
-    // orientation for a newly joined player or spectator. Keep the scoreboard
-    // and the Switch Views control aligned with that persisted state before
-    // any live changeover events arrive.
-    const scoreboard = document.querySelector(".scoreboard");
-    scoreboard?.classList.toggle("swapped", beaconSidesSwapped);
-    if (elements.swapBtn)
-    {
-      elements.swapBtn.textContent = beaconSidesSwapped ? "⇄" : "⇆";
-      elements.swapBtn.setAttribute("aria-pressed", String(beaconSidesSwapped));
-    }
-
     currentRawTeamNames = normalizeTeamNames(data.teamNames || {});
     currentPlayerNames = normalizePlayerNames(data.playerNames || {});
     currentScoringOptions = normalizeScoringOptions({
@@ -6487,42 +6478,6 @@ document.addEventListener("DOMContentLoaded", () =>
     syncSettingsTiles();
   });
 
-  async function performBeaconChangeover()
-  {
-    if (!currentCourtId || isSpectating) return;
-
-    const nextBeaconSidesSwapped = !beaconSidesSwapped;
-
-    try
-    {
-      if (elements.changeoverBtn) elements.changeoverBtn.disabled = true;
-
-      await requestBeaconChangeover(currentCourtId, nextBeaconSidesSwapped);
-      beaconSidesSwapped = nextBeaconSidesSwapped;
-      syncSettingsTiles();
-      showToast(
-        nextBeaconSidesSwapped
-          ? "Changeover active. Beacon sides are now reversed."
-          : "Beacon side mapping restored.",
-        TOAST_TYPES.SUCCESS,
-      );
-    }
-    catch (error)
-    {
-      console.error("Changeover failed:", error);
-      showToast("Changeover failed.", TOAST_TYPES.ERROR);
-    }
-    finally
-    {
-      if (elements.changeoverBtn) elements.changeoverBtn.disabled = false;
-    }
-  }
-
-  elements.changeoverBtn.addEventListener("click", () =>
-  {
-    void performBeaconChangeover();
-  });
-
   // =====================================================
   // HOLD BUTTON LOGIC
   // =====================================================
@@ -8194,8 +8149,15 @@ document.addEventListener("DOMContentLoaded", () =>
       // Ensure local state tracks newest password
       currentCourtPassword = data.password;
       currentCourtStatus = data.status;
-      currentScoreVersion = Number(data.scoreVersion) || 0;
-      beaconSidesSwapped = data.beaconSidesSwapped === true;
+
+      const nextScoreVersion = Number(data.scoreVersion) || 0;
+      if (nextScoreVersion !== currentScoreVersion)
+      {
+        // RESET is the separate backend operation that restores the default
+        // Beacon mapping. A live changeover is handled by its event marker.
+        beaconSidesSwapped = data.beaconSidesSwapped === true;
+      }
+      currentScoreVersion = nextScoreVersion;
       syncSettingsTiles();
 
       const nextScoringOptions = normalizeScoringOptions({

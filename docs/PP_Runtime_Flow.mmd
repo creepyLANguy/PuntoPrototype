@@ -56,8 +56,12 @@ sequenceDiagram
     end
 
     opt Changeover
-        B->>K: changeoverCourt({courtId, beaconSidesSwapped})
-        K->>F: Update court mapping + changeoverEvent
+        B->>K: changeoverCourt({courtId})
+        K->>F: Atomically toggle Beacon mapping + changeoverEvent
+        K-->>B: Success + changeoverEventId
+        B->>B: Blind-toggle local Changeover state + local Switch Views state
+        F-->>B: Broadcast changeoverEvent to other clients
+        B->>B: Blind-toggle local Changeover state + local Switch Views state
     end
 
     opt RESET

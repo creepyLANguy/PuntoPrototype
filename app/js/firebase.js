@@ -125,6 +125,15 @@ function handleChangeoverEvent(event)
 
   lastChangeoverEventId = eventId;
   triggerSwitchViews();
+
+  // Notify script.js so its local Beacon changeover state and control state
+  // toggle independently of the user's local Switch Views preference.
+  window.dispatchEvent(
+    new CustomEvent("punto:changeover", {
+      detail: { eventId },
+    }),
+  );
+
   showChangeoverToast();
 }
 
@@ -177,18 +186,13 @@ function installChangeoverBehaviour()
     event.stopImmediatePropagation();
 
     const courtId = getCurrentCourtId();
-    const scoreboard = document.querySelector(".scoreboard");
-    if (!courtId || !scoreboard) return;
+    if (!courtId) return;
 
-    const nextSwapped = !scoreboard.classList.contains("swapped");
     changeoverButton.disabled = true;
 
     try
     {
-      const result = await changeoverCourt({
-        courtId,
-        beaconSidesSwapped: nextSwapped,
-      });
+      const result = await changeoverCourt({ courtId });
 
       // This is deliberately local-only: remote devices only receive the
       // changeover event through Firestore and must not play the sound.

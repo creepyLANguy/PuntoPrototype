@@ -161,11 +161,14 @@ Purpose: keep physical Beacon-side semantics aligned with the logical Team A/Tea
 Steps:
 1. Operator confirms the court has changed sides.
 2. Operator uses the court Changeover control.
-3. changeoverCourt sets beaconSidesSwapped to true or false.
+3. changeoverCourt atomically toggles the current beaconSidesSwapped backend state; it does not accept a desired value from the client.
 4. The court stores a changeoverEvent marker.
-5. Subsequent Beacon scoring events are mapped using the active flag.
-6. Pulse events are not inverted by the Beacon mapping.
-7. RESET clears the mapping to the default false state for the next match/session.
+5. The client that triggered the successful changeover blindly toggles its local Changeover state and its local Switch Views state.
+6. Other connected clients receiving the changeoverEvent blindly toggle those two local states as well.
+7. Users can use Switch views independently at any time; its local state is never used as the input to changeoverCourt.
+8. Subsequent Beacon scoring events are mapped using the active flag.
+9. Pulse events are not inverted by the Beacon mapping.
+10. RESET clears the mapping to the default false state for the next match/session.
 
 Control: do not interpret a changeover as rewriting already-recorded scoring events; it only changes how new Beacon input is interpreted.
 
