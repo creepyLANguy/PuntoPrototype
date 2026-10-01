@@ -146,6 +146,14 @@ test("QR resize visibility is cached, logarithmic, and inactivity-aware", () => 
   assert.match(source, /refreshCourtQrResizeHandleVisibility/);
   assert.doesNotMatch(styles, /\.qr-resize-handle:hover\s*\{/);
 
+  const renderStart = source.indexOf("  function renderCourtQr(courtId)");
+  const renderEnd = source.indexOf("  function enableSpectateMode()", renderStart);
+  assert.ok(renderStart >= 0 && renderEnd > renderStart);
+  const renderBlock = source.slice(renderStart, renderEnd);
+  const renderRefreshIndex = renderBlock.lastIndexOf("refreshCourtQrResizeHandleVisibility?.();");
+  const renderLabelIndex = renderBlock.indexOf("elements.courtQrLabel.textContent = courtId;");
+  assert.ok(renderRefreshIndex > renderLabelIndex);
+
   const visibilityFunctionStart = source.indexOf(
     "function initializeCourtQrResizeHandleVisibility()",
   );
@@ -156,7 +164,10 @@ test("QR resize visibility is cached, logarithmic, and inactivity-aware", () => 
   const pointerMoveEnd = source.indexOf("    refreshCourtQrResizeHandleVisibility =", pointerMoveStart);
   assert.ok(pointerMoveStart >= 0 && pointerMoveEnd > pointerMoveStart);
   const pointerMoveBlock = source.slice(pointerMoveStart, pointerMoveEnd);
-  assert.match(pointerMoveBlock, /if \(!courtQrPanelVisible\)\s*\{\s*return;/);
+  assert.match(
+    pointerMoveBlock,
+    /if \(!courtQrPanelVisible\)\s*\{[\s\S]*?lastPointerX = event\.clientX;[\s\S]*?lastPointerY = event\.clientY;[\s\S]*?hasPointerPosition = true;[\s\S]*?lastPointerMoveTime = performance\.now\(\);[\s\S]*?return;/
+  );
   assert.match(pointerMoveBlock, /event\.clientX === lastPointerX/);
   assert.doesNotMatch(pointerMoveBlock, /getBoundingClientRect\(\)/);
   assert.doesNotMatch(pointerMoveBlock, /getClientRects\(\)/);
