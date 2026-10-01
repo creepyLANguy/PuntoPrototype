@@ -144,13 +144,21 @@ test("QR resize visibility is cached, logarithmic, and inactivity-aware", () => 
   assert.match(source, /if \(!courtQrPanelVisible\)/);
   assert.match(source, /if \(isPanelInteractionActive\(\)\)[\s\S]*?clearHandleUpdateTimer\(\)/);
   assert.match(source, /refreshCourtQrResizeHandleVisibility/);
+  assert.match(
+    source,
+    /refreshCourtQrResizeHandleVisibility = \(startFreshVisibilityWindow = false\)/
+  );
+  assert.match(
+    source,
+    /if \(startFreshVisibilityWindow\)[\s\S]*?clearInactivityTimer\(\);[\s\S]*?lastPointerMoveTime = performance\.now\(\);/
+  );
   assert.doesNotMatch(styles, /\.qr-resize-handle:hover\s*\{/);
 
   const renderStart = source.indexOf("  function renderCourtQr(courtId)");
   const renderEnd = source.indexOf("  function enableSpectateMode()", renderStart);
   assert.ok(renderStart >= 0 && renderEnd > renderStart);
   const renderBlock = source.slice(renderStart, renderEnd);
-  const renderRefreshIndex = renderBlock.lastIndexOf("refreshCourtQrResizeHandleVisibility?.();");
+  const renderRefreshIndex = renderBlock.lastIndexOf("refreshCourtQrResizeHandleVisibility?.(true);");
   const renderLabelIndex = renderBlock.indexOf("elements.courtQrLabel.textContent = courtId;");
   assert.ok(renderRefreshIndex > renderLabelIndex);
 
