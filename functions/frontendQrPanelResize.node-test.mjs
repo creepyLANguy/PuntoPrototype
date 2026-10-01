@@ -133,7 +133,7 @@ test("QR resize visibility is cached, logarithmic, and inactivity-aware", () => 
   assert.match(source, /radius: Math\.max\(rect\.width, rect\.height\)/);
   assert.match(source, /const inactivityTimeoutMs = 3000;/);
   assert.match(source, /const maxHandleOpacity = 1;/);
-  assert.match(source, /const opacityStartTravelPercentage = 0\.85;/);
+  assert.match(source, /const opacityStartTravelPercentage = 0\.3;/);
   assert.match(source, /const distanceFromPanelCenter = Math\.hypot\(/);
   assert.match(source, /const effectiveDistance = distanceFromPanelCenter - geometry\.radius;/);
   assert.match(source, /const effectiveMaxDistance = distanceToScreenEdge - geometry\.radius;/);
