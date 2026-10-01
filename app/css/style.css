@@ -555,16 +555,6 @@ body.light-mode .court-qr-label
   text-shadow: none;
 }
 
-body.light-mode .qr-resize-handle
-{
-  background: repeating-linear-gradient(
-    135deg,
-    transparent 0 4px,
-    rgba(0, 0, 0, 0.7) 4px 6px,
-    transparent 6px 8px
-  );
-}
-
 @keyframes scoreboardFadeIn {
   from {
     opacity: 0;
