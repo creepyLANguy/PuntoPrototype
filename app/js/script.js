@@ -5103,61 +5103,51 @@ document.addEventListener("DOMContentLoaded", () =>
       }
 
       const rect = panel.getBoundingClientRect();
-      const closestPanelX = Math.min(
-        rect.right,
-        Math.max(rect.left, lastPointerX)
-      );
-      const closestPanelY = Math.min(
-        rect.bottom,
-        Math.max(rect.top, lastPointerY)
-      );
-      const distanceFromPanelEdge = Math.hypot(
-        lastPointerX - closestPanelX,
-        lastPointerY - closestPanelY
-      );
-      const longestPanelSide = Math.max(rect.width, rect.height);
+      const centerX = rect.left + rect.width / 2;
+      const centerY = rect.top + rect.height / 2;
+      const deltaX = lastPointerX - centerX;
+      const deltaY = lastPointerY - centerY;
+      const distanceFromPanelCenter = Math.hypot(deltaX, deltaY);
+      const panelRadius = Math.max(rect.width, rect.height);
 
-      // A pointer this close to any viewport edge is already in the
-      // interaction zone for a panel positioned against that edge.
-      const distanceToNearestScreenEdge = Math.min(
-        lastPointerX,
-        lastPointerY,
-        window.innerWidth - lastPointerX,
-        window.innerHeight - lastPointerY
-      );
-
-      if (
-        distanceFromPanelEdge <= 0.001 ||
-        distanceToNearestScreenEdge <= longestPanelSide
-      )
+      // Treat the longest panel side as the radius of a circular
+      // interaction zone centered on the panel.
+      if (distanceFromPanelCenter <= panelRadius)
       {
         setHandleOpacity(1);
         return;
       }
 
-      // Treat the closest panel edge/corner as the origin for the same
-      // screen-edge ray calculation. This keeps the proximity reference
-      // attached to the part of the panel the pointer is actually approaching.
-      const deltaX = lastPointerX - closestPanelX;
-      const deltaY = lastPointerY - closestPanelY;
       const xScale = deltaX > 0
-        ? (window.innerWidth - closestPanelX) / deltaX
-        : (-closestPanelX) / deltaX;
+        ? (window.innerWidth - centerX) / deltaX
+        : (-centerX) / deltaX;
       const yScale = deltaY > 0
-        ? (window.innerHeight - closestPanelY) / deltaY
-        : (-closestPanelY) / deltaY;
+        ? (window.innerHeight - centerY) / deltaY
+        : (-centerY) / deltaY;
       const rayScale = Math.min(
         Number.isFinite(xScale) && xScale > 0 ? xScale : Infinity,
         Number.isFinite(yScale) && yScale > 0 ? yScale : Infinity
       );
 
       const distanceToScreenEdge = Number.isFinite(rayScale)
-        ? distanceFromPanelEdge * rayScale
-        : distanceFromPanelEdge;
+        ? distanceFromPanelCenter * rayScale
+        : distanceFromPanelCenter;
 
-      const travelPercentage = distanceToScreenEdge > 0
-        ? Math.min(1, distanceFromPanelEdge / distanceToScreenEdge)
-        : 1;
+      // Measure all remaining distance from the outside of the circular
+      // interaction zone rather than from the panel center.
+      const effectiveDistance = distanceFromPanelCenter - panelRadius;
+      const effectiveMaxDistance = distanceToScreenEdge - panelRadius;
+
+      if (effectiveMaxDistance <= 0)
+      {
+        setHandleOpacity(1);
+        return;
+      }
+
+      const travelPercentage = Math.min(
+        1,
+        Math.max(0, effectiveDistance / effectiveMaxDistance)
+      );
 
       if (travelPercentage >= opacityStartTravelPercentage)
       {
