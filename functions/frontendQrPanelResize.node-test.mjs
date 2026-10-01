@@ -111,20 +111,23 @@ test("QR resize visibility is isolated and throttled", () => {
   assert.match(source, /refreshCourtQrResizeHandleVisibility/);
 });
 
-test("QR resize updates one geometry value set per animation frame", () => {
+test("QR resize updates one corner geometry set per animation frame", () => {
   assert.doesNotMatch(source, /resizeStartPanelScale/);
-  assert.match(source, /const calculateResizeWidth =/);
+  assert.match(source, /const calculateResizeGeometry =/);
   assert.match(source, /const nextWidth = pendingWidth/);
   assert.match(source, /panel\.style\.width = nextWidth \+ "px"/);
+  assert.match(source, /panel\.style\.left = nextLeft \+ "px"/);
+  assert.match(source, /panel\.style\.top = nextTop \+ "px"/);
   assert.doesNotMatch(source, /panel\.style\.height =/);
   assert.match(source, /panel\.style\.transform = ""/);
   assert.doesNotMatch(source, /createCourtQrCanvas\(refreshedQrUrl\)/);
   assert.doesNotMatch(source, /createCourtQrLogoCanvas\(refreshedQrCanvas\.width\)/);
-  assert.match(styles, /padding: 12px;/);
-  assert.match(styles, /gap: 8px;/);
-  assert.match(styles, /border-radius: 12px;/);
-  assert.match(styles, /width: 28px;/);
-  assert.match(styles, /clip-path: polygon\(0px 28px, 28px 100%, 100% 0%\);/);
+  assert.match(styles, /\.qr-resize-handle\s*\{[\s\S]*?width: 28px;/);
+  assert.match(styles, /\.qr-resize-handle\s*\{[\s\S]*?height: 28px;/);
+  assert.match(styles, /\.qr-resize-handle--nw\s*\{[\s\S]*?clip-path:/);
+  assert.match(styles, /\.qr-resize-handle--ne\s*\{[\s\S]*?clip-path:/);
+  assert.match(styles, /\.qr-resize-handle--sw\s*\{[\s\S]*?clip-path:/);
+  assert.match(styles, /\.qr-resize-handle--se\s*\{[\s\S]*?clip-path:/);
   assert.match(styles, /min-width: 130px;/);
   assert.doesNotMatch(styles, /--qr-panel-scale/);
   assert.doesNotMatch(source, /const resizeHandleZone = 28;/);
