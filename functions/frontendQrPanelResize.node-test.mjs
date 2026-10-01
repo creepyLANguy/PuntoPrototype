@@ -110,18 +110,30 @@ test("QR panel spawns from the bottom-right corner in every orientation", () => 
   assert.match(styles, /\.court-qr-panel\s*\{[\s\S]*?bottom:\s*8px;[\s\S]*?right:\s*8px;/);
   assert.match(source, /elements\.courtQrPanel\.style\.bottom = "8px";/);
   assert.match(source, /elements\.courtQrPanel\.style\.right = "8px";/);
+  assert.match(
+    source,
+    /if \(!Number\.isFinite\(currentLeft\) && !Number\.isFinite\(currentTop\)\)[\s\S]*?panel\.style\.left = "auto";[\s\S]*?panel\.style\.top = "auto";[\s\S]*?panel\.style\.right = .*?safeGap.*?panel\.style\.bottom = .*?safeGap/
+  );
   assert.doesNotMatch(styles, /@media \(orientation: landscape\)[\s\S]*?\.court-qr-panel\s*\{[\s\S]*?display:\s*none\s*!important;/);
   assert.doesNotMatch(styles, /@media \(max-width: 768px\)[\s\S]*?\.court-qr-panel\s*\{[\s\S]*?display:\s*none\s*!important;/);
 });
 
-test("QR resize visibility is isolated and throttled", () => {
+test("QR resize visibility is isolated, logarithmic, and inactivity-aware", () => {
   assert.match(source, /function initializeCourtQrResizeHandleVisibility\(\)/);
   assert.match(source, /const handleUpdateIntervalMs = 40;/);
+  assert.match(source, /const inactivityTimeoutMs = 3000;/);
+  assert.match(source, /const opacityStartTravelPercentage = 0\.70;/);
+  assert.match(source, /Math\.log1p\(logarithmicCurveStrength \* normalizedProximity\)/);
   assert.match(source, /window\.setTimeout\(/);
   assert.match(source, /!panel\.classList\.contains\("hidden"\)/);
   assert.match(source, /getBoundingClientRect\(\)/);
+  assert.match(source, /isPointerWithinPanel/);
+  assert.match(source, /calculationsSuspended/);
+  assert.match(source, /isPanelInteractionActive/);
+  assert.match(source, /panel\.classList\.contains\("dragging"\)/);
   assert.match(source, /--qr-handle-opacity/);
   assert.match(source, /refreshCourtQrResizeHandleVisibility/);
+  assert.doesNotMatch(styles, /\.qr-resize-handle:hover\s*\{/);
 });
 
 test("QR resize updates one corner geometry set per animation frame", () => {
