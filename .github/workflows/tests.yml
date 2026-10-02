@@ -10,7 +10,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: read
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
@@ -19,23 +19,6 @@ jobs:
       - name: Install dependencies
         working-directory: functions
         run: npm ci
-      - name: Format Functions files (one-time)
-        if: github.ref == 'refs/heads/chore/ci-prettier-fix'
-        working-directory: functions
-        run: npm run format
-
-      - name: Commit formatting fixes (one-time)
-        if: github.ref == 'refs/heads/chore/ci-prettier-fix'
-        shell: bash
-        run: |
-          set -euo pipefail
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add functions
-          git rm .github/workflows/prettier-fix.yml
-          git commit -m "chore: format functions tests with Prettier"
-          git push origin HEAD:chore/ci-prettier-fix
-
       - name: Run unit, frontend, and OpenAPI contract tests
         working-directory: functions
         run: npm test
