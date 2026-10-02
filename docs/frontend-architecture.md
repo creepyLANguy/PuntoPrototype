@@ -217,7 +217,7 @@ score listeners and `scoring/changeover.js` for changeover events.
   (point labels, server, critical points).
 - **Changeover.** `scoring/changeover.js`: callable -> court snapshot
   listener -> `punto:changeover` / `punto:changeover-processing` window events
-  -> `session` -> Switch Views and settings tiles -> toast and clash sound.
+  -> `session` -> Swap views and settings tiles -> toast and clash sound.
 - **UI systems.** `ui/dom.js` exposes `elements` (populated once by
   `initElements()`) and `$()`. Toasts, loading overlays, the confirm modal,
   theme / appearance and fullscreen each have one module.

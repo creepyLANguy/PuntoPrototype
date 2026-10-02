@@ -76,9 +76,9 @@ sequenceDiagram
         UI->>K: changeoverCourt({courtId})
         K->>F: Atomically toggle Beacon mapping + changeoverEvent
         K-->>UI: Success + changeoverEventId
-        UI->>AS: Blind-toggle local Changeover state + local Switch Views state
+        UI->>AS: Blind-toggle local Changeover state + local Swap views state
         F-->>FL: Broadcast changeoverEvent to other clients
-        FL->>AS: Blind-toggle local Changeover state + local Switch Views state
+        FL->>AS: Blind-toggle local Changeover state + local Swap views state
         AS->>UI: Sync settings tiles, toast and clash cue
     end
 

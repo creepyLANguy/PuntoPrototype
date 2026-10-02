@@ -1,5 +1,5 @@
 // Scoreboard controls: the point tap zones and the floating / settings controls
-// (undo, exit, switch views, mute, server badge, fullscreen, reset, OBS overlay,
+// (undo, exit, swap views, mute, server badge, fullscreen, reset, OBS overlay,
 // join as player, edit players, switch to spectator).
 import { playSound } from "../audio/audio.js";
 import { EVENT_TYPES, SOUND_IDS, TOAST_TYPES } from "../config/constants.js";

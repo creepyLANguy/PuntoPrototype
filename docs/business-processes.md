@@ -163,9 +163,9 @@ Steps:
 2. Operator uses the court Changeover control.
 3. changeoverCourt atomically toggles the current beaconSidesSwapped backend state; it does not accept a desired value from the client.
 4. The court stores a changeoverEvent marker.
-5. The client that triggered the successful changeover blindly toggles its local Changeover state and its local Switch Views state.
+5. The client that triggered the successful changeover blindly toggles its local Changeover state and its local Swap views state.
 6. Other connected clients receiving the changeoverEvent blindly toggle those two local states as well.
-7. Users can use Switch views independently at any time; its local state is never used as the input to changeoverCourt.
+7. Users can use Swap views independently at any time; its local state is never used as the input to changeoverCourt.
 8. Subsequent Beacon scoring events are mapped using the active flag.
 9. Pulse events are not inverted by the Beacon mapping.
 10. RESET clears the mapping to the default false state for the next match/session.

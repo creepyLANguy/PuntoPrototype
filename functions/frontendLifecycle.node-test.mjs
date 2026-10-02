@@ -110,21 +110,21 @@ test("Changeover toggles its own state and independently toggles the local view"
   assert.notEqual(changeoverTile.style.display, "none");
   assert.equal(changeoverTile.querySelector("span").textContent, "Changeover");
 
-  const switchViewsButton = document.getElementById("swapBtn");
-  assert.equal(
-    switchViewsButton.closest(".setting-item").querySelector("span").textContent,
-    "Switch views",
-  );
+  const swapViewsButton = document.getElementById("swapBtn");
+  const swapViewsLabel = () =>
+    swapViewsButton.closest(".setting-item").querySelector("span").textContent;
+  assert.equal(swapViewsLabel(), "Swap views");
 
   // Establish a local view preference that is intentionally different from
   // the backend Beacon mapping. Changeover must not derive its backend value
   // from this view state.
-  switchViewsButton.click();
+  swapViewsButton.click();
   assert.equal(document.querySelector(".scoreboard").classList.contains("swapped"), true);
+  assert.equal(swapViewsLabel(), "Unswap views", "the swapped view offers to unswap");
   assert.equal(
     firestoreState.docs.get("courts/lifecourt").beaconSidesSwapped,
     false,
-    "Switch views remains visual-only",
+    "Swap views remains visual-only",
   );
 
   document.getElementById("changeoverBtn").click();
@@ -148,15 +148,16 @@ test("Changeover toggles its own state and independently toggles the local view"
   );
 
   assert.equal(
-    switchViewsButton.closest(".setting-item").querySelector("span").textContent,
-    "Switch views",
-    "Switch views preference is independent of active changeover state",
+    swapViewsLabel(),
+    "Swap views",
+    "Swap views preference is independent of active changeover state",
   );
   assert.equal(window.__clashAudioTestState.starts, 1);
 
   // The user can change view order without touching the Beacon changeover state.
-  switchViewsButton.click();
+  swapViewsButton.click();
   assert.equal(document.querySelector(".scoreboard").classList.contains("swapped"), true);
+  assert.equal(swapViewsLabel(), "Unswap views");
   assert.equal(firestoreState.docs.get("courts/lifecourt").beaconSidesSwapped, true);
   assert.equal(
     document.getElementById("changeoverTile").querySelector("span").textContent,
@@ -166,8 +167,9 @@ test("Changeover toggles its own state and independently toggles the local view"
   // A second local view toggle is deliberately used to make view state differ
   // from the current Beacon state again. The next changeover must still
   // toggle Beacon state and local view state independently.
-  switchViewsButton.click();
+  swapViewsButton.click();
   assert.equal(document.querySelector(".scoreboard").classList.contains("swapped"), false);
+  assert.equal(swapViewsLabel(), "Swap views");
   assert.equal(firestoreState.docs.get("courts/lifecourt").beaconSidesSwapped, true);
 
   document.getElementById("changeoverBtn").click();
@@ -219,8 +221,8 @@ test("Changeover toggles its own state and independently toggles the local view"
     "remote changeover broadcast must not play the clash sound",
   );
 
-  // Switch views remains independently controllable after the remote changeover.
-  switchViewsButton.click();
+  // Swap views remains independently controllable after the remote changeover.
+  swapViewsButton.click();
   assert.equal(document.querySelector(".scoreboard").classList.contains("swapped"), true);
   assert.equal(
     document.getElementById("changeoverTile").querySelector("span").textContent,
@@ -388,7 +390,7 @@ test("active changeover state is applied on join without changing the local view
   );
   assert.equal(
     document.getElementById("swapBtn").closest(".setting-item").querySelector("span").textContent,
-    "Switch views",
+    "Swap views",
   );
   assert.equal(document.getElementById("swapBtn").getAttribute("aria-pressed"), "false");
 

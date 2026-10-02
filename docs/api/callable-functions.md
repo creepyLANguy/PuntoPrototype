@@ -27,7 +27,7 @@ Request:
 
 { courtId }
 
-The function does not accept the desired mapping from the client. This keeps changeover independent of each client's local "Switch views" preference and prevents a display-state choice from becoming the backend changeover state.
+The function does not accept the desired mapping from the client. This keeps changeover independent of each client's local "Swap views" preference and prevents a display-state choice from becoming the backend changeover state.
 
 The function updates court configuration and writes a changeoverEvent marker. The successful response includes the resulting mapping and event ID, but clients treat the successful changeover as a blind toggle event for their own local controls. It does not rewrite already-recorded scoring events.
 

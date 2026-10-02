@@ -68,8 +68,8 @@ export function syncSettingsTiles()
   updateItem(
     elements.swapBtn,
     document.querySelector(".scoreboard")?.classList.contains("swapped"),
-    "Swap views *",
-    "Switch views",
+    "Unswap views",
+    "Swap views",
   );
   syncChangeoverItem();
   updateItem(elements.serverToggleBtn, themeState.isServerBadgeVisible, "Server on", "Server off");

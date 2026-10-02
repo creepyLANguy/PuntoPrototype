@@ -3,7 +3,7 @@
 //   changeoverCourt callable / court snapshot (firebase/)
 //        -> changeover listener (this module)
 //        -> session state (punto:changeover events)
-//        -> scoreboard view (Switch Views) and settings tiles
+//        -> scoreboard view (Swap views) and settings tiles
 //        -> toast and clash sound
 //
 // This behaviour used to live in firebase.js. It was moved here unchanged; it
@@ -34,7 +34,7 @@ function showChangeoverToast()
   appendToast(CHANGEOVER_TOAST, TOAST_TYPES.SUCCESS);
 }
 
-function syncSwitchViewsButton()
+function syncSwapViewsButton()
 {
   const scoreboard = document.querySelector(".scoreboard");
   const swapButton = document.getElementById("swapBtn");
@@ -48,7 +48,7 @@ function syncSwitchViewsButton()
   tile?.classList.toggle("active", swapped);
 }
 
-function triggerSwitchViews()
+function triggerSwapViews()
 {
   const scoreboard = document.querySelector(".scoreboard");
   if (!scoreboard) return;
@@ -56,7 +56,7 @@ function triggerSwitchViews()
   // Deliberately invert the current UI state rather than applying the
   // Firestore Beacon mapping. Each device may have chosen its own view.
   scoreboard.classList.toggle("swapped");
-  syncSwitchViewsButton();
+  syncSwapViewsButton();
 
   // If Match Details is open, ask the existing details action to rebuild its
   // presentation using the newly selected view.
@@ -73,10 +73,10 @@ function handleChangeoverEvent(event)
   if (!eventId || eventId === lastChangeoverEventId) return;
 
   lastChangeoverEventId = eventId;
-  triggerSwitchViews();
+  triggerSwapViews();
 
   // Notify the session state so its local Beacon changeover state and control
-  // state toggle independently of the user's local Switch Views preference.
+  // state toggle independently of the user's local Swap views preference.
   window.dispatchEvent(
     new CustomEvent("punto:changeover", {
       detail: { eventId },
@@ -137,7 +137,7 @@ function installChangeoverBehaviour()
   if (!changeoverButton) return;
 
   // Capture phase, registered before any other listener, so changeover owns
-  // the interaction and does not also run the normal Switch Views sound/cue.
+  // the interaction and does not also run the normal Swap views sound/cue.
   changeoverButton.addEventListener("click", async (event) =>
   {
     event.preventDefault();
@@ -203,7 +203,7 @@ export function installChangeover()
 export function registerChangeoverStateListeners()
 {
   // Changeover is a backend state transition. It also causes a blind local
-  // toggle of this client's changeover state and Switch Views state, without
+  // toggle of this client's changeover state and Swap views state, without
   // using either view state as an input to the other.
   window.addEventListener("punto:changeover", () =>
   {
