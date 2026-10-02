@@ -201,9 +201,12 @@ The net increase of 37 Node tests is made up as follows:
   rewritten to it, such as `/c/{courtId}` and `/court/**`, still get the
   default caching. This was the same before the refactor; covering them
   needs header entries for those routes.
-- **`firebase-environments.md` describes a preview channel that is not
-  created.** It says non-main branches get a 7-day Hosting preview channel,
-  but `deploy.yml` deploys staging straight to the staging site. Either the
-  doc or the workflow should change.
+- **Branches share one staging site.** `deploy.yml` deploys every non-main
+  branch straight to the staging project. It creates no Hosting preview
+  channel and never has. The docs that described a 7-day branch preview
+  (`firebase-environments.md`, `api.md`, `business-processes.md`) were
+  corrected. If per-branch isolation is wanted, the staging job would need
+  `firebase hosting:channel:deploy` for Hosting; Functions would still be
+  shared.
 - **The `script.js` shim can be removed** once cached pages that reference
   it have expired.

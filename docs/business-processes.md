@@ -72,14 +72,14 @@ Purpose: keep staging and production changes separated and make production chang
 
 Current environment rule:
 - main -> production Firebase project and production site.
-- non-main branches -> staging Firebase project and branch preview.
+- non-main branches -> staging Firebase project and the shared staging site (qa.padelpush.co.za); there are no per-branch previews.
 - local hosted development -> staging by default.
 - Device Lab production mutations require a separate explicit production acknowledgement.
 
 Steps:
 1. Develop on a feature branch.
 2. Run automated tests and repository checks.
-3. Deploy branch to staging/preview.
+3. Deploy branch to staging.
 4. Validate application, functions, device ingestion and affected operational flows.
 5. Record any defects and resolve them before release.
 6. Merge approved changes to main.

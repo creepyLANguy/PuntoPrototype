@@ -46,10 +46,10 @@ The deployment workflow runs on pushes that affect application, Functions, Fireb
 
 ### Staging
 
-- A push to a non-main branch deploys Hosting and Functions to the staging Firebase project.
-- Non-main branches also receive a 7-day Firebase Hosting preview channel.
+- A push to a non-main branch deploys Hosting and Functions to the staging Firebase project, served at https://qa.padelpush.co.za.
 - Staging uses FIREBASE_PROJECT_ID_STAGING and the staging token/config secrets.
-- Branch previews are intended for validating the branch against isolated staging data and services.
+- There are no per-branch Hosting preview channels. Every non-main branch deploys to the same staging site and Functions, so staging serves whichever branch deployed most recently.
+- Staging is intended for validating a branch against isolated staging data and services.
 
 The workflow is triggered by push events. Opening or updating a pull request by itself does not deploy. Each deployment push runs the Functions/Jest + Node integration test suite before deployment.
 
@@ -102,7 +102,7 @@ Third-party integrations introduced later must also be environment-aware so stag
 
 1. Develop on a feature branch.
 2. Run automated tests.
-3. Validate the branch against its staging preview and staging backend.
+3. Validate the branch on staging, after confirming that the latest staging deployment is from that branch and no other branch has deployed since.
 4. Correct defects and record acceptance evidence.
 5. Merge into main.
 6. The production job deploys the merged code to the production Firebase project.
@@ -111,7 +111,7 @@ Third-party integrations introduced later must also be environment-aware so stag
 ## Rollback
 
 - Hosting production: use Firebase Hosting release history in the production project.
-- Hosting staging: redeploy the previous known-good commit to the relevant preview channel or allow the channel to expire.
+- Hosting staging: use Firebase Hosting release history in the staging project, or redeploy the previous known-good commit to staging.
 - Functions: redeploy the previous known-good commit to the correct Firebase project.
 
 ## Rules and indexes
