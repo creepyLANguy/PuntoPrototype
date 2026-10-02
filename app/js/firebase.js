@@ -218,6 +218,7 @@ function installChangeoverBehaviour()
     catch (error)
     {
       console.error("Changeover failed", error);
+      announceChangeoverProcessing(false);
 
       const container = document.getElementById("toastContainer");
       if (container)
@@ -229,6 +230,7 @@ function installChangeoverBehaviour()
         window.setTimeout(() => toast.remove(), 3000);
       }
 
+      return;
     }
     finally
     {
