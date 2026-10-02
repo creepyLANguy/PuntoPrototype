@@ -249,6 +249,83 @@ test("Changeover toggles its own state and independently toggles the local view"
   await settle(10);
 });
 
+test("changeover shows backend processing feedback and recovers from failure", async () => {
+  document.getElementById("settingsBtn").click();
+  await settle(10);
+
+  const button = document.getElementById("changeoverBtn");
+  const label = document.getElementById("changeoverTile").querySelector("span");
+  const originalHandler = callableHandlers.get("changeoverCourt");
+
+  try
+  {
+    let resolveChangeover;
+    callableHandlers.set(
+      "changeoverCourt",
+      ({ courtId }) =>
+        new Promise((resolve) =>
+        {
+          resolveChangeover = async () => resolve(await originalHandler({ courtId }));
+        }),
+    );
+
+    button.click();
+
+    assert.equal(button.disabled, true);
+    assert.equal(button.getAttribute("aria-busy"), "true");
+    assert.equal(button.getAttribute("aria-label"), "Changing court over");
+    assert.equal(button.classList.contains("processing"), true);
+    assert.equal(label.textContent, "Changing over…");
+    assert.ok(button.querySelector(".changeover-spinner"));
+
+    resolveChangeover();
+
+    await waitFor(
+      () =>
+        button.disabled === false &&
+        button.getAttribute("aria-busy") === null &&
+        label.textContent === "Changeover *",
+      { label: "changeover processing state clears after success" },
+    );
+    assert.equal(button.classList.contains("processing"), false);
+    assert.equal(button.getAttribute("aria-label"), "Changeover");
+    assert.equal(button.title, "Changeover");
+    assert.equal(button.textContent, "↔");
+
+    callableHandlers.set(
+      "changeoverCourt",
+      async () =>
+      {
+        throw new Error("Simulated changeover failure");
+      },
+    );
+
+    button.click();
+
+    assert.equal(button.disabled, true);
+    assert.equal(button.getAttribute("aria-busy"), "true");
+    assert.equal(label.textContent, "Changing over…");
+
+    await waitFor(
+      () =>
+        button.disabled === false &&
+        button.getAttribute("aria-busy") === null &&
+        label.textContent === "Changeover",
+      { label: "changeover processing state clears after failure" },
+    );
+    assert.equal(button.classList.contains("processing"), false);
+    assert.equal(button.getAttribute("aria-label"), "Changeover");
+    assert.equal(button.textContent, "↔");
+  }
+  finally
+  {
+    callableHandlers.set("changeoverCourt", originalHandler);
+  }
+
+  document.getElementById("closeSettingsBtn").click();
+  await settle(10);
+});
+
 test("active changeover state is applied on join without changing the local view preference", async () => {
   document.getElementById("backBtn").click();
   await waitFor(() => !document.getElementById("confirmModal").classList.contains("hidden"), {
