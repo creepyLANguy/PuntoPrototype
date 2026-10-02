@@ -1,4 +1,4 @@
-// Composition root of the Padel Push scoring app.
+// Composition root of the scoring app.
 //
 // This module owns no behaviour of its own. It wires the feature modules
 // together and starts them, in a fixed order:

@@ -1,7 +1,8 @@
 // Assets for the shareable score card: the tinted logo data URL, the file-sharing
 // capability probe and pixel-aligned QR drawing.
+import BRAND from "../brand.mjs";
 
-// Cache the Padel Push logo as a same-origin PNG data URL. This avoids relying on
+// Cache the brand logo as a same-origin PNG data URL. This avoids relying on
 // SVG/CSS filter rendering inside html-to-image, which is particularly fragile
 // for the light-theme watermark.
 const shareLogoDataUrlCache = new Map();
@@ -27,7 +28,7 @@ export async function getShareLogoDataUrl(color = '#ffffff')
     }
 
     image.addEventListener('load', resolve, { once: true });
-    image.addEventListener('error', () => reject(new Error('Padel Push logo could not be loaded')), { once: true });
+    image.addEventListener('error', () => reject(new Error(`${BRAND.name} logo could not be loaded`)), { once: true });
   });
 
   const size = 256;

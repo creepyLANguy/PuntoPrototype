@@ -63,3 +63,46 @@ test("legacy single-character endpoint routes are genuinely free", () => {
     assert.equal(findSource(source), null, `legacy route ${source} is still reserved`);
   }
 });
+
+// Firebase Hosting header globs: `**` spans path segments, `*` stays within one.
+function globToRegExp(glob) {
+  const pattern = glob
+    .split("**")
+    .map((part) => part.replace(/[.+?^${}()|[\]\\]/g, "\\$&").replace(/\*/g, "[^/]*"))
+    .join(".*");
+  return new RegExp(`^${pattern}$`);
+}
+
+function listFiles(directory) {
+  return fs.readdirSync(path.join(root, directory), { withFileTypes: true }).flatMap((entry) => {
+    const child = `${directory}/${entry.name}`;
+    return entry.isDirectory() ? listFiles(child) : [child];
+  });
+}
+
+test("every frontend module, stylesheet and generated document is served without caching", () => {
+  const noCacheSources = (firebase.hosting.headers || [])
+    .filter(({ headers }) =>
+      headers.some(
+        ({ key, value }) =>
+          key === "Cache-Control" && value === "no-cache, no-store, must-revalidate",
+      ),
+    )
+    .map(({ source }) => globToRegExp(source));
+
+  const servedFiles = [
+    ...listFiles("app/js").filter((file) => /\.m?js$/.test(file)),
+    ...listFiles("app/css").filter((file) => file.endsWith(".css")),
+    "app/index.html",
+    "app/overlay.html",
+  ];
+
+  assert.ok(servedFiles.includes("app/js/main.js"));
+  assert.ok(servedFiles.includes("app/js/scoring/scoreboard.js"));
+  for (const file of servedFiles) {
+    assert.ok(
+      noCacheSources.some((pattern) => pattern.test(`/${file}`)),
+      `/${file} must keep the no-cache headers so modules never mix versions`,
+    );
+  }
+});

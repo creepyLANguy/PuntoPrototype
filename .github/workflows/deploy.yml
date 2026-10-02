@@ -184,12 +184,30 @@ jobs:
           cache: npm
           cache-dependency-path: functions/package-lock.json
 
+      # The frontend build, structure validation and test suite need the
+      # Functions package's development dependencies, so they are installed for
+      # every deploy (Hosting ignores node_modules, so the deployed file set is
+      # unchanged).
+      - name: Install Functions dependencies
+        run: npm ci --prefix functions
+
+      # Rebuild the generated Hosting artifacts (app/index.html, app/overlay.html,
+      # app/css/style.css) from their sources after the environment has been
+      # configured, so exactly what is validated and tested below is deployed.
+      - name: Build frontend
+        run: node scripts/build-frontend.mjs
+
+      - name: Validate frontend structure
+        run: node scripts/check-frontend-structure.mjs
+
+      - name: Lint frontend modules
+        run: npm run lint:frontend --prefix functions
+
+      - name: Run tests
+        run: npm test --prefix functions
+
       - name: Install Firebase CLI
         run: npm install --global firebase-tools@15.30.2
-
-      - name: Install Functions dependencies
-        if: needs.changes.outputs.functions_changed == 'true'
-        run: npm ci --prefix functions
 
       - name: Show Firebase CLI version
         run: firebase --version
@@ -257,12 +275,30 @@ jobs:
           cache: npm
           cache-dependency-path: functions/package-lock.json
 
+      # The frontend build, structure validation and test suite need the
+      # Functions package's development dependencies, so they are installed for
+      # every deploy (Hosting ignores node_modules, so the deployed file set is
+      # unchanged).
+      - name: Install Functions dependencies
+        run: npm ci --prefix functions
+
+      # Rebuild the generated Hosting artifacts (app/index.html, app/overlay.html,
+      # app/css/style.css) from their sources after the environment has been
+      # configured, so exactly what is validated and tested below is deployed.
+      - name: Build frontend
+        run: node scripts/build-frontend.mjs
+
+      - name: Validate frontend structure
+        run: node scripts/check-frontend-structure.mjs
+
+      - name: Lint frontend modules
+        run: npm run lint:frontend --prefix functions
+
+      - name: Run tests
+        run: npm test --prefix functions
+
       - name: Install Firebase CLI
         run: npm install --global firebase-tools@15.30.2
-
-      - name: Install Functions dependencies
-        if: needs.changes.outputs.functions_changed == 'true'
-        run: npm ci --prefix functions
 
       - name: Show Firebase CLI version
         run: firebase --version

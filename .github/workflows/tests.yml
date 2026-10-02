@@ -37,6 +37,9 @@ jobs:
         working-directory: functions
         run: npm run lint:frontend
 
+      - name: Check branding
+        run: node scripts/check-branding.mjs
+
       - name: Run unit, frontend, and OpenAPI contract tests
         working-directory: functions
         run: npm test

@@ -34,7 +34,7 @@
     ],
     "headers": [
       {
-        "source": "/app/js/script.js",
+        "source": "/app/js/**",
         "headers": [
           {
             "key": "Cache-Control",
@@ -43,7 +43,25 @@
         ]
       },
       {
-        "source": "/app/css/style.css",
+        "source": "/app/css/**",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache, no-store, must-revalidate"
+          }
+        ]
+      },
+      {
+        "source": "/app/index.html",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache, no-store, must-revalidate"
+          }
+        ]
+      },
+      {
+        "source": "/app/overlay.html",
         "headers": [
           {
             "key": "Cache-Control",
