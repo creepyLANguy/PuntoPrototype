@@ -249,6 +249,123 @@ test("Changeover toggles its own state and independently toggles the local view"
   await settle(10);
 });
 
+test("changeover shows backend processing feedback and recovers from failure", async () => {
+  document.getElementById("settingsBtn").click();
+  await settle(10);
+
+  const button = document.getElementById("changeoverBtn");
+  const label = document.getElementById("changeoverTile").querySelector("span");
+  const originalHandler = callableHandlers.get("changeoverCourt");
+  const initialBeaconSidesSwapped =
+    firestoreState.docs.get("courts/lifecourt").beaconSidesSwapped === true;
+
+  try
+  {
+    let backendReadyToComplete = null;
+    const backendGate = new Promise((resolve) =>
+    {
+      backendReadyToComplete = resolve;
+    });
+
+    let backendStarted = false;
+    callableHandlers.set(
+      "changeoverCourt",
+      async ({ courtId }) =>
+      {
+        backendStarted = true;
+        await backendGate;
+        return originalHandler({ courtId });
+      },
+    );
+
+    button.click();
+    await settle(0);
+
+    assert.equal(backendStarted, true);
+    assert.equal(
+      firestoreState.docs.get("courts/lifecourt").beaconSidesSwapped,
+      initialBeaconSidesSwapped,
+      "backend changeover must not complete while its response is held",
+    );
+    assert.equal(button.disabled, true);
+    assert.equal(button.getAttribute("aria-busy"), "true");
+    assert.equal(button.getAttribute("aria-label"), "Changing court over");
+    assert.equal(button.classList.contains("processing"), true);
+    assert.equal(label.textContent, "Changing over…");
+    assert.ok(button.querySelector(".changeover-spinner"));
+
+    backendReadyToComplete();
+
+    await waitFor(
+      () =>
+        button.disabled === false &&
+        button.getAttribute("aria-busy") === null &&
+        button.classList.contains("processing") === false &&
+        label.textContent === "Changeover *",
+      { label: "changeover UI should complete after the backend resolves" },
+    );
+
+    assert.equal(
+      firestoreState.docs.get("courts/lifecourt").beaconSidesSwapped,
+      !initialBeaconSidesSwapped,
+      "backend changeover should complete after the held callable resolves",
+    );
+    assert.equal(button.getAttribute("aria-label"), "Changeover");
+    assert.equal(button.title, "Changeover");
+    assert.equal(button.textContent, "↔");
+
+    const expectedLabelAfterFailedChangeover =
+      initialBeaconSidesSwapped ? "Changeover" : "Changeover *";
+
+    callableHandlers.set(
+      "changeoverCourt",
+      async () =>
+      {
+        throw new Error("Simulated changeover failure");
+      },
+    );
+
+    button.click();
+
+    assert.equal(button.disabled, true);
+    assert.equal(button.getAttribute("aria-busy"), "true");
+    assert.equal(label.textContent, "Changing over…");
+
+    await settle(0);
+
+    await waitFor(
+      () =>
+        button.disabled === false &&
+        button.getAttribute("aria-busy") === null &&
+        button.classList.contains("processing") === false &&
+        label.textContent === expectedLabelAfterFailedChangeover,
+      { label: "changeover UI should recover after backend failure" },
+    );
+
+    assert.equal(button.getAttribute("aria-label"), "Changeover");
+    assert.equal(button.textContent, "↔");
+  }
+  finally
+  {
+    callableHandlers.set("changeoverCourt", originalHandler);
+  }
+
+  const postTestCourt = firestoreState.docs.get("courts/lifecourt");
+  writeDoc("courts/lifecourt", {
+    ...postTestCourt,
+    beaconSidesSwapped: initialBeaconSidesSwapped,
+  });
+
+  const scoreboard = document.querySelector(".scoreboard");
+  if (scoreboard.classList.contains("swapped"))
+  {
+    document.getElementById("swapBtn").click();
+  }
+
+  document.getElementById("closeSettingsBtn").click();
+  await settle(10);
+});
+
 test("active changeover state is applied on join without changing the local view preference", async () => {
   document.getElementById("backBtn").click();
   await waitFor(() => !document.getElementById("confirmModal").classList.contains("hidden"), {

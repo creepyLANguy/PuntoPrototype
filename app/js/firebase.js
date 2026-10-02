@@ -48,7 +48,7 @@ if (usingEmulator && useFirestoreEmulator)
 const functions = getFunctions(app, "africa-south1");
 const changeoverCourt = httpsCallable(functions, "changeoverCourt");
 
-const CHANGEOVER_TOAST = "Changeover has happened";
+const CHANGEOVER_TOAST = "Changeover complete";
 const CLASH_SOUND_URL = "media/sfx/clash.mp3";
 let changeoverUnsubscribe = null;
 let activeChangeoverCourtId = null;
@@ -173,6 +173,15 @@ function attachChangeoverListener()
   );
 }
 
+function announceChangeoverProcessing(processing)
+{
+  window.dispatchEvent(
+    new CustomEvent("punto:changeover-processing", {
+      detail: { processing: processing === true },
+    }),
+  );
+}
+
 function installChangeoverBehaviour()
 {
   const changeoverButton = document.getElementById("changeoverBtn");
@@ -188,7 +197,7 @@ function installChangeoverBehaviour()
     const courtId = getCurrentCourtId();
     if (!courtId) return;
 
-    changeoverButton.disabled = true;
+    announceChangeoverProcessing(true);
 
     try
     {
@@ -209,6 +218,7 @@ function installChangeoverBehaviour()
     catch (error)
     {
       console.error("Changeover failed", error);
+      announceChangeoverProcessing(false);
 
       const container = document.getElementById("toastContainer");
       if (container)
@@ -219,10 +229,12 @@ function installChangeoverBehaviour()
         container.appendChild(toast);
         window.setTimeout(() => toast.remove(), 3000);
       }
+
+      return;
     }
     finally
     {
-      changeoverButton.disabled = false;
+      announceChangeoverProcessing(false);
     }
   }, { capture: true });
 }

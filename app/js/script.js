@@ -597,6 +597,7 @@ document.addEventListener("DOMContentLoaded", () =>
   let currentCourtStatus = null;
   let currentScoreVersion = 0;
   let beaconSidesSwapped = false;
+  let changeoverProcessing = false;
   let currentScoringOptions = { ...DEFAULT_SCORING_OPTIONS };
 
   // Changeover is a backend state transition. It also causes a blind local
@@ -605,6 +606,15 @@ document.addEventListener("DOMContentLoaded", () =>
   window.addEventListener("punto:changeover", () =>
   {
     beaconSidesSwapped = !beaconSidesSwapped;
+    syncSettingsTiles();
+  });
+
+  // The backend request lifecycle owns the temporary processing state. Keeping
+  // that state here means every settings sync renders it consistently rather
+  // than allowing an unrelated court/UI snapshot to overwrite the feedback.
+  window.addEventListener("punto:changeover-processing", (event) =>
+  {
+    changeoverProcessing = event?.detail?.processing === true;
     syncSettingsTiles();
   });
   let currentRawTeamNames = { ...DEFAULT_TEAM_NAMES };
@@ -1335,6 +1345,46 @@ document.addEventListener("DOMContentLoaded", () =>
       button.setAttribute("aria-pressed", active ? "true" : "false");
     };
 
+    const syncChangeoverItem = () =>
+    {
+      const button = elements.changeoverBtn;
+      const wrapper = elements.changeoverTile;
+      if (!button || !wrapper) return;
+
+      const label = wrapper.querySelector(":scope > span");
+
+      wrapper.classList.toggle("active", Boolean(beaconSidesSwapped));
+      wrapper.classList.toggle("processing", changeoverProcessing);
+
+      if (changeoverProcessing)
+      {
+        button.disabled = true;
+        button.classList.add("processing");
+        button.setAttribute("aria-busy", "true");
+        button.setAttribute("aria-label", "Changing court over");
+        button.title = "Changing court over";
+        button.innerHTML = '<span class="changeover-spinner" aria-hidden="true"></span>';
+
+        if (label)
+        {
+          label.textContent = "Changing over…";
+        }
+        return;
+      }
+
+      button.disabled = false;
+      button.classList.remove("processing");
+      button.removeAttribute("aria-busy");
+      button.setAttribute("aria-label", "Changeover");
+      button.title = "Changeover";
+      button.innerHTML = "↔";
+
+      if (label)
+      {
+        label.textContent = beaconSidesSwapped ? "Changeover *" : "Changeover";
+      }
+    };
+
     updateItem(elements.muteBtn, muted, "Muted", "Mute");
     updateItem(elements.waveToggleScoreboardBtn, isWavesEnabled, "Waves on", "Waves off");
     updateItem(elements.fullscreenBtn, Boolean(getFullscreenElement()), "Exit full", "Fullscreen");
@@ -1344,7 +1394,7 @@ document.addEventListener("DOMContentLoaded", () =>
       "Swap views *",
       "Switch views",
     );
-    updateItem(elements.changeoverBtn, beaconSidesSwapped, "Changeover *", "Changeover");
+    syncChangeoverItem();
     updateItem(elements.serverToggleBtn, isServerBadgeVisible, "Server on", "Server off");
   }
 
