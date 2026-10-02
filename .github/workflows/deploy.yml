@@ -260,6 +260,10 @@ jobs:
       - name: Install Firebase CLI
         run: npm install --global firebase-tools@15.30.2
 
+      - name: Install Functions dependencies
+        if: needs.changes.outputs.functions_changed == 'true'
+        run: npm ci --prefix functions
+
       - name: Show Firebase CLI version
         run: firebase --version
 
