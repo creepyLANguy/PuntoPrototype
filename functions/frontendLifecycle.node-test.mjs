@@ -259,24 +259,18 @@ test("changeover shows backend processing feedback and recovers from failure", a
   const initialBeaconSidesSwapped =
     firestoreState.docs.get("courts/lifecourt").beaconSidesSwapped === true;
 
-  try
-  {
+  try {
     let backendReadyToComplete = null;
-    const backendGate = new Promise((resolve) =>
-    {
+    const backendGate = new Promise((resolve) => {
       backendReadyToComplete = resolve;
     });
 
     let backendStarted = false;
-    callableHandlers.set(
-      "changeoverCourt",
-      async ({ courtId }) =>
-      {
-        backendStarted = true;
-        await backendGate;
-        return originalHandler({ courtId });
-      },
-    );
+    callableHandlers.set("changeoverCourt", async ({ courtId }) => {
+      backendStarted = true;
+      await backendGate;
+      return originalHandler({ courtId });
+    });
 
     button.click();
     await settle(0);
@@ -314,16 +308,13 @@ test("changeover shows backend processing feedback and recovers from failure", a
     assert.equal(button.title, "Changeover");
     assert.equal(button.textContent, "↔");
 
-    const expectedLabelAfterFailedChangeover =
-      initialBeaconSidesSwapped ? "Changeover" : "Changeover *";
+    const expectedLabelAfterFailedChangeover = initialBeaconSidesSwapped
+      ? "Changeover"
+      : "Changeover *";
 
-    callableHandlers.set(
-      "changeoverCourt",
-      async () =>
-      {
-        throw new Error("Simulated changeover failure");
-      },
-    );
+    callableHandlers.set("changeoverCourt", async () => {
+      throw new Error("Simulated changeover failure");
+    });
 
     button.click();
 
@@ -344,9 +335,7 @@ test("changeover shows backend processing feedback and recovers from failure", a
 
     assert.equal(button.getAttribute("aria-label"), "Changeover");
     assert.equal(button.textContent, "↔");
-  }
-  finally
-  {
+  } finally {
     callableHandlers.set("changeoverCourt", originalHandler);
   }
 
@@ -357,8 +346,7 @@ test("changeover shows backend processing feedback and recovers from failure", a
   });
 
   const scoreboard = document.querySelector(".scoreboard");
-  if (scoreboard.classList.contains("swapped"))
-  {
+  if (scoreboard.classList.contains("swapped")) {
     document.getElementById("swapBtn").click();
   }
 
