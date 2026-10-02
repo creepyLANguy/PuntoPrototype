@@ -259,11 +259,19 @@ test("changeover shows backend processing feedback and recovers from failure", a
 
   try
   {
+    let backendReadyToComplete = null;
+    const backendGate = new Promise((resolve) =>
+    {
+      backendReadyToComplete = resolve;
+    });
+
+    let backendStarted = false;
     callableHandlers.set(
       "changeoverCourt",
       async ({ courtId }) =>
       {
-        await new Promise((resolve) => setTimeout(resolve, 50));
+        backendStarted = true;
+        await backendGate;
         return originalHandler({ courtId });
       },
     );
@@ -271,6 +279,12 @@ test("changeover shows backend processing feedback and recovers from failure", a
     button.click();
     await settle(0);
 
+    assert.equal(backendStarted, true);
+    assert.equal(
+      firestoreState.docs.get("courts/lifecourt").beaconSidesSwapped,
+      false,
+      "backend changeover must not complete while its response is held",
+    );
     assert.equal(button.disabled, true);
     assert.equal(button.getAttribute("aria-busy"), "true");
     assert.equal(button.getAttribute("aria-label"), "Changing court over");
@@ -278,23 +292,21 @@ test("changeover shows backend processing feedback and recovers from failure", a
     assert.equal(label.textContent, "Changing over…");
     assert.ok(button.querySelector(".changeover-spinner"));
 
-    await new Promise((resolve) => setTimeout(resolve, 100));
-    await settle(10);
+    backendReadyToComplete();
 
-    assert.deepEqual(
-      {
-        disabled: button.disabled,
-        ariaBusy: button.getAttribute("aria-busy"),
-        processing: button.classList.contains("processing"),
-        label: label.textContent,
-      },
-      {
-        disabled: false,
-        ariaBusy: null,
-        processing: false,
-        label: "Changeover *",
-      },
-      "changeover UI should leave processing state after successful backend completion",
+    await waitFor(
+      () =>
+        button.disabled === false &&
+        button.getAttribute("aria-busy") === null &&
+        button.classList.contains("processing") === false &&
+        label.textContent === "Changeover *",
+      { label: "changeover UI should complete after the backend resolves" },
+    );
+
+    assert.equal(
+      firestoreState.docs.get("courts/lifecourt").beaconSidesSwapped,
+      true,
+      "backend changeover should complete after the held callable resolves",
     );
     assert.equal(button.getAttribute("aria-label"), "Changeover");
     assert.equal(button.title, "Changeover");
@@ -314,23 +326,15 @@ test("changeover shows backend processing feedback and recovers from failure", a
     assert.equal(button.getAttribute("aria-busy"), "true");
     assert.equal(label.textContent, "Changing over…");
 
-    await settle(20);
-
-    assert.deepEqual(
-      {
-        disabled: button.disabled,
-        ariaBusy: button.getAttribute("aria-busy"),
-        processing: button.classList.contains("processing"),
-        label: label.textContent,
-      },
-      {
-        disabled: false,
-        ariaBusy: null,
-        processing: false,
-        label: "Changeover",
-      },
-      "changeover UI should leave processing state after backend failure",
+    await waitFor(
+      () =>
+        button.disabled === false &&
+        button.getAttribute("aria-busy") === null &&
+        button.classList.contains("processing") === false &&
+        label.textContent === "Changeover",
+      { label: "changeover UI should recover after backend failure" },
     );
+
     assert.equal(button.getAttribute("aria-label"), "Changeover");
     assert.equal(button.textContent, "↔");
   }
