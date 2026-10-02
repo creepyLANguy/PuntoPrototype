@@ -88,9 +88,7 @@ test("expandable match details arrow pulses twice while collapsed and stops whil
   );
 });
 
-
-function extractFunction(source, functionName)
-{
+function extractFunction(source, functionName) {
   const signature = `function ${functionName}(`;
   const start = source.indexOf(signature);
   assert.notEqual(start, -1, `Could not find ${functionName}`);
@@ -104,80 +102,66 @@ function extractFunction(source, functionName)
   let lineComment = false;
   let blockComment = false;
 
-  for (let i = bodyStart; i < source.length; i++)
-  {
+  for (let i = bodyStart; i < source.length; i++) {
     const char = source[i];
     const next = source[i + 1];
 
-    if (lineComment)
-    {
+    if (lineComment) {
       if (char === "\n") lineComment = false;
       continue;
     }
 
-    if (blockComment)
-    {
-      if (char === "*" && next === "/")
-      {
+    if (blockComment) {
+      if (char === "*" && next === "/") {
         blockComment = false;
         i++;
       }
       continue;
     }
 
-    if (quote)
-    {
-      if (escaped)
-      {
+    if (quote) {
+      if (escaped) {
         escaped = false;
         continue;
       }
 
-      if (char === "\\")
-      {
+      if (char === "\\") {
         escaped = true;
         continue;
       }
 
-      if (char === quote)
-      {
+      if (char === quote) {
         quote = null;
       }
 
       continue;
     }
 
-    if ((char === "'" || char === '"' || char === "`"))
-    {
+    if (char === "'" || char === '"' || char === "`") {
       quote = char;
       continue;
     }
 
-    if (char === "/" && next === "/")
-    {
+    if (char === "/" && next === "/") {
       lineComment = true;
       i++;
       continue;
     }
 
-    if (char === "/" && next === "*")
-    {
+    if (char === "/" && next === "*") {
       blockComment = true;
       i++;
       continue;
     }
 
-    if (char === "{")
-    {
+    if (char === "{") {
       depth++;
       continue;
     }
 
-    if (char === "}")
-    {
+    if (char === "}") {
       depth--;
-      if (depth === 0)
-      {
+      if (depth === 0) {
         return source.slice(start, i + 1);
       }
     }
@@ -186,8 +170,7 @@ function extractFunction(source, functionName)
   throw new Error(`Could not find end of ${functionName}`);
 }
 
-function createToastHarness(rect, viewport = { width: 1000, height: 800 })
-{
+function createToastHarness(rect, viewport = { width: 1000, height: 800 }) {
   const dom = new JSDOM(`
     <div id="toastContainer"></div>
     <div class="floating-controls"></div>
@@ -351,21 +334,17 @@ test("showToast recalculates positioning, appends a typed toast, and removes it 
   let timeoutCallback = null;
   let timeoutDelay = null;
 
-  const showToast = vm.runInNewContext(
-    `(${extractFunction(source, "showToast")})`,
-    {
-      document: harness.document,
-      updateToastContainerPosition: harness.updateToastContainerPosition,
-      setTimeout: (callback, delay) =>
-      {
-        timeoutCallback = callback;
-        timeoutDelay = delay;
-        return 1;
-      },
-      window: harness.dom.window,
-      TOAST_DURATION_MS: 3000,
+  const showToast = vm.runInNewContext(`(${extractFunction(source, "showToast")})`, {
+    document: harness.document,
+    updateToastContainerPosition: harness.updateToastContainerPosition,
+    setTimeout: (callback, delay) => {
+      timeoutCallback = callback;
+      timeoutDelay = delay;
+      return 1;
     },
-  );
+    window: harness.dom.window,
+    TOAST_DURATION_MS: 3000,
+  });
 
   showToast("Saved", "success");
 
@@ -382,16 +361,23 @@ test("showToast recalculates positioning, appends a typed toast, and removes it 
 });
 
 test("toast CSS keeps stacked notifications centered with a 10px gap and responsive widths", () => {
-  const toastContainerBlocks = [...styles.matchAll(/\.toast-container\s*\{[\s\S]*?\n\}/g)].map(match => match[0]);
-  assert.ok(toastContainerBlocks.length >= 2, "both toast container definitions should remain covered");
+  const toastContainerBlocks = [...styles.matchAll(/\.toast-container\s*\{[\s\S]*?\n\}/g)].map(
+    (match) => match[0],
+  );
+  assert.ok(
+    toastContainerBlocks.length >= 2,
+    "both toast container definitions should remain covered",
+  );
 
-  for (const block of toastContainerBlocks.slice(0, 2))
-  {
+  for (const block of toastContainerBlocks.slice(0, 2)) {
     assert.match(block, /display:\s*flex;/);
     assert.match(block, /flex-direction:\s*column;/);
     assert.match(block, /align-items:\s*center;/);
     assert.match(block, /gap:\s*10px;/);
-    assert.match(block, /bottom:\s*calc\(var\(--toast-bottom-offset, 20px\)\s*\+\s*env\(safe-area-inset-bottom, 0px\)\);/);
+    assert.match(
+      block,
+      /bottom:\s*calc\(var\(--toast-bottom-offset, 20px\)\s*\+\s*env\(safe-area-inset-bottom, 0px\)\);/,
+    );
   }
 
   assert.match(styles, /width:\s*min\(420px,\s*100%\);/);
@@ -407,17 +393,16 @@ test("toast positioning is recalculated whenever the viewport changes", () => {
     source,
     /window\.addEventListener\("resize",[\s\S]*?updateToastContainerPosition\(\);/,
   );
-  assert.match(
-    source,
-    /showToast\(message,[\s\S]*?updateToastContainerPosition\(\);/,
-  );
+  assert.match(source, /showToast\(message,[\s\S]*?updateToastContainerPosition\(\);/);
 });
-
 
 test("toast positioning is re-synced when the scoreboard layout changes", () => {
   assert.match(source, /new window\.ResizeObserver\(/);
   assert.match(source, /new window\.MutationObserver\(/);
-  assert.match(source, /toastPositionMutationObserver\.observe\(scoreboardBody,[\s\S]*?subtree:\s*true/);
+  assert.match(
+    source,
+    /toastPositionMutationObserver\.observe\(scoreboardBody,[\s\S]*?subtree:\s*true/,
+  );
 });
 
 test("toast positioning reacts to floating-control layout changes", () => {
@@ -440,22 +425,25 @@ test("toast positioning reacts to floating-control layout changes", () => {
 
   Object.defineProperty(dom.window, "innerWidth", { configurable: true, value: 1000 });
   Object.defineProperty(dom.window, "innerHeight", { configurable: true, value: 800 });
-  dom.window.requestAnimationFrame = (callback) =>
-  {
+  dom.window.requestAnimationFrame = (callback) => {
     callback();
     return 1;
   };
 
   const resizeObservers = [];
   const mutationObservers = [];
-  class TestResizeObserver
-  {
-    constructor(callback) { this.callback = callback; resizeObservers.push(this); }
+  class TestResizeObserver {
+    constructor(callback) {
+      this.callback = callback;
+      resizeObservers.push(this);
+    }
     observe() {}
   }
-  class TestMutationObserver
-  {
-    constructor(callback) { this.callback = callback; mutationObservers.push(this); }
+  class TestMutationObserver {
+    constructor(callback) {
+      this.callback = callback;
+      mutationObservers.push(this);
+    }
     observe() {}
   }
   dom.window.ResizeObserver = TestResizeObserver;

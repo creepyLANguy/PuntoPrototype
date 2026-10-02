@@ -1,12 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import {
-  bootFrontend,
-  seedBaseData,
-  seedCourt,
-  settle,
-} from "./frontendHarness/harness.mjs";
+import { bootFrontend, seedBaseData, seedCourt, settle } from "./frontendHarness/harness.mjs";
 
 let dom;
 let document;
@@ -88,7 +83,9 @@ test("join modals move above a reduced viewport", async () => {
     "-266px",
   );
   assert.equal(
-    document.querySelector("#spectatePage .create-card").style.getPropertyValue("--keyboard-shift-y"),
+    document
+      .querySelector("#spectatePage .create-card")
+      .style.getPropertyValue("--keyboard-shift-y"),
     "-216px",
   );
 });
@@ -104,7 +101,9 @@ test("join modal shift clears when the viewport is restored", async () => {
     "0px",
   );
   assert.equal(
-    document.querySelector("#spectatePage .create-card").style.getPropertyValue("--keyboard-shift-y"),
+    document
+      .querySelector("#spectatePage .create-card")
+      .style.getPropertyValue("--keyboard-shift-y"),
     "0px",
   );
 });

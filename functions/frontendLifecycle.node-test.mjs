@@ -129,12 +129,9 @@ test("Changeover toggles its own state and independently toggles the local view"
 
   document.getElementById("changeoverBtn").click();
 
-  await waitFor(
-    () => firestoreState.docs.get("courts/lifecourt").beaconSidesSwapped === true,
-    {
-      label: "local changeover toggles backend Beacon state",
-    },
-  );
+  await waitFor(() => firestoreState.docs.get("courts/lifecourt").beaconSidesSwapped === true, {
+    label: "local changeover toggles backend Beacon state",
+  });
   await waitFor(
     () => document.querySelector(".scoreboard").classList.contains("swapped") === false,
     {
@@ -142,7 +139,9 @@ test("Changeover toggles its own state and independently toggles the local view"
     },
   );
   await waitFor(
-    () => document.getElementById("changeoverTile").querySelector("span").textContent === "Changeover *",
+    () =>
+      document.getElementById("changeoverTile").querySelector("span").textContent ===
+      "Changeover *",
     {
       label: "local changeover toggles its own button state",
     },
@@ -173,12 +172,9 @@ test("Changeover toggles its own state and independently toggles the local view"
 
   document.getElementById("changeoverBtn").click();
 
-  await waitFor(
-    () => firestoreState.docs.get("courts/lifecourt").beaconSidesSwapped === false,
-    {
-      label: "second local changeover toggles backend independently of view",
-    },
-  );
+  await waitFor(() => firestoreState.docs.get("courts/lifecourt").beaconSidesSwapped === false, {
+    label: "second local changeover toggles backend independently of view",
+  });
   await waitFor(
     () => document.querySelector(".scoreboard").classList.contains("swapped") === true,
     {
@@ -186,7 +182,8 @@ test("Changeover toggles its own state and independently toggles the local view"
     },
   );
   await waitFor(
-    () => document.getElementById("changeoverTile").querySelector("span").textContent === "Changeover",
+    () =>
+      document.getElementById("changeoverTile").querySelector("span").textContent === "Changeover",
     {
       label: "second local changeover clears its button state",
     },
@@ -209,7 +206,9 @@ test("Changeover toggles its own state and independently toggles the local view"
     },
   );
   await waitFor(
-    () => document.getElementById("changeoverTile").querySelector("span").textContent === "Changeover *",
+    () =>
+      document.getElementById("changeoverTile").querySelector("span").textContent ===
+      "Changeover *",
     {
       label: "remote changeover toggles changeover button state",
     },
@@ -232,10 +231,9 @@ test("Changeover toggles its own state and independently toggles the local view"
   document.getElementById("muteBtn").click();
   assert.equal(document.getElementById("muteBtn").getAttribute("aria-pressed"), "true");
   document.getElementById("changeoverBtn").click();
-  await waitFor(
-    () => firestoreState.docs.get("courts/lifecourt").beaconSidesSwapped === false,
-    { label: "muted changeover toggles backend" },
-  );
+  await waitFor(() => firestoreState.docs.get("courts/lifecourt").beaconSidesSwapped === false, {
+    label: "muted changeover toggles backend",
+  });
   await waitFor(() => document.getElementById("changeoverBtn").disabled === false, {
     label: "muted changeover completed",
   });
@@ -253,10 +251,9 @@ test("Changeover toggles its own state and independently toggles the local view"
 
 test("active changeover state is applied on join without changing the local view preference", async () => {
   document.getElementById("backBtn").click();
-  await waitFor(
-    () => !document.getElementById("confirmModal").classList.contains("hidden"),
-    { label: "exit confirm modal before rejoining" },
-  );
+  await waitFor(() => !document.getElementById("confirmModal").classList.contains("hidden"), {
+    label: "exit confirm modal before rejoining",
+  });
   document.getElementById("confirmOkBtn").click();
   await waitFor(() => document.getElementById("menuPage").style.display !== "none", {
     label: "menu after leaving court",
@@ -288,23 +285,20 @@ test("active changeover state is applied on join without changing the local view
     document.getElementById("swapBtn").closest(".setting-item").querySelector("span").textContent,
     "Switch views",
   );
-  assert.equal(
-    document.getElementById("swapBtn").getAttribute("aria-pressed"),
-    "false",
-  );
+  assert.equal(document.getElementById("swapBtn").getAttribute("aria-pressed"), "false");
 
   document.getElementById("changeoverBtn").click();
 
-  await waitFor(
-    () => firestoreState.docs.get("courts/lifecourt").beaconSidesSwapped === false,
-    { label: "player toggles active changeover off" },
-  );
+  await waitFor(() => firestoreState.docs.get("courts/lifecourt").beaconSidesSwapped === false, {
+    label: "player toggles active changeover off",
+  });
   await waitFor(
     () => document.querySelector(".scoreboard").classList.contains("swapped") === true,
     { label: "player view toggles independently when changeover ends" },
   );
   await waitFor(
-    () => document.getElementById("changeoverTile").querySelector("span").textContent === "Changeover",
+    () =>
+      document.getElementById("changeoverTile").querySelector("span").textContent === "Changeover",
     { label: "changeover tile returns to inactive state" },
   );
 
@@ -373,17 +367,13 @@ test("spectator joins with the court's active changeover visual state", async ()
   await waitFor(() => document.getElementById("scoreboardPage").style.display !== "none", {
     label: "scoreboard shown for spectator",
   });
-  await waitFor(
-    () => document.querySelector(".scoreboard").classList.contains("swapped"),
-    { label: "active changeover applied to spectator scoreboard on join" },
-  );
+  await waitFor(() => document.querySelector(".scoreboard").classList.contains("swapped"), {
+    label: "active changeover applied to spectator scoreboard on join",
+  });
 
   assert.equal(document.getElementById("changeoverBtn").style.display, "none");
   assert.equal(document.getElementById("changeoverTile").style.display, "none");
-  assert.equal(
-    document.getElementById("swapBtn").getAttribute("aria-pressed"),
-    "true",
-  );
+  assert.equal(document.getElementById("swapBtn").getAttribute("aria-pressed"), "true");
 });
 
 test("spectator sees live score updates pushed by other devices", async () => {

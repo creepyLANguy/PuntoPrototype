@@ -992,9 +992,9 @@ describe("changeoverCourt", () => {
       ({ changeoverCourt } = require("./index"));
     });
 
-    await expect(
-      changeoverCourt({ data: { courtId: "missing" } }),
-    ).rejects.toThrow("Court not found");
+    await expect(changeoverCourt({ data: { courtId: "missing" } })).rejects.toThrow(
+      "Court not found",
+    );
   });
 });
 
