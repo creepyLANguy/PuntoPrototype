@@ -256,6 +256,8 @@ test("changeover shows backend processing feedback and recovers from failure", a
   const button = document.getElementById("changeoverBtn");
   const label = document.getElementById("changeoverTile").querySelector("span");
   const originalHandler = callableHandlers.get("changeoverCourt");
+  const initialBeaconSidesSwapped =
+    firestoreState.docs.get("courts/lifecourt").beaconSidesSwapped === true;
 
   try
   {
@@ -282,7 +284,7 @@ test("changeover shows backend processing feedback and recovers from failure", a
     assert.equal(backendStarted, true);
     assert.equal(
       firestoreState.docs.get("courts/lifecourt").beaconSidesSwapped,
-      false,
+      initialBeaconSidesSwapped,
       "backend changeover must not complete while its response is held",
     );
     assert.equal(button.disabled, true);
@@ -305,7 +307,7 @@ test("changeover shows backend processing feedback and recovers from failure", a
 
     assert.equal(
       firestoreState.docs.get("courts/lifecourt").beaconSidesSwapped,
-      true,
+      !initialBeaconSidesSwapped,
       "backend changeover should complete after the held callable resolves",
     );
     assert.equal(button.getAttribute("aria-label"), "Changeover");
