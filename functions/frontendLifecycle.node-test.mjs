@@ -323,11 +323,12 @@ test("changeover shows backend processing feedback and recovers from failure", a
     );
 
     button.click();
-    await settle(0);
 
     assert.equal(button.disabled, true);
     assert.equal(button.getAttribute("aria-busy"), "true");
     assert.equal(label.textContent, "Changing over…");
+
+    await settle(0);
 
     await waitFor(
       () =>
