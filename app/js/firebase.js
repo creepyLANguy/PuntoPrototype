@@ -48,7 +48,7 @@ if (usingEmulator && useFirestoreEmulator)
 const functions = getFunctions(app, "africa-south1");
 const changeoverCourt = httpsCallable(functions, "changeoverCourt");
 
-const CHANGEOVER_TOAST = "Changeover has happened";
+const CHANGEOVER_TOAST = "Changeover complete";
 const CLASH_SOUND_URL = "media/sfx/clash.mp3";
 let changeoverUnsubscribe = null;
 let activeChangeoverCourtId = null;
@@ -173,6 +173,49 @@ function attachChangeoverListener()
   );
 }
 
+function setChangeoverProcessingState(isProcessing)
+{
+  const button = document.getElementById("changeoverBtn");
+  const tile = document.getElementById("changeoverTile");
+  if (!button || !tile) return;
+
+  const label = tile.querySelector("span");
+
+  if (isProcessing)
+  {
+    if (!button.dataset.changeoverOriginalContent)
+    {
+      button.dataset.changeoverOriginalContent = button.innerHTML;
+    }
+
+    button.disabled = true;
+    button.classList.add("processing");
+    button.setAttribute("aria-busy", "true");
+    button.setAttribute("aria-label", "Changing court over");
+    button.title = "Changing court over";
+
+    if (label)
+    {
+      label.textContent = "Changing over…";
+    }
+
+    button.innerHTML = '<span class="changeover-spinner" aria-hidden="true"></span>';
+    return;
+  }
+
+  button.disabled = false;
+  button.classList.remove("processing");
+  button.removeAttribute("aria-busy");
+  button.setAttribute("aria-label", "Changeover");
+  button.title = "Changeover";
+
+  if (button.dataset.changeoverOriginalContent)
+  {
+    button.innerHTML = button.dataset.changeoverOriginalContent;
+    delete button.dataset.changeoverOriginalContent;
+  }
+}
+
 function installChangeoverBehaviour()
 {
   const changeoverButton = document.getElementById("changeoverBtn");
@@ -188,7 +231,7 @@ function installChangeoverBehaviour()
     const courtId = getCurrentCourtId();
     if (!courtId) return;
 
-    changeoverButton.disabled = true;
+    setChangeoverProcessingState(true);
 
     try
     {
@@ -219,10 +262,16 @@ function installChangeoverBehaviour()
         container.appendChild(toast);
         window.setTimeout(() => toast.remove(), 3000);
       }
+
+      const label = document.getElementById("changeoverTile")?.querySelector("span");
+      if (label)
+      {
+        label.textContent = "Changeover";
+      }
     }
     finally
     {
-      changeoverButton.disabled = false;
+      setChangeoverProcessingState(false);
     }
   }, { capture: true });
 }
