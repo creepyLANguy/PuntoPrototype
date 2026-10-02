@@ -334,7 +334,7 @@ test("changeover shows backend processing feedback and recovers from failure", a
         button.getAttribute("aria-busy") === null &&
         button.classList.contains("processing") === false &&
         label.textContent === "Changeover",
-      { label: "changeover UI should recover after backend failure" },
+      { label: `changeover UI should recover after backend failure [beacon=${firestoreState.docs.get("courts/lifecourt")?.beaconSidesSwapped}, label=${label.textContent}, buttonDisabled=${button.disabled}, ariaBusy=${button.getAttribute("aria-busy")}, processing=${button.classList.contains("processing")}, ariaLabel=${button.getAttribute("aria-label")}, buttonText=${button.textContent}]` },
     );
 
     assert.equal(button.getAttribute("aria-label"), "Changeover");
