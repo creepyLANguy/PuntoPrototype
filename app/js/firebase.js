@@ -220,7 +220,15 @@ function setChangeoverProcessingState(isProcessing)
     delete button.dataset.changeoverOriginalContent;
   }
 
-  delete button.dataset.changeoverOriginalLabel;
+  if (button.dataset.changeoverOriginalLabel)
+  {
+    const label = tile.querySelector("span");
+    if (label && label.textContent === "Changing over…")
+    {
+      label.textContent = button.dataset.changeoverOriginalLabel;
+    }
+    delete button.dataset.changeoverOriginalLabel;
+  }
 }
 
 function installChangeoverBehaviour()
