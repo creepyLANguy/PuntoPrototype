@@ -1,0 +1,134 @@
+    /* ---------- Stat card ---------- */
+
+    /* The stat and momentum cards are driven by one pair of knobs so they can
+       never render differently from each other:
+         --ov-stats-scale  type size, layered on the overlay's own --ov-scale
+         --ov-stats-width  width, as a multiple of the score panel's width
+       width:0 + a percentage min-width is the same trick the sponsor strip
+       uses: it keeps the cards out of the anchor's fit-content width, so the
+       score panel alone decides that width and the cards take a multiple of
+       it. At 100% both cards line up exactly with the score panel. */
+    .stat-card {
+      background: linear-gradient(var(--ov-grad-angle), var(--ov-panel), var(--ov-panel-2));
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: var(--ov-radius);
+      box-shadow: 0 10px 35px rgba(0, 0, 0, 0.42);
+      padding: 0.6em 1em 0.7em;
+      animation: stat-in 0.35s ease both;
+      font-size: calc(24px * var(--ov-scale, 1) * var(--ov-stats-scale, 1));
+      width: 0;
+      min-width: calc(100% * var(--ov-stats-width, 1));
+      box-sizing: border-box;
+    }
+
+    .stat-card.hidden {
+      display: none;
+    }
+
+    @keyframes stat-in {
+      from {
+        opacity: 0;
+        transform: translateY(-0.4em);
+      }
+
+      to {
+        opacity: 1;
+        transform: none;
+      }
+    }
+
+    .stat-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 1em;
+      border-bottom: 1px solid var(--ov-line);
+      padding-bottom: 0.3em;
+      margin-bottom: 0.45em;
+    }
+
+    .stat-title {
+      font-size: 0.62em;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+    }
+
+    .stat-sub {
+      font-size: 0.5em;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--ov-muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      /* Lets the ellipsis engage instead of forcing the head wider than the
+         card when the width slider is turned down. */
+      min-width: 0;
+    }
+
+    .stat-row {
+      margin-bottom: 0.45em;
+    }
+
+    .stat-row:last-child {
+      margin-bottom: 0;
+    }
+
+    .stat-vals {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 0.6em;
+      font-size: 0.62em;
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+      margin-bottom: 0.18em;
+    }
+
+    .stat-vals .va {
+      color: var(--ov-teamA);
+    }
+
+    .stat-vals .vb {
+      color: var(--ov-teamB);
+    }
+
+    .stat-label {
+      font-size: 0.85em;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--ov-muted);
+    }
+
+    .stat-bar {
+      display: flex;
+      height: 0.28em;
+      border-radius: 0.14em;
+      overflow: hidden;
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .stat-bar i {
+      display: block;
+      height: 100%;
+    }
+
+    .stat-bar .ba {
+      background: var(--ov-teamA);
+    }
+
+    .stat-bar .bb {
+      background: var(--ov-teamB);
+      margin-left: auto;
+    }
+
+    .stat-empty {
+      font-size: 0.58em;
+      font-weight: 600;
+      color: var(--ov-muted);
+      padding: 0.3em 0;
+    }
+

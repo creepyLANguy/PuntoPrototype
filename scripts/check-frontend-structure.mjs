@@ -27,9 +27,7 @@ import { BUILD_TARGETS, REPO_ROOT, findMissingReferences, runBuild } from "./bui
 // unless they are listed in SIZE_EXEMPTIONS with a reason.
 const SIZE_BUDGET = { review: 600, fail: 900 };
 
-const SIZE_EXEMPTIONS = new Map([
-  ["app/overlay.html", "legacy overlay document, pending split into sources"],
-]);
+const SIZE_EXEMPTIONS = new Map([]);
 
 // Modules that predate the module architecture and are temporarily excused
 // from the layering and compatibility-entry rules while they are extracted.

@@ -28,6 +28,7 @@ export const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url
 export const BUILD_TARGETS = [
   { kind: "css", source: "app/css/index.css", output: "app/css/style.css" },
   { kind: "html", source: "app/templates/index.template.html", output: "app/index.html" },
+  { kind: "html", source: "app/overlay/template.html", output: "app/overlay.html" },
 ];
 
 const HTML_INCLUDE = /^[ \t]*<!--[ \t]*@include[ \t]+(\S+)[ \t]*-->[ \t]*$/;

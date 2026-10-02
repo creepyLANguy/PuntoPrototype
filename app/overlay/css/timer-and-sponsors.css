@@ -1,0 +1,80 @@
+    /* ---------- Match timer ---------- */
+
+    .match-timer {
+      margin-left: 0.6em;
+      font-size: 0.7em;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: 0.03em;
+      opacity: 0.9;
+    }
+
+    /* ---------- Sponsor strip ---------- */
+
+    .sponsor-strip {
+      /* width:0 + min-width:100% keeps the strip from contributing to the
+         overlay's fit-content width — it fills whatever the scores need. */
+      width: 0;
+      min-width: 100%;
+      height: 1.35em;
+      overflow: hidden;
+      border-top: 1px solid var(--ov-line);
+      border-radius: 0 0 calc(var(--ov-radius) - 1px) calc(var(--ov-radius) - 1px);
+      display: flex;
+      align-items: center;
+    }
+
+    .sponsor-strip.hidden {
+      display: none;
+    }
+
+    .sponsor-track {
+      display: flex;
+      align-items: center;
+      width: max-content;
+      height: 100%;
+      transition: opacity 0.3s ease;
+    }
+
+    .sponsor-track.fading {
+      opacity: 0;
+    }
+
+    .sponsor-track.scrolling {
+      animation: sponsor-scroll var(--sponsor-duration, 20s) linear infinite;
+    }
+
+    .sponsor-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35em;
+      padding: 0 1em;
+      font-size: 0.58em;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      color: var(--ov-muted);
+      white-space: nowrap;
+    }
+
+    .sponsor-item img {
+      height: 1.5em;
+      width: auto;
+      object-fit: contain;
+    }
+
+    .sponsor-item strong,
+    .sponsor-item b {
+      color: var(--ov-text);
+      font-weight: 800;
+    }
+
+    @keyframes sponsor-scroll {
+      from {
+        transform: translateX(0);
+      }
+
+      to {
+        transform: translateX(-50%);
+      }
+    }
+

@@ -1,0 +1,449 @@
+    /* Fixed-position wrapper: the score panel and the stat card stack inside
+       it so the corner presets and the scale slider move/size them together.
+       --ov-scale (set on :root by JS) is the single knob that drives both the
+       text (via font-size) and the px-based score-cell boxes (via --ov-col). */
+    .overlay-anchor {
+      position: fixed;
+      top: 16px;
+      left: 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.5em;
+      font-size: calc(24px * var(--ov-scale, 1));
+      z-index: 5;
+    }
+
+    .overlay-anchor.pos-tr {
+      left: auto;
+      right: 16px;
+      align-items: flex-end;
+    }
+
+    .overlay-anchor.pos-bl {
+      top: auto;
+      bottom: 16px;
+      flex-direction: column-reverse;
+    }
+
+    .overlay-anchor.pos-br {
+      top: auto;
+      bottom: 16px;
+      left: auto;
+      right: 16px;
+      flex-direction: column-reverse;
+      align-items: flex-end;
+    }
+
+    .overlay {
+      position: relative;
+      /* Content-driven width: name column + however many score cells exist.
+         Base case (2 sets + points) stays compact; extra sets widen the panel. */
+      width: fit-content;
+      min-width: 16em;
+      --ov-col: calc(64px * var(--ov-scale, 1));
+      --ov-name-col: 10.5em;
+      /* Two user-chosen colours blended at a user-chosen angle - no baked-in
+         sheen or fixed gradient. Pick the same colour twice for a flat fill. */
+      background: linear-gradient(var(--ov-grad-angle), var(--ov-panel), var(--ov-panel-2));
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: var(--ov-radius);
+      /* No overflow:hidden here — the point badge slides out past the right
+         edge. Children that could poke past the rounded corners (sponsor
+         strip) carry their own radius/clipping. */
+      box-shadow:
+        0 10px 35px rgba(0, 0, 0, 0.42),
+        inset 0 1px 0 rgba(255, 255, 255, 0.035);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.55em;
+      padding: 0.5em 1em 0.5em;
+      border-bottom: 1px solid var(--ov-line);
+    }
+
+    .brand img {
+      width: 1.55em;
+      height: 1.55em;
+      object-fit: contain;
+    }
+
+    .brand-name {
+      font-size: 0.82em;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.055em;
+      font-style: italic;
+    }
+
+    .brand-court {
+      margin-left: auto;
+      font-size: 0.7em;
+      font-weight: 600;
+      letter-spacing: 0.035em;
+      opacity: 0.85;
+      max-width: 38%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      color: var(--ov-muted);
+    }
+
+    .score-cells {
+      display: flex;
+      align-items: stretch;
+      gap: 0;
+      height: 100%;
+    }
+
+    .team-row {
+      position: relative;
+      display: grid;
+      /* The name column is measured in JS (syncNameColumn) and pinned to the
+         widest row's natural width, so names are never clipped and both team
+         rows keep their score columns aligned. */
+      grid-template-columns: var(--ov-name-col) auto;
+      align-items: center;
+      gap: 0.9em;
+      min-height: 4em;
+      padding: 0.0em 1em;
+      border-top: 1px solid var(--ov-line-soft);
+    }
+
+    .team-row::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 0.65em;
+      bottom: 0.65em;
+      width: 0.2em;
+      border-radius: 0 0.15em 0.15em 0;
+    }
+
+    .team-row[data-team="A"]::before {
+      background: var(--ov-teamA);
+      box-shadow: 0 0 12px color-mix(in srgb, var(--ov-teamA) 35%, transparent);
+    }
+
+    .team-row[data-team="B"]::before {
+      background: var(--ov-teamB);
+      box-shadow: 0 0 12px color-mix(in srgb, var(--ov-teamB) 35%, transparent);
+    }
+
+    .team-id {
+      display: flex;
+      align-items: center;
+      gap: 0.65em;
+      min-width: 0;
+    }
+
+    .team-logo {
+      width: 3em;
+      height: 3em;
+      object-fit: contain;
+      display: none;
+    }
+
+    .team-logo.visible {
+      display: block;
+    }
+
+    .team-names {
+      min-width: 0;
+    }
+
+    .team-name {
+      font-size: 0.6em;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--ov-muted);
+      white-space: nowrap;
+      margin-bottom: 0.12em;
+    }
+
+    .team-name.primary {
+      margin: 0;
+      font-size: 1em;
+      font-weight: 900;
+      letter-spacing: -0.015em;
+      color: var(--ov-text);
+      opacity: 1;
+    }
+
+    .team-row[data-team="A"] .team-name.primary {
+      color: var(--ov-teamA);
+    }
+
+    .team-row[data-team="B"] .team-name.primary {
+      color: var(--ov-teamB);
+    }
+
+    .player-line {
+      display: flex;
+      align-items: center;
+      gap: 0.35em;
+      min-width: 0;
+      font-size: 0.82em;
+      font-weight: 850;
+      text-transform: uppercase;
+      letter-spacing: -0.012em;
+      line-height: 1.2;
+      white-space: nowrap;
+      color: var(--ov-text);
+    }
+
+    .player-line.hidden {
+      display: none;
+    }
+
+    .player-name {
+      /* No ellipsis - the panel is widened to fit instead. */
+      white-space: nowrap;
+      font-size: 1.2em;
+      letter-spacing: 0.05em;
+    }
+
+    .serve-dot {
+      /* Positioning context for the ball, sized to this player's line so the
+         bounce cannot stray outside their row. */
+      position: relative;
+      flex: 0 0 auto;
+      width: 1em;
+      height: 1em;
+      visibility: hidden;
+      margin-left: 0.3em;
+    }
+
+    .serve-dot::after {
+      --size: 0.5em;
+      /* Drop from the top of the line to its baseline — the player's own
+         vertical region only. */
+      --bounceHeight: calc(1em - var(--size) + 0.05em);
+      content: "";
+      position: absolute;
+      top: 0;
+      left: calc(50% - var(--size) / 2);
+      width: var(--size);
+      height: var(--size);
+      background: currentColor;
+      border-radius: 50%;
+      z-index: 1;
+      animation: serve-anim 2s linear infinite;
+    }
+
+    @keyframes serve-anim {
+
+      100%,
+      0% {
+        transform: translateY(0);
+      }
+
+      10%,
+      90% {
+        transform: translateY(calc(var(--bounceHeight) * 0.02));
+      }
+
+      20%,
+      80% {
+        transform: translateY(calc(var(--bounceHeight) * 0.09));
+      }
+
+      30% {
+        transform: translateY(calc(var(--bounceHeight) * 0.25));
+      }
+
+      40% {
+        transform: translateY(calc(var(--bounceHeight) * 0.55));
+      }
+
+      50% {
+        transform: translateY(calc(var(--bounceHeight))) scaleX(1);
+      }
+
+      53% {
+        transform: translateY(var(--bounceHeight)) scaleX(1.5) scaleY(0.75);
+      }
+
+      60% {
+        transform: translateY(calc(var(--bounceHeight) * 0.55)) scaleX(0.75) scaleY(1.2);
+      }
+
+      70% {
+        transform: translateY(calc(var(--bounceHeight) * 0.25));
+      }
+    }
+
+    .team-row[data-team="A"] .serve-dot {
+      color: var(--ov-teamA);
+    }
+
+    .team-row[data-team="B"] .serve-dot {
+      color: var(--ov-teamB);
+    }
+
+    .serve-dot.serving {
+      visibility: visible;
+    }
+
+    .team-row>.score-cells {
+      align-items: center;
+    }
+
+    .team-row>.score-cells .cell {
+      position: relative;
+      flex: 0 0 var(--ov-col);
+      width: var(--ov-col);
+      height: var(--ov-col);
+      min-width: var(--ov-col);
+      min-height: var(--ov-col);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-left: 1px solid var(--ov-line);
+      text-align: center;
+      font-family: "Encode Sans Semi Expanded", "Arial", "Helvetica Neue", Helvetica, sans-serif;
+      font-variant-numeric: tabular-nums;
+      font-size: 1.55em;
+      font-weight: 700;
+      line-height: 1;
+      color: var(--ov-text);
+    }
+
+    .team-row>.score-cells .cell:first-child {
+      border-left: 0;
+    }
+
+    .team-row>.score-cells .cell.lost {
+      opacity: 0.7;
+    }
+
+    /* Shared by team rows and the header row so the PTS column stays aligned
+       even though their font sizes differ. */
+    .score-cells .cell.points {
+      margin-left: calc(0.8rem * var(--ov-scale, 1));
+    }
+
+    .team-row[data-team="A"]>.score-cells .cell.points {
+      border: 1px solid color-mix(in srgb, var(--ov-teamA) 75%, transparent);
+      border-radius: 0.2em;
+      background:
+        linear-gradient(135deg,
+          color-mix(in srgb, var(--ov-teamA) 3%, transparent),
+          color-mix(in srgb, var(--ov-teamA) 0%, transparent));
+      color: var(--ov-teamA);
+      box-shadow: inset 0 0 20px color-mix(in srgb, var(--ov-teamA) 5%, transparent);
+    }
+
+    .team-row[data-team="B"]>.score-cells .cell.points {
+      border: 1px solid color-mix(in srgb, var(--ov-teamB) 75%, transparent);
+      border-radius: 0.2em;
+      background:
+        linear-gradient(135deg,
+          color-mix(in srgb, var(--ov-teamB) 3%, transparent),
+          color-mix(in srgb, var(--ov-teamB) 0%, transparent));
+      color: var(--ov-teamB);
+      box-shadow: inset 0 0 20px color-mix(in srgb, var(--ov-teamB) 5%, transparent);
+    }
+
+    .status-line {
+      padding: 0.3em 1em 0.55em;
+      font-size: 0.58em;
+      font-weight: 700;
+      color: var(--ov-muted);
+      display: none;
+    }
+
+    .status-line.visible {
+      display: block;
+    }
+
+    .loading-line {
+      padding: 0.65em 1em 0.8em;
+      font-size: 0.65em;
+      font-weight: 600;
+      color: var(--ov-muted);
+      display: flex;
+      justify-content: center;
+    }
+
+    .loading-line.hidden {
+      display: none;
+    }
+
+    .score-body.hidden {
+      display: none;
+    }
+
+    /* ---------- Column headers ---------- */
+
+    .head-row {
+      display: grid;
+      grid-template-columns: var(--ov-name-col) auto;
+      gap: 0.9em;
+      align-items: end;
+      padding: 0.4em 1em 0;
+    }
+
+    .head-row .score-cells {
+      align-items: center;
+    }
+
+    .head-row .cell {
+      flex: 0 0 var(--ov-col);
+      width: var(--ov-col);
+      min-width: var(--ov-col);
+      text-align: center;
+      font-size: 0.52em;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--ov-muted);
+    }
+
+    .overlay.no-headers .head-row {
+      display: none;
+    }
+
+    .overlay.no-brand .brand {
+      display: none;
+    }
+
+    /* ---------- Score-change / new-set animations ---------- */
+
+    @keyframes cell-pop {
+      0% {
+        transform: scale(1);
+      }
+
+      35% {
+        transform: scale(1.25);
+      }
+
+      100% {
+        transform: scale(1);
+      }
+    }
+
+    .score-cells .cell.changed {
+      animation: cell-pop 0.5s ease;
+    }
+
+    @keyframes cell-in {
+      from {
+        opacity: 0;
+        transform: translateX(0.5em);
+      }
+
+      to {
+        opacity: 1;
+        transform: none;
+      }
+    }
+
+    .score-cells .cell.new {
+      animation: cell-in 0.5s ease both;
+    }
+
