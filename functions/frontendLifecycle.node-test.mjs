@@ -259,17 +259,17 @@ test("changeover shows backend processing feedback and recovers from failure", a
 
   try
   {
-    let resolveChangeover;
     callableHandlers.set(
       "changeoverCourt",
-      ({ courtId }) =>
-        new Promise((resolve) =>
-        {
-          resolveChangeover = async () => resolve(await originalHandler({ courtId }));
-        }),
+      async ({ courtId }) =>
+      {
+        await new Promise((resolve) => setTimeout(resolve, 50));
+        return originalHandler({ courtId });
+      },
     );
 
     button.click();
+    await settle(0);
 
     assert.equal(button.disabled, true);
     assert.equal(button.getAttribute("aria-busy"), "true");
@@ -277,8 +277,6 @@ test("changeover shows backend processing feedback and recovers from failure", a
     assert.equal(button.classList.contains("processing"), true);
     assert.equal(label.textContent, "Changing over…");
     assert.ok(button.querySelector(".changeover-spinner"));
-
-    resolveChangeover();
 
     await waitFor(
       () =>
