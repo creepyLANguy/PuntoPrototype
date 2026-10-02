@@ -1,6 +1,7 @@
 // Node module customization hooks that redirect the browser-only imports used
-// by app/js/script.js (Firebase CDN URLs, esm.sh, generated firebase-config.js)
-// to local mocks so the real frontend can run under node:test + jsdom.
+// by the frontend modules under app/js (Firebase CDN URLs, esm.sh, generated
+// firebase-config.js) to local mocks so the real frontend can run under
+// node:test + jsdom.
 import { fileURLToPath, pathToFileURL } from "node:url";
 import path from "node:path";
 
@@ -28,7 +29,12 @@ export async function resolve(specifier, context, nextResolve) {
     return { url: urlMap.get(specifier), shortCircuit: true };
   }
 
-  if (specifier === "./firebase-config.js" && context.parentURL?.includes("/app/js/")) {
+  // app/js/firebase-config.js is generated at deploy time and gitignored.
+  if (
+    /(?:^|\/)firebase-config\.js$/.test(specifier) &&
+    context.parentURL &&
+    new URL(specifier, context.parentURL).pathname.endsWith("/app/js/firebase-config.js")
+  ) {
     return { url: mockUrl("firebase-config.mjs"), shortCircuit: true };
   }
 

@@ -1,6 +1,6 @@
-// jsdom-based harness that boots the real frontend (app/index.html +
-// app/js/script.js) against the mocked Firebase SDK, so integration tests can
-// drive the actual UI and observe the actual DOM.
+// jsdom-based harness that boots the real frontend (app/index.html and the ES
+// module entry point it references, app/js/main.js) against the mocked Firebase
+// SDK, so integration tests can drive the actual UI and observe the actual DOM.
 import { register } from "node:module";
 import { readFileSync } from "node:fs";
 import path from "node:path";
@@ -23,7 +23,17 @@ const harnessDir = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(harnessDir, "..", "..");
 const indexHtmlPath = path.join(repoRoot, "app", "index.html");
 const stylesheetPath = path.join(repoRoot, "app", "css", "style.css");
-const scriptPath = path.join(repoRoot, "app", "js", "script.js");
+
+// The module entry point is read from the document itself, so the harness
+// always boots exactly what app/index.html loads in the browser.
+function resolveModuleEntryPath(html) {
+  const entry = html.match(/<script\s+type="module"\s+src="([^"]+)"/i);
+  if (!entry) throw new Error("app/index.html does not reference a module entry point");
+
+  const base = html.match(/<base\s+href="([^"]+)"/i)?.[1] || "/app/";
+  const { pathname } = new URL(entry[1], new URL(base, "https://padel.test/"));
+  return path.join(repoRoot, ...pathname.split("/").filter(Boolean));
+}
 
 let booted = false;
 
@@ -155,7 +165,7 @@ export async function bootFrontend({ url = "https://padel.test/" } = {}) {
   styleEl.textContent = readFileSync(stylesheetPath, "utf8");
   dom.window.document.head.appendChild(styleEl);
 
-  await import(pathToFileURL(scriptPath).href);
+  await import(pathToFileURL(resolveModuleEntryPath(html)).href);
 
   dom.window.document.dispatchEvent(
     new dom.window.Event("DOMContentLoaded", { bubbles: true, cancelable: false }),

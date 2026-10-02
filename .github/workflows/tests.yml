@@ -33,6 +33,10 @@ jobs:
       - name: Validate frontend structure
         run: node scripts/check-frontend-structure.mjs
 
+      - name: Lint frontend modules
+        working-directory: functions
+        run: npm run lint:frontend
+
       - name: Run unit, frontend, and OpenAPI contract tests
         working-directory: functions
         run: npm test

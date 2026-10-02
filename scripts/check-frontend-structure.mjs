@@ -28,7 +28,6 @@ import { BUILD_TARGETS, REPO_ROOT, findMissingReferences, runBuild } from "./bui
 const SIZE_BUDGET = { review: 600, fail: 900 };
 
 const SIZE_EXEMPTIONS = new Map([
-  ["app/js/script.js", "legacy monolith, pending extraction into module directories"],
   ["app/css/style.css", "legacy stylesheet, pending split into ordered source files"],
   ["app/index.html", "legacy document, pending split into templates"],
   ["app/overlay.html", "legacy overlay document, pending split into sources"],
@@ -36,10 +35,7 @@ const SIZE_EXEMPTIONS = new Map([
 
 // Modules that predate the module architecture and are temporarily excused
 // from the layering and compatibility-entry rules while they are extracted.
-const TRANSITIONAL_MODULES = new Map([
-  ["app/js/script.js", "legacy monolith, pending extraction"],
-  ["app/js/firebase.js", "still owns changeover UI behaviour, pending extraction"],
-]);
+const TRANSITIONAL_MODULES = new Map([]);
 
 // Directories and documents scanned for maintainability budgets. Generated
 // artifacts are skipped automatically; their sources are budgeted instead.
@@ -78,6 +74,7 @@ const FEATURE_LAYERS = [
   "routing",
   "scoring",
   "sharing",
+  "shell",
   "teams",
 ];
 

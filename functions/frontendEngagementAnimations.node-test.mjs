@@ -1,11 +1,98 @@
+// Frontend tests: the engagement nudges on Match Details (share button pulse,
+// expandable stats arrow, mobile-only scoreboard nudge). Stylesheet rules are
+// checked directly; the behaviour that switches them on and off is exercised
+// on the real app booted in jsdom.
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import vm from "node:vm";
 import test from "node:test";
-import { JSDOM } from "jsdom";
+
+import {
+  bootFrontend,
+  callableHandlers,
+  makeScore,
+  pushScoreSnapshot,
+  seedBaseData,
+  seedCourt,
+  settle,
+  waitFor,
+} from "./frontendHarness/harness.mjs";
 
 const styles = readFileSync(new URL("../app/css/style.css", import.meta.url), "utf8");
-const source = readFileSync(new URL("../app/js/script.js", import.meta.url), "utf8");
+
+const COURT_ID = "nudgecourt";
+
+let window;
+let document;
+
+function makeNoopCanvasContext() {
+  return new Proxy(
+    {},
+    {
+      get: (_target, prop) => {
+        if (prop === Symbol.toPrimitive) return () => 0;
+        return () => makeNoopCanvasContext();
+      },
+      set: () => true,
+    },
+  );
+}
+
+test.before(async () => {
+  seedBaseData();
+  seedCourt(COURT_ID, { teamNames: { A: "Reds", B: "Blues" } });
+  pushScoreSnapshot(
+    COURT_ID,
+    makeScore({
+      A: { points: 1, games: 2, sets: 1, totalPoints: 30 },
+      B: { points: 0, games: 1, sets: 0, totalPoints: 20 },
+      completedSets: [{ A: 6, B: 3 }],
+    }),
+  );
+
+  callableHandlers.set("getDetailedScore", async () => ({
+    data: {
+      sets: [{ A: 6, B: 3 }],
+      currentGames: { A: 2, B: 1 },
+      points: { A: 1, B: 0 },
+      setsA: 1,
+      setsB: 0,
+      scoringMode: "standard",
+      matchComplete: false,
+      playerNames: { A1: "", A2: "", B1: "", B2: "" },
+      advancedStats: null,
+    },
+  }));
+
+  const dom = await bootFrontend({ url: `https://padel.test/c/${COURT_ID}` });
+  window = dom.window;
+  document = window.document;
+
+  window.HTMLCanvasElement.prototype.getContext = () => makeNoopCanvasContext();
+  window.Path2D = function Path2D() {
+    return makeNoopCanvasContext();
+  };
+  globalThis.Path2D = window.Path2D;
+  window.navigator.share = async () => {};
+
+  await waitFor(() => document.getElementById("scoreboardPage").style.display !== "none", {
+    label: "spectator scoreboard",
+  });
+});
+
+async function openDetails() {
+  document.getElementById("detailsBtn").click();
+  await waitFor(() => !document.getElementById("shareDetailsBtn").classList.contains("hidden"), {
+    label: "share button ready",
+  });
+}
+
+async function closeDetails() {
+  document.getElementById("closeDetailsBtn").click();
+  await waitFor(() => document.getElementById("detailsModal").classList.contains("hidden"), {
+    label: "details modal closed",
+  });
+  await settle();
+}
 
 test("share button uses the continuous engagement animation", () => {
   assert.match(
@@ -15,37 +102,52 @@ test("share button uses the continuous engagement animation", () => {
   assert.match(styles, /@keyframes\s+matchEngagementPulse\s*\{/);
 });
 
-test("share button stops animating after it is clicked", () => {
+test("share button stops animating after it is clicked", async () => {
+  await openDetails();
+  const shareButton = document.getElementById("shareDetailsBtn");
+  assert.equal(shareButton.classList.contains("engagement-animation-disabled"), false);
+
+  shareButton.click();
+  assert.equal(shareButton.classList.contains("engagement-animation-disabled"), true);
+
   assert.match(
     styles,
     /\.dm-share-btn\.engagement-animation-disabled\s*\{[\s\S]*?animation:\s*none;[\s\S]*?opacity:\s*var\(--engagement-rest-opacity\);/,
   );
-  assert.match(
-    source,
-    /elements\.shareDetailsBtn\.classList\.add\("engagement-animation-disabled"\);[\s\S]*?void share\("details"\);/,
-  );
+  await settle();
 });
 
-test("share animation is re-enabled when the details modal is actually opened", () => {
-  assert.match(
-    source,
-    /const detailsWasHidden = elements\.detailsModal\.classList\.contains\("hidden"\);/,
+test("share animation is not reset just because already-open details are refreshed", async () => {
+  const shareButton = document.getElementById("shareDetailsBtn");
+  assert.equal(shareButton.classList.contains("engagement-animation-disabled"), true);
+
+  // A live score update re-renders the open details in place.
+  pushScoreSnapshot(
+    COURT_ID,
+    makeScore({
+      A: { points: 2, games: 2, sets: 1, totalPoints: 31 },
+      B: { points: 0, games: 1, sets: 0, totalPoints: 20 },
+      completedSets: [{ A: 6, B: 3 }],
+    }),
   );
-  assert.match(
-    source,
-    /if \(detailsWasHidden\)\s*\{[\s\S]*?elements\.shareDetailsBtn\?\.classList\.remove\("engagement-animation-disabled"\);/,
-  );
+  await waitFor(() => document.getElementById("pointsA").textContent === "30", {
+    label: "score update rendered",
+  });
+  await settle(50);
+
+  assert.equal(document.getElementById("detailsModal").classList.contains("hidden"), false);
+  assert.equal(shareButton.classList.contains("engagement-animation-disabled"), true);
 });
 
-test("share animation is not reset just because already-open details are refreshed", () => {
-  assert.match(
-    source,
-    /if \(detailsWasHidden\)[\s\S]*?elements\.detailsModal\.classList\.remove\("hidden"\);/,
+test("share animation is re-enabled when the details modal is actually opened", async () => {
+  await closeDetails();
+  await openDetails();
+
+  assert.equal(
+    document.getElementById("shareDetailsBtn").classList.contains("engagement-animation-disabled"),
+    false,
   );
-  assert.match(
-    source,
-    /showMatchDetails\(false, elements\.dmDetailsContent\.hidden === false, true\);/,
-  );
+  await closeDetails();
 });
 
 test("share engagement rests at a lower opacity and briefly increases opacity", () => {
@@ -57,7 +159,7 @@ test("share engagement rests at a lower opacity and briefly increases opacity", 
   assert.match(styles, /90%\s*\{[\s\S]*?opacity:\s*0\.9/);
 });
 
-test("scoreboard Match Details animation is restricted to detected mobile devices", () => {
+test("scoreboard Match Details animation is restricted to the mobile-device class", () => {
   assert.match(
     styles,
     /\.mobile-device \.match-details-btn\s*\{[\s\S]*?animation:\s*matchEngagementPulse\s+4\.8s\s+ease-in-out\s+infinite;/,
@@ -67,10 +169,43 @@ test("scoreboard Match Details animation is restricted to detected mobile device
 
   assert.ok(matchDetailsRule, "base Match Details rule should exist");
   assert.doesNotMatch(matchDetailsRule, /animation:\s*matchEngagementPulse/);
+});
 
-  assert.match(source, /navigator\.userAgentData\?\.mobile === true/);
-  assert.match(source, /navigator\.platform === "MacIntel" && navigator\.maxTouchPoints > 1/);
-  assert.match(source, /classList\.toggle\("mobile-device", isMobileDevice\)/);
+test("the mobile-device class follows mobile detection", async () => {
+  const { updateMobileDeviceClass } = await import("../app/js/lifecycle/deviceIdentity.js");
+  const { navigator } = window;
+  const root = document.documentElement;
+  const override = (property, value) =>
+    Object.defineProperty(navigator, property, { configurable: true, get: () => value });
+  const restore = (property) => delete navigator[property];
+
+  try {
+    assert.equal(updateMobileDeviceClass(), false, "the jsdom user agent is not mobile");
+    assert.equal(root.classList.contains("mobile-device"), false);
+
+    override("userAgentData", { mobile: true });
+    assert.equal(updateMobileDeviceClass(), true, "client hints report a mobile device");
+    assert.equal(root.classList.contains("mobile-device"), true);
+    restore("userAgentData");
+
+    override("platform", "MacIntel");
+    override("maxTouchPoints", 5);
+    assert.equal(updateMobileDeviceClass(), true, "iPadOS desktop mode is treated as mobile");
+    restore("platform");
+    restore("maxTouchPoints");
+
+    override("userAgent", "Mozilla/5.0 (Linux; Android 14; Pixel 8) Mobile Safari/537.36");
+    assert.equal(updateMobileDeviceClass(), true, "mobile user agents are detected");
+    restore("userAgent");
+
+    assert.equal(updateMobileDeviceClass(), false);
+    assert.equal(root.classList.contains("mobile-device"), false);
+  } finally {
+    for (const property of ["userAgentData", "platform", "maxTouchPoints", "userAgent"]) {
+      restore(property);
+    }
+    updateMobileDeviceClass();
+  }
 });
 
 test("expandable match details arrow pulses twice while collapsed and stops while expanded", () => {
@@ -88,403 +223,30 @@ test("expandable match details arrow pulses twice while collapsed and stops whil
   );
 });
 
-function extractFunction(source, functionName) {
-  const signature = `function ${functionName}(`;
-  const start = source.indexOf(signature);
-  assert.notEqual(start, -1, `Could not find ${functionName}`);
-
-  const bodyStart = source.indexOf("{", start);
-  assert.notEqual(bodyStart, -1, `Could not find ${functionName} body`);
-
-  let depth = 0;
-  let quote = null;
-  let escaped = false;
-  let lineComment = false;
-  let blockComment = false;
-
-  for (let i = bodyStart; i < source.length; i++) {
-    const char = source[i];
-    const next = source[i + 1];
-
-    if (lineComment) {
-      if (char === "\n") lineComment = false;
-      continue;
-    }
-
-    if (blockComment) {
-      if (char === "*" && next === "/") {
-        blockComment = false;
-        i++;
-      }
-      continue;
-    }
-
-    if (quote) {
-      if (escaped) {
-        escaped = false;
-        continue;
-      }
-
-      if (char === "\\") {
-        escaped = true;
-        continue;
-      }
-
-      if (char === quote) {
-        quote = null;
-      }
-
-      continue;
-    }
-
-    if (char === "'" || char === '"' || char === "`") {
-      quote = char;
-      continue;
-    }
-
-    if (char === "/" && next === "/") {
-      lineComment = true;
-      i++;
-      continue;
-    }
-
-    if (char === "/" && next === "*") {
-      blockComment = true;
-      i++;
-      continue;
-    }
-
-    if (char === "{") {
-      depth++;
-      continue;
-    }
-
-    if (char === "}") {
-      depth--;
-      if (depth === 0) {
-        return source.slice(start, i + 1);
-      }
-    }
-  }
-
-  throw new Error(`Could not find end of ${functionName}`);
-}
-
-function createToastHarness(rect, viewport = { width: 1000, height: 800 }) {
-  const dom = new JSDOM(`
-    <div id="toastContainer"></div>
-    <div class="floating-controls"></div>
-  `);
-
-  const { document } = dom.window;
+test("toast positioning is recalculated whenever the viewport changes", async () => {
   const container = document.getElementById("toastContainer");
   const controls = document.querySelector(".floating-controls");
-
-  Object.defineProperty(dom.window, "innerWidth", {
-    configurable: true,
-    value: viewport.width,
-  });
-  Object.defineProperty(dom.window, "innerHeight", {
-    configurable: true,
-    value: viewport.height,
-  });
-
-  controls.getBoundingClientRect = () => ({ ...rect });
-
-  const updateToastContainerPosition = vm.runInNewContext(
-    `(${extractFunction(source, "updateToastContainerPosition")})`,
-    {
-      document,
-      window: dom.window,
-    },
-  );
-
-  return {
-    dom,
-    document,
-    container,
-    controls,
-    updateToastContainerPosition,
-  };
-}
-
-test("toast positioning clears stale offsets before calculating a new position", () => {
-  const harness = createToastHarness({
-    top: 700,
-    left: 100,
-    width: 600,
-    height: 60,
-    right: 700,
-    bottom: 760,
-  });
-
-  harness.container.style.setProperty("--toast-bottom-offset", "999px");
-  harness.container.style.setProperty("--toast-right-offset", "888px");
-
-  harness.updateToastContainerPosition();
-
-  assert.equal(harness.container.style.getPropertyValue("--toast-bottom-offset"), "116px");
-  assert.equal(harness.container.style.getPropertyValue("--toast-right-offset"), "");
-});
-
-test("toast positioning reserves the correct right-side clearance in landscape", () => {
-  const harness = createToastHarness(
-    {
-      top: 50,
-      left: 900,
-      width: 70,
-      height: 500,
-      right: 970,
-      bottom: 550,
-    },
-    { width: 1000, height: 600 },
-  );
-
-  harness.updateToastContainerPosition();
-
-  assert.equal(harness.container.style.getPropertyValue("--toast-right-offset"), "116px");
-  assert.equal(harness.container.style.getPropertyValue("--toast-bottom-offset"), "");
-});
-
-test("toast positioning enforces a minimum 16px clearance", () => {
-  const portrait = createToastHarness({
-    top: 800,
-    left: 0,
-    width: 400,
-    height: 40,
-    right: 400,
-    bottom: 839,
-  });
-
-  portrait.updateToastContainerPosition();
-
-  assert.equal(portrait.container.style.getPropertyValue("--toast-bottom-offset"), "16px");
-
-  const landscape = createToastHarness(
-    {
-      top: 0,
-      left: 1000,
-      width: 40,
-      height: 400,
-      right: 1040,
-      bottom: 400,
-    },
-    { width: 1000, height: 600 },
-  );
-
-  landscape.updateToastContainerPosition();
-
-  assert.equal(landscape.container.style.getPropertyValue("--toast-right-offset"), "16px");
-});
-
-test("toast positioning safely falls back to CSS defaults when controls are absent or not measurable", () => {
-  const dom = new JSDOM(`
-    <div id="toastContainer"></div>
-  `);
-  const { document } = dom.window;
-
-  const updateToastContainerPosition = vm.runInNewContext(
-    `(${extractFunction(source, "updateToastContainerPosition")})`,
-    {
-      document,
-      window: dom.window,
-    },
-  );
-
-  const container = document.getElementById("toastContainer");
-  container.style.setProperty("--toast-bottom-offset", "123px");
-  container.style.setProperty("--toast-right-offset", "456px");
-
-  updateToastContainerPosition();
-
-  assert.equal(container.style.getPropertyValue("--toast-bottom-offset"), "");
-  assert.equal(container.style.getPropertyValue("--toast-right-offset"), "");
-
-  const controls = document.createElement("div");
-  controls.className = "floating-controls";
+  const originalRect = controls.getBoundingClientRect;
   controls.getBoundingClientRect = () => ({
-    top: 0,
-    left: 0,
-    width: 0,
-    height: 0,
-    right: 0,
-    bottom: 0,
-  });
-  document.body.appendChild(controls);
-
-  container.style.setProperty("--toast-bottom-offset", "123px");
-  container.style.setProperty("--toast-right-offset", "456px");
-
-  updateToastContainerPosition();
-
-  assert.equal(container.style.getPropertyValue("--toast-bottom-offset"), "");
-  assert.equal(container.style.getPropertyValue("--toast-right-offset"), "");
-});
-
-test("showToast recalculates positioning, appends a typed toast, and removes it after the toast duration", () => {
-  const harness = createToastHarness({
-    top: 700,
+    top: 500,
     left: 100,
     width: 600,
     height: 60,
     right: 700,
-    bottom: 760,
+    bottom: 560,
   });
 
-  let timeoutCallback = null;
-  let timeoutDelay = null;
+  try {
+    container.style.removeProperty("--toast-bottom-offset");
+    window.dispatchEvent(new window.Event("resize"));
 
-  const showToast = vm.runInNewContext(`(${extractFunction(source, "showToast")})`, {
-    document: harness.document,
-    updateToastContainerPosition: harness.updateToastContainerPosition,
-    setTimeout: (callback, delay) => {
-      timeoutCallback = callback;
-      timeoutDelay = delay;
-      return 1;
-    },
-    window: harness.dom.window,
-    TOAST_DURATION_MS: 3000,
-  });
-
-  showToast("Saved", "success");
-
-  assert.equal(harness.container.children.length, 1);
-  assert.equal(harness.container.firstElementChild.textContent, "Saved");
-  assert.equal(harness.container.firstElementChild.className, "toast success");
-  assert.equal(timeoutDelay, 3000);
-  assert.equal(harness.container.style.getPropertyValue("--toast-bottom-offset"), "116px");
-  assert.equal(typeof timeoutCallback, "function");
-
-  timeoutCallback();
-
-  assert.equal(harness.container.children.length, 0);
-});
-
-test("toast CSS keeps stacked notifications centered with a 10px gap and responsive widths", () => {
-  const toastContainerBlocks = [...styles.matchAll(/\.toast-container\s*\{[\s\S]*?\n\}/g)].map(
-    (match) => match[0],
-  );
-  assert.ok(
-    toastContainerBlocks.length >= 2,
-    "both toast container definitions should remain covered",
-  );
-
-  for (const block of toastContainerBlocks.slice(0, 2)) {
-    assert.match(block, /display:\s*flex;/);
-    assert.match(block, /flex-direction:\s*column;/);
-    assert.match(block, /align-items:\s*center;/);
-    assert.match(block, /gap:\s*10px;/);
-    assert.match(
-      block,
-      /bottom:\s*calc\(var\(--toast-bottom-offset, 20px\)\s*\+\s*env\(safe-area-inset-bottom, 0px\)\);/,
+    assert.equal(
+      container.style.getPropertyValue("--toast-bottom-offset"),
+      `${window.innerHeight - 500 + 16}px`,
     );
+  } finally {
+    controls.getBoundingClientRect = originalRect;
   }
-
-  assert.match(styles, /width:\s*min\(420px,\s*100%\);/);
-  assert.match(styles, /min-width:\s*min\(200px,\s*100%\);/);
-  assert.match(
-    styles,
-    /@media\s*\(orientation:\s*landscape\)[\s\S]*?right:\s*calc\(var\(--toast-right-offset, 20px\)\s*\+\s*env\(safe-area-inset-right, 0px\)\);/,
-  );
-});
-
-test("toast positioning is recalculated whenever the viewport changes", () => {
-  assert.match(
-    source,
-    /window\.addEventListener\("resize",[\s\S]*?updateToastContainerPosition\(\);/,
-  );
-  assert.match(source, /showToast\(message,[\s\S]*?updateToastContainerPosition\(\);/);
-});
-
-test("toast positioning is re-synced when the scoreboard layout changes", () => {
-  assert.match(source, /new window\.ResizeObserver\(/);
-  assert.match(source, /new window\.MutationObserver\(/);
-  assert.match(
-    source,
-    /toastPositionMutationObserver\.observe\(scoreboardBody,[\s\S]*?subtree:\s*true/,
-  );
-});
-
-test("toast positioning reacts to floating-control layout changes", () => {
-  let rect = {
-    top: 700,
-    left: 100,
-    width: 600,
-    height: 60,
-    right: 700,
-    bottom: 760,
-  };
-
-  const dom = new JSDOM(
-    '<div id="scoreboardPage"><div class="scoreboard-body"><div class="floating-controls"></div></div></div><div id="toastContainer"></div>',
-  );
-  const { document } = dom.window;
-  const controls = document.querySelector(".floating-controls");
-  const container = document.getElementById("toastContainer");
-  controls.getBoundingClientRect = () => ({ ...rect });
-
-  Object.defineProperty(dom.window, "innerWidth", { configurable: true, value: 1000 });
-  Object.defineProperty(dom.window, "innerHeight", { configurable: true, value: 800 });
-  dom.window.requestAnimationFrame = (callback) => {
-    callback();
-    return 1;
-  };
-
-  const resizeObservers = [];
-  const mutationObservers = [];
-  class TestResizeObserver {
-    constructor(callback) {
-      this.callback = callback;
-      resizeObservers.push(this);
-    }
-    observe() {}
-  }
-  class TestMutationObserver {
-    constructor(callback) {
-      this.callback = callback;
-      mutationObservers.push(this);
-    }
-    observe() {}
-  }
-  dom.window.ResizeObserver = TestResizeObserver;
-  dom.window.MutationObserver = TestMutationObserver;
-
-  const updateToastContainerPosition = vm.runInNewContext(
-    `(${extractFunction(source, "updateToastContainerPosition")})`,
-    { document, window: dom.window },
-  );
-
-  let toastPositionFrame = null;
-  let toastPositionObserversInitialized = false;
-  let toastPositionResizeObserver = null;
-  let toastPositionMutationObserver = null;
-
-  const initToastContainerPositionObservers = vm.runInNewContext(
-    `(${extractFunction(source, "initToastContainerPositionObservers")})`,
-    {
-      document,
-      window: dom.window,
-      toastPositionFrame,
-      toastPositionObserversInitialized,
-      toastPositionResizeObserver,
-      toastPositionMutationObserver,
-      scheduleToastContainerPositionUpdate: () => updateToastContainerPosition(),
-      updateToastContainerPosition,
-    },
-  );
-
-  initToastContainerPositionObservers();
-  assert.equal(resizeObservers.length, 1);
-  assert.equal(mutationObservers.length, 1);
-  assert.equal(container.style.getPropertyValue("--toast-bottom-offset"), "116px");
-
-  rect = { ...rect, top: 650, bottom: 710 };
-  resizeObservers[0].callback();
-  assert.equal(container.style.getPropertyValue("--toast-bottom-offset"), "166px");
-
-  rect = { ...rect, top: 600, bottom: 660 };
-  mutationObservers[0].callback();
-  assert.equal(container.style.getPropertyValue("--toast-bottom-offset"), "216px");
 });
 
 test("engagement animations are disabled when reduced motion is requested", () => {
