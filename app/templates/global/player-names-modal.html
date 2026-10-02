@@ -1,0 +1,49 @@
+    <!-- ================= PLAYER NAMES MODAL ================= -->
+    <div id="playerNamesModal" class="reset-modal hidden">
+      <div class="player-names-box">
+        <button id="closePlayerNamesBtn" class="close-btn">✕</button>
+        <h2>Team Names & Players</h2>
+        <p class="player-names-copy">Update the team labels and the four player names shown on the scoreboard.</p>
+        <form id="playerNamesForm" class="player-names-form">
+          <div class="player-names-grid">
+            <label class="form-group player-names-field">
+              <span>Team A</span>
+              <input type="text" id="playerTeamAName" autocomplete="off" autocapitalize="words" spellcheck="false" />
+            </label>
+            <label class="form-group player-names-field">
+              <span>Team B</span>
+              <input type="text" id="playerTeamBName" autocomplete="off" autocapitalize="words" spellcheck="false" />
+            </label>
+          </div>
+          <div class="player-team-grid">
+            <section class="player-team-panel">
+              <h4>Team A players</h4>
+              <label class="form-group player-names-field-a">
+                <span>Player A1</span>
+                <input type="text" id="playerNameA1" autocomplete="off" autocapitalize="words" spellcheck="false" />
+              </label>
+              <label class="form-group player-names-field-a">
+                <span>Player A2</span>
+                <input type="text" id="playerNameA2" autocomplete="off" autocapitalize="words" spellcheck="false" />
+              </label>
+            </section>
+            <section class="player-team-panel">
+              <h4>Team B players</h4>
+              <label class="form-group player-names-field-b">
+                <span>Player B1</span>
+                <input type="text" id="playerNameB1" autocomplete="off" autocapitalize="words" spellcheck="false" />
+              </label>
+              <label class="form-group player-names-field-b">
+                <span>Player B2</span>
+                <input type="text" id="playerNameB2" autocomplete="off" autocapitalize="words" spellcheck="false" />
+              </label>
+            </section>
+          </div>
+          <p class="player-names-hint">Leave a field blank to reset it to its default.</p>
+          <div class="player-names-actions">
+            <button type="button" id="cancelPlayerNamesBtn" class="secondary-btn">Cancel</button>
+            <button type="submit" class="primary-btn">Save Names</button>
+          </div>
+        </form>
+      </div>
+    </div>

@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, interactive-widget=resizes-content" />
+  <base href="/app/" />
+  <title>Padel Push™ - Live Scoreboard</title>
+  <meta name="description"
+    content="Padel Push™ — Live padel scoring system. Track points, games, sets, and matches in real-time." />
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <!-- crossorigin lets html-to-image read cssRules when embedding web fonts into
+       the shareable score card; without it every capture logs a DOMException. -->
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800;900&family=Outfit:wght@300;400;600;700;800;900&display=swap"
+    rel="stylesheet" crossorigin="anonymous" />
+  <link rel="stylesheet" href="css/style.css" />
+  <script src="js/jscolor.min.js"></script>
+  <script src="js/qrcode.min.js"></script>
+  <script type="module" src="js/main.js?v=modular-frontend-1"></script>
+  <link rel="icon" type="image/svg+xml" href="/media/favicon.svg">
+
+  <meta name="theme-color" content="#111827" />
+  <meta name="color-scheme" content="dark light" />
+  
+  <link rel="canonical" href="https://www.padelpush.co.za/app/" />
+
+  <meta property="og:title" content="Padel Push™ - Live Scoreboard" />
+  <meta property="og:description"
+    content="Live padel scoring system. Track points, games, sets and matches in real time." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://www.padelpush.co.za/app/" />
+  
+  <meta property="og:image" content="https://www.padelpush.co.za/media/social-preview.png" />
+  
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:image:type" content="image/png" />
+  
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:image" content="https://www.padelpush.co.za/media/social-preview.png" />
+  <meta name="twitter:image:alt" content="Padel Push™ - Live padel scoring" />
+</head>
+
+<body>
+  <div id="content-container">
+
+    <!-- @include global/waves.html -->
+
+    <!-- @include global/controls.html -->
+
+    <!-- @include global/modals.html -->
+
+    <!-- @include global/settings-modal.html -->
+
+    <!-- @include global/player-names-modal.html -->
+
+    <!-- @include global/details-modal.html -->
+
+    <!-- @include global/startup-loading.html -->
+
+    <!-- @include pages/menu.html -->
+
+    <!-- @include pages/admin/auth.html -->
+
+    <!-- @include pages/admin/dashboard.html -->
+
+    <!-- @include pages/admin/add-device.html -->
+
+    <!-- @include pages/admin/edit-device.html -->
+
+    <!-- @include pages/admin/create-court.html -->
+
+    <!-- @include pages/admin/edit-court.html -->
+
+    <!-- ================= TOAST NOTIFICATIONS ================= -->
+    <div id="toastContainer" class="toast-container"></div>
+
+    <!-- @include pages/play.html -->
+
+    <!-- @include pages/spectate.html -->
+
+    <!-- @include pages/scoreboard.html -->
+
+
+    <!-- @include global/set-win-overlay.html -->
+
+  </div> <!-- CONTENT CONTAINER -->
+</body>
+
+</html>

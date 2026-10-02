@@ -27,6 +27,7 @@ export const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url
 // stylesheet; `output` is the file Firebase Hosting serves.
 export const BUILD_TARGETS = [
   { kind: "css", source: "app/css/index.css", output: "app/css/style.css" },
+  { kind: "html", source: "app/templates/index.template.html", output: "app/index.html" },
 ];
 
 const HTML_INCLUDE = /^[ \t]*<!--[ \t]*@include[ \t]+(\S+)[ \t]*-->[ \t]*$/;

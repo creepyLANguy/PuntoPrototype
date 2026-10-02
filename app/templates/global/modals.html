@@ -1,0 +1,45 @@
+    <!-- ================= GLOBAL MODALS ================= -->
+    <div id="alertModal" class="alert-modal hidden">
+      <div class="alert-box">
+        <h2 id="alertTitle"></h2>
+        <p id="alertMessage"></p>
+        <button id="alertBtn" class="alert-btn">OK</button>
+      </div>
+    </div>
+
+    <div id="resetModal" class="reset-modal hidden">
+      <div class="reset-box">
+        <p>Reset the entire match?</p>
+        <div class="form-group">
+          <label>New Court Password (optional)</label>
+          <input type="password" id="resetCourtPassword" placeholder="Leave blank to keep current password" autocomplete="new-password" />
+          <p class="reset-hint">Enter a new password (min 4 characters) to change it, or leave this blank to keep the current password.</p>
+          <p class="reset-warning">⚠ Changing the password switches every other player in this court to spectate mode.</p>
+          <div class="error" id="resetPasswordError"></div>
+        </div>
+        <div class="reset-actions">
+          <button id="confirmReset" type="button">Full Reset</button>
+          <button id="shallowReset" type="button">Keep Teams</button>
+          <button id="cancelReset" type="button">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="confirmModal" class="reset-modal hidden">
+      <div class="reset-box">
+        <p id="confirmMessage"></p>
+        <div class="reset-actions">
+          <button id="confirmOkBtn" type="button">OK</button>
+          <button id="confirmCancelBtn" type="button">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <!--
+    <div id="shareImageModal" class="share-image-modal hidden" role="dialog" aria-modal="true" aria-label="Share image preview">
+      <div class="share-image-box">
+        <button id="closeShareImageBtn" class="share-image-close" type="button" aria-label="Close share image preview" title="Close">✕</button>
+        <img id="shareImagePreview" alt="Shareable match score card preview" />
+      </div>
+    </div>
+    -->

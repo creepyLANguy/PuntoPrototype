@@ -1,0 +1,154 @@
+    <!-- ================= SCOREBOARD (HIDDEN INITIALLY) ================= -->
+    <div id="scoreboardPage" style="display:none;">
+      <!-- Scoreboard Loading Overlay -->
+      <div id="scoreboardLoading" class="scoreboard-loading">
+        <div class="loading-content">
+          <div class="loading-indicator">
+            <div class="spinner-wrapper">
+              <img src="/media/logo.svg" alt="Padel Push™ Logo" class="loading-logo" />
+              <div class="spinner"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <aside id="courtQrPanel" class="court-qr-panel hidden" aria-live="polite">
+        <div id="courtQrCode" class="court-qr-code" aria-hidden="true"></div>
+        <div id="courtQrLabel" class="court-qr-label"></div>
+        <button type="button" class="qr-resize-handle qr-resize-handle--nw" data-corner="nw"
+          aria-label="Resize QR panel from top left corner"></button>
+        <button type="button" class="qr-resize-handle qr-resize-handle--ne" data-corner="ne"
+          aria-label="Resize QR panel from top right corner"></button>
+        <button type="button" class="qr-resize-handle qr-resize-handle--sw" data-corner="sw"
+          aria-label="Resize QR panel from bottom left corner"></button>
+        <button type="button" class="qr-resize-handle qr-resize-handle--se" data-corner="se"
+          aria-label="Resize QR panel from bottom right corner"></button>
+      </aside>
+
+      <!-- ================= SCOREBOARD BODY ================= -->
+      <div class="scoreboard-body">
+
+        <!-- SIDEBAR (Landscape) / HEADER (Portrait) -->
+        <aside class="sidebar-left">
+          <div class="left-group">
+            <div class="marquee-wrapper">
+              <div class="marquee-content">
+                <div class="scoreboard-branding">
+                  <img src="/media/logo.svg" alt="Padel Push™ Logo" class="scoreboard-logo" />
+                  <span class="scoreboard-app-name">Padel Push™</span>
+                </div>
+                <span class="marquee-separator">/</span>
+                <span id="courtTitle"></span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Spectator badge is injected by JS here -->
+          <div class="header-spectator-badge-slot"></div>
+        </aside>
+
+        <!-- ===== SCOREBOARD ===== -->
+        <main class="app">
+          <section class="scoreboard">
+
+            <div id="nfcCooldownBanner" class="nfc-cooldown hidden">
+              Scan locked — <span id="nfcCountdown">3</span>s
+            </div>
+
+            <div id="scoreFormatBadge" class="score-format-badge hidden"></div>
+
+            <!-- TEAM A -->
+            <div class="team team-a" id="teamA">
+              <button id="addPointA" class="ref-zone"></button>
+              <h2 class="team-name" data-team="A">
+                <span class="name-text">Team A</span>
+              </h2>
+
+              <div class="meta">
+                <div class="row sets-row">
+                  <span>Sets</span>
+                  <span id="setsA"></span>
+                </div>
+                <div class="row games-row">
+                  <span>Games</span>
+                  <span id="gamesA"></span>
+                </div>
+              </div>
+
+              <div class="server-badge hidden" id="serverBadgeA">A1</div>
+              <div class="indicator"></div>
+
+              <div class="points-wrapper">
+                <div class="points" id="pointsA">0</div>
+                <div class="critical-badge hidden" id="criticalA"></div>
+              </div>
+            </div><!-- TEAM A -->
+
+            <!-- STRAIGHT POINTS TOTAL -->
+            <div id="straightPointsTotal" class="straight-total hidden">
+              <span class="straight-total-label">Total</span>
+              <span class="straight-total-value" id="straightTotalValue">0</span>
+            </div>
+
+            <!-- TEAM B -->
+            <div class="team team-b" id="teamB">
+              <button id="addPointB" class="ref-zone"></button>
+              <h2 class="team-name" data-team="B">
+                <span class="name-text">Team B</span>
+              </h2>
+
+              <div class="meta">
+                <div class="row sets-row">
+                  <span>Sets</span>
+                  <span id="setsB"></span>
+                </div>
+                <div class="row games-row">
+                  <span>Games</span>
+                  <span id="gamesB"></span>
+                </div>
+              </div>
+
+              <div class="server-badge hidden" id="serverBadgeB">B1</div>
+              <div class="indicator"></div>
+
+              <div class="points-wrapper">
+                <div class="points" id="pointsB">0</div>
+                <div class="critical-badge hidden" id="criticalB"></div>
+              </div>
+            </div><!-- TEAM B -->
+
+          </section>
+        </main><!-- APP -->
+
+        <div class="floating-controls">
+          <button id="backBtn" class="floating-btn" title="Back">✕</button>
+
+          <div id="sep1" class="btn-separator type-sep"></div>
+
+          <button id="undoBtn" class="floating-btn" title="Undo">↩</button>
+          <button id="settingsBtn" class="floating-btn" title="Options">⛭</button>
+
+          <div id="sep2" class="btn-separator type-sep"></div>
+
+          <button id="detailsBtn" class="floating-btn match-details-btn" title="Match Details">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" height="512" width="512">
+              <path 
+                d="m 462.96577,144.59417 c -36.8941,36.8941 -82.35718,76.9634 -122.33085,116.67502 -44.56356,-40.61274 -54.02207,-48.30091 -74.79583,-69.07467 -7.447,-7.435 -16.7333,-15.44954 -26.20417,-9.57033 -122.57985,122.57985 -121.84836,123.63092 -121.84836,123.63092 -15.56089,16.4391 4.7326,38.96688 23.16582,20.41156 l 76.68254,-77.19048 c 8.33435,-8.38956 12.80083,-12.16483 29,-28.364 l 75.87332,68.364 c 18.84817,15.58492 27.2522,9.29741 64.12668,-27 l 65,-65 c 10.833,-10.833 13.88316,-14.68316 33.2,-34 8.687,-12.439 -10.65625,-30.09492 -21.86915,-18.88202 z m -29.33085,291.05302 c 21.20709,0 22.65738,31.829 -4,31.829 h -371 c -7.7125,0 -17.7515,1.72 -23.7863,-4.225 -6.3456,-6.25 -5.2137,-16.659 -5.2137,-24.775 0,-112.57333 -0.102628,-250.09842 0.0039,-375.999996 0.506845,-20.732041 31.7824,-20.452081 31.7824,-0.380955 0.575577,124.459211 0.01263,248.921051 0.2137,373.380951 371.63492,-0.68254 372,0.171 372,0.171 z"
+                />
+            </svg>
+          </button>          
+
+          <div id="sep3" class="btn-separator type-sep"></div>
+
+          <button id="shareCourtBtn" class="floating-btn share-court-btn" title="Share">
+            <svg fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path
+                d="M21.707,11.293l-8-8A.99991.99991,0,0,0,12,4V7.54492A11.01525,11.01525,0,0,0,2,18.5V20a1,1,0,0,0,1.78418.62061,11.45625,11.45625,0,0,1,7.88672-4.04932c.0498-.00635.1748-.01611.3291-.02588V20a.99991.99991,0,0,0,1.707.707l8-8A.99962.99962,0,0,0,21.707,11.293ZM14,17.58594V15.5a.99974.99974,0,0,0-1-1c-.25488,0-1.2959.04932-1.56152.085A14.00507,14.00507,0,0,0,4.05176,17.5332,9.01266,9.01266,0,0,1,13,9.5a.99974.99974,0,0,0,1-1V6.41406L19.58594,12Z" />
+            </svg>
+          </button>
+
+        </div>
+
+      </div><!-- SCOREBOARD BODY -->
+
+    </div> <!-- SCOREBOARD PAGE -->

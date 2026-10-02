@@ -1,0 +1,83 @@
+    <!-- ================= DETAILS MODAL ================= -->
+    <div id="detailsModal" class="reset-modal hidden">
+      <div class="dm-box" id="dmBox">
+        <button id="closeDetailsBtn" class="dm-close">✕</button>
+        <button id="shareDetailsBtn" class="dm-share-btn hidden" type="button" title="Share match details" aria-label="Share match details">
+          <svg fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path
+            d="M21.707,11.293l-8-8A.99991.99991,0,0,0,12,4V7.54492A11.01525,11.01525,0,0,0,2,18.5V20a1,1,0,0,0,1.78418.62061,11.45625,11.45625,0,0,1,7.88672-4.04932c.0498-.00635.1748-.01611.3291-.02588V20a.99991.99991,0,0,0,1.707.707l8-8A.99962.99962,0,0,0,21.707,11.293ZM14,17.58594V15.5a.99974.99974,0,0,0-1-1c-.25488,0-1.2959.04932-1.56152.085A14.00507,14.00507,0,0,0,4.05176,17.5332,9.01266,9.01266,0,0,1,13,9.5a.99974.99974,0,0,0,1-1V6.41406L19.58594,12Z" />
+          </svg>
+        </button>
+
+        <!-- Watermark -->
+        <div class="dm-watermark" aria-hidden="true">
+          <img src="/media/logo.svg" alt="" />
+        </div>
+
+        <!-- Header: logo + title -->
+        <div class="dm-header">
+          <img src="/media/logo.svg" class="dm-logo" alt="Padel Push™ logo" />
+          <h1 class="dm-title">
+            Padel Push™
+          </h1>
+          <h4 id="matchDetailsCourtName">Match Details</h4>
+        </div>
+
+        <!-- Middle section: names and summary -->
+        <div class="dm-mid-section">
+          <div class="dm-teams">
+            <span id="detailsTeamAName" class="dm-name dm-name-a">Team A</span>
+            <span class="dm-vs">vs</span>
+            <span id="detailsTeamBName" class="dm-name dm-name-b">Team B</span>
+          </div>
+
+          <!-- Overall set score -->
+          <div class="dm-overall">
+            <span id="detailsSetsA" class="dm-sets dm-sets-a"></span>
+            <span class="dm-dash">—</span>
+            <span id="detailsSetsB" class="dm-sets dm-sets-b"></span>
+          </div>
+        </div>
+
+        <!-- Per-set breakdown table -->
+        <div class="dm-table-wrap">
+          <table id="dmTable" class="dm-table">
+            <thead id="dmHead">
+              <tr></tr>
+            </thead>
+            <tbody id="dmBody"></tbody>
+          </table>
+        </div>
+
+        <div class="dm-details-panel hidden" id="dmDetailsPanel">
+          <button type="button" class="dm-details-toggle" id="dmDetailsToggle" aria-expanded="false"
+            aria-controls="dmDetailsContent">
+            <span class="dm-details-toggle-title">Detailed Stats</span>
+            <span class="dm-details-toggle-hint">Tap to expand</span>
+            <span class="dm-details-toggle-icon" aria-hidden="true">▼</span>
+          </button>
+
+          <div class="dm-details-content" id="dmDetailsContent" hidden>
+            <!-- Momentum graph: hidden until its payload has points to draw. -->
+            <div class="dm-momentum-wrap hidden" id="dmMomentumWrap">
+              <div class="dm-momentum-label">Match Momentum</div>
+              <canvas id="dmMomentumCanvas" class="dm-momentum-canvas"></canvas>
+            </div>
+
+            <div class="dm-stats-wrap hidden" id="dmStatsWrap">
+              <div id="dmStatsTeam"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="dm-empty-state hidden" id="dmEmptyState" role="status" aria-live="polite">
+          Once the first game is played, match details will appear here.
+        </div>
+
+        <div class="dm-error-state hidden" id="dmErrorState" role="status" aria-live="polite">
+          Match details could not be loaded. Please try again later.
+        </div>
+
+        <div class="loading hidden" id="detailsLoading">Loading...<span class="loader"></span></div>        
+      </div>
+    </div>

@@ -1,0 +1,47 @@
+    <!-- ================= ADMIN DASHBOARD PAGE ================= -->
+    <div id="adminDashboardPage" style="display:none;" class="create-page">
+      <div class="admin-dashboard-container">
+        <div class="admin-dashboard-header">
+          <button id="closeAdminDashboardBtn" class="close-btn">✕</button>
+          <h2>Admin Dashboard</h2>
+          <div class="header-actions">
+            <button id="showCreateCourtModalBtn" class="primary-btn">Create Court</button>
+            <button id="showAddDeviceModalBtn" class="primary-btn">Add Device</button>
+            <button id="nfcToolBtn" class="primary-btn">NFC Tool</button>
+            <button id="deviceHarnessBtn" class="primary-btn">Device Lab</button>
+          </div>
+        </div>
+
+        <div class="admin-tabs">
+          <button class="tab-btn active" data-tab="courts">Courts</button>
+          <button class="tab-btn" data-tab="devices">Devices</button>
+        </div>
+
+        <div id="courtsTab" class="tab-content active">
+          <div class="admin-dashboard-controls">
+            <div class="search-wrapper">
+              <input type="text" id="adminCourtSearch" placeholder="Search courts..." />
+            </div>
+            <div class="filter-wrapper">
+              <select id="adminStatusFilter">
+                <option value="all">⚪ All</option>
+                <option value="open">🟢 Open</option>
+                <option value="closed">🔴 Closed</option>
+                <option value="private">🔵 Private</option>
+              </select>
+            </div>
+          </div>
+          <div id="adminCourtList" class="admin-court-list"></div>
+        </div>
+
+        <div id="devicesTab" class="tab-content">
+          <div class="admin-dashboard-controls">
+            <div class="search-wrapper">
+              <input type="text" id="adminDeviceSearch" placeholder="Search device ID or court ID..." />
+            </div>
+          </div>
+          <div id="adminDeviceList" class="admin-court-list">
+          </div>
+        </div>
+      </div>
+    </div>

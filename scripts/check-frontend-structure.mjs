@@ -28,7 +28,6 @@ import { BUILD_TARGETS, REPO_ROOT, findMissingReferences, runBuild } from "./bui
 const SIZE_BUDGET = { review: 600, fail: 900 };
 
 const SIZE_EXEMPTIONS = new Map([
-  ["app/index.html", "legacy document, pending split into templates"],
   ["app/overlay.html", "legacy overlay document, pending split into sources"],
 ]);
 

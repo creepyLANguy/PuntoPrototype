@@ -1,0 +1,60 @@
+    <!-- ================= CREATE COURT MODAL ================= -->
+    <div id="createPage" style="display:none;" class="create-page">
+      <div class="create-card">
+        <button id="closeCreateBtn" class="close-btn">✕</button>
+        <h2>Create Court</h2>
+        <div class="form-group">
+          <label>Court Name</label>
+          <input type="text" id="courtName" />
+          <div class="error" id="courtNameError"></div>
+        </div>
+        <div class="form-group">
+          <label>Court Password</label>
+          <input type="password" id="courtPassword" />
+          <div class="error" id="courtPasswordError"></div>
+        </div>
+        <div class="form-group">
+          <label>Status</label>
+          <div class="select-wrapper">
+            <select id="courtStatus">
+              <option value="open">🟢 Open</option>
+              <option value="closed">🔴 Closed</option>
+              <option value="private">🔵 Private</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Scoring Mode</label>
+          <div class="select-wrapper">
+            <select id="courtScoringMode">
+              <option value="standard">Games and sets</option>
+              <option value="straight">Straight points</option>
+              <option value="tiebreakTen">Tiebreak Tens</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Deuce Mode</label>
+          <div class="select-wrapper">
+            <select id="courtDeuceMode">
+              <option value="standard">Advantage</option>
+              <option value="golden">Golden point</option>
+              <option value="silver">Silver deuce</option>
+              <option value="star">Star point</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Tiebreak Mode</label>
+          <div class="select-wrapper">
+            <select id="courtTiebreakMode">
+              <option value="sixAllSeven">7-point at 6-all (win by 2)</option>
+              <option value="sixAllTen">10-point at 6-all (win by 2)</option>
+              <option value="off">Off</option>
+            </select>
+          </div>
+        </div>
+        <p>
+          <button id="createCourtBtn" class="primary-btn">Create Court</button>
+      </div>
+    </div>

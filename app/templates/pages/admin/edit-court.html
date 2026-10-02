@@ -1,0 +1,85 @@
+    <!-- ================= EDIT COURT MODAL ================= -->
+    <div id="editCourtPage" style="display:none;" class="create-page">
+      <div class="create-card edit-card">
+        <button id="closeEditBtn" class="close-btn">✕</button>
+        <h2>Editing Court:<br /><span id="editCourtNameTitle"></span></h2>
+        <div class="form-group">
+          <label>Court Name</label>
+          <input type="text" id="editCourtName" />
+        </div>
+        <div class="form-group">
+          <label>Team A Name</label>
+          <input type="text" id="editTeamAName" autocomplete="off" autocapitalize="words" spellcheck="false"/>
+        </div>
+        <div class="form-group">
+          <label>Team B Name</label>
+          <input type="text" id="editTeamBName" autocomplete="off" autocapitalize="words" spellcheck="false"/>
+        </div>
+        <div class="form-group">
+          <label>Player A1 Name</label>
+          <input type="text" id="editPlayerA1Name" autocomplete="off" autocapitalize="words" spellcheck="false"/>
+        </div>
+        <div class="form-group">
+          <label>Player A2 Name</label>
+          <input type="text" id="editPlayerA2Name" autocomplete="off" autocapitalize="words" spellcheck="false"/>
+        </div>
+        <div class="form-group">
+          <label>Player B1 Name</label>
+          <input type="text" id="editPlayerB1Name" autocomplete="off" autocapitalize="words" spellcheck="false"/>
+        </div>
+        <div class="form-group">
+          <label>Player B2 Name</label>
+          <input type="text" id="editPlayerB2Name" autocomplete="off" autocapitalize="words" spellcheck="false"/>
+        </div>
+        <div class="form-group">
+          <label>Court Password</label>
+          <input type="text" id="editCourtPassword" autocomplete="off" autocapitalize="none" spellcheck="false" />
+        </div>
+        <div class="form-group">
+          <label>Status</label>
+          <div class="select-wrapper">
+            <select id="editCourtStatus">
+              <option value="open">🟢 Open</option>
+              <option value="closed">🔴 Closed</option>
+              <option value="private">🔵 Private</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Scoring Mode</label>
+          <div class="select-wrapper">
+            <select id="editCourtScoringMode">
+              <option value="standard">Games and sets</option>
+              <option value="straight">Straight points</option>
+              <option value="tiebreakTen">Tiebreak Tens</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Deuce Mode</label>
+          <div class="select-wrapper">
+            <select id="editCourtDeuceMode">
+              <option value="standard">Advantage</option>
+              <option value="golden">Golden point</option>
+              <option value="silver">Silver deuce</option>
+              <option value="star">Star point</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Tiebreak Mode</label>
+          <div class="select-wrapper">
+            <select id="editCourtTiebreakMode">
+              <option value="sixAllSeven">7-point at 6-all (win by 2)</option>
+              <option value="sixAllTen">10-point at 6-all (win by 2)</option>
+              <option value="off">Off</option>
+            </select>
+          </div>
+        </div>
+        <hr style="visibility: hidden;" />
+          <button id="saveEditBtn" class="primary-btn">Save Changes</button>
+        <hr />
+          <button id="clearCourtScoreBtn" class="danger-btn" style="background: #ff9800;">Clear Score</button>
+          <button id="deleteCourtBtn" class="danger-btn" style="background: #ff4444;">Delete Court</button>
+      </div>
+    </div>
