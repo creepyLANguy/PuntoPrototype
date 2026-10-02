@@ -23,8 +23,140 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  changes:
+    name: Determine deployment scope
+    runs-on: ubuntu-latest
+
+    outputs:
+      hosting_changed: ${{ steps.scope.outputs.hosting_changed }}
+      functions_changed: ${{ steps.scope.outputs.functions_changed }}
+      deploy_needed: ${{ steps.scope.outputs.deploy_needed }}
+      firebase_targets: ${{ steps.scope.outputs.firebase_targets }}
+      requires_force: ${{ steps.scope.outputs.requires_force }}
+
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Determine changed components
+        id: scope
+        env:
+          BEFORE_SHA: ${{ github.event.before }}
+          AFTER_SHA: ${{ github.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          all_zero="0000000000000000000000000000000000000000"
+
+          if [[ "$BEFORE_SHA" == "$all_zero" ]]; then
+            changed_files="$(git ls-tree -r --name-only "$AFTER_SHA")"
+          else
+            changed_files="$(git diff --name-only "$BEFORE_SHA" "$AFTER_SHA")"
+          fi
+
+          hosting_changed=false
+          functions_changed=false
+
+          while IFS= read -r file; do
+            [[ -z "$file" ]] && continue
+
+            case "$file" in
+              index.html|style.css|app/*|nfc/*|media/*|device-harness/*|scripts/*)
+                hosting_changed=true
+                ;;
+            esac
+
+            case "$file" in
+              functions/*)
+                functions_changed=true
+                ;;
+            esac
+
+            # These files can change the deployment target/configuration for both
+            # Hosting and Functions, so keep the conservative full-deploy path.
+            case "$file" in
+              firebase.json|.firebaserc|.github/workflows/deploy.yml)
+                hosting_changed=true
+                functions_changed=true
+                ;;
+            esac
+          done <<< "$changed_files"
+
+          # Hosting currently publishes the repository root. To preserve the
+          # existing published file set, any Functions change also performs the
+          # existing combined deployment rather than a Functions-only deploy.
+          deploy_needed=false
+          firebase_targets=""
+          requires_force=false
+
+          if [[ "$hosting_changed" == "true" || "$functions_changed" == "true" ]]; then
+            deploy_needed=true
+          fi
+
+          if [[ "$functions_changed" == "true" ]]; then
+            firebase_targets="functions,hosting"
+            requires_force=true
+          elif [[ "$hosting_changed" == "true" ]]; then
+            firebase_targets="hosting"
+          fi
+
+          {
+            echo "hosting_changed=$hosting_changed"
+            echo "functions_changed=$functions_changed"
+            echo "deploy_needed=$deploy_needed"
+            echo "firebase_targets=$firebase_targets"
+            echo "requires_force=$requires_force"
+          } >> "$GITHUB_OUTPUT"
+
+          echo "Changed files:"
+          printf '%s\n' "$changed_files"
+          echo "Hosting changed: $hosting_changed"
+          echo "Functions changed: $functions_changed"
+          echo "Firebase targets: ${firebase_targets:-none}"
+
+  validate:
+    name: Validate Functions
+    needs: changes
+    if: needs.changes.outputs.functions_changed == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: functions/package-lock.json
+
+      - name: Install Functions dependencies
+        run: npm ci --prefix functions
+
+      - name: Run Functions lint
+        run: npm run lint --prefix functions
+
+      - name: Run Functions format check
+        if: github.ref == 'refs/heads/main'
+        run: npm run format:check --prefix functions
+
+      - name: Run Functions test suite
+        run: npm test --prefix functions
+
   deploy_production:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    name: Deploy production
+    needs:
+      - changes
+      - validate
+    if: >-
+      always() &&
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/main' &&
+      needs.changes.outputs.deploy_needed == 'true' &&
+      (needs.validate.result == 'success' || needs.validate.result == 'skipped')
     runs-on: ubuntu-latest
 
     steps:
@@ -52,17 +184,12 @@ jobs:
           cache: npm
           cache-dependency-path: functions/package-lock.json
 
-      - name: Install Functions dependencies
-        run: npm ci --prefix functions
-
-      - name: Run Functions lint
-        run: npm run lint --prefix functions
-
-      - name: Run Functions test suite
-        run: npm test --prefix functions
-
       - name: Install Firebase CLI
         run: npm install --global firebase-tools@15.30.2
+
+      - name: Install Functions dependencies
+        if: needs.changes.outputs.functions_changed == 'true'
+        run: npm ci --prefix functions
 
       - name: Show Firebase CLI version
         run: firebase --version
@@ -71,14 +198,21 @@ jobs:
         env:
           FIREBASE_PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID_PRODUCTION }}
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN_PRODUCTION }}
+          FIREBASE_TARGETS: ${{ needs.changes.outputs.firebase_targets }}
+          REQUIRES_FORCE: ${{ needs.changes.outputs.requires_force }}
         run: |
-          # The repository is authoritative for the Functions codebase. --force is required in CI
-          # when an intentionally relocated/removed function exists in the deployed Firebase project.
-          firebase deploy \
-            --only functions,hosting \
-            --force \
-            --project "$FIREBASE_PROJECT_ID" \
-            --token "$FIREBASE_TOKEN"
+          if [[ "$REQUIRES_FORCE" == "true" ]]; then
+            firebase deploy \
+              --only "$FIREBASE_TARGETS" \
+              --force \
+              --project "$FIREBASE_PROJECT_ID" \
+              --token "$FIREBASE_TOKEN"
+          else
+            firebase deploy \
+              --only "$FIREBASE_TARGETS" \
+              --project "$FIREBASE_PROJECT_ID" \
+              --token "$FIREBASE_TOKEN"
+          fi
 
       - name: Smoke-test public endpoints
         env:
@@ -86,7 +220,16 @@ jobs:
         run: node scripts/smoke-test-public-routes.mjs https://www.padelpush.co.za "$FIREBASE_PROJECT_ID"
 
   deploy_staging:
-    if: github.event_name == 'push' && github.ref != 'refs/heads/main'
+    name: Deploy staging
+    needs:
+      - changes
+      - validate
+    if: >-
+      always() &&
+      github.event_name == 'push' &&
+      github.ref != 'refs/heads/main' &&
+      needs.changes.outputs.deploy_needed == 'true' &&
+      (needs.validate.result == 'success' || needs.validate.result == 'skipped')
     runs-on: ubuntu-latest
 
     steps:
@@ -114,14 +257,12 @@ jobs:
           cache: npm
           cache-dependency-path: functions/package-lock.json
 
-      - name: Install Functions dependencies
-        run: npm ci --prefix functions
-
-      - name: Run Functions test suite
-        run: npm test --prefix functions
-
       - name: Install Firebase CLI
         run: npm install --global firebase-tools@15.30.2
+
+      - name: Install Functions dependencies
+        if: needs.changes.outputs.functions_changed == 'true'
+        run: npm ci --prefix functions
 
       - name: Show Firebase CLI version
         run: firebase --version
@@ -130,15 +271,21 @@ jobs:
         env:
           FIREBASE_PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID_STAGING }}
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN_STAGING }}
+          FIREBASE_TARGETS: ${{ needs.changes.outputs.firebase_targets }}
+          REQUIRES_FORCE: ${{ needs.changes.outputs.requires_force }}
         run: |
-          # The repository is authoritative for the Functions codebase. --force is required in CI
-          # when an intentionally relocated/removed function (for example the former
-          # europe-west1 public read functions) exists in the deployed Firebase project.
-          firebase deploy \
-            --only functions,hosting \
-            --force \
-            --project "$FIREBASE_PROJECT_ID" \
-            --token "$FIREBASE_TOKEN"
+          if [[ "$REQUIRES_FORCE" == "true" ]]; then
+            firebase deploy \
+              --only "$FIREBASE_TARGETS" \
+              --force \
+              --project "$FIREBASE_PROJECT_ID" \
+              --token "$FIREBASE_TOKEN"
+          else
+            firebase deploy \
+              --only "$FIREBASE_TARGETS" \
+              --project "$FIREBASE_PROJECT_ID" \
+              --token "$FIREBASE_TOKEN"
+          fi
 
       - name: Smoke-test public endpoints
         env:
