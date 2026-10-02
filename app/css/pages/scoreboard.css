@@ -1,0 +1,384 @@
+/* =======================================================
+   SCOREBOARD PAGE — TOP-LEVEL CONTAINER
+   Flex column: header | body (fills remaining space)
+======================================================= */
+
+#scoreboardPage {
+  width: 100%;
+  height: 100svh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+
+  /* Gentle arrival transition */
+  animation: scoreboardFadeIn 0.8s ease forwards;
+}
+
+.qr-resize-handle
+{
+  position: absolute;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  appearance: none;
+  -webkit-appearance: none;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.88);
+  opacity: var(--qr-handle-opacity, 0);
+  pointer-events: auto;
+  touch-action: none;
+  z-index: 4;
+}
+
+.qr-resize-handle::before
+{
+  content: "";
+  position: absolute;
+  width: 21px;
+  height: 21px;
+  box-sizing: border-box;
+  border: 1.5px solid currentColor;
+  pointer-events: none;
+  opacity: 0.9;
+}
+
+.qr-resize-handle--nw
+{
+  left: 2px;
+  top: 2px;
+  cursor: nwse-resize;
+}
+
+.qr-resize-handle--nw::before
+{
+  left: 0;
+  top: 0;
+  border-right: 0;
+  border-bottom: 0;
+  border-top-left-radius: 10px;
+}
+
+.qr-resize-handle--ne
+{
+  right: 2px;
+  top: 2px;
+  cursor: nesw-resize;
+}
+
+.qr-resize-handle--ne::before
+{
+  right: 0;
+  top: 0;
+  border-left: 0;
+  border-bottom: 0;
+  border-top-right-radius: 10px;
+}
+
+.qr-resize-handle--sw
+{
+  left: 2px;
+  bottom: 2px;
+  cursor: nesw-resize;
+}
+
+.qr-resize-handle--sw::before
+{
+  left: 0;
+  bottom: 0;
+  border-right: 0;
+  border-top: 0;
+  border-bottom-left-radius: 10px;
+}
+
+.qr-resize-handle--se
+{
+  right: 2px;
+  bottom: 2px;
+  cursor: nwse-resize;
+}
+
+.qr-resize-handle--se::before
+{
+  right: 0;
+  bottom: 0;
+  border-left: 0;
+  border-top: 0;
+  border-bottom-right-radius: 10px;
+}
+
+.court-qr-panel.qr-panel-resizing
+{
+  --qr-handle-opacity: 1;
+}
+
+.court-qr-panel.qr-panel-resizing .qr-resize-handle
+{
+  opacity: 1 !important;
+}
+
+body.light-mode .qr-resize-handle
+{
+  color: rgba(17, 24, 39, 0.72);
+}
+
+.court-qr-panel
+{
+  --qr-handle-opacity: 0;
+  container-type: inline-size;
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  width: 160px;
+  min-width: 130px;
+  aspect-ratio: 1 / 1.24;
+  border-radius: 12px;
+  border-bottom-right-radius: 12px;
+  background: color-mix(in srgb, var(--waveColour), transparent 90%);
+  backdrop-filter: blur(6px);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.30);
+  overflow: hidden;
+  height: auto;
+  max-width: calc(100vw - 16px);
+  max-height: min(calc((100vw - 16px) * 1.24), calc(100svh - 16px));
+  min-height: calc(130px * 1.24);
+  box-sizing: border-box;
+  user-select: none;
+  touch-action: none;
+  resize: none;
+  cursor: grab;
+}
+
+.court-qr-panel.dragging
+{
+  will-change: transform;
+}
+
+.court-qr-panel.qr-panel-interacting
+{
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: none;
+}
+
+.court-qr-code
+{
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  padding: 1%;
+  box-sizing: border-box;
+}
+
+.court-qr-code > canvas
+{
+  position: absolute;
+  inset: 0;
+  width: 100% !important;
+  height: 100% !important;
+  display: block;
+}
+
+.court-qr-code > .court-qr-canvas
+{
+  image-rendering: pixelated;
+}
+
+.court-qr-code > .court-qr-logo-canvas
+{
+  image-rendering: auto;
+}
+
+.court-qr-label
+{
+  width: 100%;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  font-weight: 900;
+
+  font-size: clamp(1rem, 15cqi, 999rem);
+  letter-spacing: 0.5em;
+  padding-left: clamp(0.5em, 1cqi, 1em);
+
+  line-height: 1.2;
+  text-transform: uppercase;
+  text-align: center;
+  white-space: nowrap;
+  text-shadow: 0 0 16px #000;
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: 8px;
+
+  font-family: inherit;
+}
+
+body.light-mode .court-qr-panel
+{
+  border-color: rgba(0, 0, 0, 0.2);
+  background: rgba(255, 255, 255, 0.85);
+}
+
+body.light-mode .court-qr-label
+{
+  color: #000;
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: 8px;
+  text-shadow: none;
+}
+
+@keyframes scoreboardFadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+/* =======================================================
+   SIDEBAR / HEADER (sidebar-left)
+   Portrait: column (top header)
+   Landscape: row (left sidebar)
+======================================================= */
+
+.sidebar-left {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: clamp(6px, 1.2vmin, 12px);
+  padding: clamp(6px, 1.2vmin, 12px) clamp(8px, 1.5vmin, 14px);
+  z-index: 30;
+  background: rgba(0, 0, 0, 0.0);
+}
+
+@media (orientation: landscape) {
+  .sidebar-left {
+    flex-direction: column;
+    width: clamp(50px, 8vmin, 85px);
+    height: 100%;
+    padding: clamp(10px, 2vmin, 20px) 0;
+    justify-content: space-between;
+  }
+}
+
+#courtTitle {
+  text-align: left;
+  font-size: clamp(1.1rem, 5vmin, 2.5rem);
+  font-weight: 800;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--white);
+  pointer-events: none;
+}
+
+@media (orientation: landscape) {
+  .scoreboard-app-name,
+  #courtTitle {
+    writing-mode: vertical-rl;
+    text-orientation: sideways;
+    transform: rotate(180deg);
+    text-align: center;
+  }
+
+  #courtTitle {
+    margin-top: 10px;
+  }
+}
+
+.header-right-slot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.header-right-slot:empty {
+  display: none;
+}
+
+@media (orientation: landscape) {
+  .header-right-slot {
+    min-width: 100%;
+    min-height: clamp(40px, 6vmin, 60px);
+  }
+}
+
+/* =======================================================
+   SCOREBOARD BODY
+   Portrait  → flex column: scoreboard on top, controls row at bottom
+   Landscape → flex row:    scoreboard on left, controls column on right
+   No fixed positioning — everything is in normal document flow.
+======================================================= */
+
+.scoreboard-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+
+  /* ---- Portrait (default) ---- */
+  flex-direction: column;
+
+  /* Subtle entrance animation */
+  animation: scoreboardReveal 1.2s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+@keyframes scoreboardReveal {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (orientation: landscape) {
+  .scoreboard-body {
+    flex-direction: row;
+  }
+}
+
+/* =======================================================
+   APP & SCOREBOARD  (fills remaining space in the body)
+======================================================= */
+
+.app {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.scoreboard {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  /* Portrait default: stack cards vertically to fill screen */
+  flex-direction: column;
+  justify-content: center;
+  align-items: stretch;
+  gap: clamp(4px, 1vmin, 10px);
+  /* Enough padding so card borders are never clipped */
+  padding: clamp(6px, 1.5vmin, 14px);
+  position: relative;
+  /* visible so borders are not cut; .app clips any animation overflow */
+  overflow: visible;
+}
+

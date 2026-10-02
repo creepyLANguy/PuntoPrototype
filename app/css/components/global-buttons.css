@@ -1,0 +1,85 @@
+/* =======================================================
+   THEME TOGGLE BUTTON (Menu page / global)
+======================================================= */
+
+.global-controls {
+  position: absolute;
+  top: clamp(10px, 2vh, 24px);
+  right: clamp(10px, 3vw, 30px);
+  display: flex;
+  gap: 12px;
+  z-index: 1000;
+}
+
+.theme-toggle-btn {
+  width: clamp(40px, 8vmin, 55px);
+  height: clamp(40px, 8vmin, 55px);
+  border-radius: 50%;
+  border: 1.5px solid rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  font-size: clamp(18px, 4vmin, 26px);
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  user-select: none;
+  opacity: 0.9;
+}
+
+.home-link-btn {
+  position: fixed;
+  top: clamp(10px, 2vh, 20px);
+  left: clamp(10px, 2vw, 20px);
+  z-index: 1000;
+  text-decoration: none;
+}
+
+.theme-toggle-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: scale(1.1);
+  opacity: 1;
+}
+
+.theme-toggle-btn:active {
+  transform: scale(0.95);
+}
+
+body.light-mode .theme-toggle-btn {
+  color: black;
+  border-color: rgba(0, 0, 0, 0.2);
+  background: rgba(0, 0, 0, 0.05);
+  opacity: 0.9;
+}
+
+body.light-mode .theme-toggle-btn:hover {
+  background: rgba(0, 0, 0, 0.1);
+  transform: scale(1.1);
+  opacity: 1;
+}
+
+.appearance-menu {
+  position: absolute;
+  top: 0;
+  right: calc(clamp(40px, 8vmin, 55px) + 12px);
+  width: min(280px, calc(100vw - 90px));
+  padding: 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(17, 17, 17, 0.92);
+  color: #fff;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+body.light-mode .appearance-menu {
+  border-color: rgba(0, 0, 0, 0.12);
+  background: rgba(255, 255, 255, 0.94);
+  color: #111;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.16);
+}
+

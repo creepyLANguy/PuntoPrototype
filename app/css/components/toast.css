@@ -1,0 +1,71 @@
+/* =======================================================
+   TOAST NOTIFICATIONS
+======================================================= */
+
+.toast-container {
+  position: fixed;
+  bottom: calc(var(--toast-bottom-offset, 20px) + env(safe-area-inset-bottom, 0px));
+  left: 16px;
+  right: 16px;
+  transform: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  z-index: 9999;
+}
+
+.toast {
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  color: var(--white);
+  padding: 12px 24px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(10px);
+  font-weight: 600;
+  font-size: 0.95rem;
+  animation: toastFadeIn 0.3s ease, toastFadeOut 0.3s ease 2.7s forwards;
+  min-width: 200px;
+  text-align: center;
+}
+
+.toast.success {
+  border-color: #2ecc71;
+  color: #2ecc71;
+}
+
+.toast.error {
+  border-color: #e74c3c;
+  color: #e74c3c;
+}
+
+.toast.info {
+  border-color: #3cb7e7;
+  color: #3cb7e7;
+}
+
+@keyframes toastFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes toastFadeOut {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  to {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+}
+

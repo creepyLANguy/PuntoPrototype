@@ -25,7 +25,9 @@ export const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url
 
 // Every generated artifact, in build order. `source` is the entry template or
 // stylesheet; `output` is the file Firebase Hosting serves.
-export const BUILD_TARGETS = [];
+export const BUILD_TARGETS = [
+  { kind: "css", source: "app/css/index.css", output: "app/css/style.css" },
+];
 
 const HTML_INCLUDE = /^[ \t]*<!--[ \t]*@include[ \t]+(\S+)[ \t]*-->[ \t]*$/;
 const CSS_IMPORT = /^@import[ \t]+"([^"]+)";[ \t]*$/;
@@ -105,11 +107,47 @@ function withBanner(target, body) {
   return doctype ? doctype[0] + banner + body.slice(doctype[0].length) : banner + body;
 }
 
+// A stylesheet manifest lists its parts in cascade order. Its own comments and
+// blank lines document the manifest and are not emitted; anything else would
+// silently change the cascade, so it is rejected.
+function expandStylesheetManifest(sourcePath, dependencies) {
+  const text = readSource(sourcePath, []);
+  dependencies.add(sourcePath);
+
+  const withoutComments = text.replace(/\/\*[\s\S]*?\*\//g, "");
+  const parts = [];
+  for (const line of withoutComments.split("\n")) {
+    if (line.trim() === "") continue;
+    const match = line.match(CSS_IMPORT);
+    if (!match) {
+      throw new BuildError(
+        `${toPosix(path.relative(REPO_ROOT, sourcePath))}: a stylesheet manifest may only contain ` +
+          `@import "part.css"; lines and comments (found: ${line.trim()})`,
+      );
+    }
+    parts.push(path.resolve(path.dirname(sourcePath), match[1]));
+  }
+
+  return parts
+    .map((part) => {
+      const content = expand(part, CSS_IMPORT, [sourcePath], dependencies);
+      if (!content.endsWith("\n")) {
+        throw new BuildError(
+          `Stylesheet part must end with a newline: ${toPosix(path.relative(REPO_ROOT, part))}`,
+        );
+      }
+      return content;
+    })
+    .join("");
+}
+
 export function buildTarget(target) {
   const sourcePath = path.join(REPO_ROOT, target.source);
-  const directive = target.kind === "css" ? CSS_IMPORT : HTML_INCLUDE;
   const dependencies = new Set();
-  const body = expand(sourcePath, directive, [], dependencies);
+  const body =
+    target.kind === "css"
+      ? expandStylesheetManifest(sourcePath, dependencies)
+      : expand(sourcePath, HTML_INCLUDE, [], dependencies);
 
   return {
     target,

@@ -1,0 +1,200 @@
+/* Left group of scoreboard header (Branding + Court Name) */
+.left-group {
+  display: flex;
+  align-items: center;
+  gap: clamp(10px, 4vmin, 25px);
+  min-width: 0;
+}
+
+.left-group {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  flex: 1;
+}
+
+.scoreboard-branding {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.scoreboard-logo {
+  width: clamp(24px, 6vmin, 48px);
+  height: auto;
+  filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.2));
+}
+
+body.light-mode .scoreboard-logo {
+  filter: invert(1) drop-shadow(0 0 5px rgba(0, 0, 0, 0.1));
+}
+
+.scoreboard-app-name {
+  font-family: "Outfit", sans-serif;
+  font-weight: 800;
+  font-size: clamp(1.1rem, 5vmin, 2.5rem);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--white);
+  white-space: nowrap;
+}
+
+.marquee-separator {
+  color: rgba(255, 255, 255, 0.3);
+  font-weight: 300;
+  margin: 0 15px;
+  font-size: clamp(1.1rem, 5vmin, 2.5rem);
+}
+
+#courtTitle {
+  font-family: "Outfit", sans-serif;
+  font-weight: 800;
+  font-size: clamp(1.1rem, 5vmin, 2.5rem);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--white);
+  white-space: nowrap;
+}
+
+.marquee-wrapper {
+  width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  position: relative;
+  mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
+  -webkit-mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
+}
+
+.marquee-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: max-content;
+  min-width: 100%;
+  transition: transform 0.3s ease;
+}
+
+.marquee-content.scrolling {
+  padding-left: 100%;
+  animation: marquee 12s linear infinite;
+  justify-content: flex-start;
+}
+
+@keyframes marquee {
+  0% {
+    transform: translateX(0);
+  }
+
+  100% {
+    transform: translateX(-100%);
+  }
+}
+
+@media (orientation: landscape) {
+  .left-group {
+    width: 100%;
+    height: 100%;
+    justify-content: center;
+  }
+
+  .marquee-wrapper {
+    height: 100%;
+    width: clamp(50px, 8vmin, 85px);
+    mask-image: linear-gradient(to bottom, transparent, black 10%, black 90%, transparent);
+    -webkit-mask-image: linear-gradient(to bottom, transparent, black 10%, black 90%, transparent);
+  }
+
+  .marquee-content {
+    flex-direction: column;
+    padding-left: 0;
+    width: 100%;
+    min-height: 100%;
+    justify-content: center;
+  }
+
+  .marquee-content.scrolling {
+    padding-left: 0;
+    padding-top: var(--marquee-vertical-offset, 100svh);
+    animation: marquee-vertical 15s linear infinite;
+    justify-content: flex-start;
+  }
+
+  .scoreboard-branding {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .scoreboard-app-name,
+  #courtTitle {
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+    text-align: center;
+  }
+
+  #courtTitle {
+    overflow: visible;
+    text-overflow: clip;
+  }
+
+  .marquee-separator {
+    margin: 15px 0;
+    transform: rotate(90deg);
+  }
+
+  /*
+   * When the court name is vertically scrolling in landscape, the
+   * scoreboard-app-name reads bottom-to-top because of its 180deg rotation.
+   * Reverse the branding column so the logo becomes the visual prefix of
+   * "Padel Push™" when read in that direction, and use the logo itself as
+   * the separator between the court name and brand.
+   */
+  /*
+   * Keep the landscape branding layout identical whether the content fits or
+   * needs to scroll. The logo is the visual separator between the court name
+   * and "Padel Push™"; scrolling should only add movement, not change the
+   * arrangement of the branding.
+   */
+  .marquee-content {
+    gap: clamp(18px, 3vmin, 30px);
+  }
+
+  .marquee-content #courtTitle {
+    margin-top: 0;
+  }
+
+  .marquee-content .scoreboard-branding {
+    flex-direction: column-reverse;
+    gap: clamp(18px, 3vmin, 30px);
+  }
+
+  .marquee-content .marquee-separator {
+    display: none;
+  }
+}
+
+@keyframes marquee-vertical {
+  0% {
+    transform: translateY(0);
+  }
+
+  100% {
+    transform: translateY(-100%);
+  }
+}
+
+@media (orientation: landscape) {
+  .left-group {
+    flex-direction: column;
+    gap: 0;
+  }
+}
+
+.spectator-badge.left {
+  display: block;
+}
+
+.spectator-badge.right {
+  display: block;
+}
+

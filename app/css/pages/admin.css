@@ -1,0 +1,591 @@
+/* =======================================================
+   ADMIN DASHBOARD ENHANCEMENTS
+======================================================= */
+
+
+.score-summary-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  font-size: 0.8rem;
+}
+
+.score-summary-team {
+  background: rgba(255, 255, 255, 0.05);
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+
+.score-summary-team .pts {
+  font-weight: 800;
+  font-size: 1rem;
+  color: var(--white);
+}
+
+.score-summary-team .meta {
+  font-size: 0.7rem;
+  color: #888;
+  margin-left: 4px;
+}
+
+/* Status Select Styling */
+.select-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.select-wrapper select {
+  width: 100%;
+  appearance: none;
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  color: var(--white);
+  padding: 12px 16px;
+  border-radius: 10px;
+  font-size: 1rem;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.select-wrapper select:focus {
+  border-color: var(--white);
+}
+
+.select-wrapper::after {
+  content: "▼";
+  position: absolute;
+  right: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.8rem;
+  pointer-events: none;
+  color: #888;
+}
+
+/* =======================================================
+   COURT-ID COMBO WIDGET (device forms)
+======================================================= */
+
+.court-id-combo {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.combo-manual-row {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.combo-toggle-link {
+  font-size: 0.78rem;
+  color: #888;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.combo-toggle-link:hover {
+  color: var(--white);
+}
+
+.combo-manual-input {
+  width: 100%;
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  color: var(--white);
+  padding: 12px 16px;
+  border-radius: 10px;
+  font-size: 1rem;
+  outline: none;
+  transition: border-color 0.2s;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+.combo-manual-input:focus {
+  border-color: var(--white);
+}
+
+/* =======================================================
+   ADMIN DASHBOARD
+======================================================= */
+
+.admin-dashboard-container {
+  position: relative;
+  background: var(--modal-bg);
+  backdrop-filter: blur(20px);
+  border-radius: 20px;
+  height: 100%;
+  width: 95%;
+  max-width: 1200px;
+  max-height: 95svh;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  color: var(--text-color);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+  min-height: 0;
+  font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+@media (min-width: 769px) {
+  .admin-dashboard-container {
+    width: 88%;
+    max-height: 90svh;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 520px) {
+  .admin-dashboard-container {
+    padding: 9px 14px;
+  }
+}
+
+/* Header: title + create button */
+.admin-dashboard-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--input-border);
+}
+
+.admin-dashboard-header h2 {
+  flex: 1;
+  text-align: center;
+  margin: 0;
+  font-size: clamp(1rem, 2.5vw, 1.4rem);
+}
+
+.admin-dashboard-header .primary-btn {
+  flex-shrink: 0;
+  width: auto;
+  padding: 8px 16px;
+  font-size: 0.85rem;
+  margin: 0;
+}
+
+#nfcToolBtn {
+  background: var(--teamBcolour);
+  border-color: var(--teamBcolour);
+  color: #fff;
+}
+
+#nfcToolBtn:hover {
+  filter: brightness(1.25);
+}
+
+#deviceHarnessBtn {
+  background: var(--teamAcolour);
+  border-color: var(--teamAcolour);
+  color: #fff;
+}
+
+#deviceHarnessBtn:hover {
+  filter: brightness(1.25);
+}
+
+@media (orientation: landscape) and (max-height: 520px) {
+  .admin-dashboard-header {
+    margin-bottom: 6px;
+    padding-bottom: 6px;
+  }
+}
+
+/* Search + filter row */
+.admin-dashboard-controls {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 12px;
+  flex-wrap: nowrap;
+}
+
+.admin-dashboard-controls .search-wrapper {
+  flex: 3;
+  min-width: 0;
+}
+
+.admin-dashboard-controls .search-wrapper input {
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  color: var(--white);
+  font-size: 0.88rem;
+  font-family: inherit;
+  outline: none;
+}
+
+.admin-dashboard-controls .filter-wrapper {
+  flex: 1;
+  min-width: 105px;
+  position: relative;
+}
+
+.admin-dashboard-controls .filter-wrapper select {
+  width: 100%;
+  padding: 8px 28px 8px 12px;
+  border-radius: 8px;
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  color: var(--white);
+  font-size: 0.88rem;
+  font-family: inherit;
+  appearance: none;
+  cursor: pointer;
+  outline: none;
+}
+
+.admin-dashboard-controls .filter-wrapper::after {
+  content: "▼";
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.58rem;
+  color: #888;
+  pointer-events: none;
+}
+
+@media (orientation: landscape) and (max-height: 520px) {
+  .admin-dashboard-controls {
+    margin-bottom: 7px;
+  }
+}
+
+/* Scrollable court list */
+.admin-court-list {
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding-right: 3px;
+  scrollbar-width: thin;
+}
+
+/* ================================================================
+   COURT CARD — Mobile Portrait (default)
+================================================================ */
+
+.admin-court-item {
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  border-radius: 10px;
+  padding: 11px 13px;
+  flex-shrink: 0;
+  display: grid;
+  grid-template-columns: 40% 35% 20%;
+  gap: 5px 8px;
+  align-items: center;
+  font-size: 0.88rem;
+}
+
+/* Full-width name header row */
+.admin-court-item .aci-name {
+  grid-column: 1 / -1;
+  padding-bottom: 7px;
+  margin-bottom: 3px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.admin-court-item .aci-name strong {
+  display: block;
+  font-size: 0.95rem;
+  margin-bottom: 2px;
+}
+
+.admin-court-item .aci-name .aci-id {
+  font-size: 0.7rem;
+  color: #888;
+  word-break: break-all;
+}
+
+.admin-court-item .aci-label {
+  font-size: 0.58rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #999;
+  white-space: nowrap;
+}
+
+.admin-court-item .aci-value {
+  font-size: 0.88rem;
+  word-break: break-word;
+}
+
+.admin-court-item .aci-actions .edit-btn {
+  width: 100%;
+  margin-top: 5px;
+  font-size: 0.83rem;
+}
+
+.admin-court-item .aci-field {
+  display: block;
+}
+
+@media (orientation: portrait) {
+  #courtsTab .teams-cell {
+    display: none;
+  }
+}
+
+/* ================================================================
+   COURT CARD — Landscape mobile (short viewport)
+   Collapses to a compact horizontal row.
+================================================================ */
+@media (orientation: landscape) and (max-height: 520px) {
+  .admin-court-list {
+    gap: 5px;
+  }
+
+  .admin-court-item {
+    display: grid;
+    grid-template-columns: 1.5fr 1fr 0.85fr 0.85fr auto;
+    grid-template-rows: auto;
+    gap: 0 10px;
+    padding: 7px 11px;
+    align-items: center;
+    font-size: 0.82rem;
+  }
+
+  .admin-court-item .aci-name {
+    grid-column: span 1;
+    border-bottom: none;
+    padding-bottom: 0;
+    margin-bottom: 0;
+  }
+
+  .admin-court-item .aci-name strong {
+    font-size: 0.82rem;
+  }
+
+  .admin-court-item .aci-name .aci-id {
+    font-size: 0.6rem;
+  }
+
+  /* Each field div becomes a simple block */
+  .admin-court-item .aci-field {
+    display: block;
+  }
+
+  .admin-court-item .aci-label {
+    display: block;
+    font-size: 0.5rem;
+    margin-bottom: 2px;
+  }
+
+  .admin-court-item .aci-value {
+    font-size: 0.8rem;
+  }
+
+  .admin-court-item .aci-actions {
+    grid-column: span 1;
+    margin-top: 0;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+  }
+
+  .admin-court-item .aci-actions .edit-btn {
+    width: auto;
+    padding: 4px 10px;
+    font-size: 0.76rem;
+  }
+}
+
+/* ================================================================
+   COURT CARD — Desktop (>= 769px)
+   Full horizontal 5-column row.
+================================================================ */
+@media (min-width: 769px) {
+  .admin-court-item {
+    display: grid;
+    grid-template-columns: 1.8fr 1.2fr 0.9fr 1fr auto;
+    grid-template-rows: auto;
+    gap: 0 16px;
+    padding: 12px 16px;
+    align-items: center;
+    font-size: 0.88rem;
+  }
+
+  .admin-court-item .aci-name {
+    grid-column: span 1;
+    border-bottom: none;
+    padding-bottom: 0;
+    margin-bottom: 0;
+  }
+
+  .admin-court-item .aci-field {
+    display: block;
+  }
+
+  .admin-court-item .aci-label {
+    display: block;
+    font-size: 0.58rem;
+    margin-bottom: 3px;
+  }
+
+  .admin-court-item .aci-value {
+    font-size: 0.88rem;
+  }
+
+  .admin-court-item .aci-actions {
+    grid-column: span 1;
+    margin-top: 0;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+  }
+
+  .admin-court-item .aci-actions .edit-btn {
+    width: auto;
+    padding: 6px 14px;
+    font-size: 0.85rem;
+  }
+
+  #courtsTab .teams-cell {
+    display: block;
+  }
+}
+
+/* Status badges */
+.status-badge {
+  display: inline-block;
+  padding: 3px 9px;
+  border-radius: 20px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  white-space: nowrap;
+}
+
+.status-open {
+  background: #2ecc71;
+  color: #fff;
+}
+
+.status-closed {
+  background: #e74c3c;
+  color: #fff;
+}
+
+.status-private {
+  background: #3c7be7;
+  color: #fff;
+}
+
+/* Edit / danger buttons */
+.edit-btn {
+  background: transparent;
+  border: 1px solid var(--white);
+  color: var(--white);
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+  white-space: nowrap;
+  touch-action: manipulation;
+  font-family: inherit;
+}
+
+.edit-btn:hover {
+  background: var(--white);
+  color: var(--bg);
+}
+
+.edit-card textarea {
+  width: 100%;
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  color: var(--white);
+  padding: 10px;
+  border-radius: 8px;
+  font-family: monospace;
+}
+
+.danger-btn {
+  width: 100%;
+  padding: 12px;
+  border: none;
+  border-radius: 10px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  color: white;
+  transition: opacity 0.2s;
+  touch-action: manipulation;
+}
+
+.danger-btn:hover {
+  opacity: 0.8;
+}
+
+/* Global floating controls (theme toggle / admin lock) */
+.global-controls {
+  position: fixed;
+  top: clamp(10px, 2vh, 20px);
+  right: clamp(10px, 2vw, 20px);
+  display: flex;
+  flex-direction: column;
+  gap: clamp(8px, 1.5vh, 14px);
+  z-index: 1000;
+}
+
+/* --- REUSABLE CLOSE BUTTON (Flex-compatible) --- */
+.close-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--input-border);
+  color: var(--white);
+  font-size: 1.2rem;
+  width: 38px;
+  height: 38px;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.close-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: var(--white);
+}
+
+body.light-mode .close-btn {
+  color: black;
+  border-color: #ccc;
+}
+
+@media (max-width: 480px) {
+  .admin-dashboard-header {
+    gap: 10px;
+  }
+
+  .admin-dashboard-header h2 {
+    font-size: 0.9rem;
+  }
+
+  .admin-dashboard-header .primary-btn {
+    padding: 6px 12px;
+    font-size: 0.75rem;
+  }
+
+  .close-btn {
+    width: 34px;
+    height: 34px;
+    font-size: 1rem;
+  }
+}
+

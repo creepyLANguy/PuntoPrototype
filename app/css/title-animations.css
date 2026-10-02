@@ -1,0 +1,90 @@
+@keyframes apptitleanimation {
+  0% {
+    filter: drop-shadow(0 0 10px rgba(0, 0, 0, 0.4));
+  }
+
+  75% {
+    filter: drop-shadow(0 0 15px rgba(255, 255, 255, 0.7));
+  }
+
+  100% {
+    filter: drop-shadow(0 0 15px rgba(0, 0, 0, 0.4));
+  }
+}
+
+@keyframes apptitleanimation_light {
+  0% {
+    filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.8));
+  }
+
+  75% {
+    filter: drop-shadow(0 0 15px rgba(0, 0, 0, 0.3));
+  }
+
+  100% {
+    filter: drop-shadow(0 0 15px rgba(255, 255, 255, 0.8));
+  }
+}
+
+@keyframes subtitleanimation {
+  0% {
+    filter: drop-shadow(0 0 10px rgba(0, 0, 0, 0.4));
+  }
+
+  75% {
+    filter: drop-shadow(0 0 15px rgba(255, 255, 255, 0.7));
+  }
+
+  100% {
+    filter: drop-shadow(0 0 10px rgba(0, 0, 0, 0.4));
+  }
+}
+
+@keyframes subtitleanimation_light {
+  0% {
+    filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.7));
+  }
+
+  75% {
+    filter: drop-shadow(0 0 15px rgba(0, 0, 0, 0.4));
+  }
+
+  100% {
+    filter: drop-shadow(0 0 15px rgba(255, 255, 255, 0.7));
+  }
+}
+
+@keyframes logoanimation {
+  0% {
+    filter: drop-shadow(0 0px 15px var(--logoShadow));
+    transform: translateY(0px);
+  }
+
+  50% {
+    filter: drop-shadow(0 0 30px var(--logoHighlight));
+    transform: translateY(-12px);
+  }
+
+  100% {
+    filter: drop-shadow(0 0px 15px var(--logoShadow));
+    transform: translateY(0px);
+  }
+}
+
+@keyframes logoanimation {
+  0% {
+    filter: drop-shadow(0 0px 15px var(--logoShadow));
+    transform: translateY(0px);
+  }
+
+  50% {
+    filter: drop-shadow(0 0 30px var(--logoHighlight));
+    transform: translateY(-12px);
+  }
+
+  100% {
+    filter: drop-shadow(0 0px 15px var(--logoShadow));
+    transform: translateY(0px);
+  }
+}
+

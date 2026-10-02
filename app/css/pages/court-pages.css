@@ -1,0 +1,191 @@
+/* =======================================================
+   CREATE / PLAY / SPECTATE PAGES
+======================================================= */
+
+.create-page {
+  height: 100svh;
+  height: 100dvh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #000;
+  color: white;
+  overflow: auto;
+}
+
+#adminAuthPage,
+#spectatePage,
+#playPage {
+  position: fixed;
+  inset: 0;
+  height: 100svh;
+  height: 100dvh;
+  z-index: 10000;
+}
+
+body.play-page-open {
+  overflow: hidden;
+  height: 100svh;
+}
+
+body.light-mode .create-page {
+  background: #f5f5f5;
+  color: black;
+}
+
+#playPage .create-card,
+#spectatePage .create-card {
+  --keyboard-shift-y: 0px;
+  transform: translateY(var(--keyboard-shift-y));
+  will-change: transform;
+}
+
+.create-card {
+  position: relative;
+  width: clamp(280px, 85vw, 420px);
+  padding: 25px 35px 20px 35px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 2px solid white;
+  border-radius: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  transition: all 0.3s ease;
+  max-height: calc(100svh - 32px);
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+}
+
+body.light-mode .create-card {
+  background: rgba(255, 255, 255, 0.75);
+  border: 2px solid black;
+}
+
+.create-card .close-btn,
+.edit-card .close-btn,
+.prompt-card .close-btn {
+  position: absolute;
+  top: 15px;
+  right: 20px;
+  background: none;
+  border: none;
+  font-size: 22px;
+  color: white;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+  z-index: 10;
+}
+
+body.light-mode .close-btn {
+  color: black;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form-group input {
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid white;
+  background: black;
+  color: white;
+  font-size: 14px;
+  font-family: inherit;
+}
+
+body.light-mode .form-group input {
+  border: 1px solid var(--input-border);
+  background: var(--input-bg);
+  color: black;
+}
+
+/* Edit-court: tint the name inputs with their team's colour so it's obvious
+   which team each field belongs to. Follows the active theme's team colours. */
+.form-group input#editTeamAName,
+.form-group input#editPlayerA1Name,
+.form-group input#editPlayerA2Name {
+  border: 1px solid var(--teamAcolour);
+}
+
+.form-group input#editTeamBName,
+.form-group input#editPlayerB1Name,
+.form-group input#editPlayerB2Name {
+  border: 1px solid var(--teamBcolour);
+}
+
+body.light-mode .form-group label {
+  color: black;
+}
+
+.error {
+  font-size: 13px;
+  color: rgb(255, 255, 0);
+  min-height: 18px;
+  margin-top: 4px;
+  margin-bottom: 8px;
+}
+
+body.light-mode .error {
+  color: #c41e3a;
+}
+
+.primary-btn {
+  padding: 13px;
+  border-radius: 10px;
+  border: 2px solid white;
+  background: white;
+  color: black;
+  font-weight: bold;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+  width: 100%;
+  box-sizing: border-box;
+  margin-top: 6px;
+  font-size: 15px;
+  font-family: inherit;
+}
+
+body.light-mode .primary-btn {
+  border: 2px solid black;
+  background: black;
+  color: white;
+}
+
+.secondary-btn {
+  padding: 12px;
+  border-radius: 10px;
+  border: 2px solid white;
+  background: transparent;
+  color: white;
+  font-weight: bold;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+}
+
+.secondary-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+body.light-mode .secondary-btn {
+  border: 2px solid black;
+  background: transparent;
+  color: black;
+}
+
+.secondary-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+body.light-mode .secondary-btn:hover {
+  background: rgba(0, 0, 0, 0.1);
+}
+

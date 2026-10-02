@@ -1,0 +1,38 @@
+/* Reset */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* Page setup */
+body {
+  font-family: "Outfit", "Inter", system-ui, -apple-system, sans-serif;
+  background: var(--waveBg);
+  /* dark base */
+  color: var(--white);
+  overflow-x: hidden;
+}
+
+/* Content sits above waves */
+.content {
+  position: relative;
+  z-index: 1;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+}
+
+.content h1 {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+}
+
+.content p {
+  font-size: 1.2rem;
+  opacity: 0.8;
+}
+

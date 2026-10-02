@@ -1,0 +1,35 @@
+/* =======================================================
+   CSS CUSTOM PROPERTIES
+======================================================= */
+
+:root {
+  --teamAcolour: #ffff00;
+  --teamBcolour: #00ffff;
+  --bg: #000;
+  --white: #ffffff;
+  --spectating: rgb(255, 0, 0);
+  --text-color: #ffffff;
+  --input-bg: #1a1a1a;
+  --input-border: #444;
+  --modal-bg: rgba(0, 0, 0, 0.9);
+  --waveBg: #000000;
+  --waveColour: #2b60bc;
+  --logoShadow: rgba(0, 0, 0, 0.75);
+  --logoHighlight: rgba(255, 255, 255, 0.5);
+}
+
+body.light-mode {
+  --teamAcolour: #ad7535;
+  --teamBcolour: #0a91ac;
+  --bg: #ffffff;
+  --white: #000000;
+  --text-color: #000000;
+  --input-bg: #ffffff;
+  --input-border: #cccccc;
+  --modal-bg: rgba(255, 255, 255, 0.95);
+  --waveBg: #ffffee;
+  --waveColour: #c0fff6;
+  --logoShadow: rgba(0, 0, 0, 0.5);
+  --logoHighlight: rgba(0, 0, 0, 0.15);
+}
+

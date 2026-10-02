@@ -1,0 +1,120 @@
+/* =======================================================
+   TOAST NOTIFICATIONS
+======================================================= */
+
+.toast-container {
+  position: fixed;
+  bottom: calc(var(--toast-bottom-offset, 20px) + env(safe-area-inset-bottom, 0px));
+  left: 16px;
+  right: 16px;
+  transform: none;
+  z-index: 10000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  pointer-events: none;
+}
+
+.toast {
+  box-sizing: border-box;
+  width: min(420px, 100%);
+  min-width: min(200px, 100%);
+  padding: 12px 24px;
+  border-radius: 50px;
+  background: rgba(0, 0, 0, 0.85);
+  color: white;
+  font-weight: 600;
+  font-size: 0.9rem;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(10px);
+  animation: toastFadeIn 0.3s ease forwards;
+  pointer-events: auto;
+  min-width: 200px;
+  text-align: center;
+}
+
+@media (orientation: landscape) {
+  .toast-container {
+    bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+    right: calc(var(--toast-right-offset, 20px) + env(safe-area-inset-right, 0px));
+    left: 16px;
+    transform: none;
+  }
+}
+
+@keyframes toastFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.toast.success {
+  border: 1px solid #2ecc71;
+}
+
+.toast.error {
+  border: 1px solid #e74c3c;
+}
+
+.toast.info {
+  border: 1px solid #3498db;
+}
+
+.toast.warning {
+  border: 1px solid #f1c40f;
+}
+
+.toast {
+  padding: 12px 24px;
+  border-radius: 50px;
+  background: rgba(0, 0, 0, 0.85);
+  color: white;
+  font-weight: 600;
+  font-size: 0.9rem;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(10px);
+  animation: toastFadeIn 0.3s ease forwards;
+  pointer-events: auto;
+  min-width: 200px;
+  text-align: center;
+}
+
+@keyframes toastFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.toast.success {
+  border: 1px solid #2ecc71;
+}
+
+.toast.error {
+  border: 1px solid #e74c3c;
+}
+
+.toast.info {
+  border: 1px solid #3498db;
+}
+
+.toast.warning {
+  border: 1px solid #f1c40f;
+}
+
+.toast.warning {
+  border: 1px solid #f1c40f;
+}
+
