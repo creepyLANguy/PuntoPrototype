@@ -1351,7 +1351,7 @@ document.addEventListener("DOMContentLoaded", () =>
       const wrapper = elements.changeoverTile;
       if (!button || !wrapper) return;
 
-      const label = wrapper.querySelector("span");
+      const label = wrapper.querySelector(":scope > span");
 
       wrapper.classList.toggle("active", Boolean(beaconSidesSwapped));
       wrapper.classList.toggle("processing", changeoverProcessing);
