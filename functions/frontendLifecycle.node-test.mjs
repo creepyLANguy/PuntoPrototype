@@ -278,14 +278,24 @@ test("changeover shows backend processing feedback and recovers from failure", a
     assert.equal(label.textContent, "Changing over…");
     assert.ok(button.querySelector(".changeover-spinner"));
 
-    await waitFor(
-      () =>
-        button.disabled === false &&
-        button.getAttribute("aria-busy") === null &&
-        label.textContent === "Changeover *",
-      { label: "changeover processing state clears after success" },
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    await settle(10);
+
+    assert.deepEqual(
+      {
+        disabled: button.disabled,
+        ariaBusy: button.getAttribute("aria-busy"),
+        processing: button.classList.contains("processing"),
+        label: label.textContent,
+      },
+      {
+        disabled: false,
+        ariaBusy: null,
+        processing: false,
+        label: "Changeover *",
+      },
+      "changeover UI should leave processing state after successful backend completion",
     );
-    assert.equal(button.classList.contains("processing"), false);
     assert.equal(button.getAttribute("aria-label"), "Changeover");
     assert.equal(button.title, "Changeover");
     assert.equal(button.textContent, "↔");
@@ -304,14 +314,23 @@ test("changeover shows backend processing feedback and recovers from failure", a
     assert.equal(button.getAttribute("aria-busy"), "true");
     assert.equal(label.textContent, "Changing over…");
 
-    await waitFor(
-      () =>
-        button.disabled === false &&
-        button.getAttribute("aria-busy") === null &&
-        label.textContent === "Changeover",
-      { label: "changeover processing state clears after failure" },
+    await settle(20);
+
+    assert.deepEqual(
+      {
+        disabled: button.disabled,
+        ariaBusy: button.getAttribute("aria-busy"),
+        processing: button.classList.contains("processing"),
+        label: label.textContent,
+      },
+      {
+        disabled: false,
+        ariaBusy: null,
+        processing: false,
+        label: "Changeover",
+      },
+      "changeover UI should leave processing state after backend failure",
     );
-    assert.equal(button.classList.contains("processing"), false);
     assert.equal(button.getAttribute("aria-label"), "Changeover");
     assert.equal(button.textContent, "↔");
   }
