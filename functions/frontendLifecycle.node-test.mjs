@@ -350,6 +350,12 @@ test("changeover shows backend processing feedback and recovers from failure", a
     callableHandlers.set("changeoverCourt", originalHandler);
   }
 
+  const postTestCourt = firestoreState.docs.get("courts/lifecourt");
+  writeDoc("courts/lifecourt", {
+    ...postTestCourt,
+    beaconSidesSwapped: initialBeaconSidesSwapped,
+  });
+
   document.getElementById("closeSettingsBtn").click();
   await settle(10);
 });
