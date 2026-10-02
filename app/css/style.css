@@ -1623,6 +1623,36 @@ body.light-mode .setting-item:hover {
   padding-bottom: 1%;
 }
 
+.changeover-spinner
+{
+  width: 1.1em;
+  height: 1.1em;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  display: inline-block;
+  animation: changeoverSpin 0.8s linear infinite;
+}
+
+#changeoverBtn.processing
+{
+  cursor: wait;
+  pointer-events: none;
+}
+
+#changeoverBtn.processing:hover
+{
+  transform: none;
+}
+
+@keyframes changeoverSpin
+{
+  to
+  {
+    transform: rotate(360deg);
+  }
+}
+
 .modal-btn {  
   opacity: 1 !important;
   border-color: rgba(255, 255, 255, 0.3) !important;
