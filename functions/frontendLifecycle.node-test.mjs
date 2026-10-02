@@ -143,7 +143,7 @@ test("Changeover toggles its own state and independently toggles the local view"
       document.getElementById("changeoverTile").querySelector("span").textContent ===
       "Changeover *",
     {
-      label: "local changeover toggles its own button state",
+      label: `local changeover toggles its own button state [beacon=${firestoreState.docs.get("courts/lifecourt")?.beaconSidesSwapped}, scoreboardSwapped=${document.querySelector(".scoreboard").classList.contains("swapped")}, buttonDisabled=${document.getElementById("changeoverBtn").disabled}, ariaBusy=${document.getElementById("changeoverBtn").getAttribute("aria-busy")}, buttonProcessing=${document.getElementById("changeoverBtn").classList.contains("processing")}]`,
     },
   );
 
