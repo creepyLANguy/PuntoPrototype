@@ -25,8 +25,14 @@ test("QR panel interaction stays frame-synced", () => {
   assert.match(source, /resizeCorner\.endsWith\("e"\)/);
   assert.match(source, /resizeCorner\.startsWith\("s"\)/);
   assert.doesNotMatch(source, /panel\.style\.height =/);
-  assert.match(source, /panel\.classList\.add\("resizing", "qr-panel-resizing", "qr-panel-interacting"\)/);
-  assert.match(source, /panel\.classList\.remove\("dragging", "resizing", "qr-panel-resizing", "qr-panel-interacting"\)/);
+  assert.match(
+    source,
+    /panel\.classList\.add\("resizing", "qr-panel-resizing", "qr-panel-interacting"\)/,
+  );
+  assert.match(
+    source,
+    /panel\.classList\.remove\("dragging", "resizing", "qr-panel-resizing", "qr-panel-interacting"\)/,
+  );
   assert.match(source, /event\.target\.closest\("\.qr-resize-handle"\)/);
   assert.match(source, /panel\.classList\.add\("dragging", "qr-panel-interacting"\)/);
   assert.match(source, /const stopInteraction =/);
@@ -85,18 +91,36 @@ test("QR interaction disables expensive paint effects while active", () => {
 test("QR panel exposes four corner resize handles", () => {
   assert.equal(markup.match(/class="qr-resize-handle/g)?.length, 4);
   for (const corner of ["nw", "ne", "sw", "se"]) {
-    assert.match(markup, new RegExp('qr-resize-handle qr-resize-handle--' + corner));
+    assert.match(markup, new RegExp("qr-resize-handle qr-resize-handle--" + corner));
     assert.match(markup, new RegExp('data-corner="' + corner + '"'));
   }
 
   assert.match(styles, /\.qr-resize-handle\s*\{[\s\S]*?opacity:\s*var\(--qr-handle-opacity, 0\);/);
-  assert.match(styles, /\.qr-resize-handle::before\s*\{[\s\S]*?border:\s*1\.5px solid currentColor;/);
-  assert.match(styles, /\.qr-resize-handle--nw::before\s*\{[\s\S]*?border-top-left-radius:\s*10px;/);
-  assert.match(styles, /\.qr-resize-handle--ne::before\s*\{[\s\S]*?border-top-right-radius:\s*10px;/);
-  assert.match(styles, /\.qr-resize-handle--sw::before\s*\{[\s\S]*?border-bottom-left-radius:\s*10px;/);
-  assert.match(styles, /\.qr-resize-handle--se::before\s*\{[\s\S]*?border-bottom-right-radius:\s*10px;/);
+  assert.match(
+    styles,
+    /\.qr-resize-handle::before\s*\{[\s\S]*?border:\s*1\.5px solid currentColor;/,
+  );
+  assert.match(
+    styles,
+    /\.qr-resize-handle--nw::before\s*\{[\s\S]*?border-top-left-radius:\s*10px;/,
+  );
+  assert.match(
+    styles,
+    /\.qr-resize-handle--ne::before\s*\{[\s\S]*?border-top-right-radius:\s*10px;/,
+  );
+  assert.match(
+    styles,
+    /\.qr-resize-handle--sw::before\s*\{[\s\S]*?border-bottom-left-radius:\s*10px;/,
+  );
+  assert.match(
+    styles,
+    /\.qr-resize-handle--se::before\s*\{[\s\S]*?border-bottom-right-radius:\s*10px;/,
+  );
   assert.match(styles, /\.court-qr-panel\.qr-panel-resizing\s*\{[\s\S]*?--qr-handle-opacity:\s*1;/);
-  assert.match(styles, /\.court-qr-panel\.qr-panel-resizing \.qr-resize-handle\s*\{[\s\S]*?opacity:\s*1 !important;/);
+  assert.match(
+    styles,
+    /\.court-qr-panel\.qr-panel-resizing \.qr-resize-handle\s*\{[\s\S]*?opacity:\s*1 !important;/,
+  );
   assert.match(styles, /\.court-qr-panel\s*\{[\s\S]*?border-bottom-right-radius:\s*12px;/);
   assert.match(styles, /\.qr-resize-handle--nw\s*\{[\s\S]*?cursor:\s*nwse-resize;/);
   assert.match(styles, /\.qr-resize-handle--ne\s*\{[\s\S]*?cursor:\s*nesw-resize;/);
@@ -114,12 +138,18 @@ test("QR panel spawns from the bottom-right corner in every orientation", () => 
   assert.match(source, /elements\.courtQrPanel\.style\.right = "8px";/);
   assert.match(
     source,
-    /if \(!Number\.isFinite\(currentLeft\) && !Number\.isFinite\(currentTop\)\)[\s\S]*?panel\.style\.left = "auto";[\s\S]*?panel\.style\.top = "auto";/
+    /if \(!Number\.isFinite\(currentLeft\) && !Number\.isFinite\(currentTop\)\)[\s\S]*?panel\.style\.left = "auto";[\s\S]*?panel\.style\.top = "auto";/,
   );
   assert.match(source, /panel\.style\.right = \`\$\{safeGap\}px\`;/);
   assert.match(source, /panel\.style\.bottom = \`\$\{safeGap\}px\`;/);
-  assert.doesNotMatch(styles, /@media \(orientation: landscape\)[\s\S]*?\.court-qr-panel\s*\{[\s\S]*?display:\s*none\s*!important;/);
-  assert.doesNotMatch(styles, /@media \(max-width: 768px\)[\s\S]*?\.court-qr-panel\s*\{[\s\S]*?display:\s*none\s*!important;/);
+  assert.doesNotMatch(
+    styles,
+    /@media \(orientation: landscape\)[\s\S]*?\.court-qr-panel\s*\{[\s\S]*?display:\s*none\s*!important;/,
+  );
+  assert.doesNotMatch(
+    styles,
+    /@media \(max-width: 768px\)[\s\S]*?\.court-qr-panel\s*\{[\s\S]*?display:\s*none\s*!important;/,
+  );
 });
 
 test("QR resize visibility is cached, logarithmic, and inactivity-aware", () => {
@@ -146,11 +176,11 @@ test("QR resize visibility is cached, logarithmic, and inactivity-aware", () => 
   assert.match(source, /refreshCourtQrResizeHandleVisibility/);
   assert.match(
     source,
-    /refreshCourtQrResizeHandleVisibility = \(startFreshVisibilityWindow = false\)/
+    /refreshCourtQrResizeHandleVisibility = \(startFreshVisibilityWindow = false\)/,
   );
   assert.match(
     source,
-    /if \(startFreshVisibilityWindow\)[\s\S]*?clearInactivityTimer\(\);[\s\S]*?lastPointerMoveTime = performance\.now\(\);/
+    /if \(startFreshVisibilityWindow\)[\s\S]*?clearInactivityTimer\(\);[\s\S]*?lastPointerMoveTime = performance\.now\(\);/,
   );
   assert.doesNotMatch(styles, /\.qr-resize-handle:hover\s*\{/);
 
@@ -158,13 +188,18 @@ test("QR resize visibility is cached, logarithmic, and inactivity-aware", () => 
   const renderEnd = source.indexOf("  function enableSpectateMode()", renderStart);
   assert.ok(renderStart >= 0 && renderEnd > renderStart);
   const renderBlock = source.slice(renderStart, renderEnd);
-  const renderRefreshIndex = renderBlock.lastIndexOf("refreshCourtQrResizeHandleVisibility?.(true);");
+  const renderRefreshIndex = renderBlock.lastIndexOf(
+    "refreshCourtQrResizeHandleVisibility?.(true);",
+  );
   const renderLabelIndex = renderBlock.indexOf("elements.courtQrLabel.textContent = courtId;");
   assert.ok(renderRefreshIndex > renderLabelIndex);
 
   const courtOpenStart = source.indexOf("    currentCourtId = courtId;");
   const renderCallIndex = source.indexOf("    renderCourtQr(courtId);", courtOpenStart);
-  const scoreboardVisibleIndex = source.indexOf('    elements.scoreboardPage.style.display = "flex";', courtOpenStart);
+  const scoreboardVisibleIndex = source.indexOf(
+    '    elements.scoreboardPage.style.display = "flex";',
+    courtOpenStart,
+  );
   assert.ok(scoreboardVisibleIndex >= 0 && renderCallIndex > scoreboardVisibleIndex);
 
   const visibilityFunctionStart = source.indexOf(
@@ -174,12 +209,15 @@ test("QR resize visibility is cached, logarithmic, and inactivity-aware", () => 
     '    document.addEventListener("pointermove", (event) =>',
     visibilityFunctionStart,
   );
-  const pointerMoveEnd = source.indexOf("    refreshCourtQrResizeHandleVisibility =", pointerMoveStart);
+  const pointerMoveEnd = source.indexOf(
+    "    refreshCourtQrResizeHandleVisibility =",
+    pointerMoveStart,
+  );
   assert.ok(pointerMoveStart >= 0 && pointerMoveEnd > pointerMoveStart);
   const pointerMoveBlock = source.slice(pointerMoveStart, pointerMoveEnd);
   assert.match(
     pointerMoveBlock,
-    /if \(!courtQrPanelVisible\)\s*\{[\s\S]*?lastPointerX = event\.clientX;[\s\S]*?lastPointerY = event\.clientY;[\s\S]*?hasPointerPosition = true;[\s\S]*?lastPointerMoveTime = performance\.now\(\);[\s\S]*?return;/
+    /if \(!courtQrPanelVisible\)\s*\{[\s\S]*?lastPointerX = event\.clientX;[\s\S]*?lastPointerY = event\.clientY;[\s\S]*?hasPointerPosition = true;[\s\S]*?lastPointerMoveTime = performance\.now\(\);[\s\S]*?return;/,
   );
   assert.match(pointerMoveBlock, /event\.clientX === lastPointerX/);
   assert.doesNotMatch(pointerMoveBlock, /getBoundingClientRect\(\)/);
