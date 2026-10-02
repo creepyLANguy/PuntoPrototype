@@ -188,6 +188,11 @@ function setChangeoverProcessingState(isProcessing)
       button.dataset.changeoverOriginalContent = button.innerHTML;
     }
 
+    if (!button.dataset.changeoverOriginalLabel)
+    {
+      button.dataset.changeoverOriginalLabel = tile.querySelector("span")?.textContent || "Changeover";
+    }
+
     button.disabled = true;
     button.classList.add("processing");
     button.setAttribute("aria-busy", "true");
@@ -214,6 +219,8 @@ function setChangeoverProcessingState(isProcessing)
     button.innerHTML = button.dataset.changeoverOriginalContent;
     delete button.dataset.changeoverOriginalContent;
   }
+
+  delete button.dataset.changeoverOriginalLabel;
 }
 
 function installChangeoverBehaviour()
@@ -263,11 +270,6 @@ function installChangeoverBehaviour()
         window.setTimeout(() => toast.remove(), 3000);
       }
 
-      const label = document.getElementById("changeoverTile")?.querySelector("span");
-      if (label)
-      {
-        label.textContent = "Changeover";
-      }
     }
     finally
     {
