@@ -7,9 +7,16 @@ flowchart LR
     classDef future fill:#FAFAFA,stroke:#777777,stroke-width:1px,stroke-dasharray:5 5,color:#444444
 
     subgraph CLIENTS["Current client surfaces"]
-        WEB["Web app<br/>app/index.html + script.js"]
+        subgraph WEBAPP["Web app - native ES modules (app/js)"]
+            WEB["main.js<br/>composition root"]
+            WROUTE["routing/<br/>routes, history, views"]
+            WSTATE["state/<br/>session, app, navigation, theme"]
+            WFEAT["scoring/ court/ details/ sharing/<br/>qr/ nfc/ admin/ teams/ shell/"]
+            WUI["ui/<br/>DOM, modals, toasts, theme"]
+            WFB["firebase/<br/>client, repositories, callables"]
+        end
         ADMIN["Admin routes<br/>/admin and /app/admin"]
-        OVERLAY["OBS / public overlay<br/>app/overlay.html"]
+        OVERLAY["OBS / public overlay<br/>app/overlay.html (built from app/overlay/)"]
         NFC["NFC utility<br/>nfc/index.html"]
         LAB["Device Lab / harness<br/>admin-gated"]
     end
@@ -52,17 +59,23 @@ flowchart LR
         MFG["Manufacturing / provisioning system"]
     end
 
-    HOST --> WEB
+    HOST -- "generated app/index.html" --> WEB
+    WEB --> WROUTE
+    WEB --> WFEAT
+    WROUTE --> WFEAT
+    WFEAT --> WSTATE
+    WFEAT --> WUI
+    WFEAT --> WFB
     HOST --> ADMIN
     HOST --> OVERLAY
     HOST --> NFC
     ADMIN --> LAB
 
-    WEB --> COURT
-    WEB --> EVENTS
-    WEB --> LIVE
-    WEB --> CALLABLE
-    WEB --> DEVICES
+    WFB --> COURT
+    WFB --> EVENTS
+    WFB --> LIVE
+    WFB --> CALLABLE
+    WFB --> DEVICES
 
     HUB --> INGEST
     BEACON --> INGEST
@@ -95,7 +108,7 @@ flowchart LR
     BEACON -. "business process outside repo" .-> MFG
     PULSE -. "business process outside repo" .-> MFG
 
-    class WEB,ADMIN,OVERLAY,NFC,LAB client
+    class WEB,WROUTE,WSTATE,WFEAT,WUI,WFB,ADMIN,OVERLAY,NFC,LAB client
     class HUB,BEACON,PULSE device
     class HOST,INGEST,CALLABLE,TRIGGER,SCORE,PUBLIC firebase
     class COURT,EVENTS,LIVE,CHECK,ARCHIVE,DEVICES data

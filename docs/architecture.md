@@ -8,12 +8,12 @@ The runtime sequence is visualized in [PP_Runtime_Flow.mmd](PP_Runtime_Flow.mmd)
 
 ### Application and clients
 
-    Browser web app
-      |-- Firebase Web SDK -> courts/{courtId}
-      |-- Firebase Web SDK -> devices/{deviceId}
-      |-- Firebase Web SDK -> courts/{courtId}/events/{eventId}
+    Browser web app (native ES modules, entry app/js/main.js)
+      |-- firebase/ repositories -> courts/{courtId}
+      |-- firebase/ repositories -> devices/{deviceId}
+      |-- firebase/ repositories -> courts/{courtId}/events/{eventId}
       |-- onSnapshot <- courts/{courtId}/score/current
-      |-- callable -> resetCourt / changeoverCourt / updateScoringOptions / getDetailedScore
+      |-- firebase/callables -> resetCourt / changeoverCourt / updateScoringOptions / getDetailedScore
       |
       +-- public routes /c/{courtId}, /p/{courtId}, /overlay, /nfc, /admin
 
@@ -38,6 +38,44 @@ All current Cloud Functions run in africa-south1:
 - public JSON read functions.
 
 Firebase Hosting remains global/CDN-based. Public JSON paths redirect to the Johannesburg functions because Firebase Hosting does not support a direct function rewrite to africa-south1.
+
+## Web client module boundaries
+
+The scoring web app is a set of native ES modules under `app/js/`, separated
+by responsibility. The full developer guide is
+[frontend-architecture.md](frontend-architecture.md); in summary:
+
+- **Composition root.** `app/js/main.js` is the module entry point loaded by
+  `app/index.html`. It wires the modules together and starts them in a fixed
+  order; it contains no feature behaviour.
+- **State ownership.** Cross-module state lives in plain objects in
+  `app/js/state/`: the open court session (`session`), application state
+  (`appState`), navigation history (`navigationState`) and appearance
+  preferences (`themeState`). Each state change is made by the feature that
+  owns it.
+- **Routing.** `app/js/routing/` owns URL parsing, view states, browser history
+  and restoring a view onto the DOM; deep links, back / forward and modal
+  history entries go through it.
+- **Firebase boundary.** `app/js/firebase/` initialises Firebase and is the only
+  code that calls the Firestore SDK or the callables (court, device and admin
+  repositories plus `callables.js`). It owns no UI behaviour.
+- **Scoring boundary.** `app/js/scoring/` sends score events and presents the
+  score the backend engine computed; the backend remains the authoritative
+  scoring engine. `app/js/court/` owns the court session and its live sync.
+- **UI boundary.** `app/js/ui/` provides the reusable UI systems (DOM lookup,
+  toasts, loading overlays, modals, theme and appearance, fullscreen); each
+  module documents the part of the DOM it owns.
+- **Admin boundary.** `app/js/admin/` owns admin authentication and court /
+  device management, using the same shell and router.
+- **Sharing, QR and NFC.** `app/js/sharing/` (share text, score-card image,
+  Web Share / clipboard), `app/js/qr/` (court QR panel) and `app/js/nfc/` (Web
+  NFC scanning and the tag-format parser).
+- **Overlay.** `app/overlay.html` is a separate, self-contained client that
+  reads the public JSON API; its sources live in `app/overlay/`.
+- **Build.** `scripts/build-frontend.mjs` assembles the generated documents
+  (`app/index.html`, `app/overlay.html`) and the generated stylesheet
+  (`app/css/style.css`) from their sources. It does not bundle or transpile;
+  CI and every deployment rebuild and validate the frontend before tests run.
 
 ## Physical product boundary
 
@@ -75,7 +113,7 @@ The Cloud Functions implementation is separated between composition, domain logi
 
 ## Current data and mutation boundaries
 
-- The web app uses the Firebase Web SDK directly for court reads, court creation/edit/delete, device reads/updates, event writes and score listeners.
+- The web app uses the Firebase Web SDK (through its `app/js/firebase/` repositories) for court reads, court creation/edit/delete, device reads/updates, event writes and score listeners.
 - Callable functions present are resetCourt, changeoverCourt, updateScoringOptions and getDetailedScore.
 - The public JSON endpoints are intentionally unauthenticated read surfaces.
 - postEvent currently identifies a device through deviceId and its current devices/{deviceId}.courtId binding.

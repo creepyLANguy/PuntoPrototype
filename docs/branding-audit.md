@@ -15,12 +15,12 @@
 | Surface | Files | Changes |
 |---|---|---|
 | Landing page | `index.html` | Brand name, wordmark, page title, descriptions, social alt, visible tagline, accessibility labels, email subject text and footer |
-| Scoring app | `app/index.html`, `app/js/script.js` | Brand name, alt text, share text and dynamic page titles |
-| Score overlay | `app/overlay.html` | Overlay title, displayed brand, default text, sponsor copy and theme label |
+| Scoring app | `app/templates/` (generates `app/index.html`), `app/js/` modules | Brand name, alt text, share text and dynamic page titles |
+| Score overlay | `app/overlay/` (generates `app/overlay.html`) | Overlay title, displayed brand, default text, sponsor copy and theme label |
 | NFC tool | `nfc/index.html` | Title and attribution |
 | API docs | `docs/api.md`, `docs/api/openapi.yaml` | User-facing product name |
 | Architecture diagrams | `docs/PP_Basic_Flow.mmd`, `docs/PP_Architecture.mmd` | Product name |
-| CSS | `app/css/style.css` | Brand-specific developer comment removed |
+| CSS | `app/css/` parts (generate `app/css/style.css`) | Brand-specific developer comment removed |
 
 ## Tagline
 
@@ -46,6 +46,6 @@ Per scope, these are also untouched:
 
 ## Tooling
 
-Run `node scripts/build-branding.mjs` after changing the canonical brand values.
+Run `node scripts/build-branding.mjs` after changing the canonical brand values. It brands the sources (`index.html`, the app templates, the overlay sources, the `app/js` modules and the stylesheet parts) and then rebuilds the generated frontend files; it never edits a generated file directly. Running it again is a no-op.
 
-Run `node scripts/check-branding.mjs` to verify that no untrademarked customer-facing brand name or legacy primary tagline remains.
+Run `node scripts/check-branding.mjs` to verify that no untrademarked customer-facing brand name or legacy primary tagline remains. It checks both the sources and the generated documents, and runs in CI.

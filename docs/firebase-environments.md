@@ -53,6 +53,31 @@ The deployment workflow runs on pushes that affect application, Functions, Fireb
 
 The workflow is triggered by push events. Opening or updating a pull request by itself does not deploy. Each deployment push runs the Functions/Jest + Node integration test suite before deployment.
 
+### Deployment job steps
+
+The production and staging jobs run the same sequence; only the secrets, the
+public origin and the project id differ:
+
+1. Check out the commit.
+2. Create `app/js/firebase-config.js` from the environment's config secret.
+3. Configure the environment: `scripts/configure-public-origin.mjs` (public
+   origin in the landing page and the app template) and
+   `scripts/configure-public-function-redirects.mjs` (project id in the public
+   API redirects).
+4. Install the Functions package dependencies (`npm ci --prefix functions`).
+5. Build the frontend: `node scripts/build-frontend.mjs` regenerates
+   `app/index.html`, `app/overlay.html` and `app/css/style.css` from their
+   sources, so the configured origin is part of the generated documents.
+6. Validate the frontend structure: `node scripts/check-frontend-structure.mjs`.
+7. Lint the frontend modules: `npm run lint:frontend --prefix functions`.
+8. Run the test suite: `npm test --prefix functions`.
+9. Deploy with the Firebase CLI, then smoke-test the public endpoints.
+
+A failure in steps 5-8 stops the job before anything is deployed. The
+generated frontend files are also committed; CI (`.github/workflows/tests.yml`)
+fails a push whose generated files are out of date with their sources. See
+[frontend-architecture.md](frontend-architecture.md) for the frontend build.
+
 ## Device Lab environment safety
 
 The Device Lab/harness is admin-gated.
