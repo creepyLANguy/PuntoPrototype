@@ -356,6 +356,12 @@ test("changeover shows backend processing feedback and recovers from failure", a
     beaconSidesSwapped: initialBeaconSidesSwapped,
   });
 
+  const scoreboard = document.querySelector(".scoreboard");
+  if (scoreboard.classList.contains("swapped"))
+  {
+    document.getElementById("swapBtn").click();
+  }
+
   document.getElementById("closeSettingsBtn").click();
   await settle(10);
 });
