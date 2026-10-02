@@ -237,6 +237,17 @@ body.light-mode .court-qr-label
   text-shadow: none;
 }
 
+/* The court QR panel is for large (desktop) screens only. Phone-sized
+   viewports - narrow portrait screens and short landscape screens - never show
+   it, so the scoreboard is not crowded. */
+@media (max-width: 768px), (orientation: landscape) and (max-height: 500px)
+{
+  .court-qr-panel
+  {
+    display: none !important;
+  }
+}
+
 @keyframes scoreboardFadeIn {
   from {
     opacity: 0;

@@ -54,6 +54,16 @@ export function clampCourtQrPanelToViewport()
     return;
   }
 
+  // On phone-sized viewports the stylesheet hides the panel (display: none),
+  // so it has no box to measure. Clamping against that empty box would shrink
+  // the panel to its minimum size, which it would keep on returning to a
+  // larger viewport.
+  const panelRectNow = panel.getBoundingClientRect();
+  if (panelRectNow.width === 0 && panelRectNow.height === 0)
+  {
+    return;
+  }
+
   const parentRect = elements.scoreboardPage.getBoundingClientRect();
   const safeGap = 8;
   const minSize = 130;
@@ -66,7 +76,6 @@ export function clampCourtQrPanelToViewport()
   const maxAllowedWidth = Math.max(24, Math.min(maxWidth, maxWidthByHeight));
   const minAllowedWidth = Math.min(minSize, maxAllowedWidth);
 
-  const panelRectNow = panel.getBoundingClientRect();
   const nextWidth = Math.min(
     maxAllowedWidth,
     Math.max(minAllowedWidth, panelRectNow.width)

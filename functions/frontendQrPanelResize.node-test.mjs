@@ -29,6 +29,9 @@ let window;
 let document;
 let panel;
 let rectReads = 0;
+// jsdom does not apply media queries; tests set this to model the stylesheet
+// hiding the panel (display: none) on a phone-sized viewport.
+let panelHiddenByStylesheet = false;
 const drawLog = [];
 const pointerCaptures = [];
 
@@ -37,6 +40,59 @@ function getCssRuleBody(css, selector) {
   const match = css.match(new RegExp(escapedSelector + "\\s*\\{([^}]*)\\}"));
   assert.ok(match, "CSS rule not found: " + selector);
   return match[1];
+}
+
+// The media queries of every @media block containing a rule whose selector is
+// exactly `selector` and that sets `declaration`.
+function mediaQueriesWithRule(css, selector, declaration) {
+  const queries = [];
+  const mediaPattern = /@media([^{]+)\{/g;
+  let match;
+  while ((match = mediaPattern.exec(css))) {
+    let depth = 1;
+    let end = mediaPattern.lastIndex;
+    while (depth > 0 && end < css.length) {
+      if (css[end] === "{") depth += 1;
+      if (css[end] === "}") depth -= 1;
+      end += 1;
+    }
+    const body = css.slice(mediaPattern.lastIndex, end - 1);
+    const rules = [...body.matchAll(/([^{}]+)\{([^{}]*)\}/g)];
+    if (
+      rules.some(
+        ([, ruleSelector, ruleBody]) =>
+          ruleSelector.trim() === selector && ruleBody.includes(declaration),
+      )
+    ) {
+      queries.push(match[1].trim());
+    }
+  }
+  return queries;
+}
+
+// Evaluates a media query list for a viewport. Only the width, height and
+// orientation features are supported; anything else fails the test loudly.
+function mediaQueryMatches(queryList, { width, height }) {
+  return queryList.split(",").some((query) =>
+    [...query.matchAll(/\(([^)]+)\)/g)].every(([, feature]) => {
+      const [name, rawValue] = feature.split(":").map((part) => part.trim());
+      const value = Number.parseFloat(rawValue);
+      switch (name) {
+        case "max-width":
+          return width <= value;
+        case "min-width":
+          return width >= value;
+        case "max-height":
+          return height <= value;
+        case "min-height":
+          return height >= value;
+        case "orientation":
+          return rawValue === (width > height ? "landscape" : "portrait");
+        default:
+          throw new Error("unsupported media feature in test: " + name);
+      }
+    }),
+  );
 }
 
 function rect(left, top, width, height) {
@@ -62,7 +118,7 @@ function installLayoutAndCanvas() {
   window.Element.prototype.getBoundingClientRect = function () {
     rectReads += 1;
     if (this.id === "scoreboardPage") return rect(0, 0, window.innerWidth, window.innerHeight);
-    if (this.id === "courtQrPanel") return panelRect();
+    if (this.id === "courtQrPanel") return panelHiddenByStylesheet ? rect(0, 0, 0, 0) : panelRect();
     if (this.id === "courtQrCode") {
       const { width } = panelRect();
       return rect(0, 0, width * 2, width * 2);
@@ -164,21 +220,13 @@ test("court QR is rendered to a pixel-snapped canvas with the logo baked into th
   assert.doesNotMatch(styles, /\.court-qr-code > svg/);
 });
 
-test("QR panel spawns from the bottom-right corner in every orientation", () => {
+test("QR panel spawns from the bottom-right corner", () => {
   assert.equal(panel.style.left, "auto");
   assert.equal(panel.style.top, "auto");
   assert.equal(panel.style.right, "8px");
   assert.equal(panel.style.bottom, "8px");
 
   assert.match(styles, /\.court-qr-panel\s*\{[\s\S]*?bottom:\s*8px;[\s\S]*?right:\s*8px;/);
-  assert.doesNotMatch(
-    styles,
-    /@media \(orientation: landscape\)[\s\S]*?\.court-qr-panel\s*\{[\s\S]*?display:\s*none\s*!important;/,
-  );
-  assert.doesNotMatch(
-    styles,
-    /@media \(max-width: 768px\)[\s\S]*?\.court-qr-panel\s*\{[\s\S]*?display:\s*none\s*!important;/,
-  );
 });
 
 test("resize handles fade in on a logarithmic curve as the pointer approaches", async () => {
@@ -306,6 +354,56 @@ test("the panel is kept inside the scoreboard when the window resizes", () => {
 
   const geometry = panelRect();
   assert.equal(panel.style.left, `${window.innerWidth - geometry.width - 8}px`);
+});
+
+test("the QR panel is hidden on phone-sized viewports and shown on desktop", () => {
+  const hidingQueries = mediaQueriesWithRule(styles, ".court-qr-panel", "display: none !important");
+  assert.ok(hidingQueries.length > 0, "a media query hides the QR panel");
+  const hiddenAt = (viewport) => hidingQueries.some((query) => mediaQueryMatches(query, viewport));
+
+  for (const phone of [
+    { width: 360, height: 780 },
+    { width: 430, height: 932 },
+    { width: 768, height: 1024 },
+    { width: 780, height: 360 },
+    { width: 932, height: 430 },
+  ]) {
+    assert.equal(hiddenAt(phone), true, `hidden at ${phone.width}x${phone.height}`);
+  }
+
+  for (const desktop of [
+    { width: 1280, height: 720 },
+    { width: 1366, height: 768 },
+    { width: 1920, height: 1080 },
+    { width: 2560, height: 1440 },
+    { width: 1080, height: 1920 },
+  ]) {
+    assert.equal(hiddenAt(desktop), false, `shown at ${desktop.width}x${desktop.height}`);
+  }
+});
+
+test("a panel hidden by the stylesheet is not resized while hidden", () => {
+  const saved = { left: panel.style.left, top: panel.style.top, width: panel.style.width };
+  panel.style.left = "300px";
+  panel.style.top = "200px";
+  panel.style.width = "250px";
+
+  try {
+    panelHiddenByStylesheet = true;
+    window.dispatchEvent(new window.Event("resize"));
+    assert.deepEqual(
+      { left: panel.style.left, top: panel.style.top, width: panel.style.width },
+      { left: "300px", top: "200px", width: "250px" },
+      "the hidden panel keeps its size and position",
+    );
+
+    panelHiddenByStylesheet = false;
+    window.dispatchEvent(new window.Event("resize"));
+    assert.equal(panel.style.width, "250px", "the panel returns at the size it had");
+  } finally {
+    panelHiddenByStylesheet = false;
+    Object.assign(panel.style, saved);
+  }
 });
 
 test("QR panel uses the custom pointer interaction instead of native CSS resize", () => {
