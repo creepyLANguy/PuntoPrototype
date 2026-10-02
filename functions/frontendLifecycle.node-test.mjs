@@ -314,6 +314,9 @@ test("changeover shows backend processing feedback and recovers from failure", a
     assert.equal(button.title, "Changeover");
     assert.equal(button.textContent, "↔");
 
+    const expectedLabelAfterFailedChangeover =
+      initialBeaconSidesSwapped ? "Changeover" : "Changeover *";
+
     callableHandlers.set(
       "changeoverCourt",
       async () =>
@@ -335,7 +338,7 @@ test("changeover shows backend processing feedback and recovers from failure", a
         button.disabled === false &&
         button.getAttribute("aria-busy") === null &&
         button.classList.contains("processing") === false &&
-        label.textContent === "Changeover",
+        label.textContent === expectedLabelAfterFailedChangeover,
       { label: "changeover UI should recover after backend failure" },
     );
 
