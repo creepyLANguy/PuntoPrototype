@@ -258,10 +258,6 @@ test("changeover shows backend processing feedback and recovers from failure", a
   const originalHandler = callableHandlers.get("changeoverCourt");
   const initialBeaconSidesSwapped =
     firestoreState.docs.get("courts/lifecourt").beaconSidesSwapped === true;
-  const processingEvents = [];
-  const processingEventListener = (event) =>
-    processingEvents.push(event?.detail?.processing === true);
-  window.addEventListener("punto:changeover-processing", processingEventListener);
 
   try
   {
@@ -327,6 +323,7 @@ test("changeover shows backend processing feedback and recovers from failure", a
     );
 
     button.click();
+    await settle(0);
 
     assert.equal(button.disabled, true);
     assert.equal(button.getAttribute("aria-busy"), "true");
@@ -338,7 +335,7 @@ test("changeover shows backend processing feedback and recovers from failure", a
         button.getAttribute("aria-busy") === null &&
         button.classList.contains("processing") === false &&
         label.textContent === "Changeover",
-      { label: `changeover UI should recover after backend failure [events=${processingEvents.join(",")}, beacon=${firestoreState.docs.get("courts/lifecourt")?.beaconSidesSwapped}, label=${label.textContent}, buttonDisabled=${button.disabled}, ariaBusy=${button.getAttribute("aria-busy")}, processing=${button.classList.contains("processing")}, ariaLabel=${button.getAttribute("aria-label")}, buttonText=${button.textContent}]` },
+      { label: "changeover UI should recover after backend failure" },
     );
 
     assert.equal(button.getAttribute("aria-label"), "Changeover");
@@ -346,7 +343,6 @@ test("changeover shows backend processing feedback and recovers from failure", a
   }
   finally
   {
-    window.removeEventListener("punto:changeover-processing", processingEventListener);
     callableHandlers.set("changeoverCourt", originalHandler);
   }
 
