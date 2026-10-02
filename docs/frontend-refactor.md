@@ -183,9 +183,11 @@ The net increase of 37 Node tests is made up as follows:
 
 ## Not verified here
 
-- **Staging deployment and staging smoke tests.** The push of this branch
-  triggers the staging job in `deploy.yml`; its result was not available
-  when this log was written.
+- **The app in the staging deployment.** The push of this branch ran the
+  staging job in `deploy.yml` successfully: build, structure check,
+  frontend lint, tests, deploy and the public-endpoint smoke tests. Those
+  smoke tests cover the JSON API, not the web app, so the deployed app has
+  not been exercised.
 - **Manual visual checks in real browsers and OBS.** The equivalence
   evidence above means a visual change is unlikely: the generated CSS and
   markup are byte-identical, and the DOM is identical at every scripted step.
