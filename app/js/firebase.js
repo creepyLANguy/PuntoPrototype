@@ -173,62 +173,13 @@ function attachChangeoverListener()
   );
 }
 
-function setChangeoverProcessingState(isProcessing)
+function announceChangeoverProcessing(processing)
 {
-  const button = document.getElementById("changeoverBtn");
-  const tile = document.getElementById("changeoverTile");
-  if (!button || !tile) return;
-
-  const label = tile.querySelector("span");
-
-  if (isProcessing)
-  {
-    if (!button.dataset.changeoverOriginalContent)
-    {
-      button.dataset.changeoverOriginalContent = button.innerHTML;
-    }
-
-    if (!button.dataset.changeoverOriginalLabel)
-    {
-      button.dataset.changeoverOriginalLabel = tile.querySelector("span")?.textContent || "Changeover";
-    }
-
-    button.disabled = true;
-    button.classList.add("processing");
-    button.setAttribute("aria-busy", "true");
-    button.setAttribute("aria-label", "Changing court over");
-    button.title = "Changing court over";
-
-    if (label)
-    {
-      label.textContent = "Changing over…";
-    }
-
-    button.innerHTML = '<span class="changeover-spinner" aria-hidden="true"></span>';
-    return;
-  }
-
-  button.disabled = false;
-  button.classList.remove("processing");
-  button.removeAttribute("aria-busy");
-  button.setAttribute("aria-label", "Changeover");
-  button.title = "Changeover";
-
-  if (button.dataset.changeoverOriginalContent)
-  {
-    button.innerHTML = button.dataset.changeoverOriginalContent;
-    delete button.dataset.changeoverOriginalContent;
-  }
-
-  if (button.dataset.changeoverOriginalLabel)
-  {
-    const label = tile.querySelector("span");
-    if (label && label.textContent === "Changing over…")
-    {
-      label.textContent = button.dataset.changeoverOriginalLabel;
-    }
-    delete button.dataset.changeoverOriginalLabel;
-  }
+  window.dispatchEvent(
+    new CustomEvent("punto:changeover-processing", {
+      detail: { processing: processing === true },
+    }),
+  );
 }
 
 function installChangeoverBehaviour()
@@ -246,7 +197,7 @@ function installChangeoverBehaviour()
     const courtId = getCurrentCourtId();
     if (!courtId) return;
 
-    setChangeoverProcessingState(true);
+    announceChangeoverProcessing(true);
 
     try
     {
@@ -281,7 +232,7 @@ function installChangeoverBehaviour()
     }
     finally
     {
-      setChangeoverProcessingState(false);
+      announceChangeoverProcessing(false);
     }
   }, { capture: true });
 }
