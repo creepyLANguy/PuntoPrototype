@@ -37,6 +37,9 @@ export async function getDoc(docRef) {
 }
 
 export async function getDocs(collectionRef) {
+  if (firestoreState.failingCollections.has(collectionRef.__path)) {
+    throw new Error(`Simulated read failure: ${collectionRef.__path}`);
+  }
   const prefix = `${collectionRef.__path}/`;
   const docs = [];
   for (const [path, data] of firestoreState.docs.entries()) {

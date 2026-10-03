@@ -9,7 +9,7 @@ import {
   normalizeHexColour,
   normalizeTeamColourPair,
 } from "../app/js/utils/colour.js";
-import { formatPct, normalizeCourtId } from "../app/js/utils/formatting.js";
+import { escapeHtml, formatPct, normalizeCourtId } from "../app/js/utils/formatting.js";
 
 test("hex colours are normalised to lower-case #rrggbb", () => {
   assert.equal(normalizeHexColour(" #AbCdEf "), "#abcdef");
@@ -43,4 +43,14 @@ test("court ids and percentages are formatted consistently", () => {
   assert.equal(formatPct(55.5), "56%");
   assert.equal(formatPct("12.4"), "12%");
   assert.equal(formatPct(undefined), "0%");
+});
+
+test("text is escaped for use inside HTML", () => {
+  assert.equal(
+    escapeHtml(`<img src="x" onerror='alert(1)'> & Co`),
+    "&lt;img src=&quot;x&quot; onerror=&#39;alert(1)&#39;&gt; &amp; Co",
+  );
+  assert.equal(escapeHtml("Riverside Padel"), "Riverside Padel");
+  assert.equal(escapeHtml(undefined), "");
+  assert.equal(escapeHtml(42), "42");
 });

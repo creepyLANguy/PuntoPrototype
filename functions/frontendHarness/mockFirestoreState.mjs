@@ -26,6 +26,11 @@ export const firestoreState = {
   pendingBackendWork: [],
   // per-court authoritative score incl. history (like the CF replay would produce)
   backendScores: new Map(),
+  // Collection paths whose reads (getDocs) fail, to test degraded loading.
+  failingCollections: new Set(),
+  // Callbacks run (asynchronously, like a Firestore trigger) after a document
+  // is deleted: (path, deletedData) => void.
+  deleteHooks: new Set(),
 };
 
 export function resetFirestoreState() {
@@ -35,6 +40,8 @@ export function resetFirestoreState() {
   firestoreState.backendEnabled = true;
   firestoreState.pendingBackendWork = [];
   firestoreState.backendScores.clear();
+  firestoreState.failingCollections.clear();
+  firestoreState.deleteHooks.clear();
   timestampCounter = 0;
 }
 
@@ -100,8 +107,12 @@ export function mergeDoc(path, data) {
 }
 
 export function deleteDocAt(path) {
+  const deleted = firestoreState.docs.get(path);
   firestoreState.docs.delete(path);
   notifyListeners(path);
+  for (const hook of firestoreState.deleteHooks) {
+    queueMicrotask(() => hook(path, deleted));
+  }
 }
 
 export function seedDoc(path, data) {

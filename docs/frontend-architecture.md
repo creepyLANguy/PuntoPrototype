@@ -337,6 +337,13 @@ All frontend tests live in `functions/` and run with `npm test --prefix function
   `frontendRouteParsing`, `frontendNames`, `frontendScoringPresentation`,
   `frontendNfcParser`, `frontendSharePayload`, `frontendUtils`, `frontendClubIndex` (and
   `frontendToast` with its own small jsdom document).
+- **Club and admin tests** (`frontendClubLists`, `frontendClubs`,
+  `frontendAdmin`) drive the court lists and the admin portal. The club tests
+  run the real club callables and deletion triggers against the in-memory
+  Firestore (`frontendHarness/clubBackend.mjs`), so they also check what the
+  app sends to the backend and what ends up stored. The harness can also make
+  a collection's reads fail (`firestoreState.failingCollections`) and run
+  trigger-like hooks on deletes (`firestoreState.deleteHooks`).
 - **Overlay tests** (`frontendOverlay.node-test.mjs`) load the generated
   `app/overlay.html` in jsdom with its inline script enabled.
 - Tests assert behaviour - what is rendered, sent, stored or shared - rather

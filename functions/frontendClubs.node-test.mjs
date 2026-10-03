@@ -1,8 +1,8 @@
-// Frontend integration tests: clubs. Court lists show each court's club and can
-// be searched by club; the admin portal lists, creates, edits and deletes
-// clubs and opens a club's courts and devices for editing. The club callables
-// are stood in for by handlers that apply the request to the mock Firestore;
-// the real backend rules are covered by clubs.test.js.
+// Frontend integration tests: club management in the admin portal, driven
+// end to end. The real club callables and deletion triggers run against the
+// harness's in-memory Firestore (frontendHarness/clubBackend.mjs), so these
+// tests also pin the contract between the app and the backend: what the app
+// sends, what it does with the answer, and what ends up stored.
 import assert from "node:assert/strict";
 import test from "node:test";
 
@@ -16,60 +16,30 @@ import {
   seedDoc,
   settle,
   waitFor,
-  writeDoc,
 } from "./frontendHarness/harness.mjs";
+import { installClubBackend } from "./frontendHarness/clubBackend.mjs";
 
 let window;
 let document;
-const callableCalls = [];
+let clubRequests;
 
 const $ = (id) => document.getElementById(id);
 const isShown = (id) => window.getComputedStyle($(id)).display !== "none";
 const texts = (selector) =>
   [...document.querySelectorAll(selector)].map((el) => el.textContent.trim());
-
-// Stand-in for the club callables: replaces the club's members and removes
-// them from any other club, like the backend does.
-function saveClubDoc(clubId, { name, courtIds, deviceIds }) {
-  for (const [path, data] of firestoreState.docs) {
-    if (!path.startsWith("clubs/") || path === `clubs/${clubId}`) continue;
-    writeDoc(path, {
-      ...data,
-      courtIds: (data.courtIds || []).filter((id) => !courtIds.includes(id)),
-      deviceIds: (data.deviceIds || []).filter((id) => !deviceIds.includes(id)),
-    });
-  }
-  writeDoc(`clubs/${clubId}`, { name, courtIds, deviceIds });
-  return { data: { clubId, name, courtIds, deviceIds, moved: { courts: [], devices: [] } } };
-}
-
-function installClubCallables() {
-  callableHandlers.set("createClub", async (payload) => {
-    callableCalls.push(["createClub", payload]);
-    return saveClubDoc("newclb", payload);
-  });
-  callableHandlers.set("updateClub", async (payload) => {
-    callableCalls.push(["updateClub", payload]);
-    return saveClubDoc(payload.clubId, payload);
-  });
-  callableHandlers.set("deleteClub", async (payload) => {
-    callableCalls.push(["deleteClub", payload]);
-    firestoreState.docs.delete(`clubs/${payload.clubId}`);
-    return { data: { clubId: payload.clubId, releasedCount: 0 } };
-  });
-}
-
-function clickMenuButton(label) {
-  const button = [...document.querySelectorAll(".menu-btn")].find(
-    (btn) => btn.textContent.trim() === label,
-  );
-  assert.ok(button, `menu button ${label}`);
-  button.click();
-}
+const stored = (path) => firestoreState.docs.get(path);
+const clubIdNamed = (name) =>
+  [...firestoreState.docs]
+    .find(([path, data]) => path.startsWith("clubs/") && data.name === name)?.[0]
+    .split("/")[1];
 
 function typeInto(input, value) {
   input.value = value;
   input.dispatchEvent(new window.Event("input", { bubbles: true }));
+}
+
+function pressKey(target, key) {
+  target.dispatchEvent(new window.KeyboardEvent("keydown", { key, bubbles: true }));
 }
 
 async function confirmDialog(accept = true) {
@@ -80,125 +50,90 @@ async function confirmDialog(accept = true) {
   return message;
 }
 
+const confirmIsOpen = () => !$("confirmModal").classList.contains("hidden");
 const memberRow = (listId, memberId) =>
   document.querySelector(`#${listId} .club-member-item[data-member-id="${memberId}"]`);
+const memberChecked = (listId, memberId) =>
+  memberRow(listId, memberId).querySelector("input").checked;
+const clubRow = (clubId) => document.querySelector(`#adminClubList [data-club-id="${clubId}"]`);
+const lastToast = () => texts(".toast").at(-1);
 
-async function waitForEditorLists() {
-  await waitFor(() => document.querySelector("#clubCourtList .club-member-item"), {
-    label: "club editor court rows",
-  });
-  await waitFor(() => document.querySelector("#clubDeviceList .club-member-item"), {
-    label: "club editor device rows",
-  });
+async function waitForEditor() {
+  await waitFor(() => isShown("editClubPage"), { label: "club editor" });
+  await waitFor(
+    () =>
+      document.querySelector("#clubCourtList .club-member-item, #clubCourtList .no-courts") &&
+      document.querySelector("#clubDeviceList .club-member-item, #clubDeviceList .no-courts"),
+    { label: "club editor lists" },
+  );
+}
+
+async function waitForDashboardClubs(count) {
+  await waitFor(
+    () =>
+      isShown("adminDashboardPage") &&
+      !isShown("editClubPage") &&
+      document.querySelectorAll("#adminClubList .admin-club-item").length === count,
+    { label: `dashboard with ${count} clubs` },
+  );
+}
+
+async function openClub(clubId) {
+  await waitFor(() => clubRow(clubId), { label: `club ${clubId} in the list` });
+  clubRow(clubId).querySelector(".edit-btn").click();
+  await waitForEditor();
 }
 
 test.before(async () => {
   seedBaseData();
-  seedCourt("abcd", { name: "Alpha Court" });
+  seedCourt("abcd", { name: "Alpha Court", clubId: "rvside" });
   seedCourt("efgh", { name: "Beta Court" });
-  seedCourt("jkmn", { name: "Gamma Court" });
+  seedCourt("jkmn", { name: "Gamma Court", clubId: "hiltop" });
   seedCourt("pqrs", { name: "Delta Court", status: "private" });
+  seedCourt("stux", { name: "Echo Court", clubId: "ghostc" });
   seedDoc("clubs/rvside", { name: "Riverside Padel", courtIds: ["abcd"], deviceIds: ["HUB-1"] });
   seedDoc("clubs/hiltop", { name: "Hilltop Club", courtIds: ["jkmn"], deviceIds: [] });
+  // Lists a court and a device that no longer exist.
+  seedDoc("clubs/ghostc", {
+    name: "Ghost Club",
+    courtIds: ["stux", "zzzz"],
+    deviceIds: ["GONE-9"],
+  });
   seedDoc("devices/HUB-1", { courtId: "abcd", clubId: "rvside" });
   seedDoc("devices/PULSE-2", { courtId: "efgh" });
-  installClubCallables();
+
+  clubRequests = installClubBackend();
+  callableHandlers.set("updateScoringOptions", async ({ scoringOptions }) => ({
+    data: { scoringOptions },
+  }));
 
   const dom = await bootFrontend();
   window = dom.window;
   document = window.document;
-});
 
-test("the spectate list shows each court's club in its own column", async () => {
-  clickMenuButton("Spectate");
-  await waitFor(() => document.querySelectorAll("#spectateCourtList .court-item").length === 3, {
-    label: "spectate list",
-  });
-
-  assert.match($("spectateCourtSearch").placeholder, /club/i);
-  assert.equal($("spectateCourtList").classList.contains("has-clubs"), true);
-
-  const rows = [...document.querySelectorAll("#spectateCourtList .court-item")].map((row) => [
-    row.dataset.courtId,
-    row.querySelector(".court-item-club").textContent,
-  ]);
-  assert.deepEqual(rows, [
-    ["abcd", "Riverside Padel"],
-    ["efgh", ""],
-    ["jkmn", "Hilltop Club"],
-  ]);
-  assert.equal(
-    document.querySelector('#spectateCourtList [data-court-id="abcd"]').getAttribute("aria-label"),
-    "Alpha Court - abcd - Riverside Padel",
-  );
-});
-
-test("court searches also match club names and club ids", async () => {
-  const search = $("spectateCourtSearch");
-  const visibleCourts = () =>
-    [...document.querySelectorAll("#spectateCourtList .court-item")].map(
-      (row) => row.dataset.courtId,
-    );
-
-  typeInto(search, "riverside");
-  assert.deepEqual(visibleCourts(), ["abcd"]);
-
-  typeInto(search, "HILTOP");
-  assert.deepEqual(visibleCourts(), ["jkmn"]);
-
-  typeInto(search, "beta");
-  assert.deepEqual(visibleCourts(), ["efgh"], "court names still match");
-  assert.equal(
-    $("spectateCourtList").classList.contains("has-clubs"),
-    true,
-    "the club column stays while filtered rows have no club",
-  );
-
-  typeInto(search, "");
-  $("closeSpectateBtn").click();
-  await waitFor(() => isShown("menuPage"), { label: "menu" });
-});
-
-test("the play list shows clubs and searches by club as well", async () => {
-  clickMenuButton("Play");
-  await waitFor(() => document.querySelectorAll("#playCourtList .court-item").length === 4, {
-    label: "play list (open and private courts)",
-  });
-  assert.match($("playCourtSearch").placeholder, /club/i);
-  assert.equal(
-    document.querySelector('#playCourtList [data-court-id="jkmn"] .court-item-club').textContent,
-    "Hilltop Club",
-  );
-
-  typeInto($("playCourtSearch"), "padel");
-  assert.deepEqual(
-    [...document.querySelectorAll("#playCourtList .court-item")].map((row) => row.dataset.courtId),
-    ["abcd"],
-  );
-
-  typeInto($("playCourtSearch"), "");
-  $("closePlayBtn").click();
-  await waitFor(() => isShown("menuPage"), { label: "menu" });
-});
-
-test("admins see the club of every court and device in the dashboard lists", async () => {
   $("adminLoginBtn").click();
   await waitFor(() => isShown("adminAuthPage"), { label: "admin auth page" });
   $("adminAuthPassword").value = ADMIN_SKELETON_KEY;
   $("submitAdminAuthBtn").click();
-  await waitFor(() => document.querySelectorAll("#adminCourtList .admin-court-item").length === 4, {
+  await waitFor(() => document.querySelectorAll("#adminCourtList .admin-court-item").length === 5, {
     label: "admin court list",
   });
+});
 
-  const clubOf = (courtId) =>
-    [...document.querySelectorAll("#adminCourtList .admin-court-item")]
-      .find((row) => row.querySelector(".edit-btn").dataset.id === courtId)
-      .querySelector(".club-cell .aci-value").textContent;
-  assert.equal(clubOf("abcd"), "Riverside Padel");
-  assert.equal(clubOf("efgh"), "—");
+test("the admin court and device lists show each item's club and search by it", async () => {
+  const courtClub = (courtId) =>
+    document
+      .querySelector(`#adminCourtList .edit-btn[data-id="${courtId}"]`)
+      .closest(".admin-court-item")
+      .querySelector(".club-cell");
+  assert.equal(courtClub("abcd").querySelector(".aci-value").textContent, "Riverside Padel");
+  assert.equal(courtClub("abcd").querySelector(".aci-value").title, "Riverside Padel (RVSIDE)");
+  assert.equal(courtClub("abcd").classList.contains("is-empty"), false);
+  assert.equal(courtClub("efgh").querySelector(".aci-value").textContent, "—");
+  assert.equal(courtClub("efgh").classList.contains("is-empty"), true);
 
   assert.match($("adminCourtSearch").placeholder, /club/i);
-  typeInto($("adminCourtSearch"), "hilltop");
+  typeInto($("adminCourtSearch"), "hiltop");
   assert.deepEqual(texts("#adminCourtList .aci-name strong"), ["Gamma Court"]);
   typeInto($("adminCourtSearch"), "");
 
@@ -209,206 +144,360 @@ test("admins see the club of every court and device in the dashboard lists", asy
       label: "admin device list",
     },
   );
+  assert.match($("adminDeviceSearch").placeholder, /club/i);
   assert.deepEqual(texts("#adminDeviceList .club-cell .aci-value"), ["Riverside Padel", "—"]);
-  typeInto($("adminDeviceSearch"), "riverside");
-  assert.equal(document.querySelectorAll("#adminDeviceList .admin-court-item").length, 1);
-  typeInto($("adminDeviceSearch"), "");
+  for (const [term, count] of [
+    ["riverside", 1],
+    ["RVSIDE", 1],
+    ["efgh", 1],
+    ["pulse", 1],
+    ["", 2],
+  ]) {
+    typeInto($("adminDeviceSearch"), term);
+    assert.equal(
+      document.querySelectorAll("#adminDeviceList .admin-court-item").length,
+      count,
+      `device search "${term}"`,
+    );
+  }
 });
 
 test("the Clubs tab lists every club with its court and device counts", async () => {
-  const tabs = texts(".admin-tabs .tab-btn");
-  assert.deepEqual(tabs, ["Clubs", "Courts", "Devices"]);
+  assert.deepEqual(texts(".admin-tabs .tab-btn"), ["Clubs", "Courts", "Devices"]);
 
   document.querySelector('.tab-btn[data-tab="clubs"]').click();
-  await waitFor(() => document.querySelectorAll("#adminClubList .admin-club-item").length === 2, {
-    label: "club list",
-  });
+  await waitForDashboardClubs(3);
   assert.equal($("clubsTab").classList.contains("active"), true);
-  assert.equal($("courtsTab").classList.contains("active"), false);
+  assert.equal($("devicesTab").classList.contains("active"), false);
 
-  const rows = [...document.querySelectorAll("#adminClubList .admin-club-item")].map((row) => [
-    row.querySelector(".club-name").textContent,
-    row.querySelector(".aci-id").textContent,
-    row.querySelector(".club-courts-cell .aci-value").textContent,
-    row.querySelector(".club-devices-cell .aci-value").textContent,
+  const rows = [...document.querySelectorAll("#adminClubList .admin-club-item")].map((item) => [
+    item.querySelector(".club-name").textContent,
+    item.querySelector(".aci-id").textContent,
+    item.querySelector(".club-courts-cell .aci-value").textContent,
+    item.querySelector(".club-devices-cell .aci-value").textContent,
   ]);
   assert.deepEqual(rows, [
+    ["Ghost Club", "ID: GHOSTC", "2 courts", "1 device"],
     ["Hilltop Club", "ID: HILTOP", "1 court", "0 devices"],
     ["Riverside Padel", "ID: RVSIDE", "1 court", "1 device"],
   ]);
 
-  typeInto($("adminClubSearch"), "rvs");
-  assert.deepEqual(texts("#adminClubList .club-name"), ["Riverside Padel"]);
+  for (const [term, expected] of [
+    ["rvs", ["Riverside Padel"]],
+    ["CLUB", ["Ghost Club", "Hilltop Club"]],
+    ["nope", []],
+  ]) {
+    typeInto($("adminClubSearch"), term);
+    assert.deepEqual(texts("#adminClubList .club-name"), expected, `club search "${term}"`);
+  }
+  assert.equal(texts("#adminClubList .no-courts")[0], "No matching clubs found.");
   typeInto($("adminClubSearch"), "");
 });
 
-test("Create Club saves the name and the selected courts and devices", async () => {
-  // Start from the Courts tab: creating a club still lands on the Clubs tab.
+test("Create Club creates the club and moves members from their old club", async () => {
   document.querySelector('.tab-btn[data-tab="courts"]').click();
   await settle();
 
   $("showCreateClubBtn").click();
-  await waitFor(() => isShown("editClubPage"), { label: "club editor" });
-  await waitForEditorLists();
-
+  await waitForEditor();
+  assert.equal(window.history.state.viewState.page, "createClub");
   assert.equal($("editClubTitle").textContent, "Create Club");
+  assert.equal($("editClubIdLine").textContent, "");
   assert.equal($("saveClubBtn").textContent, "Create Club");
-  assert.equal($("deleteClubBtn").style.display, "none", "a new club cannot be deleted");
+  assert.equal($("deleteClubBtn").style.display, "none");
   assert.equal($("clubCourtsCount").textContent, "0 selected");
+  assert.equal($("clubDevicesCount").textContent, "0 selected");
 
   $("saveClubBtn").click();
   await settle();
   assert.equal($("editClubNameError").textContent, "Club name required.");
-  assert.equal(callableCalls.length, 0);
+  typeInto($("editClubName"), "   ");
+  $("saveClubBtn").click();
+  await settle();
+  assert.equal($("editClubNameError").textContent, "Club name required.");
+  assert.equal(clubRequests.length, 0);
 
   typeInto($("editClubName"), "Seaside Club");
+  assert.equal($("editClubNameError").textContent, "", "typing clears the error");
+
+  // Enter in a search box filters; it must not save the club.
   typeInto($("clubCourtSearch"), "beta");
+  pressKey($("clubCourtSearch"), "Enter");
+  await settle();
+  assert.equal(clubRequests.length, 0);
   assert.deepEqual(
     [...document.querySelectorAll("#clubCourtList .club-member-item")].map(
-      (row) => row.dataset.memberId,
+      (r) => r.dataset.memberId,
     ),
     ["efgh"],
   );
   memberRow("clubCourtList", "efgh").querySelector("input").click();
   typeInto($("clubCourtSearch"), "");
 
-  // Gamma Court belongs to Hilltop Club: selecting it marks it as a move.
   const gamma = memberRow("clubCourtList", "jkmn");
   assert.equal(gamma.querySelector(".club-member-club").textContent, "Hilltop Club");
+  assert.equal(
+    gamma.querySelector(".club-member-club").title,
+    "Currently in Hilltop Club (HILTOP)",
+  );
   gamma.querySelector("input").click();
   assert.equal(gamma.classList.contains("will-move"), true);
+  gamma.querySelector("input").click();
+  assert.equal(gamma.classList.contains("will-move"), false, "unticking clears the move marker");
+  gamma.querySelector("input").click();
+
+  typeInto($("clubDeviceSearch"), "efgh");
   memberRow("clubDeviceList", "PULSE-2").querySelector("input").click();
+  typeInto($("clubDeviceSearch"), "");
   assert.equal($("clubCourtsCount").textContent, "2 selected");
   assert.equal($("clubDevicesCount").textContent, "1 selected");
 
-  $("saveClubBtn").click();
+  // Enter in the name field saves.
+  pressKey($("editClubName"), "Enter");
   const message = await confirmDialog(true);
+  assert.match(message, /already in another club and will move to "Seaside Club"/);
   assert.match(message, /Court Gamma Court \(from Hilltop Club\)/);
 
-  await waitFor(() => callableCalls.length === 1, { label: "createClub call" });
-  assert.deepEqual(callableCalls[0], [
+  await waitForDashboardClubs(4);
+  assert.deepEqual(clubRequests.at(-1), [
     "createClub",
     { name: "Seaside Club", courtIds: ["efgh", "jkmn"], deviceIds: ["PULSE-2"] },
   ]);
 
-  await waitFor(() => isShown("adminDashboardPage") && !isShown("editClubPage"), {
-    label: "back on the dashboard",
-  });
-  await waitFor(() => document.querySelectorAll("#adminClubList .admin-club-item").length === 3, {
-    label: "club list with the new club",
-  });
-  assert.equal($("clubsTab").classList.contains("active"), true);
+  const seasideId = clubIdNamed("Seaside Club");
+  assert.match(seasideId, /^[a-z]{6}$/);
+  assert.match(
+    lastToast(),
+    new RegExp(`Club "Seaside Club" created\\. ID: ${seasideId.toUpperCase()}`),
+  );
+  assert.deepEqual(stored(`clubs/${seasideId}`).courtIds, ["efgh", "jkmn"]);
+  assert.deepEqual(stored(`clubs/${seasideId}`).deviceIds, ["PULSE-2"]);
+  assert.equal(stored("courts/efgh").clubId, seasideId);
+  assert.equal(stored("courts/jkmn").clubId, seasideId);
+  assert.equal(stored("devices/PULSE-2").clubId, seasideId);
+  assert.deepEqual(stored("clubs/hiltop").courtIds, [], "Gamma Court left Hilltop Club");
+
+  assert.equal($("clubsTab").classList.contains("active"), true, "lands on the Clubs tab");
+  assert.equal(
+    clubRow("hiltop").querySelector(".club-courts-cell .aci-value").textContent,
+    "0 courts",
+  );
 });
 
-test("a club's courts and devices open their own edit pages and return to the club", async () => {
-  const riverside = [...document.querySelectorAll("#adminClubList .admin-club-item")].find(
-    (row) => row.dataset.clubId === "rvside",
-  );
-  riverside.querySelector(".edit-btn").click();
-  await waitFor(() => isShown("editClubPage"), { label: "club editor" });
-  await waitForEditorLists();
+test("a club the backend rejects stays open with the reason shown", async () => {
+  $("showCreateClubBtn").click();
+  await waitForEditor();
 
+  // maxlength stops typing past 80 characters; the backend enforces it too.
+  $("editClubName").value = "x".repeat(81);
+  $("saveClubBtn").click();
+  await waitFor(() => lastToast()?.startsWith("Failed to save club"), { label: "error toast" });
+  assert.equal(lastToast(), "Failed to save club: Club name must be at most 80 characters.");
+  assert.equal(isShown("editClubPage"), true);
+  assert.equal($("saveClubBtn").disabled, false, "the save button is usable again");
+  assert.equal(clubIdNamed("x".repeat(81)), undefined);
+
+  $("closeEditClubBtn").click();
+  assert.match(await confirmDialog(true), /Discard your unsaved changes/);
+  await waitForDashboardClubs(4);
+});
+
+test("a club's courts and devices open their edit pages and return to the club", async () => {
+  await openClub("rvside");
+  assert.deepEqual(window.history.state.viewState.page, "editClub");
+  assert.equal(window.history.state.viewState.entityId, "rvside");
   assert.equal($("editClubTitle").textContent, "Riverside Padel");
   assert.equal($("editClubIdLine").textContent, "ID: RVSIDE");
-  assert.equal($("editClubName").value, "Riverside Padel");
-  assert.equal(memberRow("clubCourtList", "abcd").querySelector("input").checked, true);
-  assert.equal(memberRow("clubDeviceList", "HUB-1").querySelector("input").checked, true);
+  assert.equal($("saveClubBtn").textContent, "Save Club");
+  assert.equal(memberChecked("clubCourtList", "abcd"), true);
+  assert.equal(memberChecked("clubDeviceList", "HUB-1"), true);
+  assert.equal(document.querySelector("#clubCourtList .club-member-item").dataset.memberId, "abcd");
   assert.equal(
-    document.querySelector("#clubCourtList .club-member-item").dataset.memberId,
-    "abcd",
-    "members are listed first",
+    memberRow("clubCourtList", "abcd").querySelector(".club-member-club").textContent,
+    "",
   );
 
-  // An unsaved change survives a visit to a court's edit page.
+  // An unsaved change survives visits to the members' edit pages.
   memberRow("clubCourtList", "efgh").querySelector("input").click();
 
   memberRow("clubCourtList", "abcd").querySelector(".club-member-open").click();
   await waitFor(() => isShown("editCourtPage"), { label: "court edit page" });
   assert.equal(isShown("editClubPage"), false);
   assert.equal($("editCourtName").value, "Alpha Court");
-
   $("closeEditBtn").click();
-  await waitFor(() => isShown("editClubPage") && !isShown("editCourtPage"), {
-    label: "back on the club editor",
-  });
-  await waitForEditorLists();
-  assert.equal(memberRow("clubCourtList", "efgh").querySelector("input").checked, true);
+  await waitForEditor();
+  assert.equal(memberChecked("clubCourtList", "efgh"), true);
 
-  // Saving a device opened from the club returns to the club as well.
   memberRow("clubDeviceList", "HUB-1").querySelector(".club-member-open").click();
-  // The page's Save handler is attached once its court dropdown has loaded.
   await waitFor(
     () => isShown("editDevicePage") && $("editDeviceCourtIdSelect").options.length > 1,
     {
       label: "device edit page",
     },
   );
-  assert.equal($("editDeviceIdTitle").textContent, "HUB-1");
   $("saveEditDeviceBtn").click();
-  await waitFor(() => isShown("editClubPage") && !isShown("editDevicePage"), {
-    label: "back on the club editor after saving the device",
-  });
-  await waitForEditorLists();
-  assert.equal(memberRow("clubCourtList", "efgh").querySelector("input").checked, true);
+  await waitForEditor();
+  assert.equal(lastToast(), "Mapping updated");
+  assert.equal(memberChecked("clubCourtList", "efgh"), true);
 
-  // Beta Court joined Seaside Club in the previous test, so it moves.
+  // Saving a court returns here too, and the list shows the saved name.
+  memberRow("clubCourtList", "abcd").querySelector(".club-member-open").click();
+  await waitFor(() => isShown("editCourtPage"), { label: "court edit page" });
+  $("editCourtName").value = "Alpha Court Renamed";
+  $("saveEditBtn").click();
+  await waitForEditor();
+  await waitFor(
+    () => memberRow("clubCourtList", "abcd")?.textContent.includes("Alpha Court Renamed"),
+    {
+      label: "renamed court in the club editor",
+    },
+  );
+  assert.equal(stored("courts/abcd").name, "Alpha Court Renamed");
+  assert.equal(stored("courts/abcd").clubId, "rvside", "editing a court keeps its club");
+  assert.equal(memberChecked("clubCourtList", "efgh"), true);
+
+  // Unticking a member releases it from the club on save.
+  memberRow("clubDeviceList", "HUB-1").querySelector("input").click();
+  assert.equal($("clubDevicesCount").textContent, "0 selected");
+
+  const seasideId = clubIdNamed("Seaside Club");
   $("saveClubBtn").click();
   assert.match(await confirmDialog(true), /Court Beta Court \(from Seaside Club\)/);
-  await waitFor(() => callableCalls.length === 2, { label: "updateClub call" });
-  assert.deepEqual(callableCalls[1], [
+  await waitForDashboardClubs(4);
+  assert.deepEqual(clubRequests.at(-1), [
     "updateClub",
-    {
-      clubId: "rvside",
-      name: "Riverside Padel",
-      courtIds: ["abcd", "efgh"],
-      deviceIds: ["HUB-1"],
-    },
+    { clubId: "rvside", name: "Riverside Padel", courtIds: ["abcd", "efgh"], deviceIds: [] },
   ]);
-  await waitFor(() => isShown("adminDashboardPage") && !isShown("editClubPage"), {
-    label: "back on the dashboard",
-  });
+  assert.equal(lastToast(), 'Club "Riverside Padel" saved.');
+  assert.deepEqual(stored("clubs/rvside").courtIds, ["abcd", "efgh"]);
+  assert.deepEqual(stored("clubs/rvside").deviceIds, []);
+  assert.equal(stored("devices/HUB-1").clubId, null, "the unticked device was released");
+  assert.equal(stored("courts/efgh").clubId, "rvside");
+  assert.deepEqual(stored(`clubs/${seasideId}`).courtIds, ["jkmn"]);
 });
 
-test("closing the editor with unsaved changes asks first", async () => {
-  await waitFor(() => document.querySelector('#adminClubList [data-club-id="hiltop"]'), {
-    label: "club list",
+test("browser back and forward leave and restore the editor with its unsaved changes", async () => {
+  await openClub("hiltop");
+  memberRow("clubCourtList", "pqrs").querySelector("input").click();
+
+  window.history.back();
+  await waitFor(() => isShown("adminDashboardPage") && !isShown("editClubPage"), {
+    label: "dashboard after back",
   });
-  document.querySelector('#adminClubList [data-club-id="hiltop"] .edit-btn').click();
-  await waitFor(() => isShown("editClubPage"), { label: "club editor" });
-  await waitForEditorLists();
 
-  typeInto($("editClubName"), "Hilltop Padel Club");
-  $("closeEditClubBtn").click();
-  const message = await confirmDialog(false);
-  assert.match(message, /Discard your unsaved changes/);
-  assert.equal(isShown("editClubPage"), true, "cancelling keeps the editor open");
+  window.history.forward();
+  await waitForEditor();
+  assert.equal($("editClubTitle").textContent, "Hilltop Club");
+  assert.equal(memberChecked("clubCourtList", "pqrs"), true, "the unsaved selection is kept");
 
-  $("closeEditClubBtn").click();
+  // Escape asks before discarding it.
+  pressKey(document.body, "Escape");
+  assert.match(await confirmDialog(false), /Discard your unsaved changes/);
+  assert.equal(isShown("editClubPage"), true);
+
+  pressKey(document.body, "Escape");
   await confirmDialog(true);
-  await waitFor(() => isShown("adminDashboardPage") && !isShown("editClubPage"), {
-    label: "dashboard after discarding",
-  });
-  assert.equal(callableCalls.length, 2, "nothing was saved");
+  await waitForDashboardClubs(4);
 });
 
-test("Delete Club removes the club after confirmation", async () => {
-  await waitFor(() => document.querySelector('#adminClubList [data-club-id="hiltop"]'), {
-    label: "club list",
-  });
-  document.querySelector('#adminClubList [data-club-id="hiltop"] .edit-btn').click();
-  await waitFor(() => isShown("editClubPage"), { label: "club editor" });
-
-  $("deleteClubBtn").click();
-  const message = await confirmDialog(true);
-  assert.match(message, /Delete club "Hilltop Club"/);
-
-  await waitFor(() => callableCalls.length === 3, { label: "deleteClub call" });
-  assert.deepEqual(callableCalls[2], ["deleteClub", { clubId: "hiltop" }]);
-  await waitFor(
-    () =>
-      isShown("adminDashboardPage") &&
-      !document.querySelector('#adminClubList [data-club-id="hiltop"]') &&
-      document.querySelectorAll("#adminClubList .admin-club-item").length === 2,
-    { label: "club list without the deleted club" },
+test("an editor without changes closes straight away", async () => {
+  await openClub("hiltop");
+  assert.equal(
+    memberChecked("clubCourtList", "pqrs"),
+    false,
+    "a fresh open starts from the saved club",
   );
+
+  pressKey(document.body, "Escape");
+  await settle(20);
+  assert.equal(confirmIsOpen(), false);
+  await waitForDashboardClubs(4);
+
+  await openClub("hiltop");
+  $("closeEditClubBtn").click();
+  await settle(20);
+  assert.equal(confirmIsOpen(), false);
+  await waitForDashboardClubs(4);
+});
+
+test("members that no longer exist are dropped, also when deleted from the editor", async () => {
+  await openClub("ghostc");
+  // zzzz and GONE-9 do not exist any more, so only Echo Court counts.
+  assert.equal($("clubCourtsCount").textContent, "1 selected");
+  assert.equal($("clubDevicesCount").textContent, "0 selected");
+  assert.equal(memberRow("clubCourtList", "zzzz"), null);
+
+  memberRow("clubCourtList", "stux").querySelector(".club-member-open").click();
+  await waitFor(() => isShown("editCourtPage"), { label: "court edit page" });
+  $("deleteCourtBtn").click();
+  await confirmDialog(true);
+  await waitForEditor();
+  assert.equal(memberRow("clubCourtList", "stux"), null);
+  assert.equal($("clubCourtsCount").textContent, "0 selected");
+  assert.equal(stored("courts/stux"), undefined);
+  await waitFor(() => !stored("clubs/ghostc").courtIds.includes("stux"), {
+    label: "the court deletion trigger drops the court from its club",
+  });
+
+  $("saveClubBtn").click();
+  await waitForDashboardClubs(4);
+  assert.deepEqual(clubRequests.at(-1), [
+    "updateClub",
+    { clubId: "ghostc", name: "Ghost Club", courtIds: [], deviceIds: [] },
+  ]);
+  assert.deepEqual(stored("clubs/ghostc").courtIds, []);
+  assert.deepEqual(stored("clubs/ghostc").deviceIds, []);
+});
+
+test("club names are shown as text, never as markup", async () => {
+  const markupName = "<b>Bold</b> & Co";
+  await openClub("ghostc");
+  typeInto($("editClubName"), markupName);
+  $("saveClubBtn").click();
+  await waitForDashboardClubs(4);
+
+  const name = clubRow("ghostc").querySelector(".club-name");
+  assert.equal(name.textContent, markupName);
+  assert.equal(name.querySelector("b"), null);
+
+  await openClub("ghostc");
+  assert.equal($("editClubTitle").textContent, markupName);
+  $("deleteClubBtn").click();
+  await waitFor(confirmIsOpen, { label: "delete confirmation" });
+  assert.equal($("confirmMessage").querySelector("b"), null);
+  assert.match($("confirmMessage").textContent, /Delete club "<b>Bold<\/b> & Co"\?/);
+  $("confirmCancelBtn").click();
+  await settle();
+  assert.equal(isShown("editClubPage"), true, "cancelling keeps the club");
+  assert.ok(stored("clubs/ghostc"));
+  $("closeEditClubBtn").click();
+  await waitForDashboardClubs(4);
+});
+
+test("Delete Club removes the club and releases its courts and devices", async () => {
+  await openClub("rvside");
+  $("deleteClubBtn").click();
+  assert.match(await confirmDialog(true), /no longer belong to a club/);
+
+  await waitForDashboardClubs(3);
+  assert.deepEqual(clubRequests.at(-1), ["deleteClub", { clubId: "rvside" }]);
+  assert.equal(lastToast(), "Club deleted.");
+  assert.equal(stored("clubs/rvside"), undefined);
+  assert.equal(stored("courts/abcd").clubId, null);
+  assert.equal(stored("courts/efgh").clubId, null);
+  assert.equal(stored("devices/HUB-1").clubId, null);
+  assert.equal(clubRow("rvside"), null);
+});
+
+test("the Clubs tab explains how to start when there are no clubs", async () => {
+  for (const path of [...firestoreState.docs.keys()]) {
+    if (path.startsWith("clubs/")) firestoreState.docs.delete(path);
+  }
+  document.querySelector('.tab-btn[data-tab="courts"]').click();
+  await settle();
+  document.querySelector('.tab-btn[data-tab="clubs"]').click();
+  await waitFor(() => texts("#adminClubList .no-courts").length === 1, {
+    label: "empty club list",
+  });
+  assert.equal(texts("#adminClubList .no-courts")[0], "No clubs yet. Use Create Club to add one.");
 });
