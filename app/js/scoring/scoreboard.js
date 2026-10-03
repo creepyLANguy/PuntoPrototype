@@ -115,16 +115,28 @@ export function updateUI()
   {
     renderSets(team);
     renderGames(team);
-    elements.points[team].textContent = pointLabel(session.score[team].points);
+
+    const pointText = pointLabel(session.score[team].points);
+    elements.points[team].textContent = pointText;
+
+    const criticalGlow = elements.points[team].parentElement.querySelector(".critical-glow");
+    if (criticalGlow)
+    {
+      criticalGlow.textContent = pointText;
+    }
 
     document.querySelector(`#team${team} .indicator`).style.opacity =
       session.score.lastPointTeam === team ? 1 : 0;
 
-    // Toggle critical pulsate on the score display
+    // Keep the semantic critical state on the score and animate only its separate glow layer.
     const statusVal = criticalStatus[team];
     elements.points[team].classList.toggle("is-critical", !!statusVal);
+    if (criticalGlow)
+    {
+      criticalGlow.classList.toggle("is-critical", !!statusVal);
+    }
 
-    // Keep the badge element hidden (replaced by pulsate effect)
+    // Keep the badge element hidden (replaced by the separate glow layer)
     const badge = elements.critical[team];
     if (badge) badge.classList.add("hidden");
   });
