@@ -1,0 +1,93 @@
+/* =======================================================
+   SPECTATOR BADGE
+   Still fixed-positioned, sits at top-right.
+   The header row prevents scorecards from reaching that area.
+======================================================= */
+
+.spectator-badge {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--spectating);
+  font-weight: 700;
+  letter-spacing: 2px;
+  font-size: clamp(12px, 3vmin, 22px);
+  z-index: 10000;
+  pointer-events: none;
+  white-space: nowrap;
+  padding: 4px 8px;
+  animation: spectatorGlow 6s ease-in-out infinite;
+
+  /* Smooth rendering properties */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  backface-visibility: hidden;
+  transform: translateZ(0);
+  /* Hardware acceleration */
+}
+
+@keyframes spectatorGlow {
+  0% {
+    opacity: 0.2;
+    filter: drop-shadow(0 0 2px var(--spectating));
+  }
+
+  25% {
+    opacity: 1;
+    filter: drop-shadow(0 0 6px var(--spectating));
+  }
+
+  75% {
+    opacity: 1;
+    filter: drop-shadow(0 0 8px var(--spectating));
+  }
+
+
+  100% {
+    opacity: 0.2;
+    filter: drop-shadow(0 0 2px var(--spectating));
+  }
+}
+
+/* Hide the raw emoji from JS - we replace it with a CSS pulse dot */
+.spectator-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: transparent;
+  text-shadow: 0 0 0 var(--spectating);
+}
+
+.spectator-badge::before {
+  content: "";
+  width: 20px;
+  height: 20px;
+  background-color: var(--spectating);
+  /* Use the logo as a mask so it takes the --spectating color (red) */
+  mask: url('/media/logo.svg') no-repeat center;
+  -webkit-mask: url('/media/logo.svg') no-repeat center;
+  mask-size: contain;
+  -webkit-mask-size: contain;
+  flex-shrink: 0;
+  box-shadow: none;
+  /* Shadow is handled by parent's drop-shadow animation */
+}
+
+@media (orientation: landscape) {
+  .sidebar-left {
+    gap: 25px;
+  }
+
+  .spectator-badge {
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+    flex-direction: row;
+  }
+
+  /* Counter-rotate the logo so it's upright in landscape */
+  .spectator-badge::before {
+    transform: rotate(-180deg);
+  }
+}
+

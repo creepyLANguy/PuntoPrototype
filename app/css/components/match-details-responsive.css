@@ -1,0 +1,293 @@
+/* ── Responsive ── */
+
+/* Portrait: tighten name width */
+@media (orientation: portrait) {
+  .dm-name {
+    max-width: min(260px, 75vw);
+  }
+}
+
+/* ── Middle section ── */
+.dm-mid-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  background: rgba(255, 255, 255, 0);
+}
+
+/* Compact landscape (mobile landscape) */
+@media (orientation: landscape) and (max-height: 500px) {
+
+  .dm-box {
+    padding: 8px 12px 6px;
+    gap: 0;
+    max-height: calc(100svh - 16px);
+    max-width: 520px;
+  }
+
+  .dm-close {
+    top: 6px;
+    right: 6px;
+  }
+
+  .dm-header {
+    margin-bottom: 2px;
+    gap: 0px;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  /* Court name drops to its own line beneath the application heading */
+  .dm-header #matchDetailsCourtName {
+    flex-basis: 100%;
+    width: 100%;
+    margin: 2px 0 0;
+    text-align: center;
+  }
+
+  .dm-logo {
+    width: 22px;
+    height: 22px;
+    margin-right: 8px;
+    opacity: 0.9;
+  }
+
+  .dm-title {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.85rem;
+    margin: 0;
+    line-height: 1;
+    text-align: left;
+    white-space: nowrap;
+    opacity: 0.9;
+  }
+
+  .dm-title br {
+    display: none;
+  }
+
+  /* keep title on one line in landscape */
+
+  .dm-mid-section {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 4px;
+    margin-bottom: 4px;
+    background: rgba(255, 255, 255, 0);
+    border-radius: 12px;
+    padding: 2px 24px;
+  }
+
+  .dm-teams {
+    margin-bottom: 0px;
+    flex: 1;
+    min-width: 0;
+    align-items: flex-start;
+  }
+
+  .dm-vs {
+    line-height: 1.1;
+    font-size: 0.55rem;
+  }
+
+  .dm-name {
+    font-size: 0.85rem;
+    max-width: 320px;
+  }
+
+  .dm-overall {
+    margin: 0;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+
+  .dm-sets {
+    font-size: 1.5rem;
+  }
+
+  .dm-dash {
+    font-size: 1.1rem;
+  }
+
+  .dm-table-wrap {
+    padding: 4px 8px;
+    margin-top: 2px;
+  }
+
+  .dm-table thead th {
+    padding: 2px 6px 4px;
+    font-size: 0.6rem;
+  }
+
+  .dm-table tbody td {
+    padding: 3px 4px;
+    font-size: 0.9rem;
+    min-width: 32px;
+    line-height: 1.05;
+  }
+
+  .dm-watermark {
+    display: none;
+  }
+}
+
+@media (max-width: 700px) {
+  .dm-table-wrap {
+    overflow-y: hidden;
+  }
+
+  .dm-table thead tr,
+  .dm-table tbody tr {
+    height: auto;
+  }
+
+  .dm-table thead th,
+  .dm-table tbody td {
+    min-height: 32px;
+    line-height: 1.1;
+    transform: none;
+    writing-mode: horizontal-tb;
+    text-orientation: mixed;
+  }
+
+  .dm-marker-cell {
+    width: 8px;
+    padding-right: 10px;
+  }
+
+  .dm-marker-cell span {
+    min-height: 32px;
+  }
+}
+
+/* Narrow phones: the modal gutter plus the card's own padding eats a large
+   share of the screen, leaving the stats table nothing to work with. Claw some
+   of it back and tighten the densest text. */
+@media (max-width: 480px) {
+  .dm-box {
+    padding: 20px 14px 18px;
+    border-radius: 20px;
+  }
+
+  .dm-watermark {
+    border-radius: 20px;
+  }
+
+  .dm-details-content {
+    padding: 0 8px 10px;
+  }
+
+  .dm-table-wrap {
+    padding: 12px 10px;
+  }
+
+  .dm-stats-table {
+    font-size: 0.7rem;
+  }
+
+  .dm-st-row td {
+    padding: 5px 3px;
+  }
+
+  .dm-st-label {
+    font-size: 0.64rem;
+  }
+
+  .dm-st-val {
+    font-size: 0.7rem;
+  }
+
+  .dm-st-bar-cell {
+    padding-left: 2px !important;
+    padding-right: 3px !important;
+  }
+
+  .dm-split-lbl-a,
+  .dm-split-lbl-b {
+    font-size: 0.62rem;
+  }
+}
+
+body.light-mode .dm-mid-section {
+  background: rgba(0, 0, 0, 0);
+}
+
+
+
+.details-team-name {
+  font-size: 1.4rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  max-width: 320px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  border: none !important;
+  line-height: 1.1;
+  letter-spacing: -0.5px;
+}
+
+.details-team-name.team-a {
+  color: var(--teamAcolour);
+  margin-bottom: 2px;
+}
+
+.details-team-name.team-b {
+  color: var(--teamBcolour);
+  margin-top: 2px;
+}
+
+.vs-text {
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.4);
+  font-weight: 900;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  line-height: 1.6;
+  display: block;
+  text-align: center;
+}
+
+body.light-mode .vs-text {
+  color: rgba(0, 0, 0, 0.3);
+}
+
+.details-overall {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 15px;
+  margin-bottom: 15px;
+  background: rgba(255, 255, 255, 0.03);
+  padding: 10px 20px;
+  border-radius: 40px;
+  width: fit-content;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.overall-set-score {
+  font-size: 2.8rem;
+  font-weight: 900;
+  color: white;
+  border: none;
+}
+
+#detailsSetsA {
+  color: var(--teamAcolour);
+}
+
+#detailsSetsB {
+  color: var(--teamBcolour);
+}
+
+.set-divider {
+  font-size: 2rem;
+  opacity: 0.5;
+}
+

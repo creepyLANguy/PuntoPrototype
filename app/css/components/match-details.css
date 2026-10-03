@@ -1,0 +1,356 @@
+/* =======================================================
+   DETAILS MODAL  (dm-* namespace)
+======================================================= */
+
+/* The modal box itself */
+.dm-box {
+  position: relative;
+  background: #111;
+  border-radius: 24px;
+  padding: 28px 28px 24px;
+  width: 100%;
+  max-width: 480px;
+  max-height: calc(100svh - 32px);
+  overflow-y: auto;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.7);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  overscroll-behavior: contain;
+}
+
+.dm-header,
+.dm-mid-section,
+.dm-table-wrap,
+.dm-details-panel,
+.dm-overall,
+.dm-teams,
+.dm-details-toggle {
+  flex-shrink: 0;
+}
+
+body.light-mode .dm-box {
+  background: #ffffff;
+  color: #111;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.15);
+}
+
+/* Close button dark in light mode */
+body.light-mode .dm-close {
+  color: #111;
+}
+
+/* Close button */
+.dm-close {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  background: none;
+  border: none;
+  color: inherit;
+  font-size: 1.5rem;
+  cursor: pointer;
+  opacity: 0.25;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: background 0.15s, opacity 0.15s;
+}
+
+.dm-close:hover {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+body.light-mode .dm-close:hover {
+  background: rgba(0, 0, 0, 0.07);
+}
+
+.dm-share-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: none;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  opacity: 0.75;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  padding: 1%;
+  transition: background 0.15s, opacity 0.15s;
+}
+
+.dm-share-btn:hover {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.1);  
+}
+
+body.light-mode .dm-share-btn:hover {
+  background: rgba(0, 0, 0, 0.07);
+}
+
+/* Watermark — faded logo behind all content */
+.dm-watermark {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: 24px;
+}
+
+body.light-mode .dm-watermark {
+  opacity: 0.5;
+}
+
+.dm-watermark img {
+  width: 70%;
+  max-width: 280px;
+  opacity: 0.035;
+  filter: grayscale(1);
+  user-select: none;
+}
+
+
+/* Header block: logo + title centered */
+.dm-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 16px;
+  width: 100%;
+  text-align: center;
+}
+
+/* Inline logo above title */
+.dm-logo {
+  width: 48px;
+  height: 48px;
+  aspect-ratio: 1;
+  object-fit: contain;
+  opacity: 0.9;
+}
+
+/* Invert white logo for light bg */
+body.light-mode .dm-logo {
+  filter: invert(1);
+  opacity: 0.9;
+}
+
+body.light-mode .dm-watermark img {
+  filter: invert(1) grayscale(1);
+  opacity: 0.06;
+}
+
+/* Title */
+.dm-title {
+  font-size: 1.5rem;
+  font-weight: 800;
+  margin: 0;
+  text-align: center;
+  line-height: 1.25;
+  letter-spacing: -0.3px;
+  opacity: 0.9;
+}
+
+/* ── Team names stacked with vs between ── */
+.dm-teams {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  margin-bottom: 18px;
+  width: 100%;
+}
+
+.dm-name {
+  font-size: 1.25rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: -0.5px;
+  max-width: 320px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.2;
+}
+
+.dm-name-a {
+  color: var(--teamAcolour);
+}
+
+.dm-name-b {
+  color: var(--teamBcolour);
+}
+
+.dm-vs {
+  font-size: 0.65rem;
+  font-weight: 900;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.3);
+  line-height: 2;
+}
+
+body.light-mode .dm-vs {
+  color: rgba(0, 0, 0, 0.25);
+}
+
+/* ── Overall set score ── */
+.dm-overall {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.dm-sets {
+  font-size: 3rem;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.dm-sets-a {
+  color: var(--teamAcolour);
+}
+
+.dm-sets-b {
+  color: var(--teamBcolour);
+}
+
+.dm-dash {
+  font-size: 1.8rem;
+  opacity: 0.4;
+  font-weight: 300;
+  color: white;
+}
+
+body.light-mode .dm-dash {
+  color: #111;
+}
+
+/* ── Score table ── */
+.dm-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  /* horizontal scroll when many sets */
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  padding: 12px 16px;
+}
+
+body.light-mode .dm-table-wrap {
+  background: rgba(0, 0, 0, 0.03);
+  border: 1px solid rgba(0, 0, 0, 0.07);
+}
+
+.dm-table {
+  border-collapse: collapse;
+  width: 100%;
+  min-width: max-content;
+  /* never wrap columns */
+}
+
+/* Header row (S1, S2 …) */
+.dm-table thead th {
+  padding: 4px 10px 8px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.35);
+  text-align: center;
+}
+
+body.light-mode .dm-table thead th {
+  color: rgba(0, 0, 0, 0.35);
+}
+
+/* First header cell: the colour-marker column — zero width */
+.dm-table thead th:first-child {
+  width: 6px;
+  padding: 0;
+}
+
+/* Colour marker cell */
+.dm-marker-cell {
+  width: 6px;
+  padding: 0;
+  padding-right: 14px;
+}
+
+.dm-marker-cell span {
+  display: block;
+  width: 4px;
+  height: 100%;
+  min-height: 36px;
+  border-radius: 2px;
+}
+
+.dm-row-a .dm-marker-cell span {
+  background: var(--teamAcolour);
+}
+
+.dm-row-b .dm-marker-cell span {
+  background: var(--teamBcolour);
+}
+
+/* Score cells */
+.dm-table tbody td {
+  padding: 12px 10px;
+  text-align: center;
+  font-size: 1.6rem;
+  font-weight: 600;
+  white-space: nowrap;
+  min-width: 48px;
+  line-height: 1.1;
+  vertical-align: middle;
+}
+
+.dm-row-a td {
+  color: var(--teamAcolour);
+}
+
+.dm-row-b td {
+  color: var(--teamBcolour);
+}
+
+/* Winning set score: bold only, same size */
+.dm-table td.dm-won {
+  font-weight: 900;
+}
+
+/* In-progress set column — subtle styling to differentiate from completed sets */
+.dm-table .dm-current-set {
+  opacity: 0.55;
+  font-style: italic;
+}
+
+/* Separate the two team rows slightly */
+.dm-row-a td {
+  padding-bottom: 4px;
+}
+
+.dm-row-b td {
+  padding-top: 4px;
+}
+
+.dm-row-separator td {
+  height: 1px;
+  padding: 0;
+}
+

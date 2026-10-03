@@ -1,7 +1,11 @@
 sequenceDiagram
     autonumber
     participant U as Player / Court Operator
-    participant B as Web app
+    participant R as Web app: router
+    participant UI as Web app: UI rendering
+    participant SA as Web app: scoring actions
+    participant AS as Web app: application state
+    participant FL as Web app: Firebase listeners / repositories
     participant D as Hub / Beacon / Pulse
     participant I as postEvent
     participant F as Firestore
@@ -12,9 +16,20 @@ sequenceDiagram
     participant O as Overlay / read client
     participant A as Public API
 
+    opt Open a court (/c/{courtId} or /p/{courtId})
+        U->>R: Navigate or follow a deep link
+        R->>FL: Read the court document
+        R->>AS: Enter court session (player or spectator)
+        AS->>FL: Attach score + court listeners
+        R->>UI: Show the scoreboard view and record history
+    end
+
     alt Browser scoring action
-        U->>B: Score / undo in app
-        B->>F: Write court event
+        U->>UI: Score / undo in app
+        UI->>SA: addPoint / undoLastPoint
+        SA->>UI: Immediate animation + sound feedback
+        SA->>FL: Add court event
+        FL->>F: Write court event
     else Physical device action
         U->>D: Physical action
         D->>I: POST /postEvent
@@ -39,7 +54,9 @@ sequenceDiagram
     T->>F: Write score/current
     T->>F: Write checkpoint when required
     F-->>S: Updated live score
-    S-->>B: onSnapshot live score
+    S-->>FL: onSnapshot live score
+    FL->>AS: Store score in the court session
+    AS->>UI: Render points, games, sets, server and badges
 
     opt Public scoreboard or overlay
         O->>A: GET /revision/{courtId}
@@ -56,16 +73,17 @@ sequenceDiagram
     end
 
     opt Changeover
-        B->>K: changeoverCourt({courtId})
+        UI->>K: changeoverCourt({courtId})
         K->>F: Atomically toggle Beacon mapping + changeoverEvent
-        K-->>B: Success + changeoverEventId
-        B->>B: Blind-toggle local Changeover state + local Switch Views state
-        F-->>B: Broadcast changeoverEvent to other clients
-        B->>B: Blind-toggle local Changeover state + local Switch Views state
+        K-->>UI: Success + changeoverEventId
+        UI->>AS: Blind-toggle local Changeover state + local Swap views state
+        F-->>FL: Broadcast changeoverEvent to other clients
+        FL->>AS: Blind-toggle local Changeover state + local Swap views state
+        AS->>UI: Sync settings tiles, toast and clash cue
     end
 
     opt RESET
-        B->>K: resetCourt
+        UI->>K: resetCourt
         K->>F: Archive active events
         K->>F: Delete active events + checkpoints
         K->>F: Reset score/current and Beacon mapping

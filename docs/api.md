@@ -26,8 +26,7 @@ The public API and current web app are court-scoped. There is no first-class pub
 | Environment | Host | Firebase project |
 |---|---|---|
 | Production | https://www.padelpush.co.za | FIREBASE_PROJECT_ID_PRODUCTION |
-| Staging / QA | https://qa.padelpush.co.za | FIREBASE_PROJECT_ID_STAGING |
-| Branch preview | Firebase Hosting preview channel | staging project |
+| Staging / QA (all non-main branches) | https://qa.padelpush.co.za | FIREBASE_PROJECT_ID_STAGING |
 
 See firebase-environments.md.
 

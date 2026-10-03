@@ -20,10 +20,11 @@ if (parsedOrigin.protocol !== "https:" || parsedOrigin.pathname !== "/" || parse
 }
 
 const sourceOrigin = "https://www.padelpush.co.za";
-const htmlFiles = [
-  "index.html",
-  "app/index.html",
-];
+// app/index.html is generated from app/templates/index.template.html by
+// scripts/build-frontend.mjs. The template is configured so the deploy-time
+// rebuild keeps the configured origin; the generated file is configured too so
+// the result does not depend on the order of the two steps.
+const htmlFiles = ["index.html", "app/templates/index.template.html", "app/index.html"];
 
 for (const relativeFile of htmlFiles) {
   const filePath = path.resolve(relativeFile);

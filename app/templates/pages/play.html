@@ -1,0 +1,35 @@
+    <!-- ================= PLAY COURT PAGE ================= -->
+    <div id="playPage" style="display:none;" class="create-page">
+
+      <div class="create-card">
+
+        <button id="closePlayBtn" class="close-btn">✕</button>
+
+        <h2>Play Court</h2>
+
+        <!-- Search Bar -->
+        <div class="form-group">
+          <label>Search Courts</label>
+          <input type="text" id="playCourtSearch" placeholder="Enter court name or code..." />
+        </div>
+
+        <!-- Court List -->
+        <div id="playCourtList" class="court-list">
+          <div class="loading">Loading...</div>
+        </div>
+
+        <!-- Password Section (Hidden by default) -->
+        <div id="playPasswordSection" style="display:none;">
+          <div class="form-group">
+            <label>Court Password</label>
+            <input type="password" id="playCourtPassword" />
+            <div class="error" id="playCourtPasswordError"></div>
+          </div>
+
+          <button id="enterCourtBtn" class="primary-btn">Enter Court</button>
+        </div>
+
+        <div class="error" id="playCourtNameError" style="display:none;"></div>
+
+      </div>
+    </div>

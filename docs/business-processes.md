@@ -72,14 +72,14 @@ Purpose: keep staging and production changes separated and make production chang
 
 Current environment rule:
 - main -> production Firebase project and production site.
-- non-main branches -> staging Firebase project and branch preview.
+- non-main branches -> staging Firebase project and the shared staging site (qa.padelpush.co.za); there are no per-branch previews.
 - local hosted development -> staging by default.
 - Device Lab production mutations require a separate explicit production acknowledgement.
 
 Steps:
 1. Develop on a feature branch.
 2. Run automated tests and repository checks.
-3. Deploy branch to staging/preview.
+3. Deploy branch to staging.
 4. Validate application, functions, device ingestion and affected operational flows.
 5. Record any defects and resolve them before release.
 6. Merge approved changes to main.
@@ -163,9 +163,9 @@ Steps:
 2. Operator uses the court Changeover control.
 3. changeoverCourt atomically toggles the current beaconSidesSwapped backend state; it does not accept a desired value from the client.
 4. The court stores a changeoverEvent marker.
-5. The client that triggered the successful changeover blindly toggles its local Changeover state and its local Switch Views state.
+5. The client that triggered the successful changeover blindly toggles its local Changeover state and its local Swap views state.
 6. Other connected clients receiving the changeoverEvent blindly toggle those two local states as well.
-7. Users can use Switch views independently at any time; its local state is never used as the input to changeoverCourt.
+7. Users can use Swap views independently at any time; its local state is never used as the input to changeoverCourt.
 8. Subsequent Beacon scoring events are mapped using the active flag.
 9. Pulse events are not inverted by the Beacon mapping.
 10. RESET clears the mapping to the default false state for the next match/session.

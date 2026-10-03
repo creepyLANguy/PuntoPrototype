@@ -1,0 +1,83 @@
+/* =======================================================
+   ALERT MODAL
+======================================================= */
+
+.alert-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+}
+
+body.light-mode .alert-modal {
+  background: rgba(255, 255, 255, 0.75);
+}
+
+.alert-modal.hidden {
+  display: none;
+}
+
+.alert-box {
+  background: #222;
+  padding: 30px;
+  border-radius: 14px;
+  text-align: center;
+  border: 2px solid #ff6b6b;
+  width: clamp(260px, 85vw, 400px);
+}
+
+body.light-mode .alert-box {
+  background: #fff;
+  border: 2px solid #333;
+}
+
+.alert-box h2 {
+  color: #ff6b6b;
+  margin: 0 0 12px 0;
+  font-size: clamp(1.1rem, 3.5vmin, 1.5rem);
+}
+
+body.light-mode .alert-box h2 {
+  color: #333;
+}
+
+.alert-box p {
+  color: #fff;
+  margin: 0 0 20px 0;
+  font-size: clamp(0.85rem, 2.5vmin, 1rem);
+}
+
+body.light-mode .alert-box p {
+  color: black;
+}
+
+.alert-btn {
+  padding: 10px 24px;
+  border-radius: 8px;
+  border: 2px solid #fff;
+  background: #fff;
+  color: #000;
+  font-weight: bold;
+  cursor: pointer;
+  font-size: clamp(0.85rem, 2.5vmin, 1rem);
+  font-family: inherit;
+}
+
+body.light-mode .alert-btn {
+  border: 2px solid black;
+  background: black;
+  color: white;
+}
+
+.alert-btn:hover {
+  background: #f0f0f0;
+}
+
+#alertMessage {
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+

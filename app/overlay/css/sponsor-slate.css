@@ -1,0 +1,61 @@
+    /* ---------- Sponsor slate ---------- */
+
+    .sponsor-slate {
+      position: fixed;
+      left: 50%;
+      bottom: 8vh;
+      transform: translate(-50%, 1em);
+      z-index: 6;
+      font-size: calc(26px * var(--ov-slate-scale, 1));
+      background:
+        linear-gradient(var(--ov-grad-angle), var(--ov-panel), var(--ov-panel-2)),
+        rgba(0, 0, 0, 0.9);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: 0.6em;
+      box-shadow: 0 10px 35px rgba(0, 0, 0, 0.5);
+      padding: 0.7em 1.6em 0.8em;
+      text-align: center;
+      width: max-content;
+      max-width: 95vw;
+      white-space: nowrap;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.4s ease, transform 0.4s ease;
+    }
+
+    .sponsor-slate.show {
+      opacity: 1;
+      transform: translate(-50%, 0);
+    }
+
+    .slate-eyebrow {
+      font-size: 0.45em;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.3em;
+      color: var(--ov-muted);
+      margin-bottom: 0.5em;
+      white-space: nowrap;
+    }
+
+    .slate-body {
+      font-size: 0.85em;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5em;
+      color: var(--ov-text);
+      white-space: nowrap;
+    }
+
+    .slate-body * {
+      white-space: nowrap;
+    }
+
+    .slate-body img {
+      height: 2.2em;
+      width: auto;
+      object-fit: contain;
+    }
+

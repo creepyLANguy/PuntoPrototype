@@ -1,0 +1,135 @@
+/* =======================================================
+   SET WIN OVERLAY
+========================================================= */
+
+.set-win-overlay {
+  position: fixed;
+  /* Cover entire screen */
+  inset: 0;
+  z-index: 9999;
+  /* Higher than modals and global controls */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg);
+  /* Solid theme background */
+  pointer-events: none;
+  /* Catch clicks only when active */
+  opacity: 0;
+  transition: opacity 0.5s ease;
+}
+
+.set-win-overlay.hidden {
+  display: none !important;
+}
+
+.set-win-overlay:not(.hidden) {
+  display: flex !important;
+  opacity: 1;
+  pointer-events: auto !important;
+}
+
+.set-win-overlay:not(.hidden) {
+  display: flex !important;
+  opacity: 1;
+}
+
+.set-win-content {
+  text-align: center;
+  transform: scale(0.5) rotate(-5deg);
+  opacity: 0;
+  transition: transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.6s ease;
+}
+
+.set-win-overlay:not(.hidden) .set-win-content {
+  transform: scale(1) rotate(0deg);
+  opacity: 1;
+  animation: setWinPulse 1.5s ease-in-out infinite alternate;
+}
+
+.set-win-team-name {
+  font-size: clamp(1.2rem, 6vw, 2.5rem);
+  font-weight: 700;
+  text-transform: uppercase;
+  margin-bottom: 0.1rem;
+  line-height: 1;
+  opacity: 0.9;
+}
+
+.set-win-label {
+  font-size: clamp(0.6rem, 3.5vw, 1.2rem);
+  font-weight: 500;
+  letter-spacing: 0.2rem;
+  color: #fff;
+  opacity: 0.8;
+  text-transform: uppercase;
+}
+
+.set-win-score {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  gap: 2rem;
+  margin-top: 1rem;
+  font-size: clamp(5rem, 25vw, 12rem);
+  font-weight: 900;
+  color: #fff;
+  /* slight delay on score popup */
+  animation: swScorePop 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) backwards;
+  animation-delay: 0.3s;
+}
+
+@keyframes swScorePop {
+  from {
+    transform: scale(0.5);
+    opacity: 0;
+  }
+
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.sw-score-a {
+  color: var(--teamAcolour) !important;
+}
+
+.sw-score-b {
+  color: var(--teamBcolour) !important;
+}
+
+.sw-score-dash {
+  opacity: 0.5;
+  color: var(--white);
+}
+
+@keyframes setWinPulse {
+  from {
+    transform: scale(1);
+    filter: brightness(1);
+  }
+
+  to {
+    transform: scale(1.05);
+    filter: brightness(1.25);
+  }
+}
+
+/* Specific team colors for the win message */
+.set-win-overlay[data-winner="A"] .set-win-team-name {
+  color: var(--teamAcolour);
+}
+
+.set-win-overlay[data-winner="B"] .set-win-team-name {
+  color: var(--teamBcolour);
+}
+
+body.light-mode .set-win-overlay {
+  background: var(--bg);
+}
+
+body.light-mode .set-win-label {
+  color: #000;
+}
+

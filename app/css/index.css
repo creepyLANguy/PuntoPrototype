@@ -1,0 +1,87 @@
+/* Stylesheet manifest for app/css/style.css.
+ *
+ * The parts below are concatenated, in this order, by scripts/build-frontend.mjs
+ * into the generated app/css/style.css that the app loads. The order IS the
+ * cascade: it is the order in which these rules always appeared, so do not
+ * reorder parts (or move rules between them) unless the change is meant to
+ * alter which rule wins.
+ *
+ * Comments in this manifest are not emitted.
+ */
+
+/* CSS custom properties (design tokens). */
+@import "tokens.css";
+/* Global reset and element defaults. */
+@import "base.css";
+/* Menu page. */
+@import "pages/menu.css";
+/* Scoreboard page: top-level container, sidebar / header and body layout. */
+@import "pages/scoreboard.css";
+/* Scoreboard team cards: straight-points total, team card, names, set / game dots, points, critical-point glow and tap zones. */
+@import "components/scoreboard-teams.css";
+/* Floating circular buttons and the floating controls container. */
+@import "components/floating-controls.css";
+/* Point-scored animation. */
+@import "components/score-animation.css";
+/* Reset modal. */
+@import "components/reset-modal.css";
+/* Settings modal, its tiles and the player names modal. */
+@import "components/settings-modal.css";
+/* Settings / player names modal: narrow-screen adjustments. */
+@import "components/settings-modal-responsive.css";
+/* Match Details modal (dm-* namespace). */
+@import "components/match-details.css";
+/* Match Details modal: orientation and narrow-screen adjustments. */
+@import "components/match-details-responsive.css";
+/* Match Details score grid and modal width. */
+@import "components/match-details-grid.css";
+/* Undo flash animation. */
+@import "components/undo-animation.css";
+/* Create court, Play and Spectate pages (create-page cards). */
+@import "pages/court-pages.css";
+/* Court list (Play / Spectate). */
+@import "components/court-list.css";
+/* Scoreboard / startup loading overlays and spinners. */
+@import "components/loading.css";
+/* Spectator LIVE badge. */
+@import "components/spectator-badge.css";
+/* Scoreboard header: branding, court name and marquee. */
+@import "components/scoreboard-header.css";
+/* NFC cooldown banner. */
+@import "components/nfc-cooldown.css";
+/* Alert modal. */
+@import "components/alert-modal.css";
+/* Global top-right buttons (theme / appearance, admin). */
+@import "components/global-buttons.css";
+/* Activate NFC button. */
+@import "components/nfc-button.css";
+/* Toast notifications. */
+@import "components/toast.css";
+/* Admin dashboard, court-id combo widget and court cards. */
+@import "pages/admin.css";
+/* Menu page: light-mode readability and the landscape compact layout. */
+@import "pages/menu-compact.css";
+/* Admin dashboard tabs and scrollable lists. */
+@import "pages/admin-tabs.css";
+/* App title and logo animations. */
+@import "title-animations.css";
+/* Page setup and the content layer above the waves. */
+@import "layout.css";
+/* Set win overlay. */
+@import "components/set-win-overlay.css";
+/* Background waves. */
+@import "components/waves.css";
+/* Toast notifications: container layout and animation (later definitions). */
+@import "components/toast-layout.css";
+/* Bug-fix overrides (scoring selects legibility, straight-points pill layout). */
+@import "overrides.css";
+/* Match Details: scoring-mode adaptations. */
+@import "components/match-details-modes.css";
+/* Match momentum graph (dm-momentum-* namespace). */
+@import "components/momentum.css";
+/* Match Details advanced stats table. */
+@import "components/advanced-stats.css";
+/* Inline court-list loader. */
+@import "components/loader.css";
+/* Match engagement nudges (pulses) and reduced-motion handling. */
+@import "components/engagement.css";

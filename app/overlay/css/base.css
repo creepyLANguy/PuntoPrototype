@@ -1,0 +1,30 @@
+    :root {
+      --ov-bg: transparent;
+      --ov-panel: rgba(0, 0, 0, 0.82);
+      --ov-panel-2: rgba(0, 0, 45, 0.82);
+      --ov-text: #ffffff;
+      --ov-muted: #8f969e;
+      --ov-line: rgba(255, 255, 255, 0.14);
+      --ov-line-soft: rgba(255, 255, 255, 0.08);
+      --ov-teamA: #b7f000;
+      --ov-teamB: #27d9ff;
+      --ov-radius: 0.9em;
+      --ov-grad-angle: 90deg;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html,
+    body {
+      background: var(--ov-bg);
+      font-family: "Arial", "Helvetica Neue", Helvetica, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+      color: var(--ov-text);
+      min-height: 100vh;
+    }
+

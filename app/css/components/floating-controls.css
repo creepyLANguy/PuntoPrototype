@@ -1,0 +1,124 @@
+/* =======================================================
+   FLOATING BUTTONS — SHARED (all circular)
+======================================================= */
+
+.floating-btn {
+  /* Perfect circle */
+  --btn-size: clamp(48px, 9vmin, 68px);
+  width: var(--btn-size);
+  height: var(--btn-size);
+  border-radius: 50%;
+  padding: 0;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #ccc;
+  background: transparent;
+  color: #ccc;
+  font-weight: 600;
+  backdrop-filter: blur(6px);
+  opacity: 0.6;
+  position: relative;
+  overflow: hidden;
+  transition: opacity 0.2s ease,
+    background 0.2s ease;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+  cursor: pointer;
+  font-size: clamp(2rem, 2vmin, 2rem);
+}
+
+.floating-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  opacity: 1;
+}
+
+
+body.light-mode .floating-btn {
+  color: #666;
+}
+
+body.light-mode .floating-btn:hover {
+  color: black;
+  border: 2px solid black;
+  opacity: 1;
+}
+
+#resetBtn {
+  transition: opacity 0.2s ease,
+    background 0.2s ease;
+}
+
+.share-court-btn {
+  padding: clamp(7px, 1.5vmin, 14px);
+}
+
+.match-details-btn {
+  padding: clamp(7px, 1.5vmin, 14px);
+  fill: currentColor;
+  stroke: currentColor;
+  stroke-width: 10;
+}
+
+/* =======================================================
+   FLOATING CONTROLS CONTAINER
+   Portrait  → horizontal row at the bottom of .scoreboard-body
+   Landscape → vertical column on the right of .scoreboard-body
+   Both are in normal document flow — zero overlap guaranteed.
+======================================================= */
+
+/* --- Portrait (default) --- */
+.floating-controls {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(8px, 1.5vw, 16px);
+  gap: clamp(12px, 3vw, 32px);
+}
+
+/* --- Landscape --- */
+@media (orientation: landscape) {
+  .floating-controls {
+    flex-direction: column;
+    justify-content: flex-start;
+    padding: clamp(8px, 1.5vw, 16px);
+    gap: clamp(12px, 2vh, 24px);
+    padding-left: 0%;
+  }
+}
+
+.btn-separator {
+  background: rgba(255, 255, 255, 0.15);
+  flex-shrink: 0;
+}
+
+body.light-mode .btn-separator {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+/* Portrait spacing/sizing */
+.btn-separator {
+  width: 1px;
+  height: clamp(20px, 4vh, 30px);
+  margin: 0 clamp(2px, 0.5vw, 5px);
+}
+
+.btn-separator.type-sep {
+  background: rgba(255, 255, 255, 0.3);
+  /* Slightly more visible for group transition */
+}
+
+/* Landscape spacing/sizing */
+@media (orientation: landscape) {
+  .btn-separator {
+    width: clamp(20px, 4vw, 30px);
+    height: 1px;
+    margin: clamp(2px, 0.5vh, 5px) 0;
+  }
+}
+

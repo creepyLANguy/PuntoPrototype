@@ -1,3 +1,4 @@
+/* GENERATED FILE - DO NOT EDIT. Built by scripts/build-frontend.mjs from app/css/index.css. */
 /* =======================================================
    CSS CUSTOM PROPERTIES
 ======================================================= */
@@ -553,6 +554,17 @@ body.light-mode .court-qr-label
   background: rgba(255, 255, 255, 0.5);
   border-radius: 8px;
   text-shadow: none;
+}
+
+/* The court QR panel is for large (desktop) screens only. Phone-sized
+   viewports - narrow portrait screens and short landscape screens - never show
+   it, so the scoreboard is not crowded. */
+@media (max-width: 768px), (orientation: landscape) and (max-height: 500px)
+{
+  .court-qr-panel
+  {
+    display: none !important;
+  }
 }
 
 @keyframes scoreboardFadeIn {

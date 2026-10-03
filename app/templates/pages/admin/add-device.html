@@ -1,0 +1,29 @@
+    <div id="addDevicePage" style="display:none;" class="create-page">
+      <div class="create-card">
+        <button id="closeAddDeviceBtn" class="close-btn">✕</button>
+        <h2>Add Device</h2>
+        <div class="form-group">
+          <label>Device ID (Preconfigured)</label>
+          <input type="text" id="newDeviceId" placeholder="e.g. SN12345" />
+        </div>
+        <div class="form-group">
+          <label>Mapped to Court ID</label>
+          <div class="court-id-combo" id="newCourtIdCombo">
+            <div class="select-wrapper">
+              <select id="newDeviceCourtIdSelect">
+                <option value="">— Select a court —</option>
+              </select>
+            </div>
+            <div class="combo-manual-row">
+              <a href="#" class="combo-toggle-link" id="newDeviceManualToggle">Enter ID manually instead</a>
+            </div>
+            <input type="text" id="newDeviceCourtIdManual" placeholder="e.g. court-123" class="combo-manual-input"
+              style="display:none;" />
+            <div class="combo-manual-row" id="newDeviceDropdownToggleRow" style="display:none;">
+              <a href="#" class="combo-toggle-link" id="newDeviceDropdownToggle">← Choose from list</a>
+            </div>
+          </div>
+        </div>
+        <button id="saveNewDeviceBtn" class="primary-btn">Add Device</button>
+      </div>
+    </div>

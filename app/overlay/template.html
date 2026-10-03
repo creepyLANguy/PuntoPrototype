@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Padel Push™ — Score Overlay</title>
+  <link rel="icon" href="/media/favicon.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Encode+Sans+Semi+Expanded:wght@600;700&display=swap"
+    rel="stylesheet" />
+  <style>
+    <!-- @include css/base.css -->
+    <!-- @include css/panel.css -->
+    <!-- @include css/badge.css -->
+    <!-- @include css/layouts.css -->
+    <!-- @include css/win-moments.css -->
+    <!-- @include css/stat-card.css -->
+    <!-- @include css/sponsor-slate.css -->
+    <!-- @include css/qr-bug.css -->
+    <!-- @include css/timer-and-sponsors.css -->
+    <!-- @include css/settings-panel.css -->
+    <!-- @include css/momentum-card.css -->
+    <!-- @include css/draggable-and-responsive.css -->
+  </style>
+</head>
+
+<body>
+  <div class="overlay-anchor pos-tl" id="overlayAnchor">
+    <div class="overlay" id="overlayBox">
+      <div class="brand">
+        <img src="/media/logo.svg" alt="Brand logo" id="brandLogo" />
+        <span class="brand-name" id="brandName">Padel Push™</span>
+        <span class="brand-court" id="courtLabel"></span>
+        <span class="match-timer" id="matchTimer"></span>
+      </div>
+
+      <div class="loading-line" id="loadingLine">Loading...</div>
+
+      <div class="score-body hidden" id="scoreBody">
+        <div class="head-row" id="headRow">
+          <div class="score-spacer"></div>
+          <div class="score-cells" id="cellsHead"></div>
+        </div>
+
+        <div class="team-row" data-team="A">
+          <div class="team-id">
+            <img class="team-logo" id="logoA" alt="" />
+            <div class="team-names">
+              <div class="team-name" id="nameA">Team A</div>
+              <div class="player-line" id="lineA1"><span class="player-name" id="playerA1"></span><span
+                  class="serve-dot" id="dotA1"></span></div>
+              <div class="player-line" id="lineA2"><span class="player-name" id="playerA2"></span><span
+                  class="serve-dot" id="dotA2"></span></div>
+            </div>
+          </div>
+          <div class="score-cells" id="cellsA"></div>
+        </div>
+
+        <div class="team-row" data-team="B">
+          <div class="team-id">
+            <img class="team-logo" id="logoB" alt="" />
+            <div class="team-names">
+              <div class="team-name" id="nameB">Team B</div>
+              <div class="player-line" id="lineB1"><span class="player-name" id="playerB1"></span><span
+                  class="serve-dot" id="dotB1"></span></div>
+              <div class="player-line" id="lineB2"><span class="player-name" id="playerB2"></span><span
+                  class="serve-dot" id="dotB2"></span></div>
+            </div>
+          </div>
+          <div class="score-cells" id="cellsB"></div>
+        </div>
+      </div>
+
+      <div class="badge-flyout" id="badgeLine"><span class="badge" id="badgeText"></span></div>
+
+      <div class="status-line" id="statusLine"></div>
+
+      <div class="sponsor-strip hidden" id="sponsorStrip">
+        <div class="sponsor-track" id="sponsorTrack">
+          <div class="sponsor-item" id="sponsorItemA"></div>
+          <div class="sponsor-item" id="sponsorItemB" aria-hidden="true"></div>
+        </div>
+      </div>
+
+      <div class="win-moment" id="winMoment">
+        <div class="win-moment-inner">
+          <div class="win-eyebrow" id="winEyebrow"></div>
+          <div class="win-title" id="winTitle"></div>
+          <div class="win-score" id="winScore"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="stat-card hidden" id="statCard">
+      <div class="stat-head">
+        <span class="stat-title" id="statTitle">Match stats</span>
+        <span class="stat-sub" id="statSub"></span>
+      </div>
+      <div class="stat-rows" id="statRows"></div>
+    </div>
+
+    <div class="momentum-card hidden" id="momentumCard">
+      <div class="momentum-head">
+        <span class="momentum-title" id="momentumTitle">Match momentum</span>
+        <span class="momentum-sub" id="momentumSub"></span>
+      </div>
+      <div class="momentum-loading hidden" id="momentumLoading" role="status" aria-live="polite">
+        <span class="ov-loader"></span>
+      </div>
+      <div class="momentum-message hidden" id="momentumMessage" role="status" aria-live="polite"></div>
+      <canvas id="momentumCanvas" class="ov-momentum-canvas"></canvas>
+    </div>
+  </div>
+
+  <div class="sponsor-slate" id="sponsorSlate">
+    <div class="slate-eyebrow">Brought to you by</div>
+    <div class="slate-body" id="slateBody"></div>
+  </div>
+
+  <div class="qr-bug hidden" id="qrBug">
+    <div id="qrBugCode"></div>
+    <div class="qr-bug-label" id="qrBugLabel"></div>
+  </div>
+
+  <div class="quick-bar" id="quickBar">
+    <button id="statBtn" type="button" title="Toggle stat card" aria-label="Toggle stat card">📊</button>
+    <button id="momentumBtn" type="button" title="Toggle momentum graph" aria-label="Toggle momentum graph">📈</button>
+    <button id="slateBtn" type="button" title="Show sponsor slate" aria-label="Show sponsor slate">🎬</button>
+    <button class="gear-btn" id="gearBtn" title="Customise overlay" aria-label="Customise overlay">⚙</button>
+  </div>
+
+  <div class="settings-panel" id="settingsPanel">
+    <div class="settings-head">
+      <button id="closeSettingsX" class="close-x" type="button" title="Close"
+        aria-label="Close settings">&times;</button>
+      <h2>Customise Overlay</h2>
+    </div>
+    <p class="transparent-note">The page background is transparent by default — ideal for an OBS browser source.</p>
+
+    <div class="section">Layout</div>
+    <label><span>Position</span><select id="setPosition">
+        <option value="tl">Top left</option>
+        <option value="tr">Top right</option>
+        <option value="bl">Bottom left</option>
+        <option value="br">Bottom right</option>
+      </select></label>
+    <label><span>Style</span><select id="setLayout">
+        <option value="panel">Full panel</option>
+        <option value="compact">Compact</option>
+        <option value="ticker">Ticker (centered bar)</option>
+      </select></label>
+    <label><span>Scale</span><input type="range" id="setScale" min="0.5" max="2" step="0.05" /><span class="angle-value"
+        id="scaleValue">100%</span></label>
+    <label><span>Sponsor slate scale</span><input type="range" id="setSlateScale" min="0.5" max="2" step="0.05" /><span
+        class="angle-value" id="slateScaleValue">100%</span></label>
+    <label><span>Stats &amp; momentum scale</span><input type="range" id="setStatsScale" min="0.5" max="2"
+        step="0.05" /><span class="angle-value" id="statsScaleValue">100%</span></label>
+    <label><span>Stats &amp; momentum width</span><input type="range" id="setStatsWidth" min="0.5" max="2"
+        step="0.05" /><span class="angle-value" id="statsWidthValue">100%</span></label>
+
+    <div class="section">Floating Buttons</div>
+    <label><span>Buttons opacity</span><input type="range" id="setQuickBarOpacity" min="0.1" max="1" step="0.05" /><span
+        class="angle-value" id="quickBarOpacityValue">40%</span></label>
+    <label><span>Buttons scale</span><input type="range" id="setQuickBarScale" min="0.5" max="2" step="0.05" /><span
+        class="angle-value" id="quickBarScaleValue">100%</span></label>
+
+    <div class="section">Display</div>
+    <label><span>Show server indicator</span><input type="checkbox" id="setShowServer" /></label>
+    <label><span>Show brand header</span><input type="checkbox" id="setShowBrand" /></label>
+    <label><span>Show column headers</span><input type="checkbox" id="setShowHeaders" /></label>
+    <label><span>Show team names</span><input type="checkbox" id="setShowTeamNames" /></label>
+    <label><span>Show player names</span><input type="checkbox" id="setShowPlayerNames" /></label>
+    <label><span>Show match timer</span><input type="checkbox" id="setShowTimer" /></label>
+    <label><span>Show sponsor strip</span><input type="checkbox" id="setShowSponsor" /></label>
+    <label><span>Set / match win moments</span><input type="checkbox" id="setShowWinMoments" /></label>
+    <label><span>Auto stat card at set end</span><input type="checkbox" id="setAutoStatCards" /></label>
+    <label><span>Auto momentum at set end</span><input type="checkbox" id="setAutoMomentumCards" /></label>
+    <label><span>Sponsor slate at set end</span><input type="checkbox" id="setSlateOnSet" /></label>
+    <label><span>Show QR code</span><input type="checkbox" id="setShowQr" /></label>
+
+    <div class="section">Match timer</div>
+    <label><span>Set timer</span><input type="text" id="setTimerValue"
+        placeholder="h:mm:ss, mm:ss or minutes" /></label>
+
+    <div class="section">Brand</div>
+    <label><span>Brand text</span><input type="text" id="setBrandText" placeholder="Padel Push™" /></label>
+    <label><span>Brand logo URL</span><input type="url" id="setBrandLogo" placeholder="https://…" /></label>
+
+    <div class="section">Sponsor strip (HTML, {courtId} placeholder)</div>
+    <textarea id="setSponsorHtml" rows="3" placeholder="Defaults to the Padel Push™ message"></textarea>
+
+    <div class="section">Sponsor rotation (overrides the strip above)</div>
+    <div id="sponsorList"></div>
+    <button id="addSponsorBtn" class="secondary add-sponsor" type="button">+ Add sponsor</button>
+
+    <div class="section">QR code</div>
+    <label><span>Link URL</span><input type="url" id="setQrUrl" placeholder="Defaults to this court's page" /></label>
+    <label><span>Label</span><input type="text" id="setQrLabel" placeholder="Scan for live scores" /></label>
+    <label><span>Corner</span><select id="setQrCorner">
+        <option value="br">Bottom right</option>
+        <option value="bl">Bottom left</option>
+        <option value="tr">Top right</option>
+        <option value="tl">Top left</option>
+      </select></label>
+    <label><span>Size</span><input type="range" id="setQrSize" min="64" max="200" step="4" /><span class="angle-value"
+        id="qrSizeValue">96px</span></label>
+
+    <div class="section">Theme</div>
+    <label><span>Preset</span><select id="setThemePreset"></select></label>
+
+    <div class="section">Colours</div>
+    <label><span>Background colour 1</span><input type="color" id="setPanel" /></label>
+    <label><span>Background colour 2</span><input type="color" id="setPanel2" /></label>
+    <label><span>Gradient angle</span><input type="range" id="setGradAngle" min="0" max="360" step="1" /><span
+        class="angle-value" id="gradAngleValue">90&deg;</span></label>
+    <label><span>Text</span><input type="color" id="setText" /></label>
+    <label><span>Team A</span><input type="color" id="setTeamA" /></label>
+    <label><span>Team B</span><input type="color" id="setTeamB" /></label>
+
+    <div class="section">Team names</div>
+    <label><span>Team A</span><input type="text" id="setNameA" placeholder="From scoreboard" /></label>
+    <label><span>Team B</span><input type="text" id="setNameB" placeholder="From scoreboard" /></label>
+
+    <div class="section">Player names</div>
+    <label><span>Player A1</span><input type="text" id="setPlayerA1" placeholder="From scoreboard" /></label>
+    <label><span>Player A2</span><input type="text" id="setPlayerA2" placeholder="From scoreboard" /></label>
+    <label><span>Player B1</span><input type="text" id="setPlayerB1" placeholder="From scoreboard" /></label>
+    <label><span>Player B2</span><input type="text" id="setPlayerB2" placeholder="From scoreboard" /></label>
+
+    <div class="section">Team logos (image URLs)</div>
+    <label><span>Team A logo</span><input type="url" id="setLogoA" placeholder="https://…" /></label>
+    <label><span>Team B logo</span><input type="url" id="setLogoB" placeholder="https://…" /></label>
+
+    <div class="section">Share</div>
+    <div class="row-btns" style="margin-top: 0;">
+      <button id="copyObsUrl" type="button">Copy OBS URL</button>
+    </div>
+    <input type="text" class="share-url" id="shareUrlField" readonly
+      placeholder="Click the button to generate a URL with these settings" />
+
+    <div class="row-btns">
+      <button id="resetSettings" class="secondary" type="button">Reset</button>
+      <button id="closeSettings" type="button">Done</button>
+    </div>
+  </div>
+
+  <script src="/app/js/qrcode.min.js"></script>
+  <script>
+    (function () {
+      <!-- @include js/settings.js -->
+      <!-- @include js/presentation.js -->
+      <!-- @include js/score.js -->
+      <!-- @include js/stats.js -->
+      <!-- @include js/win-moments.js -->
+      <!-- @include js/render.js -->
+      <!-- @include js/apiClient.js -->
+      <!-- @include js/settingsPanel.js -->
+      <!-- @include js/drag.js -->
+      <!-- @include js/main.js -->
+    })();
+  </script>
+</body>
+
+</html>

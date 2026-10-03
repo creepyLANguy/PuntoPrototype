@@ -1,0 +1,136 @@
+    /* ---------- Momentum card ---------- */
+
+    /* Same two knobs as .stat-card - see the note there. */
+    .momentum-card {
+      background: linear-gradient(var(--ov-grad-angle), var(--ov-panel), var(--ov-panel-2));
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: var(--ov-radius);
+      box-shadow: 0 10px 35px rgba(0, 0, 0, 0.42);
+      padding: 0.6em 1em 0.7em;
+      animation: stat-in 0.35s ease both;
+      font-size: calc(24px * var(--ov-scale, 1) * var(--ov-stats-scale, 1));
+      width: 0;
+      min-width: calc(100% * var(--ov-stats-width, 1));
+      box-sizing: border-box;
+    }
+
+    .momentum-card.standalone {
+      position: fixed;
+      z-index: 5;
+      width: 16em;
+      max-width: 90vw;
+    }
+
+    .momentum-card.hidden {
+      display: none;
+    }
+
+    .momentum-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 1em;
+      border-bottom: 1px solid var(--ov-line);
+      padding-bottom: 0.3em;
+      margin-bottom: 0.45em;
+    }
+
+    .momentum-title {
+      font-size: 0.62em;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+    }
+
+    .momentum-sub {
+      font-size: 0.5em;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--ov-muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      min-width: 0;
+    }
+
+    /* Height in em so the graph grows with the shared stats/momentum slider
+       instead of staying a fixed strip inside a card that scaled around it. */
+    .ov-momentum-canvas {
+      width: 100%;
+      height: 3.75em;
+      display: block;
+      margin-top: 0.2em;
+    }
+
+    .ov-momentum-canvas.hidden {
+      display: none;
+    }
+
+    .momentum-loading {
+      height: 3.75em;
+      margin-top: 0.2em;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .momentum-loading.hidden {
+      display: none;
+    }
+
+    .momentum-message {
+      font-size: 0.58em;
+      font-weight: 600;
+      color: var(--ov-muted);
+      padding: 0.5em 0 0.3em;
+    }
+
+    .momentum-message.hidden {
+      display: none;
+    }
+
+    /* Two team-coloured bars sliding past each other - the same loading
+       animation the scoreboard app uses, so the pair read as one product. */
+    .ov-loader {
+      --loader-unit: 1px;
+      width: calc(100 * var(--loader-unit));
+      height: calc(4 * var(--loader-unit));
+      border-radius: calc(2 * var(--loader-unit));
+      display: block;
+      position: relative;
+      background: var(--ov-teamA);
+      box-sizing: border-box;
+      animation: ov-loader-up 1.2s ease-in-out infinite alternate;
+    }
+
+    .ov-loader::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: var(--ov-teamB);
+      border-radius: inherit;
+      box-sizing: border-box;
+      animation: ov-loader-down 1.2s ease-in-out infinite alternate;
+    }
+
+    @keyframes ov-loader-up {
+      0% {
+        transform: translateY(calc(-12 * var(--loader-unit)));
+      }
+
+      100% {
+        transform: translateY(calc(12 * var(--loader-unit)));
+      }
+    }
+
+    @keyframes ov-loader-down {
+      0% {
+        transform: translateY(calc(24 * var(--loader-unit)));
+      }
+
+      100% {
+        transform: translateY(calc(-24 * var(--loader-unit)));
+      }
+    }
+

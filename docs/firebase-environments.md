@@ -46,12 +46,37 @@ The deployment workflow runs on pushes that affect application, Functions, Fireb
 
 ### Staging
 
-- A push to a non-main branch deploys Hosting and Functions to the staging Firebase project.
-- Non-main branches also receive a 7-day Firebase Hosting preview channel.
+- A push to a non-main branch deploys Hosting and Functions to the staging Firebase project, served at https://qa.padelpush.co.za.
 - Staging uses FIREBASE_PROJECT_ID_STAGING and the staging token/config secrets.
-- Branch previews are intended for validating the branch against isolated staging data and services.
+- There are no per-branch Hosting preview channels. Every non-main branch deploys to the same staging site and Functions, so staging serves whichever branch deployed most recently.
+- Staging is intended for validating a branch against isolated staging data and services.
 
 The workflow is triggered by push events. Opening or updating a pull request by itself does not deploy. Each deployment push runs the Functions/Jest + Node integration test suite before deployment.
+
+### Deployment job steps
+
+The production and staging jobs run the same sequence; only the secrets, the
+public origin and the project id differ:
+
+1. Check out the commit.
+2. Create `app/js/firebase-config.js` from the environment's config secret.
+3. Configure the environment: `scripts/configure-public-origin.mjs` (public
+   origin in the landing page and the app template) and
+   `scripts/configure-public-function-redirects.mjs` (project id in the public
+   API redirects).
+4. Install the Functions package dependencies (`npm ci --prefix functions`).
+5. Build the frontend: `node scripts/build-frontend.mjs` regenerates
+   `app/index.html`, `app/overlay.html` and `app/css/style.css` from their
+   sources, so the configured origin is part of the generated documents.
+6. Validate the frontend structure: `node scripts/check-frontend-structure.mjs`.
+7. Lint the frontend modules: `npm run lint:frontend --prefix functions`.
+8. Run the test suite: `npm test --prefix functions`.
+9. Deploy with the Firebase CLI, then smoke-test the public endpoints.
+
+A failure in steps 5-8 stops the job before anything is deployed. The
+generated frontend files are also committed; CI (`.github/workflows/tests.yml`)
+fails a push whose generated files are out of date with their sources. See
+[frontend-architecture.md](frontend-architecture.md) for the frontend build.
 
 ## Device Lab environment safety
 
@@ -77,7 +102,7 @@ Third-party integrations introduced later must also be environment-aware so stag
 
 1. Develop on a feature branch.
 2. Run automated tests.
-3. Validate the branch against its staging preview and staging backend.
+3. Validate the branch on staging, after confirming that the latest staging deployment is from that branch and no other branch has deployed since.
 4. Correct defects and record acceptance evidence.
 5. Merge into main.
 6. The production job deploys the merged code to the production Firebase project.
@@ -86,7 +111,7 @@ Third-party integrations introduced later must also be environment-aware so stag
 ## Rollback
 
 - Hosting production: use Firebase Hosting release history in the production project.
-- Hosting staging: redeploy the previous known-good commit to the relevant preview channel or allow the channel to expire.
+- Hosting staging: use Firebase Hosting release history in the staging project, or redeploy the previous known-good commit to staging.
 - Functions: redeploy the previous known-good commit to the correct Firebase project.
 
 ## Rules and indexes

@@ -1,11 +1,39 @@
+// Frontend integration tests: the court QR panel on the scoreboard - its
+// rendering, placement, drag / corner-resize interaction and the proximity-
+// driven resize handles. Stylesheet and markup contracts are checked
+// directly; the interaction runs on the real app booted in jsdom with a small
+// layout model (jsdom performs no layout) and a recording canvas context.
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 
-const source = readFileSync(new URL("../app/js/script.js", import.meta.url), "utf8");
+import {
+  bootFrontend,
+  joinCourtAsPlayer,
+  seedBaseData,
+  seedCourt,
+  settle,
+  waitFor,
+} from "./frontendHarness/harness.mjs";
+
 const styles = readFileSync(new URL("../app/css/style.css", import.meta.url), "utf8");
 const markup = readFileSync(new URL("../app/index.html", import.meta.url), "utf8");
 const brand = readFileSync(new URL("../app/js/brand.mjs", import.meta.url), "utf8");
+const qrLibrary = readFileSync(new URL("../app/js/qrcode.min.js", import.meta.url), "utf8");
+
+const COURT_ID = "qrcourt";
+const DEFAULT_PANEL_WIDTH = 200;
+const PANEL_ASPECT = 1.24;
+
+let window;
+let document;
+let panel;
+let rectReads = 0;
+// jsdom does not apply media queries; tests set this to model the stylesheet
+// hiding the panel (display: none) on a phone-sized viewport.
+let panelHiddenByStylesheet = false;
+const drawLog = [];
+const pointerCaptures = [];
 
 function getCssRuleBody(css, selector) {
   const escapedSelector = selector.replace(/[.*+?^$()|[\]\\]/g, "\\$&");
@@ -13,70 +41,378 @@ function getCssRuleBody(css, selector) {
   assert.ok(match, "CSS rule not found: " + selector);
   return match[1];
 }
-test("QR panel interaction stays frame-synced", () => {
-  assert.match(source, /function initializeCourtQrPanelInteractions\(\)/);
-  assert.match(source, /const scheduleQrPanelFrame =/);
-  assert.match(source, /window\.requestAnimationFrame\(applyPendingQrPanelFrame\)/);
-  assert.match(source, /panel\.style\.transform =/);
-  assert.match(source, /panel\.style\.width = nextWidth \+ "px"/);
-  assert.match(source, /panel\.style\.left = nextLeft \+ "px"/);
-  assert.match(source, /panel\.style\.top = nextTop \+ "px"/);
-  assert.match(source, /const calculateResizeGeometry =/);
-  assert.match(source, /resizeCorner\.endsWith\("e"\)/);
-  assert.match(source, /resizeCorner\.startsWith\("s"\)/);
-  assert.doesNotMatch(source, /panel\.style\.height =/);
-  assert.match(
-    source,
-    /panel\.classList\.add\("resizing", "qr-panel-resizing", "qr-panel-interacting"\)/,
-  );
-  assert.match(
-    source,
-    /panel\.classList\.remove\("dragging", "resizing", "qr-panel-resizing", "qr-panel-interacting"\)/,
-  );
-  assert.match(source, /event\.target\.closest\("\.qr-resize-handle"\)/);
-  assert.match(source, /panel\.classList\.add\("dragging", "qr-panel-interacting"\)/);
-  assert.match(source, /const stopInteraction =/);
-  assert.doesNotMatch(source, /new ResizeObserver\(/);
 
-  const pointerMoveStart = source.indexOf(
-    '    document.addEventListener("pointermove", (event) =>',
+// The media queries of every @media block containing a rule whose selector is
+// exactly `selector` and that sets `declaration`.
+function mediaQueriesWithRule(css, selector, declaration) {
+  const queries = [];
+  const mediaPattern = /@media([^{]+)\{/g;
+  let match;
+  while ((match = mediaPattern.exec(css))) {
+    let depth = 1;
+    let end = mediaPattern.lastIndex;
+    while (depth > 0 && end < css.length) {
+      if (css[end] === "{") depth += 1;
+      if (css[end] === "}") depth -= 1;
+      end += 1;
+    }
+    const body = css.slice(mediaPattern.lastIndex, end - 1);
+    const rules = [...body.matchAll(/([^{}]+)\{([^{}]*)\}/g)];
+    if (
+      rules.some(
+        ([, ruleSelector, ruleBody]) =>
+          ruleSelector.trim() === selector && ruleBody.includes(declaration),
+      )
+    ) {
+      queries.push(match[1].trim());
+    }
+  }
+  return queries;
+}
+
+// Evaluates a media query list for a viewport. Only the width, height and
+// orientation features are supported; anything else fails the test loudly.
+function mediaQueryMatches(queryList, { width, height }) {
+  return queryList.split(",").some((query) =>
+    [...query.matchAll(/\(([^)]+)\)/g)].every(([, feature]) => {
+      const [name, rawValue] = feature.split(":").map((part) => part.trim());
+      const value = Number.parseFloat(rawValue);
+      switch (name) {
+        case "max-width":
+          return width <= value;
+        case "min-width":
+          return width >= value;
+        case "max-height":
+          return height <= value;
+        case "min-height":
+          return height >= value;
+        case "orientation":
+          return rawValue === (width > height ? "landscape" : "portrait");
+        default:
+          throw new Error("unsupported media feature in test: " + name);
+      }
+    }),
   );
-  const pointerMoveEnd = source.indexOf("    const stopInteractionFromPointer", pointerMoveStart);
-  assert.ok(pointerMoveStart >= 0 && pointerMoveEnd > pointerMoveStart);
-  const pointerMoveBlock = source.slice(pointerMoveStart, pointerMoveEnd);
-  assert.doesNotMatch(pointerMoveBlock, /getBoundingClientRect\(\)/);
-  assert.doesNotMatch(pointerMoveBlock, /clientWidth/);
-  assert.doesNotMatch(pointerMoveBlock, /clientHeight/);
+}
+
+function rect(left, top, width, height) {
+  return { left, top, width, height, x: left, y: top, right: left + width, bottom: top + height };
+}
+
+// Layout model: the scoreboard fills the viewport; the panel is anchored
+// bottom-right until it has explicit left/top, and keeps its aspect ratio.
+function panelRect() {
+  const width = Number.parseFloat(panel.style.width) || DEFAULT_PANEL_WIDTH;
+  const height = width * PANEL_ASPECT;
+  const left = Number.parseFloat(panel.style.left);
+  const top = Number.parseFloat(panel.style.top);
+  return rect(
+    Number.isFinite(left) ? left : window.innerWidth - 8 - width,
+    Number.isFinite(top) ? top : window.innerHeight - 8 - height,
+    width,
+    height,
+  );
+}
+
+function installLayoutAndCanvas() {
+  window.Element.prototype.getBoundingClientRect = function () {
+    rectReads += 1;
+    if (this.id === "scoreboardPage") return rect(0, 0, window.innerWidth, window.innerHeight);
+    if (this.id === "courtQrPanel") return panelHiddenByStylesheet ? rect(0, 0, 0, 0) : panelRect();
+    if (this.id === "courtQrCode") {
+      const { width } = panelRect();
+      return rect(0, 0, width * 2, width * 2);
+    }
+    return rect(0, 0, 0, 0);
+  };
+
+  window.HTMLCanvasElement.prototype.getContext = function () {
+    const canvas = this;
+    return new Proxy(
+      {},
+      {
+        get(target, prop) {
+          if (prop in target) return target[prop];
+          return (...args) => drawLog.push({ canvas, op: prop, args });
+        },
+        set(target, prop, value) {
+          target[prop] = value;
+          drawLog.push({ canvas, op: `set:${String(prop)}`, args: [value] });
+          return true;
+        },
+      },
+    );
+  };
+
+  // The logo image is decoded instantly.
+  Object.defineProperty(window.HTMLImageElement.prototype, "complete", { get: () => true });
+  Object.defineProperty(window.HTMLImageElement.prototype, "naturalWidth", { get: () => 512 });
+
+  window.eval(qrLibrary);
+}
+
+function pointer(type, target, { x, y, id = 7, button = 0 } = {}) {
+  const event = new window.MouseEvent(type, {
+    bubbles: true,
+    cancelable: true,
+    clientX: x,
+    clientY: y,
+    button,
+  });
+  Object.defineProperty(event, "pointerId", { value: id });
+  target.dispatchEvent(event);
+  return event;
+}
+
+const nextFrame = () => new Promise((resolve) => window.requestAnimationFrame(() => resolve()));
+const handleOpacity = () => panel.style.getPropertyValue("--qr-handle-opacity");
+const opsOn = (canvas, op) => drawLog.filter((entry) => entry.canvas === canvas && entry.op === op);
+
+test.before(async () => {
+  seedBaseData();
+  seedCourt(COURT_ID);
+
+  const dom = await bootFrontend();
+  window = dom.window;
+  document = window.document;
+  panel = document.getElementById("courtQrPanel");
+  installLayoutAndCanvas();
+
+  panel.setPointerCapture = (id) => pointerCaptures.push(id);
+  panel.hasPointerCapture = (id) => pointerCaptures.includes(id);
+  panel.releasePointerCapture = (id) => pointerCaptures.splice(pointerCaptures.indexOf(id), 1);
+
+  await joinCourtAsPlayer(document, COURT_ID);
+  await waitFor(() => !panel.classList.contains("hidden"), { label: "QR panel shown" });
 });
 
 test("court QR is rendered to a pixel-snapped canvas with the logo baked into the same surface", () => {
-  assert.match(source, /function createCourtQrCanvas\(qrUrl\)/);
-  assert.match(source, /matrix = qr\?\._oQRCode/);
-  assert.match(source, /const devicePixelRatio = Math\.max\(1, window\.devicePixelRatio \|\| 1\)/);
-  assert.match(source, /context\.imageSmoothingEnabled = false/);
-  assert.match(source, /const x0 = Math\.round\(column \* moduleScale\)/);
-  assert.match(source, /const x1 = Math\.round\(\(column \+ 1\) \* moduleScale\)/);
-  assert.match(source, /canvas\.className = "court-qr-canvas"/);
-  assert.match(source, /canvas\.className = "court-qr-logo-canvas"/);
-  assert.match(source, /createCourtQrLogoCanvas\(qrCanvas\.width\)/);
-  assert.match(source, /replaceChildren\(/);
+  const code = document.getElementById("courtQrCode");
+  assert.equal(code.classList.contains("has-canvas-qr"), true);
+  assert.deepEqual(
+    [...code.children].map((child) => child.className),
+    ["court-qr-canvas", "court-qr-logo-canvas"],
+  );
+  assert.equal(document.getElementById("courtQrLabel").textContent, COURT_ID);
+
+  const [qrCanvas, logoCanvas] = code.children;
+  // max(512, content width x devicePixelRatio)
+  assert.equal(qrCanvas.width, 512);
+  assert.equal(logoCanvas.width, qrCanvas.width);
+  assert.equal(qrCanvas.getAttribute("aria-hidden"), "true");
+
+  const qrOps = drawLog.filter((entry) => entry.canvas === qrCanvas);
+  assert.equal(qrOps.find((entry) => entry.op === "set:imageSmoothingEnabled").args[0], false);
+  const modules = opsOn(qrCanvas, "fillRect").slice(1);
+  assert.ok(modules.length > 100, "one rectangle per dark module");
+  for (const { args } of modules) {
+    assert.ok(args.every(Number.isInteger), "module edges are snapped to whole pixels");
+  }
+
+  const [arc] = opsOn(logoCanvas, "arc");
+  assert.deepEqual(arc.args.slice(0, 3), [256, 256, (512 * 0.4) / 2]);
+  assert.equal(opsOn(logoCanvas, "drawImage").length, 1, "the logo is drawn into its canvas");
+
   assert.match(styles, /\.court-qr-code > \.court-qr-canvas[\s\S]*?image-rendering: pixelated;/);
   assert.match(styles, /\.court-qr-code > \.court-qr-logo-canvas[\s\S]*?image-rendering: auto;/);
   assert.match(styles, /\.court-qr-code > canvas[\s\S]*?position: absolute;/);
-  assert.match(source, /function drawCourtQrLogo\(context, size\)/);
-  assert.match(source, /context\.arc\(size \/ 2, size \/ 2/);
-  assert.match(source, /context\.drawImage\(/);
-  assert.match(source, /courtQrLogoImage = typeof window\.Image === "function"/);
-  assert.doesNotMatch(source, /function createCourtQrSvg\(qrUrl\)/);
   assert.doesNotMatch(styles, /\.court-qr-code::after/);
   assert.doesNotMatch(styles, /\.court-qr-code > svg/);
 });
 
+test("QR panel spawns from the bottom-right corner", () => {
+  assert.equal(panel.style.left, "auto");
+  assert.equal(panel.style.top, "auto");
+  assert.equal(panel.style.right, "8px");
+  assert.equal(panel.style.bottom, "8px");
+
+  assert.match(styles, /\.court-qr-panel\s*\{[\s\S]*?bottom:\s*8px;[\s\S]*?right:\s*8px;/);
+});
+
+test("resize handles fade in on a logarithmic curve as the pointer approaches", async () => {
+  const geometry = panelRect();
+  const centerX = geometry.left + geometry.width / 2;
+  const centerY = geometry.top + geometry.height / 2;
+  const radius = Math.max(geometry.width, geometry.height);
+  const moveTo = async (x, y) => {
+    pointer("pointermove", document, { x, y });
+    await settle(80);
+  };
+
+  await moveTo(centerX, centerY);
+  assert.equal(handleOpacity(), "1.000", "inside the interaction circle");
+
+  await moveTo(0, centerY);
+  assert.equal(handleOpacity(), "0.000", "at the screen edge");
+
+  // 60px outside the circle, travelling towards the left edge.
+  const x = centerX - radius - 60;
+  await moveTo(x, centerY);
+  const travel = 60 / (centerX - radius);
+  const expected = 1 - Math.log1p(12 * travel) / Math.log1p(12 * 0.3);
+  assert.equal(handleOpacity(), expected.toFixed(3));
+
+  // Beyond 30% of the way to the screen edge the handles are fully hidden.
+  await moveTo(centerX - radius - 0.31 * (centerX - radius), centerY);
+  assert.equal(handleOpacity(), "0.000");
+
+  assert.doesNotMatch(styles, /\.qr-resize-handle:hover\s*\{/);
+});
+
+test("resize handles hide after three seconds without pointer movement outside the panel", async () => {
+  const geometry = panelRect();
+  pointer("pointermove", document, { x: geometry.left - 40, y: geometry.top + 40 });
+  await settle(80);
+  assert.notEqual(handleOpacity(), "0.000");
+
+  await settle(3200);
+  assert.equal(handleOpacity(), "0.000", "calculations are suspended after inactivity");
+
+  pointer("pointermove", document, { x: geometry.left - 41, y: geometry.top + 40 });
+  await settle(80);
+  assert.notEqual(handleOpacity(), "0.000", "movement resumes the proximity updates");
+});
+
+test("dragging moves the panel on the compositor once per frame without layout reads", async () => {
+  const start = panelRect();
+  const grab = { x: start.left + 34, y: start.top + 88 };
+
+  const down = pointer("pointerdown", panel, grab);
+  assert.equal(down.defaultPrevented, true);
+  assert.deepEqual(pointerCaptures, [7], "the pointer is captured");
+  assert.equal(panel.classList.contains("dragging"), true);
+  assert.equal(panel.classList.contains("qr-panel-interacting"), true);
+  assert.equal(panel.style.left, `${start.left}px`);
+  assert.equal(panel.style.top, `${start.top}px`);
+  assert.equal(panel.style.right, "auto");
+
+  const readsBefore = rectReads;
+  pointer("pointermove", document, { x: grab.x - 100, y: grab.y - 50 });
+  pointer("pointermove", document, { x: grab.x - 150, y: grab.y - 100 });
+  assert.equal(rectReads, readsBefore, "pointermove performs no layout reads");
+  assert.equal(panel.style.transform, "", "nothing is applied before the next frame");
+
+  await nextFrame();
+  assert.equal(panel.style.transform, "translate3d(-150px, -100px, 0)");
+  assert.equal(panel.style.left, `${start.left}px`, "left/top stay put while dragging");
+
+  pointer("pointerup", document, { x: grab.x - 150, y: grab.y - 100 });
+  assert.equal(panel.style.left, `${start.left - 150}px`);
+  assert.equal(panel.style.top, `${start.top - 100}px`);
+  assert.equal(panel.style.transform, "");
+  assert.equal(panel.classList.contains("dragging"), false);
+  assert.equal(panel.classList.contains("qr-panel-interacting"), false);
+  assert.deepEqual(pointerCaptures, [], "the pointer capture is released");
+});
+
+test("corner resize keeps the aspect ratio and applies one geometry set per frame", async () => {
+  const start = panelRect();
+  const handle = panel.querySelector('.qr-resize-handle[data-corner="nw"]');
+  const qrCanvas = document.querySelector("#courtQrCode .court-qr-canvas");
+  const logoCanvas = document.querySelector("#courtQrCode .court-qr-logo-canvas");
+  const logoArcsBefore = opsOn(logoCanvas, "arc").length;
+  const qrRectsBefore = opsOn(qrCanvas, "fillRect").length;
+
+  pointer("pointerdown", handle, { x: start.left + 4, y: start.top + 4 });
+  assert.equal(handle.classList.contains("is-active"), true);
+  for (const className of ["resizing", "qr-panel-resizing", "qr-panel-interacting"]) {
+    assert.equal(panel.classList.contains(className), true, className);
+  }
+
+  pointer("pointermove", document, { x: start.left + 4 - 60, y: start.top + 4 });
+  pointer("pointermove", document, { x: start.left + 4 - 100, y: start.top + 4 });
+  assert.equal(panel.style.width, "", "nothing is applied before the next frame");
+
+  await nextFrame();
+  const width = start.width + 100;
+  assert.equal(panel.style.width, `${width}px`);
+  assert.equal(panel.style.left, `${start.right - width}px`, "the opposite corner stays fixed");
+  assert.equal(panel.style.top, `${start.bottom - width * PANEL_ASPECT}px`);
+  assert.equal(panel.style.height, "", "height always follows from the width");
+
+  pointer("pointerup", document, { x: start.left + 4 - 100, y: start.top + 4 });
+  assert.equal(handle.classList.contains("is-active"), false);
+  assert.equal(panel.classList.contains("resizing"), false);
+
+  // Releasing re-rasterises only the logo, at the panel's new size.
+  assert.equal(document.querySelector("#courtQrCode .court-qr-canvas"), qrCanvas);
+  assert.equal(document.querySelector("#courtQrCode .court-qr-logo-canvas"), logoCanvas);
+  assert.equal(opsOn(qrCanvas, "fillRect").length, qrRectsBefore, "the QR modules are not redrawn");
+  assert.equal(logoCanvas.width, width * 2);
+  assert.equal(opsOn(logoCanvas, "arc").length, logoArcsBefore + 1);
+  assert.equal(qrCanvas.width, 512);
+
+  assert.match(styles, /\.qr-resize-handle\s*\{[\s\S]*?width: 30px;/);
+  assert.match(styles, /\.qr-resize-handle\s*\{[\s\S]*?height: 30px;/);
+  assert.match(styles, /min-width: 130px;/);
+  assert.doesNotMatch(styles, /--qr-panel-scale/);
+});
+
+test("the panel is kept inside the scoreboard when the window resizes", () => {
+  panel.style.left = `${window.innerWidth + 50}px`;
+  window.dispatchEvent(new window.Event("resize"));
+
+  const geometry = panelRect();
+  assert.equal(panel.style.left, `${window.innerWidth - geometry.width - 8}px`);
+});
+
+test("the QR panel is hidden on phone-sized viewports and shown on desktop", () => {
+  const hidingQueries = mediaQueriesWithRule(styles, ".court-qr-panel", "display: none !important");
+  assert.ok(hidingQueries.length > 0, "a media query hides the QR panel");
+  const hiddenAt = (viewport) => hidingQueries.some((query) => mediaQueryMatches(query, viewport));
+
+  for (const phone of [
+    { width: 360, height: 780 },
+    { width: 430, height: 932 },
+    { width: 768, height: 1024 },
+    { width: 780, height: 360 },
+    { width: 932, height: 430 },
+  ]) {
+    assert.equal(hiddenAt(phone), true, `hidden at ${phone.width}x${phone.height}`);
+  }
+
+  for (const desktop of [
+    { width: 1280, height: 720 },
+    { width: 1366, height: 768 },
+    { width: 1920, height: 1080 },
+    { width: 2560, height: 1440 },
+    { width: 1080, height: 1920 },
+  ]) {
+    assert.equal(hiddenAt(desktop), false, `shown at ${desktop.width}x${desktop.height}`);
+  }
+});
+
+test("a panel hidden by the stylesheet is not resized while hidden", () => {
+  const saved = { left: panel.style.left, top: panel.style.top, width: panel.style.width };
+  panel.style.left = "300px";
+  panel.style.top = "200px";
+  panel.style.width = "250px";
+
+  try {
+    panelHiddenByStylesheet = true;
+    window.dispatchEvent(new window.Event("resize"));
+    assert.deepEqual(
+      { left: panel.style.left, top: panel.style.top, width: panel.style.width },
+      { left: "300px", top: "200px", width: "250px" },
+      "the hidden panel keeps its size and position",
+    );
+
+    panelHiddenByStylesheet = false;
+    window.dispatchEvent(new window.Event("resize"));
+    assert.equal(panel.style.width, "250px", "the panel returns at the size it had");
+  } finally {
+    panelHiddenByStylesheet = false;
+    Object.assign(panel.style, saved);
+  }
+});
+
 test("QR panel uses the custom pointer interaction instead of native CSS resize", () => {
-  assert.match(source, /interactionMode = "resize"/);
-  assert.match(source, /panel\.setPointerCapture\(event\.pointerId\)/);
   assert.match(styles, /\.court-qr-panel\s*\{[\s\S]*?resize: none;/);
   assert.doesNotMatch(brand, /qr-resize-interaction/);
+
+  const ignored = pointer("pointerdown", panel, { x: 10, y: 10, button: 2 });
+  assert.equal(ignored.defaultPrevented, false, "only the primary button starts an interaction");
+  assert.equal(panel.classList.contains("qr-panel-interacting"), false);
 });
 
 test("QR interaction disables expensive paint effects while active", () => {
@@ -130,159 +466,27 @@ test("QR panel exposes four corner resize handles", () => {
   assert.doesNotMatch(styles, /\.pull-tab\s*\{/);
 });
 
-test("QR panel spawns from the bottom-right corner in every orientation", () => {
-  assert.match(styles, /\.court-qr-panel\s*\{[\s\S]*?bottom:\s*8px;[\s\S]*?right:\s*8px;/);
-  assert.match(source, /elements\.courtQrPanel\.style\.bottom = "8px";/);
-  assert.match(source, /courtQrPanelVisible = false;/);
-  assert.match(source, /courtQrPanelVisible = true;/);
-  assert.match(source, /elements\.courtQrPanel\.style\.right = "8px";/);
-  assert.match(
-    source,
-    /if \(!Number\.isFinite\(currentLeft\) && !Number\.isFinite\(currentTop\)\)[\s\S]*?panel\.style\.left = "auto";[\s\S]*?panel\.style\.top = "auto";/,
-  );
-  assert.match(source, /panel\.style\.right = \`\$\{safeGap\}px\`;/);
-  assert.match(source, /panel\.style\.bottom = \`\$\{safeGap\}px\`;/);
-  assert.doesNotMatch(
-    styles,
-    /@media \(orientation: landscape\)[\s\S]*?\.court-qr-panel\s*\{[\s\S]*?display:\s*none\s*!important;/,
-  );
-  assert.doesNotMatch(
-    styles,
-    /@media \(max-width: 768px\)[\s\S]*?\.court-qr-panel\s*\{[\s\S]*?display:\s*none\s*!important;/,
-  );
-});
-
-test("QR resize visibility is cached, logarithmic, and inactivity-aware", () => {
-  assert.match(source, /let courtQrPanelVisible = false;/);
-  assert.match(source, /let courtQrPanelGeometry = null;/);
-  assert.match(source, /function initializeCourtQrResizeHandleVisibility\(\)/);
-  assert.match(source, /const cachePanelGeometry =/);
-  assert.match(source, /panel\.getBoundingClientRect\(\)/);
-  assert.match(source, /centerX: rect\.left \+ rect\.width \/ 2/);
-  assert.match(source, /centerY: rect\.top \+ rect\.height \/ 2/);
-  assert.match(source, /radius: Math\.max\(rect\.width, rect\.height\)/);
-  assert.match(source, /const inactivityTimeoutMs = 3000;/);
-  assert.match(source, /const maxHandleOpacity = 1;/);
-  assert.match(source, /const opacityStartTravelPercentage = 0\.3;/);
-  assert.match(source, /const distanceFromPanelCenter = Math\.hypot\(/);
-  assert.match(source, /const effectiveDistance = distanceFromPanelCenter - geometry\.radius;/);
-  assert.match(source, /const effectiveMaxDistance = distanceToScreenEdge - geometry\.radius;/);
-  assert.match(source, /Math\.log1p\(logarithmicCurveStrength \* travelPercentage\)/);
-  assert.match(source, /window\.setTimeout\(/);
-  assert.match(source, /lastPointerMoveTime = performance\.now\(\)/);
-  assert.match(source, /if \(inactivityTimer\)/);
-  assert.match(source, /if \(!courtQrPanelVisible\)/);
-  assert.match(source, /if \(isPanelInteractionActive\(\)\)[\s\S]*?clearHandleUpdateTimer\(\)/);
-  assert.match(source, /refreshCourtQrResizeHandleVisibility/);
-  assert.match(
-    source,
-    /refreshCourtQrResizeHandleVisibility = \(startFreshVisibilityWindow = false\)/,
-  );
-  assert.match(
-    source,
-    /if \(startFreshVisibilityWindow\)[\s\S]*?clearInactivityTimer\(\);[\s\S]*?lastPointerMoveTime = performance\.now\(\);/,
-  );
-  assert.doesNotMatch(styles, /\.qr-resize-handle:hover\s*\{/);
-
-  const renderStart = source.indexOf("  function renderCourtQr(courtId)");
-  const renderEnd = source.indexOf("  function enableSpectateMode()", renderStart);
-  assert.ok(renderStart >= 0 && renderEnd > renderStart);
-  const renderBlock = source.slice(renderStart, renderEnd);
-  const renderRefreshIndex = renderBlock.lastIndexOf(
-    "refreshCourtQrResizeHandleVisibility?.(true);",
-  );
-  const renderLabelIndex = renderBlock.indexOf("elements.courtQrLabel.textContent = courtId;");
-  assert.ok(renderRefreshIndex > renderLabelIndex);
-
-  const courtOpenStart = source.indexOf("    currentCourtId = courtId;");
-  const renderCallIndex = source.indexOf("    renderCourtQr(courtId);", courtOpenStart);
-  const scoreboardVisibleIndex = source.indexOf(
-    '    elements.scoreboardPage.style.display = "flex";',
-    courtOpenStart,
-  );
-  assert.ok(scoreboardVisibleIndex >= 0 && renderCallIndex > scoreboardVisibleIndex);
-
-  const visibilityFunctionStart = source.indexOf(
-    "function initializeCourtQrResizeHandleVisibility()",
-  );
-  const pointerMoveStart = source.indexOf(
-    '    document.addEventListener("pointermove", (event) =>',
-    visibilityFunctionStart,
-  );
-  const pointerMoveEnd = source.indexOf(
-    "    refreshCourtQrResizeHandleVisibility =",
-    pointerMoveStart,
-  );
-  assert.ok(pointerMoveStart >= 0 && pointerMoveEnd > pointerMoveStart);
-  const pointerMoveBlock = source.slice(pointerMoveStart, pointerMoveEnd);
-  assert.match(
-    pointerMoveBlock,
-    /if \(!courtQrPanelVisible\)\s*\{[\s\S]*?lastPointerX = event\.clientX;[\s\S]*?lastPointerY = event\.clientY;[\s\S]*?hasPointerPosition = true;[\s\S]*?lastPointerMoveTime = performance\.now\(\);[\s\S]*?return;/,
-  );
-  assert.match(pointerMoveBlock, /event\.clientX === lastPointerX/);
-  assert.doesNotMatch(pointerMoveBlock, /getBoundingClientRect\(\)/);
-  assert.doesNotMatch(pointerMoveBlock, /getClientRects\(\)/);
-  assert.doesNotMatch(pointerMoveBlock, /clearTimeout\(inactivityTimer\)/);
-});
-
-test("QR resize updates one corner geometry set per animation frame", () => {
-  assert.doesNotMatch(source, /resizeStartPanelScale/);
-  assert.match(source, /const calculateResizeGeometry =/);
-  assert.match(source, /const nextWidth = pendingWidth/);
-  assert.match(source, /panel\.style\.width = nextWidth \+ "px"/);
-  assert.match(source, /panel\.style\.left = nextLeft \+ "px"/);
-  assert.match(source, /panel\.style\.top = nextTop \+ "px"/);
-  assert.doesNotMatch(source, /panel\.style\.height =/);
-  assert.match(source, /panel\.style\.transform = ""/);
-  assert.doesNotMatch(source, /createCourtQrCanvas\(refreshedQrUrl\)/);
-  assert.doesNotMatch(source, /createCourtQrLogoCanvas\(refreshedQrCanvas\.width\)/);
-  assert.match(styles, /\.qr-resize-handle\s*\{[\s\S]*?width: 30px;/);
-  assert.match(styles, /\.qr-resize-handle\s*\{[\s\S]*?height: 30px;/);
-  assert.match(styles, /\.qr-resize-handle--nw\s*\{[\s\S]*?cursor:/);
-  assert.match(styles, /\.qr-resize-handle--ne\s*\{[\s\S]*?cursor:/);
-  assert.match(styles, /\.qr-resize-handle--sw\s*\{[\s\S]*?cursor:/);
-  assert.match(styles, /\.qr-resize-handle--se\s*\{[\s\S]*?cursor:/);
-  assert.match(styles, /min-width: 130px;/);
-  assert.doesNotMatch(styles, /--qr-panel-scale/);
-  assert.doesNotMatch(source, /const resizeHandleZone = 28;/);
-});
-
-test("QR resize keeps the QR canvas stable across all corner interactions", () => {
-  assert.match(source, /rerasterizeCourtQrLogoAtCurrentSize\(\);/);
-  assert.match(source, /resizeCorner = null;/);
-  assert.match(source, /activeResizeHandle\.classList\.add\("is-active"\)/);
-  assert.doesNotMatch(source, /createCourtQrCanvas\(refreshedQrUrl\)/);
-  assert.doesNotMatch(source, /createCourtQrLogoCanvas\(refreshedQrCanvas\.width\)/);
-});
-
-test("QR resize leaves QR canvases in place on release and rerasterizes only the logo", () => {
-  assert.match(source, /function getCourtQrBackingSize\(\)/);
-  assert.match(source, /const backingSize = getCourtQrBackingSize\(\);/);
-  assert.match(source, /function rerasterizeCourtQrLogoAtCurrentSize\(\)/);
-  assert.match(source, /elements\.courtQrCode\?\.querySelector\("\.court-qr-logo-canvas"\)/);
-  assert.match(source, /if \(canvas\.width === backingSize && canvas\.height === backingSize\)/);
-  assert.match(source, /canvas\.width = backingSize;/);
-  assert.match(source, /canvas\.height = backingSize;/);
-  assert.match(source, /drawCourtQrLogo\(context, backingSize\);/);
-  assert.match(
-    source,
-    /if \(modeAtStop === "resize"\)\s*\{\s*clampCourtQrPanelToViewport\(\);\s*rerasterizeCourtQrLogoAtCurrentSize\(\);\s*\}/,
-  );
-  assert.doesNotMatch(source, /elements\.courtQrCode\.replaceChildren\(\s*refreshedQrCanvas/);
-
-  const pointerMoveStart = source.indexOf(
-    '    document.addEventListener("pointermove", (event) =>',
-  );
-  const pointerMoveEnd = source.indexOf("    const stopInteractionFromPointer", pointerMoveStart);
-  assert.ok(pointerMoveStart >= 0 && pointerMoveEnd > pointerMoveStart);
-  const pointerMoveBlock = source.slice(pointerMoveStart, pointerMoveEnd);
-  assert.doesNotMatch(pointerMoveBlock, /rerasterizeCourtQrLogoAtCurrentSize/);
-});
-
 test("QR resize keeps the compositor hint on drag only", () => {
   const interactingRule = getCssRuleBody(styles, ".court-qr-panel.qr-panel-interacting");
   const draggingRule = getCssRuleBody(styles, ".court-qr-panel.dragging");
 
   assert.match(draggingRule, /will-change:\s*transform;/);
   assert.doesNotMatch(interactingRule, /will-change:\s*transform;/);
+});
+
+test("leaving the court hides the panel and resets it to the bottom-right corner", async () => {
+  document.getElementById("backBtn").click();
+  await waitFor(() => !document.getElementById("confirmModal").classList.contains("hidden"), {
+    label: "exit confirmation",
+  });
+  document.getElementById("confirmOkBtn").click();
+  await waitFor(() => panel.classList.contains("hidden"), { label: "QR panel hidden" });
+
+  assert.equal(panel.style.left, "auto");
+  assert.equal(panel.style.top, "auto");
+  assert.equal(panel.style.right, "8px");
+  assert.equal(panel.style.bottom, "8px");
+  assert.equal(panel.style.width, "");
+  assert.equal(document.getElementById("courtQrCode").children.length, 0);
+  assert.equal(handleOpacity(), "0.000");
 });

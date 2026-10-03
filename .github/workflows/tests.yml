@@ -23,6 +23,23 @@ jobs:
         working-directory: functions
         run: npm run format:check
 
+      # The generated Hosting artifacts are rebuilt from their sources before
+      # anything inspects them, so the jsdom harness always boots exactly what
+      # Hosting serves. --check fails if a committed artifact was edited directly
+      # or its sources changed without a rebuild.
+      - name: Build frontend (verify generated artifacts)
+        run: node scripts/build-frontend.mjs --check
+
+      - name: Validate frontend structure
+        run: node scripts/check-frontend-structure.mjs
+
+      - name: Lint frontend modules
+        working-directory: functions
+        run: npm run lint:frontend
+
+      - name: Check branding
+        run: node scripts/check-branding.mjs
+
       - name: Run unit, frontend, and OpenAPI contract tests
         working-directory: functions
         run: npm test

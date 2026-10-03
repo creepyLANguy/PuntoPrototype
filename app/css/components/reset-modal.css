@@ -1,0 +1,139 @@
+/* =======================================================
+   RESET MODAL
+======================================================= */
+
+.reset-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* Safe gutter on all sides - modal never touches screen edge */
+  padding: 16px;
+  z-index: 9999;
+}
+
+body.light-mode .reset-modal {
+  background: rgba(255, 255, 255, 0.75);
+}
+
+.reset-modal.hidden {
+  display: none;
+}
+
+.reset-box {
+  background: #600000;
+  padding: 24px;
+  border-radius: 14px;
+  text-align: center;
+  width: clamp(280px, 90vw, 420px);
+  color: white;
+}
+
+body.light-mode .reset-box {
+  background: #ffeb3b;
+  color: black;
+}
+
+.reset-hint,
+.reset-warning {
+  margin: 8px 0 0;
+  font-size: 0.82rem;
+  line-height: 1.4;
+  text-align: left;
+}
+
+.reset-hint {
+  opacity: 0.8;
+}
+
+.reset-warning {
+  font-weight: 600;
+  opacity: 0.95;
+}
+
+.reset-actions {
+  margin-top: 16px;
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.reset-actions button {
+  flex: 1;
+  min-width: 80px;
+  padding: 10px;
+  border-radius: 8px;
+  border: none;
+  font-weight: bold;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+  background: white;
+  color: black;
+}
+
+body.light-mode .reset-actions button {
+  background: black;
+  color: white;
+}
+
+.share-image-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.82);
+}
+
+.share-image-modal.hidden {
+  display: none;
+}
+
+.share-image-box {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  max-width: min(92vw, 720px);
+  max-height: 92vh;
+}
+
+.share-image-box img {
+  display: block;
+  max-width: 100%;
+  max-height: 92vh;
+  object-fit: contain;
+  border-radius: 8px;
+  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.45);
+}
+
+.share-image-close {
+  position: absolute;
+  top: -12px;
+  right: -12px;
+  z-index: 1;
+  width: 36px;
+  height: 36px;
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  border-radius: 50%;
+  background: #111;
+  color: #fff;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.reset-actions button:hover {
+  filter: brightness(0.875);
+}
+
+body.light-mode .reset-actions button:hover {
+  opacity: 0.8;
+}
+

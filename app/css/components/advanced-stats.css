@@ -1,0 +1,316 @@
+/* ── Unified side-by-side stats table ── */
+
+.dm-stats-table {
+  --dm-st-label-width: 28%;
+  --dm-st-primary-width: 36%;
+  --dm-st-secondary-width: 36%;
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.75rem;
+  /* Keep the table contained, then let the frontend tighten the label column
+     only when a nowrap team value actually needs more room. */
+  table-layout: fixed;
+}
+
+/* Column header row */
+.dm-stats-table thead th {
+  padding: 4px 6px 8px;
+  font-weight: 800;
+  font-size: 0.7rem;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  /* Team names are arbitrary text and must wrap rather than overflow. */
+  overflow-wrap: anywhere;
+}
+
+.dm-st-col-label {
+  text-align: left;
+  width: var(--dm-st-label-width);
+}
+
+.dm-st-col-team {
+  text-align: center;
+}
+
+.dm-stats-table th:nth-child(2) {
+  width: var(--dm-st-primary-width);
+}
+
+.dm-stats-table th:nth-child(3) {
+  width: var(--dm-st-secondary-width);
+}
+
+.dm-st-col-a {
+  color: var(--teamAcolour);
+}
+
+.dm-st-col-b {
+  color: var(--teamBcolour);
+}
+
+/* Section divider row */
+.dm-st-section-hdr td {
+  padding: 8px 6px 4px;
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.38);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+body.light-mode .dm-st-section-hdr td {
+  color: rgba(0, 0, 0, 0.35);
+  border-top-color: rgba(0, 0, 0, 0.08);
+}
+
+/* Regular data rows */
+.dm-st-row td {
+  padding: 5px 6px;
+  line-height: 1.2;
+  vertical-align: middle;
+}
+
+.dm-st-row:not(.dm-st-bar-row):nth-child(odd) td {
+  background: rgba(255, 255, 255, 0.025);
+}
+
+body.light-mode .dm-st-row:not(.dm-st-bar-row):nth-child(odd) td {
+  background: rgba(0, 0, 0, 0.025);
+}
+
+.dm-st-label {
+  font-size: 0.69rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.5);
+  text-align: left;
+  /* With a fixed table layout a nowrap label would spill into the team column
+     on narrow screens, so let the longer labels wrap onto a second line. */
+  overflow-wrap: anywhere;
+}
+
+body.light-mode .dm-st-label {
+  color: rgba(0, 0, 0, 0.45);
+}
+
+.dm-st-val {
+  text-align: center;
+  font-weight: 700;
+  font-size: 0.75rem;
+  white-space: nowrap;
+  transition: opacity 180ms ease, filter 180ms ease, transform 180ms ease;
+}
+
+.dm-st-value-content {
+  display: inline-block;
+  white-space: nowrap;
+}
+
+.dm-st-val.is-leader {
+  filter: brightness(1.18);
+  font-weight: 800;
+  transform: translateY(-1px);
+}
+
+.dm-st-val.is-loser {
+  opacity: 0.62;
+}
+
+.dm-st-a {
+  color: var(--teamAcolour);
+}
+
+.dm-st-b {
+  color: var(--teamBcolour);
+}
+
+/* Shared value cell (spans both team columns) */
+.dm-st-shared {
+  text-align: center;
+  font-weight: 700;
+  font-size: 0.78rem;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+body.light-mode .dm-st-shared {
+  color: rgba(0, 0, 0, 0.75);
+}
+
+/* Split bar row */
+.dm-st-bar-row td {
+  padding-top: 6px;
+  padding-bottom: 6px;
+}
+
+.dm-st-bar-cell {
+  padding-left: 4px !important;
+  padding-right: 6px !important;
+}
+
+.dm-split-bar {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  width: 100%;
+}
+
+.dm-split-track {
+  flex: 1;
+  height: 7px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  display: flex;
+  overflow: hidden;
+  min-width: 0;
+}
+
+body.light-mode .dm-split-track {
+  background: rgba(0, 0, 0, 0.08);
+}
+
+.dm-split-fill-a {
+  height: 100%;
+  background: var(--teamAcolour);
+  flex-shrink: 0;
+}
+
+.dm-split-fill-b {
+  height: 100%;
+  background: var(--teamBcolour);
+  flex: 1;
+}
+
+.dm-split-lbl-a {
+  font-size: 0.67rem;
+  font-weight: 700;
+  color: var(--teamAcolour);
+  white-space: nowrap;
+  text-align: right;
+  min-width: 0;
+  transition: opacity 180ms ease, filter 180ms ease;
+}
+
+.dm-split-lbl-b {
+  font-size: 0.67rem;
+  font-weight: 700;
+  color: var(--teamBcolour);
+  white-space: nowrap;
+  min-width: 0;
+  transition: opacity 180ms ease, filter 180ms ease;
+}
+
+.dm-split-lbl-a.is-leader,
+.dm-split-lbl-b.is-leader {
+  filter: brightness(1.16);
+  font-weight: 800;
+}
+
+.dm-split-lbl-a.is-loser,
+.dm-split-lbl-b.is-loser {
+  opacity: 0.65;
+}
+
+.dm-stats-meta {
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  background: rgba(255, 255, 255, 0.03);
+  padding: 10px 12px;
+}
+
+body.light-mode .dm-stats-meta {
+  border-color: rgba(0, 0, 0, 0.1);
+  background: rgba(0, 0, 0, 0.03);
+}
+
+.dm-meta-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.dm-meta-list li {
+  font-size: 0.79rem;
+  line-height: 1.35;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+body.light-mode .dm-meta-list li {
+  color: rgba(0, 0, 0, 0.84);
+}
+
+.dm-meta-key {
+  font-weight: 800;
+  letter-spacing: 0.2px;
+}
+
+@media (orientation: landscape) and (max-height: 500px) {
+  .dm-momentum-wrap {
+    margin-top: 10px;
+  }
+
+  .dm-momentum-canvas {
+    height: 80px;
+  }
+
+  .dm-stats-wrap {
+    margin-top: 8px;
+    gap: 8px;
+  }
+
+  .dm-stats-meta {
+    padding: 8px 10px;
+  }
+
+  .dm-stats-table {
+    font-size: 0.68rem;
+  }
+
+  .dm-st-val,
+  .dm-st-shared {
+    font-size: 0.68rem;
+  }
+
+  .dm-split-lbl-a,
+  .dm-split-lbl-b {
+    font-size: 0.6rem;
+  }
+
+  .dm-meta-list li {
+    font-size: 0.7rem;
+  }
+}
+
+.dm-meta-grid {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: 28px;
+  align-items: start;
+}
+
+.dm-meta-grid>div:first-child {
+  padding-right: 28px;
+  border-right: 1px solid rgba(255, 255, 255, .08);
+}
+
+.dm-meta-title {
+  margin-bottom: 8px;
+  font-size: .68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .12em;
+  color: #8d97a6;
+}
+
+.dm-meta-value {
+  font-size: .95rem;
+  line-height: 1.35;
+  color: #fff;
+}
+
+body.light-mode .dm-meta-value {
+  color: rgba(0, 0, 0, 0.75);
+}
+

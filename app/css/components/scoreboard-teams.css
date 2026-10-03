@@ -1,0 +1,516 @@
+/* =======================================================
+   STRAIGHT POINTS TOTAL — sits in the gap between the two team cards
+======================================================= */
+
+.straight-total {
+  /* Fits in the flex gap without shrinking the team cards */
+  flex: 0 0 auto;
+  align-self: center;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(4px, 1vmin, 10px);
+
+  padding: clamp(4px, 0.8vmin, 8px) clamp(12px, 2vmin, 24px);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  backdrop-filter: blur(10px);
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.straight-total-label {
+  font-size: clamp(0.55rem, 1.4vmin, 0.8rem);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  opacity: 0.6;
+  color: var(--white);
+}
+
+.straight-total-value {
+  font-size: clamp(0.75rem, 2vmin, 1.15rem);
+  font-weight: 800;
+  color: var(--white);
+  min-width: 1.5ch;
+  text-align: center;
+}
+
+body.light-mode .straight-total {
+  background: rgba(0, 0, 0, 0.06);
+  border-color: rgba(0, 0, 0, 0.14);
+}
+
+body.light-mode .straight-total-label,
+body.light-mode .straight-total-value {
+  color: var(--ink, #111);
+}
+
+@media (orientation: landscape) {
+  .straight-total {
+    /* In landscape the scoreboard is flex-row, so the pill sits vertically */
+    flex-direction: column;
+    gap: clamp(2px, 0.6vmin, 6px);
+    padding: clamp(8px, 1.5vmin, 16px) clamp(6px, 1vmin, 10px);
+    border-radius: clamp(8px, 1.5vmin, 16px);
+  }
+}
+
+/* =======================================================
+   TEAM CARD
+======================================================= */
+
+.team {
+  /* Portrait default: fill full width, share height equally — NOT square */
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 0;
+  /* No aspect-ratio in portrait — maximise screen use */
+  padding: clamp(4px, 1vmin, 12px);
+  border-radius: clamp(12px, 2vmin, 22px);
+  position: relative;
+  overflow: hidden;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+
+  container-type: inline-size;
+}
+
+.team-a {
+  border: clamp(3px, 0.6vmin, 6px) solid var(--teamAcolour);
+  color: var(--teamAcolour);
+}
+
+.team-b {
+  border: clamp(3px, 0.6vmin, 6px) solid var(--teamBcolour);
+  color: var(--teamBcolour);
+}
+
+/* Swap order classes — still driven by JS */
+.team-a {
+  order: 1;
+}
+
+.team-b {
+  order: 2;
+}
+
+.scoreboard.swapped .team-a {
+  order: 2;
+}
+
+.scoreboard.swapped .team-b {
+  order: 1;
+}
+
+/* Large portrait screens: cap the scoreboard width so the
+   container-query-based typography and dots scale down instead
+   of stretching to tablet-width proportions. */
+@media (orientation: portrait) and (min-width: 700px) and (min-height: 900px) {
+  .scoreboard {
+    width: min(100%, 660px);
+    margin-inline: auto;
+    gap: clamp(3px, 0.8vmin, 8px);
+    padding: clamp(4px, 1vmin, 10px);
+  }
+
+  .team {
+    padding: clamp(3px, 0.7vmin, 8px);
+    border-radius: clamp(10px, 1.5vmin, 18px);
+  }
+
+  .team-name {
+    padding: clamp(2px, 0.45vmin, 6px) clamp(6px, 1.1vmin, 12px);
+  }
+
+  .team-name .name-text {
+    font-size: clamp(0.8rem, 6cqi, 3rem);
+  }
+
+  .row {
+    font-size: clamp(0.55rem, 3.2cqi, 2rem);
+  }
+
+  .row span:last-child {
+    font-size: clamp(0.7rem, 5cqi, 2.7rem);
+  }
+
+  .set-dot,
+  .game-dot {
+    width: clamp(10px, 4.4cqi, 40px);
+    height: clamp(10px, 4.4cqi, 40px);
+  }
+
+  .game-dot {
+    border-width: clamp(2px, 0.5cqi, 4px);
+  }
+
+  .set-dot {
+    border-width: clamp(1px, 0.35cqi, 2px);
+  }
+
+  .points {
+    font-size: clamp(2.4rem, 48cqi, 28rem);
+  }
+
+  .server-badge {
+    font-size: clamp(0.65rem, 1.8vmin, 1.6rem);
+  }
+
+  .indicator {
+    width: clamp(12px, 2vmin, 20px);
+    height: clamp(12px, 2vmin, 20px);
+    border-width: clamp(2px, 0.35vmin, 3px);
+  }
+}
+
+/* =======================================================
+   LANDSCAPE: restore side-by-side cards with square aspect ratio
+======================================================= */
+
+@media (orientation: landscape) {
+  .scoreboard {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-evenly;
+  }
+
+  .team {
+    /*
+     * Maximize vertical presence in landscape
+     */
+    flex: 0 0 auto;
+    height: 98%;
+    aspect-ratio: 1 / 1;
+    max-width: 48%;
+    min-width: 0;
+  }
+}
+
+/* =======================================================
+   TEAM NAME
+======================================================= */
+
+.team-name {
+  height: auto;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 100%;
+  padding: clamp(3px, 0.6vmin, 8px) clamp(8px, 1.5vmin, 16px);
+  border-radius: 10px;
+
+  overflow: hidden;
+  z-index: 10;
+  position: relative;
+}
+
+.team-name .name-text {
+  display: inline-block;
+  white-space: nowrap;
+  /* Use container query unit so text scales with the card size */
+  font-size: clamp(0.9rem, 8cqi, 4rem);
+  font-weight: 700;
+
+  transform-origin: center center;
+  transition: transform 0.15s ease;
+}
+
+body.spectating-mode .team-name {
+  pointer-events: none;
+  cursor: default;
+}
+
+body.spectating-mode .team-name:hover {
+  background: none;
+}
+
+/* =======================================================
+   META (SETS & GAMES)
+======================================================= */
+
+.meta {
+  width: 100%;
+  flex-shrink: 1;
+  min-height: 0;
+}
+
+.row {
+  padding: 0 clamp(6px, 1.5vmin, 20px);
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  /* Scale with card width via container query */
+  font-size: clamp(0.6rem, 4cqi, 2.5rem);
+}
+
+.row span:first-child {
+  font-weight: 300;
+  color: var(--white);
+}
+
+.row span:last-child {
+  font-weight: 700;
+  font-size: clamp(0.75rem, 6cqi, 3.5rem);
+  color: inherit;
+}
+
+/* =======================================================
+   SET & GAME DOTS
+======================================================= */
+
+#setsA,
+#setsB,
+#gamesA,
+#gamesB {
+  display: flex;
+  flex-direction: row-reverse;
+  align-items: center;
+  /* Dots gap scales with card width */
+  gap: clamp(4px, 2cqi, 24px);
+  color: var(--white);
+  flex-wrap: wrap;
+  justify-content: flex-start;
+}
+
+body.light-mode #setsA,
+body.light-mode #gamesA {
+  color: var(--teamAcolour);
+}
+
+body.light-mode #setsB,
+body.light-mode #gamesB {
+  color: var(--teamBcolour);
+}
+
+.set-dot,
+.game-dot {
+  /* Dots scale with card width */
+  width: clamp(12px, 5.5cqi, 56px);
+  height: clamp(12px, 5.5cqi, 56px);
+  border-radius: 50%;
+  background: #e0e0e0;
+  flex-shrink: 0;
+}
+
+.game-dot {
+  border-style: solid;
+  border-width: clamp(2px, 0.6cqi, 5px);
+  background-color: rgba(0, 0, 0, 0);
+  border-color: #e0e0e044;
+  opacity: 1;
+}
+
+body.light-mode .game-dot {
+  border-color: #e0e0e0;
+  opacity: 1;
+}
+
+.set-dot {
+  border: clamp(1px, 0.4cqi, 3px) solid #e0e0e0;
+  background: transparent;
+  opacity: 0;
+}
+
+body.light-mode .set-dot {
+  background: #e0e0e0;
+  opacity: 0;
+  border: none;
+}
+
+.game-dot.filled {
+  opacity: 1;
+  border: none;
+}
+
+.set-dot.filled[data-team="A"] {
+  background: var(--teamAcolour);
+  border-color: var(--teamAcolour);
+  opacity: 1;
+}
+
+.set-dot.filled[data-team="B"] {
+  background: var(--teamBcolour);
+  border-color: var(--teamBcolour);
+  opacity: 1;
+}
+
+.game-dot.filled {
+  background: white;
+}
+
+body.light-mode .game-dot.filled {
+  background: black;
+}
+
+/* =======================================================
+   POINTS DISPLAY
+======================================================= */
+
+.points-wrapper {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.points {
+  /* Score is always the biggest; fills blank space for distance reading */
+  font-size: clamp(3rem, 55cqi, 35rem);
+  font-weight: 800;
+  text-align: center;
+  color: inherit;
+  line-height: 1;
+}
+
+.indicator {
+  position: absolute;
+  bottom: 4%;
+  right: 4%;
+  height: clamp(14px, 2.4vmin, 24px);
+  width: clamp(14px, 2.4vmin, 24px);
+  border-radius: 50%;
+  border: clamp(2px, 0.4vmin, 4px) solid var(--white);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  pointer-events: none;
+  background-color: transparent;
+}
+
+.server-badge {
+  position: absolute;
+  bottom: 4%;
+  left: 4%;
+  transition: opacity 0.2s ease;
+  color: var(--white);
+  font-weight: 900;
+  font-size: clamp(0.75rem, 2vmin, 2.15rem);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3;
+}
+
+.server-badge::after {
+  --bounceHeight: clamp(12px, 5.5cqi, 56px);
+  --size: clamp(4px, 2.25cqi, 10px);
+  --labelHeight: calc(1.1em + 2px);
+  flex-shrink: 0;
+  bottom: calc(var(--bounceHeight) + var(--labelHeight));
+  width: var(--size);
+  height: var(--size);
+  background: currentColor;
+
+  content: "";
+  position: absolute;
+  border-radius: 50%;
+  z-index: 1;
+  animation: animloader 2s linear infinite;
+}
+
+@keyframes animloader {
+
+  100%,
+  0% {
+    transform: translateY(0);
+  }
+
+  10%,
+  90% {
+    transform: translateY(calc(var(--bounceHeight) * 0.02));
+  }
+
+  20%,
+  80% {
+    transform: translateY(calc(var(--bounceHeight) * 0.09));
+  }
+
+  30% {
+    transform: translateY(calc(var(--bounceHeight) * 0.25));
+  }
+
+  40% {
+    transform: translateY(calc(var(--bounceHeight) * 0.55));
+  }
+
+  50% {
+    transform: translateY(calc(var(--bounceHeight))) scaleX(1);
+  }
+
+  53% {
+    transform: translateY(var(--bounceHeight)) scaleX(1.5) scaleY(0.75);
+  }
+
+  60% {
+    transform: translateY(calc(var(--bounceHeight) * 0.55)) scaleX(0.75) scaleY(1.2);
+  }
+
+  70% {
+    transform: translateY(calc(var(--bounceHeight) * 0.25));
+  }
+}
+
+/* =======================================================
+   CRITICAL POINT INDICATOR — pulsating score glow
+======================================================= */
+
+/* The old .critical-badge is kept hidden; the effect is now on .points */
+.critical-badge {
+  display: none !important;
+}
+
+/* When it's a critical point, the score number pulses with a colour glow */
+.points.is-critical {
+  animation: critical-pulse 2.5s infinite ease-in-out;
+}
+
+@keyframes critical-pulse {
+
+  0%,
+  100% {
+    text-shadow:
+      0 0 0px currentColor;
+  }
+
+  50% {
+    text-shadow:
+      0 0 20px currentColor;
+  }
+}
+
+
+/* =======================================================
+   TEAM TAP ZONE
+======================================================= */
+
+.team .ref-zone {
+  position: absolute;
+  inset: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  z-index: 1;
+}
+
+.team-name {
+  z-index: 10;
+  position: relative;
+}
+
+.team-a .ref-zone:active {
+  background: color-mix(in srgb, var(--teamAcolour) 18%, transparent);
+}
+
+.team-b .ref-zone:active {
+  background: color-mix(in srgb, var(--teamBcolour) 18%, transparent);
+}
+

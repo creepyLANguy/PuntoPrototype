@@ -1,0 +1,212 @@
+/* =======================================================
+   SCOREBOARD LOADING OVERLAY
+========================================================== */
+
+.app-loading-overlay,
+.scoreboard-loading {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: var(--bg);
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.app-loading-overlay {
+  z-index: 10000;
+}
+
+.app-loading-overlay.hidden,
+.scoreboard-loading.hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.loading-content {
+  text-align: center;
+  perspective: 1000px;
+}
+
+.loading-indicator {
+  opacity: 0;
+  transition: opacity 180ms ease;
+}
+
+.app-loading-overlay.show-spinner .loading-indicator,
+.scoreboard-loading.show-spinner .loading-indicator {
+  opacity: 1;
+}
+
+.spinner-wrapper {
+  position: relative;
+  width: 140px;
+  height: 140px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 0 auto;
+}
+
+.loading-logo {
+  width: 70px;
+  height: auto;
+  z-index: 2;
+  filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.2));
+  animation: logoPulse 2s ease-in-out infinite;
+}
+
+body.light-mode .loading-logo {
+  filter: invert(1) drop-shadow(0 0 10px rgba(0, 0, 0, 0.1));
+}
+
+.spinner {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  padding: 4px;
+  /* Border thickness */
+  background: conic-gradient(from 0deg,
+      transparent 0%,
+      var(--teamAcolour) 40%,
+      var(--teamBcolour) 60%,
+      transparent 100%);
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: destination-out;
+  mask-composite: exclude;
+  animation: spin 1.2s linear infinite;
+}
+
+@keyframes logoPulse {
+
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.55);
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+
+.no-courts {
+  padding: 20px;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 14px;
+}
+
+.court-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 15px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  cursor: pointer;
+  transition: background 0.2s ease;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+}
+
+body.light-mode .court-item {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.court-item:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+body.light-mode .court-item:hover {
+  background: rgba(0, 0, 0, 0.08);
+}
+
+.court-item:focus-visible {
+  outline: 2px solid var(--teamAcolour);
+  outline-offset: -2px;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+body.light-mode .court-item:focus-visible {
+  outline: 2px solid var(--teamBcolour);
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.court-item.active {
+  background: rgba(255, 255, 255, 0.0);
+  border: 2px solid var(--teamAcolour);
+  margin: 4px;
+  border-radius: 4px;
+  box-shadow: 0 0 12px var(--teamAcolour);
+}
+
+body.light-mode .court-item.active {
+  border: 2px solid var(--teamBcolour);
+  box-shadow: 0 0 8px var(--teamBcolour);
+}
+
+.court-item.active .court-item-name {
+  color: var(--teamAcolour);
+  font-weight: 700;
+}
+
+body.light-mode .court-item.active .court-item-name {
+  color: black;
+}
+
+.court-item-name {
+  flex: 1;
+  min-width: 0;
+  line-height: 1;
+  font-weight: 600;
+  color: white;
+  margin-bottom: 0;
+}
+
+body.light-mode .court-item-name {
+  color: #1a1a1a;
+  font-weight: 700;
+}
+
+.court-item-info {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.court-item-id {
+  display: block;
+  width: auto;
+  flex-shrink: 0;
+  align-self: center;
+  line-height: 1;
+  text-align: right;  
+  text-transform: uppercase;
+  letter-spacing: 10%;
+  font-size: 14px;
+  color: rgba(190, 190, 190, 0.8);
+}
+
+body.light-mode .court-item-info {
+  color: rgba(0, 0, 0, 0.6);
+}
+
+body.light-mode .court-item-id {
+  color: rgba(90, 90, 90, 0.9);
+}
+

@@ -1,0 +1,70 @@
+    /* ---------- QR corner bug ---------- */
+
+    .qr-bug {
+      position: fixed;
+      z-index: 6;
+      background: #ffffff;
+      border-radius: 10px;
+      padding: 8px;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+      text-align: center;
+    }
+
+    .qr-bug.hidden {
+      display: none;
+    }
+
+    .qr-bug canvas,
+    .qr-bug img {
+      display: block;
+      margin: 0 auto;
+    }
+
+    #qrBugCode {
+      position: relative;
+    }
+
+    #qrBugCode::after {
+      content: "";
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 32%;
+      height: 32%;
+      transform: translate(-50%, -50%);
+      border-radius: 50%;
+      background: #000 url("/media/logo.svg") center / 82% no-repeat;
+      z-index: 2;
+      pointer-events: none;
+      box-shadow: 0 0 2px rgba(0, 0, 0, 0.8);
+    }
+
+    .qr-bug-label {
+      margin-top: 5px;
+      font-size: 11px;
+      font-weight: 700;
+      color: #111111;
+      letter-spacing: 0.02em;
+      max-width: 200px;
+    }
+
+    .qr-bug.qr-tl {
+      top: 16px;
+      left: 16px;
+    }
+
+    .qr-bug.qr-tr {
+      top: 16px;
+      right: 16px;
+    }
+
+    .qr-bug.qr-bl {
+      bottom: 16px;
+      left: 16px;
+    }
+
+    .qr-bug.qr-br {
+      bottom: 16px;
+      right: 16px;
+    }
+

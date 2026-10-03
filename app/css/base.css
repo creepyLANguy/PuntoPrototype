@@ -1,0 +1,92 @@
+/* =======================================================
+   GLOBAL RESET
+======================================================= */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  scroll-behavior: smooth;
+  /* Do NOT set overflow: hidden globally — it blocks menu page scroll.
+     Each page controls its own overflow. */
+
+  user-select: none;
+  -webkit-user-select: none;
+  /* Safari */
+  -moz-user-select: none;
+  /* Firefox */
+  -ms-user-select: none;
+  /* Older Edge */
+}
+
+.create-page,
+.create-card,
+.reset-modal,
+.reset-card,
+.admin-court-list,
+.scrollable-modal {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--bg);
+  color: var(--white);
+  font-family: "Inter", "Outfit", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  transition: background-color 0.4s var(--transition-smooth), color 0.3s ease;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+input,
+textarea,
+[contenteditable="true"] {
+  user-select: text;
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
+}
+
+button {
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  touch-action: manipulation;
+}
+
+/* Admin portal must allow full text selection across all elements. */
+#adminAuthPage,
+#adminAuthPage *,
+#adminDashboardPage,
+#adminDashboardPage *,
+#createPage,
+#createPage *,
+#editCourtPage,
+#editCourtPage *,
+#addDevicePage,
+#addDevicePage *,
+#editDevicePage,
+#editDevicePage * {
+  user-select: text !important;
+  -webkit-user-select: text !important;
+  -moz-user-select: text !important;
+  -ms-user-select: text !important;
+}
+
+img {
+  -webkit-user-drag: none;
+}
+
+img,
+svg {
+  pointer-events: none;
+  /* only if they don't need clicks */
+}
+

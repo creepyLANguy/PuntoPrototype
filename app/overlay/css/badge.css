@@ -1,0 +1,96 @@
+    /* ---------- Set / match / golden / silver point badge ---------- */
+
+    /* Clipping window glued to the panel's right edge. The ribbon slides
+       horizontally inside it, so it appears to emerge from behind the panel
+       and never adds to the overlay's height. */
+    .badge-flyout {
+      position: absolute;
+      left: 100%;
+      top: 0;
+      bottom: 0;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      pointer-events: none;
+    }
+
+    .badge {
+      display: block;
+      writing-mode: vertical-rl;
+      text-orientation: mixed;
+      white-space: nowrap;
+      font-size: 0.55em;
+      font-weight: 800;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      padding: 0.9em 0.4em;
+      border: 1px solid currentColor;
+      border-left: none;
+      border-radius: 0 0.45em 0.45em 0;
+      transform: translateX(-100%);
+      transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    .badge-flyout.visible .badge {
+      transform: translateX(0);
+      animation: badge-pulse 1.6s ease-in-out infinite;
+    }
+
+    .badge.team-A {
+      color: var(--ov-teamA);
+      background: color-mix(in srgb, var(--ov-teamA) 22%, var(--ov-panel));
+    }
+
+    .badge.team-B {
+      color: var(--ov-teamB);
+      background: color-mix(in srgb, var(--ov-teamB) 22%, var(--ov-panel));
+    }
+
+    .badge.gold {
+      color: #f2c94c;
+      background: color-mix(in srgb, #f2c94c 22%, var(--ov-panel));
+    }
+
+    .badge.silver {
+      color: #d7dee8;
+      background: color-mix(in srgb, #d7dee8 22%, var(--ov-panel));
+    }
+
+    .badge.star {
+      color: #c9a7ff;
+      background: color-mix(in srgb, #c9a7ff 22%, var(--ov-panel));
+    }
+
+    @keyframes badge-pulse {
+
+      0%,
+      100% {
+        opacity: 1;
+      }
+
+      50% {
+        opacity: 0.65;
+      }
+    }
+
+    /* When the panel hugs the right screen edge the ribbon would slide
+       off-screen, so it emerges from the panel's left side instead. */
+    .pos-tr .badge-flyout,
+    .pos-br .badge-flyout {
+      left: auto;
+      right: 100%;
+    }
+
+    .pos-tr .badge,
+    .pos-br .badge {
+      border: 1px solid currentColor;
+      border-right: none;
+      border-radius: 0.45em 0 0 0.45em;
+      transform: translateX(100%);
+    }
+
+    .pos-tr .badge-flyout.visible .badge,
+    .pos-br .badge-flyout.visible .badge {
+      transform: translateX(0);
+    }
+
