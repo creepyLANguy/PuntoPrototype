@@ -48,7 +48,7 @@ export function registerInputTapFixes()
   }, { capture: true });
 }
 
-const ADMIN_PORTAL_SELECTOR = "#adminAuthPage, #adminDashboardPage, #createPage, #editCourtPage, #addDevicePage, #editDevicePage";
+const ADMIN_PORTAL_SELECTOR = "#adminAuthPage, #adminDashboardPage, #createPage, #editCourtPage, #addDevicePage, #editDevicePage, #editClubPage";
 
 function isAdminPortalTarget(target)
 {

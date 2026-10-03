@@ -1,7 +1,9 @@
 // View controller: derives the current view state from the visible DOM and
 // restores a requested view state onto the DOM (pages, modals, court session).
-import { displayAdminCourtList, openEditModal } from "../admin/courts.js";
-import { loadDevices, openEditDeviceModal } from "../admin/devices.js";
+import { getClubEditorViewState, restoreClubEditor } from "../admin/clubEditor.js";
+import { openEditModal } from "../admin/courts.js";
+import { refreshActiveAdminTab } from "../admin/dashboardTabs.js";
+import { openEditDeviceModal } from "../admin/devices.js";
 import { NAV_MODALS, NAV_PAGES } from "../config/routes.js";
 import { displayPlayCourtList, displaySpectateCourtList, loadCourtsWithInlineLoader } from "../court/courtLists.js";
 import { setPlayPageVisible } from "../court/playJoin.js";
@@ -28,7 +30,8 @@ export function isAdminProtectedViewVisible()
     isElementVisible(elements.createPage) ||
     isElementVisible(elements.editCourtPage) ||
     isElementVisible(elements.addDevicePage) ||
-    isElementVisible(elements.editDevicePage);
+    isElementVisible(elements.editDevicePage) ||
+    isElementVisible(elements.editClubPage);
 }
 
 export function getCurrentViewState()
@@ -81,6 +84,11 @@ export function getCurrentViewState()
   if (isElementVisible(elements.createPage))
   {
     return createViewState({ page: NAV_PAGES.CREATE_COURT });
+  }
+
+  if (isElementVisible(elements.editClubPage))
+  {
+    return getClubEditorViewState();
   }
 
   if (isElementVisible(elements.adminDashboardPage))
@@ -139,6 +147,7 @@ function hideManagedPages()
   elements.editCourtPage.style.display = "none";
   elements.addDevicePage.style.display = "none";
   elements.editDevicePage.style.display = "none";
+  elements.editClubPage.style.display = "none";
   elements.scoreboardPage.style.display = "none";
 }
 
@@ -165,6 +174,7 @@ function showCurrentScoreboardView()
   elements.editCourtPage.style.display = "none";
   elements.addDevicePage.style.display = "none";
   elements.editDevicePage.style.display = "none";
+  elements.editClubPage.style.display = "none";
 
   if (elements.appearanceMenuBtn)
   {
@@ -316,8 +326,22 @@ export async function restoreViewState(viewState)
 
     if (state.page === NAV_PAGES.ADMIN_DASHBOARD)
     {
+      appState.adminEditReturnView = null;
       elements.adminDashboardPage.style.display = "flex";
-      void displayAdminCourtList();
+      void refreshActiveAdminTab();
+      return;
+    }
+
+    if (state.page === NAV_PAGES.CREATE_CLUB || state.page === NAV_PAGES.EDIT_CLUB)
+    {
+      appState.adminEditReturnView = null;
+      if (await restoreClubEditor(state.page === NAV_PAGES.EDIT_CLUB ? state.entityId : null))
+      {
+        return;
+      }
+
+      elements.adminDashboardPage.style.display = "flex";
+      void refreshActiveAdminTab();
       return;
     }
 
@@ -346,7 +370,7 @@ export async function restoreViewState(viewState)
       }
 
       elements.adminDashboardPage.style.display = "flex";
-      void displayAdminCourtList();
+      void refreshActiveAdminTab();
       return;
     }
 
@@ -375,7 +399,7 @@ export async function restoreViewState(viewState)
       }
 
       elements.adminDashboardPage.style.display = "flex";
-      void loadDevices();
+      void refreshActiveAdminTab();
       return;
     }
 

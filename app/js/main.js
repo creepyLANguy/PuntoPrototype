@@ -78,6 +78,8 @@ import {
   registerCreateCourt
 } from "./admin/courts.js";
 import { registerDeviceAdmin } from "./admin/devices.js";
+import { registerClubEditor } from "./admin/clubEditor.js";
+import { registerClubList } from "./admin/clubs.js";
 
 import { registerHotkeys } from "./shell/hotkeys.js";
 import { registerScoreboardControls } from "./shell/scoreboardControls.js";
@@ -162,4 +164,6 @@ function startApplication()
   registerCourtListenerResume();
   registerAdminTabs();
   registerDeviceAdmin();
+  registerClubList();
+  registerClubEditor();
 }

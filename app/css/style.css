@@ -3703,6 +3703,29 @@ body.light-mode .court-item-id {
   color: rgba(90, 90, 90, 0.9);
 }
 
+/* Club column: shown only in lists where some court belongs to a club
+   (.has-clubs), with a fixed share of the row so the columns line up. */
+.court-item-club {
+  display: none;
+  flex: 0 1 35%;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: right;
+  line-height: 1.2;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.65);
+}
+
+.court-list.has-clubs .court-item-club {
+  display: block;
+}
+
+body.light-mode .court-item-club {
+  color: rgba(60, 60, 60, 0.85);
+}
+
 /* =======================================================
    SPECTATOR BADGE
    Still fixed-positioned, sits at top-right.
@@ -4664,7 +4687,7 @@ body.light-mode .activate-nfc-btn:hover {
 
   .admin-court-item {
     display: grid;
-    grid-template-columns: 1.5fr 1fr 0.85fr 0.85fr auto;
+    grid-template-columns: 1.5fr 1fr 1fr 0.85fr 0.85fr auto;
     grid-template-rows: auto;
     gap: 0 10px;
     padding: 7px 11px;
@@ -4724,7 +4747,7 @@ body.light-mode .activate-nfc-btn:hover {
 @media (min-width: 769px) {
   .admin-court-item {
     display: grid;
-    grid-template-columns: 1.8fr 1.2fr 0.9fr 1fr auto;
+    grid-template-columns: 1.6fr 1.1fr 1.2fr 0.9fr 1fr auto;
     grid-template-rows: auto;
     gap: 0 16px;
     padding: 12px 16px;
@@ -5255,6 +5278,316 @@ body.light-mode #adminCourtSearch {
   display: flex;
 }
 
+/* =======================================================
+   ADMIN CLUBS
+   The Club column of the admin court and device lists, the clubs list and
+   the club editor.
+======================================================= */
+
+/* Club column. On portrait phones it is a line under the court name, left
+   out when the court has no club; wider layouts give it a grid column of
+   its own (see the grid templates in admin.css) and show a dash. */
+.admin-court-item .club-cell {
+  grid-column: 1 / -1;
+}
+
+.admin-court-item .club-cell.is-empty {
+  display: none;
+}
+
+.admin-court-item .club-cell .aci-value {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (orientation: landscape) and (max-height: 520px), (min-width: 769px) {
+  .admin-court-item .club-cell {
+    grid-column: auto;
+  }
+
+  .admin-court-item .club-cell.is-empty {
+    display: block;
+  }
+}
+
+/* Court rows in the wide layouts: the same column tracks as admin.css, but
+   allowed to shrink below their content so every row's columns line up. */
+@media (orientation: landscape) and (max-height: 520px) {
+  .admin-court-item {
+    grid-template-columns:
+      minmax(0, 1.5fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 0.85fr) minmax(0, 0.85fr) auto;
+  }
+}
+
+@media (min-width: 769px) {
+  .admin-court-item {
+    grid-template-columns:
+      minmax(0, 1.6fr) minmax(0, 1.1fr) minmax(0, 1.2fr) minmax(0, 0.9fr) minmax(0, 1fr) auto;
+  }
+}
+
+/* Device rows: device, mapped court and actions, with the club on a line of
+   its own on phones; one row of four columns in the wide layouts. */
+.admin-court-item.admin-device-item {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+}
+
+.admin-device-item .aci-actions {
+  grid-column: 3;
+  grid-row: 1;
+}
+
+.admin-device-item .club-cell {
+  grid-column: 1 / -1;
+  grid-row: 2;
+}
+
+@media (orientation: landscape) and (max-height: 520px), (min-width: 769px) {
+  .admin-court-item.admin-device-item {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) auto;
+  }
+
+  .admin-device-item .aci-actions {
+    grid-column: 4;
+  }
+
+  .admin-device-item .club-cell {
+    grid-column: 3;
+    grid-row: 1;
+  }
+}
+
+/* Dashboard tabs: Clubs, Courts and Devices. */
+.admin-tabs {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+body.light-mode #adminClubSearch {
+  background: #fff;
+  color: #000;
+  border: 1px solid #ccc;
+}
+
+/* Club rows: name, court count, device count and actions. */
+.admin-court-item.admin-club-item {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+}
+
+@media (orientation: landscape) and (max-height: 520px), (min-width: 769px) {
+  .admin-court-item.admin-club-item {
+    grid-template-columns: minmax(0, 1.8fr) minmax(0, 1fr) minmax(0, 1fr) auto;
+  }
+}
+
+/* ---------------- Club editor ---------------- */
+
+.club-editor-card {
+  width: clamp(300px, 92vw, 720px);
+  gap: 12px;
+}
+
+.club-editor-card h2 {
+  margin: 0 40px 0 0;
+  overflow-wrap: anywhere;
+}
+
+.club-editor-id {
+  margin-top: -6px;
+  font-size: 0.75rem;
+  letter-spacing: 0.5px;
+  color: #999;
+}
+
+.club-editor-id:empty {
+  display: none;
+}
+
+.club-member-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.club-member-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.club-member-header h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.club-member-count {
+  font-size: 0.75rem;
+  color: #999;
+  white-space: nowrap;
+}
+
+.club-member-search {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  color: var(--white);
+  font-size: 0.88rem;
+  font-family: inherit;
+}
+
+body.light-mode .club-member-search {
+  background: #fff;
+  color: #000;
+  border: 1px solid #ccc;
+}
+
+.club-member-list {
+  max-height: min(34vh, 280px);
+  overflow-y: auto;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.3);
+  scrollbar-width: thin;
+}
+
+body.light-mode .club-member-list {
+  border-color: rgba(0, 0, 0, 0.2);
+  background: rgba(255, 255, 255, 0.8);
+}
+
+.club-member-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+body.light-mode .club-member-item {
+  border-bottom-color: rgba(0, 0, 0, 0.08);
+}
+
+.club-member-item:last-child {
+  border-bottom: none;
+}
+
+.club-member-item.is-selected {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+body.light-mode .club-member-item.is-selected {
+  background: rgba(0, 0, 0, 0.06);
+}
+
+.club-member-select {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+}
+
+.club-member-select input {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--teamAcolour);
+}
+
+body.light-mode .club-member-select input {
+  accent-color: var(--teamBcolour);
+}
+
+.club-member-text {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.club-member-name {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.club-member-detail {
+  font-size: 0.72rem;
+  color: #999;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* The club a member currently belongs to, when that is another club. */
+.club-member-club {
+  flex: 0 1 32%;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: right;
+  font-size: 0.75rem;
+  color: #999;
+}
+
+.club-member-club:empty {
+  display: none;
+}
+
+.club-member-item.will-move .club-member-club {
+  color: #ff9800;
+}
+
+.club-member-item.will-move .club-member-club::before {
+  content: "moves from ";
+}
+
+.club-member-open {
+  flex-shrink: 0;
+  padding: 4px 10px;
+  font-size: 0.78rem;
+}
+
+/* Narrow screens: the "currently in" club drops to a line under the row so
+   the member's name keeps its width. */
+@media (max-width: 480px) {
+  .club-member-item {
+    flex-wrap: wrap;
+    row-gap: 2px;
+  }
+
+  .club-member-club {
+    order: 3;
+    flex-basis: 100%;
+    text-align: left;
+    padding-left: 28px;
+  }
+}
+
+/* The dashboard header holds five buttons since Create Club was added; on
+   mid-width and landscape-phone screens they are compacted, and wrap rather
+   than overflow if they still do not fit. */
+@media (min-width: 601px) and (max-width: 1100px) {
+  .admin-dashboard-header .header-actions {
+    min-width: 0;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+
+  .admin-dashboard-header .primary-btn {
+    padding: 6px 10px;
+    font-size: 0.75rem;
+  }
+}
 @keyframes apptitleanimation {
   0% {
     filter: drop-shadow(0 0 10px rgba(0, 0, 0, 0.4));

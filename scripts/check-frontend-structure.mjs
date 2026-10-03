@@ -62,6 +62,7 @@ const INFRASTRUCTURE_LAYERS = {
 
 const FEATURE_LAYERS = [
   "admin",
+  "clubs",
   "controls",
   "court",
   "details",

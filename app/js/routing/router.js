@@ -1,6 +1,7 @@
 // Router: turns the initial URL into a view (deep links), reacts to browser
 // back / forward, opens courts from routes and maps the Escape key onto
 // in-app back navigation.
+import { closeClubEditor } from "../admin/clubEditor.js";
 import { TOAST_TYPES } from "../config/constants.js";
 import { NAV_HISTORY_STATE_KEY, NAV_PAGES } from "../config/routes.js";
 import { closePlayPage } from "../court/playJoin.js";
@@ -124,6 +125,12 @@ export function registerEscapeKeyNavigation()
     if (isVisible(elements.editDevicePage))
     {
       void stepBackInApp(createViewState({ page: NAV_PAGES.ADMIN_DASHBOARD }));
+      return;
+    }
+
+    if (isVisible(elements.editClubPage))
+    {
+      void closeClubEditor();
       return;
     }
   });

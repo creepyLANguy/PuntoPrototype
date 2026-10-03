@@ -218,8 +218,12 @@ export function initElements()
 
   //Admin portal things
   elements.adminTabs = document.querySelectorAll('.tab-btn');
+  elements.clubsTab = $("clubsTab");
   elements.courtsTab = $("courtsTab");
   elements.devicesTab = $("devicesTab");
+  elements.adminClubList = $("adminClubList");
+  elements.adminClubSearch = $("adminClubSearch");
+  elements.showCreateClubBtn = $("showCreateClubBtn");
   elements.adminDeviceList = $("adminDeviceList");
   elements.adminDeviceSearch = $("adminDeviceSearch");
 
@@ -247,4 +251,21 @@ export function initElements()
   elements.saveEditDeviceBtn = $("saveEditDeviceBtn");
   elements.deleteDeviceBtn = $("deleteDeviceBtn");
   elements.closeEditDeviceBtn = $("closeEditDeviceBtn");
+
+  // Create / Edit Club page
+  elements.editClubPage = $("editClubPage");
+  elements.closeEditClubBtn = $("closeEditClubBtn");
+  elements.editClubTitle = $("editClubTitle");
+  elements.editClubIdLine = $("editClubIdLine");
+  elements.editClubName = $("editClubName");
+  elements.editClubNameError = $("editClubNameError");
+  elements.clubCourtsCount = $("clubCourtsCount");
+  elements.clubCourtSearch = $("clubCourtSearch");
+  elements.clubCourtList = $("clubCourtList");
+  elements.clubDevicesCount = $("clubDevicesCount");
+  elements.clubDeviceSearch = $("clubDeviceSearch");
+  elements.clubDeviceList = $("clubDeviceList");
+  elements.saveClubBtn = $("saveClubBtn");
+  elements.deleteClubBtn = $("deleteClubBtn");
+  elements.deleteClubDivider = $("deleteClubDivider");
 }

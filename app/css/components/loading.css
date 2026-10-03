@@ -210,3 +210,26 @@ body.light-mode .court-item-id {
   color: rgba(90, 90, 90, 0.9);
 }
 
+/* Club column: shown only in lists where some court belongs to a club
+   (.has-clubs), with a fixed share of the row so the columns line up. */
+.court-item-club {
+  display: none;
+  flex: 0 1 35%;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: right;
+  line-height: 1.2;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.65);
+}
+
+.court-list.has-clubs .court-item-club {
+  display: block;
+}
+
+body.light-mode .court-item-club {
+  color: rgba(60, 60, 60, 0.85);
+}
+

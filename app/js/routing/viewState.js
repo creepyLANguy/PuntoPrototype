@@ -42,7 +42,9 @@ export function isAdminProtectedPage(page)
     NAV_PAGES.CREATE_COURT,
     NAV_PAGES.EDIT_COURT,
     NAV_PAGES.ADD_DEVICE,
-    NAV_PAGES.EDIT_DEVICE
+    NAV_PAGES.EDIT_DEVICE,
+    NAV_PAGES.CREATE_CLUB,
+    NAV_PAGES.EDIT_CLUB
   ].includes(page);
 }
 

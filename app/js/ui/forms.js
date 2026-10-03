@@ -76,4 +76,8 @@ export function registerEnterKeySubmit()
   submitOnEnter(elements.editCourtDeuceMode, elements.saveEditBtn);
   submitOnEnter(elements.editCourtTiebreakMode, elements.saveEditBtn);
   submitFormOnEnter(elements.editCourtPage);
+
+  // CREATE / EDIT CLUB PAGE (only the name field submits: Enter in a search
+  // box must not save the club)
+  submitOnEnter(elements.editClubName, elements.saveClubBtn);
 }

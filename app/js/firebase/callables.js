@@ -29,3 +29,20 @@ export function getDetailedScore(payload)
   const getDetailedScoreFn = httpsCallable(functions, "getDetailedScore");
   return getDetailedScoreFn(payload);
 }
+
+// Clubs. Each call returns { clubId, name, courtIds, deviceIds, moved } where
+// moved lists the courts and devices taken over from other clubs.
+export function createClub({ name, courtIds = [], deviceIds = [] })
+{
+  return httpsCallable(functions, "createClub")({ name, courtIds, deviceIds });
+}
+
+export function updateClub({ clubId, name, courtIds = [], deviceIds = [] })
+{
+  return httpsCallable(functions, "updateClub")({ clubId, name, courtIds, deviceIds });
+}
+
+export function deleteClub(clubId)
+{
+  return httpsCallable(functions, "deleteClub")({ clubId });
+}

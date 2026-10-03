@@ -12,7 +12,9 @@ export const NAV_PAGES = {
   CREATE_COURT: "createCourt",
   EDIT_COURT: "editCourt",
   ADD_DEVICE: "addDevice",
-  EDIT_DEVICE: "editDevice"
+  EDIT_DEVICE: "editDevice",
+  CREATE_CLUB: "createClub",
+  EDIT_CLUB: "editClub"
 };
 
 export const NAV_MODALS = {

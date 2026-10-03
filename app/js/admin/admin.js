@@ -1,8 +1,8 @@
 // Admin portal shell: admin authentication, the dashboard open/close flow, cross-tab
 // logout, the dashboard tabs and the admin tool buttons. Owns #adminAuthPage and
-// the dashboard chrome; the court and device lists live in courts.js / devices.js.
-import { displayAdminCourtList } from "./courts.js";
-import { loadDevices } from "./devices.js";
+// the dashboard chrome; the club, court and device lists live in clubs.js /
+// courts.js / devices.js.
+import { refreshActiveAdminTab, showAdminTab } from "./dashboardTabs.js";
 import { ADMIN_LOGOUT_SIGNAL_KEY, ADMIN_SESSION_STORAGE_KEY } from "../config/constants.js";
 import { NAV_PAGES } from "../config/routes.js";
 import { getSkeleton } from "../firebase/adminRepository.js";
@@ -22,7 +22,7 @@ export function registerAdminPortal()
     {
       elements.menuPage.style.display = "none";
       elements.adminDashboardPage.style.display = "flex";
-      displayAdminCourtList();
+      refreshActiveAdminTab();
       syncCurrentViewState("replace");
       return;
     }
@@ -75,7 +75,7 @@ export function registerAdminPortal()
       appState.isAdmin = true;
       elements.adminAuthPage.style.display = "none";
       elements.adminDashboardPage.style.display = "flex";
-      displayAdminCourtList();
+      refreshActiveAdminTab();
       syncCurrentViewState("replace");
     }
     else
@@ -141,21 +141,7 @@ export function registerAdminTabs()
   {
     btn.addEventListener('click', () =>
     {
-      elements.adminTabs.forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-
-      const tab = btn.dataset.tab;
-      if (tab === 'courts')
-      {
-        elements.courtsTab.classList.add("active");   // Added 'elements.'
-        elements.devicesTab.classList.remove("active"); // Added 'elements.'
-        displayAdminCourtList();
-      } else
-      {
-        elements.devicesTab.classList.add("active");  // Added 'elements.'
-        elements.courtsTab.classList.remove("active"); // Added 'elements.'
-        loadDevices();
-      }
+      showAdminTab(btn.dataset.tab);
     });
   });
 }

@@ -1,6 +1,9 @@
-// Admin court management: the admin court list (search, status filter), the create
-// court form and the edit court form (save, clear score, delete). Owns
-// #adminCourtList, #createPage and #editCourtPage.
+// Admin court management: the admin court list (search by court or club,
+// status filter), the create court form and the edit court form (save, clear
+// score, delete). Owns #adminCourtList, #createPage and #editCourtPage.
+import { clubSummary, courtMatchesSearch } from "../clubs/clubIndex.js";
+import { loadClubIndex } from "../clubs/clubLoader.js";
+import { fillAdminClubCell } from "./clubCell.js";
 import { ALLOWED_COURT_ID_CHARS, DEFAULT_PLAYER_NAMES, DEFAULT_SCORING_OPTIONS, STATUS, TOAST_TYPES } from "../config/constants.js";
 import { NAV_PAGES } from "../config/routes.js";
 import { resetCourt, updateScoringOptions } from "../firebase/callables.js";
@@ -34,14 +37,15 @@ export async function displayAdminCourtList()
 
   try
   {
-    const snapshot = await getAllCourts();
+    const [snapshot, clubIndex] = await Promise.all([getAllCourts(), loadClubIndex()]);
 
     const courtPromises = snapshot.docs.map(async (courtDoc) =>
     {
       const data = courtDoc.data();
       return {
         id: courtDoc.id,
-        ...data
+        ...data,
+        club: clubSummary(clubIndex.clubByCourtId.get(courtDoc.id))
       };
     });
 
@@ -59,14 +63,12 @@ export async function displayAdminCourtList()
 
 function filterAndDisplayAdminCourts()
 {
-  const searchTerm = elements.adminCourtSearch.value.toLowerCase().trim();
+  const searchTerm = elements.adminCourtSearch.value;
   const statusFilter = elements.adminStatusFilter.value;
 
   const filtered = allAdminCourts.filter(court =>
   {
-    const matchesSearch =
-      (court.name || "").toLowerCase().includes(searchTerm) ||
-      court.id.toLowerCase().includes(searchTerm);
+    const matchesSearch = courtMatchesSearch(court, searchTerm);
 
     const matchesStatus = statusFilter === "all" || court.status === statusFilter;
 
@@ -103,6 +105,10 @@ function renderAdminCourtList(courts)
             <strong>${court.name || "N/A"}</strong>
             <div class="aci-id">ID: ${court.id}</div>
           </div>
+          <div class="aci-field club-cell">
+            <div class="aci-label">Club</div>
+            <div class="aci-value"></div>
+          </div>
           <div class="aci-field teams-cell">
             <div class="aci-label">Teams</div>
             <div class="aci-value">
@@ -125,6 +131,8 @@ function renderAdminCourtList(courts)
           </div>
         `;
 
+    fillAdminClubCell(item.querySelector(".club-cell"), court.club);
+
     const resolvedTeamNames = resolveTeamNames(court.teamNames || {}, court.playerNames || {});
     const teamsValue = item.querySelector(".teams-cell .aci-value");
     if (teamsValue)
@@ -134,6 +142,7 @@ function renderAdminCourtList(courts)
 
     item.querySelector(".edit-btn").addEventListener("click", () =>
     {
+      appState.adminEditReturnView = null;
       openEditModal(court);
     });
 
@@ -183,6 +192,24 @@ export function openEditModal(court, syncHistory = true)
   {
     syncCurrentViewState();
   }
+}
+
+// After a save or delete: back to the club editor the court was opened from,
+// otherwise to the dashboard's court list.
+function returnFromCourtEditor()
+{
+  const returnView = appState.adminEditReturnView;
+  appState.adminEditReturnView = null;
+  if (returnView)
+  {
+    void stepBackInApp(returnView);
+    return;
+  }
+
+  elements.editCourtPage.style.display = "none";
+  elements.adminDashboardPage.style.display = "flex";
+  displayAdminCourtList();
+  syncCurrentViewState("replace");
 }
 
 export function registerAdminCourtEditor()
@@ -243,10 +270,7 @@ export function registerAdminCourtEditor()
       updateUI();
 
       showToast("Court updated successfully!", TOAST_TYPES.SUCCESS);
-      elements.editCourtPage.style.display = "none";
-      elements.adminDashboardPage.style.display = "flex";
-      displayAdminCourtList();
-      syncCurrentViewState("replace");
+      returnFromCourtEditor();
     }
     catch (err)
     {
@@ -284,10 +308,7 @@ export function registerAdminCourtEditor()
     {
       await deleteCourt(appState.courtToEdit.id);
       showToast("Court deleted.", TOAST_TYPES.SUCCESS);
-      elements.editCourtPage.style.display = "none";
-      elements.adminDashboardPage.style.display = "flex";
-      displayAdminCourtList();
-      syncCurrentViewState("replace");
+      returnFromCourtEditor();
     }
     catch (err)
     {

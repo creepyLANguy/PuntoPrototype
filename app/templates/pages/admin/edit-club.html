@@ -1,0 +1,38 @@
+    <!-- ================= CREATE / EDIT CLUB PAGE ================= -->
+    <div id="editClubPage" style="display:none;" class="create-page">
+      <div class="create-card edit-card club-editor-card">
+        <button id="closeEditClubBtn" class="close-btn">✕</button>
+        <h2 id="editClubTitle">Create Club</h2>
+        <div id="editClubIdLine" class="club-editor-id"></div>
+        <div class="form-group">
+          <label for="editClubName">Club Name</label>
+          <input type="text" id="editClubName" maxlength="80" autocomplete="off" autocapitalize="words"
+            spellcheck="false" />
+          <div class="error" id="editClubNameError"></div>
+        </div>
+
+        <section class="club-member-section">
+          <div class="club-member-header">
+            <h3 id="clubCourtsHeading">Courts</h3>
+            <span id="clubCourtsCount" class="club-member-count"></span>
+          </div>
+          <input type="text" id="clubCourtSearch" class="club-member-search"
+            placeholder="Search court name, ID or club..." aria-label="Search courts" />
+          <div id="clubCourtList" class="club-member-list" role="group" aria-labelledby="clubCourtsHeading"></div>
+        </section>
+
+        <section class="club-member-section">
+          <div class="club-member-header">
+            <h3 id="clubDevicesHeading">Devices</h3>
+            <span id="clubDevicesCount" class="club-member-count"></span>
+          </div>
+          <input type="text" id="clubDeviceSearch" class="club-member-search"
+            placeholder="Search device ID, court or club..." aria-label="Search devices" />
+          <div id="clubDeviceList" class="club-member-list" role="group" aria-labelledby="clubDevicesHeading"></div>
+        </section>
+
+        <button id="saveClubBtn" class="primary-btn">Save Club</button>
+        <hr id="deleteClubDivider" />
+        <button id="deleteClubBtn" class="danger-btn" style="background: #ff4444;">Delete Club</button>
+      </div>
+    </div>
