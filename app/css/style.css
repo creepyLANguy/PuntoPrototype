@@ -1089,7 +1089,6 @@ body.light-mode .game-dot.filled {
 
 .points {
   position: relative;
-  z-index: 1;
 }
 
 .critical-glow {
