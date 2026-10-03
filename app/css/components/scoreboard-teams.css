@@ -387,10 +387,18 @@ body.light-mode .game-dot.filled {
   pointer-events: none;
   opacity: 0;
   transform: scale(0.94);
-  text-shadow:
-    0 0 20px currentColor;
+  color: transparent;
+  text-shadow: 0 0 20px var(--critical-glow-color);
   will-change: opacity, transform;
   z-index: 0;
+}
+
+.team-a .critical-glow {
+  --critical-glow-color: var(--teamAcolour);
+}
+
+.team-b .critical-glow {
+  --critical-glow-color: var(--teamBcolour);
 }
 
 .indicator {
