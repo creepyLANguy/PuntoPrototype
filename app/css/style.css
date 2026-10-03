@@ -1101,7 +1101,7 @@ body.light-mode .game-dot.filled {
   opacity: 0;
   transform: scale(0.94);
   color: transparent;
-  text-shadow: 0 0 20px var(--critical-glow-color);
+  text-shadow: 0 0 26px var(--critical-glow-color);
   will-change: opacity, transform;
   z-index: 0;
 }
