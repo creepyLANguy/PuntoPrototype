@@ -1,10 +1,14 @@
 const { onCall, onRequest } = require("firebase-functions/v2/https");
 
 const { onEventCreate } = require("./triggers/onEventCreate");
+const { onCourtDeleted, onDeviceDeleted } = require("./triggers/onClubMemberDeleted");
 const { resetCourt } = require("./callables/resetCourt");
 const { changeoverCourt } = require("./callables/changeoverCourt");
 const { updateScoringOptions } = require("./callables/updateScoringOptions");
 const { getDetailedScore } = require("./callables/getDetailedScore");
+const { createClub } = require("./callables/createClub");
+const { updateClub } = require("./callables/updateClub");
+const { deleteClub } = require("./callables/deleteClub");
 
 const { REGION } = require("./services/constants");
 const { postEvent } = require("./http/postEvent");
@@ -14,11 +18,16 @@ const { getCourtStats } = require("./http/getCourtStats");
 const { getCourtMomentum } = require("./http/getCourtMomentum");
 
 exports.onEventCreate = onEventCreate;
+exports.onCourtDeleted = onCourtDeleted;
+exports.onDeviceDeleted = onDeviceDeleted;
 
 exports.resetCourt = onCall({ region: REGION }, resetCourt);
 exports.changeoverCourt = onCall({ region: REGION }, changeoverCourt);
 exports.updateScoringOptions = onCall({ region: REGION }, updateScoringOptions);
 exports.getDetailedScore = onCall({ region: REGION }, getDetailedScore);
+exports.createClub = onCall({ region: REGION }, createClub);
+exports.updateClub = onCall({ region: REGION }, updateClub);
+exports.deleteClub = onCall({ region: REGION }, deleteClub);
 
 exports.postEvent = onRequest({ region: REGION, invoker: "public" }, postEvent);
 

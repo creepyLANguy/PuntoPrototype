@@ -1,0 +1,259 @@
+// Club persistence: creating, updating and deleting clubs/{clubId} and keeping
+// the clubId of their courts and devices in step, all inside one transaction.
+//
+// Data model:
+//   clubs/{clubId}      { name, courtIds[], deviceIds[], createdAt, updatedAt }
+//   courts/{courtId}    { ..., clubId: string | null }
+//   devices/{deviceId}  { ..., clubId: string | null }
+//
+// Every transaction reads the member documents it changes, so two concurrent
+// saves that claim the same court or device are serialised by Firestore and
+// the second one sees (and undoes) the first one's claim.
+const { db, FieldValue } = require("../infrastructure/firebase");
+const {
+  ClubError,
+  MEMBER_KINDS,
+  generateClubId,
+  normalizeClubId,
+  normalizeClubName,
+  normalizeMemberIds,
+  planMembershipChange,
+} = require("../domain/clubs/membership");
+
+const CLUBS_COLLECTION = "clubs";
+// array-contains-any accepts at most 30 values per query.
+const ARRAY_CONTAINS_ANY_LIMIT = 30;
+const MAX_CLUB_ID_ATTEMPTS = 5;
+
+function chunk(values, size) {
+  const chunks = [];
+  for (let i = 0; i < values.length; i += size) chunks.push(values.slice(i, i + size));
+  return chunks;
+}
+
+function clubRef(clubId) {
+  return db.doc(`${CLUBS_COLLECTION}/${clubId}`);
+}
+
+function memberRef(kind, id) {
+  return db.doc(`${MEMBER_KINDS[kind].collection}/${id}`);
+}
+
+function listOf(data, field) {
+  return Array.isArray(data?.[field]) ? data[field].filter((id) => typeof id === "string") : [];
+}
+
+// Reads everything one kind of membership change depends on and plans it.
+// `knownClubs` (Map clubId -> data) collects every other club document read.
+async function readAndPlanKind(tx, { kind, clubId, previousIds, nextIds, knownClubs }) {
+  const { listField } = MEMBER_KINDS[kind];
+  const ids = [...new Set([...previousIds, ...nextIds])];
+
+  const snapshots = await Promise.all(ids.map((id) => tx.get(memberRef(kind, id))));
+  const members = new Map(
+    ids.map((id, i) => [id, snapshots[i].exists ? snapshots[i].data() : undefined]),
+  );
+
+  const holders = new Map();
+  for (const batch of chunk(nextIds, ARRAY_CONTAINS_ANY_LIMIT)) {
+    const query = db.collection(CLUBS_COLLECTION).where(listField, "array-contains-any", batch);
+    const result = await tx.get(query);
+    result.forEach((clubDoc) => {
+      if (clubDoc.id === clubId) return;
+      knownClubs.set(clubDoc.id, clubDoc.data());
+      for (const id of listOf(clubDoc.data(), listField)) {
+        if (!batch.includes(id)) continue;
+        if (!holders.has(id)) holders.set(id, new Set());
+        holders.get(id).add(clubDoc.id);
+      }
+    });
+  }
+
+  const plan = planMembershipChange({ clubId, previousIds, nextIds, members, holders });
+  if (plan.missingIds.length > 0) {
+    const label = MEMBER_KINDS[kind].label;
+    throw new ClubError("not-found", `Unknown ${label} id(s): ${plan.missingIds.join(", ")}.`);
+  }
+  return plan;
+}
+
+// Applies a full membership change for `clubId` (creating it when `isNew`).
+async function saveClubInTransaction(tx, { clubId, isNew, name, courtIds, deviceIds }) {
+  const ref = clubRef(clubId);
+  const clubSnap = await tx.get(ref);
+
+  if (isNew && clubSnap.exists) return null; // id collision: caller retries
+  if (!isNew && !clubSnap.exists) {
+    throw new ClubError("not-found", `Club ${clubId} not found.`);
+  }
+
+  const existing = clubSnap.exists ? clubSnap.data() : {};
+  const knownClubs = new Map();
+  const nextIdsByKind = { courts: courtIds, devices: deviceIds };
+  const plans = {};
+
+  for (const kind of Object.keys(MEMBER_KINDS)) {
+    plans[kind] = await readAndPlanKind(tx, {
+      kind,
+      clubId,
+      previousIds: listOf(existing, MEMBER_KINDS[kind].listField),
+      nextIds: nextIdsByKind[kind],
+      knownClubs,
+    });
+  }
+
+  // Other clubs that lose members. Clubs named only by a member's clubId are
+  // read too, so every read happens before the first write.
+  const otherClubIds = new Set(
+    Object.values(plans).flatMap((plan) => [...plan.removeFromClubs.keys()]),
+  );
+  for (const otherClubId of otherClubIds) {
+    if (knownClubs.has(otherClubId)) continue;
+    const snap = await tx.get(clubRef(otherClubId));
+    knownClubs.set(otherClubId, snap.exists ? snap.data() : undefined);
+  }
+
+  const now = FieldValue.serverTimestamp();
+
+  for (const otherClubId of otherClubIds) {
+    const otherClub = knownClubs.get(otherClubId);
+    if (!otherClub) continue;
+    const update = { updatedAt: now };
+    for (const kind of Object.keys(MEMBER_KINDS)) {
+      const removed = plans[kind].removeFromClubs.get(otherClubId);
+      if (!removed) continue;
+      const { listField } = MEMBER_KINDS[kind];
+      update[listField] = listOf(otherClub, listField).filter((id) => !removed.includes(id));
+    }
+    tx.set(clubRef(otherClubId), update, { merge: true });
+  }
+
+  for (const kind of Object.keys(MEMBER_KINDS)) {
+    for (const id of plans[kind].assign) {
+      tx.set(memberRef(kind, id), { clubId }, { merge: true });
+    }
+    for (const id of plans[kind].release) {
+      tx.set(memberRef(kind, id), { clubId: null }, { merge: true });
+    }
+  }
+
+  tx.set(
+    ref,
+    {
+      name,
+      courtIds,
+      deviceIds,
+      updatedAt: now,
+      ...(isNew ? { createdAt: now } : {}),
+    },
+    { merge: true },
+  );
+
+  const describeMoves = (plan) =>
+    plan.moved.map(({ id, fromClubId }) => ({
+      id,
+      fromClubId,
+      fromClubName: knownClubs.get(fromClubId)?.name || null,
+    }));
+
+  return {
+    clubId,
+    name,
+    courtIds,
+    deviceIds,
+    moved: { courts: describeMoves(plans.courts), devices: describeMoves(plans.devices) },
+  };
+}
+
+function normalizeMembership({ courtIds, deviceIds }) {
+  return {
+    courtIds: normalizeMemberIds(courtIds, "courts"),
+    deviceIds: normalizeMemberIds(deviceIds, "devices"),
+  };
+}
+
+async function createClub(input = {}, { random = Math.random } = {}) {
+  const name = normalizeClubName(input.name);
+  const membership = normalizeMembership(input);
+
+  for (let attempt = 0; attempt < MAX_CLUB_ID_ATTEMPTS; attempt++) {
+    const clubId = generateClubId(random);
+    const result = await db.runTransaction((tx) =>
+      saveClubInTransaction(tx, { clubId, isNew: true, name, ...membership }),
+    );
+    if (result) return result;
+  }
+
+  throw new ClubError("aborted", "Could not allocate a unique club id. Please try again.");
+}
+
+async function updateClub(input = {}) {
+  const clubId = normalizeClubId(input.clubId);
+  const name = normalizeClubName(input.name);
+  const membership = normalizeMembership(input);
+
+  return db.runTransaction((tx) =>
+    saveClubInTransaction(tx, { clubId, isNew: false, name, ...membership }),
+  );
+}
+
+async function deleteClub(input = {}) {
+  const clubId = normalizeClubId(input.clubId);
+
+  return db.runTransaction(async (tx) => {
+    const ref = clubRef(clubId);
+    const clubSnap = await tx.get(ref);
+    if (!clubSnap.exists) {
+      throw new ClubError("not-found", `Club ${clubId} not found.`);
+    }
+
+    const club = clubSnap.data();
+    const releases = [];
+    for (const kind of Object.keys(MEMBER_KINDS)) {
+      const ids = listOf(club, MEMBER_KINDS[kind].listField);
+      const snapshots = await Promise.all(ids.map((id) => tx.get(memberRef(kind, id))));
+      snapshots.forEach((snap, i) => {
+        if (snap.exists && snap.data().clubId === clubId) releases.push(memberRef(kind, ids[i]));
+      });
+    }
+
+    for (const releaseRef of releases) {
+      tx.set(releaseRef, { clubId: null }, { merge: true });
+    }
+    tx.delete(ref);
+
+    return { clubId, releasedCount: releases.length };
+  });
+}
+
+// Drops a deleted court or device from every club that lists it.
+async function removeDeletedMember(kind, memberId) {
+  const { listField } = MEMBER_KINDS[kind];
+  const clubs = await db
+    .collection(CLUBS_COLLECTION)
+    .where(listField, "array-contains", memberId)
+    .get();
+
+  const updates = [];
+  clubs.forEach((clubDoc) => {
+    updates.push(
+      clubDoc.ref.set(
+        {
+          [listField]: FieldValue.arrayRemove(memberId),
+          updatedAt: FieldValue.serverTimestamp(),
+        },
+        { merge: true },
+      ),
+    );
+  });
+  await Promise.all(updates);
+  return updates.length;
+}
+
+module.exports = {
+  CLUBS_COLLECTION,
+  createClub,
+  updateClub,
+  deleteClub,
+  removeDeletedMember,
+};
