@@ -11,9 +11,11 @@ The runtime sequence is visualized in [PP_Runtime_Flow.mmd](PP_Runtime_Flow.mmd)
     Browser web app (native ES modules, entry app/js/main.js)
       |-- firebase/ repositories -> courts/{courtId}
       |-- firebase/ repositories -> devices/{deviceId}
+      |-- firebase/ repositories -> clubs/{clubId} (read only)
       |-- firebase/ repositories -> courts/{courtId}/events/{eventId}
       |-- onSnapshot <- courts/{courtId}/score/current
       |-- firebase/callables -> resetCourt / changeoverCourt / updateScoringOptions / getDetailedScore
+      |-- firebase/callables -> createClub / updateClub / deleteClub
       |
       +-- public routes /c/{courtId}, /p/{courtId}, /overlay, /nfc, /admin
 
@@ -35,6 +37,7 @@ All current Cloud Functions run in africa-south1:
 - device ingestion (postEvent);
 - callable functions;
 - Firestore event trigger (onEventCreate);
+- Firestore delete triggers (onCourtDeleted, onDeviceDeleted) that keep club member lists clean;
 - public JSON read functions.
 
 Firebase Hosting remains global/CDN-based. Public JSON paths redirect to the Johannesburg functions because Firebase Hosting does not support a direct function rewrite to africa-south1.
@@ -67,6 +70,10 @@ by responsibility. The full developer guide is
   module documents the part of the DOM it owns.
 - **Admin boundary.** `app/js/admin/` owns admin authentication and court /
   device management, using the same shell and router.
+- **Clubs.** `app/js/clubs/` resolves which club a court or device belongs
+  to and matches searches against club names and ids; the court lists and the
+  admin portal use it. Club membership is only changed through the club
+  callables.
 - **Sharing, QR and NFC.** `app/js/sharing/` (share text, score-card image,
   Web Share / clipboard), `app/js/qr/` (court QR panel) and `app/js/nfc/` (Web
   NFC scanning and the tag-format parser).
@@ -107,6 +114,7 @@ The Cloud Functions implementation is separated between composition, domain logi
 - functions/domain/scoring/ contains scoring rules and scoring-option helpers.
 - functions/domain/events/ contains event validation and ordering.
 - functions/domain/stats/ and functions/domain/momentum/ contain pure analytics calculations.
+- functions/domain/clubs/ contains the club rules: input validation, club id generation and the plan for moving courts and devices between clubs.
 - functions/services/ contains persistence, replay, checkpoint, device-event and public API orchestration.
 - functions/callables/, functions/http/ and functions/triggers/ contain thin Firebase entry handlers.
 - functions/infrastructure/ centralizes Firebase Admin access and shared API-cache behaviour.
@@ -114,7 +122,8 @@ The Cloud Functions implementation is separated between composition, domain logi
 ## Current data and mutation boundaries
 
 - The web app uses the Firebase Web SDK (through its `app/js/firebase/` repositories) for court reads, court creation/edit/delete, device reads/updates, event writes and score listeners.
-- Callable functions present are resetCourt, changeoverCourt, updateScoringOptions and getDetailedScore.
+- Callable functions present are resetCourt, changeoverCourt, updateScoringOptions, getDetailedScore, createClub, updateClub and deleteClub.
+- Clubs (clubs/{clubId}) and the clubId of courts and devices are written only by the club callables, in one transaction, so a court or device is never in two clubs. The web app only reads clubs.
 - The public JSON endpoints are intentionally unauthenticated read surfaces.
 - postEvent currently identifies a device through deviceId and its current devices/{deviceId}.courtId binding.
 - Cloud Functions use the Admin SDK, so Firestore security rules do not constrain those server-side writes.

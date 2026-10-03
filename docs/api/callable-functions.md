@@ -43,6 +43,51 @@ Request: { courtId }.
 
 Replays the active court event history and returns detailed match statistics for the scoreboard app.
 
+### createClub
+
+Creates a club. The backend generates the clubId.
+
+Request:
+
+{ name, courtIds?, deviceIds? }
+
+- name — required; trimmed, whitespace collapsed, at most 80 characters.
+- courtIds / deviceIds — optional lists of existing court / device ids (at most 100 each; duplicates are ignored).
+
+Response:
+
+{ clubId, name, courtIds, deviceIds, moved: { courts: [...], devices: [...] } }
+
+moved lists every member that belonged to another club before, as { id, fromClubId, fromClubName }. A court or device belongs to at most one club, so it is removed from its previous club in the same transaction.
+
+### updateClub
+
+Renames a club and replaces its members.
+
+Request:
+
+{ clubId, name, courtIds, deviceIds }
+
+courtIds and deviceIds are the complete new member lists. Members that are left out are released (their clubId is cleared); members of other clubs are moved, as for createClub. Ids of courts or devices that no longer exist are dropped from the club. The response has the same shape as createClub's.
+
+### deleteClub
+
+Request: { clubId }.
+
+Deletes the club and clears clubId on the courts and devices it still owned. The courts and devices themselves are kept. Response: { clubId, releasedCount }.
+
+### Club errors
+
+The club callables report problems as callable errors with a code and a readable message:
+
+- invalid-argument — missing or invalid name, ids or clubId, or too many members;
+- not-found — unknown clubId, or a court / device id that does not exist (nothing is written);
+- aborted — a unique clubId could not be allocated (retry).
+
+## Firestore triggers: onCourtDeleted and onDeviceDeleted
+
+These are not callable. When courts/{courtId} or devices/{deviceId} is deleted, they remove the id from the courtIds / deviceIds of every club that listed it.
+
 ## Firestore trigger: onEventCreate
 
 onEventCreate is not callable. It consumes:
@@ -76,6 +121,6 @@ See roles-and-responsibilities.md for the intended organisational boundaries.
 
 ## Error handling
 
-First-party clients should use Firebase callable error codes rather than matching human-readable strings.
+First-party clients should use Firebase callable error codes rather than matching human-readable strings. The club callables already report their errors this way (see [Club errors](#club-errors)).
 
 Production hardening should standardize domain errors such as invalid-argument, not-found, permission-denied, already-exists, failed-precondition, resource-exhausted and internal without exposing Firestore paths, stack traces, credentials or exception internals.
