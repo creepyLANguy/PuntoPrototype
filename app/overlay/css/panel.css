@@ -78,6 +78,20 @@
       font-style: italic;
     }
 
+    .brand-title {
+      font-size: 0.75em;
+      font-weight: 800;
+      letter-spacing: 0.03em;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: 40%;
+    }
+
+    .brand-title:empty {
+      display: none;
+    }
+
     .brand-court {
       margin-left: auto;
       font-size: 0.7em;

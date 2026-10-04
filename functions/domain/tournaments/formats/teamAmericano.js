@@ -15,6 +15,7 @@ const {
   nextRoundNumber,
   buildHistory,
   pairCount,
+  shuffle,
 } = require("./shared");
 
 const teamAmericano = {
@@ -75,7 +76,9 @@ function generateRound(state, rankedMode, rankedTeams = null) {
   );
   const sitterIds = new Set(sitters.map((team) => team.teamId));
   const playing = active.filter((team) => !sitterIds.has(team.teamId));
-  const pairs = rankedMode ? pairAdjacentWithSwaps(playing, history) : pairGreedy(playing, history);
+  const pairs = rankedMode
+    ? pairAdjacentWithSwaps(playing, history)
+    : bestGreedyPairing(playing, history, rng);
   const round = baseRound(roundNumber, `Round ${roundNumber}`, null, seed, {
     algorithm: rankedMode ? "team-mexicano-v1" : "team-americano-v1",
   });
@@ -90,6 +93,29 @@ function generateRound(state, rankedMode, rankedTeams = null) {
   );
   round.fixtureIds = fixtures.map((fixture) => fixture.fixtureId);
   return { rounds: [round], fixtures };
+}
+
+// Greedy pairing from several seeded starting orders; the arrangement with
+// the fewest repeated opponents wins.
+function bestGreedyPairing(teams, history, rng) {
+  let best = pairGreedy(teams, history);
+  let bestCost = pairingCost(best, history);
+  for (let attempt = 1; attempt < 40 && bestCost > 0; attempt += 1) {
+    const candidate = pairGreedy(shuffle(teams, rng), history);
+    const cost = pairingCost(candidate, history);
+    if (cost < bestCost) {
+      best = candidate;
+      bestCost = cost;
+    }
+  }
+  return best;
+}
+
+function pairingCost(pairs, history) {
+  return pairs.reduce(
+    (sum, [a, b]) => sum + pairCount(history.opponentCounts, a.teamId, b.teamId),
+    0,
+  );
 }
 
 function pairGreedy(teams, history) {

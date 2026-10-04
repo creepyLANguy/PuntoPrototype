@@ -236,6 +236,7 @@ module.exports = {
   requireNextRoundAllowed,
   chooseSitters,
   pairSocialGroup,
+  socialPatternCost,
   pairCount,
   entryId,
   completedRound,

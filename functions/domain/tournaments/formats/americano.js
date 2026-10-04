@@ -7,6 +7,7 @@ const {
   createRng,
   makeFixture,
   pairSocialGroup,
+  socialPatternCost,
   requireNextRoundAllowed,
   seedFor,
   shuffle,
@@ -82,8 +83,10 @@ function generateRound(state) {
   const playCount = matchCount * 4;
   const sitters = chooseSitters(active, active.length - playCount, history, rng);
   const sitterIds = new Set(sitters.map((participant) => participant.participantId));
-  const playing = shuffle(
+  const playing = bestGrouping(
     active.filter((participant) => !sitterIds.has(participant.participantId)),
+    matchCount,
+    history,
     rng,
   );
 
@@ -110,6 +113,37 @@ function generateRound(state) {
   }
   round.fixtureIds = fixtures.map((fixture) => fixture.fixtureId);
   return { rounds: [round], fixtures };
+}
+
+// Multi-start search over seeded shuffles: groups of four are scored on
+// repeated partners, opponents and groups (pairSocialGroup picks the best
+// split inside each group) and the cheapest arrangement wins. Deterministic
+// for a given seed.
+const GROUPING_CANDIDATES = 80;
+
+function groupingCost(order, matchCount, history) {
+  let cost = 0;
+  for (let index = 0; index < matchCount; index += 1) {
+    const ids = order
+      .slice(index * 4, index * 4 + 4)
+      .map((participant) => participant.participantId);
+    cost += socialPatternCost(pairSocialGroup(ids, history), history);
+  }
+  return cost;
+}
+
+function bestGrouping(players, matchCount, history, rng) {
+  let best = shuffle(players, rng);
+  let bestCost = groupingCost(best, matchCount, history);
+  for (let attempt = 1; attempt < GROUPING_CANDIDATES && bestCost > 0; attempt += 1) {
+    const candidate = shuffle(players, rng);
+    const cost = groupingCost(candidate, matchCount, history);
+    if (cost < bestCost) {
+      best = candidate;
+      bestCost = cost;
+    }
+  }
+  return best;
 }
 
 function socialRules(title, cfg, standingsLine) {

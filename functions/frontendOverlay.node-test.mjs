@@ -70,7 +70,13 @@ function makeNoopCanvasContext() {
 
 // Booted per test: the overlay reads localStorage and the query string once at
 // startup, so each scenario needs its own page.
-async function bootOverlay({ search = "", stored = null, momentumResponse = "ok" } = {}) {
+async function bootOverlay({
+  search = "",
+  stored = null,
+  momentumResponse = "ok",
+  pathname = "/overlay/" + COURT_ID,
+  scorePayload = SCORE_PAYLOAD,
+} = {}) {
   const errors = [];
   const virtualConsole = new VirtualConsole();
   virtualConsole.on("jsdomError", (err) => errors.push("jsdomError: " + err.message));
@@ -79,7 +85,7 @@ async function bootOverlay({ search = "", stored = null, momentumResponse = "ok"
   let releaseMomentum = null;
 
   const dom = new JSDOM(readFileSync(overlayPath, "utf8"), {
-    url: "https://padel.test/overlay/" + COURT_ID + search,
+    url: "https://padel.test" + pathname + search,
     runScripts: "dangerously",
     pretendToBeVisual: true,
     virtualConsole,
@@ -98,7 +104,7 @@ async function bootOverlay({ search = "", stored = null, momentumResponse = "ok"
         requested.push(target);
 
         if (!target.includes("/momentum/")) {
-          return { ok: true, status: 200, json: async () => SCORE_PAYLOAD };
+          return { ok: true, status: 200, json: async () => scorePayload };
         }
 
         if (releaseMomentum) {
@@ -273,5 +279,39 @@ test("an undeployed momentum endpoint says so instead of showing an empty card",
   assert.equal(page.$("momentumLoading").classList.contains("hidden"), true);
   assert.equal(page.$("momentumCanvas").classList.contains("hidden"), true);
 
+  page.dom.window.close();
+});
+
+test("the match name is the overlay's primary identity and the court is secondary", async () => {
+  const page = await bootOverlay({
+    scorePayload: {
+      ...SCORE_PAYLOAD,
+      matchId: "k3h8fq2a",
+      matchName: "Friday Night Final",
+      title: "Friday Night Final",
+      courtName: "Court 03",
+    },
+  });
+
+  assert.equal(page.$("matchTitle").textContent, "Friday Night Final");
+  assert.equal(page.$("courtLabel").textContent, "Court 03 - Join: BNRM");
+  page.dom.window.close();
+});
+
+test("/overlay/match/{matchId} follows the durable match through the match endpoints", async () => {
+  const page = await bootOverlay({
+    pathname: "/overlay/match/k3h8fq2a",
+    scorePayload: {
+      ...SCORE_PAYLOAD,
+      courtId: "zzzz",
+      matchId: "k3h8fq2a",
+      matchName: "Semi-final 1",
+    },
+  });
+
+  assert.ok(page.requested.some((url) => url.endsWith("/revision/match/k3h8fq2a")));
+  assert.ok(page.requested.some((url) => url.endsWith("/score/match/k3h8fq2a")));
+  assert.equal(page.$("matchTitle").textContent, "Semi-final 1");
+  assert.equal(page.$("courtLabel").textContent, "Join: ZZZZ");
   page.dom.window.close();
 });

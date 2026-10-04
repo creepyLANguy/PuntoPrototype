@@ -122,6 +122,20 @@
       font-style: italic;
     }
 
+    .brand-title {
+      font-size: 0.75em;
+      font-weight: 800;
+      letter-spacing: 0.03em;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: 40%;
+    }
+
+    .brand-title:empty {
+      display: none;
+    }
+
     .brand-court {
       margin-left: auto;
       font-size: 0.7em;
@@ -1491,6 +1505,7 @@
       <div class="brand">
         <img src="/media/logo.svg" alt="Brand logo" id="brandLogo" />
         <span class="brand-name" id="brandName">Padel Push™</span>
+        <span class="brand-title" id="matchTitle"></span>
         <span class="brand-court" id="courtLabel"></span>
         <span class="match-timer" id="matchTimer"></span>
       </div>
@@ -1820,7 +1835,23 @@
       // Hosting rewrites that all serve this overlay; a bare one carries no courtId.
       const OVERLAY_ROUTE_PREFIXES = new Set(["overlay", "broadcast"]);
 
+      // /overlay/{courtId} follows whatever match is on that court;
+      // /overlay/match/{matchId} follows one durable match across courts.
+      function getMatchIdFromPath() {
+        const segments = window.location.pathname.split("/").filter(Boolean);
+        if (segments.length >= 2 && segments[segments.length - 2] === "match") {
+          try {
+            return decodeURIComponent(segments[segments.length - 1]);
+          }
+          catch (_err) {
+            return segments[segments.length - 1];
+          }
+        }
+        return null;
+      }
+
       function getCourtIdFromPath() {
+        if (getMatchIdFromPath()) return null;
         const segments = window.location.pathname.split("/").filter(Boolean);
         const last = segments.length ? segments[segments.length - 1] : "";
 
@@ -1840,7 +1871,12 @@
       }
 
       const courtId = getCourtIdFromPath();
-      const storageKey = "padelPushOverlaySettings:" + (courtId || "default");
+      const overlayMatchId = getMatchIdFromPath();
+      // Path suffix of the public read endpoints for this overlay's target.
+      const apiTargetPath = overlayMatchId
+        ? "match/" + encodeURIComponent(overlayMatchId)
+        : encodeURIComponent(courtId || "");
+      const storageKey = "padelPushOverlaySettings:" + (overlayMatchId ? "match-" + overlayMatchId : courtId || "default");
 
       let settings = { ...DEFAULT_SETTINGS };
       let latestScore = null;
@@ -2256,8 +2292,12 @@
 
         document.getElementById("qrBugLabel").textContent = settings.qrLabel || "";
 
+        // A match overlay links to the durable match page; a court overlay to
+        // the court, which follows whatever is played on it next.
         const text = safeHttpUrl(settings.qrUrl) ||
-          window.location.origin + "/c/" + encodeURIComponent(courtId || "");
+          (overlayMatchId
+            ? window.location.origin + "/m/" + encodeURIComponent(overlayMatchId)
+            : window.location.origin + "/c/" + encodeURIComponent(courtId || ""));
         const size = Math.round(clampNumber(settings.qrSize, 64, 200, 96));
         const key = text + "|" + size;
         if (key === lastQrKey) return;
@@ -2511,7 +2551,7 @@
       let momentumPulseAnimationFrame = null;
 
       async function fetchStats(force) {
-        if (!isDebugCourt && !courtId) {
+        if (!isDebugCourt && !courtId && !overlayMatchId) {
           throw new Error("No court specified.");
         }
 
@@ -2519,17 +2559,17 @@
           return statsCache;
         }
 
-        const url = isDebugCourt ? debugCourt_statsUrl : "/stats/" + encodeURIComponent(courtId);
+        const url = isDebugCourt ? debugCourt_statsUrl : "/stats/" + apiTargetPath;
         const data = await fetchJson(url);
         statsCache = data;
         statsCacheAt = Date.now();
         return data;
       }
 
-      // The point-by-point momentum streams come from /momentum/{courtId} and nowhere
+      // The point-by-point momentum streams come from /momentum/{target} and nowhere
       // else, so this is the momentum card's only data source.
       async function fetchMomentum(force) {
-        if (!isDebugCourt && !courtId) {
+        if (!isDebugCourt && !courtId && !overlayMatchId) {
           throw new Error("No court specified.");
         }
 
@@ -2537,7 +2577,7 @@
           return momentumCache;
         }
 
-        const url = isDebugCourt ? debugCourt_momentumUrl : "/momentum/" + encodeURIComponent(courtId);
+        const url = isDebugCourt ? debugCourt_momentumUrl : "/momentum/" + apiTargetPath;
         const data = await fetchJson(url);
         momentumCache = data;
         momentumCacheAt = Date.now();
@@ -3079,9 +3119,15 @@
 
         document.getElementById("loadingLine").classList.add("hidden");
         document.getElementById("scoreBody").classList.remove("hidden");
+        // Match identity is primary; the court is secondary location context
+        // and the join code (spec section 30.5).
+        // The generated matchup is not repeated here: the team rows show it.
+        document.getElementById("matchTitle").textContent = data.matchName || "";
         const displayCourtId = data.courtId || courtId || "";
-        document.getElementById("courtLabel").textContent =
-          displayCourtId ? "Join: " + displayCourtId.toUpperCase() : "";
+        const courtText = data.courtName && displayCourtId
+          ? data.courtName + " - Join: " + displayCourtId.toUpperCase()
+          : displayCourtId ? "Join: " + displayCourtId.toUpperCase() : "";
+        document.getElementById("courtLabel").textContent = courtText;
 
         const server = settings.showServer ? (data.server || "") : "";
         const showTeamNames = settings.showTeamNames !== false;
@@ -3175,7 +3221,7 @@
       }
 
       async function loadFullScore() {
-        const url = isDebugCourt ? debugCourt_fullScoreUrl : "/score/" + encodeURIComponent(courtId);
+        const url = isDebugCourt ? debugCourt_fullScoreUrl : "/score/" + apiTargetPath;
         const data = await fetchJson(url);
         render(data);
         // Trust the revision that shipped with this payload rather than the one
@@ -3185,8 +3231,8 @@
       }
 
       async function poll() {
-        if (!courtId) {
-          showError("No court specified. Use /overlay/{courtId}.");
+        if (!courtId && !overlayMatchId) {
+          showError("No court specified. Use /overlay/{courtId} or /overlay/match/{matchId}.");
           return;
         }
 
@@ -3194,7 +3240,7 @@
         isPolling = true;
 
         try {
-          const revisionUrl = isDebugCourt ? debugCourt_revisionUrl : "/revision/" + encodeURIComponent(courtId);
+          const revisionUrl = isDebugCourt ? debugCourt_revisionUrl : "/revision/" + apiTargetPath;
           const revisionData = await fetchJson(revisionUrl);
 
           if (revisionData.revision && revisionData.revision === renderedRevision) {
