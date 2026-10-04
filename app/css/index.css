@@ -37,7 +37,7 @@
 @import "components/match-details-grid.css";
 /* Undo flash animation. */
 @import "components/undo-animation.css";
-/* Create court, Play and Spectate pages (create-page cards). */
+/* Add court, Play and Spectate pages (create-page cards). */
 @import "pages/court-pages.css";
 /* Court list (Play / Spectate). */
 @import "components/court-list.css";

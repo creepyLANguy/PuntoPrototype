@@ -194,16 +194,16 @@ test("the Clubs tab lists every club with its court and device counts", async ()
   typeInto($("adminClubSearch"), "");
 });
 
-test("Create Club creates the club and moves members from their old club", async () => {
+test("Add Club creates the club and moves members from their old club", async () => {
   document.querySelector('.tab-btn[data-tab="courts"]').click();
   await settle();
 
   $("showCreateClubBtn").click();
   await waitForEditor();
   assert.equal(window.history.state.viewState.page, "createClub");
-  assert.equal($("editClubTitle").textContent, "Create Club");
+  assert.equal($("editClubTitle").textContent, "Add Club");
   assert.equal($("editClubIdLine").textContent, "");
-  assert.equal($("saveClubBtn").textContent, "Create Club");
+  assert.equal($("saveClubBtn").textContent, "Add Club");
   assert.equal($("deleteClubBtn").style.display, "none");
   assert.equal($("clubCourtsCount").textContent, "0 selected");
   assert.equal($("clubDevicesCount").textContent, "0 selected");
@@ -496,5 +496,5 @@ test("the Clubs tab explains how to start when there are no clubs", async () => 
   await waitFor(() => texts("#adminClubList .no-courts").length === 1, {
     label: "empty club list",
   });
-  assert.equal(texts("#adminClubList .no-courts")[0], "No clubs yet. Use Create Club to add one.");
+  assert.equal(texts("#adminClubList .no-courts")[0], "No clubs yet. Use Add Club to add one.");
 });

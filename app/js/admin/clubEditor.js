@@ -138,11 +138,11 @@ async function showClubEditorPage(syncHistory)
   elements.adminDashboardPage.style.display = "none";
   elements.editClubPage.style.display = "flex";
 
-  elements.editClubTitle.textContent = draft.clubId ? draft.savedName : "Create Club";
+  elements.editClubTitle.textContent = draft.clubId ? draft.savedName : "Add Club";
   elements.editClubIdLine.textContent = draft.clubId ? `ID: ${draft.clubId.toUpperCase()}` : "";
   elements.editClubName.value = draft.name;
   elements.editClubNameError.textContent = "";
-  elements.saveClubBtn.textContent = draft.clubId ? "Save Club" : "Create Club";
+  elements.saveClubBtn.textContent = draft.clubId ? "Save Club" : "Add Club";
   elements.deleteClubBtn.style.display = draft.clubId ? "" : "none";
   elements.deleteClubDivider.style.display = draft.clubId ? "" : "none";
 

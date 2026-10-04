@@ -205,9 +205,9 @@ test("the tabs switch between the court and device lists", async () => {
   assert.equal($("devicesTab").classList.contains("active"), false);
 });
 
-test("Create Court validates its input and creates the court and its score", async () => {
+test("Add Court validates its input and creates the court and its score", async () => {
   $("showCreateCourtModalBtn").click();
-  await waitFor(() => isShown("createPage"), { label: "create court page" });
+  await waitFor(() => isShown("createPage"), { label: "add court page" });
 
   const attempt = async (name, password) => {
     $("courtName").value = name;

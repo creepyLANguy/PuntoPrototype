@@ -36,7 +36,7 @@ function renderClubList(clubs)
   if (clubs.length === 0)
   {
     elements.adminClubList.innerHTML = allClubs.length === 0
-      ? '<div class="no-courts">No clubs yet. Use Create Club to add one.</div>'
+      ? '<div class="no-courts">No clubs yet. Use Add Club to add one.</div>'
       : '<div class="no-courts">No matching clubs found.</div>';
     return;
   }

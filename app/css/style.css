@@ -5607,7 +5607,7 @@ body.light-mode .club-member-select input {
   }
 }
 
-/* The dashboard header holds five buttons since Create Club was added; on
+/* The dashboard header holds five buttons since Add Club was added; on
    mid-width and landscape-phone screens they are compacted, and wrap rather
    than overflow if they still do not fit. */
 @media (min-width: 601px) and (max-width: 1100px) {
