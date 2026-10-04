@@ -1,5 +1,5 @@
-// Global navigation buttons (home, admin, appearance) shown only on the menu page.
-import { closeAppearanceMenu, updateWavesVisibility } from "./appearance.js";
+// Global navigation buttons (home, admin) shown only on the menu page.
+import { updateWavesVisibility } from "./appearance.js";
 import { elements } from "./dom.js";
 
 function updateAdminButtonVisibility()
@@ -22,17 +22,6 @@ function updateAdminButtonVisibility()
     if (currentVal !== targetVal)
     {
       elements.adminLoginBtn.style.display = targetVal;
-    }
-  }
-
-  if (elements.appearanceMenuBtn)
-  {
-    const currentVal = elements.appearanceMenuBtn.style.display;
-    const targetVal = isMenuVisible ? "flex" : "none";
-    if (currentVal !== targetVal)
-    {
-      if (targetVal === "none") closeAppearanceMenu();
-      elements.appearanceMenuBtn.style.display = targetVal;
     }
   }
 

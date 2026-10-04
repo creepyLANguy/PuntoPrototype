@@ -11,7 +11,7 @@ flowchart LR
             WEB["main.js<br/>composition root"]
             WROUTE["routing/<br/>routes, history, views"]
             WSTATE["state/<br/>session, app, navigation, theme"]
-            WFEAT["scoring/ court/ details/ sharing/<br/>qr/ nfc/ admin/ teams/ shell/"]
+            WFEAT["scoring/ court/ clubs/ details/ sharing/<br/>qr/ nfc/ admin/ teams/ shell/"]
             WUI["ui/<br/>DOM, modals, toasts, theme"]
             WFB["firebase/<br/>client, repositories, callables"]
         end
@@ -30,8 +30,9 @@ flowchart LR
     subgraph FIREBASE["Firebase runtime"]
         HOST["Firebase Hosting"]
         INGEST["postEvent<br/>HTTP Cloud Function"]
-        CALLABLE["Callable functions<br/>resetCourt / changeoverCourt / updateScoringOptions / getDetailedScore"]
+        CALLABLE["Callable functions<br/>resetCourt / changeoverCourt / updateScoringOptions / getDetailedScore<br/>createClub / updateClub / deleteClub"]
         TRIGGER["onEventCreate"]
+        CLUBTRIGGER["onCourtDeleted / onDeviceDeleted"]
         SCORE["Scoring + replay services"]
         PUBLIC["Public read functions"]
     end
@@ -42,7 +43,8 @@ flowchart LR
         LIVE["courts/{courtId}/score/current<br/>derived live score"]
         CHECK["scoreCheckpoints<br/>replay accelerators"]
         ARCHIVE["archive/{archiveId}/events<br/>reset archives"]
-        DEVICES["devices/{deviceId}<br/>device identity + court binding"]
+        DEVICES["devices/{deviceId}<br/>device identity + court binding + club"]
+        CLUBS["clubs/{clubId}<br/>club + its courts and devices"]
     end
 
     subgraph DELIVERY["Current delivery"]
@@ -76,6 +78,7 @@ flowchart LR
     WFB --> LIVE
     WFB --> CALLABLE
     WFB --> DEVICES
+    WFB --> CLUBS
 
     HUB --> INGEST
     BEACON --> INGEST
@@ -92,6 +95,10 @@ flowchart LR
     CALLABLE --> LIVE
     CALLABLE --> CHECK
     CALLABLE --> ARCHIVE
+    CALLABLE --> CLUBS
+    COURT --> CLUBTRIGGER
+    DEVICES --> CLUBTRIGGER
+    CLUBTRIGGER --> CLUBS
 
     OVERLAY --> PUBLIC
     PUBLIC --> LIVE
@@ -110,7 +117,7 @@ flowchart LR
 
     class WEB,WROUTE,WSTATE,WFEAT,WUI,WFB,ADMIN,OVERLAY,NFC,LAB client
     class HUB,BEACON,PULSE device
-    class HOST,INGEST,CALLABLE,TRIGGER,SCORE,PUBLIC firebase
-    class COURT,EVENTS,LIVE,CHECK,ARCHIVE,DEVICES data
+    class HOST,INGEST,CALLABLE,TRIGGER,CLUBTRIGGER,SCORE,PUBLIC firebase
+    class COURT,EVENTS,LIVE,CHECK,ARCHIVE,DEVICES,CLUBS data
     class REPO,TESTS,STAGING,PROD delivery
     class AUTH,RBAC,MATCH,MFG future

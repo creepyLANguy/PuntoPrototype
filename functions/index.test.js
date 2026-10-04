@@ -4,6 +4,7 @@ let mockDb = null;
 
 jest.mock("firebase-functions/v2/firestore", () => ({
   onDocumentCreated: (_config, handler) => handler,
+  onDocumentDeleted: (_config, handler) => handler,
 }));
 
 jest.mock("firebase-functions/v2/https", () => ({

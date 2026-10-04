@@ -37,7 +37,7 @@
 @import "components/match-details-grid.css";
 /* Undo flash animation. */
 @import "components/undo-animation.css";
-/* Create court, Play and Spectate pages (create-page cards). */
+/* Add court, Play and Spectate pages (create-page cards). */
 @import "pages/court-pages.css";
 /* Court list (Play / Spectate). */
 @import "components/court-list.css";
@@ -63,6 +63,8 @@
 @import "pages/menu-compact.css";
 /* Admin dashboard tabs and scrollable lists. */
 @import "pages/admin-tabs.css";
+/* Admin clubs: the Club column of the admin lists, the clubs list and the club editor. */
+@import "pages/admin-clubs.css";
 /* App title and logo animations. */
 @import "title-animations.css";
 /* Page setup and the content layer above the waves. */

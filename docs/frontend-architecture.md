@@ -40,7 +40,6 @@ app/
 ├── overlay/                OBS overlay sources (template.html, css/, js/)
 └── js/
     ├── main.js             composition root (the module entry point)
-    ├── script.js           compatibility entry point only (imports main.js)
     ├── firebase.js         Firebase re-export for non-app pages (device-harness)
     ├── brand.mjs           canonical brand registry (brand.js re-exports it)
     ├── scoreSync.mjs       stale-snapshot guard for the live score listener
@@ -48,7 +47,7 @@ app/
     ├── qrcode.min.js       third-party (vendor) - never edit or reformat
     ├── config/             constants.js, routes.js
     ├── state/              appState, sessionState, navigationState, themeState, adminSessionState
-    ├── firebase/           client, firestore (SDK), callables, court/device/admin repositories
+    ├── firebase/           client, firestore (SDK), callables, court/device/club/admin repositories
     ├── audio/              audio.js
     ├── lifecycle/          deviceIdentity.js, wakeLock.js
     ├── utils/              colour.js, formatting.js, domHelpers.js
@@ -58,12 +57,13 @@ app/
     ├── scoring/            actions, options, presentation, scoreboard, serverIndicator,
     │                       settings, reset, changeover
     ├── court/              session, courtSync, courtLists, playJoin
+    ├── clubs/              clubIndex (pure lookups and search), clubLoader
     ├── teams/              teamNames, playerNames, playerNamesModal
     ├── details/            matchDetails, momentum, advancedStats
     ├── sharing/            share, sharePayload, shareCardState, imageCapture, shareCardAssets
     ├── qr/                 courtQr, qrPanelInteractions, qrHandleVisibility, qrState
     ├── nfc/                nfc.js, parser.js
-    ├── admin/              admin, courts, devices
+    ├── admin/              admin, dashboardTabs, tabState, courts, devices, clubs, clubEditor, clubCell
     └── shell/              hotkeys, scoreboardControls, settingsModal, viewportResize
 ```
 
@@ -80,13 +80,14 @@ app/
 | `ui/` | Reusable UI systems: DOM lookup, toasts, loading overlays, the confirm modal, forms, theme and appearance, fullscreen, settings tiles, document-level input behaviour. |
 | `routing/` | URLs, view states, browser history and turning a view state into visible pages. |
 | `scoring/` | Sending score events, scoring options, score presentation and scoreboard rendering, reset and changeover. The backend scoring engine remains authoritative. |
-| `court/` | The court session (enter / leave / spectate), live Firestore sync, the court lists and the join flow. |
+| `court/` | The court session (enter / leave / spectate), live Firestore sync, the court lists (with each court's club, searchable by club) and the join flow. |
+| `clubs/` | Club lookups shared by every list that shows clubs: which club a court or device belongs to, club-aware search matching, and loading all clubs (a failed load yields an empty index). |
 | `teams/` | Team / player name rules and the names modal. |
 | `details/` | The Match Details modal, momentum graph and advanced stats. |
 | `sharing/` | Share text, the shareable score-card image and the Web Share / clipboard flow. |
 | `qr/` | The court QR panel: link, rendering, drag / resize, handle visibility. |
 | `nfc/` | Web NFC scanning, cooldown and the tag format parser. |
-| `admin/` | Admin authentication, the dashboard, court and device management. |
+| `admin/` | Admin authentication, the dashboard and its tabs, club, court and device management. The club editor (`clubEditor.js`) opens a club's courts and devices on their own edit pages and is returned to after they are saved (`appState.adminEditReturnView`). |
 | `shell/` | Application-level wiring that spans features: hotkeys, scoreboard controls, the settings modal and viewport-resize upkeep. |
 
 ## Dependency rules
@@ -101,9 +102,8 @@ app/
 | `firebase/` | `config/`, `firebase-config.js` |
 | `audio/`, `lifecycle/` | `config/`, `utils/`, `state/` |
 | `ui/` | `config/`, `utils/`, `state/`, `audio/`, `lifecycle/`, `brand.mjs` |
-| features (`routing/`, `scoring/`, `court/`, `teams/`, `details/`, `sharing/`, `qr/`, `nfc/`, `admin/`, `shell/`) | any layer above, any feature, `brand.mjs`, `scoreSync.mjs` |
+| features (`routing/`, `scoring/`, `court/`, `clubs/`, `teams/`, `details/`, `sharing/`, `qr/`, `nfc/`, `admin/`, `shell/`) | any layer above, any feature, `brand.mjs`, `scoreSync.mjs` |
 | `main.js` | anything |
-| `script.js` | `main.js` only |
 
 Additionally:
 
@@ -333,8 +333,15 @@ All frontend tests live in `functions/` and run with `npm test --prefix function
   per test file.
 - **Unit tests** import pure modules directly and need no DOM:
   `frontendRouteParsing`, `frontendNames`, `frontendScoringPresentation`,
-  `frontendNfcParser`, `frontendSharePayload`, `frontendUtils` (and
+  `frontendNfcParser`, `frontendSharePayload`, `frontendUtils`, `frontendClubIndex` (and
   `frontendToast` with its own small jsdom document).
+- **Club and admin tests** (`frontendClubLists`, `frontendClubs`,
+  `frontendAdmin`) drive the court lists and the admin portal. The club tests
+  run the real club callables and deletion triggers against the in-memory
+  Firestore (`frontendHarness/clubBackend.mjs`), so they also check what the
+  app sends to the backend and what ends up stored. The harness can also make
+  a collection's reads fail (`firestoreState.failingCollections`) and run
+  trigger-like hooks on deletes (`firestoreState.deleteHooks`).
 - **Overlay tests** (`frontendOverlay.node-test.mjs`) load the generated
   `app/overlay.html` in jsdom with its inline script enabled.
 - Tests assert behaviour - what is rendered, sent, stored or shared - rather
@@ -360,13 +367,12 @@ reported for review, over 900 lines fails unless the file is listed in
 
 ## Compatibility notes
 
-- `app/js/script.js` only imports `main.js`. It exists for pages cached before
-  the modular frontend was deployed, which still request `js/script.js`;
-  without it Hosting's `/app/**` rewrite would answer that request with HTML
-  and the cached page would fail to boot. It can be deleted once no client can
-  still hold such a page.
 - `app/js/firebase.js` re-exports the Firebase app, Firestore instance and SDK
   functions for `device-harness/script.js`.
 - Hosting sends `Cache-Control: no-cache, no-store, must-revalidate` for
-  `/app/js/**`, `/app/css/**`, `/app/index.html` and `/app/overlay.html`, so
-  modules are never mixed across deploys.
+  `/app/js/**`, `/app/css/**`, every `.html` file and every page URL (any path
+  without a file extension, such as `/c/{courtId}`, `/admin` or `/overlay`), so
+  a page and its modules are never mixed across deploys. Header rules match the
+  requested URL, not the rewrite destination, which is why page URLs need a
+  rule of their own; `endpointRoutes.node-test.mjs` checks every rewrite.
+  Images and other media keep the default caching.

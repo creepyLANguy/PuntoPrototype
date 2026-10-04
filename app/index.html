@@ -462,7 +462,8 @@
           <button id="closeAdminDashboardBtn" class="close-btn">✕</button>
           <h2>Admin Dashboard</h2>
           <div class="header-actions">
-            <button id="showCreateCourtModalBtn" class="primary-btn">Create Court</button>
+            <button id="showCreateClubBtn" class="primary-btn">Add Club</button>
+            <button id="showCreateCourtModalBtn" class="primary-btn">Add Court</button>
             <button id="showAddDeviceModalBtn" class="primary-btn">Add Device</button>
             <button id="nfcToolBtn" class="primary-btn">NFC Tool</button>
             <button id="deviceHarnessBtn" class="primary-btn">Device Lab</button>
@@ -470,14 +471,24 @@
         </div>
 
         <div class="admin-tabs">
+          <button class="tab-btn" data-tab="clubs">Clubs</button>
           <button class="tab-btn active" data-tab="courts">Courts</button>
           <button class="tab-btn" data-tab="devices">Devices</button>
+        </div>
+
+        <div id="clubsTab" class="tab-content">
+          <div class="admin-dashboard-controls">
+            <div class="search-wrapper">
+              <input type="text" id="adminClubSearch" placeholder="Search club name or ID..." />
+            </div>
+          </div>
+          <div id="adminClubList" class="admin-court-list"></div>
         </div>
 
         <div id="courtsTab" class="tab-content active">
           <div class="admin-dashboard-controls">
             <div class="search-wrapper">
-              <input type="text" id="adminCourtSearch" placeholder="Search courts..." />
+              <input type="text" id="adminCourtSearch" placeholder="Search courts or clubs..." />
             </div>
             <div class="filter-wrapper">
               <select id="adminStatusFilter">
@@ -494,7 +505,7 @@
         <div id="devicesTab" class="tab-content">
           <div class="admin-dashboard-controls">
             <div class="search-wrapper">
-              <input type="text" id="adminDeviceSearch" placeholder="Search device ID or court ID..." />
+              <input type="text" id="adminDeviceSearch" placeholder="Search device, court or club..." />
             </div>
           </div>
           <div id="adminDeviceList" class="admin-court-list">
@@ -566,7 +577,7 @@
     <div id="createPage" style="display:none;" class="create-page">
       <div class="create-card">
         <button id="closeCreateBtn" class="close-btn">✕</button>
-        <h2>Create Court</h2>
+        <h2>Add Court</h2>
         <div class="form-group">
           <label>Court Name</label>
           <input type="text" id="courtName" />
@@ -619,7 +630,7 @@
           </div>
         </div>
         <p>
-          <button id="createCourtBtn" class="primary-btn">Create Court</button>
+          <button id="createCourtBtn" class="primary-btn">Add Court</button>
       </div>
     </div>
 
@@ -709,6 +720,45 @@
       </div>
     </div>
 
+    <!-- ================= CREATE / EDIT CLUB PAGE ================= -->
+    <div id="editClubPage" style="display:none;" class="create-page">
+      <div class="create-card edit-card club-editor-card">
+        <button id="closeEditClubBtn" class="close-btn">✕</button>
+        <h2 id="editClubTitle">Add Club</h2>
+        <div id="editClubIdLine" class="club-editor-id"></div>
+        <div class="form-group">
+          <label for="editClubName">Club Name</label>
+          <input type="text" id="editClubName" maxlength="80" autocomplete="off" autocapitalize="words"
+            spellcheck="false" />
+          <div class="error" id="editClubNameError"></div>
+        </div>
+
+        <section class="club-member-section">
+          <div class="club-member-header">
+            <h3 id="clubCourtsHeading">Courts</h3>
+            <span id="clubCourtsCount" class="club-member-count"></span>
+          </div>
+          <input type="text" id="clubCourtSearch" class="club-member-search"
+            placeholder="Search court name, ID or club..." aria-label="Search courts" />
+          <div id="clubCourtList" class="club-member-list" role="group" aria-labelledby="clubCourtsHeading"></div>
+        </section>
+
+        <section class="club-member-section">
+          <div class="club-member-header">
+            <h3 id="clubDevicesHeading">Devices</h3>
+            <span id="clubDevicesCount" class="club-member-count"></span>
+          </div>
+          <input type="text" id="clubDeviceSearch" class="club-member-search"
+            placeholder="Search device ID, court or club..." aria-label="Search devices" />
+          <div id="clubDeviceList" class="club-member-list" role="group" aria-labelledby="clubDevicesHeading"></div>
+        </section>
+
+        <button id="saveClubBtn" class="primary-btn">Save Club</button>
+        <hr id="deleteClubDivider" />
+        <button id="deleteClubBtn" class="danger-btn" style="background: #ff4444;">Delete Club</button>
+      </div>
+    </div>
+
     <!-- ================= TOAST NOTIFICATIONS ================= -->
     <div id="toastContainer" class="toast-container"></div>
 
@@ -724,7 +774,7 @@
         <!-- Search Bar -->
         <div class="form-group">
           <label>Search Courts</label>
-          <input type="text" id="playCourtSearch" placeholder="Enter court name or code..." />
+          <input type="text" id="playCourtSearch" placeholder="Court or club name or code..." />
         </div>
 
         <!-- Court List -->
@@ -760,7 +810,7 @@
         <!-- Search Bar -->
         <div class="form-group">
           <label>Search Courts</label>
-          <input type="text" id="spectateCourtSearch" placeholder="Enter court name or code..." />
+          <input type="text" id="spectateCourtSearch" placeholder="Court or club name or code..." />
         </div>
 
         <!-- Court List -->

@@ -106,7 +106,15 @@ test("view states build the canonical URLs, honouring the /app prefix", () => {
   assert.equal(buildUrlForViewState(createViewState({ page: "menu" }), "/"), "/");
   assert.equal(buildUrlForViewState(createViewState({ page: "menu" }), "/app/x"), "/app/");
 
-  for (const page of ["adminDashboard", "createCourt", "editCourt", "addDevice", "editDevice"]) {
+  for (const page of [
+    "adminDashboard",
+    "createCourt",
+    "editCourt",
+    "addDevice",
+    "editDevice",
+    "createClub",
+    "editClub",
+  ]) {
     assert.equal(isAdminProtectedPage(page), true, page);
     assert.equal(buildUrlForViewState(createViewState({ page }), "/app/"), "/admin", page);
   }
@@ -128,6 +136,15 @@ test("view-state normalisation drops fields that do not apply to the page", () =
     normalizeViewState({ page: "play", courtId: "a", returnToScoreboard: true }).courtId,
     "a",
   );
+});
+
+test("club editor view states keep the club id and compare by it", () => {
+  const editClub = createViewState({ page: "editClub", entityId: "rvside" });
+  assert.deepEqual(editClub, { ...VIEW, page: "editClub", entityId: "rvside" });
+  assert.deepEqual(createViewState({ page: "createClub" }), { ...VIEW, page: "createClub" });
+  assert.equal(viewStatesEqual(editClub, { page: "editClub", entityId: "rvside" }), true);
+  assert.equal(viewStatesEqual(editClub, { page: "editClub", entityId: "hiltop" }), false);
+  assert.equal(viewStatesEqual(editClub, { page: "createClub" }), false);
 });
 
 test("view states compare by their normalised form", () => {

@@ -179,7 +179,7 @@ The net increase of 37 Node tests is made up as follows:
 - **The 9 `no-unused-vars` warnings** reported by `lint:frontend` were
   present in the original code, and the baseline `app/js` gives the same 9
   warnings. Removing them is a code change, so they were left for a separate
-  change.
+  change. (Since removed; both lint scripts now fail on any warning.)
 
 ## Not verified here
 
@@ -196,11 +196,12 @@ The net increase of 37 Node tests is made up as follows:
 
 ## Follow-ups
 
-- **Rewritten document routes are not marked no-cache.** Hosting header
-  globs match request paths, so `/app/index.html` is no-cache but routes
-  rewritten to it, such as `/c/{courtId}` and `/court/**`, still get the
-  default caching. This was the same before the refactor; covering them
-  needs header entries for those routes.
+- **Rewritten document routes were not marked no-cache** (resolved). Hosting
+  header globs match request paths, so `/app/index.html` was no-cache but
+  routes rewritten to it, such as `/c/{courtId}`, kept the default caching. A
+  browser could then run an up-to-an-hour-old page with the newest modules,
+  which fails when the new code needs markup the old page lacks. Every page
+  URL is now served without caching.
 - **Branches share one staging site.** `deploy.yml` deploys every non-main
   branch straight to the staging project. It creates no Hosting preview
   channel and never has. The docs that described a 7-day branch preview
@@ -208,5 +209,5 @@ The net increase of 37 Node tests is made up as follows:
   corrected. If per-branch isolation is wanted, the staging job would need
   `firebase hosting:channel:deploy` for Hosting; Functions would still be
   shared.
-- **The `script.js` shim can be removed** once cached pages that reference
-  it have expired.
+- **The `script.js` shim** has been removed: pages cached before the modular
+  frontend had long expired, and every page URL is now served without caching.

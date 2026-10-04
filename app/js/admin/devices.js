@@ -1,10 +1,13 @@
-// Admin device management: the registered-device list, the add / edit device forms
-// and their court-id combo widgets (dropdown or manual entry). Owns
-// #adminDeviceList, #addDevicePage and #editDevicePage.
+// Admin device management: the registered-device list (with each device's club),
+// the add / edit device forms and their court-id combo widgets (dropdown or
+// manual entry). Owns #adminDeviceList, #addDevicePage and #editDevicePage.
+import { fillAdminClubCell } from "./clubCell.js";
+import { anyValueMatches, clubSummary, normalizeSearchTerm } from "../clubs/clubIndex.js";
+import { loadClubIndex } from "../clubs/clubLoader.js";
 import { TOAST_TYPES } from "../config/constants.js";
 import { NAV_PAGES } from "../config/routes.js";
 import { getAllCourts } from "../firebase/courtRepository.js";
-import { deleteDevice, getAllDevices, setDevice, updateDevice } from "../firebase/deviceRepository.js";
+import { deleteDevice, getAllDevices, getDevice, setDevice, updateDevice } from "../firebase/deviceRepository.js";
 import { stepBackInApp, syncCurrentViewState } from "../routing/history.js";
 import { createViewState } from "../routing/viewState.js";
 import { appState } from "../state/appState.js";
@@ -13,6 +16,9 @@ import { showConfirm } from "../ui/modals.js";
 import { showToast } from "../ui/toast.js";
 
 let allDevices = [];
+// Counts device editor openings, so a slow load for an earlier opening cannot
+// take over the page after another device was opened.
+let deviceEditorOpenCount = 0;
 
 /**
  * Fetches all courts from Firestore and populates a <select> element.
@@ -169,7 +175,11 @@ export function registerDeviceAdmin()
 
     try
     {
-      await setDevice(deviceId, { courtId: courtId });
+      // Re-adding a registered device replaces its record, but keeps the club
+      // it belongs to: the club still lists it.
+      const existing = await getDevice(deviceId);
+      const clubId = existing.exists() ? existing.data().clubId : null;
+      await setDevice(deviceId, clubId ? { courtId: courtId, clubId } : { courtId: courtId });
       showToast("Device added successfully", TOAST_TYPES.SUCCESS);
       elements.addDevicePage.style.display = 'none';
       elements.newDeviceId.value = "";
@@ -198,12 +208,7 @@ export function registerDeviceAdmin()
   // Search logic for devices
   elements.adminDeviceSearch.addEventListener('input', (e) =>
   {
-    const term = e.target.value.toLowerCase();
-    const filtered = allDevices.filter(d =>
-      d.id.toLowerCase().includes(term) ||
-      (d.courtId && d.courtId.toLowerCase().includes(term))
-    );
-    renderDeviceList(filtered);
+    renderDeviceList(filterDevices(e.target.value));
   });
 }
 
@@ -235,15 +240,27 @@ const addDropdownKeyboardSupport = (selectEl, manualEl, manualToggle, dropdownTo
   });
 };
 
+function filterDevices(searchTerm)
+{
+  const term = normalizeSearchTerm(searchTerm);
+  return allDevices.filter((device) =>
+    anyValueMatches(term, device.id, device.courtId, device.club?.name, device.club?.id)
+  );
+}
+
 // Device Management Functions
 export async function loadDevices()
 {
   elements.adminDeviceList.innerHTML = '<div class="loading">Loading devices...</div>';
   try
   {
-    const snapshot = await getAllDevices();
-    allDevices = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    renderDeviceList(allDevices);
+    const [snapshot, clubIndex] = await Promise.all([getAllDevices(), loadClubIndex()]);
+    allDevices = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+      club: clubSummary(clubIndex.clubByDeviceId.get(doc.id))
+    }));
+    renderDeviceList(filterDevices(elements.adminDeviceSearch.value));
   } catch (error)
   {
     showToast("Error loading devices", TOAST_TYPES.ERROR);
@@ -264,7 +281,7 @@ function renderDeviceList(devices)
   devices.forEach(device =>
   {
     const item = document.createElement("div");
-    item.className = "admin-court-item";
+    item.className = "admin-court-item admin-device-item";
     item.innerHTML = `
       <div class="aci-field teams-cell">
         <div class="aci-label">deviceId:</div>
@@ -278,26 +295,70 @@ function renderDeviceList(devices)
           ${device.courtId || '???'}
         </div>
       </div>
+      <div class="aci-field club-cell">
+        <div class="aci-label">Club:</div>
+        <div class="aci-value"></div>
+      </div>
       <div class="aci-actions">
         <button class="edit-btn" data-id="${device.id}">Edit</button>
       </div>
 
     `;
-    item.querySelector('.edit-btn').addEventListener('click', () => openEditDeviceModal(device));
+    fillAdminClubCell(item.querySelector(".club-cell"), device.club);
+    item.querySelector('.edit-btn').addEventListener('click', () =>
+    {
+      appState.adminEditReturnView = null;
+      void openEditDeviceModal(device);
+    });
     elements.adminDeviceList.appendChild(item);
   });
+}
+
+// After a save or delete: back to the club editor the device was opened from,
+// otherwise to the dashboard's device list.
+function returnFromDeviceEditor()
+{
+  const returnView = appState.adminEditReturnView;
+  appState.adminEditReturnView = null;
+  if (returnView)
+  {
+    void stepBackInApp(returnView);
+    return;
+  }
+
+  elements.editDevicePage.style.display = 'none';
+  loadDevices();
+  elements.adminDashboardPage.style.display = "flex";
+  syncCurrentViewState("replace");
+}
+
+// While the page loads, Save and Delete are disabled and act on nothing: they
+// only get this device's handlers once its court list has loaded, so a click
+// can neither save a half-loaded form nor reach a previously opened device.
+function setDeviceEditorLoading(loading)
+{
+  elements.editDevicePage.setAttribute("aria-busy", loading ? "true" : "false");
+  elements.editDeviceCourtIdSelect.disabled = loading;
+  elements.saveEditDeviceBtn.disabled = loading;
+  elements.deleteDeviceBtn.disabled = loading;
+  elements.saveEditDeviceBtn.textContent = loading ? "Loading courts…" : "Save Mapping";
 }
 
 // Edit/Delete Device Logic
 export async function openEditDeviceModal(device, syncHistory = true)
 {
+  const openCount = ++deviceEditorOpenCount;
   appState.currentDeviceToEdit = device;
   elements.adminDashboardPage.style.display = "none";
   elements.editDeviceIdTitle.textContent = device.id;
+  elements.saveEditDeviceBtn.onclick = null;
+  elements.deleteDeviceBtn.onclick = null;
+  setDeviceEditorLoading(true);
   elements.editDevicePage.style.display = 'flex';
 
   // Populate dropdown with all courts
   await populateCourtDropdown(elements.editDeviceCourtIdSelect);
+  if (openCount !== deviceEditorOpenCount) return;
 
   const currentCourtId = device.courtId || "";
   const editSelectWrapper = elements.editDeviceCourtIdSelect.closest(".select-wrapper");
@@ -342,10 +403,7 @@ export async function openEditDeviceModal(device, syncHistory = true)
       const courtId = getCourtIdFromCombo(elements.editDeviceCourtIdSelect, elements.editDeviceCourtIdManual);
       await updateDevice(device.id, { courtId });
       showToast("Mapping updated", TOAST_TYPES.SUCCESS);
-      elements.editDevicePage.style.display = 'none';
-      loadDevices();
-      elements.adminDashboardPage.style.display = "flex";
-      syncCurrentViewState("replace");
+      returnFromDeviceEditor();
     } catch (e) { showToast("Update failed", TOAST_TYPES.ERROR); }
   };
 
@@ -356,10 +414,9 @@ export async function openEditDeviceModal(device, syncHistory = true)
     {
       await deleteDevice(device.id);
       showToast("Device deleted", TOAST_TYPES.SUCCESS);
-      elements.editDevicePage.style.display = 'none';
-      loadDevices();
-      elements.adminDashboardPage.style.display = "flex";
-      syncCurrentViewState("replace");
+      returnFromDeviceEditor();
     } catch (e) { showToast("Delete failed", TOAST_TYPES.ERROR); }
   };
+
+  setDeviceEditorLoading(false);
 }

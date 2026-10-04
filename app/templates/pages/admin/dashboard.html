@@ -5,7 +5,8 @@
           <button id="closeAdminDashboardBtn" class="close-btn">✕</button>
           <h2>Admin Dashboard</h2>
           <div class="header-actions">
-            <button id="showCreateCourtModalBtn" class="primary-btn">Create Court</button>
+            <button id="showCreateClubBtn" class="primary-btn">Add Club</button>
+            <button id="showCreateCourtModalBtn" class="primary-btn">Add Court</button>
             <button id="showAddDeviceModalBtn" class="primary-btn">Add Device</button>
             <button id="nfcToolBtn" class="primary-btn">NFC Tool</button>
             <button id="deviceHarnessBtn" class="primary-btn">Device Lab</button>
@@ -13,14 +14,24 @@
         </div>
 
         <div class="admin-tabs">
+          <button class="tab-btn" data-tab="clubs">Clubs</button>
           <button class="tab-btn active" data-tab="courts">Courts</button>
           <button class="tab-btn" data-tab="devices">Devices</button>
+        </div>
+
+        <div id="clubsTab" class="tab-content">
+          <div class="admin-dashboard-controls">
+            <div class="search-wrapper">
+              <input type="text" id="adminClubSearch" placeholder="Search club name or ID..." />
+            </div>
+          </div>
+          <div id="adminClubList" class="admin-court-list"></div>
         </div>
 
         <div id="courtsTab" class="tab-content active">
           <div class="admin-dashboard-controls">
             <div class="search-wrapper">
-              <input type="text" id="adminCourtSearch" placeholder="Search courts..." />
+              <input type="text" id="adminCourtSearch" placeholder="Search courts or clubs..." />
             </div>
             <div class="filter-wrapper">
               <select id="adminStatusFilter">
@@ -37,7 +48,7 @@
         <div id="devicesTab" class="tab-content">
           <div class="admin-dashboard-controls">
             <div class="search-wrapper">
-              <input type="text" id="adminDeviceSearch" placeholder="Search device ID or court ID..." />
+              <input type="text" id="adminDeviceSearch" placeholder="Search device, court or club..." />
             </div>
           </div>
           <div id="adminDeviceList" class="admin-court-list">

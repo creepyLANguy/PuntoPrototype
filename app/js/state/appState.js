@@ -17,4 +17,9 @@ export const appState = {
   isJoiningCourt: false,
   courtToEdit: null,
   currentDeviceToEdit: null,
+  // The club open in the club editor and its unsaved changes (admin/clubEditor.js).
+  clubEditor: null,
+  // Where the court / device edit page returns to after a save or delete when
+  // it was opened from the club editor (a view state), otherwise null.
+  adminEditReturnView: null,
 };

@@ -1,6 +1,8 @@
-// Court lists for the Play and Spectate pages: loading the visible courts, search
-// filtering, the inline loader and the scroll-fade affordance. Owns
-// #playCourtList and #spectateCourtList.
+// Court lists for the Play and Spectate pages: loading the visible courts (with
+// their club), search filtering by court or club, the inline loader and the
+// scroll-fade affordance. Owns #playCourtList and #spectateCourtList.
+import { clubSummary, courtMatchesSearch } from "../clubs/clubIndex.js";
+import { loadClubIndex } from "../clubs/clubLoader.js";
 import { STATUS } from "../config/constants.js";
 import { enterCourt } from "./session.js";
 import { getAllCourts } from "../firebase/courtRepository.js";
@@ -14,7 +16,7 @@ async function loadAllActiveCourts(includePrivateCourts = true)
 {
   try
   {
-    const snapshot = await getAllCourts();
+    const [snapshot, clubIndex] = await Promise.all([getAllCourts(), loadClubIndex()]);
     appState.allCourts = [];
     snapshot.forEach(doc =>
     {
@@ -28,7 +30,8 @@ async function loadAllActiveCourts(includePrivateCourts = true)
           createdAt: data.createdAt,
           status: data.status,
           teamNames: normalizeTeamNames(data.teamNames || {}),
-          playerNames: normalizePlayerNames(data.playerNames || {})
+          playerNames: normalizePlayerNames(data.playerNames || {}),
+          club: clubSummary(clubIndex.clubByCourtId.get(doc.id))
         });
       }
     });
@@ -46,12 +49,41 @@ async function loadAllActiveCourts(includePrivateCourts = true)
 
 function filterCourts(searchTerm, courts)
 {
-  const term = searchTerm.toLowerCase().trim();
-  if (!term) return courts;
-  return courts.filter(court =>
-    court.name.toLowerCase().includes(term) ||
-    court.id.toLowerCase().includes(term)
+  return courts.filter((court) => courtMatchesSearch(court, searchTerm));
+}
+
+// Name, club and id columns of a court row. The club column is always
+// present so rows line up; it is hidden while no loaded court has a club.
+function fillCourtItem(item, court)
+{
+  item.dataset.courtName = court.name;
+  item.dataset.courtId = court.id;
+  item.tabIndex = 0;
+  item.role = "button";
+  item.setAttribute(
+    "aria-label",
+    court.club ? `${court.name} - ${court.id} - ${court.club.name}` : `${court.name} - ${court.id}`
   );
+
+  item.innerHTML = `
+        <div class="court-item-name">${court.name}</div>
+        <span class="court-item-club"></span>
+        <span class="court-item-id">${court.id}</span>
+    `;
+
+  const clubCell = item.querySelector(".court-item-club");
+  if (court.club)
+  {
+    clubCell.textContent = court.club.name;
+    clubCell.title = court.club.name;
+  }
+}
+
+// Decided from every loaded court rather than the filtered rows, so the
+// column does not appear and disappear while the user types a search.
+function syncClubColumn(listContainer)
+{
+  listContainer.classList.toggle("has-clubs", appState.allCourts.some((court) => court.club));
 }
 
 function showCourtListLoading(listContainer)
@@ -103,6 +135,7 @@ export function displayPlayCourtList(courts)
   const listContainer = elements.playCourtList;
   ensureCourtListFadeBinding(listContainer);
   listContainer.innerHTML = "";
+  syncClubColumn(listContainer);
 
   if (courts.length === 0)
   {
@@ -115,16 +148,7 @@ export function displayPlayCourtList(courts)
   {
     const item = document.createElement("div");
     item.className = "court-item";
-    item.dataset.courtName = court.name;
-    item.dataset.courtId = court.id;
-    item.tabIndex = 0;
-    item.role = "button";
-    item.setAttribute("aria-label", `${court.name} - ${court.id}`);
-
-    item.innerHTML = `
-        <div class="court-item-name">${court.name}</div>
-        <span class="court-item-id">${court.id}</span>
-    `;
+    fillCourtItem(item, court);
 
     const selectCourt = () =>
     {
@@ -182,6 +206,7 @@ export function displaySpectateCourtList(courts)
   const listContainer = elements.spectateCourtList;
   ensureCourtListFadeBinding(listContainer);
   listContainer.innerHTML = "";
+  syncClubColumn(listContainer);
 
   if (courts.length === 0)
   {
@@ -194,16 +219,7 @@ export function displaySpectateCourtList(courts)
   {
     const item = document.createElement("div");
     item.className = "court-item";
-    item.dataset.courtName = court.name;
-    item.dataset.courtId = court.id;
-    item.tabIndex = 0;
-    item.role = "button";
-    item.setAttribute("aria-label", `${court.name} - ${court.id}`);
-
-    item.innerHTML = `
-        <div class="court-item-name">${court.name}</div>
-        <span class="court-item-id">${court.id}</span>
-    `;
+    fillCourtItem(item, court);
 
     const selectCourt = async () =>
     {

@@ -12,6 +12,16 @@ erDiagram
         object playerNames
         boolean beaconSidesSwapped
         object changeoverEvent
+        string clubId FK
+    }
+
+    CLUB {
+        string clubId PK
+        string name
+        array courtIds
+        array deviceIds
+        timestamp createdAt
+        timestamp updatedAt
     }
 
     SCORE_CURRENT {
@@ -72,6 +82,7 @@ erDiagram
         string deviceId PK
         string deviceSKU
         string courtId FK
+        string clubId FK
     }
 
     COURT ||--|| SCORE_CURRENT : materializes
@@ -80,3 +91,5 @@ erDiagram
     COURT ||--o{ ARCHIVE : contains
     ARCHIVE ||--o{ ARCHIVED_EVENT : preserves
     COURT ||--o{ DEVICE : binds
+    CLUB |o--o{ COURT : groups
+    CLUB |o--o{ DEVICE : groups

@@ -128,7 +128,6 @@ export async function showMatchDetails(syncHistory = true, expanded = false, ref
 
   const dmOverall = document.querySelector(".dm-overall");
   const dmTableWrap = document.querySelector(".dm-table-wrap");
-  const dmMidSection = document.querySelector(".dm-mid-section");
 
   const isSwapped = isScoreboardSwapped();
 

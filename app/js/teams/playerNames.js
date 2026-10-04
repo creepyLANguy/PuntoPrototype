@@ -12,12 +12,6 @@ export function normalizePlayerNames(playerNames = {})
   };
 }
 
-function hasAnyPlayerNames(playerNames = {})
-{
-  const normalized = normalizePlayerNames(playerNames);
-  return Object.values(normalized).some(name => name.trim().length > 0);
-}
-
 function getTeamSlots(team)
 {
   return team === "B" ? ["B1", "B2"] : ["A1", "A2"];
