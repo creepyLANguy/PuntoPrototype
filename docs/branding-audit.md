@@ -16,6 +16,7 @@
 |---|---|---|
 | Landing page | `index.html` | Brand name, wordmark, page title, descriptions, social alt, visible tagline, accessibility labels, email subject text and footer |
 | Scoring app | `app/templates/` (generates `app/index.html`), `app/js/` modules | Brand name, alt text, share text and dynamic page titles |
+| Match and tournament pages | `app/templates/match.template.html`, `app/templates/tournament.template.html`, `app/js/match/`, `app/js/tournament/` | Brand name, titles and navigation labels |
 | Score overlay | `app/overlay/` (generates `app/overlay.html`) | Overlay title, displayed brand, default text, sponsor copy and theme label |
 | NFC tool | `nfc/index.html` | Title and attribution |
 | API docs | `docs/api.md`, `docs/api/openapi.yaml` | User-facing product name |

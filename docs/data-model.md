@@ -1,16 +1,31 @@
 # Firestore data model
 
-This is the current implementation reference. The model is court-centric: the active scoring state and its event history live underneath a court. The repository currently has no separate matches collection/document and no matchId field.
+This is the current implementation reference. The authoritative scoring state
+and event history are match-scoped. Courts are physical resources that may
+point at one active match.
 
 The collection relationships are visualized in [PP_Data_Model.mmd](PP_Data_Model.mmd).
 
 | Path | Role |
 |---|---|
-| courts/{courtId} | Court configuration and active match configuration |
-| courts/{courtId}/score/current | Materialized current score |
-| courts/{courtId}/events/{eventId} | Append-only scoring and device event history |
-| courts/{courtId}/scoreCheckpoints/{id} | Replay accelerators |
-| courts/{courtId}/archive/{archiveId}/events/{eventId} | Archived events from resets |
+| courts/{courtId} | Physical court configuration, status, device orientation and active/last match pointer |
+| matches/{matchId} | Durable match identity, lifecycle, names, court assignment and tournament links |
+| matches/{matchId}/events/{eventId} | Append-only scoring event history |
+| matches/{matchId}/score/current | Materialized current score |
+| matches/{matchId}/scoreCheckpoints/{id} | Replay accelerators |
+| matches/{matchId}/archive/{archiveId}/events/{eventId} | Archived events from resets |
+| matches/{matchId}/audits/{auditId} | Match lifecycle/audit records |
+| tournaments/{tournamentId} | Tournament configuration and lifecycle |
+| tournaments/{tournamentId}/participants/{participantId} | Tournament players |
+| tournaments/{tournamentId}/teams/{teamId} | Tournament teams |
+| tournaments/{tournamentId}/rounds/{roundId} | Generated rounds |
+| tournaments/{tournamentId}/fixtures/{fixtureId} | Scheduled/bracket fixtures |
+| tournaments/{tournamentId}/audits/{auditId} | Tournament audit records |
+| tournamentViews/{tournamentId} | Public tournament read model or private placeholder |
+| tournamentPrivateViews/{tournamentId} | Full private tournament read model |
+| tournamentDirectory/{tournamentId} | Public discovery/search entry |
+| tournamentSecrets/{tournamentId} | Hashed host key and optional access code |
+| tournamentCreations/{requestId} | Tournament creation idempotency markers |
 | devices/{deviceId} | Device identity, SKU, current court binding and club |
 | clubs/{clubId} | Club identity and the courts and devices that belong to it |
 
@@ -22,14 +37,12 @@ The current frontend creates court documents with fields including:
 - password
 - createdAt
 - status
-- teamNames
-- playerNames
-- scoringMode
-- scoringOptions
-- scoreVersion
+- scoringMode / scoringOptions defaults for casual matches
 - beaconSidesSwapped
 - changeoverEvent
-- clubId (see [Clubs](#clubs))
+- clubId
+- activeMatchId
+- lastMatchId
 
 The three frontend status values are:
 
@@ -37,19 +50,58 @@ The three frontend status values are:
 - private
 - closed
 
-The court document also acts as the container for the currently active match configuration. A separate match entity is not present.
+Court status is independent from match and tournament status. A closed court is
+not assignable to a live match. A private court creates private casual matches
+by default.
 
 ### Beacon changeover state
 
-beaconSidesSwapped is a court-level setting used only when new Beacon scoring events are ingested.
+`beaconSidesSwapped` is a court-level setting used only when new Beacon scoring
+events are ingested.
 
-changeoverEvent stores the most recent changeover marker. It is a notification/audit marker for clients; it does not rewrite existing scoring events.
+`changeoverEvent` stores the most recent changeover marker. It is a
+notification/audit marker for clients; it does not rewrite existing scoring
+events.
 
-RESET restores beaconSidesSwapped to false.
+A match reset on a court restores `beaconSidesSwapped` to false.
+
+## Match document
+
+`matches/{matchId}` is the durable scoring identity. A match keeps the same
+`matchId` when it moves courts, is detached, is reset, is completed or becomes
+historical.
+
+Fields include:
+
+- matchId
+- name
+- kind (`casual` or tournament-driven)
+- visibility
+- status (`scheduled`, `live`, `completed`, `cancelled`)
+- currentCourtId
+- lastCourtId
+- lastCourtName
+- teamNames
+- playerNames
+- scoringOptions
+- scoringMode
+- scoreVersion
+- scoreSummary
+- result
+- tournamentId
+- roundId
+- fixtureId
+- createdAt, updatedAt, startedAt, completedAt, cancelledAt
+
+The display title resolves to explicit match name, then generated matchup,
+then match id. It never falls back directly to court id.
 
 ## Current score document
 
-courts/{courtId}/score/current is derived state produced by the scoring engine. It contains the current A/B score state, completed-set information, scoring options, match-complete/tiebreak state and processing metadata.
+`matches/{matchId}/score/current` is derived state produced by the scoring
+engine. It contains the current A/B score state, completed-set information,
+scoring options, match-complete/tiebreak state, fixed-total state when
+applicable, and processing metadata.
 
 Important processing fields include:
 
@@ -58,40 +110,54 @@ Important processing fields include:
 - lastProcessedCreatedAt
 - updatedAt
 
-This document is not the source of truth for historical scoring; it can be reconstructed from the event stream.
+This document is not the source of truth for historical scoring; it can be
+reconstructed from the event stream.
 
 ## Event document
 
-Current scoring event types are:
+Current scoring event types include:
 
 - POINT_TEAM_A
 - POINT_TEAM_B
 - UNDO
 - RESET
+- WARMUP
 
-Operational events also exist:
+Operational device events also exist:
 
 - SPECTATE
 - REGISTER
 
+Scoring events live under:
+
+```text
+matches/{matchId}/events/{eventId}
+```
+
 Depending on the source and operation, event documents can contain:
 
+- matchId
 - eventType
 - createdBy
 - createdAt
 - scoreVersion
 - actorDeviceId
+- courtId
 - sourceCourtId
 - targetCourtId
 - registeringDeviceId
 - sourceEventType
 - beaconSidesSwapped
 
-For an inverted Beacon scoring event, sourceEventType preserves what the physical device reported, while eventType stores the effective logical scoring event.
+For an inverted Beacon scoring event, `sourceEventType` preserves what the
+physical device reported, while `eventType` stores the effective logical
+scoring event. The event `courtId` is audit/location context; replay depends on
+match id and score version, not court identity.
 
 ## Checkpoints
 
-Checkpoint documents contain a materialized score snapshot plus replay metadata such as:
+Checkpoint documents contain a materialized score snapshot plus replay metadata
+such as:
 
 - scoringOptions
 - totalPoints
@@ -104,17 +170,128 @@ They are optimizations only. The event stream remains authoritative.
 
 ## Reset archives
 
-RESET archives the active event stream below:
+Match reset archives the active event stream below:
 
-courts/{courtId}/archive/{archiveId}/events/{eventId}
+```text
+matches/{matchId}/archive/{archiveId}/events/{eventId}
+```
 
-Archived events retain their original event fields plus archive metadata such as archivedAt and resetBy.
+Archived events retain their original event fields plus archive metadata such
+as archivedAt and resetBy. Reset increments `scoreVersion` and preserves the
+same match id, fixture and tournament association.
 
-The implementation therefore preserves prior scoring evidence across RESET, but does not expose a first-class archived match entity or matchId.
+## Tournament document
+
+`tournaments/{tournamentId}` stores tournament setup and lifecycle fields:
+
+- tournamentId
+- name
+- description
+- clubId
+- visibility
+- format: `{ id, version, config }`
+- participantMode
+- courtPool
+- scheduling
+- standingsConfig
+- status
+- participantIds
+- teamIds
+- currentRoundNumber
+- lastGeneratedRoundNumber
+- revision
+- createdAt, updatedAt, publishedAt, startedAt, completedAt, cancelledAt
+
+`clubId` is optional and is not an implicit court assignment. The host must
+explicitly select `courtPool`.
+
+## Participants and teams
+
+Participants contain:
+
+- participantId
+- displayName
+- shortName
+- gender
+- seed
+- status
+- createdAt, updatedAt
+
+Teams contain:
+
+- teamId
+- name
+- participantIds
+- seed
+- status
+- createdAt, updatedAt
+
+Statuses are `active`, `withdrawn` or `removed`. Withdrawn entries are excluded
+from future round generation without rewriting existing match history.
+
+## Rounds and fixtures
+
+Round ids are deterministic (`r{roundNumber}`). Fixture ids are deterministic
+(`r{roundNumber}-m{index}`). Rounds contain:
+
+- roundId
+- tournamentId
+- roundNumber
+- label
+- stage
+- status
+- fixtureIds
+- sittingOutParticipantIds
+- sittingOutTeamIds
+- generationSnapshot
+- generatedAt, startedAt, completedAt
+
+Fixtures contain:
+
+- fixtureId
+- tournamentId
+- roundId
+- roundNumber
+- label
+- stage
+- groupId
+- sides
+- participantIds
+- teamIds
+- status
+- matchId
+- courtId
+- scheduledStartAt
+- courtLevel
+- bracketPosition
+- sourceFixtureIds
+- feeds
+- sourceRefs
+- resultSnapshot
+
+A `bye` fixture does not create a match. Scheduled fixtures with known sides
+create normal Padel Push matches.
+
+## Read models and secrets
+
+`tournamentViews/{tournamentId}` contains the compact public view for public
+tournaments. For private tournaments it contains only a private placeholder.
+
+`tournamentPrivateViews/{tournamentId}` contains the full private view and is
+not directly readable by Firestore clients.
+
+`tournamentDirectory/{tournamentId}` is a small public entry for discovery:
+tournament id, name, status, visibility, club summary, format and start time.
+It is deleted for private tournaments.
+
+`tournamentSecrets/{tournamentId}` stores hashes for the host key and optional
+private access code. Plaintext keys are returned once and may be remembered by
+the frontend on the host device.
 
 ## Devices
 
-devices/{deviceId} represents the current relationship between a physical/logical device and a court.
+`devices/{deviceId}` represents the current relationship between a
+physical/logical device and a court.
 
 Current device families are:
 
@@ -127,13 +304,17 @@ The current implementation primarily uses:
 - deviceId
 - deviceSKU
 - courtId
-- clubId (see [Clubs](#clubs))
+- clubId
 
-The device record is also the current lookup point used by postEvent to determine the acting device's court binding.
+The device record is the current lookup point used by postEvent to determine
+the acting device's court binding. For scoring events, the bound court's live
+match is used; a court without one gets a casual match.
 
 ## Clubs
 
-clubs/{clubId} represents a padel club. A club groups zero or more courts and zero or more devices. A court or device belongs to at most one club at a time, because it is a physical thing that cannot be part of two clubs at once.
+`clubs/{clubId}` represents a padel club. A club groups zero or more courts and
+zero or more devices. A court or device belongs to at most one club at a time,
+because it is a physical thing that cannot be part of two clubs at once.
 
 Club document fields:
 
@@ -142,25 +323,40 @@ Club document fields:
 - deviceIds — ids of the club's devices (at most 100).
 - createdAt, updatedAt — server timestamps.
 
-The clubId is generated by the backend: six characters from the court id alphabet (abcdefghjkmnpqrstuxyz), so it is as easy to read out and search for as a court id.
-
-The relationship is stored in two places, which are always written together in one transaction:
+The relationship is stored in two places, which are always written together in
+one transaction:
 
 - the club document lists its members (courtIds / deviceIds);
-- each member's own document carries clubId (null or absent when it belongs to no club).
+- each member's own document carries clubId (null or absent when it belongs to
+  no club).
 
-Only the club callables (createClub, updateClub, deleteClub; see [callable-functions.md](api/callable-functions.md)) change club membership. They read the member documents inside the transaction, so two concurrent saves that claim the same court or device are serialised. Claiming a member of another club moves it: it is removed from the other club's list in the same transaction. Deleting a club clears clubId on its members.
+Only the club callables (createClub, updateClub, deleteClub; see
+[callable-functions.md](api/callable-functions.md)) change club membership.
 
-When a court or device document is deleted, the onCourtDeleted / onDeviceDeleted triggers remove its id from every club that listed it.
-
-The web app reads the clubs collection to show each court's club in the court lists and to let court searches match club names and ids. A failed clubs read only removes that context; the lists still load.
-
-The production credential model described in device-protocol.md is not yet implemented.
+The tournament setup UI uses `clubId` to rank court candidates, not to
+auto-select the court pool.
 
 ## Security and data ownership boundary
 
-Cloud Functions use the Firebase Admin SDK for server-side data access. Current callable handlers do not enforce an explicit request.auth role check, so the Firestore data model must not be interpreted as a complete authorisation model.
+Cloud Functions use the Firebase Admin SDK for server-side data access.
+Server-authoritative match and tournament writes go through callables and
+services.
+
+Current mutation authority is:
+
+- admin custom claim or server-side skeleton key for platform administration;
+- hashed tournament host key for tournament control;
+- court password for casual matches on a court.
+
+Firestore rules allow public reads of match/tournament read data and client
+creation of live scoring events. Legacy `courts`, `devices` and `admin`
+development collections remain open in rules and must not be mistaken for
+production access control.
 
 ## Indexes
 
-firestore.indexes.json currently contains no composite indexes. New multi-field filters/orderings must be checked against the current index deployment process.
+`firestore.indexes.json` currently contains no composite indexes. The current
+tournament implementation avoids composite-index requirements by using direct
+document reads, full subcollection reads within one tournament, equality-only
+match filters, and precomputed read models. New multi-field filters/orderings
+must be checked against the deployment process before being added.

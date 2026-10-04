@@ -1,12 +1,17 @@
 // Cloud Function callables used by the web client (africa-south1).
 import {
+  connectFunctionsEmulator,
   getFunctions,
   httpsCallable,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-functions.js";
 
-import { app } from "./client.js";
+import { app, useLocalEmulators } from "./client.js";
 
 const functions = getFunctions(app, "africa-south1");
+
+if (useLocalEmulators) {
+  connectFunctionsEmulator(functions, "127.0.0.1", 5001);
+}
 
 export async function resetCourt(
   courtId,

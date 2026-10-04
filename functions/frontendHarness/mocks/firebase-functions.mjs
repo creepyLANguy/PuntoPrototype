@@ -5,6 +5,10 @@ export function getFunctions(app, region) {
   return { app, region, type: "mock-functions" };
 }
 
+export function connectFunctionsEmulator(functionsInstance) {
+  return functionsInstance;
+}
+
 export function httpsCallable(functionsInstance, name) {
   return async (payload) => {
     const handler = callableHandlers.get(name);

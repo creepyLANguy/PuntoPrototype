@@ -479,6 +479,7 @@ describe("tournament flow", () => {
     });
     expect(preview.errors).toEqual([]);
     expect(preview.preview).toMatchObject({ matches: 2, sittingOut: 1, estimatedMinutes: 20 });
+    expect(preview.warnings.map((warning) => warning.code)).toContain("SITTING_OUT");
     expect(preview.rulesSummary.title).toBe("AMERICANO");
   });
 });

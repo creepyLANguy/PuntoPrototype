@@ -11,6 +11,7 @@ This document defines the scoring semantics that API consumers may rely on. Impl
 | `standard` | Traditional games/sets scoring |
 | `straight` | Direct point accumulation; no games/sets |
 | `tiebreakTen` | Tiebreak Ten format; match can complete from the tiebreak |
+| `fixedTotalPoints` | Fixed number of rally points; used by social tournament formats |
 
 ### `deuceMode`
 
@@ -33,17 +34,37 @@ Unknown values currently fall back to `standard` / `standard` / `sixAllSeven`. A
 
 ## Score representation
 
-In standard play, `pointsDisplay` is one of `0`, `15`, `30`, `40`, `Ad`. The underlying point representation remains numeric. In `straight` and tiebreak contexts, the display may be numeric.
+In standard play, `pointsDisplay` is one of `0`, `15`, `30`, `40`, `Ad`. The underlying point representation remains numeric. In `straight`, tiebreak and `fixedTotalPoints` contexts, the display may be numeric.
 
 `deuceCycles` counts completed deuce cycles relevant to silver/star deciding-point semantics.
 
 `inTiebreak` identifies whether the current game is a tiebreak.
 
-`matchComplete` is currently only asserted by `tiebreakTen`; standard/straight modes otherwise represent an open-ended number of sets.
+`matchComplete` is asserted only by fixed-end modes: `tiebreakTen` and `fixedTotalPoints`. Standard and straight modes otherwise represent an open-ended number of sets/points and do not become complete from scoring alone.
+
+For `fixedTotalPoints`, the score may include `fixedTotal`:
+
+| Field | Meaning |
+|---|---|
+| `pointsTarget` | Configured total rally points, default 36 |
+| `rallyPoints` | Team A points plus Team B points |
+| `remainingPoints` | Points left before the target |
+| `currentServer` | Current server slot (`A1`, `B1`, `A2`, `B2`) or null |
+| `serveSlot` | Index in the configured serve order |
+| `servesCompleted` | Serve blocks completed per player slot |
+| `sideSwapCycles` | Completed side-swap cycles |
+| `sidesSwapped` | Whether an odd number of side-swap cycles has completed |
+
+The default social profile is 36 total points, four serves per player,
+one-serve blocks, serve order `A1, B1, A2, B2`, side swap after each player has
+served once, and draws allowed. A configured golden-point tie resolution keeps
+playing at the target until one team leads by one.
 
 ## Server
 
-`server` is `A1`, `A2`, `B1`, `B2`, or `null`.
+`server` is `A1`, `A2`, `B1`, `B2`, or `null`. For `fixedTotalPoints`, server
+rotation is derived from the configured `serving.order`,
+`serveBlockLength` and rally count.
 
 ## Replay invariants
 
@@ -53,6 +74,8 @@ In standard play, `pointsDisplay` is one of `0`, `15`, `30`, `40`, `Ad`. The und
 - Late/out-of-order events require replay from a safe checkpoint or the beginning of the current event stream.
 - `UNDO` must preserve a deterministic replay result.
 - Reprocessing the same event ID must not alter the result after the first successful application.
+- Scoring events are match-scoped under `matches/{matchId}/events`; court id on an event is audit/location context.
+- Reset preserves `matchId`, increments match `scoreVersion`, clears the current score and archives the prior match event stream.
 
 ## Revision invariant
 

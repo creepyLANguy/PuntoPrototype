@@ -6,7 +6,7 @@ The API documentation should be executable as a compatibility contract rather th
 
 ### Schema tests
 
-Validate every successful `/score`, `/revision`, `/stats`, `/momentum` response against `docs/api/openapi.yaml`.
+Validate every successful `/score`, `/revision`, `/stats`, `/momentum` response, including the `/.../match/{matchId}` variants, against `docs/api/openapi.yaml`.
 
 Cover:
 
@@ -21,6 +21,8 @@ Cover:
 - null/empty player names;
 - zero-denominator statistics;
 - momentum marker alignment.
+- match-scoped fields (`matchId`, `matchName`, `title`, `match`, `courtName`);
+- fixed-total-points payloads and `fixedTotal`.
 
 ### HTTP tests
 
@@ -53,7 +55,7 @@ For every mutation:
 - expired timestamps fail;
 - reused nonce/event ID is rejected/deduplicated;
 - retrying the same event cannot create a second score change;
-- old `scoreVersion` events do not affect a new match;
+- old `scoreVersion` events do not affect a reset match;
 - unauthorized REGISTER/SPECTATE operations fail;
 - rate limits return 429 when exceeded.
 
@@ -84,8 +86,8 @@ The executable response-contract suite lives in `functions/openapiContract.test.
 The suite:
 
 - validates `docs/api/openapi.yaml` as an OpenAPI 3.1 document and resolves its local references;
-- exercises representative successful `/score`, `/revision`, `/stats`, and `/momentum` responses;
-- covers standard, straight, match-tiebreak and set-tiebreak states, golden/silver/star deuce modes, server rotation, completed sets, empty player names, zero-denominator statistics, and momentum markers;
+- exercises representative successful `/score`, `/revision`, `/stats`, and `/momentum` responses for court and match targets;
+- covers standard, straight, match-tiebreak, set-tiebreak and fixed-total-points states, golden/silver/star deuce modes, server rotation, completed sets, empty player names, zero-denominator statistics, match context fields and momentum markers;
 - validates each successful response body against the corresponding schema from the OpenAPI document; and
 - contains a negative control proving that an incompatible enum is rejected by the validator.
 

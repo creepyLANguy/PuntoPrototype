@@ -116,7 +116,7 @@ function scoreBlock(match, score) {
         "mp-sets-line",
         `${score.fixedTotal.rallyPoints} of ${score.fixedTotal.pointsTarget} points played` +
           (score.fixedTotal.currentServer && !score.matchComplete
-            ? ` - ${score.fixedTotal.currentServer} to serve`
+            ? ` - ${match.playerNames?.[score.fixedTotal.currentServer] || score.fixedTotal.currentServer} to serve`
             : ""),
       ),
     );

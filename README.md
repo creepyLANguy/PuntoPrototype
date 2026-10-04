@@ -1,8 +1,9 @@
 # Padel Push™
 
-Court-centric padel scoring platform: the web scoring app, admin tooling, the
-OBS score overlay, the public JSON API, Cloud Functions and the Device Lab.
-Device firmware lives in the separate ProtoSketches repository.
+Padel scoring platform with physical courts, durable matches and tournaments:
+the web scoring app, admin tooling, OBS score overlay, public JSON API, Cloud
+Functions and Device Lab. Device firmware lives in the separate ProtoSketches
+repository.
 
 ## Repository layout
 
@@ -24,8 +25,11 @@ loads are **generated** from sources and committed:
 | Generated (do not edit) | Edit instead |
 | --- | --- |
 | `app/index.html` | `app/templates/` (`index.template.html` and its fragments) |
+| `app/match.html` | `app/templates/match.template.html` |
+| `app/tournament.html` | `app/templates/tournament.template.html` |
 | `app/overlay.html` | `app/overlay/` (`template.html`, `css/`, `js/`) |
 | `app/css/style.css` | `app/css/index.css` and the parts it imports |
+| `app/css/events.css` | `app/css/events/index.css` and the parts it imports |
 
 JavaScript is not generated: edit the modules under `app/js/` directly. The
 entry point is `app/js/main.js`.
@@ -60,6 +64,8 @@ npm run format:check --prefix functions
   dependency rules, templates, CSS, build and tests.
 - [Platform architecture](docs/architecture.md) and
   [runtime flow](docs/PP_Runtime_Flow.mmd).
+- [Tournaments](docs/tournaments.md): formats, lifecycle, host/public routes,
+  read models and known limitations.
 - [Firebase environments](docs/firebase-environments.md): local
   configuration, staging/production and the deployment pipeline.
 - [API](docs/api.md), [data model](docs/data-model.md),

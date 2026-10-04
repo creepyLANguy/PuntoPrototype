@@ -12,7 +12,7 @@ const TIEBREAKER_LABELS = {
   headToHead: "Head-to-head",
   buchholz: "Buchholz",
   seed: "Seed",
-  entryId: "Entry ID",
+  entryId: "Draw order",
 };
 
 const TIEBREAKERS = Object.keys(TIEBREAKER_LABELS).reduce((registry, key) => {

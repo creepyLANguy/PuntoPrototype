@@ -1,10 +1,10 @@
 # Frontend architecture
 
 This is the document to read before changing the web frontend. It covers the
-scoring app (`/app`, `/c`, `/p`, `/admin`), its build, and the OBS overlay
-(`/overlay`, `/broadcast`). The landing page (`index.html`), the NFC utility
-(`nfc/`) and the Device Lab (`device-harness/`) are separate pages and are not
-covered here.
+scoring app (`/app`, `/c`, `/p`, `/admin`), the durable match page (`/m`), the
+tournament suite (`/t`), its build, and the OBS overlay (`/overlay`,
+`/broadcast`). The landing page (`index.html`), the NFC utility (`nfc/`) and
+the Device Lab (`device-harness/`) are separate pages and are not covered here.
 
 How the current structure was reached from the former monolithic `script.js`,
 and how behavioural equivalence was verified, is recorded in
@@ -18,36 +18,45 @@ and how behavioural equivalence was verified, is recorded in
   everything it uses; ESLint `no-undef` and the structure check enforce this.
 - **Explicit DOM ownership.** Every module documents, in its header comment,
   the part of the page it is allowed to manipulate.
-- **Behaviour first.** The source layout changed; DOM ids, classes, routes, URLs,
-  storage keys, Firestore documents, callables and event semantics did not.
+- **Behaviour first.** Source layout changes preserve existing behaviour unless
+  a feature explicitly changes the route, Firestore document or callable
+  contract.
 
 ## Directory structure
 
 ```text
 app/
 ├── index.html              GENERATED from templates/ (do not edit)
+├── match.html              GENERATED from templates/match.template.html
+├── tournament.html         GENERATED from templates/tournament.template.html
 ├── overlay.html            GENERATED from overlay/ (do not edit)
 ├── templates/              scoring app document sources
 │   ├── index.template.html   <head> and the body skeleton
+│   ├── match.template.html   durable match page
+│   ├── tournament.template.html tournament landing, wizard and dashboard shell
 │   ├── global/               controls, appearance menu, modals, loading, set-win overlay, waves
 │   └── pages/                menu, play, spectate, scoreboard, admin/{auth,dashboard,...}
 ├── css/
 │   ├── style.css           GENERATED from index.css (do not edit)
+│   ├── events.css          GENERATED from css/events/index.css (do not edit)
 │   ├── index.css           ordered stylesheet manifest (the cascade order)
+│   ├── events/             shared match/tournament event-page styles
 │   ├── tokens.css base.css layout.css title-animations.css overrides.css
 │   ├── components/         scoreboard, modals, match details, toasts, loaders, ...
 │   └── pages/              menu, scoreboard, court pages, admin
 ├── overlay/                OBS overlay sources (template.html, css/, js/)
 └── js/
-    ├── main.js             composition root (the module entry point)
+    ├── main.js             scoring app composition root
+    ├── matchPage.js        /m/{matchId} composition root
+    ├── tournamentPage.js   /t, /t/new and /t/{id} composition root
     ├── firebase.js         Firebase re-export for non-app pages (device-harness)
     ├── brand.mjs           canonical brand registry (brand.js re-exports it)
     ├── scoreSync.mjs       stale-snapshot guard for the live score listener
     ├── jscolor.min.js      third-party (vendor) - never edit or reformat
     ├── qrcode.min.js       third-party (vendor) - never edit or reformat
     ├── config/             constants.js, routes.js
-    ├── state/              appState, sessionState, navigationState, themeState, adminSessionState
-    ├── firebase/           client, firestore (SDK), callables, court/device/club/admin repositories
+    ├── state/              appState, sessionState, navigationState, themeState, adminSessionState, credentialsState
+    ├── firebase/           client, firestore (SDK), callables, court/device/club/admin/match/tournament repositories
     ├── audio/              audio.js
     ├── lifecycle/          deviceIdentity.js, wakeLock.js
     ├── utils/              colour.js, formatting.js, domHelpers.js
@@ -56,14 +65,16 @@ app/
     ├── routing/            routeParsers, viewState, history, viewController, router
     ├── scoring/            actions, options, presentation, scoreboard, serverIndicator,
     │                       settings, reset, changeover
-    ├── court/              session, courtSync, courtLists, playJoin
+    ├── court/              session, courtSync, matchSync, courtLists, playJoin
     ├── clubs/              clubIndex (pure lookups and search), clubLoader
     ├── teams/              teamNames, playerNames, playerNamesModal
     ├── details/            matchDetails, momentum, advancedStats
+    ├── match/              durable match page and match identity helpers
+    ├── tournament/         tournament landing, wizard, host/public views and controls
     ├── sharing/            share, sharePayload, shareCardState, imageCapture, shareCardAssets
     ├── qr/                 courtQr, qrPanelInteractions, qrHandleVisibility, qrState
     ├── nfc/                nfc.js, parser.js
-    ├── admin/              admin, dashboardTabs, tabState, courts, devices, clubs, clubEditor, clubCell
+    ├── admin/              admin, dashboardTabs, tabState, courts, matches, tournaments, devices, clubs, clubEditor, clubCell
     └── shell/              hotkeys, scoreboardControls, settingsModal, viewportResize
 ```
 
@@ -72,22 +83,24 @@ app/
 | Directory | Owns |
 | --- | --- |
 | `config/` | Constants and the navigation vocabulary (`NAV_PAGES`, `NAV_MODALS`). |
-| `state/` | Plain-data state objects shared between modules (see [State](#state)). |
+| `state/` | Plain-data state objects shared between modules and local admin/host credential helpers (see [State](#state)). |
 | `firebase/` | Firebase initialisation and every Firestore / callable call. |
 | `audio/` | Sound effects and the audio unlock on user gesture. |
 | `lifecycle/` | Device identity, the mobile-device class, the screen wake lock. |
 | `utils/` | Pure helpers (colour, formatting) and DOM predicates. |
 | `ui/` | Reusable UI systems: DOM lookup, toasts, loading overlays, the confirm modal, forms, theme and appearance, fullscreen, settings tiles, document-level input behaviour. |
 | `routing/` | URLs, view states, browser history and turning a view state into visible pages. |
-| `scoring/` | Sending score events, scoring options, score presentation and scoreboard rendering, reset and changeover. The backend scoring engine remains authoritative. |
-| `court/` | The court session (enter / leave / spectate), live Firestore sync, the court lists (with each court's club, searchable by club) and the join flow. |
+| `scoring/` | Sending match-scoped score events, scoring options, score presentation and scoreboard rendering, reset and changeover. The backend scoring engine remains authoritative. |
+| `court/` | The court session (enter / leave / spectate), live Firestore sync, following the court's active match, the court lists (with each court's club, searchable by club) and the join flow. |
 | `clubs/` | Club lookups shared by every list that shows clubs: which club a court or device belongs to, club-aware search matching, and loading all clubs (a failed load yields an empty index). |
 | `teams/` | Team / player name rules and the names modal. |
 | `details/` | The Match Details modal, momentum graph and advanced stats. |
+| `match/` | The durable `/m/{matchId}` page and match identity helpers. |
+| `tournament/` | Tournament landing, setup wizard, public dashboard, host control room, standings, bracket and fixture controls. |
 | `sharing/` | Share text, the shareable score-card image and the Web Share / clipboard flow. |
 | `qr/` | The court QR panel: link, rendering, drag / resize, handle visibility. |
 | `nfc/` | Web NFC scanning, cooldown and the tag format parser. |
-| `admin/` | Admin authentication, the dashboard and its tabs, club, court and device management. The club editor (`clubEditor.js`) opens a club's courts and devices on their own edit pages and is returned to after they are saved (`appState.adminEditReturnView`). |
+| `admin/` | Admin authentication, the dashboard and its tabs, club, court, match, tournament and device management. The club editor (`clubEditor.js`) opens a club's courts and devices on their own edit pages and is returned to after they are saved (`appState.adminEditReturnView`). |
 | `shell/` | Application-level wiring that spans features: hotkeys, scoreboard controls, the settings modal and viewport-resize upkeep. |
 
 ## Dependency rules
@@ -102,14 +115,14 @@ app/
 | `firebase/` | `config/`, `firebase-config.js` |
 | `audio/`, `lifecycle/` | `config/`, `utils/`, `state/` |
 | `ui/` | `config/`, `utils/`, `state/`, `audio/`, `lifecycle/`, `brand.mjs` |
-| features (`routing/`, `scoring/`, `court/`, `clubs/`, `teams/`, `details/`, `sharing/`, `qr/`, `nfc/`, `admin/`, `shell/`) | any layer above, any feature, `brand.mjs`, `scoreSync.mjs` |
-| `main.js` | anything |
+| features (`routing/`, `scoring/`, `court/`, `clubs/`, `teams/`, `details/`, `sharing/`, `qr/`, `nfc/`, `match/`, `tournament/`, `admin/`, `shell/`) | any layer above, any feature, `brand.mjs`, `scoreSync.mjs` |
+| entry modules (`main.js`, `matchPage.js`, `tournamentPage.js`) | anything |
 
 Additionally:
 
 - Only `firebase/` (and the `firebase.js` re-export) imports the Firebase SDK,
   and only `sharing/` imports html-to-image. Feature code calls repository and
-  callable functions instead (`getCourt`, `addCourtEvent`, `updateScoringOptions`, ...).
+  callable functions instead (`getCourt`, `addMatchEvent`, `manageMatch`, ...).
 - **No import cycle may span directories.** Modules inside one directory may
   depend on each other cyclically (they are one feature); a cycle across
   directories is an architectural error. Break it by inverting the dependency
@@ -123,7 +136,7 @@ Additionally:
 
 ## Composition root
 
-`app/js/main.js` imports the feature modules and starts them:
+`app/js/main.js` imports the scoring-app feature modules and starts them:
 
 1. At module evaluation it installs the changeover behaviour (which must own
    the changeover button's click first and hook history before the first
@@ -154,6 +167,7 @@ State that more than one module reads or writes lives in a plain object in
 | `navigationState` | The app's mirror of the history stack and the court-session counter that expires modal history entries. |
 | `themeState` | Light mode, waves, server badge, per-theme team colours (persisted in `localStorage`). |
 | `adminSessionState.js` | Functions over the admin session flag (`sessionStorage`) and the cross-tab logout signal. |
+| `credentialsState.js` | Admin key in session storage, tournament host keys and private access codes in local storage, and helpers that build callable credentials. |
 
 Rules:
 
@@ -173,10 +187,15 @@ Rules:
 | `/c/{courtId}`, `/court/{courtId}` | spectate that court |
 | `/p`, `/play` | play court list |
 | `/p/{courtId}`, `/play/{courtId}` | join prompt over the court's spectator view |
+| `/m/{matchId}` | dedicated durable match page (`app/match.html`) |
+| `/t` | tournament landing (`app/tournament.html`) |
+| `/t/new` | tournament setup wizard |
+| `/t/{tournamentId}` | public dashboard or host control room |
 | `/admin`, `/app/admin` | admin dashboard (through admin authentication) |
 
-Every path also works under `/app/`. Firebase Hosting rewrites them all to
-`/app/index.html` (`firebase.json`).
+Scoring-app paths also work under `/app/`. Firebase Hosting rewrites scoring
+paths to `/app/index.html`, match paths to `/app/match.html` and tournament
+paths to `/app/tournament.html` (`firebase.json`).
 
 - `routing/routeParsers.js` - pathname -> view state, view state -> URL (pure
   when given a pathname).
@@ -196,25 +215,30 @@ changing what is visible, and go back with `stepBackInApp(fallbackViewState)`.
 - `firebase/client.js` reads `app/js/firebase-config.js` (generated at deploy
   time from a secret; copy `firebase-config.template.js` for local use) and
   initialises the app, Firestore and the optional emulator connection.
-- `firebase/courtRepository.js` - `courts/{courtId}`, its `score/current` and
-  its `events` (reads, writes, listeners). Functions return SDK snapshots
+- `firebase/courtRepository.js` - `courts/{courtId}` reads and listeners.
+- `firebase/matchRepository.js` - `matches/{matchId}`, its `score/current` and
+  `events` (reads, writes, listeners). Functions return SDK snapshots
   unchanged.
+- `firebase/tournamentRepository.js` - tournament read models and directory entries.
 - `firebase/deviceRepository.js` - `devices/{deviceId}`.
 - `firebase/adminRepository.js` - the admin key in `admin/goodies`.
 - `firebase/callables.js` - `resetCourt`, `changeoverCourt`,
-  `updateScoringOptions`, `getDetailedScore` (africa-south1).
+  `updateScoringOptions`, `getDetailedScore`, `manageMatch` and
+  `manageTournament` (africa-south1).
 
 Firebase modules never touch the DOM, toasts, audio or history. Reactions to
-Firestore events live in the features: `court/courtSync.js` for the court and
-score listeners and `scoring/changeover.js` for changeover events.
+Firestore events live in the features: `court/courtSync.js` for court metadata,
+`court/matchSync.js` for the active match and score listeners, tournament
+controllers for tournament read models, and `scoring/changeover.js` for
+changeover events.
 
 ## Scoring, UI and features
 
 - **Scoring.** `scoring/actions.js` writes `POINT_TEAM_A` / `POINT_TEAM_B` /
-  `UNDO` events; the backend engine computes the score and the live listener
-  (`court/courtSync.js`) stores it in `session.score`; `scoring/scoreboard.js`
-  renders it. `scoring/presentation.js` only decides how a score is displayed
-  (point labels, server, critical points).
+  `UNDO` events to the current `matches/{matchId}/events`; the backend engine
+  computes the score and `court/matchSync.js` stores it in `session.score`;
+  `scoring/scoreboard.js` renders it. `scoring/presentation.js` only decides
+  how a score is displayed (point labels, server, critical points).
 - **Changeover.** `scoring/changeover.js`: callable -> court snapshot
   listener -> `punto:changeover` / `punto:changeover-processing` window events
   -> `session` -> Swap views and settings tiles -> toast and clash sound.
@@ -222,8 +246,17 @@ score listeners and `scoring/changeover.js` for changeover events.
   `initElements()`) and `$()`. Toasts, loading overlays, the confirm modal,
   theme / appearance and fullscreen each have one module.
 - **Admin.** `admin/admin.js` (authentication, dashboard, tabs),
-  `admin/courts.js` (court list, create / edit / delete), `admin/devices.js`
-  (device list and the add / edit forms).
+  `admin/courts.js` (court list, create / edit / delete), `admin/matches.js`
+  (match operations), `admin/tournaments.js` (tournament shortcuts) and
+  `admin/devices.js` (device list and the add / edit forms).
+- **Match page.** `matchPage.js` parses `/m/{matchId}`, listens to the match
+  and its score, resolves the current court and tournament directory entry,
+  and renders the durable match view.
+- **Tournament page.** `tournamentPage.js` parses `/t`, `/t/new` and
+  `/t/{tournamentId}`. It consumes `?host=` and `?code=` URL keys, stores them
+  locally and removes them from the address bar. The wizard loads courts and
+  clubs, and the controller renders public or host controls from the tournament
+  read model.
 - **Sharing.** `sharing/sharePayload.js` builds the share text,
   `sharing/imageCapture.js` renders the 1080x1350 score card when Match Details
   finishes rendering, and `sharing/share.js` tries Web Share (with the image,
@@ -255,11 +288,16 @@ The script parts share one function scope (the IIFE), so they are an
 organisational split, not isolated modules: keep each part's top-level
 statements in place and add new code to the part that owns the concern. The
 overlay reads the public JSON API (`/revision`, `/score`, `/stats`,
-`/momentum`); `/overlay` and `/broadcast` rewrite to `app/overlay.html`.
+`/momentum`) by court, or the `/.../match/{matchId}` variants by durable
+match. `/overlay/{courtId}`, `/overlay/match/{matchId}`,
+`/broadcast/{courtId}` and `/broadcast/match/{matchId}` rewrite to
+`app/overlay.html`.
 
 ## HTML templates
 
-`app/index.html` is generated from `app/templates/index.template.html`. A line
+`app/index.html`, `app/match.html` and `app/tournament.html` are generated from
+`app/templates/index.template.html`, `app/templates/match.template.html` and
+`app/templates/tournament.template.html`. A line
 consisting only of
 
 ```html
@@ -276,18 +314,17 @@ runtime - so all DOM ids the modules look up at boot exist immediately.
 
 ## CSS
 
-`app/css/style.css` is generated from the manifest `app/css/index.css`, which
-lists the stylesheet parts with `@import "part.css";` lines. The parts are
-concatenated in manifest order, and **that order is the cascade**. The parts
-were cut from the former single stylesheet at section boundaries without
-reordering any rule. When adding styles, put them in the part that owns the
-component; only move rules between parts deliberately, knowing which rules
-they may override.
+`app/css/style.css` is generated from the manifest `app/css/index.css`.
+`app/css/events.css` is generated from `app/css/events/index.css` for the
+match/tournament event pages. The parts are concatenated in manifest order, and
+**that order is the cascade**. When adding styles, put them in the part that
+owns the component; only move rules between parts deliberately, knowing which
+rules they may override.
 
 ## Build and generated files
 
 ```bash
-node scripts/build-frontend.mjs          # regenerate app/index.html, app/overlay.html, app/css/style.css
+node scripts/build-frontend.mjs          # regenerate app/index.html, app/match.html, app/tournament.html, app/overlay.html, app/css/style.css, app/css/events.css
 node scripts/build-frontend.mjs --check  # fail if any generated file is stale
 ```
 
@@ -312,8 +349,10 @@ node scripts/build-frontend.mjs --check  # fail if any generated file is stale
 3. Look the new elements up in `ui/dom.js` (`initElements()`).
 4. Put shared state in the appropriate `state/` object; keep the rest local.
 5. Go through `firebase/` for any Firestore or callable access.
-6. Export a `register...()` function for the listeners and call it from
-   `startApplication()` in `main.js`, respecting the ordering contract.
+6. Export a `register...()` function for scoring-app listeners and call it from
+   `startApplication()` in `main.js`, respecting the ordering contract. For
+   dedicated match/tournament pages, wire page-level behaviour from
+   `matchPage.js` or `tournamentPage.js`.
 7. Record navigation with `syncCurrentViewState()` if the change is a new
    view or modal, and teach `routing/viewController.js` to restore it.
 8. Add unit tests for pure logic and an integration test through the harness.
@@ -344,9 +383,12 @@ All frontend tests live in `functions/` and run with `npm test --prefix function
   trigger-like hooks on deletes (`firestoreState.deleteHooks`).
 - **Overlay tests** (`frontendOverlay.node-test.mjs`) load the generated
   `app/overlay.html` in jsdom with its inline script enabled.
+- **Match/tournament page tests** (`frontendMatchContext.node-test.mjs`,
+  `frontendTournament.node-test.mjs`) cover durable match context, match-route
+  parsing, tournament wizard/control-room behaviour and callable payloads.
 - Tests assert behaviour - what is rendered, sent, stored or shared - rather
   than source text. Stylesheet and markup contracts are checked against the
-  generated `style.css` and `index.html`.
+  generated CSS and HTML documents.
 
 ## Validation commands
 

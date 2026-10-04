@@ -3,6 +3,8 @@
 const { resolveMatchScoringOptions } = require("./scoringProfiles");
 
 const TEAM_NAME_MAX = 40;
+const BRACKET_FORMATS = new Set(["singleElimination", "doubleElimination"]);
+const KNOCKOUT_STAGES = new Set(["knockout", "winners", "losers", "grandFinal", "grandFinalReset"]);
 
 function fixtureSidesComplete(fixture) {
   return Boolean(fixture?.sides?.A && fixture?.sides?.B);
@@ -12,20 +14,14 @@ function participantName(participantsById, id) {
   return participantsById[id]?.displayName || "";
 }
 
-function shortLabel(participantsById, ids) {
-  return ids
-    .map((id) => participantsById[id]?.shortName || participantsById[id]?.displayName)
-    .filter(Boolean)
-    .join(" & ")
-    .slice(0, TEAM_NAME_MAX);
-}
-
-function sideTeamName(side, { participantsById, teamsById }) {
+function sideTeamName(side, { teamsById }) {
   if (!side) return "";
   if (side.teamId && teamsById[side.teamId]?.name) {
     return teamsById[side.teamId].name.slice(0, TEAM_NAME_MAX);
   }
-  return shortLabel(participantsById, side.participantIds || []);
+  // Rotating partners have no team identity: the scoreboard shows the players
+  // under the default side names instead of repeating them as a team name.
+  return "";
 }
 
 function buildFixtureMatchSpec({ tournament, fixture, participantsById, teamsById }) {
@@ -34,6 +30,16 @@ function buildFixtureMatchSpec({ tournament, fixture, participantsById, teamsByI
   const sideB = fixture.sides?.B || null;
   const playersA = sideA?.participantIds || [];
   const playersB = sideB?.participantIds || [];
+  const scoringOptions = resolveMatchScoringOptions(
+    tournament.format.id,
+    tournament.format.config || {},
+  );
+  // Knockout matches need a winner: a fixed-total tie is decided by a golden
+  // point instead of ending as a draw.
+  const knockout = KNOCKOUT_STAGES.has(fixture.stage) || BRACKET_FORMATS.has(tournament.format.id);
+  if (knockout && fixture.stage !== "group" && scoringOptions.scoringMode === "fixedTotalPoints") {
+    scoringOptions.completion = { ...scoringOptions.completion, tieResolution: "golden_point" };
+  }
 
   return {
     name: fixture.label || null,
@@ -49,10 +55,7 @@ function buildFixtureMatchSpec({ tournament, fixture, participantsById, teamsByI
     },
     // The scoring profile is snapshotted onto every match so later changes to
     // tournament defaults never rewrite historical rules.
-    scoringOptions: resolveMatchScoringOptions(
-      tournament.format.id,
-      tournament.format.config || {},
-    ),
+    scoringOptions,
     visibility: tournament.visibility === "private" ? "private" : "public",
   };
 }

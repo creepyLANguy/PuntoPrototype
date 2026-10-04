@@ -312,7 +312,7 @@ export function renderPublicDashboard(view, liveMatches) {
         renderLiveNow(view, liveMatches),
         currentRound
           ? section(
-              currentRound.label,
+              "Current round",
               renderRound(currentRound, view, { liveMatches }),
             )
           : null,

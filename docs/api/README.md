@@ -8,6 +8,7 @@ This directory separates consumer-facing API contracts from implementation archi
 - [public-api.md](public-api.md) — practical guide for web/integration consumers.
 - [device-api.md](device-api.md) — current device-ingestion behaviour and request/response contract.
 - [callable-functions.md](callable-functions.md) — Firebase callable/trigger contract.
+- [../tournaments.md](../tournaments.md) — tournament suite product, data and operational guide.
 - [../device-protocol.md](../device-protocol.md) — target device authentication, idempotency and replay-protection contract.
 - [../scoring.md](../scoring.md) — scoring enums and invariants.
 - [../architecture.md](../architecture.md) — trust boundaries, caching and data flow.

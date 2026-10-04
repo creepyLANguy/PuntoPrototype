@@ -4,33 +4,40 @@ erDiagram
         string name
         string password
         string status
-        timestamp createdAt
-        integer scoreVersion
-        string scoringMode
-        object scoringOptions
-        object teamNames
-        object playerNames
+        string clubId FK
+        string activeMatchId FK
+        string lastMatchId FK
         boolean beaconSidesSwapped
         object changeoverEvent
-        string clubId FK
     }
 
-    CLUB {
-        string clubId PK
+    MATCH {
+        string matchId PK
         string name
-        array courtIds
-        array deviceIds
-        timestamp createdAt
-        timestamp updatedAt
+        string kind
+        string visibility
+        string status
+        string currentCourtId FK
+        string lastCourtId
+        string lastCourtName
+        object teamNames
+        object playerNames
+        object scoringOptions
+        integer scoreVersion
+        object scoreSummary
+        string tournamentId FK
+        string roundId
+        string fixtureId
     }
 
     SCORE_CURRENT {
-        string courtId PK
+        string matchId PK
         object teamA
         object teamB
         array completedSets
         boolean inTiebreak
         boolean matchComplete
+        object fixedTotal
         string lastEventId
         string lastProcessedEventId
         timestamp lastProcessedCreatedAt
@@ -39,43 +46,91 @@ erDiagram
 
     EVENT {
         string eventId PK
+        string matchId FK
         string eventType
-        string scoreVersion
+        integer scoreVersion
         string createdBy
         timestamp createdAt
         string actorDeviceId
-        string sourceCourtId
-        string targetCourtId
-        string registeringDeviceId
+        string courtId
         string sourceEventType
         boolean beaconSidesSwapped
     }
 
-    CHECKPOINT {
-        string checkpointId PK
-        string lastEventId
-        timestamp lastCreatedAt
-        object score
-        object scoringOptions
-        integer totalPoints
-        integer setsCompleted
-        timestamp updatedAt
+    TOURNAMENT {
+        string tournamentId PK
+        string name
+        string status
+        string clubId FK
+        string visibility
+        object format
+        string participantMode
+        array courtPool
+        object scheduling
+        integer currentRoundNumber
+        integer revision
     }
 
-    ARCHIVE {
-        string archiveId PK
-        timestamp archivedAt
-        string resetBy
+    PARTICIPANT {
+        string participantId PK
+        string displayName
+        string shortName
+        string gender
+        integer seed
+        string status
     }
 
-    ARCHIVED_EVENT {
-        string eventId PK
-        string eventType
-        string scoreVersion
-        string createdBy
-        timestamp createdAt
-        timestamp archivedAt
-        string resetBy
+    TEAM {
+        string teamId PK
+        string name
+        array participantIds
+        integer seed
+        string status
+    }
+
+    ROUND {
+        string roundId PK
+        integer roundNumber
+        string status
+        string stage
+        array fixtureIds
+        array sittingOutParticipantIds
+        array sittingOutTeamIds
+        object generationSnapshot
+    }
+
+    FIXTURE {
+        string fixtureId PK
+        string roundId FK
+        integer roundNumber
+        string status
+        string matchId FK
+        string courtId FK
+        object sides
+        array participantIds
+        array teamIds
+        string bracketPosition
+        object sourceRefs
+        object resultSnapshot
+    }
+
+    VIEW {
+        string tournamentId PK
+        string visibility
+        object publicReadModel
+    }
+
+    SECRET {
+        string tournamentId PK
+        string hostKeyHash
+        string accessCodeHash
+    }
+
+    CLUB {
+        string clubId PK
+        string name
+        array courtIds
+        array deviceIds
     }
 
     DEVICE {
@@ -85,11 +140,18 @@ erDiagram
         string clubId FK
     }
 
-    COURT ||--|| SCORE_CURRENT : materializes
-    COURT ||--o{ EVENT : owns
-    COURT ||--o{ CHECKPOINT : accelerates
-    COURT ||--o{ ARCHIVE : contains
-    ARCHIVE ||--o{ ARCHIVED_EVENT : preserves
+    COURT ||--o{ MATCH : hosts_over_time
     COURT ||--o{ DEVICE : binds
+    MATCH ||--|| SCORE_CURRENT : materializes
+    MATCH ||--o{ EVENT : owns
+    TOURNAMENT ||--o{ PARTICIPANT : has
+    TOURNAMENT ||--o{ TEAM : has
+    TOURNAMENT ||--o{ ROUND : generates
+    TOURNAMENT ||--o{ FIXTURE : schedules
+    TOURNAMENT ||--o{ MATCH : creates
+    ROUND ||--o{ FIXTURE : contains
+    FIXTURE ||--o{ MATCH : played_as
+    TOURNAMENT ||--o{ VIEW : derives
+    TOURNAMENT ||--|| SECRET : protects
     CLUB |o--o{ COURT : groups
     CLUB |o--o{ DEVICE : groups

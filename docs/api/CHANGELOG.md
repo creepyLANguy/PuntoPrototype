@@ -26,10 +26,32 @@ Breaking public-route rename ahead of the tournament suite foundation.
 - `/m/{courtId}` -> `/momentum/{courtId}`
 - `/b` and `/b/{courtId}` -> `/overlay` and `/overlay/{courtId}`
 - `/o` and `/o/{courtId}` are removed.
-- The legacy single-character public routes are intentionally not retained as aliases so those paths are free for future functionality.
+- The legacy single-character public routes are intentionally not retained as aliases; at this release those paths were freed for future functionality.
 - `/c` is now an explicit spectator selection route; `/c/{courtId}` remains the direct court route.
 
 This is a deliberate breaking route change. Update integrations to the canonical full-word endpoints before release.
+
+## 1.2.0 — 2026-10-04
+
+Match and tournament suite API expansion.
+
+- Added match-scoped public endpoints:
+  `/score/match/{matchId}`, `/revision/match/{matchId}`,
+  `/stats/match/{matchId}` and `/momentum/match/{matchId}`.
+- Added score response fields: `matchId`, `matchName`, `title`, `match`,
+  `courtName` and conditional `fixedTotal`.
+- Existing court endpoints now resolve the match on the court and return match
+  context while preserving court-routed access.
+- Added `fixedTotalPoints` scoring response support for fixed-end tournament
+  matches.
+- Added `manageMatch` and `manageTournament` callable surfaces.
+- Added postEvent response fields for scoring events: `matchId` and `courtId`
+  alongside `eventId`.
+- Moved authoritative scoring events from `courts/{courtId}/events` to
+  `matches/{matchId}/events`; court-scoped device events remain for SPECTATE
+  and REGISTER operational records.
+- Added dedicated Hosting routes for `/m`, `/m/**`, `/t` and `/t/**`; `/m` is
+  now reserved for match pages.
 
 ## Deprecation policy
 

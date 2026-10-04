@@ -8,12 +8,15 @@ flowchart LR
     subgraph PEOPLE["Users"]
         PLAYER["Player"]
         OPERATOR["Club / court operator"]
+        HOST["Tournament host"]
         SPECTATOR["Spectator"]
         BROADCAST["Broadcast / integration consumer"]
     end
 
     subgraph CLIENTS["Current clients"]
-        APP["Web app"]
+        APP["Scoring web app"]
+        MATCHPAGE["Match page /m/{matchId}"]
+        TOURNAMENT["Tournament page /t/{id}"]
         HUB["Hub"]
         BEACON["Beacon"]
         PULSE["Pulse"]
@@ -22,58 +25,65 @@ flowchart LR
 
     subgraph SERVER["Firebase"]
         POST["POST /postEvent"]
+        MATCHCALL["manageMatch"]
+        TOURCALL["manageTournament"]
         TRIGGER["onEventCreate"]
         SCORE["Scoring engine"]
-        CALLABLE["Callable functions"]
         API["Public read API"]
     end
 
     subgraph DATA["Firestore"]
-        COURT["Court configuration"]
-        EVENTS["Event stream"]
-        LIVE["Current score"]
-        CHECK["Checkpoints"]
-        ARCHIVE["Reset archives"]
+        COURT["Court configuration + activeMatchId"]
+        MATCH["Match document"]
+        EVENTS["Match event stream"]
+        LIVE["Match current score"]
+        TOURDATA["Tournament data"]
+        VIEWS["Tournament read models"]
         DEVICES["Device bindings"]
     end
 
     PLAYER --> APP
     OPERATOR --> APP
+    HOST --> TOURNAMENT
     OPERATOR --> HUB
     OPERATOR --> BEACON
     OPERATOR --> PULSE
-    SPECTATOR --> OVERLAY
+    SPECTATOR --> MATCHPAGE
+    SPECTATOR --> TOURNAMENT
     BROADCAST --> OVERLAY
 
     APP --> COURT
+    APP --> MATCH
     APP --> EVENTS
     APP --> LIVE
-    APP --> CALLABLE
-    APP --> DEVICES
+    APP --> MATCHCALL
+    TOURNAMENT --> TOURCALL
+    TOURNAMENT --> VIEWS
+    MATCHPAGE --> MATCH
+    MATCHPAGE --> LIVE
 
     HUB --> POST
     BEACON --> POST
     PULSE --> POST
     POST --> DEVICES
+    POST --> COURT
     POST --> EVENTS
 
     EVENTS --> TRIGGER
     TRIGGER --> SCORE
     SCORE --> LIVE
-    SCORE --> CHECK
-
-    CALLABLE --> COURT
-    CALLABLE --> EVENTS
-    CALLABLE --> LIVE
-    CALLABLE --> CHECK
-    CALLABLE --> ARCHIVE
+    SCORE --> MATCH
+    TOURCALL --> TOURDATA
+    TOURCALL --> MATCH
+    TOURCALL --> VIEWS
 
     OVERLAY --> API
+    API --> MATCH
     API --> LIVE
     API --> EVENTS
 
-    class PLAYER,OPERATOR,SPECTATOR,BROADCAST user
-    class APP,OVERLAY client
+    class PLAYER,OPERATOR,HOST,SPECTATOR,BROADCAST user
+    class APP,MATCHPAGE,TOURNAMENT,OVERLAY client
     class HUB,BEACON,PULSE device
-    class POST,TRIGGER,SCORE,CALLABLE,API backend
-    class COURT,EVENTS,LIVE,CHECK,ARCHIVE,DEVICES data
+    class POST,MATCHCALL,TOURCALL,TRIGGER,SCORE,API backend
+    class COURT,MATCH,EVENTS,LIVE,TOURDATA,VIEWS,DEVICES data

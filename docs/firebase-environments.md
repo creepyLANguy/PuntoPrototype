@@ -66,7 +66,8 @@ public origin and the project id differ:
    API redirects).
 4. Install the Functions package dependencies (`npm ci --prefix functions`).
 5. Build the frontend: `node scripts/build-frontend.mjs` regenerates
-   `app/index.html`, `app/overlay.html` and `app/css/style.css` from their
+   `app/index.html`, `app/match.html`, `app/tournament.html`,
+   `app/overlay.html`, `app/css/style.css` and `app/css/events.css` from their
    sources, so the configured origin is part of the generated documents.
 6. Validate the frontend structure: `node scripts/check-frontend-structure.mjs`.
 7. Lint the frontend modules: `npm run lint:frontend --prefix functions`.
@@ -117,6 +118,15 @@ Third-party integrations introduced later must also be environment-aware so stag
 ## Rules and indexes
 
 The repository tracks firestore.rules and firestore.indexes.json. The current deployment workflow deploys only Hosting and Functions (--only functions,hosting). Changes to Firestore rules or indexes therefore require an explicit Firestore deployment step when ready for release.
+
+Current rules close server-authoritative match and tournament writes while still
+leaving legacy court/device development collections open. This is a documented
+development access boundary, not a complete production RBAC model.
+
+firestore.indexes.json currently has no composite indexes. The current match
+and tournament implementation uses direct document reads, equality-only filters,
+single-field ordering or precomputed read models, so no composite index is
+required by the deployed queries.
 
 The public JSON API paths are redirected by Firebase Hosting to the Johannesburg Cloud Functions because africa-south1 is not a supported direct Firebase Hosting function-rewrite region.
 

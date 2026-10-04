@@ -1764,6 +1764,49 @@ async function getCourtOptions(data) {
   };
 }
 
+// Setup warnings (spec section 36): advisory, never blocking.
+function setupWarnings({ format, input, preview }) {
+  const warnings = [];
+  if (!preview) return warnings;
+  const scheduling = input.scheduling;
+  if (scheduling.startAt && scheduling.plannedEndAt) {
+    const availableMinutes = (scheduling.plannedEndAt - scheduling.startAt) / 60000;
+    if (preview.estimatedMinutes > availableMinutes) {
+      warnings.push({
+        code: "LIKELY_OVERRUN",
+        message: `The schedule needs about ${preview.estimatedMinutes} minutes but ${Math.round(availableMinutes)} are planned.`,
+      });
+    }
+  }
+  if (preview.courtsNeeded > input.courtPool.length && input.courtPool.length > 0) {
+    warnings.push({
+      code: "IDLE_PLAYERS",
+      message: `Only ${input.courtPool.length} court(s) for ${preview.courtsNeeded} simultaneous matches: players will wait between matches.`,
+    });
+  }
+  if (format.kind === "rotating") {
+    if (scheduling.targetRoundCount && scheduling.targetRoundCount < 3) {
+      warnings.push({
+        code: "FEW_ROUNDS",
+        message: "Fewer than 3 rounds gives each player few different partners.",
+      });
+    }
+    if (preview.sittingOut > 0) {
+      warnings.push({
+        code: "SITTING_OUT",
+        message: `${preview.sittingOut} player(s) sit out each round; sitting out is rotated fairly.`,
+      });
+    }
+  }
+  if (preview.byes > 0 && ["bracket", "groupBracket", "league", "swiss"].includes(format.kind)) {
+    warnings.push({
+      code: "BYES",
+      message: `${preview.byes} bye(s) in the first schedule; byes are not losses and are rotated where possible.`,
+    });
+  }
+  return warnings;
+}
+
 // Setup preview (spec section 35, step 7) without persisting anything.
 function previewTournament(data) {
   const input = normalizeTournamentInput({ name: data.name || "Preview", ...data });
@@ -1825,6 +1868,7 @@ function previewTournament(data) {
       validation.errors.push({ code: error.code || "GENERATION_FAILED", message: error.message });
     }
   }
+  validation.warnings.push(...setupWarnings({ format, input, preview: firstRound }));
   return {
     errors: validation.errors,
     warnings: validation.warnings,

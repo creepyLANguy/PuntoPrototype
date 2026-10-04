@@ -24,12 +24,16 @@ function standingsColumns(standings, formatKind) {
       },
       { key: "played", label: "Rounds" },
       { key: "totalPoints", label: "Points", strong: true },
-      {
-        key: "avgPerRound",
-        label: "Avg",
-        format: (value) => (Number(value) || 0).toFixed(1),
-      },
-      { key: "lastRoundPoints", label: "Last" },
+      hasValues(rows, "played")
+        ? {
+            key: "avgPerRound",
+            label: "Avg",
+            format: (value) => (Number(value) || 0).toFixed(1),
+          }
+        : null,
+      hasValues(rows, "lastRoundPoints")
+        ? { key: "lastRoundPoints", label: "Last" }
+        : null,
       hasValues(rows, "sittingOut")
         ? { key: "sittingOut", label: "Sat out" }
         : null,
