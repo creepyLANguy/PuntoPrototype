@@ -25,6 +25,8 @@ function updateAdminButtonVisibility()
     }
   }
 
+  //Uncomment to remove the theme toggle from admin portal. 
+  /*
   if (elements.appearanceMenuBtn)
   {
     const currentVal = elements.appearanceMenuBtn.style.display;
@@ -35,6 +37,7 @@ function updateAdminButtonVisibility()
       elements.appearanceMenuBtn.style.display = targetVal;
     }
   }
+  */
 
   updateWavesVisibility();
 }
