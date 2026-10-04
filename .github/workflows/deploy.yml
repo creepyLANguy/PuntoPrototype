@@ -109,15 +109,15 @@ jobs:
             firebase_targets="functions,hosting"
             requires_force=true
             if [[ "$firestore_changed" == "true" ]]; then
-              firebase_targets="functions,hosting,firestore:rules,firestore:indexes"
+              firebase_targets="functions,hosting,firestore"
             fi
           elif [[ "$hosting_changed" == "true" ]]; then
             firebase_targets="hosting"
             if [[ "$firestore_changed" == "true" ]]; then
-              firebase_targets="hosting,firestore:rules,firestore:indexes"
+              firebase_targets="hosting,firestore"
             fi
           elif [[ "$firestore_changed" == "true" ]]; then
-            firebase_targets="firestore:rules,firestore:indexes"
+            firebase_targets="firestore"
           fi
 
           {
