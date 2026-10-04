@@ -16,6 +16,9 @@ import { showConfirm } from "../ui/modals.js";
 import { showToast } from "../ui/toast.js";
 
 let allDevices = [];
+// Counts device editor openings, so a slow load for an earlier opening cannot
+// take over the page after another device was opened.
+let deviceEditorOpenCount = 0;
 
 /**
  * Fetches all courts from Firestore and populates a <select> element.
@@ -329,16 +332,33 @@ function returnFromDeviceEditor()
   syncCurrentViewState("replace");
 }
 
+// While the page loads, Save and Delete are disabled and act on nothing: they
+// only get this device's handlers once its court list has loaded, so a click
+// can neither save a half-loaded form nor reach a previously opened device.
+function setDeviceEditorLoading(loading)
+{
+  elements.editDevicePage.setAttribute("aria-busy", loading ? "true" : "false");
+  elements.editDeviceCourtIdSelect.disabled = loading;
+  elements.saveEditDeviceBtn.disabled = loading;
+  elements.deleteDeviceBtn.disabled = loading;
+  elements.saveEditDeviceBtn.textContent = loading ? "Loading courts…" : "Save Mapping";
+}
+
 // Edit/Delete Device Logic
 export async function openEditDeviceModal(device, syncHistory = true)
 {
+  const openCount = ++deviceEditorOpenCount;
   appState.currentDeviceToEdit = device;
   elements.adminDashboardPage.style.display = "none";
   elements.editDeviceIdTitle.textContent = device.id;
+  elements.saveEditDeviceBtn.onclick = null;
+  elements.deleteDeviceBtn.onclick = null;
+  setDeviceEditorLoading(true);
   elements.editDevicePage.style.display = 'flex';
 
   // Populate dropdown with all courts
   await populateCourtDropdown(elements.editDeviceCourtIdSelect);
+  if (openCount !== deviceEditorOpenCount) return;
 
   const currentCourtId = device.courtId || "";
   const editSelectWrapper = elements.editDeviceCourtIdSelect.closest(".select-wrapper");
@@ -397,4 +417,6 @@ export async function openEditDeviceModal(device, syncHistory = true)
       returnFromDeviceEditor();
     } catch (e) { showToast("Delete failed", TOAST_TYPES.ERROR); }
   };
+
+  setDeviceEditorLoading(false);
 }

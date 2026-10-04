@@ -28,6 +28,9 @@ export const firestoreState = {
   backendScores: new Map(),
   // Collection paths whose reads (getDocs) fail, to test degraded loading.
   failingCollections: new Set(),
+  // Collection path -> promise; reads (getDocs) of that collection wait for
+  // it, so tests can observe a page while its data is still loading.
+  readGates: new Map(),
   // Callbacks run (asynchronously, like a Firestore trigger) after a document
   // is deleted: (path, deletedData) => void.
   deleteHooks: new Set(),
@@ -41,6 +44,7 @@ export function resetFirestoreState() {
   firestoreState.pendingBackendWork = [];
   firestoreState.backendScores.clear();
   firestoreState.failingCollections.clear();
+  firestoreState.readGates.clear();
   firestoreState.deleteHooks.clear();
   timestampCounter = 0;
 }

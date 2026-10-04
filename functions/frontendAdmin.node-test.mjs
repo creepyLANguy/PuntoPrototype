@@ -86,15 +86,27 @@ function editCourtButton(courtId) {
   return document.querySelector(`#adminCourtList .edit-btn[data-id="${courtId}"]`);
 }
 
+// The device editor enables Save / Delete once its court list has loaded.
+const deviceEditorReady = () => isShown("editDevicePage") && !$("saveEditDeviceBtn").disabled;
+
 async function openDeviceEditor(deviceId) {
   document.querySelector(`#adminDeviceList .edit-btn[data-id="${deviceId}"]`).click();
-  // The Save / Delete handlers are attached once the court dropdown has loaded.
-  await waitFor(
-    () => isShown("editDevicePage") && $("editDeviceCourtIdSelect").options.length > 1,
-    {
-      label: `device editor for ${deviceId}`,
-    },
+  await waitFor(deviceEditorReady, { label: `device editor for ${deviceId}` });
+}
+
+// Holds reads of a collection until the returned release() is called.
+function holdReads(collectionPath) {
+  let release;
+  firestoreState.readGates.set(
+    collectionPath,
+    new Promise((resolve) => {
+      release = resolve;
+    }),
   );
+  return () => {
+    firestoreState.readGates.delete(collectionPath);
+    release();
+  };
 }
 
 test.before(async () => {
@@ -376,6 +388,71 @@ test("editing a device changes its court and returns to the device list", async 
   $("closeEditDeviceBtn").click();
   await waitForDeviceList(4);
   assert.equal(activeTab(), "devices", "returning keeps the Devices tab and reloads it");
+});
+
+test("the device editor keeps Save and Delete disabled until its courts have loaded", async () => {
+  const releaseCourts = holdReads("courts");
+  document.querySelector('#adminDeviceList .edit-btn[data-id="HUB-1"]').click();
+  await waitFor(() => isShown("editDevicePage"), { label: "device editor shown while loading" });
+
+  assert.equal($("editDeviceIdTitle").textContent, "HUB-1");
+  assert.equal($("saveEditDeviceBtn").disabled, true);
+  assert.equal($("saveEditDeviceBtn").textContent, "Loading courts…");
+  assert.equal($("deleteDeviceBtn").disabled, true);
+  assert.equal($("editDeviceCourtIdSelect").disabled, true);
+  assert.equal($("editDevicePage").getAttribute("aria-busy"), "true");
+  assert.equal(window.getComputedStyle($("saveEditDeviceBtn")).opacity, "0.5");
+
+  const before = structuredClone(stored("devices/HUB-1"));
+  $("saveEditDeviceBtn").click();
+  $("deleteDeviceBtn").click();
+  await settle();
+  assert.deepEqual(stored("devices/HUB-1"), before, "nothing is saved while loading");
+  assert.equal($("confirmModal").classList.contains("hidden"), true, "delete does not ask");
+
+  releaseCourts();
+  await waitFor(deviceEditorReady, { label: "device editor ready" });
+  assert.equal($("saveEditDeviceBtn").textContent, "Save Mapping");
+  assert.equal($("deleteDeviceBtn").disabled, false);
+  assert.equal($("editDeviceCourtIdSelect").disabled, false);
+  assert.equal($("editDevicePage").getAttribute("aria-busy"), "false");
+  assert.equal($("editDeviceCourtIdSelect").value, "efgh");
+
+  $("closeEditDeviceBtn").click();
+  await waitForDeviceList(4);
+});
+
+test("a device editor never saves to the previously opened device", async () => {
+  // HUB-1's editor is opened, left before it finishes loading, and PULSE-2's
+  // is opened. HUB-1's late load must not take over the page, and Save must
+  // only ever reach PULSE-2.
+  const releaseFirst = holdReads("courts");
+  document.querySelector('#adminDeviceList .edit-btn[data-id="HUB-1"]').click();
+  await waitFor(() => isShown("editDevicePage"), { label: "HUB-1 editor loading" });
+  $("closeEditDeviceBtn").click();
+  await waitFor(() => isShown("adminDashboardPage") && !isShown("editDevicePage"), {
+    label: "dashboard",
+  });
+  await waitForDeviceList(4);
+
+  const releaseSecond = holdReads("courts");
+  document.querySelector('#adminDeviceList .edit-btn[data-id="PULSE-2"]').click();
+  await waitFor(() => isShown("editDevicePage"), { label: "PULSE-2 editor loading" });
+  assert.equal($("saveEditDeviceBtn").onclick, null, "no handler is left from HUB-1");
+
+  releaseFirst();
+  await settle();
+  assert.equal($("editDeviceIdTitle").textContent, "PULSE-2");
+  assert.equal($("saveEditDeviceBtn").disabled, true, "HUB-1's late load does not enable Save");
+
+  releaseSecond();
+  await waitFor(deviceEditorReady, { label: "PULSE-2 editor ready" });
+  const hubBefore = structuredClone(stored("devices/HUB-1"));
+  choose($("editDeviceCourtIdSelect"), "efgh");
+  $("saveEditDeviceBtn").click();
+  await waitFor(() => stored("devices/PULSE-2").courtId === "efgh", { label: "PULSE-2 saved" });
+  assert.deepEqual(stored("devices/HUB-1"), hubBefore, "HUB-1 is untouched");
+  await waitForDeviceList(4);
 });
 
 test("deleting a device asks first and removes it", async () => {

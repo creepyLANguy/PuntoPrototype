@@ -530,6 +530,13 @@
   opacity: 0.8;
 }
 
+/* Disabled while the page is loading or saving. */
+.primary-btn:disabled,
+.danger-btn:disabled {
+  opacity: 0.5;
+  cursor: progress;
+}
+
 /* Global floating controls (theme toggle / admin lock) */
 .global-controls {
   position: fixed;

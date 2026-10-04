@@ -37,6 +37,8 @@ export async function getDoc(docRef) {
 }
 
 export async function getDocs(collectionRef) {
+  const gate = firestoreState.readGates.get(collectionRef.__path);
+  if (gate) await gate;
   if (firestoreState.failingCollections.has(collectionRef.__path)) {
     throw new Error(`Simulated read failure: ${collectionRef.__path}`);
   }

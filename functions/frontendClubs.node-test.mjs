@@ -329,12 +329,9 @@ test("a club's courts and devices open their edit pages and return to the club",
   assert.equal(memberChecked("clubCourtList", "efgh"), true);
 
   memberRow("clubDeviceList", "HUB-1").querySelector(".club-member-open").click();
-  await waitFor(
-    () => isShown("editDevicePage") && $("editDeviceCourtIdSelect").options.length > 1,
-    {
-      label: "device edit page",
-    },
-  );
+  await waitFor(() => isShown("editDevicePage") && !$("saveEditDeviceBtn").disabled, {
+    label: "device edit page",
+  });
   $("saveEditDeviceBtn").click();
   await waitForEditor();
   assert.equal(lastToast(), "Mapping updated");
