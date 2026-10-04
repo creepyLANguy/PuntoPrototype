@@ -1,4 +1,5 @@
 // Global navigation buttons (home, admin) shown only on the menu page.
+import { updateWavesVisibility } from "./appearance.js";
 import { elements } from "./dom.js";
 
 function updateAdminButtonVisibility()
