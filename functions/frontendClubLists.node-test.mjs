@@ -87,7 +87,7 @@ test("Spectate shows each open court's club in a column of its own", async () =>
   // The discovery search (spec section 31) still matches club names.
   assert.equal(
     $("spectateCourtSearch").placeholder,
-    "Search courts, matches, players or tournaments",
+    "Search courts, clubs, matches, players or tournaments",
   );
   assert.equal($("spectateCourtList").classList.contains("has-clubs"), true);
   assert.deepEqual(rowIds("spectateCourtList"), ["abcd", "efgh", "jkmn"], "sorted by court name");
@@ -157,7 +157,10 @@ test("selecting a court with a club from Spectate opens that court", async () =>
 test("Play lists open and private courts with their club and joins through a club row", async () => {
   await openList("Play", "playCourtList", 4);
 
-  assert.equal($("playCourtSearch").placeholder, "Search courts, matches, players or tournaments");
+  assert.equal(
+    $("playCourtSearch").placeholder,
+    "Search courts, clubs, matches, players or tournaments",
+  );
   assert.deepEqual(rowIds("playCourtList"), ["abcd", "efgh", "pqrs", "jkmn"]);
   assert.equal(clubCell("playCourtList", "pqrs").textContent, "Hilltop Club");
 

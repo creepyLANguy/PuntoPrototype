@@ -119,7 +119,7 @@ test("format settings become a nested configuration with only relevant options",
 });
 
 test("discovery search ranks exact ids first and finds players, matches and tournaments", () => {
-  assert.equal(SEARCH_PLACEHOLDER, "Search courts, matches, players or tournaments");
+  assert.equal(SEARCH_PLACEHOLDER, "Search courts, clubs, matches, players or tournaments");
   const courts = [
     { id: "abcd", name: "Centre Court", match: null },
     {

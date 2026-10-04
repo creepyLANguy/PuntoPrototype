@@ -4,7 +4,7 @@
 import { buildMatchupLabel, resolveMatchTitle } from "./matchIdentity.js";
 
 export const SEARCH_PLACEHOLDER =
-  "Search courts, matches, players or tournaments";
+  "Search courts, clubs, matches, players or tournaments";
 
 export const SEARCH_RANKS = {
   MATCH_ID: 1,
