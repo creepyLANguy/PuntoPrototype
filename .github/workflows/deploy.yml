@@ -12,6 +12,8 @@ on:
       - "scripts/**"
       - "firebase.json"
       - ".firebaserc"
+      - "firestore.rules"
+      - "firestore.indexes.json"
       - "functions/**"
       - ".github/workflows/deploy.yml"
 
@@ -30,6 +32,7 @@ jobs:
     outputs:
       hosting_changed: ${{ steps.scope.outputs.hosting_changed }}
       functions_changed: ${{ steps.scope.outputs.functions_changed }}
+      firestore_changed: ${{ steps.scope.outputs.firestore_changed }}
       deploy_needed: ${{ steps.scope.outputs.deploy_needed }}
       firebase_targets: ${{ steps.scope.outputs.firebase_targets }}
       requires_force: ${{ steps.scope.outputs.requires_force }}
@@ -58,6 +61,7 @@ jobs:
 
           hosting_changed=false
           functions_changed=false
+          firestore_changed=false
 
           while IFS= read -r file; do
             [[ -z "$file" ]] && continue
@@ -71,6 +75,12 @@ jobs:
             case "$file" in
               functions/*)
                 functions_changed=true
+                ;;
+            esac
+
+            case "$file" in
+              firestore.rules|firestore.indexes.json)
+                firestore_changed=true
                 ;;
             esac
 
@@ -91,20 +101,29 @@ jobs:
           firebase_targets=""
           requires_force=false
 
-          if [[ "$hosting_changed" == "true" || "$functions_changed" == "true" ]]; then
+          if [[ "$hosting_changed" == "true" || "$functions_changed" == "true" || "$firestore_changed" == "true" ]]; then
             deploy_needed=true
           fi
 
           if [[ "$functions_changed" == "true" ]]; then
             firebase_targets="functions,hosting"
             requires_force=true
+            if [[ "$firestore_changed" == "true" ]]; then
+              firebase_targets="functions,hosting,firestore:rules"
+            fi
           elif [[ "$hosting_changed" == "true" ]]; then
             firebase_targets="hosting"
+            if [[ "$firestore_changed" == "true" ]]; then
+              firebase_targets="hosting,firestore:rules"
+            fi
+          elif [[ "$firestore_changed" == "true" ]]; then
+            firebase_targets="firestore:rules"
           fi
 
           {
             echo "hosting_changed=$hosting_changed"
             echo "functions_changed=$functions_changed"
+            echo "firestore_changed=$firestore_changed"
             echo "deploy_needed=$deploy_needed"
             echo "firebase_targets=$firebase_targets"
             echo "requires_force=$requires_force"
@@ -114,6 +133,7 @@ jobs:
           printf '%s\n' "$changed_files"
           echo "Hosting changed: $hosting_changed"
           echo "Functions changed: $functions_changed"
+          echo "Firestore rules/indexes changed: $firestore_changed"
           echo "Firebase targets: ${firebase_targets:-none}"
 
   validate:
