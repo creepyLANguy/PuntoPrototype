@@ -163,7 +163,13 @@ test("the admin court and device lists show each item's club and search by it", 
 });
 
 test("the Clubs tab lists every club with its court and device counts", async () => {
-  assert.deepEqual(texts(".admin-tabs .tab-btn"), ["Clubs", "Courts", "Devices"]);
+  assert.deepEqual(texts(".admin-tabs .tab-btn"), [
+    "Clubs",
+    "Courts",
+    "Matches",
+    "Tournaments",
+    "Devices",
+  ]);
 
   document.querySelector('.tab-btn[data-tab="clubs"]').click();
   await waitForDashboardClubs(3);

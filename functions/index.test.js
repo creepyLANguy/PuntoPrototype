@@ -33,6 +33,88 @@ function timestamp(seconds, nanoseconds = 0) {
   return { seconds, nanoseconds };
 }
 
+function makeMatchDoc({
+  matchId,
+  courtId = null,
+  scoreVersion = 0,
+  scoringOptions = DEFAULT_SCORING_OPTIONS,
+  status = "live",
+  name = null,
+  teamNames = { A: "Team A", B: "Team B" },
+  playerNames = { A1: "", A2: "", B1: "", B2: "" },
+  ...overrides
+}) {
+  return {
+    matchId,
+    name,
+    kind: "casual",
+    visibility: "public",
+    status,
+    currentCourtId: courtId,
+    lastCourtId: courtId,
+    lastCourtName: courtId,
+    teamNames,
+    playerNames,
+    scoringOptions,
+    scoringMode: scoringOptions.scoringMode,
+    scoreVersion,
+    scoreSummary: null,
+    result: null,
+    tournamentId: null,
+    roundId: null,
+    fixtureId: null,
+    createdAt: timestamp(0),
+    updatedAt: timestamp(0),
+    startedAt: status === "live" ? timestamp(0) : null,
+    completedAt: status === "completed" ? timestamp(0) : null,
+    cancelledAt: status === "cancelled" ? timestamp(0) : null,
+    ...overrides,
+  };
+}
+
+function seedMatchDocs({
+  courtId,
+  matchId = "m1",
+  scoreVersion = 0,
+  scoringOptions = DEFAULT_SCORING_OPTIONS,
+  score = toLiveScorePayload(defaultScoreFor(scoringOptions)),
+  events = [],
+  court = {},
+  match = {},
+}) {
+  const seed = {
+    [`matches/${matchId}`]: makeMatchDoc({
+      matchId,
+      courtId,
+      scoreVersion,
+      scoringOptions,
+      ...match,
+    }),
+    [`matches/${matchId}/score/current`]: score,
+  };
+
+  if (courtId) {
+    seed[`courts/${courtId}`] = {
+      name: `Court ${courtId}`,
+      password: "courtpass",
+      status: "open",
+      activeMatchId: matchId,
+      lastMatchId: matchId,
+      ...court,
+    };
+  }
+
+  events.forEach((event) => {
+    seed[`matches/${matchId}/events/${event.id}`] = event;
+  });
+
+  return seed;
+}
+
+function defaultScoreFor(scoringOptions) {
+  return replayEvents([], scoringOptions);
+}
+
 function comparePrimitive(left, right) {
   if (left === right) return 0;
   return left < right ? -1 : 1;
@@ -120,7 +202,7 @@ class FakeFirestore {
       },
     };
 
-    await callback(tx);
+    const result = await callback(tx);
 
     writes.forEach((write) => {
       if (write.type === "delete") {
@@ -135,6 +217,8 @@ class FakeFirestore {
           : structuredClone(write.data);
       this.docs.set(write.path, next);
     });
+
+    return result;
   }
 
   async getTarget(target) {
@@ -313,10 +397,11 @@ describe("onEventCreate", () => {
 
   test("fully replays delayed point events that sort before the latest checkpoint", async () => {
     const courtId = "court-1";
-    const scorePath = `courts/${courtId}/score/current`;
-    const courtPath = `courts/${courtId}`;
-    const checkpointsPath = `courts/${courtId}/scoreCheckpoints`;
-    const eventsPath = `courts/${courtId}/events`;
+    const matchId = "m1";
+    const scorePath = `matches/${matchId}/score/current`;
+    const matchPath = `matches/${matchId}`;
+    const checkpointsPath = `matches/${matchId}/scoreCheckpoints`;
+    const eventsPath = `matches/${matchId}/events`;
 
     const e1 = { id: "e1", eventType: "POINT_TEAM_A", createdAt: timestamp(1), scoreVersion: 0 };
     const e2 = { id: "e2", eventType: "POINT_TEAM_A", createdAt: timestamp(2), scoreVersion: 0 };
@@ -341,11 +426,12 @@ describe("onEventCreate", () => {
     );
 
     mockDb = new FakeFirestore({
-      [courtPath]: {
+      [matchPath]: makeMatchDoc({
+        matchId,
         scoreVersion: 0,
         scoringMode: DEFAULT_SCORING_OPTIONS.scoringMode,
         scoringOptions: DEFAULT_SCORING_OPTIONS,
-      },
+      }),
       [scorePath]: {
         ...persistedScore,
         lastEventId: "e5",
@@ -357,6 +443,7 @@ describe("onEventCreate", () => {
         scoringOptions: DEFAULT_SCORING_OPTIONS,
         lastEventId: "e4",
         lastCreatedAt: e4.createdAt,
+        scoreVersion: 0,
       },
       [`${eventsPath}/e1`]: e1,
       [`${eventsPath}/e2`]: e2,
@@ -372,7 +459,7 @@ describe("onEventCreate", () => {
     });
 
     await onEventCreate({
-      params: { courtId, eventId: delayed.id },
+      params: { matchId, eventId: delayed.id },
       data: {
         data: () => structuredClone(delayed),
       },
@@ -391,9 +478,10 @@ describe("onEventCreate", () => {
 
   test("replays ignore scoring events left over from an older scoreVersion", async () => {
     const courtId = "court-1";
-    const scorePath = `courts/${courtId}/score/current`;
-    const courtPath = `courts/${courtId}`;
-    const eventsPath = `courts/${courtId}/events`;
+    const matchId = "m1";
+    const scorePath = `matches/${matchId}/score/current`;
+    const matchPath = `matches/${matchId}`;
+    const eventsPath = `matches/${matchId}/events`;
 
     // A stale event written in-flight against the pre-reset scoreVersion must
     // not pollute the full-replay path, mirroring the direct-path guard.
@@ -422,11 +510,12 @@ describe("onEventCreate", () => {
     );
 
     mockDb = new FakeFirestore({
-      [courtPath]: {
+      [matchPath]: makeMatchDoc({
+        matchId,
         scoreVersion: 1,
         scoringMode: DEFAULT_SCORING_OPTIONS.scoringMode,
         scoringOptions: DEFAULT_SCORING_OPTIONS,
-      },
+      }),
       [scorePath]: {
         ...toLiveScorePayload(replayEvents([fresh1, fresh2], DEFAULT_SCORING_OPTIONS)),
         lastEventId: "f2",
@@ -445,7 +534,7 @@ describe("onEventCreate", () => {
     });
 
     await onEventCreate({
-      params: { courtId, eventId: delayed.id },
+      params: { matchId, eventId: delayed.id },
       data: {
         data: () => structuredClone(delayed),
       },
@@ -456,6 +545,42 @@ describe("onEventCreate", () => {
     expect(nextScore.A.points).toBe(expectedScore.A.points);
     expect(nextScore.B.points).toBe(expectedScore.B.points);
     expect(nextScore.B.points).toBe(0);
+  });
+
+  test("scoring events on a completed match are ignored", async () => {
+    const matchId = "m1";
+    const scorePath = `matches/${matchId}/score/current`;
+    const event = {
+      id: "e1",
+      eventType: "POINT_TEAM_A",
+      createdAt: timestamp(1),
+      scoreVersion: 0,
+    };
+    const emptyScore = toLiveScorePayload(replayEvents([], DEFAULT_SCORING_OPTIONS));
+
+    mockDb = new FakeFirestore({
+      ...seedMatchDocs({
+        matchId,
+        score: emptyScore,
+        events: [event],
+        match: { status: "completed", completedAt: timestamp(2) },
+      }),
+    });
+
+    let onEventCreate;
+    jest.isolateModules(() => {
+      ({ onEventCreate } = require("./index"));
+    });
+
+    await onEventCreate({
+      params: { matchId, eventId: event.id },
+      data: {
+        data: () => structuredClone(event),
+      },
+    });
+
+    expect(mockDb.docs.get(scorePath)).toEqual(emptyScore);
+    expect(mockDb.docs.get(`matches/${matchId}`).scoreSummary).toBeNull();
   });
 });
 
@@ -493,10 +618,11 @@ describe("onEventCreate - undo vs checkpoints", () => {
 
   test("a point after an undo at a checkpoint boundary does not resurrect the undone set", async () => {
     const courtId = "court-undo-1";
-    const scorePath = `courts/${courtId}/score/current`;
-    const courtPath = `courts/${courtId}`;
-    const checkpointsPath = `courts/${courtId}/scoreCheckpoints`;
-    const eventsPath = `courts/${courtId}/events`;
+    const matchId = "m1";
+    const scorePath = `matches/${matchId}/score/current`;
+    const matchPath = `matches/${matchId}`;
+    const checkpointsPath = `matches/${matchId}/scoreCheckpoints`;
+    const eventsPath = `matches/${matchId}/events`;
 
     const setEvents = buildSetWinPointEvents();
     const undoEvent = { id: "u1", eventType: "UNDO", createdAt: timestamp(25), scoreVersion: 0 };
@@ -518,11 +644,12 @@ describe("onEventCreate - undo vs checkpoints", () => {
     );
 
     const initialState = {
-      [courtPath]: {
+      [matchPath]: makeMatchDoc({
+        matchId,
         scoreVersion: 0,
         scoringMode: DEFAULT_SCORING_OPTIONS.scoringMode,
         scoringOptions: DEFAULT_SCORING_OPTIONS,
-      },
+      }),
       [scorePath]: {
         ...postUndoScore,
         lastEventId: "u1",
@@ -534,6 +661,7 @@ describe("onEventCreate - undo vs checkpoints", () => {
         scoringOptions: DEFAULT_SCORING_OPTIONS,
         lastEventId: "p023",
         lastCreatedAt: timestamp(24),
+        scoreVersion: 0,
       },
     };
     seedEventDocs(initialState, eventsPath, [...setEvents, undoEvent, nextPoint]);
@@ -545,7 +673,7 @@ describe("onEventCreate - undo vs checkpoints", () => {
     });
 
     await onEventCreate({
-      params: { courtId, eventId: nextPoint.id },
+      params: { matchId, eventId: nextPoint.id },
       data: {
         data: () => structuredClone(nextPoint),
       },
@@ -565,10 +693,11 @@ describe("onEventCreate - undo vs checkpoints", () => {
 
   test("processing an UNDO writes a fresh checkpoint anchored at the undo event", async () => {
     const courtId = "court-undo-2";
-    const scorePath = `courts/${courtId}/score/current`;
-    const courtPath = `courts/${courtId}`;
-    const checkpointsPath = `courts/${courtId}/scoreCheckpoints`;
-    const eventsPath = `courts/${courtId}/events`;
+    const matchId = "m1";
+    const scorePath = `matches/${matchId}/score/current`;
+    const matchPath = `matches/${matchId}`;
+    const checkpointsPath = `matches/${matchId}/scoreCheckpoints`;
+    const eventsPath = `matches/${matchId}/events`;
 
     const setEvents = buildSetWinPointEvents();
     const undoEvent = { id: "u1", eventType: "UNDO", createdAt: timestamp(25), scoreVersion: 0 };
@@ -576,11 +705,12 @@ describe("onEventCreate - undo vs checkpoints", () => {
     const postSetScore = toLiveScorePayload(replayEvents(setEvents, DEFAULT_SCORING_OPTIONS));
 
     const initialState = {
-      [courtPath]: {
+      [matchPath]: makeMatchDoc({
+        matchId,
         scoreVersion: 0,
         scoringMode: DEFAULT_SCORING_OPTIONS.scoringMode,
         scoringOptions: DEFAULT_SCORING_OPTIONS,
-      },
+      }),
       [scorePath]: {
         ...postSetScore,
         lastEventId: "p023",
@@ -592,6 +722,7 @@ describe("onEventCreate - undo vs checkpoints", () => {
         scoringOptions: DEFAULT_SCORING_OPTIONS,
         lastEventId: "p023",
         lastCreatedAt: timestamp(24),
+        scoreVersion: 0,
       },
     };
     seedEventDocs(initialState, eventsPath, [...setEvents, undoEvent]);
@@ -603,7 +734,7 @@ describe("onEventCreate - undo vs checkpoints", () => {
     });
 
     await onEventCreate({
-      params: { courtId, eventId: undoEvent.id },
+      params: { matchId, eventId: undoEvent.id },
       data: {
         data: () => structuredClone(undoEvent),
       },
@@ -630,19 +761,29 @@ describe("onEventCreate - undo vs checkpoints", () => {
 
   test("undo after a scoring-mode change is not resurrected by the next point", async () => {
     const courtId = "court-undo-3";
-    const scorePath = `courts/${courtId}/score/current`;
-    const courtPath = `courts/${courtId}`;
-    const eventsPath = `courts/${courtId}/events`;
+    const matchId = "m1";
+    const scorePath = `matches/${matchId}/score/current`;
+    const matchPath = `matches/${matchId}`;
+    const eventsPath = `matches/${matchId}/events`;
 
     const e1 = { id: "e1", eventType: "POINT_TEAM_A", createdAt: timestamp(1), scoreVersion: 0 };
     const e2 = { id: "e2", eventType: "POINT_TEAM_A", createdAt: timestamp(2), scoreVersion: 0 };
     const e3 = { id: "e3", eventType: "POINT_TEAM_A", createdAt: timestamp(3), scoreVersion: 0 };
 
     const initialState = {
-      [courtPath]: {
+      [matchPath]: makeMatchDoc({
+        matchId,
+        courtId,
         scoreVersion: 0,
         scoringMode: DEFAULT_SCORING_OPTIONS.scoringMode,
         scoringOptions: DEFAULT_SCORING_OPTIONS,
+      }),
+      [`courts/${courtId}`]: {
+        name: "Undo Court",
+        password: "courtpass",
+        status: "open",
+        activeMatchId: matchId,
+        lastMatchId: matchId,
       },
       [scorePath]: {
         ...toLiveScorePayload(replayEvents([e1, e2, e3], DEFAULT_SCORING_OPTIONS)),
@@ -671,6 +812,7 @@ describe("onEventCreate - undo vs checkpoints", () => {
           deuceMode: "standard",
           tiebreakMode: "sixAllSeven",
         },
+        credentials: { courtPassword: "courtpass" },
       },
     });
 
@@ -681,7 +823,7 @@ describe("onEventCreate - undo vs checkpoints", () => {
     const undoEvent = { id: "u1", eventType: "UNDO", createdAt: timestamp(5), scoreVersion: 0 };
     mockDb.docs.set(`${eventsPath}/u1`, structuredClone(undoEvent));
     await onEventCreate({
-      params: { courtId, eventId: undoEvent.id },
+      params: { matchId, eventId: undoEvent.id },
       data: {
         data: () => structuredClone(undoEvent),
       },
@@ -699,7 +841,7 @@ describe("onEventCreate - undo vs checkpoints", () => {
     };
     mockDb.docs.set(`${eventsPath}/z1`, structuredClone(nextPoint));
     await onEventCreate({
-      params: { courtId, eventId: nextPoint.id },
+      params: { matchId, eventId: nextPoint.id },
       data: {
         data: () => structuredClone(nextPoint),
       },
@@ -712,6 +854,29 @@ describe("onEventCreate - undo vs checkpoints", () => {
 });
 
 describe("postEvent", () => {
+  function makePostRes() {
+    return {
+      statusCode: null,
+      payload: null,
+      body: null,
+      status(code) {
+        this.statusCode = code;
+        return this;
+      },
+      json(body) {
+        this.payload = body;
+        return this;
+      },
+      set() {
+        return this;
+      },
+      send(body) {
+        this.body = body;
+        return this;
+      },
+    };
+  }
+
   test("serves CORS preflight for the Device Lab origins without touching Firestore", async () => {
     mockDb = new FakeFirestore({});
 
@@ -752,14 +917,46 @@ describe("postEvent", () => {
     expect(headers["Access-Control-Allow-Headers"]).toBe("Content-Type");
   });
 
-  test("stamps device scoring events with the court's active scoreVersion", async () => {
+  test("stamps device scoring events with the active match scoreVersion", async () => {
     const courtId = "court-1";
+    const matchId = "m1";
     const deviceId = "device-1";
 
     mockDb = new FakeFirestore({
       [`devices/${deviceId}`]: { courtId },
+      ...seedMatchDocs({ courtId, matchId, scoreVersion: 3 }),
+    });
+
+    let postEvent;
+    jest.isolateModules(() => {
+      ({ postEvent } = require("./index"));
+    });
+
+    const res = makePostRes();
+    await postEvent({ method: "POST", body: { deviceId, eventType: "POINT_TEAM_A" } }, res);
+
+    expect(res.statusCode).toBe(200);
+    expect(res.payload).toMatchObject({ success: true, courtId, matchId });
+
+    const eventEntry = [...mockDb.docs.entries()].find(([path]) =>
+      path.startsWith(`matches/${matchId}/events/`),
+    );
+    expect(eventEntry).toBeDefined();
+    expect(eventEntry[1].eventType).toBe("POINT_TEAM_A");
+    expect(eventEntry[1].courtId).toBe(courtId);
+    expect(eventEntry[1].scoreVersion).toBe(3);
+  });
+
+  test("creates a casual match when the court has none", async () => {
+    const courtId = "court-empty";
+    const deviceId = "device-empty";
+
+    mockDb = new FakeFirestore({
+      [`devices/${deviceId}`]: { courtId },
       [`courts/${courtId}`]: {
-        scoreVersion: 3,
+        name: "Empty Court",
+        password: "courtpass",
+        status: "open",
         scoringMode: DEFAULT_SCORING_OPTIONS.scoringMode,
         scoringOptions: DEFAULT_SCORING_OPTIONS,
       },
@@ -770,44 +967,71 @@ describe("postEvent", () => {
       ({ postEvent } = require("./index"));
     });
 
-    const res = {
-      statusCode: null,
-      payload: null,
-      status(code) {
-        this.statusCode = code;
-        return this;
-      },
-      json(body) {
-        this.payload = body;
-        return this;
-      },
-    };
-
+    const res = makePostRes();
     await postEvent({ method: "POST", body: { deviceId, eventType: "POINT_TEAM_A" } }, res);
 
     expect(res.statusCode).toBe(200);
-    expect(res.payload.success).toBe(true);
-
+    expect(res.payload.matchId).toBeTruthy();
+    expect(res.payload.courtId).toBe(courtId);
+    expect(mockDb.docs.get(`courts/${courtId}`).activeMatchId).toBe(res.payload.matchId);
+    expect(mockDb.docs.get(`matches/${res.payload.matchId}`)).toMatchObject({
+      status: "live",
+      currentCourtId: courtId,
+      kind: "casual",
+    });
     const eventEntry = [...mockDb.docs.entries()].find(([path]) =>
-      path.startsWith(`courts/${courtId}/events/`),
+      path.startsWith(`matches/${res.payload.matchId}/events/`),
     );
-    expect(eventEntry).toBeDefined();
-    expect(eventEntry[1].eventType).toBe("POINT_TEAM_A");
-    expect(eventEntry[1].scoreVersion).toBe(3);
+    expect(eventEntry[1]).toMatchObject({ eventType: "POINT_TEAM_A", courtId, scoreVersion: 0 });
+  });
+
+  test("ignores a non-live active match by creating a new casual match", async () => {
+    const courtId = "court-completed";
+    const oldMatchId = "oldmatch";
+    const deviceId = "device-completed";
+
+    mockDb = new FakeFirestore({
+      [`devices/${deviceId}`]: { courtId },
+      ...seedMatchDocs({
+        courtId,
+        matchId: oldMatchId,
+        court: { activeMatchId: oldMatchId, lastMatchId: oldMatchId },
+        match: { status: "completed", completedAt: timestamp(10) },
+      }),
+    });
+
+    let postEvent;
+    jest.isolateModules(() => {
+      ({ postEvent } = require("./index"));
+    });
+
+    const res = makePostRes();
+    await postEvent({ method: "POST", body: { deviceId, eventType: "POINT_TEAM_B" } }, res);
+
+    expect(res.statusCode).toBe(200);
+    expect(res.payload.matchId).toBeTruthy();
+    expect(res.payload.matchId).not.toBe(oldMatchId);
+    expect(mockDb.docs.get(`matches/${oldMatchId}`).status).toBe("completed");
+    expect(mockDb.docs.get(`courts/${courtId}`).activeMatchId).toBe(res.payload.matchId);
+    expect(mockDb.docs.get(`matches/${res.payload.matchId}`)).toMatchObject({
+      status: "live",
+      currentCourtId: courtId,
+    });
   });
 
   test("swaps Beacon point events only when court changeover is active", async () => {
     const courtId = "court-beacon";
+    const matchId = "m1";
     const deviceId = "beacon-1";
 
     mockDb = new FakeFirestore({
       [`devices/${deviceId}`]: { courtId, deviceSKU: "Beacon" },
-      [`courts/${courtId}`]: {
+      ...seedMatchDocs({
+        courtId,
+        matchId,
         scoreVersion: 4,
-        beaconSidesSwapped: true,
-        scoringMode: DEFAULT_SCORING_OPTIONS.scoringMode,
-        scoringOptions: DEFAULT_SCORING_OPTIONS,
-      },
+        court: { beaconSidesSwapped: true },
+      }),
     });
 
     let postEvent;
@@ -815,33 +1039,20 @@ describe("postEvent", () => {
       ({ postEvent } = require("./index"));
     });
 
-    const makeRes = () => ({
-      statusCode: null,
-      payload: null,
-      status(code) {
-        this.statusCode = code;
-        return this;
-      },
-      json(body) {
-        this.payload = body;
-        return this;
-      },
-    });
-
-    const pointA = makeRes();
+    const pointA = makePostRes();
     await postEvent(
       { method: "POST", body: { deviceId, eventType: "POINT_TEAM_A", deviceSKU: "Beacon" } },
       pointA,
     );
 
-    const pointB = makeRes();
+    const pointB = makePostRes();
     await postEvent(
       { method: "POST", body: { deviceId, eventType: "POINT_TEAM_B", deviceSKU: "Beacon" } },
       pointB,
     );
 
     const events = [...mockDb.docs.entries()]
-      .filter(([path]) => path.startsWith(`courts/${courtId}/events/`))
+      .filter(([path]) => path.startsWith(`matches/${matchId}/events/`))
       .map(([, data]) => data);
 
     expect(events.map((event) => event.eventType)).toEqual(["POINT_TEAM_B", "POINT_TEAM_A"]);
@@ -852,16 +1063,17 @@ describe("postEvent", () => {
 
   test("changeover does not invert Pulse events", async () => {
     const courtId = "court-pulse";
+    const matchId = "m1";
     const deviceId = "pulse-1";
 
     mockDb = new FakeFirestore({
       [`devices/${deviceId}`]: { courtId, deviceSKU: "Pulse" },
-      [`courts/${courtId}`]: {
+      ...seedMatchDocs({
+        courtId,
+        matchId,
         scoreVersion: 1,
-        beaconSidesSwapped: true,
-        scoringMode: DEFAULT_SCORING_OPTIONS.scoringMode,
-        scoringOptions: DEFAULT_SCORING_OPTIONS,
-      },
+        court: { beaconSidesSwapped: true },
+      }),
     });
 
     let postEvent;
@@ -869,41 +1081,27 @@ describe("postEvent", () => {
       ({ postEvent } = require("./index"));
     });
 
-    const res = {
-      statusCode: null,
-      payload: null,
-      status(code) {
-        this.statusCode = code;
-        return this;
-      },
-      json(body) {
-        this.payload = body;
-        return this;
-      },
-    };
-
+    const res = makePostRes();
     await postEvent(
       { method: "POST", body: { deviceId, eventType: "POINT_TEAM_A", deviceSKU: "Pulse" } },
       res,
     );
 
     const eventEntry = [...mockDb.docs.entries()].find(([path]) =>
-      path.startsWith(`courts/${courtId}/events/`),
+      path.startsWith(`matches/${matchId}/events/`),
     );
     expect(eventEntry[1].eventType).toBe("POINT_TEAM_A");
     expect(eventEntry[1].sourceEventType).toBeUndefined();
   });
 
-  test("stamps scoreVersion 0 when the court has never been reset", async () => {
+  test("stamps scoreVersion 0 when the match has never been reset", async () => {
     const courtId = "court-2";
+    const matchId = "m1";
     const deviceId = "device-2";
 
     mockDb = new FakeFirestore({
       [`devices/${deviceId}`]: { courtId },
-      [`courts/${courtId}`]: {
-        scoringMode: DEFAULT_SCORING_OPTIONS.scoringMode,
-        scoringOptions: DEFAULT_SCORING_OPTIONS,
-      },
+      ...seedMatchDocs({ courtId, matchId }),
     });
 
     let postEvent;
@@ -911,25 +1109,13 @@ describe("postEvent", () => {
       ({ postEvent } = require("./index"));
     });
 
-    const res = {
-      statusCode: null,
-      payload: null,
-      status(code) {
-        this.statusCode = code;
-        return this;
-      },
-      json(body) {
-        this.payload = body;
-        return this;
-      },
-    };
-
+    const res = makePostRes();
     await postEvent({ method: "POST", body: { deviceId, eventType: "UNDO" } }, res);
 
     expect(res.statusCode).toBe(200);
 
     const eventEntry = [...mockDb.docs.entries()].find(([path]) =>
-      path.startsWith(`courts/${courtId}/events/`),
+      path.startsWith(`matches/${matchId}/events/`),
     );
     expect(eventEntry).toBeDefined();
     expect(eventEntry[1].scoreVersion).toBe(0);
@@ -999,6 +1185,30 @@ describe("changeoverCourt", () => {
   });
 });
 
+describe("Cloud Functions exports", () => {
+  test("exports the public, callable, and match/tournament entry points", () => {
+    mockDb = new FakeFirestore({});
+
+    jest.isolateModules(() => {
+      const functions = require("./index");
+      expect(functions).toEqual(
+        expect.objectContaining({
+          onEventCreate: expect.any(Function),
+          postEvent: expect.any(Function),
+          getCourtScore: expect.any(Function),
+          getCourtScoreRevision: expect.any(Function),
+          getCourtStats: expect.any(Function),
+          getCourtMomentum: expect.any(Function),
+          resetCourt: expect.any(Function),
+          updateScoringOptions: expect.any(Function),
+          manageMatch: expect.any(Function),
+          manageTournament: expect.any(Function),
+        }),
+      );
+    });
+  });
+});
+
 describe("getCourtScore", () => {
   function makeRes() {
     return {
@@ -1026,25 +1236,29 @@ describe("getCourtScore", () => {
 
   test("returns the current score with display labels, server, and CDN cache headers", async () => {
     const courtId = "court-1";
+    const matchId = "m1";
     const score = toLiveScorePayload(
       replayEvents(
         [
-          { id: "e1", eventType: "POINT_TEAM_A", createdAt: timestamp(1) },
-          { id: "e2", eventType: "POINT_TEAM_A", createdAt: timestamp(2) },
-          { id: "e3", eventType: "POINT_TEAM_A", createdAt: timestamp(3) },
+          { id: "e1", eventType: "POINT_TEAM_A", createdAt: timestamp(1), scoreVersion: 0 },
+          { id: "e2", eventType: "POINT_TEAM_A", createdAt: timestamp(2), scoreVersion: 0 },
+          { id: "e3", eventType: "POINT_TEAM_A", createdAt: timestamp(3), scoreVersion: 0 },
         ],
         DEFAULT_SCORING_OPTIONS,
       ),
     );
 
     mockDb = new FakeFirestore({
-      [`courts/${courtId}`]: {
-        teamNames: { A: "Smashers", B: "Lobbers" },
-        playerNames: { A1: "Ann", A2: "Al", B1: "Bo", B2: "Bea" },
-        scoringMode: DEFAULT_SCORING_OPTIONS.scoringMode,
-        scoringOptions: DEFAULT_SCORING_OPTIONS,
-      },
-      [`courts/${courtId}/score/current`]: score,
+      ...seedMatchDocs({
+        courtId,
+        matchId,
+        score,
+        court: { name: "Court One" },
+        match: {
+          teamNames: { A: "Smashers", B: "Lobbers" },
+          playerNames: { A1: "Ann", A2: "Al", B1: "Bo", B2: "Bea" },
+        },
+      }),
     });
 
     let getCourtScore;
@@ -1058,8 +1272,11 @@ describe("getCourtScore", () => {
     expect(res.statusCode).toBe(200);
     expect(res.payload.success).toBe(true);
     expect(res.payload.courtId).toBe(courtId);
+    expect(res.payload.courtName).toBe("Court One");
+    expect(res.payload.matchId).toBe(matchId);
     expect(res.payload.teamNames).toEqual({ A: "Smashers", B: "Lobbers" });
     expect(res.payload.playerNames.A1).toBe("Ann");
+    expect(res.payload.match).toMatchObject({ matchId, courtId, courtName: "Court One" });
     expect(res.payload.teams.A.points).toBe(3);
     expect(res.payload.teams.A.pointsDisplay).toBe("40");
     expect(res.payload.teams.B.pointsDisplay).toBe("0");
@@ -1068,6 +1285,37 @@ describe("getCourtScore", () => {
     expect(res.payload.matchComplete).toBe(false);
     expect(typeof res.payload.revision).toBe("string");
     expect(res.headers["Cache-Control"]).toBe("public, max-age=4, s-maxage=4");
+  });
+
+  test("/score/match/{matchId} works and uses the match name as title", async () => {
+    const courtId = "court-named";
+    const matchId = "namedmatch";
+
+    mockDb = new FakeFirestore({
+      ...seedMatchDocs({
+        courtId,
+        matchId,
+        court: { name: "Show Court" },
+        match: { name: "Club Championship Final" },
+      }),
+    });
+
+    let getCourtScore;
+    jest.isolateModules(() => {
+      ({ getCourtScore } = require("./index"));
+    });
+
+    const res = makeRes();
+    await getCourtScore({ method: "GET", path: `/score/match/${matchId}` }, res);
+
+    expect(res.statusCode).toBe(200);
+    expect(res.payload).toMatchObject({
+      courtId,
+      courtName: "Show Court",
+      matchId,
+      matchName: "Club Championship Final",
+      title: "Club Championship Final",
+    });
   });
 
   test("returns 404 for an unknown court", async () => {
@@ -1082,18 +1330,19 @@ describe("getCourtScore", () => {
     await getCourtScore({ method: "GET", path: "/score/no-such-court" }, res);
 
     expect(res.statusCode).toBe(404);
-    expect(res.payload.success).toBe(false);
+    expect(res.payload).toEqual({ success: false, error: "Court not found." });
   });
 
   test("serves repeat requests from the in-memory cache instead of Firestore", async () => {
     const courtId = "court-cache";
+    const matchId = "m1";
 
     mockDb = new FakeFirestore({
-      [`courts/${courtId}`]: {
-        teamNames: { A: "First", B: "Second" },
-        scoringMode: DEFAULT_SCORING_OPTIONS.scoringMode,
-        scoringOptions: DEFAULT_SCORING_OPTIONS,
-      },
+      ...seedMatchDocs({
+        courtId,
+        matchId,
+        match: { teamNames: { A: "First", B: "Second" } },
+      }),
     });
 
     let getCourtScore;
@@ -1106,8 +1355,10 @@ describe("getCourtScore", () => {
     expect(first.statusCode).toBe(200);
     expect(first.payload.teamNames.A).toBe("First");
 
-    // Mutate the backing store; a cached response must still be returned.
-    mockDb.docs.set(`courts/${courtId}`, { teamNames: { A: "Changed", B: "Second" } });
+    mockDb.docs.set(`matches/${matchId}`, {
+      ...mockDb.docs.get(`matches/${matchId}`),
+      teamNames: { A: "Changed", B: "Second" },
+    });
 
     const second = makeRes();
     await getCourtScore({ method: "GET", path: `/score/${courtId}` }, second);
@@ -1132,20 +1383,20 @@ describe("getCourtScore", () => {
 
   test("revision endpoint returns a tiny payload that tracks score changes", async () => {
     const courtId = "court-rev";
-    const baseCourt = {
-      teamNames: { A: "Smashers", B: "Lobbers" },
-      scoringMode: DEFAULT_SCORING_OPTIONS.scoringMode,
-      scoringOptions: DEFAULT_SCORING_OPTIONS,
-    };
+    const matchId = "m1";
 
     mockDb = new FakeFirestore({
-      [`courts/${courtId}`]: baseCourt,
-      [`courts/${courtId}/score/current`]: toLiveScorePayload(
-        replayEvents(
-          [{ id: "e1", eventType: "POINT_TEAM_A", createdAt: timestamp(1) }],
-          DEFAULT_SCORING_OPTIONS,
+      ...seedMatchDocs({
+        courtId,
+        matchId,
+        score: toLiveScorePayload(
+          replayEvents(
+            [{ id: "e1", eventType: "POINT_TEAM_A", createdAt: timestamp(1), scoreVersion: 0 }],
+            DEFAULT_SCORING_OPTIONS,
+          ),
         ),
-      ),
+        match: { teamNames: { A: "Smashers", B: "Lobbers" } },
+      }),
     });
 
     let getCourtScore;
@@ -1158,21 +1409,25 @@ describe("getCourtScore", () => {
     await getCourtScoreRevision({ method: "GET", path: `/revision/${courtId}` }, revisionRes);
 
     expect(revisionRes.statusCode).toBe(200);
-    expect(Object.keys(revisionRes.payload).sort()).toEqual(["courtId", "revision", "success"]);
+    expect(Object.keys(revisionRes.payload).sort()).toEqual([
+      "courtId",
+      "matchId",
+      "revision",
+      "success",
+    ]);
+    expect(revisionRes.payload.matchId).toBe(matchId);
 
-    // The revision poll primes the shared cache, so the follow-up full fetch
-    // must report the exact same revision it advertised.
     const scoreRes = makeRes();
     await getCourtScore({ method: "GET", path: `/score/${courtId}` }, scoreRes);
     expect(scoreRes.payload.revision).toBe(revisionRes.payload.revision);
 
     mockDb.docs.set(
-      `courts/${courtId}/score/current`,
+      `matches/${matchId}/score/current`,
       toLiveScorePayload(
         replayEvents(
           [
-            { id: "e1", eventType: "POINT_TEAM_A", createdAt: timestamp(1) },
-            { id: "e2", eventType: "POINT_TEAM_B", createdAt: timestamp(2) },
+            { id: "e1", eventType: "POINT_TEAM_A", createdAt: timestamp(1), scoreVersion: 0 },
+            { id: "e2", eventType: "POINT_TEAM_B", createdAt: timestamp(2), scoreVersion: 0 },
           ],
           DEFAULT_SCORING_OPTIONS,
         ),
@@ -1188,25 +1443,21 @@ describe("getCourtScore", () => {
     expect(changedRes.payload.revision).not.toBe(revisionRes.payload.revision);
   });
 
-  test("ignores a stale matchComplete flag for non-tiebreakTen scores", async () => {
+  test("ignores a stale matchComplete flag for non-fixed-end scores", async () => {
     const courtId = "court-stale-complete";
+    const matchId = "m1";
     const staleScore = {
       ...toLiveScorePayload(
         replayEvents(
-          [{ id: "e1", eventType: "POINT_TEAM_A", createdAt: timestamp(1) }],
+          [{ id: "e1", eventType: "POINT_TEAM_A", createdAt: timestamp(1), scoreVersion: 0 }],
           DEFAULT_SCORING_OPTIONS,
         ),
       ),
-      // e.g. persisted before the court switched away from tiebreakTen
       matchComplete: true,
     };
 
     mockDb = new FakeFirestore({
-      [`courts/${courtId}`]: {
-        scoringMode: DEFAULT_SCORING_OPTIONS.scoringMode,
-        scoringOptions: DEFAULT_SCORING_OPTIONS,
-      },
-      [`courts/${courtId}/score/current`]: staleScore,
+      ...seedMatchDocs({ courtId, matchId, score: staleScore }),
     });
 
     let getCourtScore;
@@ -1223,6 +1474,7 @@ describe("getCourtScore", () => {
 
   test("still reports matchComplete for tiebreakTen scores", async () => {
     const courtId = "court-tb-complete";
+    const matchId = "m1";
     const tiebreakOptions = {
       scoringMode: "tiebreakTen",
       deuceMode: "standard",
@@ -1230,16 +1482,22 @@ describe("getCourtScore", () => {
     };
     const events = [];
     for (let i = 0; i < 10; i++) {
-      events.push({ id: `e${i}`, eventType: "POINT_TEAM_A", createdAt: timestamp(i + 1) });
+      events.push({
+        id: `e${i}`,
+        eventType: "POINT_TEAM_A",
+        createdAt: timestamp(i + 1),
+        scoreVersion: 0,
+      });
     }
     const completedScore = toLiveScorePayload(replayEvents(events, tiebreakOptions));
 
     mockDb = new FakeFirestore({
-      [`courts/${courtId}`]: {
-        scoringMode: "tiebreakTen",
+      ...seedMatchDocs({
+        courtId,
+        matchId,
         scoringOptions: tiebreakOptions,
-      },
-      [`courts/${courtId}/score/current`]: completedScore,
+        score: completedScore,
+      }),
     });
 
     let getCourtScore;
@@ -1254,7 +1512,7 @@ describe("getCourtScore", () => {
     expect(res.payload.matchComplete).toBe(true);
   });
 
-  test("revision endpoint reports 404 for an unknown court", async () => {
+  test("revision endpoint reports 404 for an unknown match", async () => {
     mockDb = new FakeFirestore({});
 
     let getCourtScoreRevision;
@@ -1263,10 +1521,10 @@ describe("getCourtScore", () => {
     });
 
     const res = makeRes();
-    await getCourtScoreRevision({ method: "GET", path: "/revision/no-such-court" }, res);
+    await getCourtScoreRevision({ method: "GET", path: "/revision/match/no-such-match" }, res);
 
     expect(res.statusCode).toBe(404);
-    expect(res.payload.success).toBe(false);
+    expect(res.payload).toEqual({ success: false, error: "Match not found." });
   });
 });
 
@@ -1295,28 +1553,28 @@ describe("getCourtStats", () => {
     };
   }
 
-  test("replays the event stream into aggregate stats without the point-by-point streams", async () => {
+  test("replays the match event stream into aggregate stats without point-by-point streams", async () => {
     const courtId = "court-stats";
+    const matchId = "m1";
     const events = [
-      { eventType: "POINT_TEAM_A", createdAt: timestamp(1) },
-      { eventType: "POINT_TEAM_A", createdAt: timestamp(2) },
-      { eventType: "POINT_TEAM_B", createdAt: timestamp(3) },
-      { eventType: "POINT_TEAM_A", createdAt: timestamp(4) },
-      { eventType: "POINT_TEAM_A", createdAt: timestamp(5) },
+      { id: "e1", eventType: "POINT_TEAM_A", createdAt: timestamp(1), scoreVersion: 0 },
+      { id: "e2", eventType: "POINT_TEAM_A", createdAt: timestamp(2), scoreVersion: 0 },
+      { id: "e3", eventType: "POINT_TEAM_B", createdAt: timestamp(3), scoreVersion: 0 },
+      { id: "e4", eventType: "POINT_TEAM_A", createdAt: timestamp(4), scoreVersion: 0 },
+      { id: "e5", eventType: "POINT_TEAM_A", createdAt: timestamp(5), scoreVersion: 0 },
     ];
 
-    const seed = {
-      [`courts/${courtId}`]: {
-        teamNames: { A: "Smashers", B: "Lobbers" },
-        playerNames: { A1: "Ann", A2: "Al", B1: "Bo", B2: "Bea" },
-        scoringMode: DEFAULT_SCORING_OPTIONS.scoringMode,
-        scoringOptions: DEFAULT_SCORING_OPTIONS,
-      },
-    };
-    events.forEach((event, index) => {
-      seed[`courts/${courtId}/events/e${index + 1}`] = event;
+    mockDb = new FakeFirestore({
+      ...seedMatchDocs({
+        courtId,
+        matchId,
+        events,
+        match: {
+          teamNames: { A: "Smashers", B: "Lobbers" },
+          playerNames: { A1: "Ann", A2: "Al", B1: "Bo", B2: "Bea" },
+        },
+      }),
     });
-    mockDb = new FakeFirestore(seed);
 
     let getCourtStats;
     jest.isolateModules(() => {
@@ -1329,13 +1587,13 @@ describe("getCourtStats", () => {
     expect(res.statusCode).toBe(200);
     expect(res.payload.success).toBe(true);
     expect(res.payload.courtId).toBe(courtId);
+    expect(res.payload.matchId).toBe(matchId);
     expect(res.payload.totalPoints).toBe(5);
     expect(res.payload.advancedStats.teamStats.A.pointsWon).toBe(4);
     expect(res.payload.advancedStats.teamStats.B.pointsWon).toBe(1);
     expect(res.payload.advancedStats.matchStats.totalPoints).toBe(5);
     expect(res.payload.playerNames.A1).toBe("Ann");
 
-    // The per-point momentum streams belong to /momentum/{courtId} alone.
     expect(res.payload.pointHistory).toBeUndefined();
     expect(res.payload.momentumTimeline).toBeUndefined();
     expect(res.payload.setPointMarkers).toBeUndefined();
@@ -1346,12 +1604,13 @@ describe("getCourtStats", () => {
 
   test("serves repeat requests from the in-memory cache instead of replaying events", async () => {
     const courtId = "court-stats-cache";
+    const matchId = "m1";
     mockDb = new FakeFirestore({
-      [`courts/${courtId}`]: {
-        scoringMode: DEFAULT_SCORING_OPTIONS.scoringMode,
-        scoringOptions: DEFAULT_SCORING_OPTIONS,
-      },
-      [`courts/${courtId}/events/e1`]: { eventType: "POINT_TEAM_A", createdAt: timestamp(1) },
+      ...seedMatchDocs({
+        courtId,
+        matchId,
+        events: [{ id: "e1", eventType: "POINT_TEAM_A", createdAt: timestamp(1), scoreVersion: 0 }],
+      }),
     });
 
     let getCourtStats;
@@ -1364,16 +1623,39 @@ describe("getCourtStats", () => {
     expect(first.statusCode).toBe(200);
     expect(first.payload.totalPoints).toBe(1);
 
-    // New events land; the cached aggregate must still be returned within the TTL.
-    mockDb.docs.set(`courts/${courtId}/events/e2`, {
+    mockDb.docs.set(`matches/${matchId}/events/e2`, {
       eventType: "POINT_TEAM_B",
       createdAt: timestamp(2),
+      scoreVersion: 0,
     });
 
     const second = makeRes();
     await getCourtStats({ method: "GET", path: `/stats/${courtId}` }, second);
     expect(second.statusCode).toBe(200);
     expect(second.payload.totalPoints).toBe(1);
+  });
+
+  test("/stats/match/{matchId} returns match-addressed stats", async () => {
+    const courtId = "court-stats-match";
+    const matchId = "statsmatch";
+    mockDb = new FakeFirestore({
+      ...seedMatchDocs({
+        courtId,
+        matchId,
+        events: [{ id: "e1", eventType: "POINT_TEAM_A", createdAt: timestamp(1), scoreVersion: 0 }],
+      }),
+    });
+
+    let getCourtStats;
+    jest.isolateModules(() => {
+      ({ getCourtStats } = require("./index"));
+    });
+
+    const res = makeRes();
+    await getCourtStats({ method: "GET", path: `/stats/match/${matchId}` }, res);
+
+    expect(res.statusCode).toBe(200);
+    expect(res.payload).toMatchObject({ courtId, matchId, totalPoints: 1 });
   });
 
   test("returns 404 for an unknown court", async () => {
@@ -1388,7 +1670,7 @@ describe("getCourtStats", () => {
     await getCourtStats({ method: "GET", path: "/stats/no-such-court" }, res);
 
     expect(res.statusCode).toBe(404);
-    expect(res.payload.success).toBe(false);
+    expect(res.payload).toEqual({ success: false, error: "Court not found." });
   });
 });
 
@@ -1417,26 +1699,20 @@ describe("getCourtMomentum", () => {
     };
   }
 
-  test("returns the point-by-point momentum streams for the court", async () => {
+  test("returns the point-by-point momentum streams for the match", async () => {
     const courtId = "court-momentum";
+    const matchId = "m1";
     const events = [
-      { eventType: "POINT_TEAM_A", createdAt: timestamp(1) },
-      { eventType: "POINT_TEAM_A", createdAt: timestamp(2) },
-      { eventType: "POINT_TEAM_B", createdAt: timestamp(3) },
-      { eventType: "POINT_TEAM_A", createdAt: timestamp(4) },
-      { eventType: "POINT_TEAM_A", createdAt: timestamp(5) },
+      { id: "e1", eventType: "POINT_TEAM_A", createdAt: timestamp(1), scoreVersion: 0 },
+      { id: "e2", eventType: "POINT_TEAM_A", createdAt: timestamp(2), scoreVersion: 0 },
+      { id: "e3", eventType: "POINT_TEAM_B", createdAt: timestamp(3), scoreVersion: 0 },
+      { id: "e4", eventType: "POINT_TEAM_A", createdAt: timestamp(4), scoreVersion: 0 },
+      { id: "e5", eventType: "POINT_TEAM_A", createdAt: timestamp(5), scoreVersion: 0 },
     ];
 
-    const seed = {
-      [`courts/${courtId}`]: {
-        scoringMode: DEFAULT_SCORING_OPTIONS.scoringMode,
-        scoringOptions: DEFAULT_SCORING_OPTIONS,
-      },
-    };
-    events.forEach((event, index) => {
-      seed[`courts/${courtId}/events/e${index + 1}`] = event;
+    mockDb = new FakeFirestore({
+      ...seedMatchDocs({ courtId, matchId, events }),
     });
-    mockDb = new FakeFirestore(seed);
 
     let getCourtMomentum;
     jest.isolateModules(() => {
@@ -1449,10 +1725,10 @@ describe("getCourtMomentum", () => {
     expect(res.statusCode).toBe(200);
     expect(res.payload.success).toBe(true);
     expect(res.payload.courtId).toBe(courtId);
+    expect(res.payload.matchId).toBe(matchId);
     expect(res.payload.pointHistory).toEqual(["A", "A", "B", "A", "A"]);
     expect(res.payload.totalPoints).toBe(5);
 
-    // One value per played point, so the graph can pair them up 1:1.
     expect(res.payload.momentumTimeline).toHaveLength(5);
     res.payload.momentumTimeline.forEach((value) => {
       expect(typeof value).toBe("number");
@@ -1460,7 +1736,6 @@ describe("getCourtMomentum", () => {
       expect(value).toBeLessThanOrEqual(100);
     });
 
-    // Team A took the game on the fifth point, so that is the only marker.
     expect(res.payload.gameMarkers).toEqual([5]);
     expect(res.payload.setPointMarkers).toEqual([]);
 
@@ -1469,12 +1744,13 @@ describe("getCourtMomentum", () => {
 
   test("serves repeat requests from the in-memory cache instead of replaying events", async () => {
     const courtId = "court-momentum-cache";
+    const matchId = "m1";
     mockDb = new FakeFirestore({
-      [`courts/${courtId}`]: {
-        scoringMode: DEFAULT_SCORING_OPTIONS.scoringMode,
-        scoringOptions: DEFAULT_SCORING_OPTIONS,
-      },
-      [`courts/${courtId}/events/e1`]: { eventType: "POINT_TEAM_A", createdAt: timestamp(1) },
+      ...seedMatchDocs({
+        courtId,
+        matchId,
+        events: [{ id: "e1", eventType: "POINT_TEAM_A", createdAt: timestamp(1), scoreVersion: 0 }],
+      }),
     });
 
     let getCourtMomentum;
@@ -1487,16 +1763,39 @@ describe("getCourtMomentum", () => {
     expect(first.statusCode).toBe(200);
     expect(first.payload.totalPoints).toBe(1);
 
-    // A new event lands; the cached payload must still be returned inside the TTL.
-    mockDb.docs.set(`courts/${courtId}/events/e2`, {
+    mockDb.docs.set(`matches/${matchId}/events/e2`, {
       eventType: "POINT_TEAM_B",
       createdAt: timestamp(2),
+      scoreVersion: 0,
     });
 
     const second = makeRes();
     await getCourtMomentum({ method: "GET", path: `/momentum/${courtId}` }, second);
     expect(second.statusCode).toBe(200);
     expect(second.payload.totalPoints).toBe(1);
+  });
+
+  test("/momentum/match/{matchId} returns match-addressed momentum", async () => {
+    const courtId = "court-momentum-match";
+    const matchId = "momentummatch";
+    mockDb = new FakeFirestore({
+      ...seedMatchDocs({
+        courtId,
+        matchId,
+        events: [{ id: "e1", eventType: "POINT_TEAM_A", createdAt: timestamp(1), scoreVersion: 0 }],
+      }),
+    });
+
+    let getCourtMomentum;
+    jest.isolateModules(() => {
+      ({ getCourtMomentum } = require("./index"));
+    });
+
+    const res = makeRes();
+    await getCourtMomentum({ method: "GET", path: `/momentum/match/${matchId}` }, res);
+
+    expect(res.statusCode).toBe(200);
+    expect(res.payload).toMatchObject({ courtId, matchId, totalPoints: 1 });
   });
 
   test("returns 404 for an unknown court", async () => {
@@ -1511,22 +1810,29 @@ describe("getCourtMomentum", () => {
     await getCourtMomentum({ method: "GET", path: "/momentum/no-such-court" }, res);
 
     expect(res.statusCode).toBe(404);
-    expect(res.payload.success).toBe(false);
+    expect(res.payload).toEqual({ success: false, error: "Court not found." });
   });
 });
 
 describe("resetCourt - password handling", () => {
   const courtId = "reset-court";
+  const matchId = "m1";
+  const credentials = { courtPassword: "oldpw" };
 
   function seedCourtDb(overrides = {}) {
+    const { court: courtOverrides = {}, match: matchOverrides = {}, scoreVersion = 2 } = overrides;
     mockDb = new FakeFirestore({
-      [`courts/${courtId}`]: {
-        password: "oldpw",
-        scoreVersion: 2,
-        scoringMode: DEFAULT_SCORING_OPTIONS.scoringMode,
-        scoringOptions: DEFAULT_SCORING_OPTIONS,
-        ...overrides,
-      },
+      ...seedMatchDocs({
+        courtId,
+        matchId,
+        scoreVersion,
+        court: {
+          password: "oldpw",
+          beaconSidesSwapped: false,
+          ...courtOverrides,
+        },
+        match: matchOverrides,
+      }),
     });
 
     let resetCourt;
@@ -1536,10 +1842,14 @@ describe("resetCourt - password handling", () => {
     return resetCourt;
   }
 
-  test("reset always restores default Beacon side handling", async () => {
-    const resetCourt = seedCourtDb({ beaconSidesSwapped: true });
+  function resetData(data = {}, authCredentials = credentials) {
+    return { data: { courtId, ...data, credentials: authCredentials } };
+  }
 
-    await resetCourt({ data: { courtId, deepReset: false } });
+  test("reset always restores default Beacon side handling", async () => {
+    const resetCourt = seedCourtDb({ court: { beaconSidesSwapped: true } });
+
+    await resetCourt(resetData({ deepReset: false }));
 
     expect(mockDb.docs.get(`courts/${courtId}`).beaconSidesSwapped).toBe(false);
   });
@@ -1547,17 +1857,31 @@ describe("resetCourt - password handling", () => {
   test("a blank password leaves the existing court password untouched", async () => {
     const resetCourt = seedCourtDb();
 
-    const result = await resetCourt({ data: { courtId, deepReset: false } });
+    const result = await resetCourt(resetData({ deepReset: false }));
 
     expect(result.success).toBe(true);
+    expect(result.matchId).toBe(matchId);
     expect(mockDb.docs.get(`courts/${courtId}`).password).toBe("oldpw");
     expect(result.scoreVersion).toBe(3);
+    expect(mockDb.docs.get(`matches/${matchId}`).scoreVersion).toBe(3);
+  });
+
+  test("rejects missing or incorrect credentials", async () => {
+    const resetCourt = seedCourtDb();
+
+    await expect(resetCourt({ data: { courtId } })).rejects.toMatchObject({
+      code: "PERMISSION_DENIED",
+    });
+    await expect(
+      resetCourt(resetData({}, { courtPassword: "wrong-password" })),
+    ).rejects.toMatchObject({ code: "PERMISSION_DENIED" });
+    expect(mockDb.docs.get(`matches/${matchId}`).scoreVersion).toBe(2);
   });
 
   test("a whitespace-only password is treated as blank, not as a change", async () => {
     const resetCourt = seedCourtDb();
 
-    await resetCourt({ data: { courtId, newPassword: "   " } });
+    await resetCourt(resetData({ newPassword: "   " }));
 
     expect(mockDb.docs.get(`courts/${courtId}`).password).toBe("oldpw");
   });
@@ -1565,13 +1889,11 @@ describe("resetCourt - password handling", () => {
   test("a new password replaces the old one", async () => {
     const resetCourt = seedCourtDb();
 
-    await resetCourt({ data: { courtId, newPassword: "brandnew" } });
+    await resetCourt(resetData({ newPassword: "brandnew" }));
 
     expect(mockDb.docs.get(`courts/${courtId}`).password).toBe("brandnew");
   });
 
-  // Records the payload of every set() on the court document, so a test can assert
-  // on what the client-visible write actually contained.
   function captureCourtWrites() {
     const writes = [];
     const originalDoc = mockDb.doc.bind(mockDb);
@@ -1593,12 +1915,9 @@ describe("resetCourt - password handling", () => {
     const resetCourt = seedCourtDb();
     const courtWrites = captureCourtWrites();
 
-    await resetCourt({ data: { courtId, newPassword: "oldpw" } });
+    await resetCourt(resetData({ newPassword: "oldpw" }));
 
     expect(mockDb.docs.get(`courts/${courtId}`).password).toBe("oldpw");
-    // The court doc is still updated (scoreVersion), but the write carries no
-    // password field, so listening clients see no password-change event.
-    expect(courtWrites.length).toBeGreaterThan(0);
     courtWrites.forEach((write) => expect(write).not.toHaveProperty("password"));
   });
 
@@ -1606,7 +1925,7 @@ describe("resetCourt - password handling", () => {
     const resetCourt = seedCourtDb();
     const courtWrites = captureCourtWrites();
 
-    await resetCourt({ data: { courtId, newPassword: "" } });
+    await resetCourt(resetData({ newPassword: "" }));
 
     courtWrites.forEach((write) => expect(write).not.toHaveProperty("password"));
   });
@@ -1615,7 +1934,7 @@ describe("resetCourt - password handling", () => {
     const resetCourt = seedCourtDb();
     const courtWrites = captureCourtWrites();
 
-    await resetCourt({ data: { courtId, newPassword: "brandnew" } });
+    await resetCourt(resetData({ newPassword: "brandnew" }));
 
     expect(courtWrites.some((write) => write.password === "brandnew")).toBe(true);
   });
@@ -1623,7 +1942,7 @@ describe("resetCourt - password handling", () => {
   test("a supplied password shorter than 4 characters is rejected", async () => {
     const resetCourt = seedCourtDb();
 
-    await expect(resetCourt({ data: { courtId, newPassword: "abc" } })).rejects.toThrow(
+    await expect(resetCourt(resetData({ newPassword: "abc" }))).rejects.toThrow(
       "Password must be at least 4 characters.",
     );
     expect(mockDb.docs.get(`courts/${courtId}`).password).toBe("oldpw");
@@ -1632,7 +1951,7 @@ describe("resetCourt - password handling", () => {
   test("a supplied password equal to the court id is rejected", async () => {
     const resetCourt = seedCourtDb();
 
-    await expect(resetCourt({ data: { courtId, newPassword: courtId } })).rejects.toThrow(
+    await expect(resetCourt(resetData({ newPassword: courtId }))).rejects.toThrow(
       "Password must be different from court name.",
     );
   });
@@ -1640,21 +1959,25 @@ describe("resetCourt - password handling", () => {
   test("requirePassword still makes a password mandatory", async () => {
     const resetCourt = seedCourtDb();
 
-    await expect(resetCourt({ data: { courtId, requirePassword: true } })).rejects.toThrow(
+    await expect(resetCourt(resetData({ requirePassword: true }))).rejects.toThrow(
       "Password must be at least 4 characters.",
     );
   });
 
-  test("a deep reset with a blank password still restores names and keeps the password", async () => {
+  test("a deep reset with a blank password still restores match names and keeps the password", async () => {
     const resetCourt = seedCourtDb({
-      teamNames: { A: "Reds", B: "Blues" },
-      playerNames: { A1: "Ann", A2: "Bob", B1: "Cy", B2: "Dee" },
+      match: {
+        teamNames: { A: "Reds", B: "Blues" },
+        playerNames: { A1: "Ann", A2: "Bob", B1: "Cy", B2: "Dee" },
+      },
     });
 
-    await resetCourt({ data: { courtId, deepReset: true } });
+    await resetCourt(resetData({ deepReset: true }));
 
     const court = mockDb.docs.get(`courts/${courtId}`);
+    const match = mockDb.docs.get(`matches/${matchId}`);
     expect(court.password).toBe("oldpw");
-    expect(court.teamNames).toEqual({ A: "Team A", B: "Team B" });
+    expect(match.teamNames).toEqual({ A: "Team A", B: "Team B" });
+    expect(match.playerNames).toEqual({ A1: "", A2: "", B1: "", B2: "" });
   });
 });

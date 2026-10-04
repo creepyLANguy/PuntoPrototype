@@ -9,9 +9,13 @@ import {
   orderBy,
   query,
   setDoc,
-  serverTimestamp
+  serverTimestamp,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { DEVICE_PROFILES, normaliseSku, createInitialLocalState } from "./device-profiles.js";
+import {
+  DEVICE_PROFILES,
+  normaliseSku,
+  createInitialLocalState,
+} from "./device-profiles.js";
 import * as firebaseEnvironmentConfig from "../app/js/firebase-config.js";
 
 const state = {
@@ -33,8 +37,8 @@ const state = {
     mode: "none",
     latencyMs: 1500,
     timeoutMs: 3000,
-    armed: false
-  }
+    armed: false,
+  },
 };
 
 const els = {};
@@ -42,11 +46,15 @@ const ADMIN_SESSION_STORAGE_KEY = "padelPushAdminUnlocked";
 const ADMIN_LOGOUT_SIGNAL_KEY = "padelPushAdminLogoutSignal";
 const HARNESS_THEME_STORAGE_KEY = "puntoDeviceHarnessTheme";
 
-function $(id) { return document.getElementById(id); }
+function $(id) {
+  return document.getElementById(id);
+}
 
 function getStoredTheme() {
   try {
-    return localStorage.getItem(HARNESS_THEME_STORAGE_KEY) === "dark" ? "dark" : "light";
+    return localStorage.getItem(HARNESS_THEME_STORAGE_KEY) === "dark"
+      ? "dark"
+      : "light";
   } catch {
     return "light";
   }
@@ -65,7 +73,7 @@ function applyTheme(theme) {
   const buttons = [
     $("themeToggleBtn"),
     $("themeToggleGateBtn"),
-    $("themeToggleProductionGateBtn")
+    $("themeToggleProductionGateBtn"),
   ].filter(Boolean);
   const isDark = resolvedTheme === "dark";
   buttons.forEach((button) => {
@@ -156,7 +164,8 @@ async function unlockHarness() {
 function detectEnvironment() {
   const host = globalThis.location.hostname;
 
-  if (host === "www.padelpush.co.za" || host === "padelpush.co.za") return "production";
+  if (host === "www.padelpush.co.za" || host === "padelpush.co.za")
+    return "production";
   if (host === "qa.padelpush.co.za") return "staging";
 
   // Local development instances intentionally use the staging backend.
@@ -167,21 +176,25 @@ function detectEnvironment() {
     host === "127.0.0.1" ||
     host === "::1" ||
     host === "[::1]"
-  ) return "staging";
+  )
+    return "staging";
 
   return "development";
 }
 
 function projectIdForEnvironment() {
   const configs = firebaseEnvironmentConfig.firebaseConfigs || {};
-  const config = configs[firebaseEnvironmentConfig.activeFirebaseEnvironment] || {};
+  const config =
+    configs[firebaseEnvironmentConfig.activeFirebaseEnvironment] || {};
   return config.projectId || "unknown-project";
 }
 
 function postEventUrl() {
   const projectId = projectIdForEnvironment();
   if (!projectId || projectId === "unknown-project") {
-    throw new Error("Firebase project ID is not available for the active environment.");
+    throw new Error(
+      "Firebase project ID is not available for the active environment.",
+    );
   }
   return "https://africa-south1-" + projectId + ".cloudfunctions.net/postEvent";
 }
@@ -195,7 +208,8 @@ function firebaseEnvironmentMatchesHost() {
 
 function formatTime(value) {
   if (!value) return "—";
-  if (typeof value?.toDate === "function") return value.toDate().toLocaleTimeString();
+  if (typeof value?.toDate === "function")
+    return value.toDate().toLocaleTimeString();
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? "—" : date.toLocaleTimeString();
 }
@@ -220,7 +234,10 @@ function currentLocalState() {
   const device = currentDevice();
   if (!device) return null;
   if (!state.localStates.has(device.id)) {
-    state.localStates.set(device.id, createInitialLocalState(normaliseSku(device.deviceSKU)));
+    state.localStates.set(
+      device.id,
+      createInitialLocalState(normaliseSku(device.deviceSKU)),
+    );
   }
   return state.localStates.get(device.id);
 }
@@ -232,18 +249,26 @@ function canMutate() {
 
 function requireMutationAccess() {
   if (state.environmentMismatch) {
-    showToast("Harness mutations are blocked because the Firebase environment does not match this hostname.", "error");
+    showToast(
+      "Harness mutations are blocked because the Firebase environment does not match this hostname.",
+      "error",
+    );
     return false;
   }
   if (canMutate()) return true;
-  showToast("Production mutations are locked. Enable production mutations first.", "error");
+  showToast(
+    "Production mutations are locked. Enable production mutations first.",
+    "error",
+  );
   return false;
 }
 
 function getFocusableElements(container) {
-  return Array.from(container.querySelectorAll(
-    'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
-  )).filter((element) => {
+  return Array.from(
+    container.querySelectorAll(
+      'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+    ),
+  ).filter((element) => {
     const style = globalThis.getComputedStyle(element);
     return style.display !== "none" && style.visibility !== "hidden";
   });
@@ -251,7 +276,9 @@ function getFocusableElements(container) {
 
 function focusDialogElement(dialog, preferredSelector = "") {
   queueMicrotask(() => {
-    const preferred = preferredSelector ? dialog.querySelector(preferredSelector) : null;
+    const preferred = preferredSelector
+      ? dialog.querySelector(preferredSelector)
+      : null;
     const target = preferred || getFocusableElements(dialog)[0];
     target?.focus();
   });
@@ -285,9 +312,10 @@ function registerDialogAccessibility(dialog) {
 }
 
 function openHarnessDialog(dialog, preferredSelector = "") {
-  dialog.__returnFocusElement = document.activeElement instanceof HTMLElement
-    ? document.activeElement
-    : null;
+  dialog.__returnFocusElement =
+    document.activeElement instanceof HTMLElement
+      ? document.activeElement
+      : null;
   dialog.showModal();
   focusDialogElement(dialog, preferredSelector);
 }
@@ -314,7 +342,9 @@ function registerGateAccessibility(gate, preferredSelector = "") {
 }
 
 function focusGate(gate) {
-  const preferred = gate.__focusPreferredSelector ? gate.querySelector(gate.__focusPreferredSelector) : null;
+  const preferred = gate.__focusPreferredSelector
+    ? gate.querySelector(gate.__focusPreferredSelector)
+    : null;
   (preferred || getFocusableElements(gate)[0])?.focus();
 }
 
@@ -352,7 +382,8 @@ function updateProductionGate() {
 }
 
 function openProductionGateIfNeeded() {
-  const shouldShow = state.environment === "production" || state.environmentMismatch;
+  const shouldShow =
+    state.environment === "production" || state.environmentMismatch;
   $("productionGate").classList.toggle("hidden", !shouldShow);
   if (shouldShow) {
     updateProductionGate();
@@ -386,7 +417,10 @@ async function loadDevices() {
 
   try {
     const snapshot = await getDocs(collection(db, "devices"));
-    state.devices = snapshot.docs.map((item) => ({ id: item.id, ...item.data() }));
+    state.devices = snapshot.docs.map((item) => ({
+      id: item.id,
+      ...item.data(),
+    }));
     state.devices.sort((a, b) => a.id.localeCompare(b.id));
     renderDeviceList();
 
@@ -404,13 +438,21 @@ async function loadDevices() {
 
 function renderCourtSelectors() {
   const current = state.selectedCourtId;
-  const options = state.courts.map((court) =>
-    '<option value="' + escapeHtml(court.id) + '">' +
-    escapeHtml(court.name || court.id) + " · " + escapeHtml(court.id) +
-    "</option>"
-  ).join("");
+  const options = state.courts
+    .map(
+      (court) =>
+        '<option value="' +
+        escapeHtml(court.id) +
+        '">' +
+        escapeHtml(court.name || court.id) +
+        " · " +
+        escapeHtml(court.id) +
+        "</option>",
+    )
+    .join("");
   $("courtSelect").innerHTML = options || '<option value="">No courts</option>';
-  $("virtualDeviceCourt").innerHTML = options || '<option value="">No courts</option>';
+  $("virtualDeviceCourt").innerHTML =
+    options || '<option value="">No courts</option>';
   if (current) $("courtSelect").value = current;
   if (current) $("virtualDeviceCourt").value = current;
 }
@@ -423,21 +465,39 @@ function renderDeviceList() {
     return;
   }
 
-  $("deviceList").innerHTML = state.devices.length ? state.devices.map((device) => {
-    const sku = normaliseSku(device.deviceSKU);
-    const virtual = device.isVirtual === true;
-    return '<button class="device-item ' + (device.id === state.selectedDeviceId ? "selected" : "") +
-      '" data-device-id="' + escapeHtml(device.id) + '">' +
-      '<div class="device-item-top"><span class="device-item-name">' + escapeHtml(sku) +
-      '</span><span class="device-dot"></span></div>' +
-      '<div class="device-item-meta">' + escapeHtml(device.id) + " · " +
-      escapeHtml(device.courtId || "unbound") + '</div>' +
-      '<span class="device-type-badge ' + (virtual ? "virtual" : "physical") + '">' +
-      (virtual ? "VIRTUAL" : "PHYSICAL") + '</span></button>';
-  }).join("") : '<div class="hint">No devices registered yet.</div>';
+  $("deviceList").innerHTML = state.devices.length
+    ? state.devices
+        .map((device) => {
+          const sku = normaliseSku(device.deviceSKU);
+          const virtual = device.isVirtual === true;
+          return (
+            '<button class="device-item ' +
+            (device.id === state.selectedDeviceId ? "selected" : "") +
+            '" data-device-id="' +
+            escapeHtml(device.id) +
+            '">' +
+            '<div class="device-item-top"><span class="device-item-name">' +
+            escapeHtml(sku) +
+            '</span><span class="device-dot"></span></div>' +
+            '<div class="device-item-meta">' +
+            escapeHtml(device.id) +
+            " · " +
+            escapeHtml(device.courtId || "unbound") +
+            "</div>" +
+            '<span class="device-type-badge ' +
+            (virtual ? "virtual" : "physical") +
+            '">' +
+            (virtual ? "VIRTUAL" : "PHYSICAL") +
+            "</span></button>"
+          );
+        })
+        .join("")
+    : '<div class="hint">No devices registered yet.</div>';
 
   document.querySelectorAll("[data-device-id]").forEach((button) => {
-    button.addEventListener("click", () => selectDevice(button.dataset.deviceId));
+    button.addEventListener("click", () =>
+      selectDevice(button.dataset.deviceId),
+    );
   });
 }
 
@@ -466,11 +526,17 @@ function updateDeviceListToggle() {
 async function selectDevice(deviceId) {
   state.selectedDeviceId = deviceId;
   const device = currentDevice();
-  if (device?.courtId && state.courts.some((court) => court.id === device.courtId)) {
+  if (
+    device?.courtId &&
+    state.courts.some((court) => court.id === device.courtId)
+  ) {
     state.selectedCourtId = device.courtId;
   }
   if (device && !state.localStates.has(device.id)) {
-    state.localStates.set(device.id, createInitialLocalState(normaliseSku(device.deviceSKU)));
+    state.localStates.set(
+      device.id,
+      createInitialLocalState(normaliseSku(device.deviceSKU)),
+    );
   }
   renderAll();
   requestAnimationFrame(ensureSelectedDeviceVisible);
@@ -487,8 +553,36 @@ function selectCourt(courtId) {
   $("courtSelect").value = courtId;
 
   const courtRef = doc(db, "courts", courtId);
-  const scoreRef = doc(db, "courts", courtId, "score", "current");
-  const eventQuery = query(collection(db, "courts", courtId, "events"), orderBy("createdAt", "desc"), limit(20));
+  let followedMatchId = null;
+
+  // Scoring is match-scoped: follow the match currently on the court.
+  const followMatch = (matchId) => {
+    if (matchId === followedMatchId) return;
+    followedMatchId = matchId;
+    if (state.selectedScoreUnsub) state.selectedScoreUnsub();
+    if (state.selectedEventsUnsub) state.selectedEventsUnsub();
+    state.selectedScoreUnsub = null;
+    state.selectedEventsUnsub = null;
+    if (!matchId) {
+      renderCourtState({ score: null });
+      renderCourtEvents([]);
+      return;
+    }
+    const scoreRef = doc(db, "matches", matchId, "score", "current");
+    const eventQuery = query(
+      collection(db, "matches", matchId, "events"),
+      orderBy("createdAt", "desc"),
+      limit(20),
+    );
+    state.selectedScoreUnsub = onSnapshot(scoreRef, (snap) => {
+      renderCourtState({ score: snap.exists() ? snap.data() : null });
+    });
+    state.selectedEventsUnsub = onSnapshot(eventQuery, (snap) => {
+      renderCourtEvents(
+        snap.docs.map((item) => ({ id: item.id, ...item.data() })),
+      );
+    });
+  };
 
   state.selectedCourtUnsub = onSnapshot(courtRef, (snap) => {
     const index = state.courts.findIndex((item) => item.id === courtId);
@@ -497,14 +591,8 @@ function selectCourt(courtId) {
       renderCourtSelectors();
       renderCourtState({ court: state.courts[index] });
     }
-  });
-
-  state.selectedScoreUnsub = onSnapshot(scoreRef, (snap) => {
-    renderCourtState({ score: snap.exists() ? snap.data() : null });
-  });
-
-  state.selectedEventsUnsub = onSnapshot(eventQuery, (snap) => {
-    renderCourtEvents(snap.docs.map((item) => ({ id: item.id, ...item.data() })));
+    const data = snap.exists() ? snap.data() : {};
+    followMatch(data.activeMatchId || data.lastMatchId || null);
   });
 
   renderAll();
@@ -531,8 +619,10 @@ function renderSelectedDevice() {
   const profile = DEVICE_PROFILES[sku];
   $("selectedDeviceValue").textContent = device.id;
   $("deviceTitle").textContent = profile.label;
-  $("deviceStatus").textContent = device.disabled === true ? "DISABLED" : "READY";
-  $("deviceStatus").className = "status-pill " + (device.disabled === true ? "disabled" : "");
+  $("deviceStatus").textContent =
+    device.disabled === true ? "DISABLED" : "READY";
+  $("deviceStatus").className =
+    "status-pill " + (device.disabled === true ? "disabled" : "");
 
   const fields = [
     ["deviceId", device.id],
@@ -542,32 +632,56 @@ function renderSelectedDevice() {
     ["simulator profile", device.simulatorProfile || profile.label],
     ["firmware", device.firmwareVersion || "Not recorded"],
     ["createdAt", formatTime(device.createdAt)],
-    ["raw fields", Object.keys(device).length + " fields"]
+    ["raw fields", Object.keys(device).length + " fields"],
   ];
-  $("deviceIdentity").innerHTML = fields.map(([label, value]) =>
-    '<div class="identity-cell"><div class="identity-label">' + escapeHtml(label) +
-    '</div><div class="identity-value">' + escapeHtml(String(value)) + "</div></div>"
-  ).join("");
+  $("deviceIdentity").innerHTML = fields
+    .map(
+      ([label, value]) =>
+        '<div class="identity-cell"><div class="identity-label">' +
+        escapeHtml(label) +
+        '</div><div class="identity-value">' +
+        escapeHtml(String(value)) +
+        "</div></div>",
+    )
+    .join("");
 
   const local = currentLocalState();
-  $("localStatePanel").innerHTML = Object.entries(local || {}).map(([label, value]) =>
-    '<div class="state-cell"><div class="state-label">' + escapeHtml(label) +
-    '</div><div class="state-value">' + escapeHtml(String(value)) + "</div></div>"
-  ).join("");
+  $("localStatePanel").innerHTML = Object.entries(local || {})
+    .map(
+      ([label, value]) =>
+        '<div class="state-cell"><div class="state-label">' +
+        escapeHtml(label) +
+        '</div><div class="state-value">' +
+        escapeHtml(String(value)) +
+        "</div></div>",
+    )
+    .join("");
 
-  $("deviceControls").innerHTML = profile.controls.map((control) =>
-    '<button class="control-btn" data-control="' + escapeHtml(control.id) + '">' +
-    '<span class="control-btn-title">' + escapeHtml(control.label) + "</span>" +
-    '<span class="control-btn-hint">' + escapeHtml(control.hint) + "</span></button>"
-  ).join("");
+  $("deviceControls").innerHTML = profile.controls
+    .map(
+      (control) =>
+        '<button class="control-btn" data-control="' +
+        escapeHtml(control.id) +
+        '">' +
+        '<span class="control-btn-title">' +
+        escapeHtml(control.label) +
+        "</span>" +
+        '<span class="control-btn-hint">' +
+        escapeHtml(control.hint) +
+        "</span></button>",
+    )
+    .join("");
 
-  const physicalNote = device.isVirtual === true
-    ? "Virtual device. Actions use the real backend."
-    : "Registered physical device record. This simulator can exercise its backend binding too.";
+  const physicalNote =
+    device.isVirtual === true
+      ? "Virtual device. Actions use the real backend."
+      : "Registered physical device record. This simulator can exercise its backend binding too.";
   $("controlHint").textContent = physicalNote;
 
   document.querySelectorAll("[data-control]").forEach((button) => {
-    button.addEventListener("click", () => handleDeviceControl(button.dataset.control));
+    button.addEventListener("click", () =>
+      handleDeviceControl(button.dataset.control),
+    );
   });
 }
 
@@ -583,31 +697,56 @@ function renderCourtState({ court, score } = {}) {
   $("selectedCourtValue").textContent = mergedCourt.id;
   $("courtTitle").textContent = mergedCourt.name || mergedCourt.id;
   $("courtMeta").textContent =
-    mergedCourt.id + " · status " + (mergedCourt.status || "unknown") +
-    " · Beacon changeover " + (mergedCourt.beaconSidesSwapped === true ? "ACTIVE" : "off");
+    mergedCourt.id +
+    " · status " +
+    (mergedCourt.status || "unknown") +
+    " · Beacon changeover " +
+    (mergedCourt.beaconSidesSwapped === true ? "ACTIVE" : "off");
 
   if (!score) return;
   const teamA = score.A || {};
   const teamB = score.B || {};
   $("scoreState").innerHTML =
-    '<div class="score-card"><div class="score-team">' + escapeHtml(mergedCourt.teamNames?.A || "Team A") +
-    '</div><div class="score-points">' + escapeHtml(String(teamA.pointsDisplay ?? teamA.points ?? 0)) +
-    '</div><div class="score-games">Games ' + escapeHtml(String(teamA.games ?? 0)) +
-    " · Sets " + escapeHtml(String(teamA.sets ?? 0)) + "</div></div>" +
-    '<div class="score-card"><div class="score-team">' + escapeHtml(mergedCourt.teamNames?.B || "Team B") +
-    '</div><div class="score-points">' + escapeHtml(String(teamB.pointsDisplay ?? teamB.points ?? 0)) +
-    '</div><div class="score-games">Games ' + escapeHtml(String(teamB.games ?? 0)) +
-    " · Sets " + escapeHtml(String(teamB.sets ?? 0)) + "</div></div>";
+    '<div class="score-card"><div class="score-team">' +
+    escapeHtml(mergedCourt.teamNames?.A || "Team A") +
+    '</div><div class="score-points">' +
+    escapeHtml(String(teamA.pointsDisplay ?? teamA.points ?? 0)) +
+    '</div><div class="score-games">Games ' +
+    escapeHtml(String(teamA.games ?? 0)) +
+    " · Sets " +
+    escapeHtml(String(teamA.sets ?? 0)) +
+    "</div></div>" +
+    '<div class="score-card"><div class="score-team">' +
+    escapeHtml(mergedCourt.teamNames?.B || "Team B") +
+    '</div><div class="score-points">' +
+    escapeHtml(String(teamB.pointsDisplay ?? teamB.points ?? 0)) +
+    '</div><div class="score-games">Games ' +
+    escapeHtml(String(teamB.games ?? 0)) +
+    " · Sets " +
+    escapeHtml(String(teamB.sets ?? 0)) +
+    "</div></div>";
 }
 
 function renderCourtEvents(events) {
-  $("courtEvents").innerHTML = events.length ? events.map((event) =>
-    '<div class="event-row"><div class="event-main">' +
-    '<div class="event-type">' + escapeHtml(event.eventType || "UNKNOWN") + "</div>" +
-    '<div class="event-meta">' + escapeHtml(formatTime(event.createdAt)) + " · " +
-    escapeHtml(event.actorDeviceId || event.createdBy || "unknown") + "</div></div>" +
-    '<div class="event-badge">' + escapeHtml(event.id.slice(0, 10)) + "</div></div>"
-  ).join("") : '<div class="hint">No events yet.</div>';
+  $("courtEvents").innerHTML = events.length
+    ? events
+        .map(
+          (event) =>
+            '<div class="event-row"><div class="event-main">' +
+            '<div class="event-type">' +
+            escapeHtml(event.eventType || "UNKNOWN") +
+            "</div>" +
+            '<div class="event-meta">' +
+            escapeHtml(formatTime(event.createdAt)) +
+            " · " +
+            escapeHtml(event.actorDeviceId || event.createdBy || "unknown") +
+            "</div></div>" +
+            '<div class="event-badge">' +
+            escapeHtml(event.id.slice(0, 10)) +
+            "</div></div>",
+        )
+        .join("")
+    : '<div class="hint">No events yet.</div>';
 }
 
 function updateEnvironmentUi() {
@@ -619,13 +758,18 @@ function updateEnvironmentUi() {
   $("environmentBadge").textContent = mismatch
     ? state.environment.toUpperCase() + " · CONFIG MISMATCH"
     : state.environment.toUpperCase();
-  $("environmentBadge").className = "env-badge " + state.environment + (mismatch ? " mismatch" : "");
+  $("environmentBadge").className =
+    "env-badge " + state.environment + (mismatch ? " mismatch" : "");
   $("environmentBadge").title = mismatch
     ? "Mutations blocked: Firebase environment does not match this hostname."
-    : "Firebase environment: " + String(firebaseEnvironmentConfig.activeFirebaseEnvironment || "unknown");
+    : "Firebase environment: " +
+      String(firebaseEnvironmentConfig.activeFirebaseEnvironment || "unknown");
 
   if (mismatchChanged && mismatch) {
-    showToast("Firebase environment config does not match this hostname. Mutations are blocked.", "error");
+    showToast(
+      "Firebase environment config does not match this hostname. Mutations are blocked.",
+      "error",
+    );
   }
 
   updateProductionGate();
@@ -640,20 +784,41 @@ function addTrace(entry) {
 }
 
 function renderTrace() {
-  $("traceList").innerHTML = state.trace.length ? state.trace.map((entry) =>
-    '<button class="trace-row ' + (entry.id === state.selectedTraceId ? "selected" : "") +
-    '" data-trace-id="' + escapeHtml(entry.id) + '">' +
-    '<span class="trace-time">' + escapeHtml(formatTime(entry.startedAt)) + "</span>" +
-    '<span class="trace-kind">' + escapeHtml(entry.direction) + "</span>" +
-    '<span class="trace-summary"><strong>' + escapeHtml(entry.summary) + '</strong><span>' +
-    escapeHtml(entry.detail || "") + "</span></span>" +
-    '<span class="trace-code ' + traceCodeClass(entry.code) + '">' + escapeHtml(String(entry.code || "—")) + "</span></button>"
-  ).join("") : '<div class="hint" style="padding:20px;">No requests yet.</div>';
+  $("traceList").innerHTML = state.trace.length
+    ? state.trace
+        .map(
+          (entry) =>
+            '<button class="trace-row ' +
+            (entry.id === state.selectedTraceId ? "selected" : "") +
+            '" data-trace-id="' +
+            escapeHtml(entry.id) +
+            '">' +
+            '<span class="trace-time">' +
+            escapeHtml(formatTime(entry.startedAt)) +
+            "</span>" +
+            '<span class="trace-kind">' +
+            escapeHtml(entry.direction) +
+            "</span>" +
+            '<span class="trace-summary"><strong>' +
+            escapeHtml(entry.summary) +
+            "</strong><span>" +
+            escapeHtml(entry.detail || "") +
+            "</span></span>" +
+            '<span class="trace-code ' +
+            traceCodeClass(entry.code) +
+            '">' +
+            escapeHtml(String(entry.code || "—")) +
+            "</span></button>",
+        )
+        .join("")
+    : '<div class="hint" style="padding:20px;">No requests yet.</div>';
   document.querySelectorAll("[data-trace-id]").forEach((button) => {
     button.addEventListener("click", () => {
       state.selectedTraceId = button.dataset.traceId;
       renderTrace();
-      const entry = state.trace.find((item) => item.id === state.selectedTraceId);
+      const entry = state.trace.find(
+        (item) => item.id === state.selectedTraceId,
+      );
       if (entry) renderExchange(entry);
     });
   });
@@ -664,13 +829,13 @@ function renderExchange(entry) {
   $("exchangeDetail").textContent = formatJson({
     request: entry.request,
     response: entry.response,
-    simulator: entry.simulator
+    simulator: entry.simulator,
   });
 }
 
 function traceCodeClass(code) {
   const n = Number(code);
-  if (n >= 200 && n < 300 || code === "ACK") return "ok";
+  if ((n >= 200 && n < 300) || code === "ACK") return "ok";
   if (n >= 500 || code === "ERROR" || code === "TIMEOUT") return "error";
   return "warn";
 }
@@ -680,7 +845,12 @@ async function executeDeviceRequest(body, label) {
 
   const injection = state.failure.armed
     ? { ...state.failure }
-    : { mode: "none", latencyMs: state.failure.latencyMs, timeoutMs: state.failure.timeoutMs, armed: false };
+    : {
+        mode: "none",
+        latencyMs: state.failure.latencyMs,
+        timeoutMs: state.failure.timeoutMs,
+        armed: false,
+      };
   const attempts = 2;
   let finalResult = null;
 
@@ -691,7 +861,7 @@ async function executeDeviceRequest(body, label) {
       method: "POST",
       url: postEventUrl(),
       headers: { "Content-Type": "application/json" },
-      body
+      body,
     };
     const baseTrace = {
       id: traceId,
@@ -701,13 +871,20 @@ async function executeDeviceRequest(body, label) {
       detail: body.eventType + " · " + body.deviceId,
       code: "—",
       request,
-      simulator: { environment: state.environment, failureMode: injection.mode, attempt }
+      simulator: {
+        environment: state.environment,
+        failureMode: injection.mode,
+        attempt,
+      },
     };
     addTrace(baseTrace);
 
     try {
       const response = await transportRequest(body, injection);
-      const payload = await parseResponse(response, injection.mode === "malformed");
+      const payload = await parseResponse(
+        response,
+        injection.mode === "malformed",
+      );
       const entry = {
         ...baseTrace,
         direction: "IN ←",
@@ -718,9 +895,13 @@ async function executeDeviceRequest(body, label) {
         response: {
           status: response.status,
           headers: response.headers,
-          body: payload
+          body: payload,
         },
-        simulator: { environment: state.environment, failureMode: injection.mode, attempt }
+        simulator: {
+          environment: state.environment,
+          failureMode: injection.mode,
+          attempt,
+        },
       };
       addTrace(entry);
       finalResult = { response, payload };
@@ -733,11 +914,20 @@ async function executeDeviceRequest(body, label) {
       const entry = {
         ...baseTrace,
         direction: "IN ←",
-        summary: label + " network failure · attempt " + attempt + "/" + attempts,
+        summary:
+          label + " network failure · attempt " + attempt + "/" + attempts,
         detail: error?.message || String(error),
         code,
-        response: { status: null, body: null, error: error?.message || String(error) },
-        simulator: { environment: state.environment, failureMode: injection.mode, attempt }
+        response: {
+          status: null,
+          body: null,
+          error: error?.message || String(error),
+        },
+        simulator: {
+          environment: state.environment,
+          failureMode: injection.mode,
+          attempt,
+        },
       };
       addTrace(entry);
       finalResult = { error };
@@ -753,7 +943,7 @@ async function executeDeviceRequest(body, label) {
         code: "RETRY",
         request,
         response: null,
-        simulator: { retryOf: traceId, failureMode: injection.mode }
+        simulator: { retryOf: traceId, failureMode: injection.mode },
       };
       addTrace(retryEntry);
     }
@@ -776,23 +966,37 @@ async function transportRequest(body, injection) {
   }
 
   if (injection.mode === "connection_reset") {
-    throw new Error("Simulated connection reset before the request reached the backend.");
+    throw new Error(
+      "Simulated connection reset before the request reached the backend.",
+    );
   }
 
   if (injection.mode === "http_500") {
-    return syntheticResponse(500, { success: false, error: "Simulated HTTP 500" });
+    return syntheticResponse(500, {
+      success: false,
+      error: "Simulated HTTP 500",
+    });
   }
   if (injection.mode === "http_401") {
-    return syntheticResponse(401, { success: false, error: "Simulated HTTP 401" });
+    return syntheticResponse(401, {
+      success: false,
+      error: "Simulated HTTP 401",
+    });
   }
   if (injection.mode === "http_403") {
-    return syntheticResponse(403, { success: false, error: "Simulated HTTP 403" });
+    return syntheticResponse(403, {
+      success: false,
+      error: "Simulated HTTP 403",
+    });
   }
 
   const controller = new AbortController();
   let timer = null;
   if (injection.mode === "timeout") {
-    timer = setTimeout(() => controller.abort(), Number(injection.timeoutMs) || 3000);
+    timer = setTimeout(
+      () => controller.abort(),
+      Number(injection.timeoutMs) || 3000,
+    );
   }
 
   const response = await fetch(postEventUrl(), {
@@ -800,7 +1004,7 @@ async function transportRequest(body, injection) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
     signal: controller.signal,
-    cache: "no-store"
+    cache: "no-store",
   });
   if (timer) clearTimeout(timer);
 
@@ -809,7 +1013,7 @@ async function transportRequest(body, injection) {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
-      cache: "no-store"
+      cache: "no-store",
     });
     addTrace({
       id: newId("duplicate"),
@@ -818,9 +1022,20 @@ async function transportRequest(body, injection) {
       summary: "Duplicate request",
       detail: "Second identical POST was sent to the real backend.",
       code: duplicate.status,
-      request: { method: "POST", url: postEventUrl(), headers: { "Content-Type": "application/json" }, body },
-      response: { status: duplicate.status, body: await duplicate.json().catch(() => null) },
-      simulator: { environment: state.environment, failureMode: injection.mode }
+      request: {
+        method: "POST",
+        url: postEventUrl(),
+        headers: { "Content-Type": "application/json" },
+        body,
+      },
+      response: {
+        status: duplicate.status,
+        body: await duplicate.json().catch(() => null),
+      },
+      simulator: {
+        environment: state.environment,
+        failureMode: injection.mode,
+      },
     });
   }
 
@@ -834,7 +1049,7 @@ function syntheticResponse(status, body) {
     url: globalThis.location.origin + "/device-api/postEvent",
     headers: { "content-type": "application/json" },
     json: async () => body,
-    text: async () => JSON.stringify(body)
+    text: async () => JSON.stringify(body),
   };
 }
 
@@ -854,7 +1069,7 @@ async function waitForEventPropagation(eventId) {
     code: "ACK",
     request: null,
     response: null,
-    simulator: { eventId }
+    simulator: { eventId },
   });
 }
 
@@ -867,7 +1082,10 @@ async function handleDeviceControl(controlId) {
   if (controlId === "factoryReset") {
     local.wifiConnected = false;
     if (sku === "Pulse") local.currentTeam = "A";
-    if (sku === "Beacon") { local.distanceCm = 50; local.hasTriggered = false; }
+    if (sku === "Beacon") {
+      local.distanceCm = 50;
+      local.hasTriggered = false;
+    }
     addTrace({
       id: newId("local"),
       startedAt: new Date(),
@@ -877,10 +1095,13 @@ async function handleDeviceControl(controlId) {
       code: "LOCAL",
       request: null,
       response: null,
-      simulator: { environment: state.environment }
+      simulator: { environment: state.environment },
     });
     renderSelectedDevice();
-    setTimeout(() => { local.wifiConnected = true; renderSelectedDevice(); }, 250);
+    setTimeout(() => {
+      local.wifiConnected = true;
+      renderSelectedDevice();
+    }, 250);
     return;
   }
 
@@ -893,11 +1114,12 @@ async function handleDeviceControl(controlId) {
       startedAt: new Date(),
       direction: "LOCAL",
       summary: "Pulse switched team",
-      detail: "Local team changed to " + local.currentTeam + ". No backend request.",
+      detail:
+        "Local team changed to " + local.currentTeam + ". No backend request.",
       code: "LOCAL",
       request: null,
       response: null,
-      simulator: { environment: state.environment }
+      simulator: { environment: state.environment },
     });
     return;
   }
@@ -915,33 +1137,53 @@ async function handleDeviceControl(controlId) {
     local.distanceCm = 5;
     local.hasTriggered = true;
     renderSelectedDevice();
-    return executeDeviceRequest({
-      deviceId: device.id,
-      deviceSKU: "Beacon",
-      eventType: team === "A" ? "POINT_TEAM_A" : "POINT_TEAM_B"
-    }, "Beacon detection");
+    return executeDeviceRequest(
+      {
+        deviceId: device.id,
+        deviceSKU: "Beacon",
+        eventType: team === "A" ? "POINT_TEAM_A" : "POINT_TEAM_B",
+      },
+      "Beacon detection",
+    );
   }
 
   if (sku === "Pulse" && (controlId === "tap" || controlId === "undo")) {
-    const eventType = controlId === "tap"
-      ? (local.currentTeam === "A" ? "POINT_TEAM_A" : "POINT_TEAM_B")
-      : "UNDO";
+    const eventType =
+      controlId === "tap"
+        ? local.currentTeam === "A"
+          ? "POINT_TEAM_A"
+          : "POINT_TEAM_B"
+        : "UNDO";
     if (controlId === "undo") local.lastHoldMs = 2000;
     renderSelectedDevice();
-    return executeDeviceRequest({
-      deviceId: device.id,
-      deviceSKU: "Pulse",
-      eventType
-    }, controlId === "tap" ? "Pulse tap" : "Pulse undo");
+    return executeDeviceRequest(
+      {
+        deviceId: device.id,
+        deviceSKU: "Pulse",
+        eventType,
+      },
+      controlId === "tap" ? "Pulse tap" : "Pulse undo",
+    );
   }
 
-  if (sku === "Hub" && ["pointA","pointB","undo","reset"].includes(controlId)) {
-    const eventType = { pointA: "POINT_TEAM_A", pointB: "POINT_TEAM_B", undo: "UNDO", reset: "RESET" }[controlId];
-    return executeDeviceRequest({
-      deviceId: device.id,
-      deviceSKU: "Hub",
-      eventType
-    }, "Hub " + eventType);
+  if (
+    sku === "Hub" &&
+    ["pointA", "pointB", "undo", "reset"].includes(controlId)
+  ) {
+    const eventType = {
+      pointA: "POINT_TEAM_A",
+      pointB: "POINT_TEAM_B",
+      undo: "UNDO",
+      reset: "RESET",
+    }[controlId];
+    return executeDeviceRequest(
+      {
+        deviceId: device.id,
+        deviceSKU: "Hub",
+        eventType,
+      },
+      "Hub " + eventType,
+    );
   }
 
   if (sku === "Hub" && controlId === "nfc") {
@@ -968,13 +1210,19 @@ function openNfcDialog() {
     const device = currentDevice();
     if (!device) return;
     const normalized = eventType.toUpperCase();
-    const supported = ["POINT_TEAM_A","POINT_TEAM_B","UNDO","RESET"];
+    const supported = ["POINT_TEAM_A", "POINT_TEAM_B", "UNDO", "RESET"];
     if (!supported.includes(normalized)) {
-      showToast("This simple NFC action expects a scoring event. Use SPECTATE or REGISTER directly from the device controls.", "error");
+      showToast(
+        "This simple NFC action expects a scoring event. Use SPECTATE or REGISTER directly from the device controls.",
+        "error",
+      );
       return;
     }
     $("actionDialog").close();
-    void executeDeviceRequest({ deviceId: device.id, deviceSKU: "Hub", eventType: normalized }, "Hub NFC scan");
+    void executeDeviceRequest(
+      { deviceId: device.id, deviceSKU: "Hub", eventType: normalized },
+      "Hub NFC scan",
+    );
   };
 }
 
@@ -985,33 +1233,66 @@ function openOperationalDialog(controlId) {
     $("actionDialogTitle").textContent = "Hub → Spectate court";
     $("actionDialogBody").innerHTML =
       '<label>Target court<select id="actionCourtSelect" class="select">' +
-      state.courts.map((court) => '<option value="' + escapeHtml(court.id) + '">' +
-        escapeHtml(court.name || court.id) + " · " + escapeHtml(court.id) + "</option>").join("") +
+      state.courts
+        .map(
+          (court) =>
+            '<option value="' +
+            escapeHtml(court.id) +
+            '">' +
+            escapeHtml(court.name || court.id) +
+            " · " +
+            escapeHtml(court.id) +
+            "</option>",
+        )
+        .join("") +
       "</select></label>";
     $("actionConfirmBtn").textContent = "Send SPECTATE";
     $("actionConfirmBtn").onclick = (event) => {
       event.preventDefault();
       const targetCourtId = $("actionCourtSelect").value;
       $("actionDialog").close();
-      void executeDeviceRequest({
-        deviceId: device.id, deviceSKU: "Hub", eventType: "SPECTATE", courtId: targetCourtId
-      }, "Hub SPECTATE");
+      void executeDeviceRequest(
+        {
+          deviceId: device.id,
+          deviceSKU: "Hub",
+          eventType: "SPECTATE",
+          courtId: targetCourtId,
+        },
+        "Hub SPECTATE",
+      );
     };
   } else {
     $("actionDialogTitle").textContent = "Hub → Register device";
     $("actionDialogBody").innerHTML =
       '<label>Device to register<select id="actionDeviceSelect" class="select">' +
-      state.devices.filter((item) => item.id !== device.id).map((item) => '<option value="' + escapeHtml(item.id) + '">' +
-        escapeHtml(item.id) + " · " + escapeHtml(item.deviceSKU || "unknown") + "</option>").join("") +
+      state.devices
+        .filter((item) => item.id !== device.id)
+        .map(
+          (item) =>
+            '<option value="' +
+            escapeHtml(item.id) +
+            '">' +
+            escapeHtml(item.id) +
+            " · " +
+            escapeHtml(item.deviceSKU || "unknown") +
+            "</option>",
+        )
+        .join("") +
       "</select></label>";
     $("actionConfirmBtn").textContent = "Send REGISTER";
     $("actionConfirmBtn").onclick = (event) => {
       event.preventDefault();
       const registeringDeviceId = $("actionDeviceSelect").value;
       $("actionDialog").close();
-      void executeDeviceRequest({
-        deviceId: device.id, deviceSKU: "Hub", eventType: "REGISTER", registeringDeviceId
-      }, "Hub REGISTER");
+      void executeDeviceRequest(
+        {
+          deviceId: device.id,
+          deviceSKU: "Hub",
+          eventType: "REGISTER",
+          registeringDeviceId,
+        },
+        "Hub REGISTER",
+      );
     };
   }
   openHarnessDialog($("actionDialog"));
@@ -1019,11 +1300,19 @@ function openOperationalDialog(controlId) {
 
 function extractTagField(tag, fieldName) {
   const wanted = fieldName.toUpperCase();
-  return String(tag).split(";").map((part) => {
-    const index = part.indexOf(":");
-    if (index < 0) return null;
-    return { key: part.slice(0, index).trim().toUpperCase(), value: part.slice(index + 1).trim() };
-  }).find((field) => field?.key === wanted)?.value || "";
+  return (
+    String(tag)
+      .split(";")
+      .map((part) => {
+        const index = part.indexOf(":");
+        if (index < 0) return null;
+        return {
+          key: part.slice(0, index).trim().toUpperCase(),
+          value: part.slice(index + 1).trim(),
+        };
+      })
+      .find((field) => field?.key === wanted)?.value || ""
+  );
 }
 
 async function createVirtualDevice() {
@@ -1046,7 +1335,7 @@ async function createVirtualDevice() {
     courtId,
     isVirtual: true,
     simulatorProfile: deviceSKU,
-    createdAt: serverTimestamp()
+    createdAt: serverTimestamp(),
   });
   $("deviceDialog").close();
   await loadDevices();
@@ -1061,14 +1350,17 @@ function updateFailureUi() {
   $("timeoutControl").classList.toggle("hidden", mode !== "timeout");
   const descriptions = {
     none: "Normal requests are sent to the real backend.",
-    latency: "Delay before the real backend request. Useful for timing behaviour.",
-    timeout: "Abort the browser-side request after the configured timeout. The server may still process the request.",
+    latency:
+      "Delay before the real backend request. Useful for timing behaviour.",
+    timeout:
+      "Abort the browser-side request after the configured timeout. The server may still process the request.",
     connection_reset: "Drop the request before it reaches the backend.",
     http_500: "Return a synthetic 500 without calling the backend.",
     http_401: "Return a synthetic 401 without calling the backend.",
     http_403: "Return a synthetic 403 without calling the backend.",
-    malformed: "Call the real backend, then present malformed JSON to the simulated device.",
-    duplicate: "Send the same request twice to the real backend."
+    malformed:
+      "Call the real backend, then present malformed JSON to the simulated device.",
+    duplicate: "Send the same request twice to the real backend.",
   };
   $("failureDescription").textContent = descriptions[mode] || descriptions.none;
 }
@@ -1082,18 +1374,40 @@ function escapeHtml(value) {
     .replaceAll("'", "&#039;");
 }
 
-function delay(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
+function delay(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 function initHarness() {
   els.deviceList = $("deviceList");
-  $("environmentBadge").title = "Firebase environment: " + String(firebaseEnvironmentConfig.activeFirebaseEnvironment || "unknown");
-  $("courtSelect").addEventListener("change", (event) => selectCourt(event.target.value));
-  $("clearTraceBtn").addEventListener("click", () => { state.trace = []; state.selectedTraceId = null; renderTrace(); $("exchangeDetail").textContent = "Select a trace entry."; });
+  $("environmentBadge").title =
+    "Firebase environment: " +
+    String(firebaseEnvironmentConfig.activeFirebaseEnvironment || "unknown");
+  $("courtSelect").addEventListener("change", (event) =>
+    selectCourt(event.target.value),
+  );
+  $("clearTraceBtn").addEventListener("click", () => {
+    state.trace = [];
+    state.selectedTraceId = null;
+    renderTrace();
+    $("exchangeDetail").textContent = "Select a trace entry.";
+  });
   $("failureMode").addEventListener("change", updateFailureUi);
-  $("latencyMs").addEventListener("input", (event) => state.failure.latencyMs = Number(event.target.value) || 0);
-  $("timeoutMs").addEventListener("input", (event) => state.failure.timeoutMs = Number(event.target.value) || 3000);
+  $("latencyMs").addEventListener(
+    "input",
+    (event) => (state.failure.latencyMs = Number(event.target.value) || 0),
+  );
+  $("timeoutMs").addEventListener(
+    "input",
+    (event) => (state.failure.timeoutMs = Number(event.target.value) || 3000),
+  );
   $("networkResetBtn").addEventListener("click", () => {
-    state.failure = { mode: "none", latencyMs: 1500, timeoutMs: 3000, armed: false };
+    state.failure = {
+      mode: "none",
+      latencyMs: 1500,
+      timeoutMs: 3000,
+      armed: false,
+    };
     $("failureMode").value = "none";
     $("latencyMs").value = "1500";
     $("timeoutMs").value = "3000";
@@ -1108,7 +1422,10 @@ function initHarness() {
       return;
     }
     state.failure.armed = true;
-    showToast("Armed: " + mode + " will apply to the next device request only.", "info");
+    showToast(
+      "Armed: " + mode + " will apply to the next device request only.",
+      "info",
+    );
     $("failNextBtn").textContent = "Failure armed";
   });
   $("courtSelect").addEventListener("change", () => {
@@ -1117,7 +1434,8 @@ function initHarness() {
   });
   $("addVirtualDeviceBtn").addEventListener("click", () => {
     if (!requireMutationAccess()) return;
-    $("virtualDeviceId").value = "SIM-" + Math.random().toString(36).slice(2, 8).toUpperCase();
+    $("virtualDeviceId").value =
+      "SIM-" + Math.random().toString(36).slice(2, 8).toUpperCase();
     renderCourtSelectors();
     openHarnessDialog($("deviceDialog"), "#virtualDeviceId");
   });
@@ -1139,7 +1457,8 @@ function initHarness() {
   window.addEventListener("resize", updateDeviceListToggle);
 
   $("productionAck").addEventListener("change", (event) => {
-    $("productionEnableBtn").disabled = state.environmentMismatch || !event.target.checked;
+    $("productionEnableBtn").disabled =
+      state.environmentMismatch || !event.target.checked;
   });
   $("productionEnableBtn").addEventListener("click", () => {
     if (state.environmentMismatch || !$("productionAck").checked) return;
@@ -1154,7 +1473,10 @@ function initHarness() {
   updateEnvironmentUi();
   void Promise.all([loadCourts(), loadDevices()]).catch((error) => {
     console.error(error);
-    showToast("Failed to load courts/devices: " + (error?.message || error), "error");
+    showToast(
+      "Failed to load courts/devices: " + (error?.message || error),
+      "error",
+    );
   });
 
   openProductionGateIfNeeded();
@@ -1166,12 +1488,9 @@ function init() {
   window.addEventListener("storage", (event) => {
     if (event.key !== ADMIN_LOGOUT_SIGNAL_KEY) return;
 
-    try
-    {
+    try {
       sessionStorage.removeItem(ADMIN_SESSION_STORAGE_KEY);
-    }
-    catch (storageError)
-    {
+    } catch (storageError) {
       console.warn("Unable to clear admin session state.", storageError);
     }
 

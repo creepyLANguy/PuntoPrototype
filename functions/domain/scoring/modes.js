@@ -1,5 +1,17 @@
 const { normalizeScoringOptions } = require("./engine");
 
+const FIXED_TOTAL_POINTS_FIELDS = ["pointsTarget", "serving", "completion"];
+
+function pickFixedTotalPointsFields(source) {
+  const picked = {};
+  FIXED_TOTAL_POINTS_FIELDS.forEach((field) => {
+    if (source[field] !== undefined) {
+      picked[field] = source[field];
+    }
+  });
+  return picked;
+}
+
 function buildScoringOptions(source = {}) {
   const normalizedInput = { ...(source || {}) };
   const explicitScoringMode =
@@ -11,6 +23,7 @@ function buildScoringOptions(source = {}) {
 
   const options = normalizeScoringOptions({
     ...(normalizedInput.scoringOptions || {}),
+    ...pickFixedTotalPointsFields(normalizedInput),
     scoringMode: explicitScoringMode,
     deuceMode: explicitDeuceMode,
     tiebreakMode: explicitTiebreakMode,

@@ -77,16 +77,25 @@ function project(score) {
 }
 
 // Feed a fixture's events into the mock backend the same way the client does:
-// each event is written to courts/<id>/events/<eventId> at the court's active
+// each event is written to matches/<id>/events/<eventId> at the match's active
 // scoreVersion, and the backend reduces them into the authoritative score.
 function runThroughBackend(fixture) {
   resetFirestoreState();
   firestoreState.backendEnabled = false; // defer so events process in written order
 
   const courtId = "golden";
+  const matchId = "m-golden";
   const options = normalizeScoringOptions(fixture.options);
   seedDoc(`courts/${courtId}`, {
     name: courtId,
+    activeMatchId: matchId,
+    scoringMode: options.scoringMode,
+    scoringOptions: options,
+  });
+  seedDoc(`matches/${matchId}`, {
+    matchId,
+    status: "live",
+    currentCourtId: courtId,
     scoreVersion: 0,
     scoringMode: options.scoringMode,
     scoringOptions: options,
@@ -94,10 +103,11 @@ function runThroughBackend(fixture) {
 
   fixture.events.forEach((event, index) => {
     const eventId = event.id || `evt-${index + 1}`;
-    writeDoc(`courts/${courtId}/events/${eventId}`, {
+    writeDoc(`matches/${matchId}/events/${eventId}`, {
       eventType: event.eventType,
       scoreVersion: 0,
       createdAt: event.createdAt,
+      courtId,
     });
   });
 

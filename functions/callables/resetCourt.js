@@ -1,13 +1,16 @@
-const { db, FieldValue } = require("../infrastructure/firebase");
-const { buildScoringOptions } = require("../domain/scoring/modes");
-const { toLiveScorePayload, defaultScore } = require("../domain/scoring/engine");
-const { normalizeScoreVersion } = require("../domain/events/validation");
+// Court-addressed reset used by the scoreboard: resets the match currently on
+// the court (spec section 7) and optionally changes the court password.
+const { db } = require("../infrastructure/firebase");
+const { paths } = require("../services/firestorePaths");
+const matchService = require("../services/matchService");
 const {
-  SCORE_CHECKPOINTS_COLLECTION,
-  DEFAULT_TEAM_NAMES,
-  DEFAULT_PLAYER_NAMES,
-  REGION,
-} = require("../services/constants");
+  readCredentials,
+  authorizeCourtControl,
+  authorizeMatchControl,
+} = require("../services/authService");
+const { invalid, notFound } = require("../services/errors");
+const { onTournamentMatchChanged } = require("../services/tournamentHooks");
+const { REGION } = require("../services/constants");
 
 async function resetCourt(request) {
   const {
@@ -17,103 +20,52 @@ async function resetCourt(request) {
     requirePassword,
     scoringMode,
     scoringOptions: incomingScoringOptions,
-  } = request.data;
-  if (!courtId) throw new Error("Missing courtId");
+  } = request.data || {};
+  if (!courtId) throw invalid("Missing courtId");
 
-  const courtRef = db.doc(`courts/${courtId}`);
-  const courtDoc = await courtRef.get();
-  const courtData = courtDoc.exists ? courtDoc.data() : {};
+  const courtSnap = await db.doc(paths.court(courtId)).get();
+  if (!courtSnap.exists) throw notFound("Court not found.");
+  const court = { courtId, ...courtSnap.data() };
+  const credentials = readCredentials(request);
   const trimmedPassword = typeof newPassword === "string" ? newPassword.trim() : "";
 
   // A password is optional on reset: blank means "keep the existing court
   // password". When one is supplied it still has to satisfy the usual rules,
   // and callers can set requirePassword to make it mandatory.
   if (requirePassword && !trimmedPassword) {
-    throw new Error("Password must be at least 4 characters.");
+    throw invalid("Password must be at least 4 characters.");
   }
-
   if (trimmedPassword) {
-    if (trimmedPassword.length < 4) {
-      throw new Error("Password must be at least 4 characters.");
-    }
-
-    if (trimmedPassword === courtId) {
-      throw new Error("Password must be different from court name.");
-    }
+    if (trimmedPassword.length < 4) throw invalid("Password must be at least 4 characters.");
+    if (trimmedPassword === courtId) throw invalid("Password must be different from court name.");
   }
 
-  const scoringOptions = buildScoringOptions({
-    ...(courtData.scoringOptions || {}),
-    ...(incomingScoringOptions || {}),
-    scoringMode: scoringMode || courtData.scoringMode || courtData.scoringOptions?.scoringMode,
+  const matchId = await matchService.resolveCourtMatchId(courtId, { ensure: true });
+  const matchSnap = await db.doc(paths.match(matchId)).get();
+  const match = { matchId, ...matchSnap.data() };
+  const actor = await authorizeMatchControl({ match, court }, credentials);
+  if (trimmedPassword && match.tournamentId) {
+    await authorizeCourtControl(court, credentials);
+  }
+
+  const result = await matchService.resetMatch({
+    matchId,
+    deepReset: Boolean(deepReset),
+    scoringOptions:
+      incomingScoringOptions || scoringMode
+        ? { ...(incomingScoringOptions || {}), ...(scoringMode ? { scoringMode } : {}) }
+        : null,
+    actor,
   });
-  const nextScoreVersion = normalizeScoreVersion(courtData.scoreVersion) + 1;
-
-  const eventsRef = db.collection(`courts/${courtId}/events`);
-  const eventsSnap = await eventsRef.get();
-  const checkpointsRef = db.collection(`courts/${courtId}/${SCORE_CHECKPOINTS_COLLECTION}`);
-  const checkpointsSnap = await checkpointsRef.get();
-  const archiveId = new Date().toISOString();
-
-  const archiveBatch = db.batch();
-  eventsSnap.forEach((doc) => {
-    const archiveRef = db.doc(`courts/${courtId}/archive/${archiveId}/events/${doc.id}`);
-    archiveBatch.set(archiveRef, {
-      ...doc.data(),
-      archivedAt: FieldValue.serverTimestamp(),
-      resetBy: request.auth?.uid || "system",
-    });
-  });
-  await archiveBatch.commit();
-
-  // Delete events
-  const deleteBatch = db.batch();
-  eventsSnap.forEach((doc) => deleteBatch.delete(doc.ref));
-  checkpointsSnap.forEach((doc) => deleteBatch.delete(doc.ref));
-  await deleteBatch.commit();
-
-  // Reset score. Include explicit null sentinels for the ordering fields so
-  // that any in-flight Cloud Function invocation for a pre-reset event — whose
-  // event document has already been deleted — cannot corrupt the fresh score
-  // (the tx.get(eventRef) existence check in onEventCreate will bail early,
-  // but writing nulls here also clears any stale baseline timestamp that would
-  // make a late CF fall through the orderComparison guard).
-  await db.doc(`courts/${courtId}/score/current`).set({
-    ...toLiveScorePayload(defaultScore(scoringOptions)),
-    lastProcessedEventId: null,
-    lastProcessedCreatedAt: null,
-  });
-
-  const courtUpdates = {
-    scoreVersion: nextScoreVersion,
-    scoringOptions,
-    scoringMode: scoringOptions.scoringMode,
-    // A reset starts a new match with the physical Beacon/team mapping restored.
-    beaconSidesSwapped: false,
-  };
 
   // Skip the write when the password is unchanged so connected clients do not
   // see a password-change event (which would switch them to spectate mode).
-  if (trimmedPassword && trimmedPassword !== courtData.password) {
-    courtUpdates.password = trimmedPassword;
+  if (trimmedPassword && trimmedPassword !== court.password) {
+    await db.doc(paths.court(courtId)).set({ password: trimmedPassword }, { merge: true });
   }
 
-  if (deepReset) {
-    courtUpdates.teamNames = { ...DEFAULT_TEAM_NAMES };
-    courtUpdates.playerNames = { ...DEFAULT_PLAYER_NAMES };
-  }
-
-  if (Object.keys(courtUpdates).length > 0) {
-    await courtRef.set(courtUpdates, { merge: true });
-  }
-
-  return {
-    success: true,
-    archivedId: archiveId,
-    scoreVersion: nextScoreVersion,
-    scoringMode: scoringOptions.scoringMode,
-    scoringOptions,
-  };
+  if (result.tournamentId) await onTournamentMatchChanged(result);
+  return { ...result, courtId };
 }
 
 module.exports = { resetCourt, REGION };

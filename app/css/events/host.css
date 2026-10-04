@@ -1,0 +1,140 @@
+/* =======================================================
+   EVENTS PAGES: HOST CONTROL ROOM
+======================================================= */
+
+.host-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  font-weight: 700;
+}
+
+.host-access {
+  flex-basis: 100%;
+}
+
+.host-access summary {
+  cursor: pointer;
+  color: var(--ev-muted);
+}
+
+.host-link {
+  display: block;
+  margin: 6px 0;
+  padding: 8px;
+  border-radius: 8px;
+  background: var(--ev-surface-2);
+  overflow-wrap: anywhere;
+  font-size: 0.8rem;
+}
+
+.kpi-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 10px;
+}
+
+.kpi {
+  display: flex;
+  flex-direction: column;
+  padding: 12px;
+  border: 1px solid var(--ev-border);
+  border-radius: 12px;
+  background: var(--ev-surface);
+}
+
+.kpi strong {
+  font-family: var(--ev-display);
+  font-size: 1.5rem;
+}
+
+.kpi span {
+  color: var(--ev-muted);
+  font-size: 0.78rem;
+}
+
+.kpi.is-live strong {
+  color: var(--ev-live);
+}
+
+.kpi.is-warning strong {
+  color: var(--ev-warning);
+}
+
+.primary-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--ev-border);
+  border-radius: var(--ev-radius);
+  background: var(--ev-surface);
+  position: sticky;
+  top: 58px;
+  z-index: 5;
+}
+
+.exceptions {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.exception {
+  margin: 4px 0;
+}
+
+.exception-match_delayed,
+.exception-bye_imbalance {
+  color: var(--ev-warning);
+}
+
+.exception-court_unavailable,
+.exception-court_missing,
+.exception-player_withdrawn {
+  color: var(--ev-danger);
+}
+
+.entry-list.is-host .entry {
+  align-items: flex-start;
+}
+
+.entry-main {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.entry-seed {
+  font-weight: 800;
+}
+
+.entry-edit summary,
+.entry-add summary,
+.settings-panel summary {
+  cursor: pointer;
+  color: var(--ev-muted);
+  font-weight: 700;
+}
+
+.entry-edit-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.entry-add {
+  margin-bottom: 12px;
+}
+
+.entry-add .ev-textarea {
+  margin: 8px 0;
+}
+
+.rules-preview .ev-section {
+  padding: 0;
+  border: 0;
+}

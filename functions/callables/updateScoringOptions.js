@@ -1,40 +1,81 @@
+// Changes the scoring options of a casual match (addressed by matchId, or by
+// courtId for the match currently on that court) and replays its events under
+// the new rules. Tournament match rules are snapshotted and locked.
 const { db, FieldPath, FieldValue } = require("../infrastructure/firebase");
 const { buildScoringOptions } = require("../domain/scoring/modes");
 const { replayEvents, toLiveScorePayload } = require("../domain/scoring/engine");
-const { getLatestCheckpoint, buildCheckpointPayload } = require("../services/checkpointService");
-const { SCORE_CHECKPOINTS_COLLECTION, REGION } = require("../services/constants");
-const { normalizeScoreVersion } = require("../domain/events/validation");
-const { SCORING_EVENTS } = require("../domain/events/validation");
+const { buildCheckpointPayload } = require("../services/checkpointService");
+const { REGION } = require("../services/constants");
+const { normalizeScoreVersion, SCORING_EVENTS } = require("../domain/events/validation");
+const { buildScoreSummary } = require("../domain/matches/lifecycle");
+const { paths } = require("../services/firestorePaths");
+const matchService = require("../services/matchService");
+const { readCredentials, authorizeMatchControl, requireAdmin } = require("../services/authService");
+const { invalid, notFound, precondition } = require("../services/errors");
 
 async function updateScoringOptions(request) {
-  const { courtId, scoringOptions: incomingScoringOptions, scoringMode } = request.data;
-  if (!courtId) throw new Error("Missing courtId");
+  const {
+    courtId,
+    matchId: requestedMatchId,
+    scoringOptions: incomingScoringOptions,
+    scoringMode,
+  } = request.data || {};
+  if (!courtId && !requestedMatchId) throw invalid("Missing courtId");
 
-  const courtRef = db.doc(`courts/${courtId}`);
-  const scoreRef = db.doc(`courts/${courtId}/score/current`);
-  const eventsRef = db
-    .collection(`courts/${courtId}/events`)
-    .orderBy("createdAt", "asc")
-    .orderBy(FieldPath.documentId(), "asc");
-
-  const courtSnap = await courtRef.get();
-  if (!courtSnap.exists) {
-    throw new Error("Court not found");
+  let court = null;
+  if (courtId) {
+    const courtSnap = await db.doc(paths.court(courtId)).get();
+    if (!courtSnap.exists) throw notFound("Court not found");
+    court = { courtId, ...courtSnap.data() };
   }
 
-  const courtData = courtSnap.data() || {};
+  const matchId =
+    requestedMatchId || (await matchService.resolveCourtMatchId(courtId, { ensure: true }));
+  const matchRef = db.doc(paths.match(matchId));
+  const matchSnap = await matchRef.get();
+  if (!matchSnap.exists) throw notFound("Match not found");
+  const match = { matchId, ...matchSnap.data() };
+  if (match.tournamentId) {
+    throw precondition("Tournament match scoring rules cannot be changed.");
+  }
+
+  const credentials = readCredentials(request);
+  if (court || match.currentCourtId) {
+    let controlCourt = court;
+    if (!controlCourt) {
+      const snap = await db.doc(paths.court(match.currentCourtId)).get();
+      controlCourt = snap.exists ? { courtId: match.currentCourtId, ...snap.data() } : null;
+    }
+    await authorizeMatchControl({ match, court: controlCourt }, credentials);
+  } else {
+    await requireAdmin(credentials);
+  }
+
   const normalizedOptions = buildScoringOptions({
-    ...(courtData.scoringOptions || {}),
+    ...(match.scoringOptions || {}),
     ...(incomingScoringOptions || {}),
-    scoringMode: scoringMode || courtData.scoringMode || courtData.scoringOptions?.scoringMode,
+    scoringMode: scoringMode || match.scoringMode || match.scoringOptions?.scoringMode,
   });
-  await courtRef.set(
+  await matchRef.set(
     { scoringOptions: normalizedOptions, scoringMode: normalizedOptions.scoringMode },
     { merge: true },
   );
+  // The court keeps the options as its default for future casual matches.
+  if (court) {
+    await db
+      .doc(paths.court(courtId))
+      .set(
+        { scoringOptions: normalizedOptions, scoringMode: normalizedOptions.scoringMode },
+        { merge: true },
+      );
+  }
 
-  const activeScoreVersion = normalizeScoreVersion(courtData.scoreVersion);
-  const eventsSnap = await eventsRef.get();
+  const activeScoreVersion = normalizeScoreVersion(match.scoreVersion);
+  const eventsSnap = await db
+    .collection(paths.matchEvents(matchId))
+    .orderBy("createdAt", "asc")
+    .orderBy(FieldPath.documentId(), "asc")
+    .get();
   const events = eventsSnap.docs
     .map((doc) => ({ id: doc.id, ...doc.data() }))
     .filter(
@@ -46,15 +87,16 @@ async function updateScoringOptions(request) {
 
   const lastEventId = events.length > 0 ? events[events.length - 1].id : null;
   const lastEventCreatedAt = events.length > 0 ? events[events.length - 1].createdAt || null : null;
-  await scoreRef.set({
+  await db.doc(paths.matchScore(matchId)).set({
     ...toLiveScorePayload(replayedScore),
     lastEventId,
     lastProcessedEventId: lastEventId,
     lastProcessedCreatedAt: lastEventCreatedAt,
     updatedAt: FieldValue.serverTimestamp(),
   });
+  await matchRef.set({ scoreSummary: buildScoreSummary(replayedScore) }, { merge: true });
 
-  const checkpointsRef = db.collection(`courts/${courtId}/${SCORE_CHECKPOINTS_COLLECTION}`);
+  const checkpointsRef = db.collection(paths.matchCheckpoints(matchId));
   const checkpointsSnap = await checkpointsRef.get();
   const checkpointDeleteBatch = db.batch();
   checkpointsSnap.forEach((docSnap) => checkpointDeleteBatch.delete(docSnap.ref));
@@ -64,12 +106,19 @@ async function updateScoringOptions(request) {
     await checkpointsRef
       .doc()
       .set(
-        buildCheckpointPayload(replayedScore, normalizedOptions, lastEventId, lastEventCreatedAt),
+        buildCheckpointPayload(
+          replayedScore,
+          normalizedOptions,
+          lastEventId,
+          lastEventCreatedAt,
+          activeScoreVersion,
+        ),
       );
   }
 
   return {
     success: true,
+    matchId,
     scoringOptions: normalizedOptions,
     scoringMode: normalizedOptions.scoringMode,
     mode: normalizedOptions.scoringMode,

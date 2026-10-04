@@ -1,0 +1,89 @@
+/* =======================================================
+   MATCH CONTEXT
+   Court location next to the match title, the live match line in court
+   lists, discovery results and the admin match / tournament rows.
+======================================================= */
+
+.court-location {
+  opacity: 0.7;
+  font-weight: 400;
+}
+
+.court-location.hidden,
+.marquee-separator.hidden {
+  display: none;
+}
+
+.court-item-match {
+  grid-column: 1 / -1;
+  font-size: 0.8rem;
+  opacity: 0.75;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.discovery-results {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0 0 12px;
+}
+
+.discovery-results.hidden {
+  display: none;
+}
+
+.discovery-result {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  border: 1px solid var(--input-border);
+  border-radius: 10px;
+  background: var(--input-bg);
+  color: var(--text-color);
+  text-decoration: none;
+}
+
+.discovery-result strong {
+  font-size: 0.95rem;
+}
+
+.discovery-result span {
+  font-size: 0.78rem;
+  opacity: 0.75;
+}
+
+.discovery-tournament {
+  border-left: 3px solid var(--waveColour);
+}
+
+.discovery-match {
+  border-left: 3px solid var(--teamAcolour);
+}
+
+.menu-btn-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+
+.admin-match-item .aci-actions,
+.admin-tournament-item .aci-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.admin-match-court-select {
+  max-width: 160px;
+}
+
+#tournamentsTab .admin-dashboard-controls a.primary-btn {
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+}

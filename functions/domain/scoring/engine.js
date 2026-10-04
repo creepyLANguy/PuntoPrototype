@@ -1,8 +1,16 @@
 const historyThreshold = 500;
 
-const SCORING_MODES = new Set(["standard", "straight", "tiebreakTen"]);
+const SCORING_MODES = new Set(["standard", "straight", "tiebreakTen", "fixedTotalPoints"]);
 const DEUCE_MODES = new Set(["standard", "golden", "silver", "star"]);
 const TIEBREAK_MODES = new Set(["off", "sixAllSeven", "sixAllTen"]);
+
+// Modes with a defined end: the score itself decides when the match is over.
+const FIXED_END_MODES = new Set(["tiebreakTen", "fixedTotalPoints"]);
+
+const SERVE_SLOTS = ["A1", "B1", "A2", "B2"];
+const SIDE_SWAP_RULES = new Set(["after_each_player_serves_once", "none"]);
+const COMPLETION_RULES = new Set(["exact_total_points"]);
+const TIE_RESOLUTIONS = new Set(["allow_draw", "golden_point"]);
 
 const DEFAULT_SCORING_OPTIONS = {
   scoringMode: "standard",
@@ -10,8 +18,70 @@ const DEFAULT_SCORING_OPTIONS = {
   tiebreakMode: "sixAllSeven",
 };
 
+const DEFAULT_FIXED_TOTAL_POINTS = {
+  pointsTarget: 36,
+  serving: {
+    enabled: true,
+    order: [...SERVE_SLOTS],
+    servesPerPlayer: 4,
+    serveBlockLength: 1,
+    sideSwapRule: "after_each_player_serves_once",
+  },
+  completion: {
+    rule: "exact_total_points",
+    tieResolution: "allow_draw",
+  },
+};
+
 function clone(value) {
   return structuredClone(value);
+}
+
+function clampInteger(value, min, max, fallback) {
+  const number = Number(value);
+  if (!Number.isInteger(number) || number < min || number > max) {
+    return fallback;
+  }
+  return number;
+}
+
+function isServeOrder(order) {
+  return (
+    Array.isArray(order) &&
+    order.length === SERVE_SLOTS.length &&
+    SERVE_SLOTS.every((slot) => order.includes(slot))
+  );
+}
+
+function normalizeFixedTotalPointsOptions(options) {
+  const serving = { ...DEFAULT_FIXED_TOTAL_POINTS.serving, ...(options.serving || {}) };
+  const completion = { ...DEFAULT_FIXED_TOTAL_POINTS.completion, ...(options.completion || {}) };
+
+  return {
+    pointsTarget: clampInteger(
+      options.pointsTarget,
+      1,
+      500,
+      DEFAULT_FIXED_TOTAL_POINTS.pointsTarget,
+    ),
+    serving: {
+      enabled: serving.enabled !== false,
+      order: isServeOrder(serving.order) ? [...serving.order] : [...SERVE_SLOTS],
+      servesPerPlayer: clampInteger(serving.servesPerPlayer, 1, 100, 4),
+      serveBlockLength: clampInteger(serving.serveBlockLength, 1, 20, 1),
+      sideSwapRule: SIDE_SWAP_RULES.has(serving.sideSwapRule)
+        ? serving.sideSwapRule
+        : DEFAULT_FIXED_TOTAL_POINTS.serving.sideSwapRule,
+    },
+    completion: {
+      rule: COMPLETION_RULES.has(completion.rule)
+        ? completion.rule
+        : DEFAULT_FIXED_TOTAL_POINTS.completion.rule,
+      tieResolution: TIE_RESOLUTIONS.has(completion.tieResolution)
+        ? completion.tieResolution
+        : DEFAULT_FIXED_TOTAL_POINTS.completion.tieResolution,
+    },
+  };
 }
 
 function normalizeScoringOptions(options = {}) {
@@ -32,11 +102,66 @@ function normalizeScoringOptions(options = {}) {
     normalized.tiebreakMode = DEFAULT_SCORING_OPTIONS.tiebreakMode;
   }
 
+  if (normalized.scoringMode === "fixedTotalPoints") {
+    Object.assign(normalized, normalizeFixedTotalPointsOptions(normalized));
+  } else {
+    delete normalized.pointsTarget;
+    delete normalized.serving;
+    delete normalized.completion;
+  }
+
   return normalized;
 }
 
-function defaultScore(scoringOptions = DEFAULT_SCORING_OPTIONS) {
+function isFixedEndMode(scoringMode) {
+  return FIXED_END_MODES.has(scoringMode);
+}
+
+// Serve/side state of a fixed-total-points match after `rallyPoints` points.
+// It is a pure function of the configuration and the rally count, so undo and
+// replay never need to store it separately; it is materialised on the score
+// for display and audit.
+function buildFixedTotalState(rallyPoints, options) {
+  const { serving, pointsTarget } = options;
+  const order = serving.order;
+  const blockLength = serving.serveBlockLength;
+  const servesCompleted = Object.fromEntries(order.map((slot) => [slot, 0]));
+  const fullBlocks = Math.floor(rallyPoints / blockLength);
+
+  order.forEach((slot, index) => {
+    const blocksForSlot =
+      Math.floor(fullBlocks / order.length) + (index < fullBlocks % order.length ? 1 : 0);
+    servesCompleted[slot] = blocksForSlot;
+  });
+
+  const cycleLength = order.length * blockLength;
+  const sideSwapCycles =
+    serving.sideSwapRule === "after_each_player_serves_once"
+      ? Math.floor(rallyPoints / cycleLength)
+      : 0;
+
   return {
+    pointsTarget,
+    rallyPoints,
+    remainingPoints: Math.max(0, pointsTarget - rallyPoints),
+    currentServer: serving.enabled ? order[fullBlocks % order.length] : null,
+    serveSlot: fullBlocks % order.length,
+    servesCompleted,
+    sideSwapCycles,
+    sidesSwapped: sideSwapCycles % 2 === 1,
+  };
+}
+
+function getFixedTotalResult(score) {
+  const pointsA = Number(score?.A?.points) || 0;
+  const pointsB = Number(score?.B?.points) || 0;
+  if (pointsA === pointsB) return "draw";
+  return pointsA > pointsB ? "A" : "B";
+}
+
+function defaultScore(scoringOptions = DEFAULT_SCORING_OPTIONS) {
+  const options = normalizeScoringOptions(scoringOptions);
+  const score = {
     A: { points: 0, games: 0, sets: 0, totalPoints: 0 },
     B: { points: 0, games: 0, sets: 0, totalPoints: 0 },
     lastPointTeam: null,
@@ -47,9 +172,16 @@ function defaultScore(scoringOptions = DEFAULT_SCORING_OPTIONS) {
     deuceCycles: 0,
     matchComplete: false,
     completedSets: [],
-    scoringOptions: normalizeScoringOptions(scoringOptions),
+    scoringOptions: options,
     history: [],
   };
+
+  if (options.scoringMode === "fixedTotalPoints") {
+    score.fixedTotal = buildFixedTotalState(0, options);
+    score.result = null;
+  }
+
+  return score;
 }
 
 function getCompletedMatchGames(score) {
@@ -95,6 +227,11 @@ function getCurrentServerLabel(score) {
     return null;
   }
 
+  if (options.scoringMode === "fixedTotalPoints") {
+    const rallyPoints = (Number(score.A?.points) || 0) + (Number(score.B?.points) || 0);
+    return buildFixedTotalState(rallyPoints, options).currentServer;
+  }
+
   const totalCompletedGames = getCompletedMatchGames(score);
   const isStandardTiebreak =
     options.scoringMode === "standard" &&
@@ -125,12 +262,22 @@ function normalizeScore(score, scoringOptions) {
   if (typeof merged.deuceCycles !== "number") merged.deuceCycles = 0;
   if (typeof merged.matchComplete !== "boolean") merged.matchComplete = false;
 
-  // matchComplete is only meaningful in the single match tiebreak
-  // ("tiebreakTen"). Standard and straight modes have no fixed set/point
-  // target - a match can go on indefinitely - so a stale flag (e.g. carried
-  // over from a scoring-mode change) must never block or end scoring there.
-  if (normalizedOptions.scoringMode !== "tiebreakTen") {
+  // matchComplete is only meaningful in modes with a defined end (the match
+  // tiebreak and fixed total points). Standard and straight modes have no
+  // fixed set/point target - a match can go on indefinitely - so a stale flag
+  // (e.g. carried over from a scoring-mode change) must never block or end
+  // scoring there.
+  if (!isFixedEndMode(normalizedOptions.scoringMode)) {
     merged.matchComplete = false;
+  }
+
+  if (normalizedOptions.scoringMode === "fixedTotalPoints") {
+    const rallyPoints = (Number(merged.A.points) || 0) + (Number(merged.B.points) || 0);
+    merged.fixedTotal = buildFixedTotalState(rallyPoints, normalizedOptions);
+    merged.result = merged.matchComplete ? getFixedTotalResult(merged) : null;
+  } else {
+    delete merged.fixedTotal;
+    delete merged.result;
   }
 
   return merged;
@@ -156,9 +303,9 @@ function applyEvent(score, event, scoringOptions) {
 
   const newScore = normalizeScore(clone(score), options);
 
-  // Only the match tiebreak has a defined end; normalizeScore already clears
-  // the flag for every other mode, so this guard can never fire there.
-  if (options.scoringMode === "tiebreakTen" && newScore.matchComplete) {
+  // Only modes with a defined end can be complete; normalizeScore already
+  // clears the flag for every other mode, so this guard can never fire there.
+  if (isFixedEndMode(options.scoringMode) && newScore.matchComplete) {
     return newScore;
   }
 
@@ -209,6 +356,11 @@ function awardPoint(score, scoringTeam, otherTeam, options) {
 
   if (options.scoringMode === "straight") {
     score[scoringTeam].points++;
+    return;
+  }
+
+  if (options.scoringMode === "fixedTotalPoints") {
+    awardFixedTotalPoint(score, scoringTeam, options);
     return;
   }
 
@@ -266,6 +418,33 @@ function awardRegularGamePoint(score, scoringTeam, otherTeam, options) {
     if (options.deuceMode === "silver" || options.deuceMode === "star") {
       score.deuceCycles++;
     }
+  }
+}
+
+function awardFixedTotalPoint(score, scoringTeam, options) {
+  score[scoringTeam].points++;
+
+  const rallyPoints = score.A.points + score.B.points;
+  score.fixedTotal = buildFixedTotalState(rallyPoints, options);
+
+  if (rallyPoints < options.pointsTarget) {
+    score.result = null;
+    return;
+  }
+
+  // At (or past) the target: a tie under "golden_point" plays one deciding
+  // rally; every other case ends the match on exactly the target.
+  const tied = score.A.points === score.B.points;
+  if (tied && options.completion.tieResolution === "golden_point") {
+    score.result = null;
+    return;
+  }
+
+  score.matchComplete = true;
+  score.result = getFixedTotalResult(score);
+  if (score.result !== "draw") {
+    score[score.result].sets = 1;
+    score.lastSetTeam = score.result;
   }
 }
 
@@ -424,10 +603,62 @@ function didSetCountIncrease(previousScore, nextScore) {
   return nextSets > previousSets;
 }
 
+function compareTeams(left, right) {
+  if (left === right) return null;
+  return left > right ? "A" : "B";
+}
+
+// Canonical result of a match from its authoritative score. Rally points are
+// the team's total points won in every mode; games include completed sets.
+function getMatchResult(score) {
+  const options = normalizeScoringOptions(score?.scoringOptions);
+  const side = (team) => score?.[team] || {};
+  const sets = { A: Number(side("A").sets) || 0, B: Number(side("B").sets) || 0 };
+  const completedSets = Array.isArray(score?.completedSets) ? score.completedSets : [];
+  const games = {
+    A:
+      completedSets.reduce((sum, set) => sum + (Number(set.A) || 0), 0) +
+      (Number(side("A").games) || 0),
+    B:
+      completedSets.reduce((sum, set) => sum + (Number(set.B) || 0), 0) +
+      (Number(side("B").games) || 0),
+  };
+  const points = {
+    A: Number(side("A").totalPoints) || 0,
+    B: Number(side("B").totalPoints) || 0,
+  };
+
+  let winner;
+  if (options.scoringMode === "fixedTotalPoints" || options.scoringMode === "straight") {
+    points.A = Number(side("A").points) || 0;
+    points.B = Number(side("B").points) || 0;
+    winner = compareTeams(points.A, points.B);
+  } else {
+    winner =
+      compareTeams(sets.A, sets.B) ||
+      compareTeams(games.A, games.B) ||
+      compareTeams(points.A, points.B);
+  }
+
+  return {
+    winner: winner || "draw",
+    points,
+    games,
+    sets,
+    scoringMode: options.scoringMode,
+    matchComplete: Boolean(score?.matchComplete),
+  };
+}
+
 module.exports = {
   DEFAULT_SCORING_OPTIONS,
+  DEFAULT_FIXED_TOTAL_POINTS,
+  SCORING_MODES,
   defaultScore,
   normalizeScoringOptions,
+  isFixedEndMode,
+  buildFixedTotalState,
+  getMatchResult,
   applyEvent,
   replayEvents,
   getCompletedMatchGames,

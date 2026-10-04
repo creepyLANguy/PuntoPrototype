@@ -4,8 +4,7 @@ export const $ = (id) => document.getElementById(id);
 
 export const elements = {};
 
-export function initElements()
-{
+export function initElements() {
   Object.assign(elements, {
     startupLoading: $("startupLoading"),
     homeLinkBtn: $("homeLinkBtn"),
@@ -16,22 +15,22 @@ export function initElements()
 
     points: {
       A: $("pointsA"),
-      B: $("pointsB")
+      B: $("pointsB"),
     },
 
     sets: {
       A: $("setsA"),
-      B: $("setsB")
+      B: $("setsB"),
     },
 
     games: {
       A: $("gamesA"),
-      B: $("gamesB")
+      B: $("gamesB"),
     },
 
     critical: {
       A: $("criticalA"),
-      B: $("criticalB")
+      B: $("criticalB"),
     },
 
     cooldown: $("cooldown"),
@@ -206,6 +205,7 @@ export function initElements()
 
   elements.spectateCourtSearch = $("spectateCourtSearch");
   elements.spectateCourtList = $("spectateCourtList");
+  elements.spectateDiscoveryResults = $("spectateDiscoveryResults");
   elements.spectateCourtNameError = $("spectateCourtNameError");
 
   //RESET COURT ELEMENTS
@@ -217,10 +217,17 @@ export function initElements()
   elements.nfcCountdown = $("nfcCountdown");
 
   //Admin portal things
-  elements.adminTabs = document.querySelectorAll('.tab-btn');
+  elements.adminTabs = document.querySelectorAll(".tab-btn");
   elements.clubsTab = $("clubsTab");
   elements.courtsTab = $("courtsTab");
   elements.devicesTab = $("devicesTab");
+  elements.matchesTab = $("matchesTab");
+  elements.tournamentsTab = $("tournamentsTab");
+  elements.adminMatchList = $("adminMatchList");
+  elements.adminMatchSearch = $("adminMatchSearch");
+  elements.adminMatchStatusFilter = $("adminMatchStatusFilter");
+  elements.adminTournamentList = $("adminTournamentList");
+  elements.showCreateTournamentBtn = $("showCreateTournamentBtn");
   elements.adminClubList = $("adminClubList");
   elements.adminClubSearch = $("adminClubSearch");
   elements.showCreateClubBtn = $("showCreateClubBtn");

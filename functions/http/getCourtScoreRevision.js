@@ -1,7 +1,7 @@
 const {
   prepareScoreApiRequest,
-  buildCourtScoreResponse,
-  extractScoreApiCourtId,
+  buildScoreResponse,
+  extractScoreApiTarget,
 } = require("../services/publicApiService");
 function sendJson(res, status, body) {
   return res.status(status).json(body);
@@ -13,15 +13,15 @@ async function getCourtScoreRevision(req, res) {
   }
 
   try {
-    const courtId = extractScoreApiCourtId(req.path);
-    if (!courtId) {
+    const target = extractScoreApiTarget(req.path);
+    if (!target) {
       return sendJson(res, 400, {
         success: false,
-        error: "Missing or invalid courtId. Use /revision/{courtId}.",
+        error: "Missing or invalid id. Use /revision/{courtId} or /revision/match/{matchId}.",
       });
     }
 
-    const { status, body } = await buildCourtScoreResponse(courtId);
+    const { status, body } = await buildScoreResponse(target);
 
     if (status !== 200) {
       return sendJson(res, status, body);
@@ -29,7 +29,8 @@ async function getCourtScoreRevision(req, res) {
 
     return sendJson(res, 200, {
       success: true,
-      courtId,
+      courtId: body.courtId,
+      matchId: body.matchId,
       revision: body.revision,
     });
   } catch (err) {

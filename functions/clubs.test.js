@@ -708,6 +708,8 @@ describe("Cloud Functions exports", () => {
         "getCourtScoreRevision",
         "getCourtStats",
         "getDetailedScore",
+        "manageMatch",
+        "manageTournament",
         "onCourtDeleted",
         "onDeviceDeleted",
         "onEventCreate",

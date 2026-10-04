@@ -25,13 +25,29 @@
         "source": "/momentum/:courtId",
         "destination": "https://africa-south1-__FIREBASE_PROJECT_ID__.cloudfunctions.net/getCourtMomentum/:courtId",
         "type": 307
+      },
+      {
+        "source": "/score/match/:matchId",
+        "destination": "https://africa-south1-__FIREBASE_PROJECT_ID__.cloudfunctions.net/getCourtScore/match/:matchId",
+        "type": 307
+      },
+      {
+        "source": "/revision/match/:matchId",
+        "destination": "https://africa-south1-__FIREBASE_PROJECT_ID__.cloudfunctions.net/getCourtScoreRevision/match/:matchId",
+        "type": 307
+      },
+      {
+        "source": "/stats/match/:matchId",
+        "destination": "https://africa-south1-__FIREBASE_PROJECT_ID__.cloudfunctions.net/getCourtStats/match/:matchId",
+        "type": 307
+      },
+      {
+        "source": "/momentum/match/:matchId",
+        "destination": "https://africa-south1-__FIREBASE_PROJECT_ID__.cloudfunctions.net/getCourtMomentum/match/:matchId",
+        "type": 307
       }
     ],
-    "ignore": [
-      "firebase.json",
-      "**/.*",
-      "**/node_modules/**"
-    ],
+    "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
     "headers": [
       {
         "source": "/app/js/**",
@@ -89,6 +105,22 @@
       }
     ],
     "rewrites": [
+      {
+        "source": "/m",
+        "destination": "/app/match.html"
+      },
+      {
+        "source": "/m/**",
+        "destination": "/app/match.html"
+      },
+      {
+        "source": "/t",
+        "destination": "/app/tournament.html"
+      },
+      {
+        "source": "/t/**",
+        "destination": "/app/tournament.html"
+      },
       {
         "source": "/court",
         "destination": "/app/index.html"

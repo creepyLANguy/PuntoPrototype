@@ -1,0 +1,145 @@
+/* =======================================================
+   EVENTS PAGES: SETUP WIZARD AND COURT PICKER
+======================================================= */
+
+.wizard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ev-gap);
+  max-width: 860px;
+  margin: 0 auto;
+}
+
+.wizard-step {
+  padding: clamp(14px, 2.5vw, 22px);
+  background: var(--ev-surface);
+  border: 1px solid var(--ev-border);
+  border-radius: var(--ev-radius);
+}
+
+.wizard-step-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 14px;
+  font-family: var(--ev-display);
+  font-size: 1.15rem;
+}
+
+.wizard-step-number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--ev-accent);
+  color: var(--ev-accent-ink);
+  font-size: 0.9rem;
+}
+
+.format-choices {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 10px;
+}
+
+.format-choice {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px;
+  border: 1px solid var(--ev-border);
+  border-radius: 12px;
+  background: var(--ev-surface-2);
+  cursor: pointer;
+}
+
+.format-choice input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.format-choice span {
+  color: var(--ev-muted);
+  font-size: 0.85rem;
+}
+
+.format-choice.is-selected {
+  border-color: var(--ev-accent);
+  box-shadow: inset 0 0 0 1px var(--ev-accent);
+}
+
+.format-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 0 14px;
+}
+
+.court-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.court-group {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--ev-border);
+  border-radius: 12px;
+}
+
+.court-group legend {
+  padding: 0 6px;
+  font-weight: 800;
+}
+
+.court-group-club {
+  border-color: var(--ev-accent);
+}
+
+.court-group-unavailable {
+  opacity: 0.7;
+}
+
+.court-option {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 2px;
+  cursor: pointer;
+}
+
+.court-option-meta {
+  color: var(--ev-muted);
+  font-size: 0.8rem;
+}
+
+.wizard-review {
+  margin-top: 12px;
+}
+
+.review-errors {
+  color: var(--ev-danger);
+}
+
+.review-warnings {
+  color: var(--ev-warning);
+}
+
+.review-facts {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 4px 16px;
+}
+
+.review-facts dt {
+  color: var(--ev-muted);
+}
+
+.review-facts dd {
+  margin: 0;
+  font-weight: 700;
+}

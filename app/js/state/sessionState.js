@@ -1,7 +1,12 @@
 // Court session state: everything about the court that is currently open (its id,
-// score, options, names, password, mode) plus the match-details caches. Reset by
+// password, mode), the match being played on it (id, score, options, names)
+// plus the match-details caches. Reset by
 // court/session.js when a court is entered or left.
-import { DEFAULT_PLAYER_NAMES, DEFAULT_SCORING_OPTIONS, DEFAULT_TEAM_NAMES } from "../config/constants.js";
+import {
+  DEFAULT_PLAYER_NAMES,
+  DEFAULT_SCORING_OPTIONS,
+  DEFAULT_TEAM_NAMES,
+} from "../config/constants.js";
 import { appState } from "./appState.js";
 
 export const defaultScore = () => ({
@@ -12,11 +17,10 @@ export const defaultScore = () => ({
   lastSetTeam: null,
   inTiebreak: false,
   matchComplete: false,
-  scoringOptions: { ...DEFAULT_SCORING_OPTIONS }
+  scoringOptions: { ...DEFAULT_SCORING_OPTIONS },
 });
 
-export function invalidateMatchDetailsCache()
-{
+export function invalidateMatchDetailsCache() {
   session.isMatchDetailsCacheValid = false;
   session.matchDetailsCache = null;
   session.matchDetailsCacheCourtId = null;
@@ -24,8 +28,7 @@ export function invalidateMatchDetailsCache()
   session.momentumCacheCourtId = null;
 }
 
-export function hasCourtAdminPrivileges()
-{
+export function hasCourtAdminPrivileges() {
   return appState.isAdmin || session.enteredCourtAsAdmin;
 }
 
@@ -58,4 +61,21 @@ export const session = {
   // the admin dashboard). Admins keep control of the court across password changes.
   enteredCourtAsAdmin: false,
   currentCourtName: null,
+  // The match the scoreboard follows (spec section 46 MatchContext): the
+  // court's active match, else its most recent match.
+  currentMatchId: null,
+  currentMatchName: null,
+  currentMatchTitle: null,
+  currentMatchStatus: null,
+  currentMatchCourtId: null,
+  currentTournamentId: null,
 };
+
+export function clearMatchContext() {
+  session.currentMatchId = null;
+  session.currentMatchName = null;
+  session.currentMatchTitle = null;
+  session.currentMatchStatus = null;
+  session.currentMatchCourtId = null;
+  session.currentTournamentId = null;
+}

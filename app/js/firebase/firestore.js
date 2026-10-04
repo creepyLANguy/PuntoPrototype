@@ -1,7 +1,6 @@
 // Firestore SDK primitives. Only the firebase/ infrastructure modules import
 // the SDK; the rest of the application goes through the repositories.
-export
-{
+export {
   getFirestore,
   connectFirestoreEmulator,
   doc,
@@ -13,5 +12,8 @@ export
   onSnapshot,
   collection,
   addDoc,
-  serverTimestamp
+  serverTimestamp,
+  query,
+  where,
+  limit,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";

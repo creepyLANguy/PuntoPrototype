@@ -21,14 +21,40 @@ import path from "node:path";
 import process from "node:process";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
-export const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+export const REPO_ROOT = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "..",
+);
 
 // Every generated artifact, in build order. `source` is the entry template or
 // stylesheet; `output` is the file Firebase Hosting serves.
 export const BUILD_TARGETS = [
   { kind: "css", source: "app/css/index.css", output: "app/css/style.css" },
-  { kind: "html", source: "app/templates/index.template.html", output: "app/index.html" },
-  { kind: "html", source: "app/overlay/template.html", output: "app/overlay.html" },
+  {
+    kind: "html",
+    source: "app/templates/index.template.html",
+    output: "app/index.html",
+  },
+  {
+    kind: "html",
+    source: "app/overlay/template.html",
+    output: "app/overlay.html",
+  },
+  {
+    kind: "css",
+    source: "app/css/events/index.css",
+    output: "app/css/events.css",
+  },
+  {
+    kind: "html",
+    source: "app/templates/match.template.html",
+    output: "app/match.html",
+  },
+  {
+    kind: "html",
+    source: "app/templates/tournament.template.html",
+    output: "app/tournament.html",
+  },
 ];
 
 const HTML_INCLUDE = /^[ \t]*<!--[ \t]*@include[ \t]+(\S+)[ \t]*-->[ \t]*$/;
@@ -106,7 +132,9 @@ function withBanner(target, body) {
 
   // Keep <!DOCTYPE html> as the first line so the document mode is unaffected.
   const doctype = body.match(/^<!DOCTYPE html>\n/i);
-  return doctype ? doctype[0] + banner + body.slice(doctype[0].length) : banner + body;
+  return doctype
+    ? doctype[0] + banner + body.slice(doctype[0].length)
+    : banner + body;
 }
 
 // A stylesheet manifest lists its parts in cascade order. Its own comments and
@@ -154,7 +182,9 @@ export function buildTarget(target) {
   return {
     target,
     content: withBanner(target, body),
-    dependencies: [...dependencies].map((file) => toPosix(path.relative(REPO_ROOT, file))),
+    dependencies: [...dependencies].map((file) =>
+      toPosix(path.relative(REPO_ROOT, file)),
+    ),
   };
 }
 
@@ -243,7 +273,9 @@ export function runBuild({ check = false, log = console.log } = {}) {
     }
 
     const outputPath = path.join(REPO_ROOT, target.output);
-    const current = fs.existsSync(outputPath) ? fs.readFileSync(outputPath, "utf8") : null;
+    const current = fs.existsSync(outputPath)
+      ? fs.readFileSync(outputPath, "utf8")
+      : null;
 
     if (current === result.content) {
       log(`up to date  ${target.output}`);
@@ -276,5 +308,7 @@ if (isCli) {
     process.exit(1);
   }
 
-  console.log(check ? "Frontend build check passed." : "Frontend build completed.");
+  console.log(
+    check ? "Frontend build check passed." : "Frontend build completed.",
+  );
 }

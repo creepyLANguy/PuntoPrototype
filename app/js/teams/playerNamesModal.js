@@ -1,18 +1,21 @@
 // Player / team names modal (#playerNamesModal): editing and saving the open
 // court's team and player names.
 import { TOAST_TYPES } from "../config/constants.js";
-import { updateCourt } from "../firebase/courtRepository.js";
+import { updateMatch } from "../firebase/matchRepository.js";
 import { syncCurrentViewState } from "../routing/history.js";
 import { applyTeamNamesToScoreboard } from "../scoring/scoreboard.js";
 import { updateServerIndicator } from "../scoring/serverIndicator.js";
 import { session } from "../state/sessionState.js";
 import { normalizePlayerNames } from "./playerNames.js";
-import { normalizeTeamNames, resolvePersistedTeamNames, resolveTeamNames } from "./teamNames.js";
+import {
+  normalizeTeamNames,
+  resolvePersistedTeamNames,
+  resolveTeamNames,
+} from "./teamNames.js";
 import { elements } from "../ui/dom.js";
 import { showToast } from "../ui/toast.js";
 
-export function openPlayerNamesModal()
-{
+export function openPlayerNamesModal() {
   const existingPlayers = normalizePlayerNames(session.currentPlayerNames);
   const existingTeams = normalizeTeamNames(session.currentRawTeamNames);
 
@@ -28,82 +31,90 @@ export function openPlayerNamesModal()
   syncCurrentViewState();
 }
 
-function closePlayerNamesModal()
-{
+function closePlayerNamesModal() {
   elements.playerNamesModal.classList.add("hidden");
   elements.settingsModal.classList.remove("hidden");
   syncCurrentViewState();
 }
 
-async function savePlayerNamesFromModal()
-{
-  if (!session.currentCourtId)
-  {
+async function savePlayerNamesFromModal() {
+  if (!session.currentCourtId) {
     showToast("No court is currently open.", TOAST_TYPES.ERROR);
     return;
   }
 
   const nextTeamNames = normalizeTeamNames({
     A: elements.playerTeamAName.value.trim(),
-    B: elements.playerTeamBName.value.trim()
+    B: elements.playerTeamBName.value.trim(),
   });
   const nextPlayerNames = normalizePlayerNames({
     A1: elements.playerNameA1.value.trim(),
     A2: elements.playerNameA2.value.trim(),
     B1: elements.playerNameB1.value.trim(),
-    B2: elements.playerNameB2.value.trim()
+    B2: elements.playerNameB2.value.trim(),
   });
-  const derivedTeamNames = resolvePersistedTeamNames(nextTeamNames, nextPlayerNames);
+  const derivedTeamNames = resolvePersistedTeamNames(
+    nextTeamNames,
+    nextPlayerNames,
+  );
 
-  try
-  {
-    await updateCourt(session.currentCourtId, {
+  try {
+    if (session.currentTournamentId) {
+      showToast(
+        "Tournament match names come from the tournament roster.",
+        TOAST_TYPES.INFO,
+      );
+      return;
+    }
+    if (!session.currentMatchId) {
+      showToast("There is no match on this court yet.", TOAST_TYPES.ERROR);
+      return;
+    }
+    await updateMatch(session.currentMatchId, {
       playerNames: nextPlayerNames,
-      teamNames: derivedTeamNames
+      teamNames: derivedTeamNames,
     });
 
     session.currentPlayerNames = normalizePlayerNames(nextPlayerNames);
     session.currentRawTeamNames = normalizeTeamNames(derivedTeamNames);
-    applyTeamNamesToScoreboard(resolveTeamNames(session.currentRawTeamNames, session.currentPlayerNames));
+    applyTeamNamesToScoreboard(
+      resolveTeamNames(session.currentRawTeamNames, session.currentPlayerNames),
+    );
     updateServerIndicator();
     elements.playerNamesModal.classList.add("hidden");
     elements.settingsModal.classList.remove("hidden");
     showToast("Player/Team names updated.", TOAST_TYPES.SUCCESS);
-  }
-  catch (error)
-  {
+  } catch (error) {
     console.error("Error updating player names:", error);
     showToast("Failed to update player names.", TOAST_TYPES.ERROR);
   }
 }
 
-export function registerPlayerNamesModal()
-{
-  if (elements.playerNamesForm)
-  {
-    elements.playerNamesForm.addEventListener("submit", (e) =>
-    {
+export function registerPlayerNamesModal() {
+  if (elements.playerNamesForm) {
+    elements.playerNamesForm.addEventListener("submit", (e) => {
       e.preventDefault();
       void savePlayerNamesFromModal();
     });
   }
 
-  if (elements.closePlayerNamesBtn)
-  {
-    elements.closePlayerNamesBtn.addEventListener("click", closePlayerNamesModal);
+  if (elements.closePlayerNamesBtn) {
+    elements.closePlayerNamesBtn.addEventListener(
+      "click",
+      closePlayerNamesModal,
+    );
   }
 
-  if (elements.cancelPlayerNamesBtn)
-  {
-    elements.cancelPlayerNamesBtn.addEventListener("click", closePlayerNamesModal);
+  if (elements.cancelPlayerNamesBtn) {
+    elements.cancelPlayerNamesBtn.addEventListener(
+      "click",
+      closePlayerNamesModal,
+    );
   }
 
-  if (elements.playerNamesModal)
-  {
-    elements.playerNamesModal.addEventListener("click", (e) =>
-    {
-      if (e.target === elements.playerNamesModal)
-      {
+  if (elements.playerNamesModal) {
+    elements.playerNamesModal.addEventListener("click", (e) => {
+      if (e.target === elements.playerNamesModal) {
         closePlayerNamesModal();
       }
     });

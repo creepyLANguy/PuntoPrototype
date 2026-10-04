@@ -5,21 +5,35 @@ const {
   defaultScore,
   toLiveScorePayload,
 } = require("../domain/scoring/engine");
-const { SCORE_CHECKPOINTS_COLLECTION } = require("./constants");
+const { normalizeScoreVersion } = require("../domain/events/validation");
+const { paths } = require("./firestorePaths");
 
-async function getLatestCheckpoint(tx, courtId, options) {
+function scoringOptionsKey(options) {
+  const normalized = normalizeScoringOptions(options);
+  return JSON.stringify([
+    normalized.scoringMode,
+    normalized.deuceMode,
+    normalized.tiebreakMode,
+    normalized.pointsTarget ?? null,
+    normalized.serving ?? null,
+    normalized.completion ?? null,
+  ]);
+}
+
+async function getLatestCheckpoint(tx, matchId, options, scoreVersion = 0) {
   // Order by a single field only: a multi-field orderBy requires a composite
   // Firestore index, which this repo never defines/deploys. If that index is
   // missing, this query throws FAILED_PRECONDITION inside every scoring
   // transaction and the score document is never updated. Tie-break the small
   // candidate window in memory instead.
   const checkpointsQuery = db
-    .collection(`courts/${courtId}/${SCORE_CHECKPOINTS_COLLECTION}`)
+    .collection(paths.matchCheckpoints(matchId))
     .orderBy("lastCreatedAt", "desc")
     .limit(10);
 
   const checkpointsSnap = await tx.get(checkpointsQuery);
-  const targetOptions = normalizeScoringOptions(options);
+  const targetOptionsKey = scoringOptionsKey(options);
+  const targetScoreVersion = normalizeScoreVersion(scoreVersion);
 
   const candidates = checkpointsSnap.docs
     .map((docSnap) => ({ ref: docSnap.ref, data: docSnap.data() || {} }))
@@ -35,13 +49,8 @@ async function getLatestCheckpoint(tx, courtId, options) {
 
   for (const candidate of candidates) {
     const data = candidate.data;
-    const checkpointOptions = normalizeScoringOptions(data.scoringOptions || {});
-    const sameOptions =
-      checkpointOptions.scoringMode === targetOptions.scoringMode &&
-      checkpointOptions.deuceMode === targetOptions.deuceMode &&
-      checkpointOptions.tiebreakMode === targetOptions.tiebreakMode;
-
-    if (!sameOptions) continue;
+    if (scoringOptionsKey(data.scoringOptions || {}) !== targetOptionsKey) continue;
+    if (normalizeScoreVersion(data.scoreVersion) !== targetScoreVersion) continue;
     if (!data.score || !data.lastEventId || !data.lastCreatedAt) continue;
 
     return {
@@ -53,8 +62,9 @@ async function getLatestCheckpoint(tx, courtId, options) {
   return null;
 }
 
-function buildCheckpointPayload(score, options, lastEventId, lastCreatedAt) {
+function buildCheckpointPayload(score, options, lastEventId, lastCreatedAt, scoreVersion = 0) {
   return {
+    scoreVersion: normalizeScoreVersion(scoreVersion),
     score: toLiveScorePayload(score),
     scoringOptions: normalizeScoringOptions(options),
     totalPoints: (Number(score?.A?.totalPoints) || 0) + (Number(score?.B?.totalPoints) || 0),

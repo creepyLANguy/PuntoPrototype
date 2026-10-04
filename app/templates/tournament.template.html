@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <base href="/app/" />
+  <title>Tournament | Padel Push</title>
+  <meta name="description" content="Live padel tournament: matches, standings, rounds and brackets on Padel Push." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Outfit:wght@600;700;800&display=swap"
+    rel="stylesheet" />
+  <link rel="stylesheet" href="css/events.css" />
+  <link rel="icon" type="image/svg+xml" href="/media/favicon.svg">
+  <meta name="theme-color" content="#0b1220" />
+  <meta name="color-scheme" content="dark light" />
+  <meta property="og:title" content="Padel Push Tournament" />
+  <meta property="og:description" content="Follow the live matches, standings and schedule." />
+  <meta property="og:image" content="https://www.padelpush.co.za/media/social-preview.png" />
+  <script src="js/qrcode.min.js"></script>
+  <script type="module" src="js/tournamentPage.js"></script>
+</head>
+
+<body class="events-page">
+  <div class="ev-topbar">
+    <a class="ev-brand" href="/t"><img src="/media/logo.svg" alt="" class="ev-logo" /> Padel Push</a>
+    <nav class="ev-nav">
+      <a href="/t">Tournaments</a>
+      <a href="/app/">Scoreboard</a>
+    </nav>
+  </div>
+  <div id="tournamentApp" class="ev-app"></div>
+</body>
+
+</html>

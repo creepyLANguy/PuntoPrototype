@@ -183,19 +183,19 @@ test("frontend score state matches the authoritative backend score", async () =>
 });
 
 test("stale events posted with an outdated scoreVersion are ignored by the backend", async () => {
-  // Bump the court's scoreVersion server-side without telling this client yet:
+  // Bump the match's scoreVersion server-side without telling this client yet:
   // events sent with the old version must not corrupt the score.
-  const courtBefore = firestoreState.docs.get("courts/courtone");
+  const matchBefore = firestoreState.docs.get("matches/m-courtone");
   const scoreBefore = getRenderedScore(document);
 
-  firestoreState.docs.set("courts/courtone", { ...courtBefore, scoreVersion: 99 });
+  firestoreState.docs.set("matches/m-courtone", { ...matchBefore, scoreVersion: 99 });
 
   document.getElementById("addPointA").click();
   await settle(60);
   assert.deepEqual(getRenderedScore(document), scoreBefore);
 
   // Restore the version; scoring works again.
-  firestoreState.docs.set("courts/courtone", { ...courtBefore });
+  firestoreState.docs.set("matches/m-courtone", { ...matchBefore });
   document.getElementById("addPointA").click();
   await waitFor(() => getRenderedScore(document).pointsA !== scoreBefore.pointsA, {
     label: "scoring resumes after version restore",

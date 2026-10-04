@@ -169,7 +169,7 @@ test("the details tables render while the momentum payload is still in flight", 
   assert.equal(document.getElementById("detailsLoading").classList.contains("hidden"), true);
 
   assert.equal(momentumRequests.length, 1, "momentum is fetched exactly once per open");
-  assert.match(momentumRequests[0], new RegExp(`/momentum/${COURT_ID}$`));
+  assert.match(momentumRequests[0], new RegExp(`/momentum/match/m-${COURT_ID}$`));
 });
 
 test("stat columns are fitted when the detailed panel is expanded after rendering", async () => {

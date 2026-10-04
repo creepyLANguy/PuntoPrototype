@@ -7,7 +7,9 @@ if (!projectId) {
 }
 
 if (!/^[a-z0-9-]+$/.test(projectId)) {
-  throw new Error(`FIREBASE_PROJECT_ID is not a valid Firebase project ID: ${projectId}`);
+  throw new Error(
+    `FIREBASE_PROJECT_ID is not a valid Firebase project ID: ${projectId}`,
+  );
 }
 
 const firebasePath = "firebase.json";
@@ -24,17 +26,26 @@ const publicFunctionNames = new Set([
 
 const publicRedirects = redirects.filter((redirect) => {
   const destination = String(redirect.destination || "");
-  return destination.includes(placeholder) && destination.includes("africa-south1-");
+  return (
+    destination.includes(placeholder) && destination.includes("africa-south1-")
+  );
 });
 
-if (publicRedirects.length !== publicFunctionNames.size) {
+// Each public function has a court route (/score/:courtId) and a match route
+// (/score/match/:matchId).
+const ROUTES_PER_FUNCTION = 2;
+
+if (publicRedirects.length !== publicFunctionNames.size * ROUTES_PER_FUNCTION) {
   throw new Error(
-    `Expected ${publicFunctionNames.size} Johannesburg public-function redirects with the ${placeholder} placeholder; found ${publicRedirects.length}.`,
+    `Expected ${publicFunctionNames.size * ROUTES_PER_FUNCTION} Johannesburg public-function redirects with the ${placeholder} placeholder; found ${publicRedirects.length}.`,
   );
 }
 
 for (const redirect of publicRedirects) {
-  redirect.destination = redirect.destination.replaceAll(placeholder, projectId);
+  redirect.destination = redirect.destination.replaceAll(
+    placeholder,
+    projectId,
+  );
 }
 
 fs.writeFileSync(firebasePath, JSON.stringify(firebase, null, 2) + "\n");

@@ -84,7 +84,11 @@ test.before(async () => {
 test("Spectate shows each open court's club in a column of its own", async () => {
   await openList("Spectate", "spectateCourtList", 3);
 
-  assert.match($("spectateCourtSearch").placeholder, /club/i);
+  // The discovery search (spec section 31) still matches club names.
+  assert.equal(
+    $("spectateCourtSearch").placeholder,
+    "Search courts, matches, players or tournaments",
+  );
   assert.equal($("spectateCourtList").classList.contains("has-clubs"), true);
   assert.deepEqual(rowIds("spectateCourtList"), ["abcd", "efgh", "jkmn"], "sorted by court name");
   assert.deepEqual(
@@ -92,10 +96,15 @@ test("Spectate shows each open court's club in a column of its own", async () =>
     ["Riverside Padel", "", "Hilltop Club"],
   );
 
-  // The column sits between the name and the id in every row, also when empty.
+  // The club column sits between the court name and id; live match context follows.
   for (const id of rowIds("spectateCourtList")) {
     const classes = [...row("spectateCourtList", id).children].map((child) => child.className);
-    assert.deepEqual(classes, ["court-item-name", "court-item-club", "court-item-id"]);
+    assert.deepEqual(classes, [
+      "court-item-name",
+      "court-item-club",
+      "court-item-id",
+      "court-item-match",
+    ]);
     assert.equal(window.getComputedStyle(clubCell("spectateCourtList", id)).display, "block");
   }
   assert.equal(clubCell("spectateCourtList", "abcd").title, "Riverside Padel");
@@ -148,7 +157,7 @@ test("selecting a court with a club from Spectate opens that court", async () =>
 test("Play lists open and private courts with their club and joins through a club row", async () => {
   await openList("Play", "playCourtList", 4);
 
-  assert.match($("playCourtSearch").placeholder, /club/i);
+  assert.equal($("playCourtSearch").placeholder, "Search courts, matches, players or tournaments");
   assert.deepEqual(rowIds("playCourtList"), ["abcd", "efgh", "pqrs", "jkmn"]);
   assert.equal(clubCell("playCourtList", "pqrs").textContent, "Hilltop Club");
 

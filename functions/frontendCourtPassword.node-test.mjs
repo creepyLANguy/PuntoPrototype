@@ -64,15 +64,18 @@ test.before(async () => {
     resetCalls.push(newPassword);
 
     const court = courtDoc(courtId) || {};
-    const scoreVersion = (Number(court.scoreVersion) || 0) + 1;
+    const matchId = court.activeMatchId || `m-${courtId}`;
+    const matchPath = `matches/${matchId}`;
+    const match = firestoreState.docs.get(matchPath) || {};
+    const scoreVersion = (Number(match.scoreVersion) || 0) + 1;
     const trimmed = typeof newPassword === "string" ? newPassword.trim() : "";
 
     // Mirror the Cloud Function: only write the password when it actually changed.
     writeDoc(`courts/${courtId}`, {
       ...court,
-      scoreVersion,
       password: trimmed && trimmed !== court.password ? trimmed : court.password,
     });
+    writeDoc(matchPath, { ...match, scoreVersion });
 
     return { data: { scoreVersion } };
   });
@@ -98,8 +101,8 @@ test("a player is NOT switched to spectate when the court doc changes but the pa
   assert.equal(isSpectating(), false);
 
   // A rename of the teams must not be mistaken for a password change.
-  writeDoc("courts/adminpwcourt", {
-    ...courtDoc("adminpwcourt"),
+  writeDoc("matches/m-adminpwcourt", {
+    ...firestoreState.docs.get("matches/m-adminpwcourt"),
     teamNames: { A: "Reds", B: "Blues" },
   });
 

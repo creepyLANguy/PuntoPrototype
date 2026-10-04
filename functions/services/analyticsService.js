@@ -10,36 +10,49 @@ const { computeMomentumTimeline } = require("../domain/momentum/calculator");
 
 const { SCORING_EVENTS, normalizeScoreVersion } = require("../domain/events/validation");
 
+const { paths } = require("./firestorePaths");
+
 const DEFAULT_TEAM_NAMES = { A: "Team A", B: "Team B" };
 
 const DEFAULT_PLAYER_NAMES = { A1: "", A2: "", B1: "", B2: "" };
 
-async function replayCourtAnalytics(courtId) {
-  const courtSnap = await db.doc(`courts/${courtId}`).get();
-  const courtExists = courtSnap.exists;
-  const courtData = courtExists ? courtSnap.data() : {};
+async function replayMatchAnalytics(matchId) {
+  const matchSnap = matchId ? await db.doc(paths.match(matchId)).get() : { exists: false };
+  const matchExists = matchSnap.exists;
+  const matchData = matchExists ? matchSnap.data() : {};
   const scoringOptions = buildScoringOptions({
-    ...(courtData.scoringOptions || {}),
-    scoringMode: courtData.scoringMode || courtData.scoringOptions?.scoringMode,
+    ...(matchData.scoringOptions || {}),
+    scoringMode: matchData.scoringMode || matchData.scoringOptions?.scoringMode,
   });
   const normalizedOptions = normalizeScoringOptions(scoringOptions);
 
   const playerNames = {
-    A1: typeof courtData?.playerNames?.A1 === "string" ? courtData.playerNames.A1 : "",
-    A2: typeof courtData?.playerNames?.A2 === "string" ? courtData.playerNames.A2 : "",
-    B1: typeof courtData?.playerNames?.B1 === "string" ? courtData.playerNames.B1 : "",
-    B2: typeof courtData?.playerNames?.B2 === "string" ? courtData.playerNames.B2 : "",
+    A1: typeof matchData?.playerNames?.A1 === "string" ? matchData.playerNames.A1 : "",
+    A2: typeof matchData?.playerNames?.A2 === "string" ? matchData.playerNames.A2 : "",
+    B1: typeof matchData?.playerNames?.B1 === "string" ? matchData.playerNames.B1 : "",
+    B2: typeof matchData?.playerNames?.B2 === "string" ? matchData.playerNames.B2 : "",
   };
 
+  if (!matchExists) {
+    return {
+      matchExists,
+      score: defaultScore(normalizedOptions),
+      normalizedOptions,
+      playerNames,
+      pointHistory: [],
+      setPointMarkers: [],
+    };
+  }
+
   const eventsSnap = await db
-    .collection(`courts/${courtId}/events`)
+    .collection(paths.matchEvents(matchId))
     .orderBy("createdAt", "asc")
     .orderBy(FieldPath.documentId(), "asc")
     .get();
 
   // Use only scoring events so details replay mirrors score/current logic,
   // including the stale-scoreVersion guard applied by onEventCreate.
-  const activeScoreVersion = normalizeScoreVersion(courtData.scoreVersion);
+  const activeScoreVersion = normalizeScoreVersion(matchData.scoreVersion);
   const events = eventsSnap.docs
     .map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }))
     .filter(
@@ -100,7 +113,7 @@ async function replayCourtAnalytics(courtId) {
   }
 
   return {
-    courtExists,
+    matchExists,
     score,
     normalizedOptions,
     playerNames,
@@ -109,9 +122,9 @@ async function replayCourtAnalytics(courtId) {
   };
 }
 
-async function buildDetailedScoreData(courtId) {
-  const { courtExists, score, normalizedOptions, playerNames, pointHistory } =
-    await replayCourtAnalytics(courtId);
+async function buildDetailedScoreData(matchId) {
+  const { matchExists, score, normalizedOptions, playerNames, pointHistory } =
+    await replayMatchAnalytics(matchId);
 
   // Canonical source for per-set rows: completedSets from scorer state.
   // This guarantees details table aligns with score/current.
@@ -129,7 +142,7 @@ async function buildDetailedScoreData(courtId) {
   };
 
   return {
-    courtExists,
+    matchExists,
     payload: {
       sets: setScores,
       currentGames: currentSetGames,
@@ -147,14 +160,14 @@ async function buildDetailedScoreData(courtId) {
   };
 }
 
-async function buildMomentumData(courtId) {
-  const { courtExists, score, normalizedOptions, pointHistory, setPointMarkers } =
-    await replayCourtAnalytics(courtId);
+async function buildMomentumData(matchId) {
+  const { matchExists, score, normalizedOptions, pointHistory, setPointMarkers } =
+    await replayMatchAnalytics(matchId);
 
   const momentumData = computeMomentumTimeline(pointHistory, normalizedOptions);
 
   return {
-    courtExists,
+    matchExists,
     payload: {
       pointHistory,
       momentumTimeline: momentumData.timeline,
@@ -167,4 +180,4 @@ async function buildMomentumData(courtId) {
   };
 }
 
-module.exports = { replayCourtAnalytics, buildDetailedScoreData, buildMomentumData };
+module.exports = { replayMatchAnalytics, buildDetailedScoreData, buildMomentumData };

@@ -33,6 +33,28 @@ paths:
       summary: CORS preflight
       responses:
         '204': { description: CORS preflight accepted }
+  /score/match/{matchId}:
+    get:
+      operationId: getMatchScore
+      summary: Get the live score for a match
+      parameters:
+        - $ref: '#/components/parameters/MatchId'
+      responses:
+        '200':
+          description: Live score
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScoreResponse'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '405': { $ref: '#/components/responses/MethodNotAllowed' }
+        '500': { $ref: '#/components/responses/InternalError' }
+    options:
+      operationId: optionsMatchScore
+      summary: CORS preflight
+      responses:
+        '204': { description: CORS preflight accepted }
   /revision/{courtId}:
     get:
       operationId: getCourtScoreRevision
@@ -52,6 +74,27 @@ paths:
         '500': { $ref: '#/components/responses/InternalError' }
     options:
       operationId: optionsCourtScoreRevision
+      responses:
+        '204': { description: CORS preflight accepted }
+  /revision/match/{matchId}:
+    get:
+      operationId: getMatchScoreRevision
+      summary: Get the opaque score revision for a match
+      parameters:
+        - $ref: '#/components/parameters/MatchId'
+      responses:
+        '200':
+          description: Revision
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RevisionResponse'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '405': { $ref: '#/components/responses/MethodNotAllowed' }
+        '500': { $ref: '#/components/responses/InternalError' }
+    options:
+      operationId: optionsMatchScoreRevision
       responses:
         '204': { description: CORS preflight accepted }
   /stats/{courtId}:
@@ -75,6 +118,27 @@ paths:
       operationId: optionsCourtStats
       responses:
         '204': { description: CORS preflight accepted }
+  /stats/match/{matchId}:
+    get:
+      operationId: getMatchStats
+      summary: Get match statistics by match id
+      parameters:
+        - $ref: '#/components/parameters/MatchId'
+      responses:
+        '200':
+          description: Match statistics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatsResponse'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '405': { $ref: '#/components/responses/MethodNotAllowed' }
+        '500': { $ref: '#/components/responses/InternalError' }
+    options:
+      operationId: optionsMatchStats
+      responses:
+        '204': { description: CORS preflight accepted }
   /momentum/{courtId}:
     get:
       operationId: getCourtMomentum
@@ -96,6 +160,27 @@ paths:
       operationId: optionsCourtMomentum
       responses:
         '204': { description: CORS preflight accepted }
+  /momentum/match/{matchId}:
+    get:
+      operationId: getMatchMomentum
+      summary: Get momentum timeline by match id
+      parameters:
+        - $ref: '#/components/parameters/MatchId'
+      responses:
+        '200':
+          description: Momentum data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MomentumResponse'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '405': { $ref: '#/components/responses/MethodNotAllowed' }
+        '500': { $ref: '#/components/responses/InternalError' }
+    options:
+      operationId: optionsMatchMomentum
+      responses:
+        '204': { description: CORS preflight accepted }
 components:
   parameters:
     CourtId:
@@ -108,14 +193,23 @@ components:
         minLength: 1
         maxLength: 64
         pattern: '^[abcdefghjkmnpqrstuxyz]+$'
+    MatchId:
+      name: matchId
+      in: path
+      required: true
+      description: Match document ID.
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 64
   responses:
     BadRequest:
-      description: Invalid court ID or request
+      description: Invalid court or match ID/request
       content:
         application/json:
           schema: { $ref: '#/components/schemas/ErrorResponse' }
     NotFound:
-      description: Court not found
+      description: Court or match not found
       content:
         application/json:
           schema: { $ref: '#/components/schemas/ErrorResponse' }
@@ -132,10 +226,18 @@ components:
   schemas:
     ScoreResponse:
       type: object
-      required: [success, courtId, teamNames, playerNames, scoringOptions, scoringMode, teams, completedSets, inTiebreak, deuceCycles, matchComplete, server, scoreVersion, revision, fetchedAt]
+      required: [success, courtId, courtName, matchId, matchName, title, match, teamNames, playerNames, scoringOptions, scoringMode, teams, completedSets, inTiebreak, deuceCycles, matchComplete, server, scoreVersion, revision, fetchedAt]
       properties:
         success: { const: true }
-        courtId: { type: string }
+        courtId: { type: [string, 'null'] }
+        courtName: { type: [string, 'null'] }
+        matchId: { type: [string, 'null'] }
+        matchName: { type: [string, 'null'] }
+        title: { type: [string, 'null'] }
+        match:
+          oneOf:
+            - $ref: '#/components/schemas/MatchContext'
+            - type: 'null'
         teamNames: { $ref: '#/components/schemas/TeamNames' }
         playerNames: { $ref: '#/components/schemas/PlayerNames' }
         scoringOptions: { $ref: '#/components/schemas/ScoringOptions' }
@@ -156,6 +258,9 @@ components:
           type: [string, 'null']
           enum: [A1, A2, B1, B2, null]
         scoreVersion: { type: integer, minimum: 0 }
+        fixedTotal:
+          type: object
+          additionalProperties: true
         revision:
           type: string
           description: Opaque equality token; do not order or parse it.
@@ -163,17 +268,19 @@ components:
         fetchedAt: { type: string, format: date-time }
     RevisionResponse:
       type: object
-      required: [success, courtId, revision]
+      required: [success, courtId, matchId, revision]
       properties:
         success: { const: true }
-        courtId: { type: string }
+        courtId: { type: [string, 'null'] }
+        matchId: { type: [string, 'null'] }
         revision: { type: string, pattern: '^[0-9a-f]{16}$' }
     StatsResponse:
       type: object
-      required: [success, courtId, sets, currentGames, points, setsA, setsB, scoringMode, matchComplete, playerNames, advancedStats, totalPoints, fetchedAt]
+      required: [success, courtId, matchId, sets, currentGames, points, setsA, setsB, scoringMode, matchComplete, playerNames, advancedStats, totalPoints, fetchedAt]
       properties:
         success: { const: true }
-        courtId: { type: string }
+        courtId: { type: [string, 'null'] }
+        matchId: { type: [string, 'null'] }
         sets:
           type: array
           items: { $ref: '#/components/schemas/CompletedSet' }
@@ -199,10 +306,11 @@ components:
         fetchedAt: { type: string, format: date-time }
     MomentumResponse:
       type: object
-      required: [success, courtId, pointHistory, momentumTimeline, setPointMarkers, gameMarkers, totalPoints, scoringMode, matchComplete, fetchedAt]
+      required: [success, courtId, matchId, pointHistory, momentumTimeline, setPointMarkers, gameMarkers, totalPoints, scoringMode, matchComplete, fetchedAt]
       properties:
         success: { const: true }
-        courtId: { type: string }
+        courtId: { type: [string, 'null'] }
+        matchId: { type: [string, 'null'] }
         pointHistory:
           type: array
           items: { type: string, enum: [A, B] }
@@ -238,6 +346,19 @@ components:
           description: Stable machine-readable error code.
         message: { type: string }
         requestId: { type: string }
+    MatchContext:
+      type: object
+      required: [matchId, name, title, status, tournamentId, roundId, fixtureId, courtId, courtName]
+      properties:
+        matchId: { type: string }
+        name: { type: [string, 'null'] }
+        title: { type: string }
+        status: { type: [string, 'null'], enum: [scheduled, live, completed, cancelled, null] }
+        tournamentId: { type: [string, 'null'] }
+        roundId: { type: [string, 'null'] }
+        fixtureId: { type: [string, 'null'] }
+        courtId: { type: [string, 'null'] }
+        courtName: { type: [string, 'null'] }
     TeamNames:
       type: object
       required: [A, B]
@@ -271,7 +392,7 @@ components:
           additionalProperties: true
     ScoringMode:
       type: string
-      enum: [standard, straight, tiebreakTen]
+      enum: [standard, straight, tiebreakTen, fixedTotalPoints]
     DeuceMode:
       type: string
       enum: [standard, golden, silver, star]

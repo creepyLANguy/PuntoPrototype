@@ -1,0 +1,169 @@
+/* =======================================================
+   EVENTS PAGES: STANDINGS, ROUNDS AND BRACKET
+======================================================= */
+
+.standings {
+  overflow-x: auto;
+}
+
+.standings-title {
+  margin: 8px 0;
+  font-size: 1rem;
+}
+
+.standings-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+.standings-table th,
+.standings-table td {
+  padding: 8px 6px;
+  text-align: right;
+  border-bottom: 1px solid var(--ev-border);
+  white-space: nowrap;
+}
+
+.standings-table th {
+  color: var(--ev-muted);
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.standings-table .col-name {
+  text-align: left;
+  white-space: normal;
+  width: 100%;
+}
+
+.standings-table .col-rank {
+  text-align: left;
+  color: var(--ev-muted);
+}
+
+.standings-table .is-strong {
+  font-weight: 800;
+}
+
+.standings-table tr.is-withdrawn td {
+  opacity: 0.6;
+}
+
+.row-flag {
+  color: var(--ev-warning);
+  font-size: 0.75rem;
+}
+
+/* On phones the secondary columns step aside so the table never needs a
+   horizontal spreadsheet scroll for the primary information. */
+@media (max-width: 560px) {
+  .standings-table .col-form,
+  .standings-table .col-setDiff,
+  .standings-table .col-gameDiff,
+  .standings-table .col-avgPerRound,
+  .standings-table .col-lastRoundPoints,
+  .standings-table .col-sittingOut {
+    display: none;
+  }
+}
+
+.group-standings {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.rounds {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.round-details > summary {
+  cursor: pointer;
+  padding: 8px 0;
+  font-weight: 700;
+  text-transform: capitalize;
+}
+
+.round-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.round-head h3 {
+  margin: 0;
+}
+
+.bracket {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.bracket-stage h3 {
+  margin: 0 0 8px;
+}
+
+.bracket-columns {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(230px, 1fr);
+  gap: 12px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+  scroll-snap-type: x proximity;
+}
+
+.bracket-column {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around;
+  gap: 10px;
+  scroll-snap-align: start;
+}
+
+.bracket-column-title {
+  color: var(--ev-muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.entry-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.entry {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px 10px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: var(--ev-surface-2);
+}
+
+.entry span {
+  color: var(--ev-muted);
+  font-size: 0.85rem;
+}
+
+.entry.is-withdrawn {
+  opacity: 0.7;
+}
+
+.my-schedule-output {
+  margin-top: 12px;
+}

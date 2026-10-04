@@ -1,6 +1,8 @@
 const {
   prepareScoreApiRequest,
-  extractScoreApiCourtId,
+  extractScoreApiTarget,
+  resolveScoreTarget,
+  targetCacheKey,
   statsApiCache,
 } = require("../services/publicApiService");
 const { buildDetailedScoreData } = require("../services/analyticsService");
@@ -14,36 +16,39 @@ async function getCourtStats(req, res) {
   }
 
   try {
-    const courtId = extractScoreApiCourtId(req.path);
-    if (!courtId) {
+    const target = extractScoreApiTarget(req.path);
+    if (!target) {
       return sendJson(res, 400, {
         success: false,
-        error: "Missing or invalid courtId. Use /stats/{courtId}.",
+        error: "Missing or invalid id. Use /stats/{courtId} or /stats/match/{matchId}.",
       });
     }
 
-    const cached = statsApiCache.get(courtId);
+    const cacheKey = targetCacheKey(target);
+    const cached = statsApiCache.get(cacheKey);
     if (cached) {
       return sendJson(res, cached.status, cached.body);
     }
 
-    const { courtExists, payload } = await buildDetailedScoreData(courtId);
-
-    if (!courtExists) {
-      const notFoundBody = { success: false, error: "Court not found." };
-      statsApiCache.set(courtId, 404, notFoundBody);
+    const resolved = await resolveScoreTarget(target);
+    if (resolved.notFound) {
+      const notFoundBody = { success: false, error: resolved.notFound };
+      statsApiCache.set(cacheKey, 404, notFoundBody);
       return sendJson(res, 404, notFoundBody);
     }
 
+    const { payload } = await buildDetailedScoreData(resolved.match?.matchId || null);
+
     const body = {
       success: true,
-      courtId,
+      courtId: resolved.court?.courtId || resolved.match?.currentCourtId || null,
+      matchId: resolved.match?.matchId || null,
       ...payload,
       totalPoints: payload.advancedStats?.matchStats?.totalPoints ?? 0,
       fetchedAt: new Date().toISOString(),
     };
 
-    statsApiCache.set(courtId, 200, body);
+    statsApiCache.set(cacheKey, 200, body);
     return sendJson(res, 200, body);
   } catch (err) {
     console.error("getCourtStats failed:", err);

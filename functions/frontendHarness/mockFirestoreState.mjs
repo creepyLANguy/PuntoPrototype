@@ -24,8 +24,10 @@ export const firestoreState = {
   autoId: 0,
   backendEnabled: true, // set false to defer backend score processing
   pendingBackendWork: [],
-  // per-court authoritative score incl. history (like the CF replay would produce)
+  // per-match authoritative score incl. history (like the CF replay would produce)
   backendScores: new Map(),
+  // Query listeners: { collectionPath, filters, onNext }.
+  queryListeners: new Set(),
   // Collection paths whose reads (getDocs) fail, to test degraded loading.
   failingCollections: new Set(),
   // Collection path -> promise; reads (getDocs) of that collection wait for
@@ -43,6 +45,7 @@ export function resetFirestoreState() {
   firestoreState.backendEnabled = true;
   firestoreState.pendingBackendWork = [];
   firestoreState.backendScores.clear();
+  firestoreState.queryListeners.clear();
   firestoreState.failingCollections.clear();
   firestoreState.readGates.clear();
   firestoreState.deleteHooks.clear();
@@ -88,12 +91,28 @@ export function makeSnapshot(path, data) {
   };
 }
 
+export function queryDocs(collectionPath, filters = []) {
+  const prefix = `${collectionPath}/`;
+  const docs = [];
+  for (const [path, data] of firestoreState.docs.entries()) {
+    if (!path.startsWith(prefix) || path.slice(prefix.length).includes("/")) continue;
+    if (filters.every(({ field, value }) => data?.[field] === value)) {
+      docs.push(makeSnapshot(path, data));
+    }
+  }
+  return { empty: docs.length === 0, size: docs.length, docs, forEach: (fn) => docs.forEach(fn) };
+}
+
 export function notifyListeners(path) {
   const listeners = firestoreState.listeners.get(path);
-  if (!listeners) return;
   const data = firestoreState.docs.get(path);
-  for (const listener of [...listeners]) {
+  for (const listener of [...(listeners || [])]) {
     queueMicrotask(() => listener.onNext(makeSnapshot(path, data)));
+  }
+  const collectionPath = path.split("/").slice(0, -1).join("/");
+  for (const listener of [...firestoreState.queryListeners]) {
+    if (listener.collectionPath !== collectionPath) continue;
+    queueMicrotask(() => listener.onNext(queryDocs(listener.collectionPath, listener.filters)));
   }
 }
 
@@ -128,14 +147,14 @@ export function seedDoc(path, data) {
 // ---------------------------------------------------------------------------
 
 function maybeProcessBackend(path) {
-  const match = path.match(/^courts\/([^/]+)\/events\/([^/]+)$/);
+  const match = path.match(/^matches\/([^/]+)\/events\/([^/]+)$/);
   if (!match) return;
 
-  const [, courtId, eventId] = match;
+  const [, matchId, eventId] = match;
   const event = firestoreState.docs.get(path);
   if (!event || !SCORING_EVENTS.has(event.eventType)) return;
 
-  const work = () => processScoringEvent(courtId, eventId, event);
+  const work = () => processScoringEvent(matchId, eventId, event);
 
   if (!firestoreState.backendEnabled) {
     firestoreState.pendingBackendWork.push(work);
@@ -152,29 +171,30 @@ export function flushBackendWork() {
   pending.forEach((work) => work());
 }
 
-function processScoringEvent(courtId, eventId, event) {
-  const courtPath = `courts/${courtId}`;
-  const scorePath = `courts/${courtId}/score/current`;
-  const courtData = firestoreState.docs.get(courtPath) || {};
+function processScoringEvent(matchId, eventId, event) {
+  const matchPath = `matches/${matchId}`;
+  const scorePath = `matches/${matchId}/score/current`;
+  const matchData = firestoreState.docs.get(matchPath) || {};
+  if (matchData.status && matchData.status !== "live") return;
 
   const activeOptions = scoringEngine.normalizeScoringOptions({
-    ...(courtData.scoringOptions || {}),
-    scoringMode: courtData.scoringMode || courtData.scoringOptions?.scoringMode,
+    ...(matchData.scoringOptions || {}),
+    scoringMode: matchData.scoringMode || matchData.scoringOptions?.scoringMode,
   });
 
-  const activeScoreVersion = Number(courtData.scoreVersion) || 0;
+  const activeScoreVersion = Number(matchData.scoreVersion) || 0;
   const eventScoreVersion = Number(event.scoreVersion) || 0;
   if (eventScoreVersion !== activeScoreVersion) {
     return; // stale event, exactly like the CF skips it
   }
 
-  let score = firestoreState.backendScores.get(courtId);
+  let score = firestoreState.backendScores.get(matchId);
   if (!score) {
     score = scoringEngine.defaultScore(activeOptions);
   }
 
   score = scoringEngine.applyEvent(score, { id: eventId, ...event }, activeOptions);
-  firestoreState.backendScores.set(courtId, score);
+  firestoreState.backendScores.set(matchId, score);
 
   writeDoc(scorePath, {
     ...scoringEngine.toLiveScorePayload(score),
@@ -183,12 +203,18 @@ function processScoringEvent(courtId, eventId, event) {
   });
 }
 
-export function getBackendScore(courtId) {
-  return firestoreState.backendScores.get(courtId);
+// Tests address scores by court (the match currently on it) or by match id.
+export function resolveMatchIdForCourt(courtOrMatchId) {
+  const court = firestoreState.docs.get(`courts/${courtOrMatchId}`);
+  return court?.activeMatchId || court?.lastMatchId || courtOrMatchId;
 }
 
-export function setBackendScore(courtId, score) {
-  firestoreState.backendScores.set(courtId, score);
+export function getBackendScore(courtOrMatchId) {
+  return firestoreState.backendScores.get(resolveMatchIdForCourt(courtOrMatchId));
+}
+
+export function setBackendScore(courtOrMatchId, score) {
+  firestoreState.backendScores.set(resolveMatchIdForCourt(courtOrMatchId), score);
 }
 
 export function nextAutoId() {

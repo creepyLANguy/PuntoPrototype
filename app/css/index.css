@@ -87,3 +87,5 @@
 @import "components/loader.css";
 /* Match engagement nudges (pulses) and reduced-motion handling. */
 @import "components/engagement.css";
+/* Match identity context: court location, discovery search, admin match / tournament rows. */
+@import "components/match-context.css";
