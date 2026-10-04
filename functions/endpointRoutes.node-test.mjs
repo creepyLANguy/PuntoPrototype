@@ -80,16 +80,20 @@ function listFiles(directory) {
   });
 }
 
-test("every frontend module, stylesheet and generated document is served without caching", () => {
-  const noCacheSources = (firebase.hosting.headers || [])
-    .filter(({ headers }) =>
-      headers.some(
-        ({ key, value }) =>
-          key === "Cache-Control" && value === "no-cache, no-store, must-revalidate",
-      ),
-    )
-    .map(({ source }) => globToRegExp(source));
+// Header rules that disable caching, as regular expressions over the request
+// path. A rule has either a glob `source` or an RE2 `regex` (RE2 is a subset
+// of JavaScript regular expressions for the patterns used here).
+const noCacheSources = (firebase.hosting.headers || [])
+  .filter(({ headers }) =>
+    headers.some(
+      ({ key, value }) =>
+        key === "Cache-Control" && value === "no-cache, no-store, must-revalidate",
+    ),
+  )
+  .map(({ source, regex }) => (regex ? new RegExp(regex) : globToRegExp(source)));
+const isNoCache = (requestPath) => noCacheSources.some((pattern) => pattern.test(requestPath));
 
+test("every frontend module, stylesheet and generated document is served without caching", () => {
   const servedFiles = [
     ...listFiles("app/js").filter((file) => /\.m?js$/.test(file)),
     ...listFiles("app/css").filter((file) => file.endsWith(".css")),
@@ -101,8 +105,51 @@ test("every frontend module, stylesheet and generated document is served without
   assert.ok(servedFiles.includes("app/js/scoring/scoreboard.js"));
   for (const file of servedFiles) {
     assert.ok(
-      noCacheSources.some((pattern) => pattern.test(`/${file}`)),
+      isNoCache(`/${file}`),
       `/${file} must keep the no-cache headers so modules never mix versions`,
     );
+  }
+});
+
+// Hosting matches headers against the requested URL, not the rewrite
+// destination, so every page URL needs its own no-cache rule. Otherwise a
+// browser can keep an hour-old copy of the page and run it with the newest
+// modules (which are never cached), and the app breaks wherever the old
+// markup lacks elements the new code needs.
+test("every page URL is served without caching, whatever document it rewrites to", () => {
+  const pageRoutes = firebase.hosting.rewrites.filter(({ destination }) =>
+    destination?.endsWith(".html"),
+  );
+  assert.ok(pageRoutes.length > 20);
+
+  const samplePaths = new Set(["/", "/unknown-page", "/app/c/abcd", "/app/p/abcd"]);
+  for (const { source } of pageRoutes) {
+    if (source === "**") continue;
+    samplePaths.add(source.replace(/\/\*\*$/, ""));
+    samplePaths.add(source.replace(/\*\*$/, "abcd"));
+    samplePaths.add(source.replace(/\*\*$/, "abcd/extra"));
+  }
+  assert.ok(samplePaths.has("/c/abcd") && samplePaths.has("/admin") && samplePaths.has("/overlay"));
+
+  for (const requestPath of samplePaths) {
+    assert.ok(isNoCache(requestPath), `${requestPath} must be served without caching`);
+  }
+
+  const htmlFiles = [
+    "index.html",
+    ...listFiles("app").filter((file) => /^app\/[^/]+\.html$/.test(file)),
+    "nfc/index.html",
+    "device-harness/index.html",
+  ];
+  for (const file of htmlFiles) {
+    assert.ok(isNoCache(`/${file}`), `/${file} must be served without caching`);
+  }
+});
+
+test("images and other static media stay cacheable", () => {
+  const mediaFiles = listFiles("media");
+  assert.ok(mediaFiles.length > 0);
+  for (const file of mediaFiles) {
+    assert.equal(isNoCache(`/${file}`), false, `/${file} should keep normal caching`);
   }
 });

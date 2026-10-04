@@ -377,5 +377,9 @@ reported for review, over 900 lines fails unless the file is listed in
 - `app/js/firebase.js` re-exports the Firebase app, Firestore instance and SDK
   functions for `device-harness/script.js`.
 - Hosting sends `Cache-Control: no-cache, no-store, must-revalidate` for
-  `/app/js/**`, `/app/css/**`, `/app/index.html` and `/app/overlay.html`, so
-  modules are never mixed across deploys.
+  `/app/js/**`, `/app/css/**`, every `.html` file and every page URL (any path
+  without a file extension, such as `/c/{courtId}`, `/admin` or `/overlay`), so
+  a page and its modules are never mixed across deploys. Header rules match the
+  requested URL, not the rewrite destination, which is why page URLs need a
+  rule of their own; `endpointRoutes.node-test.mjs` checks every rewrite.
+  Images and other media keep the default caching.
