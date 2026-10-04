@@ -6,7 +6,6 @@
 //   - third-party minified assets are unmodified and excluded from budgets;
 //   - module directories only import the layers they are allowed to;
 //   - the Firebase SDK and html-to-image are only imported by their owners;
-//   - app/js/script.js stays a thin compatibility entry point, never an implementation;
 //   - no import cycle spans more than one module directory;
 //   - source files stay inside the agreed size budget;
 //   - every HTML include resolves and every asset an entry document references exists.
@@ -278,18 +277,11 @@ function checkLayering(graph) {
       if (targetLayer === layer && isDirectoryLayer(file)) continue;
 
       if (targetLayer === "main.js") {
-        if (file !== "app/js/script.js") {
-          errors.push(`${file}: only the compatibility entry point may import main.js`);
-        }
+        errors.push(`${file}: main.js is the entry point; no module may import it`);
         continue;
       }
 
       if (layer === "main.js") continue;
-
-      if (layer === "script.js") {
-        errors.push(`${file}: the compatibility entry point may only import main.js`);
-        continue;
-      }
 
       if (layer === "firebase.js") {
         if (targetLayer !== "firebase") {
@@ -321,26 +313,6 @@ function checkLayering(graph) {
         warnings.push(`${file}: module outside the known layers imports ${target}`);
       }
     }
-  }
-}
-
-function checkCompatibilityEntryPoint(graph) {
-  const shim = graph.get("app/js/script.js");
-  if (!shim || TRANSITIONAL_MODULES.has("app/js/script.js")) return;
-
-  const code = shim.source
-    .replace(/\/\*[\s\S]*?\*\//g, "")
-    .replace(/^\s*\/\/.*$/gm, "")
-    .split("\n")
-    .map((line) => line.trim())
-    .filter(Boolean);
-
-  const implementation = code.filter((line) => !/^(?:import|export)\b.*;$/.test(line));
-  if (implementation.length) {
-    errors.push(
-      "app/js/script.js must remain a compatibility entry point that only imports/re-exports " +
-        "main.js; application code belongs in the module directories.",
-    );
   }
 }
 
@@ -417,7 +389,6 @@ checkVendorFiles();
 checkSizeBudgets(generated);
 const graph = buildModuleGraph();
 checkLayering(graph);
-checkCompatibilityEntryPoint(graph);
 checkCycles(graph);
 checkEntryDocuments();
 

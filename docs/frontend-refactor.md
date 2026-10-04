@@ -209,5 +209,5 @@ The net increase of 37 Node tests is made up as follows:
   corrected. If per-branch isolation is wanted, the staging job would need
   `firebase hosting:channel:deploy` for Hosting; Functions would still be
   shared.
-- **The `script.js` shim can be removed** once cached pages that reference
-  it have expired.
+- **The `script.js` shim** has been removed: pages cached before the modular
+  frontend had long expired, and every page URL is now served without caching.

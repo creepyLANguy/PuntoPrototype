@@ -40,7 +40,6 @@ app/
 ├── overlay/                OBS overlay sources (template.html, css/, js/)
 └── js/
     ├── main.js             composition root (the module entry point)
-    ├── script.js           compatibility entry point only (imports main.js)
     ├── firebase.js         Firebase re-export for non-app pages (device-harness)
     ├── brand.mjs           canonical brand registry (brand.js re-exports it)
     ├── scoreSync.mjs       stale-snapshot guard for the live score listener
@@ -105,7 +104,6 @@ app/
 | `ui/` | `config/`, `utils/`, `state/`, `audio/`, `lifecycle/`, `brand.mjs` |
 | features (`routing/`, `scoring/`, `court/`, `clubs/`, `teams/`, `details/`, `sharing/`, `qr/`, `nfc/`, `admin/`, `shell/`) | any layer above, any feature, `brand.mjs`, `scoreSync.mjs` |
 | `main.js` | anything |
-| `script.js` | `main.js` only |
 
 Additionally:
 
@@ -369,11 +367,6 @@ reported for review, over 900 lines fails unless the file is listed in
 
 ## Compatibility notes
 
-- `app/js/script.js` only imports `main.js`. It exists for pages cached before
-  the modular frontend was deployed, which still request `js/script.js`;
-  without it Hosting's `/app/**` rewrite would answer that request with HTML
-  and the cached page would fail to boot. It can be deleted once no client can
-  still hold such a page.
 - `app/js/firebase.js` re-exports the Firebase app, Firestore instance and SDK
   functions for `device-harness/script.js`.
 - Hosting sends `Cache-Control: no-cache, no-store, must-revalidate` for
