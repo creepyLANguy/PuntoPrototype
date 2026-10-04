@@ -1723,613 +1723,762 @@
   <script src="/app/js/qrcode.min.js"></script>
   <script>
     (function () {
-      //AL.
-      const isDebugCourt = location.hostname === "localhost" || location.hostname === "127.0.0.1";
-      const debugCourt_revisionUrl = "https://qa.padelpush.co.za/revision/bnrm";
-      const debugCourt_fullScoreUrl = "https://qa.padelpush.co.za/score/bnrm";
-      const debugCourt_statsUrl = "https://qa.padelpush.co.za/stats/bnrm";
-      const debugCourt_momentumUrl = "https://qa.padelpush.co.za/momentum/bnrm";
-      const debugCourt_id = "bnrm";
-      //
+//AL.
+const isDebugCourt =
+  location.hostname === "localhost" || location.hostname === "127.0.0.1";
+const debugCourt_revisionUrl = "https://qa.padelpush.co.za/revision/bnrm";
+const debugCourt_fullScoreUrl = "https://qa.padelpush.co.za/score/bnrm";
+const debugCourt_statsUrl = "https://qa.padelpush.co.za/stats/bnrm";
+const debugCourt_momentumUrl = "https://qa.padelpush.co.za/momentum/bnrm";
+const debugCourt_id = "bnrm";
+//
 
-      const POLL_INTERVAL_MS = 2 * 1000;
+const POLL_INTERVAL_MS = 2 * 1000;
 
-      const DEFAULT_SETTINGS = {
-        showServer: true,
-        showBrand: true,
-        showHeaders: true,
-        showTeamNames: true,
-        showPlayerNames: true,
-        showTimer: true,
-        showSponsor: true,
-        showWinMoments: true,
-        autoStatCards: true,
-        autoMomentumCards: false,
-        sponsorSlateOnSet: false,
-        showQr: false,
-        position: "tl",
-        layout: "panel",
-        scale: 1,
-        slateScale: 1,
-        statsScale: 1,
-        statsWidth: 1,
-        quickBarOpacity: 0.4,
-        quickBarScale: 1,
-        dragOverlay: null,
-        dragSlate: null,
-        dragQr: null,
-        dragQuickBar: null,
-        dragSettings: null,
-        dragMomentum: null,
-        themePreset: "padelpush",
-        panel: "#000000",
-        panel2: "#00002d",
-        gradientAngle: 90,
-        text: "#ffffff",
-        teamA: "#b7f000",
-        teamB: "#27d9ff",
-        nameA: "",
-        nameB: "",
-        playerA1: "",
-        playerA2: "",
-        playerB1: "",
-        playerB2: "",
-        logoA: "",
-        logoB: "",
-        brandText: "",
-        brandLogo: "",
-        sponsorHtml: "",
-        sponsors: [],
-        qrUrl: "",
-        qrLabel: "Scan for live scores",
-        qrCorner: "br",
-        qrSize: 96,
-        timerText: "",
-        timerOffset: 0,
-        timerAnchor: 0
+const DEFAULT_SETTINGS = {
+  showServer: true,
+  showBrand: true,
+  showHeaders: true,
+  showTeamNames: true,
+  showPlayerNames: true,
+  showTimer: true,
+  showSponsor: true,
+  showWinMoments: true,
+  autoStatCards: true,
+  autoMomentumCards: false,
+  sponsorSlateOnSet: false,
+  showQr: false,
+  position: "tl",
+  layout: "panel",
+  scale: 1,
+  slateScale: 1,
+  statsScale: 1,
+  statsWidth: 1,
+  quickBarOpacity: 0.4,
+  quickBarScale: 1,
+  dragOverlay: null,
+  dragSlate: null,
+  dragQr: null,
+  dragQuickBar: null,
+  dragSettings: null,
+  dragMomentum: null,
+  themePreset: "padelpush",
+  panel: "#000000",
+  panel2: "#00002d",
+  gradientAngle: 90,
+  text: "#ffffff",
+  teamA: "#b7f000",
+  teamB: "#27d9ff",
+  nameA: "",
+  nameB: "",
+  playerA1: "",
+  playerA2: "",
+  playerB1: "",
+  playerB2: "",
+  logoA: "",
+  logoB: "",
+  brandText: "",
+  brandLogo: "",
+  sponsorHtml: "",
+  sponsors: [],
+  qrUrl: "",
+  qrLabel: "Scan for live scores",
+  qrCorner: "br",
+  qrSize: 96,
+  timerText: "",
+  timerOffset: 0,
+  timerAnchor: 0,
+};
+
+// Colour keys a theme preset controls; touching any of them by hand
+// flips the preset selector to "custom".
+const THEME_COLOR_KEYS = [
+  "panel",
+  "panel2",
+  "gradientAngle",
+  "text",
+  "teamA",
+  "teamB",
+];
+
+const THEME_PRESETS = {
+  padelpush: {
+    label: "Padel Push™",
+    panel: "#000000",
+    panel2: "#00002d",
+    gradientAngle: 90,
+    text: "#ffffff",
+    teamA: "#b7f000",
+    teamB: "#27d9ff",
+  },
+  broadcast: {
+    label: "Broadcast Navy",
+    panel: "#0a1a3c",
+    panel2: "#050b18",
+    gradientAngle: 135,
+    text: "#ffffff",
+    teamA: "#ffd75e",
+    teamB: "#6ecbff",
+  },
+  carbon: {
+    label: "Carbon",
+    panel: "#101010",
+    panel2: "#1d1d1d",
+    gradientAngle: 180,
+    text: "#f5f5f5",
+    teamA: "#ff5c39",
+    teamB: "#3ddc97",
+  },
+  clay: {
+    label: "Clay Court",
+    panel: "#3d1f14",
+    panel2: "#20100a",
+    gradientAngle: 120,
+    text: "#ffe9dd",
+    teamA: "#ffb26b",
+    teamB: "#7fd8ff",
+  },
+  club: {
+    label: "Club Green",
+    panel: "#0b2e1f",
+    panel2: "#06170f",
+    gradientAngle: 120,
+    text: "#eafff3",
+    teamA: "#c6ff4d",
+    teamB: "#ffdf6b",
+  },
+  custom: { label: "Custom" },
+};
+
+const POSITIONS = ["tl", "tr", "bl", "br"];
+const LAYOUTS = ["panel", "compact", "ticker"];
+
+// Settings that have been renamed. Old stored configs and old share URLs
+// keep working: the legacy name is read once and folded into the new key.
+const LEGACY_SETTING_ALIASES = {
+  momentumScale: "statsScale",
+};
+
+function adoptLegacySettingKeys(source) {
+  Object.entries(LEGACY_SETTING_ALIASES).forEach(([legacyKey, currentKey]) => {
+    if (source[legacyKey] !== undefined && source[currentKey] === undefined) {
+      source[currentKey] = source[legacyKey];
+    }
+    delete source[legacyKey];
+  });
+  return source;
+}
+
+function clampNumber(value, min, max, fallback) {
+  const num = Number(value);
+  if (!Number.isFinite(num)) return fallback;
+  return Math.min(max, Math.max(min, num));
+}
+
+const DEFAULT_SPONSOR_HTML =
+  'Live scores brought to you by <img src="/media/logo.svg" alt="Padel Push™" /> ' +
+  "<strong>Padel Push™</strong>. Visit <strong>padelpush.co.za</strong> and join us on this court: " +
+  "<strong>{courtId}</strong>";
+
+// Hosting rewrites that all serve this overlay; a bare one carries no courtId.
+const OVERLAY_ROUTE_PREFIXES = new Set(["overlay", "broadcast"]);
+
+// /overlay/{courtId} follows whatever match is on that court;
+// /overlay/match/{matchId} follows one durable match across courts.
+function getMatchIdFromPath() {
+  const segments = window.location.pathname.split("/").filter(Boolean);
+  if (segments.length >= 2 && segments[segments.length - 2] === "match") {
+    try {
+      return decodeURIComponent(segments[segments.length - 1]);
+    } catch (_err) {
+      return segments[segments.length - 1];
+    }
+  }
+  return null;
+}
+
+function getCourtIdFromPath() {
+  if (getMatchIdFromPath()) return null;
+  const segments = window.location.pathname.split("/").filter(Boolean);
+  const last = segments.length ? segments[segments.length - 1] : "";
+
+  if (!last || OVERLAY_ROUTE_PREFIXES.has(last)) {
+    return null;
+  } else if (last === "overlay.html") {
+    return debugCourt_id; //AL.
+  }
+
+  try {
+    return decodeURIComponent(last);
+  } catch (_err) {
+    return last;
+  }
+}
+
+const courtId = getCourtIdFromPath();
+const overlayMatchId = getMatchIdFromPath();
+// Path suffix of the public read endpoints for this overlay's target.
+const apiTargetPath = overlayMatchId
+  ? "match/" + encodeURIComponent(overlayMatchId)
+  : encodeURIComponent(courtId || "");
+const storageKey =
+  "padelPushOverlaySettings:" +
+  (overlayMatchId ? "match-" + overlayMatchId : courtId || "default");
+
+let settings = { ...DEFAULT_SETTINGS };
+let latestScore = null;
+let renderedRevision = null;
+let isPolling = false;
+let lastSponsorHtml = null;
+let lastHeadLabels = null;
+const lastCellValues = {};
+
+function loadSettings() {
+  try {
+    const raw = localStorage.getItem(storageKey);
+    if (raw) {
+      settings = {
+        ...DEFAULT_SETTINGS,
+        ...adoptLegacySettingKeys(JSON.parse(raw)),
       };
+    }
+  } catch (_err) {
+    /* keep defaults */
+  }
+}
 
-      // Colour keys a theme preset controls; touching any of them by hand
-      // flips the preset selector to "custom".
-      const THEME_COLOR_KEYS = ["panel", "panel2", "gradientAngle", "text", "teamA", "teamB"];
+function saveSettings() {
+  try {
+    localStorage.setItem(storageKey, JSON.stringify(settings));
+  } catch (_err) {
+    /* storage unavailable */
+  }
+}
 
-      const THEME_PRESETS = {
-        padelpush: { label: "Padel Push™", panel: "#000000", panel2: "#00002d", gradientAngle: 90, text: "#ffffff", teamA: "#b7f000", teamB: "#27d9ff" },
-        broadcast: { label: "Broadcast Navy", panel: "#0a1a3c", panel2: "#050b18", gradientAngle: 135, text: "#ffffff", teamA: "#ffd75e", teamB: "#6ecbff" },
-        carbon: { label: "Carbon", panel: "#101010", panel2: "#1d1d1d", gradientAngle: 180, text: "#f5f5f5", teamA: "#ff5c39", teamB: "#3ddc97" },
-        clay: { label: "Clay Court", panel: "#3d1f14", panel2: "#20100a", gradientAngle: 120, text: "#ffe9dd", teamA: "#ffb26b", teamB: "#7fd8ff" },
-        club: { label: "Club Green", panel: "#0b2e1f", panel2: "#06170f", gradientAngle: 120, text: "#eafff3", teamA: "#c6ff4d", teamB: "#ffdf6b" },
-        custom: { label: "Custom" }
+function normalizeSettings() {
+  settings.position = POSITIONS.includes(settings.position)
+    ? settings.position
+    : DEFAULT_SETTINGS.position;
+  settings.layout = LAYOUTS.includes(settings.layout)
+    ? settings.layout
+    : DEFAULT_SETTINGS.layout;
+  settings.scale = clampNumber(settings.scale, 0.5, 2, 1);
+  settings.slateScale = clampNumber(settings.slateScale, 0.5, 2, 1);
+  settings.statsScale = clampNumber(settings.statsScale, 0.5, 2, 1);
+  settings.statsWidth = clampNumber(settings.statsWidth, 0.5, 2, 1);
+  settings.autoMomentumCards = Boolean(settings.autoMomentumCards);
+  settings.quickBarOpacity = clampNumber(settings.quickBarOpacity, 0.1, 1, 0.4);
+  settings.quickBarScale = clampNumber(settings.quickBarScale, 0.5, 2, 1);
+  settings.qrSize = clampNumber(
+    settings.qrSize,
+    64,
+    200,
+    DEFAULT_SETTINGS.qrSize,
+  );
+  settings.qrCorner = POSITIONS.includes(settings.qrCorner)
+    ? settings.qrCorner
+    : DEFAULT_SETTINGS.qrCorner;
+  settings.themePreset = THEME_PRESETS[settings.themePreset]
+    ? settings.themePreset
+    : "custom";
+  [
+    "dragOverlay",
+    "dragSlate",
+    "dragQr",
+    "dragQuickBar",
+    "dragSettings",
+    "dragMomentum",
+  ].forEach((key) => {
+    const val = settings[key];
+    if (
+      !val ||
+      typeof val !== "object" ||
+      !Number.isFinite(Number(val.x)) ||
+      !Number.isFinite(Number(val.y))
+    ) {
+      settings[key] = null;
+    } else {
+      settings[key] = {
+        x: Math.round(Number(val.x)),
+        y: Math.round(Number(val.y)),
       };
+    }
+  });
+  settings.sponsors = (
+    Array.isArray(settings.sponsors) ? settings.sponsors : []
+  )
+    .map((item) => ({
+      text: typeof item?.text === "string" ? item.text : "",
+      img: typeof item?.img === "string" ? item.img : "",
+      seconds: clampNumber(item?.seconds, 3, 600, 8),
+    }))
+    .filter((item) => item.text.trim() || item.img.trim());
+}
 
-      const POSITIONS = ["tl", "tr", "bl", "br"];
-      const LAYOUTS = ["panel", "compact", "ticker"];
+function applyThemePreset(name) {
+  const preset = THEME_PRESETS[name];
+  if (!preset || name === "custom") return;
 
-      // Settings that have been renamed. Old stored configs and old share URLs
-      // keep working: the legacy name is read once and folded into the new key.
-      const LEGACY_SETTING_ALIASES = {
-        momentumScale: "statsScale"
-      };
+  THEME_COLOR_KEYS.forEach((key) => {
+    if (preset[key] !== undefined) {
+      settings[key] = preset[key];
+    }
+  });
+  settings.themePreset = name;
+}
 
-      function adoptLegacySettingKeys(source) {
-        Object.entries(LEGACY_SETTING_ALIASES).forEach(([legacyKey, currentKey]) => {
-          if (source[legacyKey] !== undefined && source[currentKey] === undefined) {
-            source[currentKey] = source[legacyKey];
-          }
-          delete source[legacyKey];
-        });
-        return source;
+// ---------- Shareable config via URL parameters ----------
+// Every persisted setting (except transient timer state) can be supplied
+// as a query parameter, so a fully-styled overlay can be pasted into an
+// OBS browser source as a single URL that survives cache clears and
+// machine changes. URL values override stored ones on load; edits made
+// afterwards in the settings panel still apply and persist locally.
+const URL_SKIP_KEYS = new Set(["timerText", "timerOffset", "timerAnchor"]);
+const HEX_COLOR_KEYS = new Set(["panel", "panel2", "text", "teamA", "teamB"]);
+
+function applyUrlOverrides() {
+  let params;
+  try {
+    params = new URLSearchParams(window.location.search);
+  } catch (_err) {
+    return;
+  }
+
+  Object.entries(LEGACY_SETTING_ALIASES).forEach(([legacyKey, currentKey]) => {
+    if (params.has(legacyKey) && !params.has(currentKey)) {
+      params.set(currentKey, params.get(legacyKey));
+    }
+  });
+
+  // "theme" is applied first so explicit colour params can refine it.
+  const theme = params.get("theme") || params.get("themePreset");
+  if (theme && THEME_PRESETS[theme]) {
+    applyThemePreset(theme);
+  }
+
+  Object.keys(DEFAULT_SETTINGS).forEach((key) => {
+    if (URL_SKIP_KEYS.has(key) || !params.has(key)) return;
+
+    const raw = params.get(key);
+    const fallback = DEFAULT_SETTINGS[key];
+
+    if (typeof fallback === "boolean") {
+      settings[key] = !/^(0|false|no|off)$/i.test(raw.trim());
+    } else if (typeof fallback === "number") {
+      const num = Number(raw);
+      if (Number.isFinite(num)) settings[key] = num;
+    } else if (Array.isArray(fallback)) {
+      try {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) settings[key] = parsed;
+      } catch (_err) {
+        /* malformed JSON param */
       }
-
-      function clampNumber(value, min, max, fallback) {
-        const num = Number(value);
-        if (!Number.isFinite(num)) return fallback;
-        return Math.min(max, Math.max(min, num));
+    } else if (fallback === null || typeof fallback === "object") {
+      try {
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === "object") settings[key] = parsed;
+      } catch (_err) {
+        /* malformed JSON param */
       }
-
-      const DEFAULT_SPONSOR_HTML =
-        'Live scores brought to you by <img src="/media/logo.svg" alt="Padel Push™" /> ' +
-        '<strong>Padel Push™</strong>. Visit <strong>padelpush.co.za</strong> and join us on this court: ' +
-        '<strong>{courtId}</strong>';
-
-      // Hosting rewrites that all serve this overlay; a bare one carries no courtId.
-      const OVERLAY_ROUTE_PREFIXES = new Set(["overlay", "broadcast"]);
-
-      // /overlay/{courtId} follows whatever match is on that court;
-      // /overlay/match/{matchId} follows one durable match across courts.
-      function getMatchIdFromPath() {
-        const segments = window.location.pathname.split("/").filter(Boolean);
-        if (segments.length >= 2 && segments[segments.length - 2] === "match") {
-          try {
-            return decodeURIComponent(segments[segments.length - 1]);
-          }
-          catch (_err) {
-            return segments[segments.length - 1];
-          }
-        }
-        return null;
-      }
-
-      function getCourtIdFromPath() {
-        if (getMatchIdFromPath()) return null;
-        const segments = window.location.pathname.split("/").filter(Boolean);
-        const last = segments.length ? segments[segments.length - 1] : "";
-
-        if (!last || OVERLAY_ROUTE_PREFIXES.has(last)) {
-          return null;
-        }
-        else if(last === "overlay.html") {
-          return debugCourt_id; //AL.
-        }
-
-        try {
-          return decodeURIComponent(last);
-        }
-        catch (_err) {
-          return last;
-        }
-      }
-
-      const courtId = getCourtIdFromPath();
-      const overlayMatchId = getMatchIdFromPath();
-      // Path suffix of the public read endpoints for this overlay's target.
-      const apiTargetPath = overlayMatchId
-        ? "match/" + encodeURIComponent(overlayMatchId)
-        : encodeURIComponent(courtId || "");
-      const storageKey = "padelPushOverlaySettings:" + (overlayMatchId ? "match-" + overlayMatchId : courtId || "default");
-
-      let settings = { ...DEFAULT_SETTINGS };
-      let latestScore = null;
-      let renderedRevision = null;
-      let isPolling = false;
-      let lastSponsorHtml = null;
-      let lastHeadLabels = null;
-      const lastCellValues = {};
-
-      function loadSettings() {
-        try {
-          const raw = localStorage.getItem(storageKey);
-          if (raw) {
-            settings = { ...DEFAULT_SETTINGS, ...adoptLegacySettingKeys(JSON.parse(raw)) };
-          }
-        }
-        catch (_err) { /* keep defaults */ }
-      }
-
-      function saveSettings() {
-        try {
-          localStorage.setItem(storageKey, JSON.stringify(settings));
-        }
-        catch (_err) { /* storage unavailable */ }
-      }
-
-      function normalizeSettings() {
-        settings.position = POSITIONS.includes(settings.position) ? settings.position : DEFAULT_SETTINGS.position;
-        settings.layout = LAYOUTS.includes(settings.layout) ? settings.layout : DEFAULT_SETTINGS.layout;
-        settings.scale = clampNumber(settings.scale, 0.5, 2, 1);
-        settings.slateScale = clampNumber(settings.slateScale, 0.5, 2, 1);
-        settings.statsScale = clampNumber(settings.statsScale, 0.5, 2, 1);
-        settings.statsWidth = clampNumber(settings.statsWidth, 0.5, 2, 1);
-        settings.autoMomentumCards = Boolean(settings.autoMomentumCards);
-        settings.quickBarOpacity = clampNumber(settings.quickBarOpacity, 0.1, 1, 0.4);
-        settings.quickBarScale = clampNumber(settings.quickBarScale, 0.5, 2, 1);
-        settings.qrSize = clampNumber(settings.qrSize, 64, 200, DEFAULT_SETTINGS.qrSize);
-        settings.qrCorner = POSITIONS.includes(settings.qrCorner) ? settings.qrCorner : DEFAULT_SETTINGS.qrCorner;
-        settings.themePreset = THEME_PRESETS[settings.themePreset] ? settings.themePreset : "custom";
-        ["dragOverlay", "dragSlate", "dragQr", "dragQuickBar", "dragSettings", "dragMomentum"].forEach((key) => {
-          const val = settings[key];
-          if (!val || typeof val !== "object" || !Number.isFinite(Number(val.x)) || !Number.isFinite(Number(val.y))) {
-            settings[key] = null;
-          }
-          else {
-            settings[key] = { x: Math.round(Number(val.x)), y: Math.round(Number(val.y)) };
-          }
-        });
-        settings.sponsors = (Array.isArray(settings.sponsors) ? settings.sponsors : [])
-          .map((item) => ({
-            text: typeof item?.text === "string" ? item.text : "",
-            img: typeof item?.img === "string" ? item.img : "",
-            seconds: clampNumber(item?.seconds, 3, 600, 8)
-          }))
-          .filter((item) => item.text.trim() || item.img.trim());
-      }
-
-      function applyThemePreset(name) {
-        const preset = THEME_PRESETS[name];
-        if (!preset || name === "custom") return;
-
-        THEME_COLOR_KEYS.forEach((key) => {
-          if (preset[key] !== undefined) {
-            settings[key] = preset[key];
-          }
-        });
-        settings.themePreset = name;
-      }
-
-      // ---------- Shareable config via URL parameters ----------
-      // Every persisted setting (except transient timer state) can be supplied
-      // as a query parameter, so a fully-styled overlay can be pasted into an
-      // OBS browser source as a single URL that survives cache clears and
-      // machine changes. URL values override stored ones on load; edits made
-      // afterwards in the settings panel still apply and persist locally.
-      const URL_SKIP_KEYS = new Set(["timerText", "timerOffset", "timerAnchor"]);
-      const HEX_COLOR_KEYS = new Set(["panel", "panel2", "text", "teamA", "teamB"]);
-
-      function applyUrlOverrides() {
-        let params;
-        try {
-          params = new URLSearchParams(window.location.search);
-        }
-        catch (_err) {
-          return;
-        }
-
-        Object.entries(LEGACY_SETTING_ALIASES).forEach(([legacyKey, currentKey]) => {
-          if (params.has(legacyKey) && !params.has(currentKey)) {
-            params.set(currentKey, params.get(legacyKey));
-          }
-        });
-
-        // "theme" is applied first so explicit colour params can refine it.
-        const theme = params.get("theme") || params.get("themePreset");
-        if (theme && THEME_PRESETS[theme]) {
-          applyThemePreset(theme);
-        }
-
-        Object.keys(DEFAULT_SETTINGS).forEach((key) => {
-          if (URL_SKIP_KEYS.has(key) || !params.has(key)) return;
-
-          const raw = params.get(key);
-          const fallback = DEFAULT_SETTINGS[key];
-
-          if (typeof fallback === "boolean") {
-            settings[key] = !/^(0|false|no|off)$/i.test(raw.trim());
-          }
-          else if (typeof fallback === "number") {
-            const num = Number(raw);
-            if (Number.isFinite(num)) settings[key] = num;
-          }
-          else if (Array.isArray(fallback)) {
-            try {
-              const parsed = JSON.parse(raw);
-              if (Array.isArray(parsed)) settings[key] = parsed;
-            }
-            catch (_err) { /* malformed JSON param */ }
-          }
-          else if (fallback === null || typeof fallback === "object") {
-            try {
-              const parsed = JSON.parse(raw);
-              if (parsed && typeof parsed === "object") settings[key] = parsed;
-            }
-            catch (_err) { /* malformed JSON param */ }
-          }
-          else {
-            // Allow bare hex colours ("b7f000") so the URL reads cleanly.
-            settings[key] = HEX_COLOR_KEYS.has(key) && /^[0-9a-f]{6}$/i.test(raw)
-              ? "#" + raw
-              : raw;
-          }
-        });
-      }
-
-      function buildShareUrl() {
-        const params = new URLSearchParams();
-
-        Object.keys(DEFAULT_SETTINGS).forEach((key) => {
-          if (URL_SKIP_KEYS.has(key)) return;
-
-          const value = settings[key];
-          if (JSON.stringify(value) === JSON.stringify(DEFAULT_SETTINGS[key])) return;
-
-          params.set(key, (typeof value === "object" && value !== null) || Array.isArray(value) ? JSON.stringify(value) : String(value));
-        });
-
-        const base = window.location.origin + "/overlay/" + encodeURIComponent(courtId || "");
-        const query = params.toString();
-        return query ? base + "?" + query : base;
-      }
-
-      function hexToPanelRgba(hex) {
-        const value = /^#([0-9a-f]{6})$/i.exec(hex || "");
-        if (!value) return "rgba(0, 0, 0, 0.82)";
-        const int = parseInt(value[1], 16);
-        const r = (int >> 16) & 255;
-        const g = (int >> 8) & 255;
-        const b = int & 255;
-        return "rgba(" + r + ", " + g + ", " + b + ", 0.82)";
-      }
-
-      // Compact and ticker layouts trade the header/player detail for a slim
-      // footprint regardless of the individual display toggles.
-      function isSlimLayout() {
-        return settings.layout === "compact" || settings.layout === "ticker";
-      }
-
-      function applyDragPosition(el, pos) {
-        if (!el) return;
-        if (pos && typeof pos.x === "number" && typeof pos.y === "number") {
-          el.style.left = pos.x + "px";
-          el.style.top = pos.y + "px";
-          el.style.right = "auto";
-          el.style.bottom = "auto";
-          el.style.transform = "none";
-        }
-        else {
-          el.style.left = "";
-          el.style.top = "";
-          el.style.right = "";
-          el.style.bottom = "";
-          el.style.transform = "";
-        }
-      }
-
-      function applySettings() {
-        const root = document.documentElement.style;
-        root.setProperty("--ov-panel", hexToPanelRgba(settings.panel));
-        root.setProperty("--ov-panel-2", hexToPanelRgba(settings.panel2));
-        root.setProperty("--ov-grad-angle", (Number(settings.gradientAngle) || 0) + "deg");
-        root.setProperty("--ov-text", settings.text);
-        root.setProperty("--ov-teamA", settings.teamA);
-        root.setProperty("--ov-teamB", settings.teamB);
-        root.setProperty("--ov-scale", String(clampNumber(settings.scale, 0.5, 2, 1)));
-        root.setProperty("--ov-slate-scale", String(clampNumber(settings.slateScale, 0.5, 2, 1)));
-        root.setProperty("--ov-stats-scale", String(clampNumber(settings.statsScale, 0.5, 2, 1)));
-        root.setProperty("--ov-stats-width", String(clampNumber(settings.statsWidth, 0.5, 2, 1)));
-        root.setProperty("--ov-quickbar-opacity", String(clampNumber(settings.quickBarOpacity, 0.1, 1, 0.4)));
-        root.setProperty("--ov-quickbar-scale", String(clampNumber(settings.quickBarScale, 0.5, 2, 1)));
-
-        const anchor = document.getElementById("overlayAnchor");
-        anchor.className = "overlay-anchor pos-" + settings.position +
-          (settings.layout !== "panel" ? " layout-" + settings.layout : "");
-
-        applyDragPosition(document.getElementById("overlayAnchor"), settings.dragOverlay);
-        applyDragPosition(document.getElementById("sponsorSlate"), settings.dragSlate);
-        applyDragPosition(document.getElementById("qrBug"), settings.dragQr);
-        applyDragPosition(document.getElementById("quickBar"), settings.dragQuickBar);
-        applyDragPosition(document.getElementById("settingsPanel"), settings.dragSettings);
-        applyDragPosition(document.getElementById("momentumCard"), settings.dragMomentum);
-
-        applyLogo("logoA", settings.logoA);
-        applyLogo("logoB", settings.logoB);
-        applyBrand();
-
-        const overlayBox = document.getElementById("overlayBox");
-        overlayBox.classList.toggle("no-brand", settings.showBrand === false || isSlimLayout());
-        overlayBox.classList.toggle("no-headers", settings.showHeaders === false || isSlimLayout());
-
-        tickTimer();
-        updateSponsor();
-        renderQrBug();
-
-        if (latestScore) {
-          render(latestScore);
-        }
-        else {
-          syncNameColumn();
-        }
-      }
-
-      function safeHttpUrl(url) {
-        if (!url) return "";
-        try {
-          const parsed = new URL(url, window.location.origin);
-          if (parsed.protocol === "https:" || parsed.protocol === "http:") {
-            return parsed.href;
-          }
-        }
-        catch (_err) { /* invalid URL */ }
-        return "";
-      }
-
-      function applyBrand() {
-        document.getElementById("brandName").textContent = settings.brandText || "Padel Push™";
-        document.getElementById("brandLogo").src = safeHttpUrl(settings.brandLogo) || "/media/logo.svg";
-      }
-
-      // ---------- Match timer ----------
-
-      function formatTimer(totalSeconds) {
-        const hours = Math.floor(totalSeconds / 3600);
-        const minutes = Math.floor((totalSeconds % 3600) / 60);
-        const seconds = totalSeconds % 60;
-        const mm = String(minutes).padStart(2, "0");
-        const ss = String(seconds).padStart(2, "0");
-        return hours > 0 ? hours + ":" + mm + ":" + ss : mm + ":" + ss;
-      }
-
-      // Accepts "h:mm:ss", "mm:ss" or a plain number of minutes; returns seconds.
-      function parseTimerInput(raw) {
-        const value = (raw || "").trim();
-        if (!value) return 0;
-        if (/^\d+$/.test(value)) return parseInt(value, 10) * 60;
-
-        const parts = value.split(":").map((part) => part.trim());
-        if (parts.length < 2 || parts.length > 3 || parts.some((part) => !/^\d+$/.test(part))) {
-          return 0;
-        }
-
-        return parts.reduce((total, part) => total * 60 + parseInt(part, 10), 0);
-      }
-
-      function tickTimer() {
-        const el = document.getElementById("matchTimer");
-        if (settings.showTimer === false) {
-          el.style.display = "none";
-          return;
-        }
-
-        el.style.display = "";
-        const anchor = settings.timerAnchor || Date.now();
-        const offset = Number(settings.timerOffset) || 0;
-        const elapsed = Math.max(0, Math.floor((Date.now() - anchor) / 1000) + offset);
-        el.textContent = formatTimer(elapsed);
-      }
-
-      // ---------- Sponsor strip & rotation ----------
-
-      let sponsorRotationTimer = null;
-      let sponsorIndex = 0;
-
-      function activeSponsors() {
-        return (Array.isArray(settings.sponsors) ? settings.sponsors : [])
-          .filter((item) => item && ((item.text && item.text.trim()) || safeHttpUrl(item.img)));
-      }
-
-      function sponsorItemHtml(item) {
-        const imgUrl = safeHttpUrl(item.img);
-        const img = imgUrl ? '<img src="' + imgUrl.replace(/"/g, "&quot;") + '" alt="" /> ' : "";
-        return img + (item.text || "");
-      }
-
-      function defaultSponsorHtml() {
-        const displayCourtId = ((latestScore && latestScore.courtId) || courtId || "").toUpperCase();
-        return (settings.sponsorHtml || DEFAULT_SPONSOR_HTML).split("{courtId}").join(displayCourtId);
-      }
-
-      function currentSponsorHtml() {
-        const list = activeSponsors();
-        if (!list.length) {
-          return defaultSponsorHtml();
-        }
-
-        sponsorIndex = sponsorIndex % list.length;
-        return sponsorItemHtml(list[sponsorIndex]);
-      }
-
-      function updateSponsor() {
-        const strip = document.getElementById("sponsorStrip");
-        const show = settings.showSponsor !== false;
-        strip.classList.toggle("hidden", !show);
-        if (!show) {
-          clearTimeout(sponsorRotationTimer);
-          sponsorRotationTimer = null;
-          return;
-        }
-
-        const html = currentSponsorHtml();
-
-        if (html !== lastSponsorHtml) {
-          lastSponsorHtml = html;
-          document.getElementById("sponsorItemA").innerHTML = html;
-          document.getElementById("sponsorItemB").innerHTML = html;
-
-          // Images load async and change the strip's width — re-measure as they arrive.
-          document.querySelectorAll("#sponsorItemA img").forEach((img) => {
-            img.addEventListener("load", measureSponsor, { once: true });
-          });
-        }
-
-        measureSponsor();
-        scheduleSponsorRotation();
-      }
-
-      function scheduleSponsorRotation() {
-        const list = activeSponsors();
-        if (settings.showSponsor === false || list.length < 2) {
-          clearTimeout(sponsorRotationTimer);
-          sponsorRotationTimer = null;
-          return;
-        }
-
-        if (sponsorRotationTimer) return;
-
-        const dwellMs = clampNumber(list[sponsorIndex % list.length].seconds, 3, 600, 8) * 1000;
-        sponsorRotationTimer = setTimeout(() => {
-          const track = document.getElementById("sponsorTrack");
-          track.classList.add("fading");
-
-          setTimeout(() => {
-            sponsorIndex = (sponsorIndex + 1) % Math.max(activeSponsors().length, 1);
-            sponsorRotationTimer = null;
-            updateSponsor();
-            track.classList.remove("fading");
-          }, 300);
-        }, dwellMs);
-      }
-
-      // Settings edits can change the list or dwell times mid-cycle; drop the
-      // pending timer so the next updateSponsor() reschedules from scratch.
-      function restartSponsorRotation() {
-        clearTimeout(sponsorRotationTimer);
-        sponsorRotationTimer = null;
-        updateSponsor();
-      }
-
-      // ---------- Sponsor slate (lower-third interstitial) ----------
-
-      let slateTimer = null;
-      let slateIndex = 0;
-
-      function showSponsorSlate(durationMs) {
-        const slate = document.getElementById("sponsorSlate");
-        const body = document.getElementById("slateBody");
-        const list = activeSponsors();
-
-        if (list.length) {
-          slateIndex = slateIndex % list.length;
-          body.innerHTML = sponsorItemHtml(list[slateIndex]);
-          slateIndex++;
-        }
-        else {
-          body.innerHTML = defaultSponsorHtml();
-        }
-
-        slate.classList.add("show");
-        clearTimeout(slateTimer);
-        slateTimer = setTimeout(() => slate.classList.remove("show"), durationMs || 8000);
-      }
-
-      // ---------- QR corner bug ----------
-
-      let lastQrKey = null;
-
-      function renderQrBug() {
-        const bug = document.getElementById("qrBug");
-        const show = settings.showQr === true && Boolean(window.QRCode);
-        const corner = POSITIONS.includes(settings.qrCorner) ? settings.qrCorner : "br";
-        bug.className = "qr-bug qr-" + corner + (show ? "" : " hidden");
-        if (!show) return;
-
-        document.getElementById("qrBugLabel").textContent = settings.qrLabel || "";
-
-        // A match overlay links to the durable match page; a court overlay to
-        // the court, which follows whatever is played on it next.
-        const text = safeHttpUrl(settings.qrUrl) ||
-          (overlayMatchId
-            ? window.location.origin + "/m/" + encodeURIComponent(overlayMatchId)
-            : window.location.origin + "/c/" + encodeURIComponent(courtId || ""));
-        const size = Math.round(clampNumber(settings.qrSize, 64, 200, 96));
-        const key = text + "|" + size;
-        if (key === lastQrKey) return;
-        lastQrKey = key;
-
-        const mount = document.getElementById("qrBugCode");
-        mount.innerHTML = "";
-        new window.QRCode(mount, {
-          text,
-          width: size,
-          height: size,
-          colorDark: "#000000",
-          colorLight: "#ffffff",
-          correctLevel: window.QRCode.CorrectLevel.H
-        });
-      }
-
-      function measureSponsor() {
-        const strip = document.getElementById("sponsorStrip");
-        if (strip.classList.contains("hidden")) return;
-
-        const track = document.getElementById("sponsorTrack");
-        const itemA = document.getElementById("sponsorItemA");
-        const itemB = document.getElementById("sponsorItemB");
-        const overflows = itemA.scrollWidth > strip.clientWidth + 1;
-
-        // The second (duplicate) item only exists to make the loop seamless.
-        itemB.style.display = overflows ? "" : "none";
-        track.classList.toggle("scrolling", overflows);
-        track.style.setProperty("--sponsor-duration", Math.max(8, Math.round(itemA.scrollWidth / 30)) + "s");
-      }
-
+    } else {
+      // Allow bare hex colours ("b7f000") so the URL reads cleanly.
+      settings[key] =
+        HEX_COLOR_KEYS.has(key) && /^[0-9a-f]{6}$/i.test(raw) ? "#" + raw : raw;
+    }
+  });
+}
+
+function buildShareUrl() {
+  const params = new URLSearchParams();
+
+  Object.keys(DEFAULT_SETTINGS).forEach((key) => {
+    if (URL_SKIP_KEYS.has(key)) return;
+
+    const value = settings[key];
+    if (JSON.stringify(value) === JSON.stringify(DEFAULT_SETTINGS[key])) return;
+
+    params.set(
+      key,
+      (typeof value === "object" && value !== null) || Array.isArray(value)
+        ? JSON.stringify(value)
+        : String(value),
+    );
+  });
+
+  const base =
+    window.location.origin + "/overlay/" + encodeURIComponent(courtId || "");
+  const query = params.toString();
+  return query ? base + "?" + query : base;
+}
+
+function hexToPanelRgba(hex) {
+  const value = /^#([0-9a-f]{6})$/i.exec(hex || "");
+  if (!value) return "rgba(0, 0, 0, 0.82)";
+  const int = parseInt(value[1], 16);
+  const r = (int >> 16) & 255;
+  const g = (int >> 8) & 255;
+  const b = int & 255;
+  return "rgba(" + r + ", " + g + ", " + b + ", 0.82)";
+}
+// Compact and ticker layouts trade the header/player detail for a slim
+// footprint regardless of the individual display toggles.
+function isSlimLayout() {
+  return settings.layout === "compact" || settings.layout === "ticker";
+}
+
+function applyDragPosition(el, pos) {
+  if (!el) return;
+  if (pos && typeof pos.x === "number" && typeof pos.y === "number") {
+    el.style.left = pos.x + "px";
+    el.style.top = pos.y + "px";
+    el.style.right = "auto";
+    el.style.bottom = "auto";
+    el.style.transform = "none";
+  } else {
+    el.style.left = "";
+    el.style.top = "";
+    el.style.right = "";
+    el.style.bottom = "";
+    el.style.transform = "";
+  }
+}
+
+function applySettings() {
+  const root = document.documentElement.style;
+  root.setProperty("--ov-panel", hexToPanelRgba(settings.panel));
+  root.setProperty("--ov-panel-2", hexToPanelRgba(settings.panel2));
+  root.setProperty(
+    "--ov-grad-angle",
+    (Number(settings.gradientAngle) || 0) + "deg",
+  );
+  root.setProperty("--ov-text", settings.text);
+  root.setProperty("--ov-teamA", settings.teamA);
+  root.setProperty("--ov-teamB", settings.teamB);
+  root.setProperty(
+    "--ov-scale",
+    String(clampNumber(settings.scale, 0.5, 2, 1)),
+  );
+  root.setProperty(
+    "--ov-slate-scale",
+    String(clampNumber(settings.slateScale, 0.5, 2, 1)),
+  );
+  root.setProperty(
+    "--ov-stats-scale",
+    String(clampNumber(settings.statsScale, 0.5, 2, 1)),
+  );
+  root.setProperty(
+    "--ov-stats-width",
+    String(clampNumber(settings.statsWidth, 0.5, 2, 1)),
+  );
+  root.setProperty(
+    "--ov-quickbar-opacity",
+    String(clampNumber(settings.quickBarOpacity, 0.1, 1, 0.4)),
+  );
+  root.setProperty(
+    "--ov-quickbar-scale",
+    String(clampNumber(settings.quickBarScale, 0.5, 2, 1)),
+  );
+
+  const anchor = document.getElementById("overlayAnchor");
+  anchor.className =
+    "overlay-anchor pos-" +
+    settings.position +
+    (settings.layout !== "panel" ? " layout-" + settings.layout : "");
+
+  applyDragPosition(
+    document.getElementById("overlayAnchor"),
+    settings.dragOverlay,
+  );
+  applyDragPosition(
+    document.getElementById("sponsorSlate"),
+    settings.dragSlate,
+  );
+  applyDragPosition(document.getElementById("qrBug"), settings.dragQr);
+  applyDragPosition(document.getElementById("quickBar"), settings.dragQuickBar);
+  applyDragPosition(
+    document.getElementById("settingsPanel"),
+    settings.dragSettings,
+  );
+  applyDragPosition(
+    document.getElementById("momentumCard"),
+    settings.dragMomentum,
+  );
+
+  applyLogo("logoA", settings.logoA);
+  applyLogo("logoB", settings.logoB);
+  applyBrand();
+
+  const overlayBox = document.getElementById("overlayBox");
+  overlayBox.classList.toggle(
+    "no-brand",
+    settings.showBrand === false || isSlimLayout(),
+  );
+  overlayBox.classList.toggle(
+    "no-headers",
+    settings.showHeaders === false || isSlimLayout(),
+  );
+
+  tickTimer();
+  updateSponsor();
+  renderQrBug();
+
+  if (latestScore) {
+    render(latestScore);
+  } else {
+    syncNameColumn();
+  }
+}
+
+function safeHttpUrl(url) {
+  if (!url) return "";
+  try {
+    const parsed = new URL(url, window.location.origin);
+    if (parsed.protocol === "https:" || parsed.protocol === "http:") {
+      return parsed.href;
+    }
+  } catch (_err) {
+    /* invalid URL */
+  }
+  return "";
+}
+
+function applyBrand() {
+  document.getElementById("brandName").textContent =
+    settings.brandText || "Padel Push™";
+  document.getElementById("brandLogo").src =
+    safeHttpUrl(settings.brandLogo) || "/media/logo.svg";
+}
+
+// ---------- Match timer ----------
+
+function formatTimer(totalSeconds) {
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  const mm = String(minutes).padStart(2, "0");
+  const ss = String(seconds).padStart(2, "0");
+  return hours > 0 ? hours + ":" + mm + ":" + ss : mm + ":" + ss;
+}
+
+// Accepts "h:mm:ss", "mm:ss" or a plain number of minutes; returns seconds.
+function parseTimerInput(raw) {
+  const value = (raw || "").trim();
+  if (!value) return 0;
+  if (/^\d+$/.test(value)) return parseInt(value, 10) * 60;
+
+  const parts = value.split(":").map((part) => part.trim());
+  if (
+    parts.length < 2 ||
+    parts.length > 3 ||
+    parts.some((part) => !/^\d+$/.test(part))
+  ) {
+    return 0;
+  }
+
+  return parts.reduce((total, part) => total * 60 + parseInt(part, 10), 0);
+}
+
+function tickTimer() {
+  const el = document.getElementById("matchTimer");
+  if (settings.showTimer === false) {
+    el.style.display = "none";
+    return;
+  }
+
+  el.style.display = "";
+  const anchor = settings.timerAnchor || Date.now();
+  const offset = Number(settings.timerOffset) || 0;
+  const elapsed = Math.max(
+    0,
+    Math.floor((Date.now() - anchor) / 1000) + offset,
+  );
+  el.textContent = formatTimer(elapsed);
+}
+
+// ---------- Sponsor strip & rotation ----------
+
+let sponsorRotationTimer = null;
+let sponsorIndex = 0;
+
+function activeSponsors() {
+  return (Array.isArray(settings.sponsors) ? settings.sponsors : []).filter(
+    (item) =>
+      item && ((item.text && item.text.trim()) || safeHttpUrl(item.img)),
+  );
+}
+
+function sponsorItemHtml(item) {
+  const imgUrl = safeHttpUrl(item.img);
+  const img = imgUrl
+    ? '<img src="' + imgUrl.replace(/"/g, "&quot;") + '" alt="" /> '
+    : "";
+  return img + (item.text || "");
+}
+
+function defaultSponsorHtml() {
+  const displayCourtId = (
+    (latestScore && latestScore.courtId) ||
+    courtId ||
+    ""
+  ).toUpperCase();
+  return (settings.sponsorHtml || DEFAULT_SPONSOR_HTML)
+    .split("{courtId}")
+    .join(displayCourtId);
+}
+
+function currentSponsorHtml() {
+  const list = activeSponsors();
+  if (!list.length) {
+    return defaultSponsorHtml();
+  }
+
+  sponsorIndex = sponsorIndex % list.length;
+  return sponsorItemHtml(list[sponsorIndex]);
+}
+
+function updateSponsor() {
+  const strip = document.getElementById("sponsorStrip");
+  const show = settings.showSponsor !== false;
+  strip.classList.toggle("hidden", !show);
+  if (!show) {
+    clearTimeout(sponsorRotationTimer);
+    sponsorRotationTimer = null;
+    return;
+  }
+
+  const html = currentSponsorHtml();
+
+  if (html !== lastSponsorHtml) {
+    lastSponsorHtml = html;
+    document.getElementById("sponsorItemA").innerHTML = html;
+    document.getElementById("sponsorItemB").innerHTML = html;
+
+    // Images load async and change the strip's width — re-measure as they arrive.
+    document.querySelectorAll("#sponsorItemA img").forEach((img) => {
+      img.addEventListener("load", measureSponsor, { once: true });
+    });
+  }
+
+  measureSponsor();
+  scheduleSponsorRotation();
+}
+
+function scheduleSponsorRotation() {
+  const list = activeSponsors();
+  if (settings.showSponsor === false || list.length < 2) {
+    clearTimeout(sponsorRotationTimer);
+    sponsorRotationTimer = null;
+    return;
+  }
+
+  if (sponsorRotationTimer) return;
+
+  const dwellMs =
+    clampNumber(list[sponsorIndex % list.length].seconds, 3, 600, 8) * 1000;
+  sponsorRotationTimer = setTimeout(() => {
+    const track = document.getElementById("sponsorTrack");
+    track.classList.add("fading");
+
+    setTimeout(() => {
+      sponsorIndex = (sponsorIndex + 1) % Math.max(activeSponsors().length, 1);
+      sponsorRotationTimer = null;
+      updateSponsor();
+      track.classList.remove("fading");
+    }, 300);
+  }, dwellMs);
+}
+
+// Settings edits can change the list or dwell times mid-cycle; drop the
+// pending timer so the next updateSponsor() reschedules from scratch.
+function restartSponsorRotation() {
+  clearTimeout(sponsorRotationTimer);
+  sponsorRotationTimer = null;
+  updateSponsor();
+}
+
+// ---------- Sponsor slate (lower-third interstitial) ----------
+
+let slateTimer = null;
+let slateIndex = 0;
+
+function showSponsorSlate(durationMs) {
+  const slate = document.getElementById("sponsorSlate");
+  const body = document.getElementById("slateBody");
+  const list = activeSponsors();
+
+  if (list.length) {
+    slateIndex = slateIndex % list.length;
+    body.innerHTML = sponsorItemHtml(list[slateIndex]);
+    slateIndex++;
+  } else {
+    body.innerHTML = defaultSponsorHtml();
+  }
+
+  slate.classList.add("show");
+  clearTimeout(slateTimer);
+  slateTimer = setTimeout(
+    () => slate.classList.remove("show"),
+    durationMs || 8000,
+  );
+}
+
+// ---------- QR corner bug ----------
+
+let lastQrKey = null;
+
+function renderQrBug() {
+  const bug = document.getElementById("qrBug");
+  const show = settings.showQr === true && Boolean(window.QRCode);
+  const corner = POSITIONS.includes(settings.qrCorner)
+    ? settings.qrCorner
+    : "br";
+  bug.className = "qr-bug qr-" + corner + (show ? "" : " hidden");
+  if (!show) return;
+
+  document.getElementById("qrBugLabel").textContent = settings.qrLabel || "";
+
+  // A match overlay links to the durable match page; a court overlay to
+  // the court, which follows whatever is played on it next.
+  const text =
+    safeHttpUrl(settings.qrUrl) ||
+    (overlayMatchId
+      ? window.location.origin + "/m/" + encodeURIComponent(overlayMatchId)
+      : window.location.origin + "/c/" + encodeURIComponent(courtId || ""));
+  const size = Math.round(clampNumber(settings.qrSize, 64, 200, 96));
+  const key = text + "|" + size;
+  if (key === lastQrKey) return;
+  lastQrKey = key;
+
+  const mount = document.getElementById("qrBugCode");
+  mount.innerHTML = "";
+  new window.QRCode(mount, {
+    text,
+    width: size,
+    height: size,
+    colorDark: "#000000",
+    colorLight: "#ffffff",
+    correctLevel: window.QRCode.CorrectLevel.H,
+  });
+}
+
+function measureSponsor() {
+  const strip = document.getElementById("sponsorStrip");
+  if (strip.classList.contains("hidden")) return;
+
+  const track = document.getElementById("sponsorTrack");
+  const itemA = document.getElementById("sponsorItemA");
+  const itemB = document.getElementById("sponsorItemB");
+  const overflows = itemA.scrollWidth > strip.clientWidth + 1;
+
+  // The second (duplicate) item only exists to make the loop seamless.
+  itemB.style.display = overflows ? "" : "none";
+  track.classList.toggle("scrolling", overflows);
+  track.style.setProperty(
+    "--sponsor-duration",
+    Math.max(8, Math.round(itemA.scrollWidth / 30)) + "s",
+  );
+}
       // Player names must never be truncated, so the name column is sized to
       // the widest row's natural content instead of a fixed width. Both team
       // rows and the header share one pinned value so the score columns stay
@@ -2539,484 +2688,572 @@
         return null;
       }
 
-      // ---------- Stat cards ----------
+// ---------- Stat cards ----------
 
-      let statsCache = null;
-      let statsCacheAt = 0;
-      let momentumCache = null;
-      let momentumCacheAt = 0;
-      let statCardPinned = false;
-      let statCardTimer = null;
-      let statRefreshTimer = null;
-      let momentumPulseAnimationFrame = null;
+let statsCache = null;
+let statsCacheAt = 0;
+let momentumCache = null;
+let momentumCacheAt = 0;
+let statCardPinned = false;
+let statCardTimer = null;
+let statRefreshTimer = null;
+let momentumPulseAnimationFrame = null;
 
-      async function fetchStats(force) {
-        if (!isDebugCourt && !courtId && !overlayMatchId) {
-          throw new Error("No court specified.");
-        }
+async function fetchStats(force) {
+  if (!isDebugCourt && !courtId && !overlayMatchId) {
+    throw new Error("No court specified.");
+  }
 
-        if (!force && statsCache && Date.now() - statsCacheAt < 8000) {
-          return statsCache;
-        }
+  if (!force && statsCache && Date.now() - statsCacheAt < 8000) {
+    return statsCache;
+  }
 
-        const url = isDebugCourt ? debugCourt_statsUrl : "/stats/" + apiTargetPath;
-        const data = await fetchJson(url);
-        statsCache = data;
-        statsCacheAt = Date.now();
-        return data;
-      }
+  const url = isDebugCourt ? debugCourt_statsUrl : "/stats/" + apiTargetPath;
+  const data = await fetchJson(url);
+  statsCache = data;
+  statsCacheAt = Date.now();
+  return data;
+}
 
-      // The point-by-point momentum streams come from /momentum/{target} and nowhere
-      // else, so this is the momentum card's only data source.
-      async function fetchMomentum(force) {
-        if (!isDebugCourt && !courtId && !overlayMatchId) {
-          throw new Error("No court specified.");
-        }
+// The point-by-point momentum streams come from /momentum/{target} and nowhere
+// else, so this is the momentum card's only data source.
+async function fetchMomentum(force) {
+  if (!isDebugCourt && !courtId && !overlayMatchId) {
+    throw new Error("No court specified.");
+  }
 
-        if (!force && momentumCache && Date.now() - momentumCacheAt < 8000) {
-          return momentumCache;
-        }
+  if (!force && momentumCache && Date.now() - momentumCacheAt < 8000) {
+    return momentumCache;
+  }
 
-        const url = isDebugCourt ? debugCourt_momentumUrl : "/momentum/" + apiTargetPath;
-        const data = await fetchJson(url);
-        momentumCache = data;
-        momentumCacheAt = Date.now();
-        return data;
-      }
+  const url = isDebugCourt
+    ? debugCourt_momentumUrl
+    : "/momentum/" + apiTargetPath;
+  const data = await fetchJson(url);
+  momentumCache = data;
+  momentumCacheAt = Date.now();
+  return data;
+}
 
-      function teamDisplayName(team) {
-        return settings["name" + team] ||
-          (latestScore && latestScore.teamNames && latestScore.teamNames[team]) ||
-          ("Team " + team);
-      }
+function teamDisplayName(team) {
+  return (
+    settings["name" + team] ||
+    (latestScore && latestScore.teamNames && latestScore.teamNames[team]) ||
+    "Team " + team
+  );
+}
 
-      function statRowHtml(label, valueA, valueB, weightA, weightB) {
-        const total = (Number(weightA) || 0) + (Number(weightB) || 0);
-        const pctA = total > 0 ? Math.round((weightA / total) * 98) : 49;
-        const pctB = total > 0 ? 98 - pctA : 49;
-        return '<div class="stat-row">' +
-          '<div class="stat-vals"><span class="va">' + valueA + '</span>' +
-          '<span class="stat-label">' + label + '</span>' +
-          '<span class="vb">' + valueB + '</span></div>' +
-          '<div class="stat-bar"><i class="ba" style="width:' + pctA + '%"></i>' +
-          '<i class="bb" style="width:' + pctB + '%"></i></div>' +
-          '</div>';
-      }
+function statRowHtml(label, valueA, valueB, weightA, weightB) {
+  const total = (Number(weightA) || 0) + (Number(weightB) || 0);
+  const pctA = total > 0 ? Math.round((weightA / total) * 98) : 49;
+  const pctB = total > 0 ? 98 - pctA : 49;
+  return (
+    '<div class="stat-row">' +
+    '<div class="stat-vals"><span class="va">' +
+    valueA +
+    "</span>" +
+    '<span class="stat-label">' +
+    label +
+    "</span>" +
+    '<span class="vb">' +
+    valueB +
+    "</span></div>" +
+    '<div class="stat-bar"><i class="ba" style="width:' +
+    pctA +
+    '%"></i>' +
+    '<i class="bb" style="width:' +
+    pctB +
+    '%"></i></div>' +
+    "</div>"
+  );
+}
 
-      function renderMomentumGraph(data) {
-        const canvas = document.getElementById("momentumCanvas");
-        if (!canvas) return;
+function renderMomentumGraph(data) {
+  const canvas = document.getElementById("momentumCanvas");
+  if (!canvas) return;
 
-        if (momentumPulseAnimationFrame) {
-          cancelAnimationFrame(momentumPulseAnimationFrame);
-          momentumPulseAnimationFrame = null;
-        }
+  if (momentumPulseAnimationFrame) {
+    cancelAnimationFrame(momentumPulseAnimationFrame);
+    momentumPulseAnimationFrame = null;
+  }
 
-        const subEl = document.getElementById("momentumSub");
-        if (subEl) {
-          subEl.textContent = teamDisplayName("A") + " vs " + teamDisplayName("B");
-        }
+  const subEl = document.getElementById("momentumSub");
+  if (subEl) {
+    subEl.textContent = teamDisplayName("A") + " vs " + teamDisplayName("B");
+  }
 
-        const colourA = settings.teamA || "#b7f000";
-        const colourB = settings.teamB || "#27d9ff";
-        const setPointMarkers = data?.setPointMarkers || [];
-        const momentumTimeline = data?.momentumTimeline || null;
-        const gameMarkers = data?.gameMarkers || [];
-        const pointHistory = data?.pointHistory || [];
+  const colourA = settings.teamA || "#b7f000";
+  const colourB = settings.teamB || "#27d9ff";
+  const setPointMarkers = data?.setPointMarkers || [];
+  const momentumTimeline = data?.momentumTimeline || null;
+  const gameMarkers = data?.gameMarkers || [];
+  const pointHistory = data?.pointHistory || [];
 
-        const CANVAS_FALLBACK_WIDTH = 300;
-        const CANVAS_FALLBACK_HEIGHT = 90;
-        const FILL_OPACITY = "55";
+  const CANVAS_FALLBACK_WIDTH = 300;
+  const CANVAS_FALLBACK_HEIGHT = 90;
+  const FILL_OPACITY = "55";
 
-        const MOMENTUM_CLAMP_MIN = -100;
-        const MOMENTUM_CLAMP_MAX = 100;
+  const MOMENTUM_CLAMP_MIN = -100;
+  const MOMENTUM_CLAMP_MAX = 100;
 
-        const hasLiveMomentum = Array.isArray(momentumTimeline) &&
-          momentumTimeline.length > 0 &&
-          momentumTimeline.length === pointHistory.length;
+  const hasLiveMomentum =
+    Array.isArray(momentumTimeline) &&
+    momentumTimeline.length > 0 &&
+    momentumTimeline.length === pointHistory.length;
 
-        const values = (pointHistory && pointHistory.length > 0)
-          ? (hasLiveMomentum
-            ? [0, ...momentumTimeline.map((value) => {
+  const values =
+    pointHistory && pointHistory.length > 0
+      ? hasLiveMomentum
+        ? [
+            0,
+            ...momentumTimeline.map((value) => {
               const numeric = Number(value);
               const safeNumeric = Number.isFinite(numeric) ? numeric : 0;
-              return Math.max(MOMENTUM_CLAMP_MIN, Math.min(MOMENTUM_CLAMP_MAX, safeNumeric));
-            })]
-            : (() => {
-              const cumulative = [0];
-              for (const p of pointHistory)
-                cumulative.push(cumulative[cumulative.length - 1] + (p === "A" ? 1 : -1));
-              return cumulative;
-            })())
-          : [0, 0];
+              return Math.max(
+                MOMENTUM_CLAMP_MIN,
+                Math.min(MOMENTUM_CLAMP_MAX, safeNumeric),
+              );
+            }),
+          ]
+        : (() => {
+            const cumulative = [0];
+            for (const p of pointHistory)
+              cumulative.push(
+                cumulative[cumulative.length - 1] + (p === "A" ? 1 : -1),
+              );
+            return cumulative;
+          })()
+      : [0, 0];
 
-        const smoothedValues = values.map((v, i, arr) => {
-          if (i === 0 || i === arr.length - 1) return v;
-          return (arr[i - 1] + arr[i] * 2 + arr[i + 1]) / 4;
-        });
+  const smoothedValues = values.map((v, i, arr) => {
+    if (i === 0 || i === arr.length - 1) return v;
+    return (arr[i - 1] + arr[i] * 2 + arr[i + 1]) / 4;
+  });
 
-        const maxVal = hasLiveMomentum ? MOMENTUM_CLAMP_MAX : Math.max(...values.map(Math.abs), 1);
+  const maxVal = hasLiveMomentum
+    ? MOMENTUM_CLAMP_MAX
+    : Math.max(...values.map(Math.abs), 1);
 
-        const drawGraphFrame = (timestamp) => {
-          if (!canvas.isConnected || canvas.classList.contains("hidden") || canvas.parentElement?.classList.contains("hidden")) return;
+  const drawGraphFrame = (timestamp) => {
+    if (
+      !canvas.isConnected ||
+      canvas.classList.contains("hidden") ||
+      canvas.parentElement?.classList.contains("hidden")
+    )
+      return;
 
-          const dpr = window.devicePixelRatio || 1;
-          const cssW = canvas.offsetWidth || canvas.parentElement?.offsetWidth || CANVAS_FALLBACK_WIDTH;
-          const cssH = canvas.offsetHeight || CANVAS_FALLBACK_HEIGHT;
-          canvas.width = cssW * dpr;
-          // Only the backing store is set here - the CSS height is in em so it
-          // tracks the scale slider, and an inline px height would freeze it.
-          canvas.height = cssH * dpr;
+    const dpr = window.devicePixelRatio || 1;
+    const cssW =
+      canvas.offsetWidth ||
+      canvas.parentElement?.offsetWidth ||
+      CANVAS_FALLBACK_WIDTH;
+    const cssH = canvas.offsetHeight || CANVAS_FALLBACK_HEIGHT;
+    canvas.width = cssW * dpr;
+    // Only the backing store is set here - the CSS height is in em so it
+    // tracks the scale slider, and an inline px height would freeze it.
+    canvas.height = cssH * dpr;
 
-          const ctx = canvas.getContext("2d");
-          ctx.setTransform(1, 0, 0, 1, 0, 0);
-          ctx.clearRect(0, 0, canvas.width, canvas.height);
-          ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const ctx = canvas.getContext("2d");
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-          const W = cssW;
-          const H = cssH;
-          const padX = 8;
-          const padY = 8;
-          const midY = H / 2;
-          const axisColour = "rgba(255, 255, 255, 0.25)";
+    const W = cssW;
+    const H = cssH;
+    const padX = 8;
+    const padY = 8;
+    const midY = H / 2;
+    const axisColour = "rgba(255, 255, 255, 0.25)";
 
-          // Baseline
-          ctx.beginPath();
-          ctx.moveTo(padX, midY);
-          ctx.lineTo(W - padX, midY);
-          ctx.strokeStyle = axisColour;
-          ctx.lineWidth = 1;
-          ctx.stroke();
+    // Baseline
+    ctx.beginPath();
+    ctx.moveTo(padX, midY);
+    ctx.lineTo(W - padX, midY);
+    ctx.strokeStyle = axisColour;
+    ctx.lineWidth = 1;
+    ctx.stroke();
 
-          const toX = (i) => padX + (i / Math.max(values.length - 1, 1)) * (W - padX * 2);
-          const toY = (v) => midY - (v / maxVal) * (midY - padY);
+    const toX = (i) =>
+      padX + (i / Math.max(values.length - 1, 1)) * (W - padX * 2);
+    const toY = (v) => midY - (v / maxVal) * (midY - padY);
 
-          // Set point markers
-          const markerIndices = Array.isArray(setPointMarkers)
-            ? [...new Set(setPointMarkers.filter((idx) => Number.isInteger(idx) && idx > 0 && idx < values.length))]
-            : [];
+    // Set point markers
+    const markerIndices = Array.isArray(setPointMarkers)
+      ? [
+          ...new Set(
+            setPointMarkers.filter(
+              (idx) => Number.isInteger(idx) && idx > 0 && idx < values.length,
+            ),
+          ),
+        ]
+      : [];
 
-          markerIndices.forEach((index) => {
-            const x = toX(index);
-            ctx.beginPath();
-            ctx.moveTo(x, padY - 2);
-            ctx.lineTo(x, H - padY + 2);
-            ctx.strokeStyle = axisColour;
-            ctx.lineWidth = 1;
-            ctx.stroke();
-          });
+    markerIndices.forEach((index) => {
+      const x = toX(index);
+      ctx.beginPath();
+      ctx.moveTo(x, padY - 2);
+      ctx.lineTo(x, H - padY + 2);
+      ctx.strokeStyle = axisColour;
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    });
 
-          // Game markers
-          const completedGameMarkers = Array.isArray(gameMarkers)
-            ? [...new Set(gameMarkers.filter((idx) => Number.isInteger(idx) && idx > 0 && idx < values.length))]
-              .filter((idx) => !markerIndices.includes(idx))
-            : [];
+    // Game markers
+    const completedGameMarkers = Array.isArray(gameMarkers)
+      ? [
+          ...new Set(
+            gameMarkers.filter(
+              (idx) => Number.isInteger(idx) && idx > 0 && idx < values.length,
+            ),
+          ),
+        ].filter((idx) => !markerIndices.includes(idx))
+      : [];
 
-          completedGameMarkers.forEach((index) => {
-            const x = toX(index);
-            const radius = 1.5;
-            ctx.beginPath();
-            ctx.arc(x, midY, radius, 0, Math.PI * 2);
-            ctx.fillStyle = axisColour;
-            ctx.fill();
-          });
+    completedGameMarkers.forEach((index) => {
+      const x = toX(index);
+      const radius = 1.5;
+      ctx.beginPath();
+      ctx.arc(x, midY, radius, 0, Math.PI * 2);
+      ctx.fillStyle = axisColour;
+      ctx.fill();
+    });
 
-          const points = smoothedValues.map((v, i) => ({ x: toX(i), y: toY(v) }));
+    const points = smoothedValues.map((v, i) => ({ x: toX(i), y: toY(v) }));
 
-          const traceQuadraticPath = (target, pts, moveToStart = true) => {
-            if (!pts || pts.length === 0) return;
-            if (moveToStart) target.moveTo(pts[0].x, pts[0].y);
-            if (pts.length === 1) return;
-            if (pts.length === 2) {
-              target.lineTo(pts[1].x, pts[1].y);
-              return;
-            }
-            for (let i = 1; i < pts.length - 1; i++) {
-              const mx = (pts[i].x + pts[i + 1].x) / 2;
-              const my = (pts[i].y + pts[i + 1].y) / 2;
-              target.quadraticCurveTo(pts[i].x, pts[i].y, mx, my);
-            }
-            const last = pts.length - 1;
-            target.quadraticCurveTo(pts[last - 1].x, pts[last - 1].y, pts[last].x, pts[last].y);
-          };
-
-          if (pointHistory.length > 0) {
-            // Fill above (Team A)
-            const fillAbove = new Path2D();
-            fillAbove.moveTo(points[0].x, midY);
-            fillAbove.lineTo(points[0].x, points[0].y);
-            traceQuadraticPath(fillAbove, points, false);
-            fillAbove.lineTo(points[points.length - 1].x, midY);
-            fillAbove.closePath();
-
-            ctx.save();
-            ctx.beginPath();
-            ctx.rect(0, 0, W, midY);
-            ctx.clip();
-            ctx.fillStyle = colourA + FILL_OPACITY;
-            ctx.fill(fillAbove);
-            ctx.restore();
-
-            // Fill below (Team B)
-            ctx.save();
-            ctx.beginPath();
-            ctx.rect(0, midY, W, H - midY);
-            ctx.clip();
-            ctx.fillStyle = colourB + FILL_OPACITY;
-            ctx.fill(fillAbove);
-            ctx.restore();
-
-            // Stroke Team A
-            ctx.lineWidth = 2;
-            ctx.save();
-            ctx.beginPath();
-            ctx.rect(0, 0, W, midY);
-            ctx.clip();
-            ctx.beginPath();
-            traceQuadraticPath(ctx, points);
-            ctx.strokeStyle = colourA;
-            ctx.stroke();
-            ctx.restore();
-
-            // Stroke Team B
-            ctx.save();
-            ctx.beginPath();
-            ctx.rect(0, midY, W, H - midY);
-            ctx.clip();
-            ctx.beginPath();
-            traceQuadraticPath(ctx, points);
-            ctx.strokeStyle = colourB;
-            ctx.stroke();
-            ctx.restore();
-
-            // Pulsing end dot
-            const finalMomentum = values[values.length - 1];
-            const finalColour = finalMomentum > 0 ? colourA : (finalMomentum < 0 ? colourB : "#ffffff");
-            const lastPt = points[points.length - 1];
-            const pulseWave = (Math.sin((timestamp || performance.now()) / 320) + 1) / 2;
-            const pulseRadius = 3.5 + pulseWave * 2.5;
-            const pulseAlpha = 0.18 + pulseWave * 0.22;
-
-            ctx.save();
-            ctx.beginPath();
-            ctx.arc(lastPt.x, lastPt.y, pulseRadius, 0, Math.PI * 2);
-            ctx.strokeStyle = finalColour;
-            ctx.lineWidth = 1.2;
-            ctx.globalAlpha = pulseAlpha;
-            ctx.stroke();
-            ctx.restore();
-
-            ctx.beginPath();
-            ctx.arc(lastPt.x, lastPt.y, 2.8, 0, Math.PI * 2);
-            ctx.fillStyle = finalColour;
-            ctx.fill();
-          }
-          else {
-            ctx.fillStyle = "rgba(255, 255, 255, 0.45)";
-            ctx.font = "600 11px system-ui, sans-serif";
-            ctx.textAlign = "center";
-            ctx.fillText("No point history recorded yet", W / 2, midY - 8);
-          }
-
-          if (canvas.isConnected && !canvas.parentElement?.classList.contains("hidden")) {
-            momentumPulseAnimationFrame = requestAnimationFrame(drawGraphFrame);
-          }
-        };
-
-        momentumPulseAnimationFrame = requestAnimationFrame(drawGraphFrame);
+    const traceQuadraticPath = (target, pts, moveToStart = true) => {
+      if (!pts || pts.length === 0) return;
+      if (moveToStart) target.moveTo(pts[0].x, pts[0].y);
+      if (pts.length === 1) return;
+      if (pts.length === 2) {
+        target.lineTo(pts[1].x, pts[1].y);
+        return;
       }
-
-      // Only fixed labels and numbers derived from the payload go through
-      // innerHTML here; anything user-editable (team names) uses textContent.
-      function renderStatCard(data) {
-        const stats = (data && data.advancedStats) || {};
-        const teams = stats.teamStats || { A: {}, B: {} };
-        const serve = stats.servePlayerStats || {};
-        const match = stats.matchStats || {};
-        const rowsEl = document.getElementById("statRows");
-        const subEl = document.getElementById("statSub");
-
-        subEl.textContent = teamDisplayName("A") + " vs " + teamDisplayName("B");
-
-        if (!match.totalPoints) {
-          rowsEl.innerHTML = '<div class="stat-empty">No points played yet.</div>';
-          return;
-        }
-
-        const rows = [];
-        const pointsA = Number(teams.A.pointsWon) || 0;
-        const pointsB = Number(teams.B.pointsWon) || 0;
-        rows.push(statRowHtml("Points won", pointsA, pointsB, pointsA, pointsB));
-
-        const servedA = (Number(serve.A1?.pointsServed) || 0) + (Number(serve.A2?.pointsServed) || 0);
-        const servedB = (Number(serve.B1?.pointsServed) || 0) + (Number(serve.B2?.pointsServed) || 0);
-        const serveWonA = (Number(serve.A1?.pointsWonOnServe) || 0) + (Number(serve.A2?.pointsWonOnServe) || 0);
-        const serveWonB = (Number(serve.B1?.pointsWonOnServe) || 0) + (Number(serve.B2?.pointsWonOnServe) || 0);
-        if (servedA || servedB) {
-          const pctA = servedA ? Math.round((serveWonA / servedA) * 100) + "%" : "–";
-          const pctB = servedB ? Math.round((serveWonB / servedB) * 100) + "%" : "–";
-          rows.push(statRowHtml("Won on serve", pctA, pctB,
-            servedA ? serveWonA / servedA : 0, servedB ? serveWonB / servedB : 0));
-        }
-
-        const bpOppA = Number(teams.A.breakPointConversionOpportunities) || 0;
-        const bpOppB = Number(teams.B.breakPointConversionOpportunities) || 0;
-        if (bpOppA || bpOppB) {
-          const bpWonA = Number(teams.A.breakPointConversions) || 0;
-          const bpWonB = Number(teams.B.breakPointConversions) || 0;
-          rows.push(statRowHtml("Break points", bpWonA + "/" + bpOppA, bpWonB + "/" + bpOppB, bpWonA, bpWonB));
-        }
-
-        const streakA = Number(teams.A.longestScoringStreak) || 0;
-        const streakB = Number(teams.B.longestScoringStreak) || 0;
-        if (streakA > 1 || streakB > 1) {
-          rows.push(statRowHtml("Longest streak", streakA, streakB, streakA, streakB));
-        }
-
-        if (Number(match.goldenPointsPlayed) > 0) {
-          const goldA = Number(teams.A.goldenPointsWon) || 0;
-          const goldB = Number(teams.B.goldenPointsWon) || 0;
-          rows.push(statRowHtml("Golden points", goldA, goldB, goldA, goldB));
-        }
-
-        if (Number(match.deuceGames) > 0) {
-          const deuceA = Number(teams.A.gamesWonAfterDeuce) || 0;
-          const deuceB = Number(teams.B.gamesWonAfterDeuce) || 0;
-          rows.push(statRowHtml("Deuce games won", deuceA, deuceB, deuceA, deuceB));
-        }
-
-        rowsEl.innerHTML = rows.join("");
+      for (let i = 1; i < pts.length - 1; i++) {
+        const mx = (pts[i].x + pts[i + 1].x) / 2;
+        const my = (pts[i].y + pts[i + 1].y) / 2;
+        target.quadraticCurveTo(pts[i].x, pts[i].y, mx, my);
       }
+      const last = pts.length - 1;
+      target.quadraticCurveTo(
+        pts[last - 1].x,
+        pts[last - 1].y,
+        pts[last].x,
+        pts[last].y,
+      );
+    };
 
-      async function showStatCard(options) {
-        const { durationMs = null, pin = false } = options || {};
-        const card = document.getElementById("statCard");
-        card.classList.remove("hidden");
+    if (pointHistory.length > 0) {
+      // Fill above (Team A)
+      const fillAbove = new Path2D();
+      fillAbove.moveTo(points[0].x, midY);
+      fillAbove.lineTo(points[0].x, points[0].y);
+      traceQuadraticPath(fillAbove, points, false);
+      fillAbove.lineTo(points[points.length - 1].x, midY);
+      fillAbove.closePath();
 
-        if (!statsCache) {
-          document.getElementById("statRows").innerHTML = '<div class="stat-empty">Loading stats…</div>';
-        }
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(0, 0, W, midY);
+      ctx.clip();
+      ctx.fillStyle = colourA + FILL_OPACITY;
+      ctx.fill(fillAbove);
+      ctx.restore();
 
-        try {
-          renderStatCard(await fetchStats(true));
-        }
-        catch (_err) {
-          if (statsCache) {
-            renderStatCard(statsCache);
-          }
-          else {
-            document.getElementById("statRows").innerHTML = '<div class="stat-empty">Stats unavailable.</div>';
-          }
-        }
+      // Fill below (Team B)
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(0, midY, W, H - midY);
+      ctx.clip();
+      ctx.fillStyle = colourB + FILL_OPACITY;
+      ctx.fill(fillAbove);
+      ctx.restore();
 
-        clearTimeout(statCardTimer);
-        if (pin) {
-          statCardPinned = true;
-          document.getElementById("statBtn").classList.add("active");
-          clearInterval(statRefreshTimer);
-          statRefreshTimer = setInterval(async () => {
-            try { renderStatCard(await fetchStats(true)); }
-            catch (_err) { /* keep the last rendered stats */ }
-          }, 15000);
-        }
-        else if (durationMs) {
-          statCardTimer = setTimeout(() => {
-            if (!statCardPinned) hideStatCard();
-          }, durationMs);
-        }
+      // Stroke Team A
+      ctx.lineWidth = 2;
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(0, 0, W, midY);
+      ctx.clip();
+      ctx.beginPath();
+      traceQuadraticPath(ctx, points);
+      ctx.strokeStyle = colourA;
+      ctx.stroke();
+      ctx.restore();
+
+      // Stroke Team B
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(0, midY, W, H - midY);
+      ctx.clip();
+      ctx.beginPath();
+      traceQuadraticPath(ctx, points);
+      ctx.strokeStyle = colourB;
+      ctx.stroke();
+      ctx.restore();
+
+      // Pulsing end dot
+      const finalMomentum = values[values.length - 1];
+      const finalColour =
+        finalMomentum > 0 ? colourA : finalMomentum < 0 ? colourB : "#ffffff";
+      const lastPt = points[points.length - 1];
+      const pulseWave =
+        (Math.sin((timestamp || performance.now()) / 320) + 1) / 2;
+      const pulseRadius = 3.5 + pulseWave * 2.5;
+      const pulseAlpha = 0.18 + pulseWave * 0.22;
+
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(lastPt.x, lastPt.y, pulseRadius, 0, Math.PI * 2);
+      ctx.strokeStyle = finalColour;
+      ctx.lineWidth = 1.2;
+      ctx.globalAlpha = pulseAlpha;
+      ctx.stroke();
+      ctx.restore();
+
+      ctx.beginPath();
+      ctx.arc(lastPt.x, lastPt.y, 2.8, 0, Math.PI * 2);
+      ctx.fillStyle = finalColour;
+      ctx.fill();
+    } else {
+      ctx.fillStyle = "rgba(255, 255, 255, 0.45)";
+      ctx.font = "600 11px system-ui, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText("No point history recorded yet", W / 2, midY - 8);
+    }
+
+    if (
+      canvas.isConnected &&
+      !canvas.parentElement?.classList.contains("hidden")
+    ) {
+      momentumPulseAnimationFrame = requestAnimationFrame(drawGraphFrame);
+    }
+  };
+
+  momentumPulseAnimationFrame = requestAnimationFrame(drawGraphFrame);
+}
+
+// Only fixed labels and numbers derived from the payload go through
+// innerHTML here; anything user-editable (team names) uses textContent.
+function renderStatCard(data) {
+  const stats = (data && data.advancedStats) || {};
+  const teams = stats.teamStats || { A: {}, B: {} };
+  const serve = stats.servePlayerStats || {};
+  const match = stats.matchStats || {};
+  const rowsEl = document.getElementById("statRows");
+  const subEl = document.getElementById("statSub");
+
+  subEl.textContent = teamDisplayName("A") + " vs " + teamDisplayName("B");
+
+  if (!match.totalPoints) {
+    rowsEl.innerHTML = '<div class="stat-empty">No points played yet.</div>';
+    return;
+  }
+
+  const rows = [];
+  const pointsA = Number(teams.A.pointsWon) || 0;
+  const pointsB = Number(teams.B.pointsWon) || 0;
+  rows.push(statRowHtml("Points won", pointsA, pointsB, pointsA, pointsB));
+
+  const servedA =
+    (Number(serve.A1?.pointsServed) || 0) +
+    (Number(serve.A2?.pointsServed) || 0);
+  const servedB =
+    (Number(serve.B1?.pointsServed) || 0) +
+    (Number(serve.B2?.pointsServed) || 0);
+  const serveWonA =
+    (Number(serve.A1?.pointsWonOnServe) || 0) +
+    (Number(serve.A2?.pointsWonOnServe) || 0);
+  const serveWonB =
+    (Number(serve.B1?.pointsWonOnServe) || 0) +
+    (Number(serve.B2?.pointsWonOnServe) || 0);
+  if (servedA || servedB) {
+    const pctA = servedA ? Math.round((serveWonA / servedA) * 100) + "%" : "–";
+    const pctB = servedB ? Math.round((serveWonB / servedB) * 100) + "%" : "–";
+    rows.push(
+      statRowHtml(
+        "Won on serve",
+        pctA,
+        pctB,
+        servedA ? serveWonA / servedA : 0,
+        servedB ? serveWonB / servedB : 0,
+      ),
+    );
+  }
+
+  const bpOppA = Number(teams.A.breakPointConversionOpportunities) || 0;
+  const bpOppB = Number(teams.B.breakPointConversionOpportunities) || 0;
+  if (bpOppA || bpOppB) {
+    const bpWonA = Number(teams.A.breakPointConversions) || 0;
+    const bpWonB = Number(teams.B.breakPointConversions) || 0;
+    rows.push(
+      statRowHtml(
+        "Break points",
+        bpWonA + "/" + bpOppA,
+        bpWonB + "/" + bpOppB,
+        bpWonA,
+        bpWonB,
+      ),
+    );
+  }
+
+  const streakA = Number(teams.A.longestScoringStreak) || 0;
+  const streakB = Number(teams.B.longestScoringStreak) || 0;
+  if (streakA > 1 || streakB > 1) {
+    rows.push(
+      statRowHtml("Longest streak", streakA, streakB, streakA, streakB),
+    );
+  }
+
+  if (Number(match.goldenPointsPlayed) > 0) {
+    const goldA = Number(teams.A.goldenPointsWon) || 0;
+    const goldB = Number(teams.B.goldenPointsWon) || 0;
+    rows.push(statRowHtml("Golden points", goldA, goldB, goldA, goldB));
+  }
+
+  if (Number(match.deuceGames) > 0) {
+    const deuceA = Number(teams.A.gamesWonAfterDeuce) || 0;
+    const deuceB = Number(teams.B.gamesWonAfterDeuce) || 0;
+    rows.push(statRowHtml("Deuce games won", deuceA, deuceB, deuceA, deuceB));
+  }
+
+  rowsEl.innerHTML = rows.join("");
+}
+
+async function showStatCard(options) {
+  const { durationMs = null, pin = false } = options || {};
+  const card = document.getElementById("statCard");
+  card.classList.remove("hidden");
+
+  if (!statsCache) {
+    document.getElementById("statRows").innerHTML =
+      '<div class="stat-empty">Loading stats…</div>';
+  }
+
+  try {
+    renderStatCard(await fetchStats(true));
+  } catch (_err) {
+    if (statsCache) {
+      renderStatCard(statsCache);
+    } else {
+      document.getElementById("statRows").innerHTML =
+        '<div class="stat-empty">Stats unavailable.</div>';
+    }
+  }
+
+  clearTimeout(statCardTimer);
+  if (pin) {
+    statCardPinned = true;
+    document.getElementById("statBtn").classList.add("active");
+    clearInterval(statRefreshTimer);
+    statRefreshTimer = setInterval(async () => {
+      try {
+        renderStatCard(await fetchStats(true));
+      } catch (_err) {
+        /* keep the last rendered stats */
       }
+    }, 15000);
+  } else if (durationMs) {
+    statCardTimer = setTimeout(() => {
+      if (!statCardPinned) hideStatCard();
+    }, durationMs);
+  }
+}
 
-      function hideStatCard() {
-        document.getElementById("statCard").classList.add("hidden");
-        document.getElementById("statBtn").classList.remove("active");
-        statCardPinned = false;
-        clearTimeout(statCardTimer);
-        clearInterval(statRefreshTimer);
-        statRefreshTimer = null;
+function hideStatCard() {
+  document.getElementById("statCard").classList.add("hidden");
+  document.getElementById("statBtn").classList.remove("active");
+  statCardPinned = false;
+  clearTimeout(statCardTimer);
+  clearInterval(statRefreshTimer);
+  statRefreshTimer = null;
+}
+
+// ---------- Momentum card ----------
+
+let momentumCardTimer = null;
+let momentumRefreshTimer = null;
+let momentumCardPinned = false;
+
+// Three mutually exclusive states for the card body: the loader, a short
+// message, or the graph. A card that silently empties itself is
+// indistinguishable from a broken feed, so a failure always says so.
+function setMomentumState(state, message) {
+  document
+    .getElementById("momentumLoading")
+    .classList.toggle("hidden", state !== "loading");
+  document
+    .getElementById("momentumCanvas")
+    .classList.toggle("hidden", state !== "graph");
+
+  const messageEl = document.getElementById("momentumMessage");
+  messageEl.classList.toggle("hidden", state !== "message");
+  messageEl.textContent = state === "message" ? message || "" : "";
+}
+
+async function showMomentumCard(options) {
+  const { durationMs = null, pin = false } = options || {};
+  const card = document.getElementById("momentumCard");
+  const subEl = document.getElementById("momentumSub");
+  if (subEl)
+    subEl.textContent = teamDisplayName("A") + " vs " + teamDisplayName("B");
+
+  // Put the card on screen before the request goes out: replaying the
+  // event stream is the slowest call the overlay makes, and a card that
+  // only appears seconds after its trigger reads as a broken source. A
+  // graph that is already drawn stays up while the refresh lands.
+  card.classList.remove("hidden");
+  if (momentumCache === null) {
+    setMomentumState("loading");
+  }
+
+  let momentum = null;
+  try {
+    momentum = await fetchMomentum(true);
+  } catch (err) {
+    console.error("Momentum could not be loaded:", err);
+    momentum = momentumCache;
+  }
+
+  if (momentum) {
+    setMomentumState("graph");
+    renderMomentumGraph(momentum);
+  } else {
+    setMomentumState("message", "Momentum unavailable.");
+  }
+
+  // The pin and auto-hide timers are set either way: an auto-shown card
+  // that failed to load still has to take itself off screen.
+  clearTimeout(momentumCardTimer);
+  if (pin) {
+    momentumCardPinned = true;
+    document.getElementById("momentumBtn").classList.add("active");
+    clearInterval(momentumRefreshTimer);
+    momentumRefreshTimer = setInterval(async () => {
+      try {
+        renderMomentumGraph(await fetchMomentum(true));
+      } catch (_err) {
+        /* keep last rendered */
       }
+    }, 15000);
+  } else if (durationMs) {
+    momentumCardTimer = setTimeout(() => {
+      if (!momentumCardPinned) hideMomentumCard();
+    }, durationMs);
+  }
+}
 
-      // ---------- Momentum card ----------
-
-      let momentumCardTimer = null;
-      let momentumRefreshTimer = null;
-      let momentumCardPinned = false;
-
-      // Three mutually exclusive states for the card body: the loader, a short
-      // message, or the graph. A card that silently empties itself is
-      // indistinguishable from a broken feed, so a failure always says so.
-      function setMomentumState(state, message) {
-        document.getElementById("momentumLoading").classList.toggle("hidden", state !== "loading");
-        document.getElementById("momentumCanvas").classList.toggle("hidden", state !== "graph");
-
-        const messageEl = document.getElementById("momentumMessage");
-        messageEl.classList.toggle("hidden", state !== "message");
-        messageEl.textContent = state === "message" ? (message || "") : "";
-      }
-
-      async function showMomentumCard(options) {
-        const { durationMs = null, pin = false } = options || {};
-        const card = document.getElementById("momentumCard");
-        const subEl = document.getElementById("momentumSub");
-        if (subEl) subEl.textContent = teamDisplayName("A") + " vs " + teamDisplayName("B");
-
-        // Put the card on screen before the request goes out: replaying the
-        // event stream is the slowest call the overlay makes, and a card that
-        // only appears seconds after its trigger reads as a broken source. A
-        // graph that is already drawn stays up while the refresh lands.
-        card.classList.remove("hidden");
-        if (momentumCache === null) {
-          setMomentumState("loading");
-        }
-
-        let momentum = null;
-        try {
-          momentum = await fetchMomentum(true);
-        }
-        catch (err) {
-          console.error("Momentum could not be loaded:", err);
-          momentum = momentumCache;
-        }
-
-        if (momentum) {
-          setMomentumState("graph");
-          renderMomentumGraph(momentum);
-        }
-        else {
-          setMomentumState("message", "Momentum unavailable.");
-        }
-
-        // The pin and auto-hide timers are set either way: an auto-shown card
-        // that failed to load still has to take itself off screen.
-        clearTimeout(momentumCardTimer);
-        if (pin) {
-          momentumCardPinned = true;
-          document.getElementById("momentumBtn").classList.add("active");
-          clearInterval(momentumRefreshTimer);
-          momentumRefreshTimer = setInterval(async () => {
-            try { renderMomentumGraph(await fetchMomentum(true)); }
-            catch (_err) { /* keep last rendered */ }
-          }, 15000);
-        }
-        else if (durationMs) {
-          momentumCardTimer = setTimeout(() => {
-            if (!momentumCardPinned) hideMomentumCard();
-          }, durationMs);
-        }
-      }
-
-      function hideMomentumCard() {
-        document.getElementById("momentumCard").classList.add("hidden");
-        document.getElementById("momentumBtn").classList.remove("active");
-        momentumCardPinned = false;
-        clearTimeout(momentumCardTimer);
-        clearInterval(momentumRefreshTimer);
-        momentumRefreshTimer = null;
-        if (momentumPulseAnimationFrame) {
-          cancelAnimationFrame(momentumPulseAnimationFrame);
-          momentumPulseAnimationFrame = null;
-        }
-      }
-
+function hideMomentumCard() {
+  document.getElementById("momentumCard").classList.add("hidden");
+  document.getElementById("momentumBtn").classList.remove("active");
+  momentumCardPinned = false;
+  clearTimeout(momentumCardTimer);
+  clearInterval(momentumRefreshTimer);
+  momentumRefreshTimer = null;
+  if (momentumPulseAnimationFrame) {
+    cancelAnimationFrame(momentumPulseAnimationFrame);
+    momentumPulseAnimationFrame = null;
+  }
+}
       // ---------- Set / match win moments ----------
 
       let winTimer = null;
@@ -3112,152 +3349,174 @@
         }
       }
 
-      function render(data) {
-        latestScore = data;
-        trackAdvantage(data);
-        handleTransitions(data);
+function render(data) {
+  latestScore = data;
+  trackAdvantage(data);
+  handleTransitions(data);
 
-        document.getElementById("loadingLine").classList.add("hidden");
-        document.getElementById("scoreBody").classList.remove("hidden");
-        // Match identity is primary; the court is secondary location context
-        // and the join code (spec section 30.5).
-        // The generated matchup is not repeated here: the team rows show it.
-        document.getElementById("matchTitle").textContent = data.matchName || "";
-        const displayCourtId = data.courtId || courtId || "";
-        const courtText = data.courtName && displayCourtId
-          ? data.courtName + " - Join: " + displayCourtId.toUpperCase()
-          : displayCourtId ? "Join: " + displayCourtId.toUpperCase() : "";
-        document.getElementById("courtLabel").textContent = courtText;
+  document.getElementById("loadingLine").classList.add("hidden");
+  document.getElementById("scoreBody").classList.remove("hidden");
+  // Match identity is primary; the court is secondary location context
+  // and the join code (spec section 30.5).
+  // The generated matchup is not repeated here: the team rows show it.
+  document.getElementById("matchTitle").textContent = data.matchName || "";
+  const displayCourtId = data.courtId || courtId || "";
+  const courtText =
+    data.courtName && displayCourtId
+      ? data.courtName + " - Join: " + displayCourtId.toUpperCase()
+      : displayCourtId
+        ? "Join: " + displayCourtId.toUpperCase()
+        : "";
+  document.getElementById("courtLabel").textContent = courtText;
 
-        const server = settings.showServer ? (data.server || "") : "";
-        const showTeamNames = settings.showTeamNames !== false;
-        const showPlayerNames = settings.showPlayerNames !== false && !isSlimLayout();
+  const server = settings.showServer ? data.server || "" : "";
+  const showTeamNames = settings.showTeamNames !== false;
+  const showPlayerNames = settings.showPlayerNames !== false && !isSlimLayout();
 
-        ["A", "B"].forEach((team) => {
-          const teamName = settings["name" + team] || data.teamNames[team] || ("Team " + team);
-          const nameEl = document.getElementById("name" + team);
-          nameEl.textContent = teamName;
-          nameEl.style.display = showTeamNames ? "" : "none";
+  ["A", "B"].forEach((team) => {
+    const teamName =
+      settings["name" + team] || data.teamNames[team] || "Team " + team;
+    const nameEl = document.getElementById("name" + team);
+    nameEl.textContent = teamName;
+    nameEl.style.display = showTeamNames ? "" : "none";
 
-          let hasAnyPlayer = false;
+    let hasAnyPlayer = false;
 
-          [1, 2].forEach((index) => {
-            const slot = team + index;
-            const playerName = showPlayerNames ? getPlayerName(slot, data) : "";
-            const line = document.getElementById("line" + slot);
+    [1, 2].forEach((index) => {
+      const slot = team + index;
+      const playerName = showPlayerNames ? getPlayerName(slot, data) : "";
+      const line = document.getElementById("line" + slot);
 
-            line.classList.toggle("hidden", !playerName);
-            document.getElementById("player" + slot).textContent = playerName;
-            document.getElementById("dot" + slot).classList.toggle("serving", server === slot);
+      line.classList.toggle("hidden", !playerName);
+      document.getElementById("player" + slot).textContent = playerName;
+      document
+        .getElementById("dot" + slot)
+        .classList.toggle("serving", server === slot);
 
-            if (playerName) hasAnyPlayer = true;
-          });
+      if (playerName) hasAnyPlayer = true;
+    });
 
-          nameEl.classList.toggle("primary", !hasAnyPlayer);
-        });
+    nameEl.classList.toggle("primary", !hasAnyPlayer);
+  });
 
-        const columns = buildColumns(data);
-        setHeadCells(columns);
-        ["A", "B"].forEach((team) => setCells("cells" + team, columns.map((column) => column[team])));
+  const columns = buildColumns(data);
+  setHeadCells(columns);
+  ["A", "B"].forEach((team) =>
+    setCells(
+      "cells" + team,
+      columns.map((column) => column[team]),
+    ),
+  );
 
-        const badge = computeBadge(data);
-        const badgeLine = document.getElementById("badgeLine");
-        if (badge) {
-          // Text/colour are left untouched when hiding so the ribbon keeps
-          // its label while it slides back behind the panel.
-          const badgeText = document.getElementById("badgeText");
-          badgeText.textContent = badge.text;
-          badgeText.className = "badge " + badge.cls;
-        }
-        badgeLine.classList.toggle("visible", Boolean(badge));
+  const badge = computeBadge(data);
+  const badgeLine = document.getElementById("badgeLine");
+  if (badge) {
+    // Text/colour are left untouched when hiding so the ribbon keeps
+    // its label while it slides back behind the panel.
+    const badgeText = document.getElementById("badgeText");
+    badgeText.textContent = badge.text;
+    badgeText.className = "badge " + badge.cls;
+  }
+  badgeLine.classList.toggle("visible", Boolean(badge));
 
-        const statusLine = document.getElementById("statusLine");
-        if (data.matchComplete) {
-          statusLine.textContent = "Match complete";
-          statusLine.classList.add("visible");
-        }
-        else {
-          statusLine.textContent = "";
-          statusLine.classList.remove("visible");
-        }
+  const statusLine = document.getElementById("statusLine");
+  if (data.matchComplete) {
+    statusLine.textContent = "Match complete";
+    statusLine.classList.add("visible");
+  } else {
+    statusLine.textContent = "";
+    statusLine.classList.remove("visible");
+  }
 
-        // Names have just changed - re-measure before the sponsor strip, whose
-        // scroll test depends on the final panel width.
-        syncNameColumn();
+  // Names have just changed - re-measure before the sponsor strip, whose
+  // scroll test depends on the final panel width.
+  syncNameColumn();
 
-        // The court id may only be known once data arrives; refresh the strip.
-        updateSponsor();
-      }
+  // The court id may only be known once data arrives; refresh the strip.
+  updateSponsor();
+}
+function showError(message) {
+  document.getElementById("loadingLine").classList.add("hidden");
+  const statusLine = document.getElementById("statusLine");
+  statusLine.textContent = message;
+  statusLine.classList.add("visible");
+}
 
-      function showError(message) {
-        document.getElementById("loadingLine").classList.add("hidden");
-        const statusLine = document.getElementById("statusLine");
-        statusLine.textContent = message;
-        statusLine.classList.add("visible");
-      }
+async function fetchJson(path) {
+  const response = await fetch(path, { cache: "no-store" });
+  let data = null;
 
-      async function fetchJson(path) {
-        const response = await fetch(path, { cache: "no-store" });
-        let data = null;
+  try {
+    data = await response.json();
+  } catch (_parseErr) {
+    /* non-JSON body */
+  }
 
-        try {
-          data = await response.json();
-        }
-        catch (_parseErr) { /* non-JSON body */ }
+  if (!data) {
+    // These endpoints are hosting rewrites: until one is deployed the
+    // request falls through to index.html and arrives here as a
+    // perfectly successful lump of HTML.
+    throw new Error(
+      "No JSON from " +
+        path +
+        " (HTTP " +
+        response.status +
+        ") - the endpoint is probably not deployed.",
+    );
+  }
 
-        if (!data) {
-          // These endpoints are hosting rewrites: until one is deployed the
-          // request falls through to index.html and arrives here as a
-          // perfectly successful lump of HTML.
-          throw new Error("No JSON from " + path + " (HTTP " + response.status +
-            ") - the endpoint is probably not deployed.");
-        }
+  if (!response.ok || !data.success) {
+    throw new Error(data.error || "Could not load " + path + ".");
+  }
 
-        if (!response.ok || !data.success) {
-          throw new Error(data.error || "Could not load " + path + ".");
-        }
+  return data;
+}
 
-        return data;
-      }
+async function loadFullScore() {
+  const url = isDebugCourt
+    ? debugCourt_fullScoreUrl
+    : "/score/" + apiTargetPath;
+  const data = await fetchJson(url);
+  render(data);
+  // Trust the revision that shipped with this payload rather than the one
+  // that triggered the fetch, so a change landing mid-request is not
+  // mistaken for already-rendered state on the next poll.
+  renderedRevision = data.revision || null;
+}
 
-      async function loadFullScore() {
-        const url = isDebugCourt ? debugCourt_fullScoreUrl : "/score/" + apiTargetPath;
-        const data = await fetchJson(url);
-        render(data);
-        // Trust the revision that shipped with this payload rather than the one
-        // that triggered the fetch, so a change landing mid-request is not
-        // mistaken for already-rendered state on the next poll.
-        renderedRevision = data.revision || null;
-      }
+async function poll() {
+  if (!courtId && !overlayMatchId) {
+    showError(
+      "No court specified. Use /overlay/{courtId} or /overlay/match/{matchId}.",
+    );
+    return;
+  }
 
-      async function poll() {
-        if (!courtId && !overlayMatchId) {
-          showError("No court specified. Use /overlay/{courtId} or /overlay/match/{matchId}.");
-          return;
-        }
+  if (isPolling) return;
+  isPolling = true;
 
-        if (isPolling) return;
-        isPolling = true;
+  try {
+    const revisionUrl = isDebugCourt
+      ? debugCourt_revisionUrl
+      : "/revision/" + apiTargetPath;
+    const revisionData = await fetchJson(revisionUrl);
 
-        try {
-          const revisionUrl = isDebugCourt ? debugCourt_revisionUrl : "/revision/" + apiTargetPath;
-          const revisionData = await fetchJson(revisionUrl);
+    if (revisionData.revision && revisionData.revision === renderedRevision) {
+      if (latestScore) render(latestScore);
+      return;
+    }
 
-          if (revisionData.revision && revisionData.revision === renderedRevision) {
-            if (latestScore) render(latestScore);
-            return;
-          }
-
-          await loadFullScore();
-        }
-        catch (err) {
-          showError(err.message === "Failed to fetch" ? "Connection lost. Retrying…" : err.message);
-        }
-        finally {
-          isPolling = false;
-        }
-      }
-
+    await loadFullScore();
+  } catch (err) {
+    showError(
+      err.message === "Failed to fetch"
+        ? "Connection lost. Retrying…"
+        : err.message,
+    );
+  } finally {
+    isPolling = false;
+  }
+}
       // ---------- Settings UI wiring ----------
       const fieldMap = {
         setPanel: "panel",
