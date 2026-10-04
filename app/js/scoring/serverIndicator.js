@@ -12,11 +12,6 @@ export function updateServerIndicator()
     return;
   }
 
-  const teamAColour = getComputedStyle(document.body).getPropertyValue("--teamAcolour").trim();
-  const teamBColour = getComputedStyle(document.body).getPropertyValue("--teamBcolour").trim();
-  //elements.serverBadgeA.style.color = teamAColour;
-  //elements.serverBadgeB.style.color = teamBColour;
-
   const label = getCurrentServerLabel(session.score);
   const teamAServing = themeState.isServerBadgeVisible && label?.startsWith("A");
   const teamBServing = themeState.isServerBadgeVisible && label?.startsWith("B");

@@ -36,25 +36,15 @@ export const SCORING_LABELS = {
 
 export const COOLDOWN_MS = 3000;
 
-const BACK_HOLD_MS = 550;
-
 export const ADMIN_SESSION_STORAGE_KEY = "padelPushAdminUnlocked";
 
 export const ADMIN_LOGOUT_SIGNAL_KEY = "padelPushAdminLogoutSignal";
-
-const UNDO_HOLD_MS = 550;
-
-const RESET_HOLD_MS = 1050;
-
-const LONG_PRESS_VIBRATION_MS = 200;
 
 export const TOAST_DURATION_MS = 3000;
 
 export const LOAD_SPINNER_DELAY_MS = 750;
 
 export const LOADING_SPINNER_MIN_DURATION_MS = 750;
-
-const COURTID_UPPER_LIMIT = 999999999;
 
 export const EVENT_TYPES = {
   POINT_TEAM_A: "POINT_TEAM_A",

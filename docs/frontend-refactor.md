@@ -179,7 +179,7 @@ The net increase of 37 Node tests is made up as follows:
 - **The 9 `no-unused-vars` warnings** reported by `lint:frontend` were
   present in the original code, and the baseline `app/js` gives the same 9
   warnings. Removing them is a code change, so they were left for a separate
-  change.
+  change. (Since removed; both lint scripts now fail on any warning.)
 
 ## Not verified here
 
