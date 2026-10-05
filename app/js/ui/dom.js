@@ -226,7 +226,16 @@ export function initElements() {
   elements.adminMatchList = $("adminMatchList");
   elements.adminMatchSearch = $("adminMatchSearch");
   elements.adminMatchStatusFilter = $("adminMatchStatusFilter");
+  elements.showAddMatchBtn = $("showAddMatchBtn");
+  elements.adminMatchCreatePanel = $("adminMatchCreatePanel");
+  elements.adminMatchName = $("adminMatchName");
+  elements.adminMatchCourt = $("adminMatchCourt");
+  elements.adminMatchTeamA = $("adminMatchTeamA");
+  elements.adminMatchTeamB = $("adminMatchTeamB");
+  elements.cancelAddMatchBtn = $("cancelAddMatchBtn");
+  elements.saveAddMatchBtn = $("saveAddMatchBtn");
   elements.adminTournamentList = $("adminTournamentList");
+  elements.adminTournamentSearch = $("adminTournamentSearch");
   elements.showCreateTournamentBtn = $("showCreateTournamentBtn");
   elements.adminClubList = $("adminClubList");
   elements.adminClubSearch = $("adminClubSearch");
