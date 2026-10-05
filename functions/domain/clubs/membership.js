@@ -37,6 +37,17 @@ class ClubError extends Error {
 
 const invalid = (message) => new ClubError("invalid-argument", message);
 
+function normalizeClubState(state) {
+  if (state === undefined || state === null || state === "") return DEFAULT_CLUB_STATE;
+  if (typeof state !== "string") throw invalid("Club state must be one of: open, maintenance, closed.");
+
+  const normalized = state.trim().toLowerCase();
+  if (!Object.values(CLUB_STATES).includes(normalized)) {
+    throw invalid("Club state must be one of: open, maintenance, closed.");
+  }
+  return normalized;
+}
+
 function normalizeClubName(name) {
   if (typeof name !== "string") {
     throw invalid("Club name is required.");
@@ -164,9 +175,12 @@ module.exports = {
   MAX_CLUB_DEVICES,
   CLUB_ID_ALPHABET,
   CLUB_ID_LENGTH,
+  CLUB_STATES,
+  DEFAULT_CLUB_STATE,
   MEMBER_KINDS,
   ClubError,
   normalizeClubName,
+  normalizeClubState,
   normalizeMemberIds,
   normalizeClubId,
   generateClubId,
