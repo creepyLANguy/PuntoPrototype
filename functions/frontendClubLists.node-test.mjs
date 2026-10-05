@@ -234,7 +234,9 @@ test("courts belonging to maintenance or closed clubs stay out of user lists", a
   seedCourt("cmaint", { name: "Maintenance Court", status: "open", clubId: "maintc" });
 
   await loadCourtsWithInlineLoader(document.getElementById("playCourtList"), true);
-  const names = [...document.querySelectorAll("#playCourtList .court-item")].map((el) => el.textContent);
+  const names = [...document.querySelectorAll("#playCourtList .court-item")].map(
+    (el) => el.textContent,
+  );
   assert.equal(names.some((text) => /Closed Club Court|Maintenance Court/.test(text)), false);
 });
 
