@@ -294,12 +294,12 @@ describe("createClub", () => {
       deviceIds: ["HUB-1"],
       moved: { courts: [], devices: [] },
       closedTournamentIds: [],
-      state: DEFAULT_CLUB_STATE,
     });
     expect(doc(db, "clubs/aaaaaa")).toEqual({
       name: "Central Padel",
       courtIds: ["abcd", "efgh"],
       deviceIds: ["HUB-1"],
+      state: DEFAULT_CLUB_STATE,
       createdAt: { __serverTimestamp: true },
       updatedAt: { __serverTimestamp: true },
     });
@@ -445,7 +445,12 @@ describe("createClub", () => {
 
   test("members of another club are moved to the new club", async () => {
     const { functions, db } = loadFunctions({
-      "clubs/other1": { name: "Old Club", courtIds: ["abcd", "efgh"], deviceIds: ["HUB-1"] },
+      "clubs/other1": {
+      name: "Old Club",
+      state: DEFAULT_CLUB_STATE,
+      courtIds: ["abcd", "efgh"],
+      deviceIds: ["HUB-1"],
+    },
       "courts/abcd": { clubId: "other1" },
       "courts/efgh": { clubId: "other1" },
       "devices/HUB-1": { clubId: "other1" },
