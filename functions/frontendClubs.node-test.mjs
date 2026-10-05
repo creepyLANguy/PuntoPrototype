@@ -183,9 +183,9 @@ test("the Clubs tab lists every club with its court and device counts", async ()
     item.querySelector(".club-devices-cell .aci-value").textContent,
   ]);
   assert.deepEqual(rows, [
-    ["Ghost Club", "ID: GHOSTC", "2 courts", "1 device"],
-    ["Hilltop Club", "ID: HILTOP", "1 court", "0 devices"],
-    ["Riverside Padel", "ID: RVSIDE", "1 court", "1 device"],
+    ["Ghost Club", "ID: GHOSTC", "Closed", "2 courts", "1 device"],
+    ["Hilltop Club", "ID: HILTOP", "Open", "1 court", "0 devices"],
+    ["Riverside Padel", "ID: RVSIDE", "Open", "1 court", "1 device"],
   ]);
 
   for (const [term, expected] of [
@@ -213,6 +213,7 @@ test("Add Club creates the club and moves members from their old club", async ()
   assert.equal($("deleteClubBtn").style.display, "none");
   assert.equal($("clubCourtsCount").textContent, "0 selected");
   assert.equal($("clubDevicesCount").textContent, "0 selected");
+  assert.equal($("editClubState").value, "maintenance");
 
   $("saveClubBtn").click();
   await settle();
@@ -267,7 +268,12 @@ test("Add Club creates the club and moves members from their old club", async ()
   await waitForDashboardClubs(4);
   assert.deepEqual(clubRequests.at(-1), [
     "createClub",
-    { name: "Seaside Club", courtIds: ["efgh", "jkmn"], deviceIds: ["PULSE-2"] },
+    {
+      name: "Seaside Club",
+      state: "maintenance",
+      courtIds: ["efgh", "jkmn"],
+      deviceIds: ["PULSE-2"],
+    },
   ]);
 
   const seasideId = clubIdNamed("Seaside Club");
@@ -369,7 +375,13 @@ test("a club's courts and devices open their edit pages and return to the club",
   await waitForDashboardClubs(4);
   assert.deepEqual(clubRequests.at(-1), [
     "updateClub",
-    { clubId: "rvside", name: "Riverside Padel", courtIds: ["abcd", "efgh"], deviceIds: [] },
+    {
+      clubId: "rvside",
+      name: "Riverside Padel",
+      state: "open",
+      courtIds: ["abcd", "efgh"],
+      deviceIds: [],
+    },
   ]);
   assert.equal(lastToast(), 'Club "Riverside Padel" saved.');
   assert.deepEqual(stored("clubs/rvside").courtIds, ["abcd", "efgh"]);
