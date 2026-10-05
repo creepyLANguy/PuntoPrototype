@@ -154,6 +154,12 @@ function firstValidationError(validation) {
   return validation.errors?.length ? validation.errors[0].message : null;
 }
 
+async function loadClubForCourt(tx, courtId) {
+  const snap = await tx.get(db.collection("clubs").where("courtIds", "array-contains", courtId));
+  const record = snap.docs[0];
+  return record ? { clubId: record.id, ...record.data() } : null;
+}
+
 async function assertClubAndCourts(tx, { clubId, courtPool }) {
   const clubsById = new Map();
 
@@ -175,12 +181,15 @@ async function assertClubAndCourts(tx, { clubId, courtPool }) {
     }
 
     for (const court of courts) {
-      if (!court.clubId) continue;
-      if (!clubsById.has(court.clubId)) {
-        clubsById.set(court.clubId, await loadClub(tx, court.clubId));
-      }
-      const club = clubsById.get(court.clubId);
-      if (!club || normalizeClubState(club.state) !== CLUB_STATES.OPEN) {
+      const associatedClub =
+        court.clubId
+          ? clubsById.get(court.clubId) || (await loadClub(tx, court.clubId))
+          : await loadClubForCourt(tx, court.courtId);
+
+      if (!associatedClub) continue;
+      clubsById.set(associatedClub.clubId, associatedClub);
+
+      if (normalizeClubState(associatedClub.state) !== CLUB_STATES.OPEN) {
         throw precondition(`Court ${court.courtId} belongs to a club that is not open.`);
       }
     }
@@ -1892,10 +1901,26 @@ async function recalculateTournament({ tournamentId, rebuildSchedule = false }, 
 // Reads
 // ---------------------------------------------------------------------------
 
+async function sanitizeTournamentClubView(view) {
+  const clubId = view?.club?.clubId || view?.clubId || null;
+  if (!clubId) return view;
+
+  const club = await loadClub(null, clubId);
+  if (club && normalizeClubState(club.state) === CLUB_STATES.OPEN) return view;
+
+  return {
+    ...view,
+    club: null,
+    clubId: null,
+    clubName: null,
+  };
+}
+
 async function getTournamentView(data, credentials) {
   const publicSnap = await db.doc(paths.tournamentView(data.tournamentId)).get();
   if (!publicSnap.exists) throw notFound("That tournament could not be found.");
-  const publicView = publicSnap.data();
+
+  const publicView = await sanitizeTournamentClubView(publicSnap.data());
   if (publicView.visibility !== "private") return { view: publicView };
 
   const secretSnap = await db.doc(paths.tournamentSecret(data.tournamentId)).get();
@@ -1906,6 +1931,7 @@ async function getTournamentView(data, credentials) {
     secretsMatch(credentials.hostKey, secret.hostKeyHash) ||
     secretsMatch(data.accessCode, secret.accessCodeHash);
   if (!allowed) throw denied("This tournament is private. Enter its access code to view it.");
+
   const privateSnap = await db.doc(paths.tournamentPrivateView(data.tournamentId)).get();
   const matchesSnap = await db
     .collection("matches")
@@ -1917,8 +1943,11 @@ async function getTournamentView(data, credentials) {
       ? [{ matchId: matchSnap.id, scoreSummary: match.scoreSummary || null }]
       : [];
   });
+
   return {
-    view: privateSnap.exists ? privateSnap.data() : publicView,
+    view: privateSnap.exists
+      ? await sanitizeTournamentClubView(privateSnap.data())
+      : publicView,
     liveMatches,
   };
 }
@@ -1931,13 +1960,22 @@ async function getCourtOptions(data) {
   const clubsById = new Map(
     clubSnap.docs.map((docSnap) => [docSnap.id, { clubId: docSnap.id, ...docSnap.data() }]),
   );
+  const clubByCourtId = new Map();
+  for (const club of clubsById.values()) {
+    for (const courtId of club.courtIds || []) {
+      if (!clubByCourtId.has(courtId)) clubByCourtId.set(courtId, club);
+    }
+  }
+
   const courts = courtSnap.docs
     .map((docSnap) => ({ courtId: docSnap.id, ...docSnap.data() }))
     .filter((court) => {
-      if (!court.clubId) return true;
-      const club = clubsById.get(court.clubId);
-      return Boolean(club) && normalizeClubState(club.state) === CLUB_STATES.OPEN;
+      const club =
+        (court.clubId && clubsById.get(court.clubId)) || clubByCourtId.get(court.courtId);
+      if (!club) return true;
+      return normalizeClubState(club.state) === CLUB_STATES.OPEN;
     });
+
   const club = data.clubId ? clubsById.get(data.clubId) || null : null;
   return {
     club: club ? { clubId: club.clubId, name: club.name } : null,
