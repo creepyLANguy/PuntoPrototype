@@ -3,6 +3,7 @@
 // #adminTournamentList.
 import { getAllTournaments } from "../firebase/tournamentRepository.js";
 import { getTournamentPath } from "../match/matchIdentity.js";
+import { anyValueMatches, normalizeSearchTerm } from "../clubs/clubIndex.js";
 import { elements } from "../ui/dom.js";
 
 const STATUS_ORDER = {
@@ -13,7 +14,17 @@ const STATUS_ORDER = {
   cancelled: 4,
 };
 
+let allTournaments = [];
+let filtersBound = false;
+
+function bindFilters() {
+  if (filtersBound) return;
+  filtersBound = true;
+  elements.adminTournamentSearch?.addEventListener("input", renderAdminTournaments);
+}
+
 export async function loadAdminTournaments() {
+  bindFilters();
   const list = elements.adminTournamentList;
   if (!list) return;
   list.innerHTML = '<div class="loading">Loading tournaments...</div>';
@@ -29,18 +40,40 @@ export async function loadAdminTournaments() {
           (STATUS_ORDER[a.status] ?? 9) - (STATUS_ORDER[b.status] ?? 9) ||
           String(a.name || "").localeCompare(String(b.name || "")),
       );
-    list.innerHTML = "";
-    if (tournaments.length === 0) {
-      list.innerHTML = '<div class="no-courts">No tournaments yet.</div>';
-      return;
-    }
-    tournaments.forEach((tournament) =>
-      list.appendChild(buildTournamentRow(tournament)),
-    );
+    allTournaments = tournaments;
+    renderAdminTournaments();
   } catch (error) {
     console.error("Error loading tournaments:", error);
     list.innerHTML = '<div class="error">Error loading tournaments.</div>';
   }
+}
+
+function renderAdminTournaments() {
+  const list = elements.adminTournamentList;
+  if (!list) return;
+
+  const term = normalizeSearchTerm(elements.adminTournamentSearch?.value || "");
+  const tournaments = allTournaments.filter((tournament) =>
+    anyValueMatches(
+      term,
+      tournament.name,
+      tournament.tournamentId,
+      tournament.clubId,
+      tournament.format?.id,
+    ),
+  );
+
+  list.innerHTML = "";
+  if (tournaments.length === 0) {
+    list.innerHTML = allTournaments.length === 0
+      ? '<div class="no-courts">No tournaments yet.</div>'
+      : '<div class="no-courts">No matching tournaments found.</div>';
+    return;
+  }
+
+  tournaments.forEach((tournament) =>
+    list.appendChild(buildTournamentRow(tournament)),
+  );
 }
 
 function buildTournamentRow(tournament) {
