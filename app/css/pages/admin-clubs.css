@@ -100,6 +100,17 @@ body.light-mode #adminClubSearch {
   }
 }
 
+/* Club state badges. */
+.status-maintenance {
+  background: #d98e04;
+  color: #fff;
+}
+
+.admin-court-item.admin-club-item .club-state-cell .status-badge {
+  min-width: 80px;
+  text-align: center;
+}
+
 /* ---------------- Club editor ---------------- */
 
 .club-editor-card {
