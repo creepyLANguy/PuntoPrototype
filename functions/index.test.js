@@ -1978,7 +1978,9 @@ describe("resetCourt - password handling", () => {
 
     expect(mockDb.docs.get(`courts/${courtId}`).activeMatchId).toBeUndefined();
     expect(
-      [...mockDb.docs.keys()].some((path) => path === `matches/${courtId}` || path.startsWith("matches/")),
+      [...mockDb.docs.keys()].some(
+        (path) => path === `matches/${courtId}` || path.startsWith("matches/"),
+      ),
     ).toBe(false);
   });
 
