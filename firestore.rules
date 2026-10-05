@@ -59,6 +59,8 @@ service cloud.firestore {
       match /events/{eventId} {
         allow read: if true;
         allow create: if matchDoc(matchId).data.status == 'live'
+          && matchDoc(matchId).data.currentCourtId == request.resource.data.courtId
+          && get(/databases/$(database)/documents/courts/$(request.resource.data.courtId)).data.activeMatchId == matchId
           && request.resource.data.eventType in ['POINT_TEAM_A', 'POINT_TEAM_B', 'UNDO', 'WARMUP']
           && request.resource.data.matchId == matchId;
         allow update, delete: if false;
