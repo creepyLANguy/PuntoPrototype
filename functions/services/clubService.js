@@ -234,7 +234,10 @@ async function saveClubInTransaction(tx, { clubId, isNew, name, state, courtIds,
 
   const existing = clubSnap.exists ? clubSnap.data() : {};
   const previousState = clubSnap.exists ? normalizeClubState(existing.state) : null;
-  const nextState = normalizeClubState(state);
+  const nextState =
+    state === undefined && clubSnap.exists
+      ? normalizeClubState(existing.state)
+      : normalizeClubState(state);
   const effectiveDeviceIds = nextState === CLUB_STATES.CLOSED ? [] : deviceIds;
   const knownClubs = new Map();
   const nextIdsByKind = { courts: courtIds, devices: effectiveDeviceIds };
@@ -354,7 +357,7 @@ async function createClub(input = {}, { random = Math.random } = {}) {
 async function updateClub(input = {}) {
   const clubId = normalizeClubId(input.clubId);
   const name = normalizeClubName(input.name);
-  const state = normalizeClubState(input.state);
+  const state = input.state === undefined ? undefined : normalizeClubState(input.state);
   const membership = normalizeMembership(input);
 
   const result = await db.runTransaction((tx) =>
