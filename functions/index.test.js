@@ -1956,6 +1956,32 @@ describe("resetCourt - password handling", () => {
     expect(mockDb.docs.get(`matches/${matchId}`).scoreVersion).toBe(2);
   });
 
+  test("rejects an empty court before creating a match", async () => {
+    mockDb = new FakeFirestore({
+      [`courts/${courtId}`]: {
+        name: "Empty Court",
+        password: "oldpw",
+        status: "open",
+        scoringMode: DEFAULT_SCORING_OPTIONS.scoringMode,
+        scoringOptions: DEFAULT_SCORING_OPTIONS,
+      },
+    });
+
+    let resetCourt;
+    jest.isolateModules(() => {
+      ({ resetCourt } = require("./index"));
+    });
+
+    await expect(resetCourt({ data: { courtId } })).rejects.toMatchObject({
+      code: "PERMISSION_DENIED",
+    });
+
+    expect(mockDb.docs.get(`courts/${courtId}`).activeMatchId).toBeUndefined();
+    expect(
+      [...mockDb.docs.keys()].some((path) => path === `matches/${courtId}` || path.startsWith("matches/")),
+    ).toBe(false);
+  });
+
   test("a whitespace-only password is treated as blank, not as a change", async () => {
     const resetCourt = seedCourtDb();
 
