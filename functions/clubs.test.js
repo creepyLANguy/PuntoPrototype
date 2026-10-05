@@ -118,7 +118,9 @@ class FakeFirestore {
       )
       .filter((docPath) =>
         filters.every(({ field, op, value }) => {
-          const list = this.docs.get(docPath)[field];
+          const record = this.docs.get(docPath);
+          if (op === "==") return record[field] === value;
+          const list = record[field];
           if (!Array.isArray(list)) return false;
           if (op === "array-contains") return list.includes(value);
           if (op === "array-contains-any") {
