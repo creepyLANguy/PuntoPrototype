@@ -979,6 +979,52 @@ describe("postEvent", () => {
     ).toBe(false);
   });
 
+  test("resets casual device matches through the versioned reset operation", async () => {
+    const courtId = "court-casual-reset";
+    const matchId = "m-casual-reset";
+    const deviceId = "device-casual-reset";
+    const oldEvent = {
+      id: "old-point",
+      eventType: "POINT_TEAM_A",
+      scoreVersion: 3,
+      createdAt: timestamp(1),
+    };
+
+    mockDb = new FakeFirestore({
+      [`devices/${deviceId}`]: { courtId },
+      ...seedMatchDocs({
+        courtId,
+        matchId,
+        scoreVersion: 3,
+        events: [oldEvent],
+        score: { ...defaultScoreFor(DEFAULT_SCORING_OPTIONS), A: { points: 15 } },
+      }),
+    });
+
+    let postEvent;
+    jest.isolateModules(() => {
+      ({ postEvent } = require("./index"));
+    });
+
+    const res = makePostRes();
+    await postEvent({ method: "POST", body: { deviceId, eventType: "RESET" } }, res);
+
+    expect(res.statusCode).toBe(200);
+    expect(res.payload).toMatchObject({ success: true, matchId, courtId });
+    expect(mockDb.docs.get(`matches/${matchId}`).scoreVersion).toBe(4);
+    expect(mockDb.docs.get(`matches/${matchId}/score/current`).A.points).toBe(0);
+    expect(mockDb.docs.has(`matches/${matchId}/events/old-point`)).toBe(false);
+    expect(
+      [...mockDb.docs.entries()].some(
+        ([path, data]) =>
+          path.startsWith(`matches/${matchId}/archive/`) && data.eventType === "POINT_TEAM_A",
+      ),
+    ).toBe(true);
+    expect(
+      [...mockDb.docs.keys()].some((path) => path.startsWith(`matches/${matchId}/events/`)),
+    ).toBe(false);
+  });
+
   test("creates a casual match when the court has none", async () => {
     const courtId = "court-empty";
     const deviceId = "device-empty";

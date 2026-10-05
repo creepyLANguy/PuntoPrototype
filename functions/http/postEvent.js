@@ -4,7 +4,7 @@ const {
   appendMatchEvent,
   appendCourtDeviceEvent,
 } = require("../services/eventService");
-const { ensureCourtMatch } = require("../services/matchService");
+const { ensureCourtMatch, resetMatch } = require("../services/matchService");
 const { paths } = require("../services/firestorePaths");
 const { mapBeaconEventType, normalizeDeviceSku } = require("../services/beaconService");
 const {
@@ -210,6 +210,15 @@ async function postEvent(req, res) {
         success: false,
         error: "Tournament matches must be reset through the authorized reset flow.",
       });
+    }
+
+    if (eventType === "RESET") {
+      await resetMatch({
+        matchId,
+        actor: { type: "device", uid: deviceId },
+        reason: "Device reset",
+      });
+      return sendJson(res, 200, { success: true, matchId, courtId: actingCourtId });
     }
 
     const effectiveEventType = mapBeaconEventType(
