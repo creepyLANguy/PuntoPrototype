@@ -81,12 +81,12 @@ export async function renderLanding(container, { hostedIds }) {
         h(
           "div",
           { className: "ev-header-main" },
-          h("div", { className: "ev-eyebrow" }, "Padel Push"),
+          h("div", { className: "ev-eyebrow" }, "Padel Push™"),
           h("h1", { className: "ev-title" }, "Tournaments"),
           h(
             "p",
             { className: "ev-description" },
-            "Americano, Mexicano, leagues, Swiss, brackets and King of the Court, played on normal Padel Push courts.",
+            "Americano, Mexicano, leagues, Swiss, brackets and King of the Court, played on normal Padel Push™ courts.",
           ),
           h(
             "div",

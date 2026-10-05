@@ -78,12 +78,12 @@ function start() {
   const route = parseRoute(window.location.pathname);
 
   if (route.page === "new") {
-    document.title = "New tournament | Padel Push";
+    document.title = "New tournament | Padel Push™";
     void startWizard(container);
     return;
   }
   if (route.page === "landing") {
-    document.title = "Tournaments | Padel Push";
+    document.title = "Tournaments | Padel Push™";
     void renderLanding(container, { hostedIds: listHostedTournamentIds() });
     return;
   }
