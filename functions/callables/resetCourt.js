@@ -40,6 +40,23 @@ async function resetCourt(request) {
     if (trimmedPassword === courtId) throw invalid("Password must be different from court name.");
   }
 
+  // Only a currently live match can safely defer authorization until after
+  // resolution: ensureCourtMatch will return it without mutating the court.
+  // With no live match on the court, ensureCourtMatch may create/attach a new
+  // casual match, so prove court control before entering that path.
+  let activeMatch = null;
+  if (court.activeMatchId) {
+    const activeMatchSnap = await db.doc(paths.match(court.activeMatchId)).get();
+    if (activeMatchSnap.exists) {
+      activeMatch = { matchId: court.activeMatchId, ...activeMatchSnap.data() };
+    }
+  }
+  const hasLiveMatchOnCourt =
+    activeMatch?.status === "live" && activeMatch.currentCourtId === courtId;
+  if (!hasLiveMatchOnCourt) {
+    await authorizeCourtControl(court, credentials);
+  }
+
   const matchId = await matchService.resolveCourtMatchId(courtId, { ensure: true });
   const matchSnap = await db.doc(paths.match(matchId)).get();
   const match = { matchId, ...matchSnap.data() };
