@@ -190,6 +190,9 @@ export function createTournamentController(
         },
       );
       ctx.view = result.view;
+      ctx.liveMatches = new Map(
+        (result.liveMatches || []).map((match) => [match.matchId, match]),
+      );
       render();
     } catch (error) {
       renderAccessPrompt(friendlyError(error));

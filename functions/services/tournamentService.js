@@ -1887,7 +1887,20 @@ async function getTournamentView(data, credentials) {
     secretsMatch(data.accessCode, secret.accessCodeHash);
   if (!allowed) throw denied("This tournament is private. Enter its access code to view it.");
   const privateSnap = await db.doc(paths.tournamentPrivateView(data.tournamentId)).get();
-  return { view: privateSnap.exists ? privateSnap.data() : publicView };
+  const matchesSnap = await db
+    .collection("matches")
+    .where("tournamentId", "==", data.tournamentId)
+    .get();
+  const liveMatches = matchesSnap.docs.flatMap((matchSnap) => {
+    const match = matchSnap.data();
+    return match.status === "live"
+      ? [{ matchId: matchSnap.id, scoreSummary: match.scoreSummary || null }]
+      : [];
+  });
+  return {
+    view: privateSnap.exists ? privateSnap.data() : publicView,
+    liveMatches,
+  };
 }
 
 async function getCourtOptions(data) {

@@ -625,8 +625,33 @@ describe("tournament flow", () => {
     expect(view(tournamentId)).toMatchObject({ visibility: "private" });
     expect(view(tournamentId).participants).toBeUndefined();
     await expect(tournament("getTournamentView", { tournamentId })).rejects.toThrow(/private/);
+
+    await tournament("generateRound", { tournamentId }, { hostKey });
+    const fixture = mockDb.list(`tournaments/${tournamentId}/fixtures`)[0];
+    const matchPath = `matches/${fixture.matchId}`;
+    mockDb.write(matchPath, {
+      ...mockDb.get(matchPath),
+      status: "live",
+      scoreSummary: { A: { points: 4 }, B: { points: 2 } },
+    });
+    await expect(tournament("getTournamentView", { tournamentId })).rejects.toThrow(/private/);
+
     const viaCode = await tournament("getTournamentView", { tournamentId, accessCode });
     expect(viaCode.view.participants).toHaveLength(8);
+    expect(viaCode.liveMatches).toEqual([
+      {
+        matchId: fixture.matchId,
+        scoreSummary: { A: { points: 4 }, B: { points: 2 } },
+      },
+    ]);
+    mockDb.write(matchPath, {
+      ...mockDb.get(matchPath),
+      scoreSummary: { A: { points: 5 }, B: { points: 2 } },
+    });
+    expect(
+      (await tournament("getTournamentView", { tournamentId }, { hostKey })).liveMatches[0]
+        .scoreSummary.A.points,
+    ).toBe(5);
     const viaHost = await tournament("getTournamentView", { tournamentId }, { hostKey });
     expect(viaHost.view.name).toBe("Friday Night Padel Social");
   });
