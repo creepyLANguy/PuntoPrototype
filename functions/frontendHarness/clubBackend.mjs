@@ -75,6 +75,7 @@ function runQuery(collectionPath, filters) {
       filters.every(({ field, op, value }) => {
         const list = firestoreState.docs.get(path)[field];
         if (!Array.isArray(list)) return false;
+        if (op === "==") return firestoreState.docs.get(path)[field] === value;
         if (op === "array-contains") return list.includes(value);
         if (op === "array-contains-any") {
           if (value.length > 30) throw new Error("array-contains-any supports at most 30 values");

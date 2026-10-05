@@ -4,7 +4,7 @@ const { REGION } = require("../services/constants");
 
 exports.onEventCreate = onDocumentCreated(
   {
-    document: "courts/{courtId}/events/{eventId}",
+    document: "matches/{matchId}/events/{eventId}",
     region: REGION,
     retry: true,
   },

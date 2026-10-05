@@ -45,25 +45,28 @@ test.before(async () => {
   });
 
   // Mimic the resetCourt Cloud Function: zero the score, clear the event log,
-  // bump the court's scoreVersion so pre-reset events become stale.
+  // bump the match's scoreVersion so pre-reset events become stale.
   callableHandlers.set("resetCourt", async ({ courtId, newPassword }) => {
     const courtPath = `courts/${courtId}`;
     const court = firestoreState.docs.get(courtPath) || {};
-    const scoreVersion = (Number(court.scoreVersion) || 0) + 1;
+    const matchId = court.activeMatchId || `m-${courtId}`;
+    const matchPath = `matches/${matchId}`;
+    const match = firestoreState.docs.get(matchPath) || {};
+    const scoreVersion = (Number(match.scoreVersion) || 0) + 1;
 
     for (const path of [...firestoreState.docs.keys()]) {
-      if (path.startsWith(`courts/${courtId}/events/`)) {
+      if (path.startsWith(`matches/${matchId}/events/`)) {
         firestoreState.docs.delete(path);
       }
     }
-    firestoreState.backendScores.delete(courtId);
+    firestoreState.backendScores.delete(matchId);
 
     writeDoc(courtPath, {
       ...court,
-      scoreVersion,
       password: newPassword || court.password,
       beaconSidesSwapped: false,
     });
+    writeDoc(matchPath, { ...match, scoreVersion });
     pushScoreSnapshot(courtId, makeScore());
 
     return { data: { scoreVersion } };

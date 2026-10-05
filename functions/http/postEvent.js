@@ -1,5 +1,11 @@
 const { db } = require("../infrastructure/firebase");
-const { requireDevice, appendCourtEvent } = require("../services/eventService");
+const {
+  requireDevice,
+  appendMatchEvent,
+  appendCourtDeviceEvent,
+} = require("../services/eventService");
+const { ensureCourtMatch, resetMatch } = require("../services/matchService");
+const { paths } = require("../services/firestorePaths");
 const { mapBeaconEventType, normalizeDeviceSku } = require("../services/beaconService");
 const {
   SCORING_EVENTS,
@@ -105,7 +111,7 @@ async function postEvent(req, res) {
 
       await actingDevice.ref.set({ courtId: targetCourtId }, { merge: true });
 
-      const eventId = await appendCourtEvent(targetCourtId, {
+      const eventId = await appendCourtDeviceEvent(targetCourtId, {
         eventType,
         createdBy: deviceId,
         sourceCourtId: actingCourtId,
@@ -140,7 +146,7 @@ async function postEvent(req, res) {
         .doc(`devices/${registeringDeviceId}`)
         .set({ courtId: actingCourtId }, { merge: true });
 
-      const eventId = await appendCourtEvent(actingCourtId, {
+      const eventId = await appendCourtDeviceEvent(actingCourtId, {
         eventType,
         createdBy: deviceId,
         actorDeviceId: deviceId,
@@ -164,12 +170,56 @@ async function postEvent(req, res) {
       });
     }
 
-    // Stamp scoring events with the court's active scoreVersion. Without
-    // it, onEventCreate normalizes the missing field to 0 and silently
-    // skips every device-posted point/undo as "stale" once the court has
-    // been reset at least once — the scoreboard then never updates.
-    const actingCourtSnap = await db.doc(`courts/${actingCourtId}`).get();
-    const actingCourtData = actingCourtSnap.exists ? actingCourtSnap.data() : {};
+    // Scoring events go to the match currently on the device's court; a
+    // court without one gets a casual match. The match's active scoreVersion
+    // is stamped on the event: without it onEventCreate normalizes the
+    // missing field to 0 and silently skips every device-posted point/undo
+    // as "stale" once the match has been reset at least once.
+    const actingCourtSnap = await db.doc(paths.court(actingCourtId)).get();
+    if (!actingCourtSnap.exists) {
+      return sendJson(res, 400, {
+        success: false,
+        error: "Associated court not found for deviceId: " + deviceId,
+      });
+    }
+    const actingCourtData = actingCourtSnap.data() || {};
+    let matchId = actingCourtData.activeMatchId || null;
+    let matchData = null;
+    if (matchId) {
+      const matchSnap = await db.doc(paths.match(matchId)).get();
+      matchData = matchSnap.exists ? matchSnap.data() : null;
+      if (!matchData || matchData.status !== "live" || matchData.currentCourtId !== actingCourtId) {
+        matchId = null;
+      }
+    }
+    if (!matchId) {
+      ({ matchId } = await ensureCourtMatch({
+        courtId: actingCourtId,
+        actor: { type: "device", uid: null },
+      }));
+      const [matchSnap, refreshedCourtSnap] = await Promise.all([
+        db.doc(paths.match(matchId)).get(),
+        db.doc(paths.court(actingCourtId)).get(),
+      ]);
+      matchData = matchSnap.exists ? matchSnap.data() : {};
+      actingCourtData.beaconSidesSwapped = refreshedCourtSnap.data()?.beaconSidesSwapped === true;
+    }
+
+    if (eventType === "RESET" && matchData?.tournamentId) {
+      return sendJson(res, 403, {
+        success: false,
+        error: "Tournament matches must be reset through the authorized reset flow.",
+      });
+    }
+
+    if (eventType === "RESET") {
+      await resetMatch({
+        matchId,
+        actor: { type: "device", uid: deviceId },
+        reason: "Device reset",
+      });
+      return sendJson(res, 200, { success: true, matchId, courtId: actingCourtId });
+    }
 
     const effectiveEventType = mapBeaconEventType(
       eventType,
@@ -177,17 +227,18 @@ async function postEvent(req, res) {
       actingCourtData.beaconSidesSwapped === true,
     );
 
-    const eventId = await appendCourtEvent(actingCourtId, {
+    const eventId = await appendMatchEvent(matchId, {
       eventType: effectiveEventType,
       createdBy: deviceId,
       actorDeviceId: deviceId,
-      scoreVersion: normalizeScoreVersion(actingCourtData.scoreVersion),
+      courtId: actingCourtId,
+      scoreVersion: normalizeScoreVersion(matchData?.scoreVersion),
       ...(effectiveEventType !== eventType
         ? { sourceEventType: eventType, beaconSidesSwapped: true }
         : {}),
     });
 
-    return sendJson(res, 200, { success: true, eventId });
+    return sendJson(res, 200, { success: true, eventId, matchId, courtId: actingCourtId });
   } catch (err) {
     console.error(err);
     return sendJson(res, 500, { success: false, error: "Error" });

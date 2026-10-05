@@ -16,7 +16,12 @@ import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
 
-import { BUILD_TARGETS, REPO_ROOT, findMissingReferences, runBuild } from "./build-frontend.mjs";
+import {
+  BUILD_TARGETS,
+  REPO_ROOT,
+  findMissingReferences,
+  runBuild,
+} from "./build-frontend.mjs";
 
 // ---------------------------------------------------------------------------
 // Policy
@@ -40,8 +45,14 @@ const SOURCE_EXTENSIONS = new Set([".js", ".mjs", ".css", ".html"]);
 
 // Third-party assets: never reformatted, never counted against budgets.
 const VENDOR_FILES = new Map([
-  ["app/js/jscolor.min.js", "d4ccfcb13aa7aa1b738cb7de0507b06f374a1603ae81561e64a2024e6ed5854b"],
-  ["app/js/qrcode.min.js", "c541ef06327885a8415bca8df6071e14189b4855336def4f36db54bde8484f36"],
+  [
+    "app/js/jscolor.min.js",
+    "d4ccfcb13aa7aa1b738cb7de0507b06f374a1603ae81561e64a2024e6ed5854b",
+  ],
+  [
+    "app/js/qrcode.min.js",
+    "c541ef06327885a8415bca8df6071e14189b4855336def4f36db54bde8484f36",
+  ],
 ]);
 
 // Deployment-time / developer-local files that are not part of the source tree.
@@ -65,6 +76,7 @@ const FEATURE_LAYERS = [
   "controls",
   "court",
   "details",
+  "match",
   "nfc",
   "qr",
   "routing",
@@ -72,9 +84,14 @@ const FEATURE_LAYERS = [
   "sharing",
   "shell",
   "teams",
+  "tournament",
 ];
 
 const SHARED_ROOT_MODULES = ["brand.mjs", "scoreSync.mjs"];
+
+// Page entry modules (composition roots). Each wires one entry document; no
+// module may import them.
+const ENTRY_MODULES = ["main.js", "matchPage.js", "tournamentPage.js"];
 
 const FEATURE_ALLOWED = [
   ...Object.keys(INFRASTRUCTURE_LAYERS).filter((layer) => layer !== "firebase"),
@@ -85,12 +102,20 @@ const FEATURE_ALLOWED = [
 
 // Remote imports and the only modules allowed to make them.
 const REMOTE_IMPORT_OWNERS = [
-  { pattern: /^https:\/\/www\.gstatic\.com\/firebasejs\//, owners: ["firebase", "firebase.js"] },
+  {
+    pattern: /^https:\/\/www\.gstatic\.com\/firebasejs\//,
+    owners: ["firebase", "firebase.js"],
+  },
   { pattern: /^https:\/\/esm\.sh\/html-to-image@/, owners: ["sharing"] },
 ];
 
 // Entry documents whose referenced assets must exist.
-const ENTRY_DOCUMENTS = ["app/index.html", "app/overlay.html"];
+const ENTRY_DOCUMENTS = [
+  "app/index.html",
+  "app/overlay.html",
+  "app/match.html",
+  "app/tournament.html",
+];
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -141,7 +166,9 @@ const IMPORT_PATTERNS = [
 ];
 
 function importSpecifiers(source) {
-  const withoutComments = source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  const withoutComments = source
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/^\s*\/\/.*$/gm, "");
   return IMPORT_PATTERNS.flatMap((pattern) =>
     [...withoutComments.matchAll(pattern)].map((match) => match[1]),
   );
@@ -159,7 +186,9 @@ function checkGeneratedArtifacts() {
   for (const result of results) {
     for (const dependency of result.dependencies) {
       if (generated.has(dependency)) {
-        errors.push(`${result.target.output} includes the generated file ${dependency}`);
+        errors.push(
+          `${result.target.output} includes the generated file ${dependency}`,
+        );
       }
     }
   }
@@ -173,7 +202,10 @@ function checkVendorFiles() {
       errors.push(`${file}: vendor asset is missing`);
       continue;
     }
-    const hash = crypto.createHash("sha256").update(fs.readFileSync(absolute)).digest("hex");
+    const hash = crypto
+      .createHash("sha256")
+      .update(fs.readFileSync(absolute))
+      .digest("hex");
     if (hash !== expectedHash) {
       errors.push(
         `${file}: third-party asset changed. Vendor files must not be edited or reformatted; ` +
@@ -184,14 +216,24 @@ function checkVendorFiles() {
 }
 
 function checkSizeBudgets(generated) {
-  const files = [...SOURCE_ROOTS.flatMap((root) => walk(root)), ...SOURCE_FILES];
+  const files = [
+    ...SOURCE_ROOTS.flatMap((root) => walk(root)),
+    ...SOURCE_FILES,
+  ];
 
   for (const file of files) {
     {
       if (!SOURCE_EXTENSIONS.has(path.extname(file))) continue;
-      if (generated.has(file) || VENDOR_FILES.has(file) || IGNORED_FILES.has(file)) continue;
+      if (
+        generated.has(file) ||
+        VENDOR_FILES.has(file) ||
+        IGNORED_FILES.has(file)
+      )
+        continue;
 
-      const lines = lineCount(fs.readFileSync(path.join(REPO_ROOT, file), "utf8"));
+      const lines = lineCount(
+        fs.readFileSync(path.join(REPO_ROOT, file), "utf8"),
+      );
       const exemption = SIZE_EXEMPTIONS.get(file);
 
       if (lines > SIZE_BUDGET.fail && !exemption) {
@@ -217,7 +259,9 @@ function checkSizeBudgets(generated) {
   }
 
   for (const [file, reason] of TRANSITIONAL_MODULES) {
-    warnings.push(`${file}: transitional module excused from layering rules - ${reason}`);
+    warnings.push(
+      `${file}: transitional module excused from layering rules - ${reason}`,
+    );
   }
 }
 
@@ -238,11 +282,18 @@ function buildModuleGraph() {
         continue;
       }
 
-      const target = rel(path.resolve(path.dirname(path.join(REPO_ROOT, file)), specifier));
+      const target = rel(
+        path.resolve(path.dirname(path.join(REPO_ROOT, file)), specifier),
+      );
       imports.push({ specifier, target });
 
-      if (!fs.existsSync(path.join(REPO_ROOT, target)) && !IGNORED_FILES.has(target)) {
-        errors.push(`${file}: import "${specifier}" does not resolve to a file`);
+      if (
+        !fs.existsSync(path.join(REPO_ROOT, target)) &&
+        !IGNORED_FILES.has(target)
+      ) {
+        errors.push(
+          `${file}: import "${specifier}" does not resolve to a file`,
+        );
       }
     }
 
@@ -259,11 +310,15 @@ function checkLayering(graph) {
 
     for (const { specifier, target, remote } of imports) {
       if (remote) {
-        const rule = REMOTE_IMPORT_OWNERS.find(({ pattern }) => pattern.test(specifier));
+        const rule = REMOTE_IMPORT_OWNERS.find(({ pattern }) =>
+          pattern.test(specifier),
+        );
         if (!rule) {
           errors.push(`${file}: unexpected remote import "${specifier}"`);
         } else if (!rule.owners.includes(layer)) {
-          errors.push(`${file}: "${specifier}" may only be imported by ${rule.owners.join(", ")}`);
+          errors.push(
+            `${file}: "${specifier}" may only be imported by ${rule.owners.join(", ")}`,
+          );
         }
         continue;
       }
@@ -276,16 +331,20 @@ function checkLayering(graph) {
       const targetLayer = layerOf(target);
       if (targetLayer === layer && isDirectoryLayer(file)) continue;
 
-      if (targetLayer === "main.js") {
-        errors.push(`${file}: main.js is the entry point; no module may import it`);
+      if (ENTRY_MODULES.includes(targetLayer)) {
+        errors.push(
+          `${file}: ${targetLayer} is an entry point; no module may import it`,
+        );
         continue;
       }
 
-      if (layer === "main.js") continue;
+      if (ENTRY_MODULES.includes(layer)) continue;
 
       if (layer === "firebase.js") {
         if (targetLayer !== "firebase") {
-          errors.push(`${file}: firebase.js may only re-export the firebase/ infrastructure`);
+          errors.push(
+            `${file}: firebase.js may only re-export the firebase/ infrastructure`,
+          );
         }
         continue;
       }
@@ -310,7 +369,9 @@ function checkLayering(graph) {
       }
 
       if (!SHARED_ROOT_MODULES.includes(layer) && layer !== "brand.js") {
-        warnings.push(`${file}: module outside the known layers imports ${target}`);
+        warnings.push(
+          `${file}: module outside the known layers imports ${target}`,
+        );
       }
     }
   }
@@ -361,7 +422,9 @@ function checkCycles(graph) {
 
   for (const component of components) {
     if (component.length < 2) continue;
-    const directories = new Set(component.map((file) => path.posix.dirname(file)));
+    const directories = new Set(
+      component.map((file) => path.posix.dirname(file)),
+    );
     if (directories.size > 1) {
       errors.push(
         `Import cycle spans module directories: ${component.sort().join(", ")}. ` +
@@ -378,7 +441,9 @@ function checkEntryDocuments() {
       errors.push(`${document}: entry document is missing`);
       continue;
     }
-    errors.push(...findMissingReferences(document, fs.readFileSync(absolute, "utf8")));
+    errors.push(
+      ...findMissingReferences(document, fs.readFileSync(absolute, "utf8")),
+    );
   }
 }
 
@@ -396,7 +461,9 @@ for (const warning of warnings) console.warn(`warning: ${warning}`);
 
 if (errors.length) {
   for (const error of errors) console.error(`error: ${error}`);
-  console.error(`Frontend structure check failed with ${errors.length} error(s).`);
+  console.error(
+    `Frontend structure check failed with ${errors.length} error(s).`,
+  );
   process.exit(1);
 }
 

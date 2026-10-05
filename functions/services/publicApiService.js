@@ -6,12 +6,15 @@ const {
   defaultScore,
   normalizeScoringOptions,
   getCurrentServerLabel,
+  isFixedEndMode,
 } = require("../domain/scoring/engine");
 
 const { createApiResponseCache } = require("../infrastructure/cache");
 const { buildScoringOptions } = require("../domain/scoring/modes");
 const { normalizeScoreVersion } = require("../domain/events/validation");
 const { DEFAULT_TEAM_NAMES, DEFAULT_PLAYER_NAMES } = require("./constants");
+const { paths } = require("./firestorePaths");
+const { resolveMatchTitle } = require("../domain/matches/lifecycle");
 
 const SCORE_API_REWRITE_PREFIXES = new Set(["a", "r", "s", "m"]);
 const SCORE_API_POINT_LABELS = ["0", "15", "30", "40"];
@@ -26,6 +29,7 @@ function buildScorePointsDisplay(points, scoringOptions, inTiebreak) {
   const usesNumericPoints =
     options.scoringMode === "straight" ||
     options.scoringMode === "tiebreakTen" ||
+    options.scoringMode === "fixedTotalPoints" ||
     Boolean(inTiebreak);
 
   if (usesNumericPoints) {
@@ -39,8 +43,8 @@ function buildScorePointsDisplay(points, scoringOptions, inTiebreak) {
   return SCORE_API_POINT_LABELS[numericPoints] ?? String(numericPoints);
 }
 
-function extractScoreApiCourtId(reqPath) {
-  const segments = String(reqPath || "")
+function decodePathSegments(reqPath) {
+  return String(reqPath || "")
     .split("/")
     .filter(Boolean)
     .map((segment) => {
@@ -50,22 +54,63 @@ function extractScoreApiCourtId(reqPath) {
         return segment;
       }
     });
+}
 
-  // With the Hosting redirect the public path looks like /score/{courtId}, /revision/{courtId},
-  // /stats/{courtId} or /momentum/{courtId}; when the function URL is hit directly the
-  // courtId is simply the last segment.
-  let courtId;
-  if (SCORE_API_REWRITE_PREFIXES.has(segments[0])) {
-    courtId = segments.length >= 2 ? segments[segments.length - 1] : null;
-  } else {
-    courtId = segments.length ? segments[segments.length - 1] : null;
+function isValidId(id) {
+  return typeof id === "string" && id.length > 0 && id.length <= 64;
+}
+
+// Public read paths address either a physical court (/score/{courtId}: the
+// match currently on that court) or a durable match (/score/match/{matchId}).
+function extractScoreApiTarget(reqPath) {
+  const segments = decodePathSegments(reqPath);
+  const id = segments.length ? segments[segments.length - 1] : null;
+  if (!isValidId(id)) return null;
+
+  if (segments.length >= 2 && segments[segments.length - 2] === "match") {
+    return { kind: "match", id };
   }
 
-  if (!courtId || courtId.length > 64) {
-    return null;
+  // When the function URL is hit directly, or through the Hosting redirect,
+  // the court id is the last segment.
+  if (SCORE_API_REWRITE_PREFIXES.has(segments[0]) && segments.length < 2) return null;
+  return { kind: "court", id };
+}
+
+function extractScoreApiCourtId(reqPath) {
+  const target = extractScoreApiTarget(reqPath);
+  return target?.kind === "court" ? target.id : null;
+}
+
+function targetCacheKey(target) {
+  return `${target.kind}:${target.id}`;
+}
+
+// Resolves a court or match target to { court, match } without reading any
+// score. A court with no active match falls back to its most recent match.
+async function resolveScoreTarget(target) {
+  if (target.kind === "match") {
+    const matchSnap = await db.doc(paths.match(target.id)).get();
+    if (!matchSnap.exists) return { notFound: "Match not found." };
+    const match = { matchId: target.id, ...matchSnap.data() };
+    let court = null;
+    if (match.currentCourtId) {
+      const courtSnap = await db.doc(paths.court(match.currentCourtId)).get();
+      court = courtSnap.exists ? { courtId: match.currentCourtId, ...courtSnap.data() } : null;
+    }
+    return { court, match };
   }
 
-  return courtId;
+  const courtSnap = await db.doc(paths.court(target.id)).get();
+  if (!courtSnap.exists) return { notFound: "Court not found." };
+  const court = { courtId: target.id, ...courtSnap.data() };
+  const matchId = court.activeMatchId || court.lastMatchId || null;
+  let match = null;
+  if (matchId) {
+    const matchSnap = await db.doc(paths.match(matchId)).get();
+    match = matchSnap.exists ? { matchId, ...matchSnap.data() } : null;
+  }
+  return { court, match };
 }
 
 function computeScoreRevision(body) {
@@ -77,45 +122,66 @@ function computeScoreRevision(body) {
     .slice(0, 16);
 }
 
-async function buildCourtScoreResponse(courtId) {
-  const cached = scoreApiCache.get(courtId);
+function buildMatchContext(match, court) {
+  if (!match) return null;
+  return {
+    matchId: match.matchId,
+    name: match.name || null,
+    title: resolveMatchTitle(match),
+    status: match.status || null,
+    tournamentId: match.tournamentId || null,
+    roundId: match.roundId || null,
+    fixtureId: match.fixtureId || null,
+    courtId: match.currentCourtId || null,
+    courtName: court && court.courtId === match.currentCourtId ? court.name || null : null,
+  };
+}
+
+async function buildScoreResponse(target) {
+  const cacheKey = targetCacheKey(target);
+  const cached = scoreApiCache.get(cacheKey);
   if (cached) {
     return { status: cached.status, body: cached.body };
   }
 
-  const [courtSnap, scoreSnap] = await Promise.all([
-    db.doc(`courts/${courtId}`).get(),
-    db.doc(`courts/${courtId}/score/current`).get(),
-  ]);
-
-  if (!courtSnap.exists) {
-    const notFoundBody = { success: false, error: "Court not found." };
-    scoreApiCache.set(courtId, 404, notFoundBody);
+  const resolved = await resolveScoreTarget(target);
+  if (resolved.notFound) {
+    const notFoundBody = { success: false, error: resolved.notFound };
+    scoreApiCache.set(cacheKey, 404, notFoundBody);
     return { status: 404, body: notFoundBody };
   }
 
-  const courtData = courtSnap.data() || {};
-  const rawScore = scoreSnap.exists ? scoreSnap.data() : null;
+  const { court, match } = resolved;
+  const scoreSnap = match ? await db.doc(paths.matchScore(match.matchId)).get() : null;
+  const rawScore = scoreSnap?.exists ? scoreSnap.data() : null;
+  const configSource = match || court || {};
   const scoringOptions = buildScoringOptions({
-    ...(courtData.scoringOptions || {}),
+    ...(configSource.scoringOptions || {}),
     ...(rawScore?.scoringOptions || {}),
-    scoringMode: rawScore?.scoringOptions?.scoringMode || courtData.scoringMode,
+    scoringMode: rawScore?.scoringOptions?.scoringMode || configSource.scoringMode,
   });
   const score = rawScore || defaultScore(scoringOptions);
   const inTiebreak = Boolean(score.inTiebreak);
+  const matchContext = buildMatchContext(match, court);
 
   const body = {
     success: true,
-    courtId,
+    courtId: court?.courtId || match?.currentCourtId || null,
+    courtName: court?.name || null,
+    matchId: match?.matchId || null,
+    matchName: match?.name || null,
+    // Display identity: match name, then matchup, then match id - never the court.
+    title: matchContext?.title || null,
+    match: matchContext,
     teamNames: {
-      A: courtData.teamNames?.A || DEFAULT_TEAM_NAMES.A,
-      B: courtData.teamNames?.B || DEFAULT_TEAM_NAMES.B,
+      A: match?.teamNames?.A || DEFAULT_TEAM_NAMES.A,
+      B: match?.teamNames?.B || DEFAULT_TEAM_NAMES.B,
     },
     playerNames: {
-      A1: courtData.playerNames?.A1 || "",
-      A2: courtData.playerNames?.A2 || "",
-      B1: courtData.playerNames?.B1 || "",
-      B2: courtData.playerNames?.B2 || "",
+      A1: match?.playerNames?.A1 || DEFAULT_PLAYER_NAMES.A1,
+      A2: match?.playerNames?.A2 || DEFAULT_PLAYER_NAMES.A2,
+      B1: match?.playerNames?.B1 || DEFAULT_PLAYER_NAMES.B1,
+      B2: match?.playerNames?.B2 || DEFAULT_PLAYER_NAMES.B2,
     },
     scoringOptions,
     scoringMode: scoringOptions.scoringMode,
@@ -138,20 +204,28 @@ async function buildCourtScoreResponse(courtId) {
     // Silver deuce only becomes a deciding point after the first deuce
     // cycle, so overlays need the cycle count to label it correctly.
     deuceCycles: Number(score.deuceCycles) || 0,
-    // Only the match tiebreak has a defined end; other modes play an open
-    // number of sets/points, so a stale persisted flag must not leak out.
-    matchComplete: scoringOptions.scoringMode === "tiebreakTen" && Boolean(score.matchComplete),
+    // Only modes with a defined end (match tiebreak, fixed total points)
+    // can be complete; other modes play an open number of sets/points, so a
+    // stale persisted flag must not leak out.
+    matchComplete: isFixedEndMode(scoringOptions.scoringMode) && Boolean(score.matchComplete),
     server: getCurrentServerLabel({ ...score, scoringOptions }),
-    scoreVersion: normalizeScoreVersion(courtData.scoreVersion),
+    scoreVersion: normalizeScoreVersion(match?.scoreVersion),
   };
+
+  if (scoringOptions.scoringMode === "fixedTotalPoints" && score.fixedTotal) {
+    body.fixedTotal = score.fixedTotal;
+  }
 
   body.revision = computeScoreRevision(body);
   body.fetchedAt = new Date().toISOString();
 
-  scoreApiCache.set(courtId, 200, body);
+  scoreApiCache.set(cacheKey, 200, body);
   return { status: 200, body };
 }
 
+function buildCourtScoreResponse(courtId) {
+  return buildScoreResponse({ kind: "court", id: courtId });
+}
 function prepareScoreApiRequest(req, res, cacheSeconds) {
   res.set("Access-Control-Allow-Origin", "*");
   res.set("Access-Control-Allow-Methods", "GET, OPTIONS");
@@ -168,7 +242,7 @@ function prepareScoreApiRequest(req, res, cacheSeconds) {
   }
 
   // Let the Firebase Hosting CDN absorb repeat requests: at most one
-  // origin hit per courtId per TTL window regardless of client volume.
+  // origin hit per court or match per TTL window regardless of client volume.
   res.set("Cache-Control", `public, max-age=${cacheSeconds}, s-maxage=${cacheSeconds}`);
   return true;
 }
@@ -180,7 +254,11 @@ const statsApiCache = createApiResponseCache(10 * 1000, 200);
 const momentumApiCache = createApiResponseCache(5 * 1000, 200);
 
 module.exports = {
+  buildScoreResponse,
   buildCourtScoreResponse,
+  resolveScoreTarget,
+  extractScoreApiTarget,
+  targetCacheKey,
   prepareScoreApiRequest,
   scoreApiCache,
   statsApiCache,

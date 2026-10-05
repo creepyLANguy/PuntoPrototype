@@ -1,8 +1,11 @@
 name: Tests
 
 on:
+  # Test direct pushes to the default branch. Feature branches are tested
+  # through pull_request instead, which prevents duplicate runs while a PR is open.
   push:
-    branches: ['**']
+    branches:
+      - main
   pull_request:
     branches: ['**']
 

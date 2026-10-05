@@ -91,11 +91,22 @@ test.before(async () => {
   seedCourt("jkmn", { name: "Gamma Court", clubId: "hiltop" });
   seedCourt("pqrs", { name: "Delta Court", status: "private" });
   seedCourt("stux", { name: "Echo Court", clubId: "ghostc" });
-  seedDoc("clubs/rvside", { name: "Riverside Padel", courtIds: ["abcd"], deviceIds: ["HUB-1"] });
-  seedDoc("clubs/hiltop", { name: "Hilltop Club", courtIds: ["jkmn"], deviceIds: [] });
+  seedDoc("clubs/rvside", {
+    name: "Riverside Padel",
+    state: "open",
+    courtIds: ["abcd"],
+    deviceIds: ["HUB-1"],
+  });
+  seedDoc("clubs/hiltop", {
+    name: "Hilltop Club",
+    state: "open",
+    courtIds: ["jkmn"],
+    deviceIds: [],
+  });
   // Lists a court and a device that no longer exist.
   seedDoc("clubs/ghostc", {
     name: "Ghost Club",
+    state: "closed",
     courtIds: ["stux", "zzzz"],
     deviceIds: ["GONE-9"],
   });
@@ -163,7 +174,13 @@ test("the admin court and device lists show each item's club and search by it", 
 });
 
 test("the Clubs tab lists every club with its court and device counts", async () => {
-  assert.deepEqual(texts(".admin-tabs .tab-btn"), ["Clubs", "Courts", "Devices"]);
+  assert.deepEqual(texts(".admin-tabs .tab-btn"), [
+    "Tournaments",
+    "Clubs",
+    "Courts",
+    "Matches",
+    "Devices",
+  ]);
 
   document.querySelector('.tab-btn[data-tab="clubs"]').click();
   await waitForDashboardClubs(3);
@@ -173,13 +190,14 @@ test("the Clubs tab lists every club with its court and device counts", async ()
   const rows = [...document.querySelectorAll("#adminClubList .admin-club-item")].map((item) => [
     item.querySelector(".club-name").textContent,
     item.querySelector(".aci-id").textContent,
+    item.querySelector(".club-state-cell .status-badge").textContent,
     item.querySelector(".club-courts-cell .aci-value").textContent,
     item.querySelector(".club-devices-cell .aci-value").textContent,
   ]);
   assert.deepEqual(rows, [
-    ["Ghost Club", "ID: GHOSTC", "2 courts", "1 device"],
-    ["Hilltop Club", "ID: HILTOP", "1 court", "0 devices"],
-    ["Riverside Padel", "ID: RVSIDE", "1 court", "1 device"],
+    ["Ghost Club", "ID: GHOSTC", "Closed", "2 courts", "1 device"],
+    ["Hilltop Club", "ID: HILTOP", "Open", "1 court", "0 devices"],
+    ["Riverside Padel", "ID: RVSIDE", "Open", "1 court", "1 device"],
   ]);
 
   for (const [term, expected] of [
@@ -207,6 +225,7 @@ test("Add Club creates the club and moves members from their old club", async ()
   assert.equal($("deleteClubBtn").style.display, "none");
   assert.equal($("clubCourtsCount").textContent, "0 selected");
   assert.equal($("clubDevicesCount").textContent, "0 selected");
+  assert.equal($("editClubState").value, "maintenance");
 
   $("saveClubBtn").click();
   await settle();
@@ -261,7 +280,12 @@ test("Add Club creates the club and moves members from their old club", async ()
   await waitForDashboardClubs(4);
   assert.deepEqual(clubRequests.at(-1), [
     "createClub",
-    { name: "Seaside Club", courtIds: ["efgh", "jkmn"], deviceIds: ["PULSE-2"] },
+    {
+      name: "Seaside Club",
+      state: "maintenance",
+      courtIds: ["efgh", "jkmn"],
+      deviceIds: ["PULSE-2"],
+    },
   ]);
 
   const seasideId = clubIdNamed("Seaside Club");
@@ -363,7 +387,13 @@ test("a club's courts and devices open their edit pages and return to the club",
   await waitForDashboardClubs(4);
   assert.deepEqual(clubRequests.at(-1), [
     "updateClub",
-    { clubId: "rvside", name: "Riverside Padel", courtIds: ["abcd", "efgh"], deviceIds: [] },
+    {
+      clubId: "rvside",
+      name: "Riverside Padel",
+      state: "open",
+      courtIds: ["abcd", "efgh"],
+      deviceIds: [],
+    },
   ]);
   assert.equal(lastToast(), 'Club "Riverside Padel" saved.');
   assert.deepEqual(stored("clubs/rvside").courtIds, ["abcd", "efgh"]);
@@ -440,7 +470,13 @@ test("members that no longer exist are dropped, also when deleted from the edito
   await waitForDashboardClubs(4);
   assert.deepEqual(clubRequests.at(-1), [
     "updateClub",
-    { clubId: "ghostc", name: "Ghost Club", courtIds: [], deviceIds: [] },
+    {
+      clubId: "ghostc",
+      name: "Ghost Club",
+      state: "closed",
+      courtIds: [],
+      deviceIds: [],
+    },
   ]);
   assert.deepEqual(stored("clubs/ghostc").courtIds, []);
   assert.deepEqual(stored("clubs/ghostc").deviceIds, []);

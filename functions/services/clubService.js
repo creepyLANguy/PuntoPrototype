@@ -12,10 +12,12 @@
 const { db, FieldValue } = require("../infrastructure/firebase");
 const {
   ClubError,
+  CLUB_STATES,
   MEMBER_KINDS,
   generateClubId,
   normalizeClubId,
   normalizeClubName,
+  normalizeClubState,
   normalizeMemberIds,
   planMembershipChange,
 } = require("../domain/clubs/membership");
@@ -77,8 +79,150 @@ async function readAndPlanKind(tx, { kind, clubId, previousIds, nextIds, knownCl
   return plan;
 }
 
+async function readClosedClubEffects(tx, { clubId, previousState, nextState, courtIds }) {
+  if (nextState !== CLUB_STATES.CLOSED || previousState === CLUB_STATES.CLOSED) {
+    return { courts: [], tournaments: [], matches: new Map(), fixtures: new Map() };
+  }
+
+  const courtSnaps = await Promise.all(
+    courtIds.map((courtId) => tx.get(memberRef("courts", courtId))),
+  );
+  const courts = courtSnaps
+    .map((snap, index) => (snap.exists ? { courtId: courtIds[index], ...snap.data() } : null))
+    .filter(Boolean);
+
+  const tournamentSnap = await tx.get(db.collection("tournaments").where("clubId", "==", clubId));
+  const tournaments = tournamentSnap.docs.map((snap) => ({
+    tournamentId: snap.id,
+    ...snap.data(),
+  }));
+
+  const matches = new Map();
+  const fixtures = new Map();
+
+  for (const tournament of tournaments) {
+    const [matchSnap, fixtureSnap] = await Promise.all([
+      tx.get(db.collection("matches").where("tournamentId", "==", tournament.tournamentId)),
+      tx.get(db.collection(`tournaments/${tournament.tournamentId}/fixtures`)),
+    ]);
+    matchSnap.docs.forEach((snap) => {
+      matches.set(snap.id, { matchId: snap.id, ...snap.data() });
+    });
+    fixtures.set(
+      tournament.tournamentId,
+      fixtureSnap.docs.map((snap) => ({ fixtureId: snap.id, ...snap.data() })),
+    );
+  }
+
+  for (const court of courts) {
+    const matchSnap = await tx.get(
+      db.collection("matches").where("currentCourtId", "==", court.courtId),
+    );
+    matchSnap.docs.forEach((snap) => {
+      matches.set(snap.id, { matchId: snap.id, ...snap.data() });
+    });
+  }
+
+  return { courts, tournaments, matches, fixtures };
+}
+
+function applyClosedClubEffects(tx, effects, { clubId, clubName }) {
+  if (!effects) return [];
+
+  const closingCourtIds = new Set(effects.courts.map((court) => court.courtId));
+  const cancelledTournamentIds = [];
+  const tournamentIds = new Set(effects.tournaments.map((tournament) => tournament.tournamentId));
+
+  for (const tournament of effects.tournaments) {
+    const wasCancelled = tournament.status === "cancelled";
+    const nextStatus = ["completed", "cancelled"].includes(tournament.status)
+      ? tournament.status
+      : "cancelled";
+    const timestamp = FieldValue.serverTimestamp();
+
+    if (!wasCancelled && nextStatus === "cancelled") {
+      cancelledTournamentIds.push(tournament.tournamentId);
+      tx.set(
+        db.doc(`tournaments/${tournament.tournamentId}`),
+        {
+          status: "cancelled",
+          cancelledAt: timestamp,
+          cancellationReason: `Club "${clubName || clubId}" was closed.`,
+          revision: Number(tournament.revision || 0) + 1,
+          updatedAt: timestamp,
+        },
+        { merge: true },
+      );
+    }
+
+    tx.set(
+      db.doc(`tournamentDirectory/${tournament.tournamentId}`),
+      { status: nextStatus, clubId, clubName: null, updatedAt: timestamp },
+      { merge: true },
+    );
+    tx.set(
+      db.doc(`tournamentViews/${tournament.tournamentId}`),
+      { status: nextStatus, club: null, updatedAt: timestamp },
+      { merge: true },
+    );
+    tx.set(
+      db.doc(`tournamentPrivateViews/${tournament.tournamentId}`),
+      { status: nextStatus, club: null, updatedAt: timestamp },
+      { merge: true },
+    );
+  }
+
+  for (const court of effects.courts) {
+    tx.set(
+      memberRef("courts", court.courtId),
+      { status: "closed", activeMatchId: null, updatedAt: FieldValue.serverTimestamp() },
+      { merge: true },
+    );
+  }
+
+  const releasedOtherCourtIds = new Set();
+  effects.matches.forEach((match) => {
+    const tournamentCancelled = Boolean(
+      match.tournamentId && tournamentIds.has(match.tournamentId),
+    );
+    const needsCancellation =
+      tournamentCancelled && !["completed", "cancelled"].includes(match.status);
+    const needsUnlink = match.currentCourtId && closingCourtIds.has(match.currentCourtId);
+
+    if (!needsCancellation && !needsUnlink) return;
+
+    const patch = { currentCourtId: null, updatedAt: FieldValue.serverTimestamp() };
+    if (needsCancellation) {
+      patch.status = "cancelled";
+      patch.cancelledAt = FieldValue.serverTimestamp();
+    }
+    tx.set(db.doc(`matches/${match.matchId}`), patch, { merge: true });
+
+    if (match.currentCourtId && !closingCourtIds.has(match.currentCourtId)) {
+      releasedOtherCourtIds.add(match.currentCourtId);
+    }
+  });
+
+  for (const courtId of releasedOtherCourtIds) {
+    tx.set(memberRef("courts", courtId), { activeMatchId: null }, { merge: true });
+  }
+
+  effects.fixtures.forEach((fixtureList, tournamentId) => {
+    fixtureList.forEach((fixture) => {
+      if (["completed", "cancelled", "bye"].includes(fixture.status)) return;
+      tx.set(
+        db.doc(`tournaments/${tournamentId}/fixtures/${fixture.fixtureId}`),
+        { status: "cancelled", updatedAt: FieldValue.serverTimestamp() },
+        { merge: true },
+      );
+    });
+  });
+
+  return cancelledTournamentIds;
+}
+
 // Applies a full membership change for `clubId` (creating it when `isNew`).
-async function saveClubInTransaction(tx, { clubId, isNew, name, courtIds, deviceIds }) {
+async function saveClubInTransaction(tx, { clubId, isNew, name, state, courtIds, deviceIds }) {
   const ref = clubRef(clubId);
   const clubSnap = await tx.get(ref);
 
@@ -88,8 +232,14 @@ async function saveClubInTransaction(tx, { clubId, isNew, name, courtIds, device
   }
 
   const existing = clubSnap.exists ? clubSnap.data() : {};
+  const previousState = clubSnap.exists ? normalizeClubState(existing.state) : null;
+  const nextState =
+    state === undefined && clubSnap.exists
+      ? normalizeClubState(existing.state)
+      : normalizeClubState(state);
+  const effectiveDeviceIds = nextState === CLUB_STATES.CLOSED ? [] : deviceIds;
   const knownClubs = new Map();
-  const nextIdsByKind = { courts: courtIds, devices: deviceIds };
+  const nextIdsByKind = { courts: courtIds, devices: effectiveDeviceIds };
   const plans = {};
 
   for (const kind of Object.keys(MEMBER_KINDS)) {
@@ -112,6 +262,18 @@ async function saveClubInTransaction(tx, { clubId, isNew, name, courtIds, device
     const snap = await tx.get(clubRef(otherClubId));
     knownClubs.set(otherClubId, snap.exists ? snap.data() : undefined);
   }
+
+  // All reads must happen before the first queued write in a Firestore transaction.
+  const closureEffects = await readClosedClubEffects(tx, {
+    clubId,
+    previousState,
+    nextState,
+    courtIds: listOf(existing, MEMBER_KINDS.courts.listField),
+  });
+  const cancelledTournamentIds = applyClosedClubEffects(tx, closureEffects, {
+    clubId,
+    clubName: name,
+  });
 
   const now = FieldValue.serverTimestamp();
 
@@ -142,7 +304,8 @@ async function saveClubInTransaction(tx, { clubId, isNew, name, courtIds, device
     {
       name,
       courtIds,
-      deviceIds,
+      deviceIds: effectiveDeviceIds,
+      state: nextState,
       updatedAt: now,
       ...(isNew ? { createdAt: now } : {}),
     },
@@ -159,9 +322,14 @@ async function saveClubInTransaction(tx, { clubId, isNew, name, courtIds, device
   return {
     clubId,
     name,
+    state: nextState,
     courtIds,
-    deviceIds,
-    moved: { courts: describeMoves(plans.courts), devices: describeMoves(plans.devices) },
+    deviceIds: effectiveDeviceIds,
+    moved: {
+      courts: describeMoves(plans.courts),
+      devices: describeMoves(plans.devices),
+    },
+    closedTournamentIds: cancelledTournamentIds,
   };
 }
 
@@ -174,12 +342,13 @@ function normalizeMembership({ courtIds, deviceIds }) {
 
 async function createClub(input = {}, { random = Math.random } = {}) {
   const name = normalizeClubName(input.name);
+  const state = normalizeClubState(input.state);
   const membership = normalizeMembership(input);
 
   for (let attempt = 0; attempt < MAX_CLUB_ID_ATTEMPTS; attempt++) {
     const clubId = generateClubId(random);
     const result = await db.runTransaction((tx) =>
-      saveClubInTransaction(tx, { clubId, isNew: true, name, ...membership }),
+      saveClubInTransaction(tx, { clubId, isNew: true, name, state, ...membership }),
     );
     if (result) return result;
   }
@@ -190,11 +359,27 @@ async function createClub(input = {}, { random = Math.random } = {}) {
 async function updateClub(input = {}) {
   const clubId = normalizeClubId(input.clubId);
   const name = normalizeClubName(input.name);
+  const state = input.state === undefined ? undefined : normalizeClubState(input.state);
   const membership = normalizeMembership(input);
 
-  return db.runTransaction((tx) =>
-    saveClubInTransaction(tx, { clubId, isNew: false, name, ...membership }),
+  const result = await db.runTransaction((tx) =>
+    saveClubInTransaction(tx, { clubId, isNew: false, name, state, ...membership }),
   );
+
+  if (result?.closedTournamentIds?.length) {
+    try {
+      const { recalculateTournament } = require("./tournamentService");
+      await Promise.allSettled(
+        result.closedTournamentIds.map((tournamentId) =>
+          recalculateTournament({ tournamentId, reason: "club-closed" }),
+        ),
+      );
+    } catch (error) {
+      console.error("Could not refresh closed-club tournament views:", error);
+    }
+  }
+
+  return result;
 }
 
 async function deleteClub(input = {}) {

@@ -4,33 +4,34 @@ flowchart LR
     classDef data fill:#E8F5E9,stroke:#2E7D32,stroke-width:2px,color:#1B5E20
     classDef device fill:#FCE4EC,stroke:#C2185B,stroke-width:2px,color:#880E4F
     classDef delivery fill:#ECEFF1,stroke:#455A64,stroke-width:2px,color:#263238
-    classDef future fill:#FAFAFA,stroke:#777777,stroke-width:1px,stroke-dasharray:5 5,color:#444444
+    classDef target fill:#FAFAFA,stroke:#777777,stroke-width:1px,stroke-dasharray:5 5,color:#444444
 
     subgraph CLIENTS["Current client surfaces"]
-        subgraph WEBAPP["Web app - native ES modules (app/js)"]
-            WEB["main.js<br/>composition root"]
-            WROUTE["routing/<br/>routes, history, views"]
-            WSTATE["state/<br/>session, app, navigation, theme"]
-            WFEAT["scoring/ court/ clubs/ details/ sharing/<br/>qr/ nfc/ admin/ teams/ shell/"]
-            WUI["ui/<br/>DOM, modals, toasts, theme"]
-            WFB["firebase/<br/>client, repositories, callables"]
+        subgraph WEBAPP["Scoring web app - native ES modules"]
+            WEB["main.js"]
+            COURTUI["court/ + scoring/<br/>court session follows active match"]
+            MATCHUI["matchPage.js + match/<br/>/m/{matchId}"]
+            TOURUI["tournamentPage.js + tournament/<br/>/t, /t/new, /t/{id}"]
+            ADMIN["admin/<br/>courts, matches, tournaments, devices, clubs"]
+            FB["firebase/<br/>repositories + callables"]
         end
-        ADMIN["Admin routes<br/>/admin and /app/admin"]
-        OVERLAY["OBS / public overlay<br/>app/overlay.html (built from app/overlay/)"]
-        NFC["NFC utility<br/>nfc/index.html"]
-        LAB["Device Lab / harness<br/>admin-gated"]
+        OVERLAY["OBS overlay<br/>/overlay/{courtId}<br/>/overlay/match/{matchId}"]
+        NFC["NFC utility"]
+        LAB["Device Lab / harness"]
     end
 
     subgraph FIRMWARE["Current firmware repository"]
-        HUB["Hub<br/>NFC + control"]
-        BEACON["Beacon<br/>distance trigger"]
-        PULSE["Pulse<br/>button remote"]
+        HUB["Hub"]
+        BEACON["Beacon"]
+        PULSE["Pulse"]
     end
 
     subgraph FIREBASE["Firebase runtime"]
         HOST["Firebase Hosting"]
-        INGEST["postEvent<br/>HTTP Cloud Function"]
-        CALLABLE["Callable functions<br/>resetCourt / changeoverCourt / updateScoringOptions / getDetailedScore<br/>createClub / updateClub / deleteClub"]
+        INGEST["postEvent"]
+        MATCHCALL["manageMatch"]
+        TOURCALL["manageTournament"]
+        OTHERCALL["resetCourt / changeoverCourt / clubs"]
         TRIGGER["onEventCreate"]
         CLUBTRIGGER["onCourtDeleted / onDeviceDeleted"]
         SCORE["Scoring + replay services"]
@@ -38,13 +39,16 @@ flowchart LR
     end
 
     subgraph DATA["Firestore"]
-        COURT["courts/{courtId}<br/>configuration + active match state"]
-        EVENTS["courts/{courtId}/events/{eventId}<br/>authoritative active event history"]
-        LIVE["courts/{courtId}/score/current<br/>derived live score"]
-        CHECK["scoreCheckpoints<br/>replay accelerators"]
-        ARCHIVE["archive/{archiveId}/events<br/>reset archives"]
+        COURTS["courts/{courtId}<br/>physical court + activeMatchId"]
+        MATCHES["matches/{matchId}<br/>durable match identity"]
+        EVENTS["matches/{matchId}/events/{eventId}<br/>authoritative scoring history"]
+        LIVE["matches/{matchId}/score/current<br/>derived live score"]
+        CHECK["match checkpoints + archive"]
+        TOURS["tournaments/{tournamentId}<br/>participants, teams, rounds, fixtures, audits"]
+        VIEWS["tournamentViews / tournamentPrivateViews / tournamentDirectory"]
+        SECRETS["tournamentSecrets<br/>hashed host/access keys"]
         DEVICES["devices/{deviceId}<br/>device identity + court binding + club"]
-        CLUBS["clubs/{clubId}<br/>club + its courts and devices"]
+        CLUBS["clubs/{clubId}<br/>club + courts/devices"]
     end
 
     subgraph DELIVERY["Current delivery"]
@@ -54,53 +58,62 @@ flowchart LR
         PROD["main -> production"]
     end
 
-    subgraph NOT_IMPLEMENTED["Not yet implemented as production controls"]
+    subgraph TARGETS["Production-hardening targets"]
         AUTH["Cryptographic device authentication<br/>freshness / replay / idempotency"]
-        RBAC["Explicit callable request.auth RBAC"]
-        MATCH["First-class match/tournament model"]
+        RBAC["Full account/RBAC model"]
         MFG["Manufacturing / provisioning system"]
     end
 
-    HOST -- "generated app/index.html" --> WEB
-    WEB --> WROUTE
-    WEB --> WFEAT
-    WROUTE --> WFEAT
-    WFEAT --> WSTATE
-    WFEAT --> WUI
-    WFEAT --> WFB
-    HOST --> ADMIN
+    HOST --> WEB
+    HOST --> MATCHUI
+    HOST --> TOURUI
     HOST --> OVERLAY
     HOST --> NFC
     ADMIN --> LAB
 
-    WFB --> COURT
-    WFB --> EVENTS
-    WFB --> LIVE
-    WFB --> CALLABLE
-    WFB --> DEVICES
-    WFB --> CLUBS
+    WEB --> COURTUI
+    COURTUI --> FB
+    MATCHUI --> FB
+    TOURUI --> FB
+    ADMIN --> FB
+
+    FB --> COURTS
+    FB --> MATCHES
+    FB --> EVENTS
+    FB --> LIVE
+    FB --> DEVICES
+    FB --> CLUBS
+    FB --> MATCHCALL
+    FB --> TOURCALL
+    FB --> OTHERCALL
 
     HUB --> INGEST
     BEACON --> INGEST
     PULSE --> INGEST
     INGEST --> DEVICES
+    INGEST --> COURTS
     INGEST --> EVENTS
     EVENTS --> TRIGGER
     TRIGGER --> SCORE
     SCORE --> LIVE
     SCORE --> CHECK
+    SCORE --> MATCHES
 
-    CALLABLE --> COURT
-    CALLABLE --> EVENTS
-    CALLABLE --> LIVE
-    CALLABLE --> CHECK
-    CALLABLE --> ARCHIVE
-    CALLABLE --> CLUBS
-    COURT --> CLUBTRIGGER
+    MATCHCALL --> MATCHES
+    MATCHCALL --> COURTS
+    MATCHCALL --> EVENTS
+    TOURCALL --> TOURS
+    TOURCALL --> MATCHES
+    TOURCALL --> VIEWS
+    TOURCALL --> SECRETS
+    OTHERCALL --> COURTS
+    OTHERCALL --> CLUBS
+    COURTS --> CLUBTRIGGER
     DEVICES --> CLUBTRIGGER
     CLUBTRIGGER --> CLUBS
 
     OVERLAY --> PUBLIC
+    PUBLIC --> MATCHES
     PUBLIC --> LIVE
     PUBLIC --> EVENTS
 
@@ -108,16 +121,16 @@ flowchart LR
     TESTS --> STAGING
     REPO --> PROD
 
-    INGEST -. "production target" .-> AUTH
-    CALLABLE -. "production target" .-> RBAC
-    COURT -. "future architecture" .-> MATCH
-    HUB -. "business process outside repo" .-> MFG
-    BEACON -. "business process outside repo" .-> MFG
-    PULSE -. "business process outside repo" .-> MFG
+    INGEST -. "target" .-> AUTH
+    TOURCALL -. "target" .-> RBAC
+    MATCHCALL -. "target" .-> RBAC
+    HUB -. "outside repo boundary" .-> MFG
+    BEACON -. "outside repo boundary" .-> MFG
+    PULSE -. "outside repo boundary" .-> MFG
 
-    class WEB,WROUTE,WSTATE,WFEAT,WUI,WFB,ADMIN,OVERLAY,NFC,LAB client
+    class WEB,COURTUI,MATCHUI,TOURUI,ADMIN,FB,OVERLAY,NFC,LAB client
     class HUB,BEACON,PULSE device
-    class HOST,INGEST,CALLABLE,TRIGGER,CLUBTRIGGER,SCORE,PUBLIC firebase
-    class COURT,EVENTS,LIVE,CHECK,ARCHIVE,DEVICES,CLUBS data
+    class HOST,INGEST,MATCHCALL,TOURCALL,OTHERCALL,TRIGGER,CLUBTRIGGER,SCORE,PUBLIC firebase
+    class COURTS,MATCHES,EVENTS,LIVE,CHECK,TOURS,VIEWS,SECRETS,DEVICES,CLUBS data
     class REPO,TESTS,STAGING,PROD delivery
-    class AUTH,RBAC,MATCH,MFG future
+    class AUTH,RBAC,MFG target

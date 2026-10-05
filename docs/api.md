@@ -19,7 +19,10 @@ Production-facing API contract and integration guide for Padel Push™.
 
 ## Current model
 
-The public API and current web app are court-scoped. There is no first-class public matchId in this repository. The active match is represented by the current court document, its scoreVersion and its event stream.
+The public API supports both physical-court and durable-match reads. A court
+request resolves the live or last match on that court. A match request reads
+the specified `matches/{matchId}` document directly. Scoring events and replay
+are match-scoped; court id is location context.
 
 ## Environments
 
@@ -32,11 +35,15 @@ See firebase-environments.md.
 
 ## Security boundary
 
-Public score endpoints are intentionally unauthenticated.
+Public score endpoints and public tournament read models are intentionally unauthenticated.
 
-The current postEvent endpoint is not cryptographically authenticated. It uses deviceId plus the current device/court binding.
+The current postEvent endpoint is not cryptographically authenticated. It uses deviceId plus the current device/court binding and appends scoring events to the match on that court.
 
-The current callable functions also do not contain explicit request.auth authorization checks. These are documented production-hardening gaps, not guarantees.
+Server-authoritative match and tournament callables verify the admin skeleton
+key/custom claim, tournament host key, or court password according to the
+operation. Host keys and private access codes are stored server-side only as
+hashes. Legacy court/device collections remain open in Firestore rules as
+development access; this is a production-hardening gap, not a guarantee.
 
 See device-protocol.md and roles-and-responsibilities.md.
 
@@ -49,13 +56,21 @@ See device-protocol.md and roles-and-responsibilities.md.
 | /admin, /app/admin | Privileged admin surface |
 | /court/{courtId}, /c/{courtId} | Court/spectator deep links |
 | /play, /p, /play/{courtId}, /p/{courtId} | Play/court picker and direct join |
+| /m, /m/{matchId} | Dedicated durable match page |
+| /t, /t/new, /t/{tournamentId} | Tournament landing, setup wizard, public dashboard and host control room |
 | /overlay, /overlay/{courtId} | Canonical OBS overlay |
+| /overlay/match/{matchId} | OBS overlay for a durable match |
 | /broadcast, /broadcast/{courtId} | Secondary overlay alias |
+| /broadcast/match/{matchId} | Secondary match overlay alias |
 | /nfc, /nfc/** | NFC utility |
 | /score/{courtId} | Live score JSON |
+| /score/match/{matchId} | Match score JSON |
 | /revision/{courtId} | Revision JSON |
+| /revision/match/{matchId} | Match revision JSON |
 | /stats/{courtId} | Match statistics JSON |
+| /stats/match/{matchId} | Match statistics JSON by match |
 | /momentum/{courtId} | Momentum JSON |
+| /momentum/match/{matchId} | Momentum JSON by match |
 
 ## Change management
 

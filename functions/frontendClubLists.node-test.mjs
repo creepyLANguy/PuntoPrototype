@@ -73,8 +73,18 @@ test.before(async () => {
   seedCourt("jkmn", { name: "Gamma Court" });
   seedCourt("pqrs", { name: "Delta Court", status: "private" });
   seedCourt("stux", { name: "Closed Court", status: "closed" });
-  seedDoc("clubs/rvside", { name: "Riverside Padel", courtIds: ["abcd"], deviceIds: [] });
-  seedDoc("clubs/hiltop", { name: "Hilltop Club", courtIds: ["jkmn", "pqrs"], deviceIds: [] });
+  seedDoc("clubs/rvside", {
+    name: "Riverside Padel",
+    state: "open",
+    courtIds: ["abcd"],
+    deviceIds: [],
+  });
+  seedDoc("clubs/hiltop", {
+    name: "Hilltop Club",
+    state: "open",
+    courtIds: ["jkmn", "pqrs"],
+    deviceIds: [],
+  });
 
   const dom = await bootFrontend();
   window = dom.window;
@@ -84,7 +94,11 @@ test.before(async () => {
 test("Spectate shows each open court's club in a column of its own", async () => {
   await openList("Spectate", "spectateCourtList", 3);
 
-  assert.match($("spectateCourtSearch").placeholder, /club/i);
+  // The discovery search (spec section 31) still matches club names.
+  assert.equal(
+    $("spectateCourtSearch").placeholder,
+    "Search courts, clubs, matches, players or tournaments",
+  );
   assert.equal($("spectateCourtList").classList.contains("has-clubs"), true);
   assert.deepEqual(rowIds("spectateCourtList"), ["abcd", "efgh", "jkmn"], "sorted by court name");
   assert.deepEqual(
@@ -92,10 +106,15 @@ test("Spectate shows each open court's club in a column of its own", async () =>
     ["Riverside Padel", "", "Hilltop Club"],
   );
 
-  // The column sits between the name and the id in every row, also when empty.
+  // The club column sits between the court name and id; live match context follows.
   for (const id of rowIds("spectateCourtList")) {
     const classes = [...row("spectateCourtList", id).children].map((child) => child.className);
-    assert.deepEqual(classes, ["court-item-name", "court-item-club", "court-item-id"]);
+    assert.deepEqual(classes, [
+      "court-item-name",
+      "court-item-club",
+      "court-item-id",
+      "court-item-match",
+    ]);
     assert.equal(window.getComputedStyle(clubCell("spectateCourtList", id)).display, "block");
   }
   assert.equal(clubCell("spectateCourtList", "abcd").title, "Riverside Padel");
@@ -148,7 +167,10 @@ test("selecting a court with a club from Spectate opens that court", async () =>
 test("Play lists open and private courts with their club and joins through a club row", async () => {
   await openList("Play", "playCourtList", 4);
 
-  assert.match($("playCourtSearch").placeholder, /club/i);
+  assert.equal(
+    $("playCourtSearch").placeholder,
+    "Search courts, clubs, matches, players or tournaments",
+  );
   assert.deepEqual(rowIds("playCourtList"), ["abcd", "efgh", "pqrs", "jkmn"]);
   assert.equal(clubCell("playCourtList", "pqrs").textContent, "Hilltop Club");
 
@@ -193,6 +215,35 @@ test("lists still load, without club names, when clubs cannot be read", async ()
   }
 
   await closeList("closeSpectateBtn");
+});
+
+test("courts belonging to maintenance or closed clubs stay out of user lists", async () => {
+  await openList("Play", "playCourtList", 4);
+  await closeList("closePlayBtn");
+
+  firestoreState.docs.set("clubs/closedc", {
+    name: "Closed Club",
+    state: "closed",
+    courtIds: ["cclos"],
+    deviceIds: [],
+  });
+  firestoreState.docs.set("clubs/maintc", {
+    name: "Maintenance Club",
+    state: "maintenance",
+    courtIds: ["cmaint"],
+    deviceIds: [],
+  });
+  seedCourt("cclos", { name: "Closed Club Court", status: "open", clubId: "closedc" });
+  seedCourt("cmaint", { name: "Maintenance Court", status: "open", clubId: "maintc" });
+
+  await openList("Play", "playCourtList", 4);
+  assert.deepEqual(rowIds("playCourtList"), ["abcd", "efgh", "pqrs", "jkmn"]);
+  assert.equal(
+    rowIds("playCourtList").some((id) => /cclos|cmaint/.test(id)),
+    false,
+  );
+
+  await closeList("closePlayBtn");
 });
 
 test("the club column is hidden when no court belongs to a club", async () => {

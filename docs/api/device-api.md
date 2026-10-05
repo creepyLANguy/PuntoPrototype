@@ -29,7 +29,9 @@ The backend accepts and stores Hub, Beacon and Pulse as device family identifier
 | courtId | SPECTATE | Target court |
 | registeringDeviceId | REGISTER | Device being registered |
 
-For scoring events, the server looks up the device's current court binding and stamps the event with the court's current scoreVersion.
+For scoring events, the server looks up the device's current court binding,
+resolves the live match on that court, creates a casual match if needed, and
+stamps the event with the match's current scoreVersion.
 
 ### Beacon changeover behaviour
 
@@ -37,23 +39,27 @@ When the bound court has beaconSidesSwapped: true, Team A/B point events from a 
 
 Pulse events are not inverted by the Beacon mapping.
 
-A court RESET restores beaconSidesSwapped to false.
+A match reset on the court restores beaconSidesSwapped to false.
 
 ## Operational event behaviour
 
 ### SPECTATE
 
-SPECTATE moves the acting device's binding to the target court after validating that the target court exists. The resulting operation is recorded against the target court event stream.
+SPECTATE moves the acting device's binding to the target court after validating
+that the target court exists. The resulting operation is recorded against the
+target court's device-event stream.
 
 ### REGISTER
 
-REGISTER binds the target device to the acting device's current court. The current implementation records the operation and returns the resulting device/court information.
+REGISTER binds the target device to the acting device's current court. The
+current implementation records the operation in the court device-event stream
+and returns the resulting device/court information.
 
 The current implementation does not enforce the production authorization model described in ../device-protocol.md.
 
 ## Current success response
 
-    { "success": true, "eventId": "aBc123" }
+    { "success": true, "eventId": "aBc123", "matchId": "m_abc123", "courtId": "bnrm" }
 
 SPECTATE returns the resulting target court/device binding. REGISTER returns the resulting court/device/registering-device information.
 

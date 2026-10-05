@@ -27,15 +27,18 @@ flowchart TB
         P7["BP-08 Device validation"]
         P8["BP-09 Support & incident handling"]
         P9["BP-10 Physical production / provisioning"]
+        P10["BP-13 Tournament operation"]
     end
 
     subgraph PLATFORM["Current platform"]
         APP["Padel Push web app"]
         ADMIN["Admin portal"]
+        MATCH["Match pages"]
+        TOURNAMENT["Tournament control room + public dashboard"]
         LAB["Device Lab / harness"]
         INGEST["POST /postEvent"]
         SCORE["Scoring + replay engine"]
-        DATA["Firestore court/event state"]
+        DATA["Firestore court/match/tournament state"]
         API["Public score / revision / stats / momentum API"]
         DEPLOY["Staging / production deployment"]
     end
@@ -58,6 +61,7 @@ flowchart TB
     P1 --> P3
     P1 --> P5
     P1 --> P9
+    P1 --> P10
 
     P2 --> DEPLOY
     P2 --> APP
@@ -81,6 +85,11 @@ flowchart TB
     SCORE --> DATA
     DATA --> API
     API --> BROADCAST
+
+    CS --> P10
+    P10 --> TOURNAMENT
+    P10 --> MATCH
+    P10 --> DATA
 
     P4 --> P6
     P6 --> DATA
@@ -113,7 +122,7 @@ flowchart TB
     COM --> BO
 
     class BO,PO,ENG,HW,QA,OPS,CS,COM,FLC role
-    class P1,P2,P3,P4,P5,P6,P7,P8,P9 process
-    class APP,ADMIN,LAB,INGEST,SCORE,DATA,API,DEPLOY system
+    class P1,P2,P3,P4,P5,P6,P7,P8,P9,P10 process
+    class APP,ADMIN,MATCH,TOURNAMENT,LAB,INGEST,SCORE,DATA,API,DEPLOY system
     class HUB,BEACON,PULSE device
     class MFG,CLUB,BROADCAST external

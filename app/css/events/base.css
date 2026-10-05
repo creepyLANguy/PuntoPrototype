@@ -1,0 +1,103 @@
+/* =======================================================
+   EVENTS PAGES: TOKENS AND FRAME
+======================================================= */
+
+:root {
+  --ev-bg: #0b1220;
+  --ev-surface: #121b2e;
+  --ev-surface-2: #18233a;
+  --ev-border: #24324d;
+  --ev-text: #e8edf6;
+  --ev-muted: #93a1b8;
+  --ev-accent: #3dd6c6;
+  --ev-accent-ink: #062a27;
+  --ev-live: #ff5a5f;
+  --ev-ready: #4cc38a;
+  --ev-warning: #f2b544;
+  --ev-danger: #ef5350;
+  --ev-radius: 14px;
+  --ev-gap: 16px;
+  --ev-font: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --ev-display: "Outfit", "Inter", system-ui, sans-serif;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --ev-bg: #f4f6fb;
+    --ev-surface: #ffffff;
+    --ev-surface-2: #eef2f8;
+    --ev-border: #d7deea;
+    --ev-text: #111827;
+    --ev-muted: #5b6475;
+    --ev-accent: #0f9488;
+    --ev-accent-ink: #ffffff;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body.events-page {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--ev-bg);
+  color: var(--ev-text);
+  font-family: var(--ev-font);
+  font-size: 15px;
+  line-height: 1.45;
+}
+
+.events-page a {
+  color: var(--ev-accent);
+}
+
+.ev-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px clamp(14px, 3vw, 32px);
+  border-bottom: 1px solid var(--ev-border);
+  background: var(--ev-surface);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.ev-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--ev-display);
+  font-weight: 800;
+  color: var(--ev-text) !important;
+  text-decoration: none;
+}
+
+.ev-logo {
+  width: 26px;
+  height: 26px;
+}
+
+.ev-nav {
+  display: flex;
+  gap: 16px;
+}
+
+.ev-nav a {
+  color: var(--ev-muted);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.ev-app {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: clamp(14px, 3vw, 32px);
+}
+
+.ev-loading {
+  padding: 48px 0;
+  text-align: center;
+}

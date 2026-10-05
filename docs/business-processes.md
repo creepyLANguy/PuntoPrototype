@@ -11,7 +11,7 @@ The current software and firmware repositories establish the following operating
 
 - PuntoPrototype is the application, Firebase backend, public API, admin portal, NFC utility, Device Lab/harness and deployment workflow.
 - ProtoSketches contains the current ESP32 firmware prototypes for Hub, Beacon and Pulse.
-- The application is currently court-centric. A court is the active operational container for a match; there is not yet a first-class match/tournament entity.
+- The application has durable match and tournament entities. Courts remain physical resources and device locations.
 - Physical manufacturing, production provisioning, inventory control and fulfilment are business processes but are not implemented as an end-to-end system in either repository.
 
 ## 2. Current product and actor model
@@ -24,6 +24,7 @@ The current software and firmware repositories establish the following operating
 | Spectator | Read-only participant consuming a court view or public scoreboard. |
 | Broadcast/Integration Consumer | OBS or another system consuming the public score/revision/stats/momentum endpoints. |
 | Device | System actor representing Hub, Beacon or Pulse firmware. |
+| Tournament Host | Person holding a tournament host key and operating a tournament control room. |
 | Business role | An organisational responsibility such as Product Owner, Platform Engineering or Operations. These are distinct from application roles. |
 
 ## 3. Process catalogue
@@ -33,15 +34,16 @@ The current software and firmware repositories establish the following operating
 | BP-01 | Product and change control | New requirement, defect, hardware change or policy decision | Product Owner | Git/GitHub + product documentation |
 | BP-02 | Software release and environment promotion | Approved software change | Quality & Release Lead | GitHub + Firebase staging/production |
 | BP-03 | Court creation and configuration | New court required | Customer/Club Operations | Firestore courts collection |
-| BP-04 | Live court operation and scoring | Match/session starts | Club/Court Operator | Firestore event stream + live score |
+| BP-04 | Live court operation and scoring | Match/session starts | Club/Court Operator | Match event stream + live score |
 | BP-05 | Device registration and assignment | New device introduced or moved | Operations / Platform Admin | Firestore devices collection |
-| BP-06 | Device event ingestion | Physical device action | Platform Engineering | postEvent + court event stream |
+| BP-06 | Device event ingestion | Physical device action | Platform Engineering | postEvent + match event stream |
 | BP-07 | Beacon court changeover | Physical court-side changeover | Club/Court Operator / Platform Admin | Court Beacon mapping + changeover marker |
 | BP-08 | Device validation and diagnostic testing | Development, repair, acceptance or incident | Hardware/Firmware Engineering | Device Lab + test records |
 | BP-09 | Customer support and incident handling | Fault report, scoring issue, device issue or service interruption | Customer/Club Operations | Support record + linked technical issue |
 | BP-10 | Physical production and provisioning | Approved hardware build | Operations / Supply Chain | Production records outside repo |
 | BP-11 | Device retirement, replacement and reassignment | Lost, damaged, failed or replaced device | Operations / Platform Admin | Device record + production/support records |
 | BP-12 | Data, access and security administration | Role change, security incident, privacy request or audit | Business Owner + Platform Engineering + Compliance | Access records + incident records |
+| BP-13 | Tournament operation | Tournament created, published or run | Tournament Host / Club Operations | tournaments, matches and read models |
 
 ## 4. Detailed process definitions
 
@@ -104,24 +106,25 @@ Steps:
 
 Outputs: usable court record, live score state and known access configuration.
 
-Important current limitation: the software does not yet provide a dedicated Club Operator RBAC role. Authorisation for privileged callable functions is also not yet enforced by explicit request.auth checks.
+Important current limitation: the software does not yet provide a dedicated Club Operator RBAC role. Server-authoritative match and tournament callables verify keys/passwords, but this is not a complete account/RBAC model.
 
 ### BP-04 — Live court operation and scoring
 
-Purpose: run a live scoring session with a single authoritative event stream.
+Purpose: run a live scoring session with a single authoritative match event stream.
 
 Steps:
 1. Court is opened/configured.
-2. Players join the court in play mode, or a spectator joins in spectate mode.
-3. Scoring input comes from the web app or a physical device.
-4. Device actions are sent to postEvent; browser actions can write scoring events directly.
-5. courts/{courtId}/events/{eventId} is appended.
-6. onEventCreate applies/replays scoring logic.
-7. score/current is updated for live clients.
-8. Public score/revision/stats/momentum endpoints expose read-only outputs.
-9. RESET starts a new score version and archives the prior active event stream.
+2. A live match is assigned to the court. If a casual court has no match, the backend creates one.
+3. Players join the court in play mode, or a spectator joins in spectate mode.
+4. Scoring input comes from the web app or a physical device.
+5. Device actions are sent to postEvent; browser actions write scoring events to the current match.
+6. matches/{matchId}/events/{eventId} is appended.
+7. onEventCreate applies/replays scoring logic.
+8. matches/{matchId}/score/current is updated for live clients.
+9. Public score/revision/stats/momentum endpoints expose read-only outputs by court or by match.
+10. RESET starts a new score version and archives the prior active match event stream while preserving matchId.
 
-Outputs: live scoreboard, event history, optional broadcast data and reset archive.
+Outputs: live scoreboard, match event history, optional broadcast data and reset archive.
 
 ### BP-05 — Device registration and assignment
 
@@ -151,8 +154,8 @@ Steps:
 2. postEvent validates the device ID and event type.
 3. Device binding is resolved.
 4. For Beacon scoring events, the server applies the current court beaconSidesSwapped mapping.
-5. Effective event is appended to the court event stream.
-6. Event trigger updates the derived score.
+5. Effective scoring event is appended to the live match event stream. Operational SPECTATE/REGISTER events remain court device events.
+6. Event trigger updates the derived match score.
 
 Current limitation: HMAC authentication, freshness checks, nonce handling and client-generated idempotency keys are documented targets, not implemented runtime controls.
 
@@ -170,7 +173,7 @@ Steps:
 7. Users can use Swap views independently at any time; its local state is never used as the input to changeoverCourt.
 8. Subsequent Beacon scoring events are mapped using the active flag.
 9. Pulse events are not inverted by the Beacon mapping.
-10. RESET clears the mapping to the default false state for the next match/session.
+10. Match reset clears the mapping to the default false state for the next match/session on that court.
 
 Control: do not interpret a changeover as rewriting already-recorded scoring events; it only changes how new Beacon input is interpreted.
 
@@ -245,10 +248,11 @@ Steps:
 
 Current application boundary:
 - Public read endpoints are intentionally unauthenticated.
-- Admin access is an application-level privileged surface.
-- Current callable functions do not perform explicit request.auth checks.
+- Admin access is an application-level privileged surface and the admin skeleton key/custom claim is verified server-side for server-authoritative callables.
+- Tournament host operations use a host key stored by the server only as a hash.
+- Casual match control uses the current court password.
 - Firestore Admin SDK writes bypass Firestore rules.
-- The repository's Firestore rules are documented as emulator-only.
+- Legacy court/device collections remain open in Firestore rules as development access.
 
 Required organisational controls:
 1. Assign privileged access only to named personnel.
@@ -257,6 +261,24 @@ Required organisational controls:
 4. Do not store device secrets in source control, URLs, NFC data or logs.
 5. Record security incidents and credential/provisioning changes.
 6. Treat production-hardening items in device-protocol.md as release-blocking work before broad physical-device deployment.
+
+### BP-13 — Tournament operation
+
+Purpose: create, run and complete club-aware tournaments using normal Padel Push matches.
+
+Steps:
+1. Host opens `/t/new` and creates a tournament with name, format, visibility, optional club, roster and explicit court pool.
+2. If a club is selected, club courts are shown first; the club never auto-selects courts.
+3. Host receives and stores the tournament host key. Private tournaments also receive an access code.
+4. Host publishes or starts the tournament.
+5. Host generates the schedule. Americano and Team Americano create all planned rounds and pairings upfront; recalculation rebuilds only rounds after the latest started or completed round. Result-dependent formats show future time slots with pairings pending and generate the next draw after results exist. The server uses deterministic round and fixture ids and treats duplicate generation requests idempotently.
+6. Each playable fixture creates a normal match with a durable matchId and snapshotted scoring profile.
+7. Host assigns, moves, detaches, starts and completes fixture matches through the host control room.
+8. Fixed-end tournament matches can auto-complete from scoring; standings and bracket progression recalculate from stored results.
+9. Corrections require a reason, preserve original match history and write audit metadata.
+10. Host completes or cancels the tournament; early completion records a reason and cancels open fixtures.
+
+Outputs: tournament read model, match links, standings, bracket, schedule, audit trail and historical match access.
 
 ## 5. Process hand-offs
 
@@ -275,9 +297,8 @@ The following hand-offs must have a named accountable owner:
 
 The following are deliberately recorded as gaps:
 
-- No first-class match/tournament entity or matchId.
 - No complete application RBAC model for business roles.
-- No explicit callable request.auth authorisation enforcement.
+- No full account/RBAC model for hosts, referees or venue staff.
 - No cryptographic device authentication, freshness/replay protection or device-side idempotency.
 - No end-to-end manufacturing/provisioning/inventory system in the repositories.
 - No dedicated production telemetry/correlation layer.

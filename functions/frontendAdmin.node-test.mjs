@@ -149,8 +149,28 @@ test("the admin password is checked before the dashboard opens", async () => {
 
   $("adminAuthPassword").value = ADMIN_SKELETON_KEY;
   $("submitAdminAuthBtn").click();
-  await waitForCourtList(3);
+  await waitFor(() => isShown("adminDashboardPage"), { label: "admin dashboard" });
   assert.equal(activeTab(), "courts", "the Courts tab is open by default");
+  assert.deepEqual(
+    [...document.querySelectorAll(".admin-tabs .tab-btn")].map((button) => button.dataset.tab),
+    ["tournaments", "clubs", "courts", "matches", "devices"],
+  );
+
+  const tabControls = {
+    tournaments: ["adminTournamentSearch", "showCreateTournamentBtn"],
+    clubs: ["adminClubSearch", "showCreateClubBtn"],
+    courts: ["adminCourtSearch", "showCreateCourtModalBtn"],
+    matches: ["adminMatchSearch", "showAddMatchBtn"],
+    devices: ["adminDeviceSearch", "showAddDeviceModalBtn"],
+  };
+  for (const [tab, [searchId, addId]] of Object.entries(tabControls)) {
+    assert.ok($(searchId), tab + " tab has a search box");
+    assert.ok($(addId), tab + " tab has an add button");
+  }
+
+  document.querySelector('.tab-btn[data-tab="courts"]').click();
+  await waitForCourtList(3);
+  assert.equal(activeTab(), "courts");
   assert.equal($("courtsTab").classList.contains("active"), true);
 });
 
@@ -237,9 +257,9 @@ test("Add Court validates its input and creates the court and its score", async 
   assert.equal(lastToast(), `Court "Delta Court" created successfully. ID: ${id.toUpperCase()}`);
   assert.equal(court.password, "delta-pw");
   assert.equal(court.status, "private");
-  assert.equal(court.scoreVersion, 0);
   assert.equal(court.clubId, undefined, "new courts belong to no club");
-  assert.ok(stored(`courts/${id}/score/current`), "the initial score document exists");
+  assert.equal(court.activeMatchId, null, "a new court has no live match until play starts");
+  assert.equal(stored(`courts/${id}/score/current`), undefined, "courts no longer own score docs");
   assert.ok(courtNames().includes("Delta Court"));
 });
 

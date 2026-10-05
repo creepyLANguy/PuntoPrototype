@@ -4961,6 +4961,204 @@ body.light-mode .close-btn {
   }
 }
 
+
+
+/* =======================================================
+   ADMIN TAB CONTROL BARS + MATCH ACTION TOOLBAR
+======================================================= */
+
+.admin-dashboard-controls .primary-btn {
+  flex: 0 0 auto;
+  width: auto;
+  min-width: 112px;
+  margin: 0;
+  padding: 8px 14px;
+  font-size: 0.82rem;
+  white-space: nowrap;
+}
+
+.admin-match-create-panel {
+  margin: 0 0 12px;
+  padding: 12px;
+  border: 1px solid var(--input-border);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.admin-match-create-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.admin-match-create-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+.admin-match-create-grid label span {
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #999;
+}
+
+.admin-match-create-grid input,
+.admin-match-create-grid select {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--input-border);
+  background: var(--input-bg);
+  color: var(--white);
+  font: inherit;
+  font-size: 0.84rem;
+  outline: none;
+}
+
+.admin-match-create-grid input:focus,
+.admin-match-create-grid select:focus {
+  border-color: var(--white);
+}
+
+.admin-match-create-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.admin-match-create-actions .primary-btn,
+.admin-match-create-actions .edit-btn {
+  width: auto;
+  margin: 0;
+}
+
+.admin-match-item {
+  grid-template-columns: minmax(200px, 1.7fr) minmax(110px, 1fr) minmax(110px, 1fr) auto minmax(330px, 2.2fr);
+}
+
+.admin-match-item .aci-actions {
+  min-width: 0;
+  display: flex;
+  flex-wrap: nowrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 6px;
+}
+
+.admin-match-item .aci-actions .edit-btn,
+.admin-match-item .aci-actions .delete-btn,
+.admin-match-item .aci-actions .admin-match-court-select {
+  flex: 0 0 auto;
+  height: 32px;
+  box-sizing: border-box;
+}
+
+.admin-match-item .aci-actions .edit-btn,
+.admin-match-item .aci-actions .delete-btn {
+  padding: 5px 10px;
+  min-width: 64px;
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.admin-match-item .aci-actions .admin-match-court-select {
+  width: 150px;
+  min-width: 120px;
+  max-width: 150px;
+  padding: 5px 28px 5px 9px;
+  border-radius: 6px;
+  border: 1px solid var(--input-border);
+  background: var(--input-bg);
+  color: var(--white);
+  font: inherit;
+  font-size: 0.78rem;
+}
+
+@media (max-width: 900px) {
+  .admin-match-create-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .admin-match-item {
+    grid-template-columns: 1.7fr 1fr 1fr auto;
+  }
+
+  .admin-match-item .aci-actions {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    padding-top: 8px;
+    margin-top: 2px;
+    border-top: 1px solid rgba(255, 255, 255, 0.07);
+  }
+}
+
+@media (max-width: 600px) {
+  .admin-dashboard-controls {
+    align-items: stretch;
+    flex-wrap: wrap;
+  }
+
+  .admin-dashboard-controls .search-wrapper {
+    flex: 1 1 100%;
+  }
+
+  .admin-dashboard-controls .filter-wrapper {
+    flex: 1 1 140px;
+  }
+
+  .admin-dashboard-controls .primary-btn {
+    flex: 0 0 auto;
+    min-width: 0;
+  }
+
+  .admin-match-create-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-match-item {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px 10px;
+  }
+
+  .admin-match-item .aci-name {
+    grid-column: 1 / -1;
+  }
+
+  .admin-match-item .aci-actions {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+  }
+
+  .admin-match-item .aci-actions .admin-match-court-select {
+    flex: 1 1 180px;
+    max-width: none;
+  }
+}
+
+body.light-mode .admin-match-create-panel {
+  background: rgba(0, 0, 0, 0.02);
+}
+
+body.light-mode .admin-match-create-grid input,
+body.light-mode .admin-match-create-grid select,
+body.light-mode .admin-match-item .aci-actions .admin-match-court-select {
+  color: #111;
+}
+
+body.light-mode .admin-match-item .aci-actions {
+  border-top-color: rgba(0, 0, 0, 0.08);
+}
 /* =======================================================
    MENU PAGE — LIGHT MODE TEXT READABILITY
 ======================================================= */
@@ -5406,13 +5604,24 @@ body.light-mode #adminClubSearch {
 
 /* Club rows: name, court count, device count and actions. */
 .admin-court-item.admin-club-item {
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) auto;
 }
 
 @media (orientation: landscape) and (max-height: 520px), (min-width: 769px) {
   .admin-court-item.admin-club-item {
-    grid-template-columns: minmax(0, 1.8fr) minmax(0, 1fr) minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1.8fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) auto;
   }
+}
+
+/* Club state badges. */
+.status-maintenance {
+  background: #d98e04;
+  color: #fff;
+}
+
+.admin-court-item.admin-club-item .club-state-cell .status-badge {
+  min-width: 80px;
+  text-align: center;
 }
 
 /* ---------------- Club editor ---------------- */
@@ -6934,4 +7143,93 @@ body.light-mode .dm-meta-value {
   .dm-details-toggle-icon {
     animation: none;
   }
+}
+/* =======================================================
+   MATCH CONTEXT
+   Court location next to the match title, the live match line in court
+   lists, discovery results and the admin match / tournament rows.
+======================================================= */
+
+.court-location {
+  opacity: 0.7;
+  font-weight: 400;
+}
+
+.court-location.hidden,
+.marquee-separator.hidden {
+  display: none;
+}
+
+.court-item-match {
+  grid-column: 1 / -1;
+  font-size: 0.8rem;
+  opacity: 0.75;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.discovery-results {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0 0 12px;
+}
+
+.discovery-results.hidden {
+  display: none;
+}
+
+.discovery-result {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  border: 1px solid var(--input-border);
+  border-radius: 10px;
+  background: var(--input-bg);
+  color: var(--text-color);
+  text-decoration: none;
+}
+
+.discovery-result strong {
+  font-size: 0.95rem;
+}
+
+.discovery-result span {
+  font-size: 0.78rem;
+  opacity: 0.75;
+}
+
+.discovery-tournament {
+  border-left: 3px solid var(--waveColour);
+}
+
+.discovery-match {
+  border-left: 3px solid var(--teamAcolour);
+}
+
+.menu-btn-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+
+.admin-match-item .aci-actions,
+.admin-tournament-item .aci-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.admin-match-court-select {
+  max-width: 160px;
+}
+
+#tournamentsTab .admin-dashboard-controls a.primary-btn {
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
 }

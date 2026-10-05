@@ -1,12 +1,110 @@
 rules_version = '2';
 
-// Development environments intentionally allow unrestricted Firestore access.
-// Tighten these rules before production hardening; Cloud Functions use the Admin SDK.
+// Firestore security rules.
+//
+// Server-authoritative data (matches, tournaments and their read models) is
+// written only by Cloud Functions through the Admin SDK, which these rules do
+// not constrain. Clients may read public data, append scoring events to a
+// live match and rename the players of a casual match.
+//
+// The court-centric development collections (courts, devices, admin) remain
+// open for the existing admin tooling; tightening them is tracked as
+// production-hardening work (docs/architecture.md, "Operational security").
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /{document=**} {
+
+    function matchDoc(matchId) {
+      return get(/databases/$(database)/documents/matches/$(matchId));
+    }
+
+    function tournamentIsPublic(tournamentId) {
+      return get(/databases/$(database)/documents/tournaments/$(tournamentId)).data.visibility == 'public';
+    }
+
+    // ---- Physical platform (development access) ----
+    match /courts/{courtId} {
       allow read, write: if true;
+
+      match /deviceEvents/{eventId} {
+        allow read: if true;
+        allow write: if false;
+      }
+    }
+
+    match /devices/{deviceId} {
+      allow read, write: if true;
+    }
+
+    match /admin/{docId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // Club membership is changed only by the club callables.
+    match /clubs/{clubId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // ---- Matches (durable scoring identity) ----
+    match /matches/{matchId} {
+      allow read: if true;
+      allow create, delete: if false;
+      // Players may name the players and teams of a casual match; tournament
+      // match names come from the tournament roster.
+      allow update: if resource.data.tournamentId == null
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['teamNames', 'playerNames', 'updatedAt']);
+
+      match /events/{eventId} {
+        allow read: if true;
+        allow create: if matchDoc(matchId).data.status == 'live'
+          && matchDoc(matchId).data.currentCourtId == request.resource.data.courtId
+          && get(/databases/$(database)/documents/courts/$(request.resource.data.courtId)).data.activeMatchId == matchId
+          && request.resource.data.eventType in ['POINT_TEAM_A', 'POINT_TEAM_B', 'UNDO', 'WARMUP']
+          && request.resource.data.matchId == matchId;
+        allow update, delete: if false;
+      }
+
+      match /{document=**} {
+        allow read: if true;
+        allow write: if false;
+      }
+    }
+
+    // ---- Tournaments (server-authoritative; read models are derived) ----
+    match /tournaments/{tournamentId} {
+      allow read: if true;
+      allow write: if false;
+
+      match /{document=**} {
+        allow read: if tournamentIsPublic(tournamentId);
+        allow write: if false;
+      }
+    }
+
+    match /tournamentViews/{tournamentId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    match /tournamentDirectory/{tournamentId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // Private read models, host-key hashes and creation idempotency markers
+    // are only reachable through Cloud Functions.
+    match /tournamentPrivateViews/{tournamentId} {
+      allow read, write: if false;
+    }
+
+    match /tournamentSecrets/{tournamentId} {
+      allow read, write: if false;
+    }
+
+    match /tournamentCreations/{requestId} {
+      allow read, write: if false;
     }
   }
 }
-

@@ -3,52 +3,80 @@
 import { DEFAULT_SCORING_OPTIONS } from "../config/constants.js";
 import { session } from "../state/sessionState.js";
 
-export function normalizeScoringOptions(options = {})
-{
+// fixedTotalPoints is the tournament profile (spec section 8.2); its serve and
+// completion settings are snapshotted on the match and only displayed here.
+const SCORING_MODES = [
+  "standard",
+  "straight",
+  "tiebreakTen",
+  "fixedTotalPoints",
+];
+const FIXED_TOTAL_FIELDS = ["pointsTarget", "serving", "completion"];
+
+export function normalizeScoringOptions(options = {}) {
   const normalized = {
     ...DEFAULT_SCORING_OPTIONS,
-    ...(options || {})
+    ...(options || {}),
   };
 
-  if (!["standard", "straight", "tiebreakTen"].includes(normalized.scoringMode))
-  {
+  if (!SCORING_MODES.includes(normalized.scoringMode)) {
     normalized.scoringMode = DEFAULT_SCORING_OPTIONS.scoringMode;
   }
 
-  if (!["standard", "golden", "silver", "star"].includes(normalized.deuceMode))
-  {
+  if (
+    !["standard", "golden", "silver", "star"].includes(normalized.deuceMode)
+  ) {
     normalized.deuceMode = DEFAULT_SCORING_OPTIONS.deuceMode;
   }
 
-  if (!["off", "sixAllSeven", "sixAllTen"].includes(normalized.tiebreakMode))
-  {
+  if (!["off", "sixAllSeven", "sixAllTen"].includes(normalized.tiebreakMode)) {
     normalized.tiebreakMode = DEFAULT_SCORING_OPTIONS.tiebreakMode;
+  }
+
+  if (normalized.scoringMode !== "fixedTotalPoints") {
+    FIXED_TOTAL_FIELDS.forEach((field) => delete normalized[field]);
   }
 
   return normalized;
 }
 
-export function areScoringOptionsEqual(a, b)
-{
+export function areScoringOptionsEqual(a, b) {
   const left = normalizeScoringOptions(a);
   const right = normalizeScoringOptions(b);
 
-  return left.scoringMode === right.scoringMode &&
+  return (
+    left.scoringMode === right.scoringMode &&
     left.deuceMode === right.deuceMode &&
-    left.tiebreakMode === right.tiebreakMode;
+    left.tiebreakMode === right.tiebreakMode &&
+    FIXED_TOTAL_FIELDS.every(
+      (field) =>
+        JSON.stringify(left[field] ?? null) ===
+        JSON.stringify(right[field] ?? null),
+    )
+  );
 }
 
-export function resolveScoringOptions(scoreData = session.score)
-{
-  const courtOptions = normalizeScoringOptions(session.currentScoringOptions || {});
+export function resolveScoringOptions(scoreData = session.score) {
+  const courtOptions = normalizeScoringOptions(
+    session.currentScoringOptions || {},
+  );
   const scoreOptions = normalizeScoringOptions(scoreData?.scoringOptions || {});
 
   return normalizeScoringOptions({
     ...scoreOptions,
     ...courtOptions,
-    scoringMode: courtOptions.scoringMode || scoreOptions.scoringMode || DEFAULT_SCORING_OPTIONS.scoringMode,
-    deuceMode: courtOptions.deuceMode || scoreOptions.deuceMode || DEFAULT_SCORING_OPTIONS.deuceMode,
-    tiebreakMode: courtOptions.tiebreakMode || scoreOptions.tiebreakMode || DEFAULT_SCORING_OPTIONS.tiebreakMode
+    scoringMode:
+      courtOptions.scoringMode ||
+      scoreOptions.scoringMode ||
+      DEFAULT_SCORING_OPTIONS.scoringMode,
+    deuceMode:
+      courtOptions.deuceMode ||
+      scoreOptions.deuceMode ||
+      DEFAULT_SCORING_OPTIONS.deuceMode,
+    tiebreakMode:
+      courtOptions.tiebreakMode ||
+      scoreOptions.tiebreakMode ||
+      DEFAULT_SCORING_OPTIONS.tiebreakMode,
   });
 }
 
@@ -59,10 +87,8 @@ export function resolveScoringOptions(scoreData = session.score)
 // options keeps the rendered numbers and their formatting consistent during
 // a scoring-mode change; resolveScoringOptions (court-first) remains the
 // right source for the settings controls.
-export function resolveScoreDisplayOptions(scoreData = session.score)
-{
-  if (scoreData?.scoringOptions?.scoringMode)
-  {
+export function resolveScoreDisplayOptions(scoreData = session.score) {
+  if (scoreData?.scoringOptions?.scoringMode) {
     return normalizeScoringOptions(scoreData.scoringOptions);
   }
   return resolveScoringOptions(scoreData);

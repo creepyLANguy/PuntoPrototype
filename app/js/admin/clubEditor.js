@@ -11,7 +11,7 @@ import { openEditDeviceModal } from "./devices.js";
 import { activateAdminTab, ADMIN_TABS } from "./tabState.js";
 import { anyValueMatches, clubSummary, courtMatchesSearch, normalizeSearchTerm } from "../clubs/clubIndex.js";
 import { loadClubIndex } from "../clubs/clubLoader.js";
-import { TOAST_TYPES } from "../config/constants.js";
+import { CLUB_STATES, TOAST_TYPES } from "../config/constants.js";
 import { NAV_PAGES } from "../config/routes.js";
 import { createClub, deleteClub, updateClub } from "../firebase/callables.js";
 import { getClub } from "../firebase/clubRepository.js";
@@ -64,9 +64,11 @@ function createDraft(club)
   return {
     clubId: club?.id || null,
     savedName: club?.name || "",
+    savedState: club?.state || CLUB_STATES.MAINTENANCE,
     savedCourtIds: [...(club?.courtIds || [])],
     savedDeviceIds: [...(club?.deviceIds || [])],
     name: club?.name || "",
+    state: club?.state || CLUB_STATES.MAINTENANCE,
     courtIds: new Set(club?.courtIds || []),
     deviceIds: new Set(club?.deviceIds || [])
   };
@@ -78,6 +80,7 @@ export function isClubEditorDirty(draft = appState.clubEditor)
 {
   if (!draft) return false;
   return draft.name.trim() !== draft.savedName ||
+    draft.state !== draft.savedState ||
     !sameMembers(draft.courtIds, draft.savedCourtIds) ||
     !sameMembers(draft.deviceIds, draft.savedDeviceIds);
 }
@@ -125,6 +128,7 @@ export async function restoreClubEditor(clubId)
   await openClubEditor({
     id: snap.id,
     name: data.name || snap.id,
+    state: data.state || CLUB_STATES.MAINTENANCE,
     courtIds: Array.isArray(data.courtIds) ? data.courtIds : [],
     deviceIds: Array.isArray(data.deviceIds) ? data.deviceIds : []
   }, false);
@@ -141,6 +145,7 @@ async function showClubEditorPage(syncHistory)
   elements.editClubTitle.textContent = draft.clubId ? draft.savedName : "Add Club";
   elements.editClubIdLine.textContent = draft.clubId ? `ID: ${draft.clubId.toUpperCase()}` : "";
   elements.editClubName.value = draft.name;
+  elements.editClubState.value = draft.state;
   elements.editClubNameError.textContent = "";
   elements.saveClubBtn.textContent = draft.clubId ? "Save Club" : "Add Club";
   elements.deleteClubBtn.style.display = draft.clubId ? "" : "none";
@@ -367,8 +372,20 @@ async function saveClub()
     `These are already in another club and will move to "${escapeHtml(name)}":\n${moves.join("\n")}`
   ))) return;
 
+  const nextState = elements.editClubState.value;
+  const closing =
+    draft.clubId &&
+    draft.savedState === CLUB_STATES.OPEN &&
+    nextState === CLUB_STATES.CLOSED;
+
+  if (closing && !(await showConfirm(
+    `Closing "${escapeHtml(name)}" will close its courts, unlink its devices, detach active matches and cancel its tournaments. Continue?`
+  ))) return;
+
+  draft.state = nextState;
   const payload = {
     name,
+    state: nextState,
     courtIds: [...draft.courtIds],
     deviceIds: [...draft.deviceIds]
   };
@@ -450,6 +467,11 @@ export function registerClubEditor()
   {
     if (appState.clubEditor) appState.clubEditor.name = elements.editClubName.value;
     elements.editClubNameError.textContent = "";
+  });
+
+  elements.editClubState.addEventListener("change", () =>
+  {
+    if (appState.clubEditor) appState.clubEditor.state = elements.editClubState.value;
   });
 
   elements.clubCourtSearch.addEventListener("input", () => renderMemberList("courts"));

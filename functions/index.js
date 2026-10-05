@@ -9,6 +9,9 @@ const { getDetailedScore } = require("./callables/getDetailedScore");
 const { createClub } = require("./callables/createClub");
 const { updateClub } = require("./callables/updateClub");
 const { deleteClub } = require("./callables/deleteClub");
+const { manageMatch } = require("./callables/manageMatch");
+const { manageTournament } = require("./callables/manageTournament");
+const { wrapCallable } = require("./services/errors");
 
 const { REGION } = require("./services/constants");
 const { postEvent } = require("./http/postEvent");
@@ -21,10 +24,12 @@ exports.onEventCreate = onEventCreate;
 exports.onCourtDeleted = onCourtDeleted;
 exports.onDeviceDeleted = onDeviceDeleted;
 
-exports.resetCourt = onCall({ region: REGION }, resetCourt);
+exports.resetCourt = onCall({ region: REGION }, wrapCallable(resetCourt));
 exports.changeoverCourt = onCall({ region: REGION }, changeoverCourt);
-exports.updateScoringOptions = onCall({ region: REGION }, updateScoringOptions);
-exports.getDetailedScore = onCall({ region: REGION }, getDetailedScore);
+exports.updateScoringOptions = onCall({ region: REGION }, wrapCallable(updateScoringOptions));
+exports.getDetailedScore = onCall({ region: REGION }, wrapCallable(getDetailedScore));
+exports.manageMatch = onCall({ region: REGION }, wrapCallable(manageMatch));
+exports.manageTournament = onCall({ region: REGION }, wrapCallable(manageTournament));
 exports.createClub = onCall({ region: REGION }, createClub);
 exports.updateClub = onCall({ region: REGION }, updateClub);
 exports.deleteClub = onCall({ region: REGION }, deleteClub);

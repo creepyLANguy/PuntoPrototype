@@ -5,17 +5,17 @@ import { getFirestore, connectFirestoreEmulator } from "./firestore.js";
 
 import * as firebaseEnvironmentConfig from "../firebase-config.js";
 
-const {
-  activeFirebaseEnvironment,
-  firebaseConfigs
-} = firebaseEnvironmentConfig;
-const useFirestoreEmulator = firebaseEnvironmentConfig.useFirestoreEmulator === true;
+const { activeFirebaseEnvironment, firebaseConfigs } =
+  firebaseEnvironmentConfig;
+const useFirestoreEmulator =
+  firebaseEnvironmentConfig.useFirestoreEmulator === true;
 
 const firebaseConfig = firebaseConfigs[activeFirebaseEnvironment];
 
-if (!firebaseConfig)
-{
-  throw new Error(`Invalid Firebase environment '${activeFirebaseEnvironment}'. Expected 'production' or 'staging'.`);
+if (!firebaseConfig) {
+  throw new Error(
+    `Invalid Firebase environment '${activeFirebaseEnvironment}'. Expected 'production' or 'staging'.`,
+  );
 }
 
 export const app = initializeApp(firebaseConfig);
@@ -23,9 +23,13 @@ export const db = getFirestore(app);
 
 // Served by the Firebase hosting emulator: talk to the local Firestore emulator instead of the cloud project.
 const emulatorHosts = ["localhost", "127.0.0.1", "[::1]"];
-export const usingEmulator = emulatorHosts.includes(globalThis.location?.hostname);
+export const usingEmulator = emulatorHosts.includes(
+  globalThis.location?.hostname,
+);
 
-if (usingEmulator && useFirestoreEmulator)
-{
+// Local development against the emulators: Firestore and the callables.
+export const useLocalEmulators = usingEmulator && useFirestoreEmulator;
+
+if (useLocalEmulators) {
   connectFirestoreEmulator(db, "127.0.0.1", 8080);
 }

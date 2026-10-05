@@ -1,95 +1,96 @@
 sequenceDiagram
     autonumber
-    participant U as Player / Court Operator
-    participant R as Web app: router
-    participant UI as Web app: UI rendering
-    participant SA as Web app: scoring actions
-    participant AS as Web app: application state
-    participant FL as Web app: Firebase listeners / repositories
+    participant U as Player / Operator / Host
+    participant R as Web app routing
+    participant UI as UI rendering
+    participant SA as Scoring actions
+    participant MS as Match sync
+    participant FL as Firebase repositories
     participant D as Hub / Beacon / Pulse
     participant I as postEvent
     participant F as Firestore
     participant T as onEventCreate
     participant G as Scoring / Replay
-    participant S as score/current
-    participant K as Callable functions
+    participant K as manageMatch
+    participant Q as manageTournament
     participant O as Overlay / read client
     participant A as Public API
 
     opt Open a court (/c/{courtId} or /p/{courtId})
-        U->>R: Navigate or follow a deep link
-        R->>FL: Read the court document
-        R->>AS: Enter court session (player or spectator)
-        AS->>FL: Attach score + court listeners
-        R->>UI: Show the scoreboard view and record history
+        U->>R: Navigate or follow a court link
+        R->>FL: Read court document
+        FL->>K: ensureCourtMatch when needed
+        K->>F: Create or return live match
+        R->>MS: Follow courts/{courtId}.activeMatchId
+        MS->>FL: Attach match + score listeners
+        R->>UI: Show scoreboard with match title primary
+    end
+
+    opt Open match or tournament
+        U->>R: Navigate to /m/{matchId} or /t/{tournamentId}
+        R->>FL: Read match, score or tournament read model
+        R->>UI: Render match page, public dashboard or host control room
     end
 
     alt Browser scoring action
         U->>UI: Score / undo in app
         UI->>SA: addPoint / undoLastPoint
         SA->>UI: Immediate animation + sound feedback
-        SA->>FL: Add court event
-        FL->>F: Write court event
+        SA->>FL: Add match event
+        FL->>F: Write matches/{matchId}/events/{eventId}
     else Physical device action
         U->>D: Physical action
         D->>I: POST /postEvent
-        I->>F: Append effective event
-    end
-
-    opt Beacon changeover active
+        I->>F: Resolve device binding and court activeMatchId
+        I->>K: ensureCourtMatch if the court has no live match
         I->>I: Apply beaconSidesSwapped for Beacon events
+        I->>F: Append matches/{matchId}/events/{eventId}
     end
 
-    F-->>T: Event document created
-    T->>F: Read court + event + current score
+    F-->>T: Match event document created
+    T->>F: Read match + event + current score
     T->>T: Check scoreVersion and event ordering
 
     alt Out-of-order event or UNDO
-        T->>G: Full active-history replay
+        T->>G: Full match-history replay
     else Normal scoring
         T->>G: Apply event / checkpoint
     end
 
     G-->>T: Materialized score
-    T->>F: Write score/current
+    T->>F: Write matches/{matchId}/score/current
     T->>F: Write checkpoint when required
-    F-->>S: Updated live score
-    S-->>FL: onSnapshot live score
-    FL->>AS: Store score in the court session
-    AS->>UI: Render points, games, sets, server and badges
+    T->>F: Update match scoreSummary/result
+    opt Tournament fixed-end match completes
+        T->>Q: tournament hook after match change
+        Q->>F: Update fixture result, standings, bracket and read models
+    end
+    F-->>MS: Match score snapshot
+    MS->>UI: Render points, games, sets, server, fixed-total state and badges
 
     opt Public scoreboard or overlay
-        O->>A: GET /revision/{courtId}
-        A->>S: Read current score
+        O->>A: GET /revision/{courtId} or /revision/match/{matchId}
+        A->>F: Resolve court or match target
         A-->>O: Revision payload
 
-        O->>A: GET /score/{courtId}
-        A->>S: Read current score
-        A-->>O: Live score payload
-
-        O->>A: GET /stats or /momentum
-        A->>F: Replay active court history
-        A-->>O: Derived payload
+        O->>A: GET /score/{courtId} or /score/match/{matchId}
+        A->>F: Read match and current score
+        A-->>O: Live score payload with match context
     end
 
-    opt Changeover
-        UI->>K: changeoverCourt({courtId})
-        K->>F: Atomically toggle Beacon mapping + changeoverEvent
-        K-->>UI: Success + changeoverEventId
-        UI->>AS: Blind-toggle local Changeover state + local Swap views state
-        F-->>FL: Broadcast changeoverEvent to other clients
-        FL->>AS: Blind-toggle local Changeover state + local Swap views state
-        AS->>UI: Sync settings tiles, toast and clash cue
+    opt Tournament host operation
+        U->>UI: Generate round, assign court, correct result, complete tournament
+        UI->>Q: manageTournament with host/admin credentials
+        Q->>F: Transactional tournament/match/read-model writes
+        F-->>UI: Updated read model
     end
 
-    opt RESET
-        UI->>K: resetCourt
-        K->>F: Archive active events
-        K->>F: Delete active events + checkpoints
-        K->>F: Reset score/current and Beacon mapping
-        K->>F: Increment scoreVersion
+    opt Match move / reset / completion
+        UI->>K: manageMatch operation
+        K->>F: Transactional court + match writes
+        K->>F: Reset archives match events and increments scoreVersion when requested
     end
 
     Note over I,D: Current device identity is deviceId/binding. HMAC, freshness, replay protection and idempotency are production targets.
-    Note over K,F: Current callable handlers do not perform explicit request.auth checks.
-    Note over F,S: Events are authoritative. The current score is derived state.
+    Note over K,Q,F: Host keys are hashed; admin skeleton key is verified server-side. Legacy court/device rules remain development-open.
+    Note over F: Match events are authoritative. Current score and tournament views are derived state.

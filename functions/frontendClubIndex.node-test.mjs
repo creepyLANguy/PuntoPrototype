@@ -16,7 +16,7 @@ import {
 test("club documents are normalised to plain records", () => {
   assert.deepEqual(
     clubFromData("rvside", { name: "  Riverside  ", courtIds: ["abcd", 7], deviceIds: "x" }),
-    { id: "rvside", name: "Riverside", courtIds: ["abcd"], deviceIds: [] },
+    { id: "rvside", name: "Riverside", state: "maintenance", courtIds: ["abcd"], deviceIds: [] },
   );
   assert.equal(clubFromData("noname", {}).name, "noname", "a club without a name shows its id");
 });
@@ -40,6 +40,12 @@ test("the index maps courts and devices to their club and sorts clubs by name", 
   assert.equal(index.clubByDeviceId.get("HUB-1"), riverside);
   assert.equal(index.clubByCourtId.get("efgh"), undefined);
   assert.equal(EMPTY_CLUB_INDEX.clubByCourtId.size, 0);
+});
+
+test("legacy clubs default to maintenance state", () => {
+  assert.equal(clubFromData("legacy", {}).state, "maintenance");
+  assert.equal(clubFromData("open", { state: "open" }).state, "open");
+  assert.equal(clubFromData("closed", { state: "closed" }).state, "closed");
 });
 
 test("a member listed by two clubs resolves deterministically to the first by name", () => {

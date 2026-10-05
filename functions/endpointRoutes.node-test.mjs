@@ -59,8 +59,34 @@ test("court and play roots are available without a court id", () => {
 });
 
 test("legacy single-character endpoint routes are genuinely free", () => {
-  for (const source of ["/a/**", "/r/**", "/s/**", "/m/**", "/b", "/b/**", "/o", "/o/**"]) {
+  for (const source of ["/a/**", "/r/**", "/s/**", "/b", "/b/**", "/o", "/o/**"]) {
     assert.equal(findSource(source), null, `legacy route ${source} is still reserved`);
+  }
+});
+
+test("/m/** is reserved for durable match pages and /t/** for tournaments", () => {
+  assert.equal(findSource("/m")?.destination, "/app/match.html");
+  assert.equal(findSource("/m/**")?.destination, "/app/match.html");
+  assert.equal(findSource("/t")?.destination, "/app/tournament.html");
+  assert.equal(findSource("/t/**")?.destination, "/app/tournament.html");
+
+  // The match and tournament routes must win over the catch-all rewrite.
+  const index = (source) => rewrites.findIndex((rewrite) => rewrite.source === source);
+  assert.ok(index("/m/**") < index("**"));
+  assert.ok(index("/t/**") < index("**"));
+});
+
+test("public read endpoints also address durable matches", () => {
+  const expected = [
+    ["/score/match/:matchId", "getCourtScore"],
+    ["/revision/match/:matchId", "getCourtScoreRevision"],
+    ["/stats/match/:matchId", "getCourtStats"],
+    ["/momentum/match/:matchId", "getCourtMomentum"],
+  ];
+  for (const [source, functionId] of expected) {
+    const redirect = findRedirect(source);
+    assert.equal(redirect?.type, 307, source);
+    assert.equal(new URL(redirect.destination).pathname, `/${functionId}/match/:matchId`);
   }
 });
 

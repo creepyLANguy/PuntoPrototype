@@ -1,0 +1,18 @@
+/* Stylesheet manifest for app/css/events.css: the tournament (/t) and match
+ * (/m) pages. Concatenated in this order by scripts/build-frontend.mjs.
+ */
+
+/* Design tokens and page frame. */
+@import "base.css";
+/* Header, sections, buttons, inputs and status chips. */
+@import "components.css";
+/* Match / fixture cards and the live court board. */
+@import "fixtures.css";
+/* Standings tables, rounds and the bracket. */
+@import "standings.css";
+/* Host control room, roster and settings. */
+@import "host.css";
+/* Setup wizard and court picker. */
+@import "wizard.css";
+/* Match page. */
+@import "match.css";

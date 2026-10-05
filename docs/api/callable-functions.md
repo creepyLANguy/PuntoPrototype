@@ -1,12 +1,15 @@
 # Callable functions
 
-First-party Firebase callable functions run in africa-south1. They are used by the application for scoring/court administration operations and are separate from the public read-only HTTP API.
+First-party Firebase callable functions run in africa-south1. They are used by
+the application for scoring, match, tournament and administration operations
+and are separate from the public read-only HTTP API.
 
 ## Current functions
 
 ### resetCourt
 
-Archives the current event log, clears the live score/checkpoints and increments scoreVersion.
+Resolves the match currently on a court, archives that match's current event
+log, clears its live score/checkpoints and increments match scoreVersion.
 
 Request fields currently accepted include:
 
@@ -17,7 +20,8 @@ Request fields currently accepted include:
 - scoringMode — optional.
 - scoringOptions — optional.
 
-A reset also restores beaconSidesSwapped to false so the next scoring session starts with the default Beacon mapping.
+A reset also restores the court's beaconSidesSwapped value to false so the next
+scoring session starts with the default Beacon mapping.
 
 ### changeoverCourt
 
@@ -33,7 +37,9 @@ The function updates court configuration and writes a changeoverEvent marker. Th
 
 ### updateScoringOptions
 
-Persists scoring configuration and replays the active court event history under the new rules. Existing checkpoints are removed/rebuilt as required.
+Persists court-default scoring configuration and replays the current match on
+that court under the new rules. Existing match checkpoints are removed/rebuilt
+as required.
 
 Request: courtId, scoringOptions and scoringMode.
 
@@ -41,7 +47,99 @@ Request: courtId, scoringOptions and scoringMode.
 
 Request: { courtId }.
 
-Replays the active court event history and returns detailed match statistics for the scoreboard app.
+Resolves the match on the requested court, replays its event history and
+returns detailed match statistics for the scoreboard app.
+
+### manageMatch
+
+One callable exposes server-authoritative match operations. The request carries
+`operation`, operation fields and `credentials`.
+
+Implemented operations:
+
+- ensureCourtMatch
+- createMatch
+- startMatch
+- moveMatch
+- detachMatch
+- requeueMatch
+- completeMatch
+- cancelMatch
+- reopenMatch
+- resetMatch
+- renameMatch
+- updateMatchNames
+- courtControlCheck
+
+Tournament matches are authorised with the tournament host key or admin key.
+Casual matches are authorised with the court password or admin key.
+
+### manageTournament
+
+One callable exposes public tournament reads/setup helpers and host operations.
+The request carries `operation`, operation fields and, for protected operations,
+`credentials`.
+
+Public operations:
+
+- listFormats
+- previewTournament
+- getCourtOptions
+- getTournamentView
+- createTournament
+
+Host/admin operations:
+
+- verifyHost
+- updateTournament
+- publishTournament
+- unpublishTournament
+- startTournament
+- completeTournament
+- cancelTournament
+- addParticipants
+- updateParticipant
+- removeParticipant
+- withdrawParticipant
+- restoreParticipant
+- createTeam
+- updateTeam
+- removeTeam
+- withdrawTeam
+- restoreTeam
+- replaceTeamMember
+- generateRound
+- generateNextRound
+- startFixture
+- startRound
+- assignFixtureCourt
+- setFixtureSchedule
+- moveFixtureCourt
+- detachFixtureMatch
+- renameFixture
+- completeFixture
+- createFixtureMatch
+- correctTournamentResult
+- recalculateTournament
+
+createTournament returns the plaintext `hostKey` once and an `accessCode` for
+private tournaments. The server stores only hashes in
+`tournamentSecrets/{tournamentId}`.
+
+`generateRound` creates the full Americano/Team Americano forecast, rather than
+one round. Its `roundIds` response contains every generated round. Set
+`scheduling.targetRoundCount` to choose its length; otherwise a configured time
+window or one social cycle supplies the default. `expectedRoundNumber` retains
+its duplicate-request behaviour. Once the schedule exists, use
+`recalculateTournament` rather than `generateNextRound` for these formats.
+
+The host `recalculateTournament` operation transactionally rebuilds unstarted
+Americano/Team Americano rounds after the latest round containing a live,
+completed or scored match, using the current roster and court availability.
+Historical matches/results are preserved and the operation is audited. Internal
+read-model refreshes do not rebuild the schedule. Result-dependent formats
+retain result-gated generation; their read model includes `roundForecast` slots
+with pending pairings, not playable fixtures.
 
 ### createClub
 
@@ -92,11 +190,11 @@ These are not callable. When courts/{courtId} or devices/{deviceId} is deleted, 
 
 onEventCreate is not callable. It consumes:
 
-courts/{courtId}/events/{eventId}
+matches/{matchId}/events/{eventId}
 
 and maintains:
 
-courts/{courtId}/score/current
+matches/{matchId}/score/current
 
 Current invariants include:
 
@@ -104,18 +202,23 @@ Current invariants include:
 - events from an older scoreVersion are ignored;
 - late/out-of-order events trigger replay;
 - UNDO uses full-history replay where required;
-- RESET archives/deletes the active event stream and checkpoints and reinitializes score/current;
+- RESET archives/deletes the active match event stream and checkpoints and reinitializes score/current;
 - trigger retries are enabled.
 
 ## Current authorization status
 
-The current callable implementations do not perform explicit request.auth checks in the Firebase function layer.
+Server-authoritative match and tournament callables verify caller authority at
+the mutation boundary:
+
+- admin custom claim or `admin/goodies.skeletonKey` for admin operations;
+- tournament host key hash for tournament operations and tournament matches;
+- court password for casual match control.
 
 Therefore:
 
 - courtId is not proof of authorisation;
-- the current admin UI is not equivalent to a secure server-side RBAC system;
-- callable mutation access must be treated as a production-hardening item.
+- the current admin UI is not equivalent to a complete account/RBAC system;
+- legacy court/device development rules still require production hardening.
 
 See roles-and-responsibilities.md for the intended organisational boundaries.
 

@@ -5,6 +5,23 @@ check the claim it rests on: the application behaves exactly as before, while
 its source is organised by responsibility. The resulting architecture is
 documented in [frontend-architecture.md](frontend-architecture.md).
 
+## Current additions after the restructure
+
+The current frontend keeps the same build and structure guardrails but now has
+additional generated entry documents and feature layers:
+
+- `app/match.html` from `app/templates/match.template.html` for `/m/{matchId}`;
+- `app/tournament.html` from `app/templates/tournament.template.html` for
+  `/t`, `/t/new` and `/t/{tournamentId}`;
+- `app/css/events.css` from `app/css/events/index.css`;
+- `app/js/matchPage.js` and `app/js/tournamentPage.js` as entry modules;
+- `app/js/match/` and `app/js/tournament/` as feature layers;
+- behavioural coverage in `frontendMatchContext.node-test.mjs` and
+  `frontendTournament.node-test.mjs`.
+
+The historical notes below describe the original modular refactor and its
+baseline verification.
+
 ## Baseline
 
 Captured on the refactor starting point (`main` at `e10fc84`, Node 22.22.0)
@@ -119,8 +136,8 @@ On the final tree, Node 22.22.0:
 
 | Check | Result |
 | --- | --- |
-| `node scripts/build-frontend.mjs --check` | passed, all 3 generated files up to date |
-| `node scripts/check-frontend-structure.mjs` | passed, 78 modules, 0 warnings |
+| `node scripts/build-frontend.mjs --check` | passed, all 3 then-generated files up to date |
+| `node scripts/check-frontend-structure.mjs` | passed, 78 modules at the refactor point, 0 warnings |
 | `npm run lint:frontend --prefix functions` | 0 errors, 9 warnings (see below) |
 | `npm run lint --prefix functions` | passed |
 | `npm run format:check --prefix functions` | passed |

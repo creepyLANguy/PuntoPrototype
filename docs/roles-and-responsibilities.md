@@ -151,14 +151,15 @@ These are not substitutes for the organisational roles above.
 | Application/system role | Current state | Permissions/behaviour |
 |---|---|---|
 | Platform Admin | Implemented as a privileged app surface | Can access admin dashboard, court/device administration, NFC utility and Device Lab. Current security is application-level and not equivalent to enterprise IAM. |
-| Court user / Player | Implemented | Uses a court in play mode and can perform supported scoring actions. |
-| Spectator | Implemented | Read-only court experience; scoring controls are disabled/hidden. |
-| Broadcast consumer | Implemented as a technical client | Reads public score/revision/stats/momentum endpoints. |
+| Tournament Host | Implemented with host key | Creates and operates tournaments through `/t`; controls participants, teams, rounds, fixture scheduling, result correction and tournament completion. The server stores only a hash of the host key. |
+| Court user / Player | Implemented | Uses a court in play mode and can perform supported scoring actions on the live match assigned to that court. |
+| Spectator | Implemented | Read-only court, match or tournament experience; scoring controls are disabled/hidden. |
+| Broadcast consumer | Implemented as a technical client | Reads public score/revision/stats/momentum endpoints by court or by match. |
 | Hub | Implemented as firmware prototype | Scoring, undo/reset, SPECTATE, REGISTER, NFC parsing, Wi-Fi configuration and factory reset. |
 | Beacon | Implemented as firmware prototype | Distance-triggered point input with Team A/B selection and device-originated scoring events. |
 | Pulse | Implemented as firmware prototype | Button/tap scoring, hold-to-undo, local team switch and factory reset. |
 
-Important: there is currently no separate software role named Club Admin, Venue Manager, Referee or Support Agent. Those can be organisational responsibilities without being represented as first-class application roles.
+Important: there is currently no separate software role named Club Admin, Venue Manager, Referee or Support Agent. Those can be organisational responsibilities without being represented as first-class application roles. Tournament host access is key-based, not a full account/RBAC system.
 
 ## 4. Role authority boundaries
 
@@ -205,6 +206,7 @@ Legend: A = accountable; R = responsible; C = consulted; I = informed.
 | BP-10 Physical production/provisioning | A | C | C | C | C | R | I | I | C |
 | BP-11 Retirement/reassignment | I | I | C | C | C | A/R | C | I | I |
 | BP-12 Data/access/security | A | C | R | C | C | C | I | I | A/R |
+| BP-13 Tournament operation | I | C | C | I | C | C | A/R | I | I |
 
 For BP-02 and BP-08, the Quality & Release Lead should remain independent enough to stop a deployment/build when required evidence is absent. In a very small team this may be a combined role, but the approval step must still be explicit.
 

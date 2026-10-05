@@ -1,3 +1,5 @@
+import { CLUB_STATES } from "../config/constants.js";
+
 // Club lookups and search matching: which club a court or device belongs to,
 // and whether a court / device matches a search term through its club. Pure
 // functions over plain club records { id, name, courtIds, deviceIds }.
@@ -8,6 +10,9 @@ export function clubFromData(id, data = {})
   return {
     id,
     name: typeof data.name === "string" && data.name.trim() ? data.name.trim() : id,
+    state: Object.values(CLUB_STATES).includes(data.state)
+      ? data.state
+      : CLUB_STATES.MAINTENANCE,
     courtIds: ids(data.courtIds),
     deviceIds: ids(data.deviceIds)
   };
@@ -50,6 +55,11 @@ export const EMPTY_CLUB_INDEX = buildClubIndex([]);
 export function clubSummary(club)
 {
   return club ? { id: club.id, name: club.name } : null;
+}
+
+export function isClubOpen(club)
+{
+  return Boolean(club) && club.state === CLUB_STATES.OPEN;
 }
 
 export function normalizeSearchTerm(term)

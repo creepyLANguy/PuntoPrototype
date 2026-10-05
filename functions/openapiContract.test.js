@@ -154,21 +154,38 @@ function makeSeed(
   courtId,
   scoringOptions = DEFAULT_SCORING_OPTIONS,
   events = [],
-  courtOverrides = {},
+  matchOverrides = {},
 ) {
+  const matchId = matchOverrides.matchId || "m1";
   const score = replayEvents(events, scoringOptions);
   const seed = {
     [`courts/${courtId}`]: {
+      name: matchOverrides.courtName || "Court BN",
+      activeMatchId: matchId,
+      lastMatchId: matchId,
       scoringMode: scoringOptions.scoringMode,
       scoringOptions,
-      scoreVersion: 0,
-      ...courtOverrides,
     },
-    [`courts/${courtId}/score/current`]: toLiveScorePayload(score),
+    [`matches/${matchId}`]: {
+      matchId,
+      name: matchOverrides.name || null,
+      status: "live",
+      currentCourtId: courtId,
+      lastCourtId: courtId,
+      teamNames: matchOverrides.teamNames || { A: "Team A", B: "Team B" },
+      playerNames: matchOverrides.playerNames || { A1: "", A2: "", B1: "", B2: "" },
+      scoringOptions,
+      scoringMode: scoringOptions.scoringMode,
+      scoreVersion: 0,
+      tournamentId: null,
+      roundId: null,
+      fixtureId: null,
+    },
+    [`matches/${matchId}/score/current`]: toLiveScorePayload(score),
   };
 
   events.forEach((event) => {
-    seed[`courts/${courtId}/events/${event.id}`] = event;
+    seed[`matches/${matchId}/events/${event.id}`] = { ...event, matchId };
   });
 
   return seed;
@@ -176,9 +193,11 @@ function makeSeed(
 
 function resetEnvironment(seed) {
   mockDb = new FakeFirestore(seed);
-  scoreApiCache.clear("bnrm");
-  statsApiCache.clear("bnrm");
-  momentumApiCache.clear("bnrm");
+  ["court:bnrm", "match:m1", "match:namedmatch"].forEach((key) => {
+    scoreApiCache.clear(key);
+    statsApiCache.clear(key);
+    momentumApiCache.clear(key);
+  });
 }
 
 function makeResponse() {
@@ -373,9 +392,13 @@ describe("public API OpenAPI contract", () => {
   test("the OpenAPI document is valid and all local references resolve", () => {
     expect(contract.document.openapi).toBe("3.1.0");
     expect(contract.document.paths["/score/{courtId}"]).toBeDefined();
+    expect(contract.document.paths["/score/match/{matchId}"]).toBeDefined();
     expect(contract.document.paths["/revision/{courtId}"]).toBeDefined();
+    expect(contract.document.paths["/revision/match/{matchId}"]).toBeDefined();
     expect(contract.document.paths["/stats/{courtId}"]).toBeDefined();
+    expect(contract.document.paths["/stats/match/{matchId}"]).toBeDefined();
     expect(contract.document.paths["/momentum/{courtId}"]).toBeDefined();
+    expect(contract.document.paths["/momentum/match/{matchId}"]).toBeDefined();
   });
 
   test.each([
@@ -476,6 +499,22 @@ describe("public API OpenAPI contract", () => {
     await assertSuccessfulResponseMatchesContract(contract, "/score/{courtId}", response);
   });
 
+  test("validates the match-addressed score response and title fields", async () => {
+    resetEnvironment(
+      makeSeed("bnrm", DEFAULT_SCORING_OPTIONS, [], {
+        matchId: "namedmatch",
+        name: "Friday Final",
+      }),
+    );
+
+    const response = await invoke(getCourtScore, "/score/match/namedmatch");
+    await assertSuccessfulResponseMatchesContract(contract, "/score/match/{matchId}", response);
+
+    expect(response.payload.matchId).toBe("namedmatch");
+    expect(response.payload.title).toBe("Friday Final");
+    expect(response.payload.match.title).toBe("Friday Final");
+  });
+
   test("validates /revision and preserves the advertised score revision", async () => {
     const events = makeEvents(["A", "A", "A"]);
     resetEnvironment(
@@ -487,9 +526,18 @@ describe("public API OpenAPI contract", () => {
 
     const revision = await invoke(getCourtScoreRevision, "/revision/bnrm");
     await assertSuccessfulResponseMatchesContract(contract, "/revision/{courtId}", revision);
+    expect(revision.payload.matchId).toBe("m1");
 
     const score = await invoke(getCourtScore, "/score/bnrm");
     expect(score.payload.revision).toBe(revision.payload.revision);
+
+    const matchRevision = await invoke(getCourtScoreRevision, "/revision/match/m1");
+    await assertSuccessfulResponseMatchesContract(
+      contract,
+      "/revision/match/{matchId}",
+      matchRevision,
+    );
+    expect(matchRevision.payload.revision).toBe(revision.payload.revision);
   });
 
   test("validates /stats for zero-denominator statistics and populated match data", async () => {
@@ -501,6 +549,7 @@ describe("public API OpenAPI contract", () => {
 
     const emptyStats = await invoke(getCourtStats, "/stats/bnrm");
     await assertSuccessfulResponseMatchesContract(contract, "/stats/{courtId}", emptyStats);
+    expect(emptyStats.payload.matchId).toBe("m1");
 
     const events = makeEvents(["A", "A", "B", "A", "A"]);
     resetEnvironment(
@@ -512,6 +561,10 @@ describe("public API OpenAPI contract", () => {
     const populatedStats = await invoke(getCourtStats, "/stats/bnrm");
     await assertSuccessfulResponseMatchesContract(contract, "/stats/{courtId}", populatedStats);
     expect(populatedStats.payload.totalPoints).toBe(5);
+
+    const matchStats = await invoke(getCourtStats, "/stats/match/m1");
+    await assertSuccessfulResponseMatchesContract(contract, "/stats/match/{matchId}", matchStats);
+    expect(matchStats.payload.matchId).toBe("m1");
   });
 
   test("validates /momentum and preserves one-to-one marker alignment", async () => {
@@ -520,11 +573,20 @@ describe("public API OpenAPI contract", () => {
 
     const momentum = await invoke(getCourtMomentum, "/momentum/bnrm");
     await assertSuccessfulResponseMatchesContract(contract, "/momentum/{courtId}", momentum);
+    expect(momentum.payload.matchId).toBe("m1");
 
     expect(momentum.payload.pointHistory).toEqual(["A", "A", "B", "A", "A"]);
     expect(momentum.payload.momentumTimeline).toHaveLength(5);
     expect(momentum.payload.gameMarkers).toEqual([5]);
     expect(momentum.payload.setPointMarkers).toEqual([]);
+
+    const matchMomentum = await invoke(getCourtMomentum, "/momentum/match/m1");
+    await assertSuccessfulResponseMatchesContract(
+      contract,
+      "/momentum/match/{matchId}",
+      matchMomentum,
+    );
+    expect(matchMomentum.payload.matchId).toBe("m1");
   });
 
   test("rejects an implementation payload with an incompatible enum", async () => {

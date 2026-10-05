@@ -3,57 +3,78 @@
 // visibility and the spectator badge.
 import { playJoinSound } from "../audio/audio.js";
 import { DEFAULT_SCORING_OPTIONS } from "../config/constants.js";
-import { cancelCourtListenerReconnect, courtSubscription, listenToCourt, scheduleCourtListenerReconnect } from "./courtSync.js";
+import {
+  cancelCourtListenerReconnect,
+  courtSubscription,
+  listenToCourt,
+  scheduleCourtListenerReconnect,
+} from "./courtSync.js";
 import { setPlayPageVisible } from "./playJoin.js";
 import BRAND from "../brand.mjs";
-import { addCourtEvent, getCourt, getCourtScore } from "../firebase/courtRepository.js";
+import { getCourt } from "../firebase/courtRepository.js";
+import {
+  addMatchEvent,
+  getMatch,
+  getMatchScore,
+} from "../firebase/matchRepository.js";
+import { manageMatch } from "../firebase/callables.js";
+import {
+  applyMatchData,
+  refreshScoreboardTitle,
+  stopFollowingMatch,
+} from "./matchSync.js";
 import { releaseWakeLock, requestWakeLock } from "../lifecycle/wakeLock.js";
 import { clearCourtQr, renderCourtQr } from "../qr/courtQr.js";
 import { syncCurrentViewState } from "../routing/history.js";
-import { normalizeScoringOptions } from "../scoring/options.js";
-import { applyTeamNamesToScoreboard, fitTextToContainer, showCourtTitle, updatePageTitle, updateUI } from "../scoring/scoreboard.js";
-import { updateServerIndicator } from "../scoring/serverIndicator.js";
+import {
+  fitTextToContainer,
+  showCourtTitle,
+  updatePageTitle,
+  updateUI,
+} from "../scoring/scoreboard.js";
 import { syncScoringControls } from "../scoring/settings.js";
 import { appState } from "../state/appState.js";
 import { bumpCourtHistorySessionId } from "../state/navigationState.js";
-import { defaultScore, invalidateMatchDetailsCache, session } from "../state/sessionState.js";
+import {
+  clearMatchContext,
+  defaultScore,
+  invalidateMatchDetailsCache,
+  session,
+} from "../state/sessionState.js";
 import { themeState } from "../state/themeState.js";
-import { normalizePlayerNames } from "../teams/playerNames.js";
-import { normalizeTeamNames, resolveTeamNames } from "../teams/teamNames.js";
 import { closeAppearanceMenu } from "../ui/appearance.js";
 import { $, elements } from "../ui/dom.js";
-import { beginScoreboardLoading, finishScoreboardLoading } from "../ui/loading.js";
+import {
+  beginScoreboardLoading,
+  finishScoreboardLoading,
+} from "../ui/loading.js";
 import { syncSettingsTiles } from "../ui/settingsTiles.js";
 
-export async function enterCourt(courtId, spectate, { historyMode = "push", adminEntry = false } = {})
-{
+export async function enterCourt(
+  courtId,
+  spectate,
+  { historyMode = "push", adminEntry = false } = {},
+) {
   //console.log(`Entering court: ${courtId}, spectate: ${spectate}`);
   session.enteredCourtAsAdmin = Boolean(adminEntry) || appState.isAdmin;
   session.pendingLocalPasswordUpdate = null;
   bumpCourtHistorySessionId();
   invalidateMatchDetailsCache();
 
-  // Warm Firestore connection
-  await getCourtScore(courtId);
-  // Warm Firestore cloud functions
-  await addCourtEvent(
-    courtId,
-    {
-      eventType: "WARMUP",
-      createdBy: appState.thisDeviceId
-    }
-  );
-
   const snap = await getCourt(courtId);
-  if (!snap.exists())
-  {
-    const errorEl = spectate ? elements.spectateCourtNameError : elements.playCourtNameError;
+  if (!snap.exists()) {
+    const errorEl = spectate
+      ? elements.spectateCourtNameError
+      : elements.playCourtNameError;
     errorEl.textContent = "Court not found.";
     errorEl.style.display = "block";
-    const listContainer = spectate ? elements.spectateCourtList : elements.playCourtList;
-    const selectedItem = listContainer.querySelector(`[data-court-name="${courtId}"]`);
-    if (selectedItem)
-    {
+    const listContainer = spectate
+      ? elements.spectateCourtList
+      : elements.playCourtList;
+    const selectedItem = listContainer.querySelector(
+      `[data-court-name="${courtId}"]`,
+    );
+    if (selectedItem) {
       selectedItem.remove();
     }
     return;
@@ -64,27 +85,36 @@ export async function enterCourt(courtId, spectate, { historyMode = "push", admi
   session.currentCourtName = data.name || courtId;
   session.currentCourtPassword = data.password;
   session.currentCourtStatus = data.status;
-  session.currentScoreVersion = Number(data.scoreVersion) || 0;
   session.beaconSidesSwapped = data.beaconSidesSwapped === true;
 
-  session.currentRawTeamNames = normalizeTeamNames(data.teamNames || {});
-  session.currentPlayerNames = normalizePlayerNames(data.playerNames || {});
-  session.currentScoringOptions = normalizeScoringOptions({
-    ...(data.scoringOptions || {}),
-    scoringMode: data.scoringMode || data.scoringOptions?.scoringMode
-  });
-  applyTeamNamesToScoreboard(resolveTeamNames(session.currentRawTeamNames, session.currentPlayerNames));
-  updateServerIndicator();
+  // The scoreboard plays the match on this court; a court without a live
+  // match gets a casual one (the backend creates it atomically).
+  const matchId = await resolveCourtMatchId(courtId, data);
+  clearMatchContext();
+  session.currentScoreVersion = -1;
+  if (matchId) {
+    // Warm the Firestore connection and the scoring Cloud Function.
+    await getMatchScore(matchId);
+    await addMatchEvent(matchId, {
+      eventType: "WARMUP",
+      createdBy: appState.thisDeviceId,
+      courtId,
+    });
+    const matchSnap = await getMatch(matchId);
+    if (matchSnap.exists()) {
+      applyMatchData(matchId, matchSnap.data(), {
+        courtBeaconSidesSwapped: data.beaconSidesSwapped === true,
+      });
+    }
+  }
+  if (session.currentScoreVersion < 0) session.currentScoreVersion = 0;
   syncScoringControls();
   syncSettingsTiles();
-
-  if (appState.muted)
-  {
+  if (appState.muted) {
     elements.muteBtn.textContent = "♫⃠";
   }
 
-  if (themeState.isWavesEnabled == false)
-  {
+  if (themeState.isWavesEnabled == false) {
     elements.waveToggleScoreboardBtn.textContent = "═";
   }
 
@@ -94,17 +124,14 @@ export async function enterCourt(courtId, spectate, { historyMode = "push", admi
   elements.spectatePage.style.display = "none";
 
   // Hide top-right buttons in court view
-  if (elements.appearanceMenuBtn)
-  {
+  if (elements.appearanceMenuBtn) {
     closeAppearanceMenu();
     elements.appearanceMenuBtn.style.display = "none";
   }
-  if (elements.adminLoginBtn)
-  {
+  if (elements.adminLoginBtn) {
     elements.adminLoginBtn.style.display = "none";
   }
-  if (elements.activateNfcBtn)
-  {
+  if (elements.activateNfcBtn) {
     elements.activateNfcBtn.classList.add("hidden");
   }
 
@@ -123,26 +150,33 @@ export async function enterCourt(courtId, spectate, { historyMode = "push", admi
   if (spectate) enableSpectateMode();
   else disableSpectateMode();
 
-  listenToCourt(courtId).catch((err) =>
-  {
+  listenToCourt(courtId).catch((err) => {
     console.error("Court listener setup failed:", err);
     scheduleCourtListenerReconnect(courtId, session.activeCourtListenerToken);
   });
 
   requestWakeLock();
 
-  if (historyMode !== "skip")
-  {
+  if (historyMode !== "skip") {
     syncCurrentViewState(historyMode);
   }
 
   await playJoinSound();
 
-  updatePageTitle(session.currentCourtName, session.currentCourtId);
+  refreshScoreboardTitle();
 }
 
-export function leaveCourt(historyMode = "push")
-{
+async function resolveCourtMatchId(courtId, court) {
+  try {
+    const result = await manageMatch("ensureCourtMatch", { courtId });
+    if (result?.matchId) return result.matchId;
+  } catch (err) {
+    console.warn("Could not prepare a match for this court:", err);
+  }
+  return court.activeMatchId || court.lastMatchId || null;
+}
+
+export function leaveCourt(historyMode = "push") {
   //console.log("Leaving court: " + currentCourtId);
   session.activeCourtListenerToken++;
   cancelCourtListenerReconnect();
@@ -154,11 +188,12 @@ export function leaveCourt(historyMode = "push")
   disableSpectateMode();
   releaseWakeLock();
 
-  if (courtSubscription.unsubscribe)
-  {
+  if (courtSubscription.unsubscribe) {
     courtSubscription.unsubscribe();
     courtSubscription.unsubscribe = null;
   }
+  stopFollowingMatch();
+  clearMatchContext();
 
   session.currentCourtId = null;
   session.currentCourtName = null;
@@ -175,32 +210,27 @@ export function leaveCourt(historyMode = "push")
   if (elements.appearanceMenuBtn) elements.appearanceMenuBtn.style.display = "";
   if (elements.adminLoginBtn) elements.adminLoginBtn.style.display = "";
 
-  if (appState.nfcDenied && elements.activateNfcBtn)
-  {
+  if (appState.nfcDenied && elements.activateNfcBtn) {
     elements.activateNfcBtn.classList.remove("hidden");
   }
 
   elements.scoreboardPage.style.display = "none";
   elements.menuPage.style.display = "flex";
 
-  if (historyMode !== "skip")
-  {
+  if (historyMode !== "skip") {
     syncCurrentViewState(historyMode);
   }
 }
 
-function BlankOutScoreboard()
-{
+function BlankOutScoreboard() {
   showCourtTitle(BRAND.name + " - " + BRAND.app.title);
   const nameA = $("teamA").querySelector(".name-text");
   const nameB = $("teamB").querySelector(".name-text");
-  if (nameA)
-  {
+  if (nameA) {
     nameA.textContent = ".";
     fitTextToContainer(nameA);
   }
-  if (nameB)
-  {
+  if (nameB) {
     nameB.textContent = ".";
     fitTextToContainer(nameB);
   }
@@ -210,15 +240,17 @@ function BlankOutScoreboard()
   updateUI();
 }
 
-export function enableSpectateMode()
-{
+export function enableSpectateMode() {
   const wasPlaying = !session.isSpectating;
   session.isSpectating = true;
 
   document.body.classList.add("spectating-mode");
 
-  if (wasPlaying && elements.settingsModal && !elements.settingsModal.classList.contains("hidden"))
-  {
+  if (
+    wasPlaying &&
+    elements.settingsModal &&
+    !elements.settingsModal.classList.contains("hidden")
+  ) {
     elements.settingsModal.classList.add("hidden");
   }
 
@@ -233,9 +265,11 @@ export function enableSpectateMode()
 
   // Hide player-only tiles in the settings modal
   if (elements.editPlayersTile) elements.editPlayersTile.style.display = "none";
-  if (elements.resetSettingsTile) elements.resetSettingsTile.style.display = "none";
+  if (elements.resetSettingsTile)
+    elements.resetSettingsTile.style.display = "none";
   if (elements.changeoverTile) elements.changeoverTile.style.display = "none";
-  if (elements.switchToSpectateTile) elements.switchToSpectateTile.style.display = "none";
+  if (elements.switchToSpectateTile)
+    elements.switchToSpectateTile.style.display = "none";
 
   if (elements.joinCourtTile) elements.joinCourtTile.style.display = "";
 
@@ -243,8 +277,7 @@ export function enableSpectateMode()
   showSpectatorBadges();
 }
 
-function disableSpectateMode()
-{
+function disableSpectateMode() {
   session.isSpectating = false;
 
   document.body.classList.remove("spectating-mode");
@@ -263,7 +296,8 @@ function disableSpectateMode()
   if (elements.editPlayersTile) elements.editPlayersTile.style.display = "";
   if (elements.resetSettingsTile) elements.resetSettingsTile.style.display = "";
   if (elements.changeoverTile) elements.changeoverTile.style.display = "";
-  if (elements.switchToSpectateTile) elements.switchToSpectateTile.style.display = "";
+  if (elements.switchToSpectateTile)
+    elements.switchToSpectateTile.style.display = "";
 
   if (elements.joinCourtTile) elements.joinCourtTile.style.display = "none";
 
@@ -271,14 +305,13 @@ function disableSpectateMode()
   removeSpectatorBadges();
 }
 
-function showSpectatorBadges()
-{
-  const slot = document.querySelector(".header-spectator-badge-slot") || document.body;
+function showSpectatorBadges() {
+  const slot =
+    document.querySelector(".header-spectator-badge-slot") || document.body;
 
   let badge = document.getElementById(`spectatorBadge`);
 
-  if (!badge)
-  {
+  if (!badge) {
     badge = document.createElement("div");
     badge.id = `spectatorBadge`;
     badge.className = "spectator-badge";
@@ -287,8 +320,7 @@ function showSpectatorBadges()
   }
 }
 
-function removeSpectatorBadges()
-{
+function removeSpectatorBadges() {
   const badge = document.getElementById(`spectatorBadge`);
   if (badge) badge.remove();
 }

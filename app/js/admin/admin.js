@@ -3,23 +3,27 @@
 // the dashboard chrome; the club, court and device lists live in clubs.js /
 // courts.js / devices.js.
 import { refreshActiveAdminTab, showAdminTab } from "./dashboardTabs.js";
-import { ADMIN_LOGOUT_SIGNAL_KEY, ADMIN_SESSION_STORAGE_KEY } from "../config/constants.js";
+import {
+  ADMIN_LOGOUT_SIGNAL_KEY,
+  ADMIN_SESSION_STORAGE_KEY,
+} from "../config/constants.js";
 import { NAV_PAGES } from "../config/routes.js";
 import { getSkeleton } from "../firebase/adminRepository.js";
 import { stepBackInApp, syncCurrentViewState } from "../routing/history.js";
 import { isAdminProtectedViewVisible } from "../routing/viewController.js";
 import { createViewState } from "../routing/viewState.js";
-import { clearAdminSession, endAdminSession } from "../state/adminSessionState.js";
+import {
+  clearAdminSession,
+  endAdminSession,
+} from "../state/adminSessionState.js";
 import { appState } from "../state/appState.js";
+import { setAdminKey } from "../state/credentialsState.js";
 import { $, elements } from "../ui/dom.js";
 import { hideSpinner, showSpinner } from "../ui/loading.js";
 
-export function registerAdminPortal()
-{
-  elements.adminLoginBtn.addEventListener("click", () =>
-  {
-    if (appState.isAdmin)
-    {
+export function registerAdminPortal() {
+  elements.adminLoginBtn.addEventListener("click", () => {
+    if (appState.isAdmin) {
       elements.menuPage.style.display = "none";
       elements.adminDashboardPage.style.display = "flex";
       refreshActiveAdminTab();
@@ -35,16 +39,13 @@ export function registerAdminPortal()
     syncCurrentViewState();
   });
 
-  elements.closeAdminAuthBtn.addEventListener("click", () =>
-  {
+  elements.closeAdminAuthBtn.addEventListener("click", () => {
     void stepBackInApp(createViewState({ page: NAV_PAGES.MENU }));
   });
 
-  elements.submitAdminAuthBtn.addEventListener("click", async () =>
-  {
+  elements.submitAdminAuthBtn.addEventListener("click", async () => {
     const pass = elements.adminAuthPassword.value.trim();
-    if (!pass)
-    {
+    if (!pass) {
       elements.adminAuthError.textContent = "Admin password cannot be empty.";
       return;
     }
@@ -54,21 +55,18 @@ export function registerAdminPortal()
     let skeleton;
     try {
       skeleton = await getSkeleton();
-    }
-    catch (err) {
-      elements.adminAuthError.textContent = "Admin config error: " + err.message;
+    } catch (err) {
+      elements.adminAuthError.textContent =
+        "Admin config error: " + err.message;
       hideSpinner(elements.adminAuthPage);
       return;
     }
 
-    if (pass === skeleton)
-    {
-      try
-      {
+    if (pass === skeleton) {
+      try {
         sessionStorage.setItem(ADMIN_SESSION_STORAGE_KEY, "true");
-      }
-      catch (storageError)
-      {
+        setAdminKey(pass);
+      } catch (storageError) {
         console.warn("Unable to persist admin session state.", storageError);
       }
 
@@ -77,9 +75,7 @@ export function registerAdminPortal()
       elements.adminDashboardPage.style.display = "flex";
       refreshActiveAdminTab();
       syncCurrentViewState("replace");
-    }
-    else
-    {
+    } else {
       elements.adminAuthError.textContent = "Incorrect admin password.";
       elements.adminAuthPassword.value = "";
       elements.adminAuthPassword.focus();
@@ -88,59 +84,47 @@ export function registerAdminPortal()
     hideSpinner(elements.adminAuthPage);
   });
 
-  elements.closeAdminDashboardBtn.addEventListener("click", () =>
-  {
+  elements.closeAdminDashboardBtn.addEventListener("click", () => {
     endAdminSession();
     void stepBackInApp(createViewState({ page: NAV_PAGES.MENU }));
   });
 
-  window.addEventListener("storage", (event) =>
-  {
+  window.addEventListener("storage", (event) => {
     if (event.key !== ADMIN_LOGOUT_SIGNAL_KEY) return;
     if (!appState.isAdmin) return;
 
     clearAdminSession();
     appState.isAdmin = false;
 
-    if (isAdminProtectedViewVisible())
-    {
+    if (isAdminProtectedViewVisible()) {
       void stepBackInApp(createViewState({ page: NAV_PAGES.MENU }));
     }
   });
 
-  if (elements.nfcToolBtn)
-  {
-    elements.nfcToolBtn.addEventListener("click", () =>
-    {
+  if (elements.nfcToolBtn) {
+    elements.nfcToolBtn.addEventListener("click", () => {
       window.open("/nfc/index.html", "_blank");
     });
   }
 
   const deviceHarnessBtn = $("deviceHarnessBtn");
-  if (deviceHarnessBtn)
-  {
-    deviceHarnessBtn.addEventListener("click", () =>
-    {
+  if (deviceHarnessBtn) {
+    deviceHarnessBtn.addEventListener("click", () => {
       window.open("/harness", "_blank");
     });
   }
 
-  elements.adminAuthPage.addEventListener("click", (e) =>
-  {
-    if (e.target === elements.adminAuthPage)
-    {
+  elements.adminAuthPage.addEventListener("click", (e) => {
+    if (e.target === elements.adminAuthPage) {
       void stepBackInApp(createViewState({ page: NAV_PAGES.MENU }));
     }
   });
 }
 
-export function registerAdminTabs()
-{
+export function registerAdminTabs() {
   // Tab Switching Logic
-  elements.adminTabs.forEach(btn =>
-  {
-    btn.addEventListener('click', () =>
-    {
+  elements.adminTabs.forEach((btn) => {
+    btn.addEventListener("click", () => {
       showAdminTab(btn.dataset.tab);
     });
   });

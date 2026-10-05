@@ -1,0 +1,160 @@
+/* =======================================================
+   EVENTS PAGES: MATCH / FIXTURE CARDS
+======================================================= */
+
+.fx-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+}
+
+.fx-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px;
+  border: 1px solid var(--ev-border);
+  border-radius: 12px;
+  background: var(--ev-surface-2);
+  min-width: 0;
+}
+
+.fx-card.fx-live {
+  border-color: var(--ev-live);
+  box-shadow: inset 3px 0 0 var(--ev-live);
+}
+
+.fx-card.fx-ready {
+  box-shadow: inset 3px 0 0 var(--ev-ready);
+}
+
+.fx-card.fx-delayed {
+  box-shadow: inset 3px 0 0 var(--ev-warning);
+}
+
+.fx-card.is-compact {
+  padding: 10px;
+  gap: 6px;
+}
+
+.fx-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.fx-name {
+  font-weight: 800;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fx-meta {
+  color: var(--ev-muted);
+  font-size: 0.82rem;
+}
+
+.fx-sides {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.fx-side {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.fx-side-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fx-side.is-tbd .fx-side-name {
+  color: var(--ev-muted);
+  font-style: italic;
+}
+
+.fx-side.is-winner .fx-side-name {
+  font-weight: 800;
+}
+
+.fx-side-score {
+  font-family: var(--ev-display);
+  font-size: 1.6rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.fx-card.is-compact .fx-side-score {
+  font-size: 1.15rem;
+}
+
+.fx-detail {
+  color: var(--ev-muted);
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.fx-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.fx-link {
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.fx-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.fx-more,
+.fx-correct {
+  font-size: 0.85rem;
+}
+
+.fx-more summary,
+.fx-correct summary {
+  cursor: pointer;
+  color: var(--ev-muted);
+}
+
+.correction-form {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.correction-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.correction-row .ev-input-num {
+  max-width: 70px;
+}
+
+.sitting-out {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  color: var(--ev-muted);
+}

@@ -13,9 +13,10 @@ const {
   isEventAfterOrder,
 } = require("../domain/events/ordering");
 const { getLatestCheckpoint } = require("./checkpointService");
+const { paths } = require("./firestorePaths");
 
-function buildScoringEventsQuery(courtId, startAtCreatedAt = null) {
-  let query = db.collection(`courts/${courtId}/events`).orderBy("createdAt", "asc");
+function buildScoringEventsQuery(matchId, startAtCreatedAt = null) {
+  let query = db.collection(paths.matchEvents(matchId)).orderBy("createdAt", "asc");
 
   // Keep the Firestore query on a single indexed field. The deterministic
   // (createdAt, eventId) tie-break is applied in memory below, avoiding a
@@ -57,17 +58,17 @@ function collectApplicableScoringEvents(eventsSnap, targetScoreVersion, afterOrd
   return events;
 }
 
-async function replayScoreFromEvents(tx, courtId, options, useCheckpoint, activeScoreVersion = 0) {
+async function replayScoreFromEvents(tx, matchId, options, useCheckpoint, activeScoreVersion = 0) {
   const activeOptions = normalizeScoringOptions(options);
   const targetScoreVersion = normalizeScoreVersion(activeScoreVersion);
   let replayedScore = defaultScore(activeOptions);
-  let query = buildScoringEventsQuery(courtId);
+  let query = buildScoringEventsQuery(matchId);
   let checkpoint = null;
 
   if (useCheckpoint) {
-    checkpoint = await getLatestCheckpoint(tx, courtId, activeOptions);
+    checkpoint = await getLatestCheckpoint(tx, matchId, activeOptions, targetScoreVersion);
     if (checkpoint) {
-      query = buildScoringEventsQuery(courtId, checkpoint.data.lastCreatedAt);
+      query = buildScoringEventsQuery(matchId, checkpoint.data.lastCreatedAt);
     }
   }
 
@@ -92,7 +93,7 @@ async function replayScoreFromEvents(tx, courtId, options, useCheckpoint, active
   // in-memory history stack is complete.
   if (checkpoint && applicableEvents.some((event) => event.eventType === "UNDO")) {
     checkpoint = null;
-    const fullEventsSnap = await tx.get(buildScoringEventsQuery(courtId));
+    const fullEventsSnap = await tx.get(buildScoringEventsQuery(matchId));
     applicableEvents = collectApplicableScoringEvents(fullEventsSnap, targetScoreVersion);
   }
 
@@ -128,7 +129,7 @@ async function replayScoreFromEvents(tx, courtId, options, useCheckpoint, active
 
 async function replayScoreFromEventsExcluding(
   tx,
-  courtId,
+  matchId,
   options,
   excludedEventId,
   activeScoreVersion = 0,
@@ -142,7 +143,7 @@ async function replayScoreFromEventsExcluding(
   const activeOptions = normalizeScoringOptions(options);
   const targetScoreVersion = normalizeScoreVersion(activeScoreVersion);
   let replayedScore = defaultScore(activeOptions);
-  const query = buildScoringEventsQuery(courtId);
+  const query = buildScoringEventsQuery(matchId);
 
   const eventsSnap = await tx.get(query);
   const applicableEvents = collectApplicableScoringEvents(eventsSnap, targetScoreVersion).filter(

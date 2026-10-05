@@ -5,49 +5,52 @@ import { POINTS } from "../config/constants.js";
 import { resolveScoreDisplayOptions } from "./options.js";
 import { session } from "../state/sessionState.js";
 
-function usesNumericPoints()
-{
+function usesNumericPoints() {
   const options = resolveScoreDisplayOptions(session.score);
-  return options.scoringMode === "straight" ||
+  return (
+    options.scoringMode === "straight" ||
     options.scoringMode === "tiebreakTen" ||
-    session.score.inTiebreak;
+    options.scoringMode === "fixedTotalPoints" ||
+    session.score.inTiebreak
+  );
 }
 
-export function pointLabel(p)
-{
+export function pointLabel(p) {
   if (usesNumericPoints()) return p;
   return p === 4 ? "Ad" : (POINTS[p] ?? p);
 }
 
-function getCompletedMatchGames(currentScore)
-{
-  const completedSets = Array.isArray(currentScore.completedSets) ? currentScore.completedSets : [];
-  const completedGames = completedSets.reduce((sum, set) =>
-  {
+function getCompletedMatchGames(currentScore) {
+  const completedSets = Array.isArray(currentScore.completedSets)
+    ? currentScore.completedSets
+    : [];
+  const completedGames = completedSets.reduce((sum, set) => {
     const setA = Number(set.A) || 0;
     const setB = Number(set.B) || 0;
     return sum + setA + setB;
   }, 0);
 
-  return completedGames + (Number(currentScore.A.games) || 0) + (Number(currentScore.B.games) || 0);
+  return (
+    completedGames +
+    (Number(currentScore.A.games) || 0) +
+    (Number(currentScore.B.games) || 0)
+  );
 }
 
-function getGameServerLabel(totalCompletedGames)
-{
+function getGameServerLabel(totalCompletedGames) {
   const servingTeam = totalCompletedGames % 2 === 0 ? "A" : "B";
   const serviceRotationIndex = Math.floor(totalCompletedGames / 2);
   const playerNumber = serviceRotationIndex % 2 === 0 ? "1" : "2";
   return `${servingTeam}${playerNumber}`;
 }
 
-function getTiebreakServerLabel(currentScore)
-{
+function getTiebreakServerLabel(currentScore) {
   const totalCompletedGames = getCompletedMatchGames(currentScore);
   const startingServer = getGameServerLabel(totalCompletedGames);
-  const totalPoints = (Number(currentScore.A.points) || 0) + (Number(currentScore.B.points) || 0);
+  const totalPoints =
+    (Number(currentScore.A.points) || 0) + (Number(currentScore.B.points) || 0);
 
-  if (totalPoints === 0)
-  {
+  if (totalPoints === 0) {
     return startingServer;
   }
 
@@ -61,10 +64,24 @@ function getTiebreakServerLabel(currentScore)
   return `${servingTeam}${playerNumber}`;
 }
 
-export function getCurrentServerLabel(currentScore)
-{
-  if (!currentScore)
-  {
+// Fixed-total-points serving: the server of rally point i is
+// order[floor(i / serveBlockLength) % order.length] (spec section 8.4).
+function getFixedTotalServerLabel(currentScore, options) {
+  if (currentScore.matchComplete) return null;
+  const serving = options.serving || {};
+  if (serving.enabled === false) return null;
+  const order =
+    Array.isArray(serving.order) && serving.order.length
+      ? serving.order
+      : ["A1", "B1", "A2", "B2"];
+  const blockLength = Math.max(1, Number(serving.serveBlockLength) || 1);
+  const rallyPoints =
+    (Number(currentScore.A.points) || 0) + (Number(currentScore.B.points) || 0);
+  return order[Math.floor(rallyPoints / blockLength) % order.length];
+}
+
+export function getCurrentServerLabel(currentScore) {
+  if (!currentScore) {
     return null;
   }
 
@@ -73,38 +90,39 @@ export function getCurrentServerLabel(currentScore)
   // matchComplete only ends a match in tiebreakTen mode; every other mode
   // plays an open number of sets/points, so a stale flag must not hide the
   // server indicator there.
-  if (options.scoringMode === "tiebreakTen" && currentScore.matchComplete)
-  {
+  if (options.scoringMode === "tiebreakTen" && currentScore.matchComplete) {
     return null;
   }
 
-  if (options.scoringMode === "straight")
-  {
+  if (options.scoringMode === "straight") {
     return null;
+  }
+
+  if (options.scoringMode === "fixedTotalPoints") {
+    return getFixedTotalServerLabel(currentScore, options);
   }
 
   const totalCompletedGames = getCompletedMatchGames(currentScore);
-  const isStandardTiebreak = options.scoringMode === "standard" &&
-    (currentScore.inTiebreak || (currentScore.A.games === 6 && currentScore.B.games === 6));
+  const isStandardTiebreak =
+    options.scoringMode === "standard" &&
+    (currentScore.inTiebreak ||
+      (currentScore.A.games === 6 && currentScore.B.games === 6));
   const isMatchTiebreak = options.scoringMode === "tiebreakTen";
 
-  if (isStandardTiebreak || isMatchTiebreak)
-  {
+  if (isStandardTiebreak || isMatchTiebreak) {
     return getTiebreakServerLabel(currentScore);
   }
 
   return getGameServerLabel(totalCompletedGames);
 }
 
-export function getCriticalPointStatus(currentScore)
-{
+export function getCriticalPointStatus(currentScore) {
   const status = {
     A: null, // "Game", "Set", "Match", or null
-    B: null
+    B: null,
   };
 
-  if (!currentScore)
-  {
+  if (!currentScore) {
     return status;
   }
 
@@ -114,104 +132,84 @@ export function getCriticalPointStatus(currentScore)
 
   // matchComplete only ends a match in tiebreakTen mode; a stale flag in
   // any other mode must not suppress critical-point indicators.
-  if (options.scoringMode === "tiebreakTen" && currentScore.matchComplete)
-  {
+  if (options.scoringMode === "tiebreakTen" && currentScore.matchComplete) {
     return status;
   }
 
-  if (options.scoringMode === "straight")
-  {
+  if (
+    options.scoringMode === "straight" ||
+    options.scoringMode === "fixedTotalPoints"
+  ) {
     return status;
   }
 
   const teams = ["A", "B"];
 
-  for (const team of teams)
-  {
+  for (const team of teams) {
     const opponent = team === "A" ? "B" : "A";
 
-    if (options.scoringMode === "tiebreakTen")
-    {
+    if (options.scoringMode === "tiebreakTen") {
       const target = 10;
       const pts = currentScore[team].points;
       const oppPts = currentScore[opponent].points;
-      if (pts >= target - 1 && (pts - oppPts) >= 1)
-      {
+      if (pts >= target - 1 && pts - oppPts >= 1) {
         status[team] = "Match";
       }
       continue;
     }
 
     // Standard scoring mode
-    if (currentScore.inTiebreak || (currentScore.A.games === 6 && currentScore.B.games === 6))
-    {
+    if (
+      currentScore.inTiebreak ||
+      (currentScore.A.games === 6 && currentScore.B.games === 6)
+    ) {
       const target = options.tiebreakMode === "sixAllTen" ? 10 : 7;
       const pts = currentScore[team].points;
       const oppPts = currentScore[opponent].points;
 
-      if (pts >= target - 1 && (pts - oppPts) >= 1)
-      {
-        if (currentScore[team].sets === 1)
-        {
+      if (pts >= target - 1 && pts - oppPts >= 1) {
+        if (currentScore[team].sets === 1) {
           status[team] = "Match";
-        }
-        else
-        {
+        } else {
           status[team] = "Set";
         }
       }
-    }
-    else
-    {
+    } else {
       const pts = currentScore[team].points;
       const oppPts = currentScore[opponent].points;
       const gms = currentScore[team].games;
       const oppGms = currentScore[opponent].games;
 
       let winsGame = false;
-      if (pts === 3 && oppPts < 3)
-      {
+      if (pts === 3 && oppPts < 3) {
         winsGame = true;
-      }
-      else if (pts === 3 && oppPts === 3)
-      {
-        if (options.deuceMode === "golden" ||
+      } else if (pts === 3 && oppPts === 3) {
+        if (
+          options.deuceMode === "golden" ||
           (options.deuceMode === "silver" && currentScore.deuceCycles > 0) ||
-          (options.deuceMode === "star" && currentScore.deuceCycles >= 2))
-        {
+          (options.deuceMode === "star" && currentScore.deuceCycles >= 2)
+        ) {
           winsGame = true;
         }
-      }
-      else if (pts === 4)
-      {
+      } else if (pts === 4) {
         winsGame = true;
       }
 
-      if (winsGame)
-      {
+      if (winsGame) {
         let winsSet = false;
-        if (gms === 5 && oppGms <= 4)
-        {
+        if (gms === 5 && oppGms <= 4) {
           winsSet = true;
-        }
-        else if (gms === 6 && oppGms === 5)
-        {
+        } else if (gms === 6 && oppGms === 5) {
           winsSet = true;
         }
 
-        if (winsSet)
-        {
-          if (currentScore[team].sets === 1)
-          {
+        if (winsSet) {
+          if (currentScore[team].sets === 1) {
             status[team] = "Match";
-          }
-          else
-          {
+          } else {
             status[team] = "Set";
           }
-        }
-        else
-        {
+        } else {
           status[team] = "Game";
         }
       }

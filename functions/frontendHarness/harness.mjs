@@ -15,6 +15,7 @@ import {
   flushBackendWork,
   getBackendScore,
   callableHandlers,
+  resolveMatchIdForCourt,
 } from "./mockFirestoreState.mjs";
 
 register("./loaderHooks.mjs", import.meta.url);
@@ -212,31 +213,114 @@ export function seedBaseData() {
   seedDoc("admin/goodies", { skeletonKey: ADMIN_SKELETON_KEY });
 }
 
+const MATCH_FIELDS = ["teamNames", "playerNames", "scoringMode", "scoringOptions", "scoreVersion"];
+
+export function matchIdForCourt(courtId) {
+  return `m-${courtId}`;
+}
+
+// Seeds a court and the live casual match on it. Name, scoring and score
+// version overrides belong to the match (scoring is match-scoped); every
+// other override belongs to the court. Returns the merged view.
 export function seedCourt(courtId, overrides = {}) {
+  const matchId = overrides.activeMatchId || matchIdForCourt(courtId);
+  const scoringOptions = overrides.scoringOptions || {
+    scoringMode: overrides.scoringMode || "standard",
+    deuceMode: "standard",
+    tiebreakMode: "sixAllSeven",
+  };
+  const match = {
+    matchId,
+    name: overrides.matchName ?? null,
+    kind: overrides.tournamentId ? "tournament" : "casual",
+    visibility: "public",
+    status: "live",
+    currentCourtId: courtId,
+    lastCourtId: courtId,
+    teamNames: { A: "Team A", B: "Team B" },
+    playerNames: { A1: "", A2: "", B1: "", B2: "" },
+    scoringMode: scoringOptions.scoringMode,
+    scoringOptions,
+    scoreVersion: 0,
+    tournamentId: overrides.tournamentId ?? null,
+  };
   const court = {
     name: courtId,
     password: "pw",
     status: "open",
-    scoreVersion: 0,
     beaconSidesSwapped: false,
+    scoringMode: scoringOptions.scoringMode,
+    scoringOptions,
+    activeMatchId: matchId,
+    lastMatchId: matchId,
+  };
+  for (const [key, value] of Object.entries(overrides)) {
+    if (key === "matchName" || key === "tournamentId") continue;
+    if (MATCH_FIELDS.includes(key)) match[key] = value;
+    if (!MATCH_FIELDS.includes(key) || key === "scoringMode" || key === "scoringOptions") {
+      court[key] = value;
+    }
+  }
+  seedDoc(`courts/${courtId}`, court);
+  seedDoc(`matches/${matchId}`, match);
+  return { ...court, ...match, matchId };
+}
+
+export function pushScoreSnapshot(courtOrMatchId, score) {
+  writeDoc(`matches/${resolveMatchIdForCourt(courtOrMatchId)}/score/current`, score);
+}
+
+// Default backend for the manageMatch callable: ensureCourtMatch returns the
+// live match on the court or creates a casual one, like the Cloud Function.
+let createdMatchCounter = 0;
+callableHandlers.set("manageMatch", async ({ operation, courtId }) => {
+  if (operation !== "ensureCourtMatch") {
+    throw new Error(`No mock for manageMatch operation '${operation}'`);
+  }
+  const court = firestoreState.docs.get(`courts/${courtId}`);
+  if (!court) throw new Error("Court not found");
+  const active = court.activeMatchId
+    ? firestoreState.docs.get(`matches/${court.activeMatchId}`)
+    : null;
+  if (
+    active &&
+    (active.status || "live") === "live" &&
+    (active.currentCourtId || courtId) === courtId
+  ) {
+    return {
+      data: {
+        success: true,
+        matchId: court.activeMatchId,
+        scoreVersion: Number(active.scoreVersion) || 0,
+        created: false,
+      },
+    };
+  }
+  createdMatchCounter += 1;
+  const matchId = `m-${courtId}-${createdMatchCounter}`;
+  const scoringOptions = court.scoringOptions || {
     scoringMode: "standard",
-    scoringOptions: {
-      scoringMode: "standard",
-      deuceMode: "standard",
-      tiebreakMode: "sixAllSeven",
-    },
+    deuceMode: "standard",
+    tiebreakMode: "sixAllSeven",
+  };
+  writeDoc(`matches/${matchId}`, {
+    matchId,
+    name: null,
+    kind: "casual",
+    visibility: "public",
+    status: "live",
+    currentCourtId: courtId,
+    lastCourtId: courtId,
     teamNames: { A: "Team A", B: "Team B" },
     playerNames: { A1: "", A2: "", B1: "", B2: "" },
-    ...overrides,
-  };
-  seedDoc(`courts/${courtId}`, court);
-  return court;
-}
-
-export function pushScoreSnapshot(courtId, score) {
-  writeDoc(`courts/${courtId}/score/current`, score);
-}
-
+    scoringMode: scoringOptions.scoringMode,
+    scoringOptions,
+    scoreVersion: 0,
+    tournamentId: null,
+  });
+  writeDoc(`courts/${courtId}`, { ...court, activeMatchId: matchId, lastMatchId: matchId });
+  return { data: { success: true, matchId, scoreVersion: 0, created: true } };
+});
 export function makeScore(overrides = {}) {
   return {
     A: { points: 0, games: 0, sets: 0, totalPoints: 0 },
@@ -292,6 +376,7 @@ export function getRenderedScore(document) {
 }
 
 export {
+  resolveMatchIdForCourt,
   firestoreState,
   resetFirestoreState,
   seedDoc,
