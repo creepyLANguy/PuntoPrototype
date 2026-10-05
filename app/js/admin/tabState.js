@@ -22,7 +22,7 @@ export function getActiveAdminTab() {
   const active = [...elements.adminTabs].find((button) =>
     button.classList.contains("active"),
   );
-  return active?.dataset.tab || ADMIN_TABS.TOURNAMENTS;
+  return active?.dataset.tab || ADMIN_TABS.COURTS;
 }
 
 export function activateAdminTab(tab) {
