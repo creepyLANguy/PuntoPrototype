@@ -29,6 +29,9 @@ function bindFilters() {
     "change",
     () => void loadAdminMatches(),
   );
+  elements.showAddMatchBtn?.addEventListener("click", openCreateMatchPanel);
+  elements.cancelAddMatchBtn?.addEventListener("click", closeCreateMatchPanel);
+  elements.saveAddMatchBtn?.addEventListener("click", () => void createAdminMatch());
 }
 
 export async function loadAdminMatches() {
@@ -58,11 +61,81 @@ export async function loadAdminMatches() {
           : null,
       };
     });
+    populateCreateMatchCourts();
     renderAdminMatches();
   } catch (error) {
     console.error("Error loading matches:", error);
     elements.adminMatchList.innerHTML =
       '<div class="error">Error loading matches.</div>';
+  }
+}
+
+function populateCreateMatchCourts() {
+  const select = elements.adminMatchCourt;
+  if (!select) return;
+
+  const current = select.value;
+  select.innerHTML = "";
+  const empty = document.createElement("option");
+  empty.value = "";
+  empty.textContent = "No court — leave scheduled";
+  select.appendChild(empty);
+
+  adminCourts.forEach((court) => {
+    const option = document.createElement("option");
+    option.value = court.courtId;
+    option.textContent = `${court.name || court.courtId}${court.status === "closed" ? " (closed)" : ""}`;
+    select.appendChild(option);
+  });
+
+  if (current && adminCourts.some((court) => court.courtId === current)) {
+    select.value = current;
+  }
+}
+
+function openCreateMatchPanel() {
+  elements.adminMatchCreatePanel?.classList.remove("hidden");
+  populateCreateMatchCourts();
+  elements.adminMatchName?.focus();
+}
+
+function closeCreateMatchPanel() {
+  elements.adminMatchCreatePanel?.classList.add("hidden");
+}
+
+async function createAdminMatch() {
+  const name = elements.adminMatchName?.value.trim() || null;
+  const teamA = elements.adminMatchTeamA?.value.trim() || "Team A";
+  const teamB = elements.adminMatchTeamB?.value.trim() || "Team B";
+  const courtId = elements.adminMatchCourt?.value || null;
+
+  if (elements.saveAddMatchBtn) elements.saveAddMatchBtn.disabled = true;
+
+  try {
+    await manageMatch(
+      "createMatch",
+      {
+        name,
+        teamNames: { A: teamA, B: teamB },
+        courtId,
+        visibility: "public",
+      },
+      getCourtCredentials(),
+    );
+
+    closeCreateMatchPanel();
+    if (elements.adminMatchName) elements.adminMatchName.value = "";
+    if (elements.adminMatchTeamA) elements.adminMatchTeamA.value = "";
+    if (elements.adminMatchTeamB) elements.adminMatchTeamB.value = "";
+    if (elements.adminMatchStatusFilter) {
+      elements.adminMatchStatusFilter.value = courtId ? "live" : "scheduled";
+    }
+    showToast("Match created.", TOAST_TYPES.SUCCESS);
+    await loadAdminMatches();
+  } catch (error) {
+    showToast(error.message || "That did not work.", TOAST_TYPES.ERROR);
+  } finally {
+    if (elements.saveAddMatchBtn) elements.saveAddMatchBtn.disabled = false;
   }
 }
 
