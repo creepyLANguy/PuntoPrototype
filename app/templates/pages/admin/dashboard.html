@@ -5,20 +5,27 @@
           <button id="closeAdminDashboardBtn" class="close-btn">✕</button>
           <h2>Admin Dashboard</h2>
           <div class="header-actions">
-            <button id="showCreateClubBtn" class="primary-btn">Add Club</button>
-            <button id="showCreateCourtModalBtn" class="primary-btn">Add Court</button>
-            <button id="showAddDeviceModalBtn" class="primary-btn">Add Device</button>
             <button id="nfcToolBtn" class="primary-btn">NFC Tool</button>
             <button id="deviceHarnessBtn" class="primary-btn">Device Lab</button>
           </div>
         </div>
 
         <div class="admin-tabs">
+          <button class="tab-btn active" data-tab="tournaments">Tournaments</button>
           <button class="tab-btn" data-tab="clubs">Clubs</button>
-          <button class="tab-btn active" data-tab="courts">Courts</button>
+          <button class="tab-btn" data-tab="courts">Courts</button>
           <button class="tab-btn" data-tab="matches">Matches</button>
-          <button class="tab-btn" data-tab="tournaments">Tournaments</button>
           <button class="tab-btn" data-tab="devices">Devices</button>
+        </div>
+
+        <div id="tournamentsTab" class="tab-content active">
+          <div class="admin-dashboard-controls">
+            <div class="search-wrapper">
+              <input type="text" id="adminTournamentSearch" placeholder="Search tournament, club or ID..." />
+            </div>
+            <a id="showCreateTournamentBtn" class="primary-btn" href="/t/new">Add Tournament</a>
+          </div>
+          <div id="adminTournamentList" class="admin-court-list"></div>
         </div>
 
         <div id="clubsTab" class="tab-content">
@@ -26,11 +33,12 @@
             <div class="search-wrapper">
               <input type="text" id="adminClubSearch" placeholder="Search club name or ID..." />
             </div>
+            <button id="showCreateClubBtn" class="primary-btn">Add Club</button>
           </div>
           <div id="adminClubList" class="admin-court-list"></div>
         </div>
 
-        <div id="courtsTab" class="tab-content active">
+        <div id="courtsTab" class="tab-content">
           <div class="admin-dashboard-controls">
             <div class="search-wrapper">
               <input type="text" id="adminCourtSearch" placeholder="Search courts or clubs..." />
@@ -43,6 +51,7 @@
                 <option value="private">🔵 Private</option>
               </select>
             </div>
+            <button id="showCreateCourtModalBtn" class="primary-btn">Add Court</button>
           </div>
           <div id="adminCourtList" class="admin-court-list"></div>
         </div>
@@ -60,15 +69,35 @@
                 <option value="cancelled">Cancelled</option>
               </select>
             </div>
+            <button id="showAddMatchBtn" class="primary-btn">Add Match</button>
           </div>
-          <div id="adminMatchList" class="admin-court-list"></div>
-        </div>
 
-        <div id="tournamentsTab" class="tab-content">
-          <div class="admin-dashboard-controls">
-            <a id="showCreateTournamentBtn" class="primary-btn" href="/t/new">New Tournament</a>
+          <div id="adminMatchCreatePanel" class="admin-match-create-panel hidden" aria-label="Add match">
+            <div class="admin-match-create-grid">
+              <label>
+                <span>Match name</span>
+                <input id="adminMatchName" type="text" maxlength="80" placeholder="Optional match name" />
+              </label>
+              <label>
+                <span>Court</span>
+                <select id="adminMatchCourt"></select>
+              </label>
+              <label>
+                <span>Team A</span>
+                <input id="adminMatchTeamA" type="text" maxlength="40" placeholder="Team A" />
+              </label>
+              <label>
+                <span>Team B</span>
+                <input id="adminMatchTeamB" type="text" maxlength="40" placeholder="Team B" />
+              </label>
+            </div>
+            <div class="admin-match-create-actions">
+              <button id="cancelAddMatchBtn" class="edit-btn" type="button">Cancel</button>
+              <button id="saveAddMatchBtn" class="primary-btn" type="button">Add Match</button>
+            </div>
           </div>
-          <div id="adminTournamentList" class="admin-court-list"></div>
+
+          <div id="adminMatchList" class="admin-court-list"></div>
         </div>
 
         <div id="devicesTab" class="tab-content">
@@ -76,6 +105,7 @@
             <div class="search-wrapper">
               <input type="text" id="adminDeviceSearch" placeholder="Search device, court or club..." />
             </div>
+            <button id="showAddDeviceModalBtn" class="primary-btn">Add Device</button>
           </div>
           <div id="adminDeviceList" class="admin-court-list">
           </div>
