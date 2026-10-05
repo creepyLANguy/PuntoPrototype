@@ -24,14 +24,20 @@ async function resolveScorableMatch() {
     };
   }
 
-  const result = await manageMatch("ensureCourtMatch", {
-    courtId: session.currentCourtId,
-  });
+  const courtId = session.currentCourtId;
+  const listenerToken = session.activeCourtListenerToken;
+  const result = await manageMatch("ensureCourtMatch", { courtId });
+  if (
+    session.currentCourtId !== courtId ||
+    session.activeCourtListenerToken !== listenerToken
+  ) {
+    throw new Error("The open court changed before the point could be saved.");
+  }
   if (!result?.matchId) throw new Error("No match is available on this court.");
   const scoreVersion = Number(result.scoreVersion) || 0;
   session.currentMatchId = result.matchId;
   session.currentMatchStatus = "live";
-  session.currentMatchCourtId = session.currentCourtId;
+  session.currentMatchCourtId = courtId;
   session.currentScoreVersion = scoreVersion;
   return { matchId: result.matchId, scoreVersion };
 }
