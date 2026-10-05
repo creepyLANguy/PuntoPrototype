@@ -84,14 +84,13 @@ export function createClub({
 export function updateClub({
   clubId,
   name,
-  state = "maintenance",
+  state,
   courtIds = [],
   deviceIds = [],
 }) {
-  return httpsCallable(
-    functions,
-    "updateClub",
-  )({ clubId, name, state, courtIds, deviceIds });
+  const payload = { clubId, name, courtIds, deviceIds };
+  if (state !== undefined) payload.state = state;
+  return httpsCallable(functions, "updateClub")(payload);
 }
 
 export function deleteClub(clubId) {
