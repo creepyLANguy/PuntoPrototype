@@ -68,7 +68,9 @@ async function loadAllActiveCourts(includePrivateCourts = true) {
     appState.allCourts = [];
     snapshot.forEach((doc) => {
       const data = doc.data();
-      const club = data.clubId ? clubIndex.byId.get(data.clubId) : null;
+      const club = data.clubId
+        ? clubIndex.byId.get(data.clubId)
+        : clubIndex.clubByCourtId.get(doc.id);
       const clubAllowed = !data.clubId ? true : isClubOpen(club);
       if (
         clubAllowed &&
