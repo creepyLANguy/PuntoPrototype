@@ -53,7 +53,9 @@ function start() {
         state.court = null;
         if (courtId) {
           const courtSnap = await getCourt(courtId).catch(() => null);
-          state.court = courtSnap?.exists() ? courtSnap.data() : null;
+          if (state.courtId === courtId) {
+            state.court = courtSnap?.exists() ? courtSnap.data() : null;
+          }
         }
       }
       if (state.match.tournamentId && !state.tournamentLoaded) {
