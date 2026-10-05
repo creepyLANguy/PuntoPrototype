@@ -287,7 +287,14 @@ callableHandlers.set("manageMatch", async ({ operation, courtId }) => {
     (active.status || "live") === "live" &&
     (active.currentCourtId || courtId) === courtId
   ) {
-    return { data: { success: true, matchId: court.activeMatchId, created: false } };
+    return {
+      data: {
+        success: true,
+        matchId: court.activeMatchId,
+        scoreVersion: Number(active.scoreVersion) || 0,
+        created: false,
+      },
+    };
   }
   createdMatchCounter += 1;
   const matchId = `m-${courtId}-${createdMatchCounter}`;
@@ -312,7 +319,7 @@ callableHandlers.set("manageMatch", async ({ operation, courtId }) => {
     tournamentId: null,
   });
   writeDoc(`courts/${courtId}`, { ...court, activeMatchId: matchId, lastMatchId: matchId });
-  return { data: { success: true, matchId, created: true } };
+  return { data: { success: true, matchId, scoreVersion: 0, created: true } };
 });
 export function makeScore(overrides = {}) {
   return {

@@ -15,6 +15,7 @@ import {
   waitFor,
   writeDoc,
 } from "./frontendHarness/harness.mjs";
+import { session } from "../app/js/state/sessionState.js";
 
 let document;
 let window;
@@ -121,6 +122,26 @@ test("points are written to the current match events with court context", async 
     [...firestoreState.docs.keys()].some((path) => path.startsWith("courts/ctxcourt/events/")),
     false,
     eventPath,
+  );
+});
+
+test("a resolved live match supplies its current score version before the listener catches up", async () => {
+  const matchPath = "matches/m-ctxcourt";
+  seedDoc(matchPath, { ...firestoreState.docs.get(matchPath), scoreVersion: 7 });
+  session.currentMatchStatus = "completed";
+  session.currentScoreVersion = 0;
+
+  $("addPointA").click();
+
+  await waitFor(
+    () =>
+      [...firestoreState.docs.entries()].some(
+        ([path, event]) =>
+          path.startsWith(`${matchPath}/events/`) &&
+          event.eventType === "POINT_TEAM_A" &&
+          event.scoreVersion === 7,
+      ),
+    { label: "point with authoritative score version" },
   );
 });
 

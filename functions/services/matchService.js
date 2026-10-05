@@ -213,7 +213,11 @@ async function ensureCourtMatch({ courtId, actor = null }) {
       const activeSnap = await tx.get(matchRef(court.activeMatchId));
       const active = activeSnap.exists ? activeSnap.data() : null;
       if (active && active.status === "live" && active.currentCourtId === courtId) {
-        return { matchId: court.activeMatchId, created: false };
+        return {
+          matchId: court.activeMatchId,
+          scoreVersion: normalizeScoreVersion(active.scoreVersion),
+          created: false,
+        };
       }
     }
 
@@ -232,7 +236,11 @@ async function ensureCourtMatch({ courtId, actor = null }) {
       actor,
       afterSummary: { status: "live", kind: "casual" },
     });
-    return { matchId: prepared.matchId, created: true };
+    return {
+      matchId: prepared.matchId,
+      scoreVersion: normalizeScoreVersion(prepared.match.scoreVersion),
+      created: true,
+    };
   });
 }
 

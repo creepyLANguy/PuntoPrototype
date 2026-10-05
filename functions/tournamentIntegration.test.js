@@ -100,6 +100,8 @@ describe("match foundation", () => {
     const second = await match("ensureCourtMatch", { courtId: "c1" });
     expect(first.created).toBe(true);
     expect(second.matchId).toBe(first.matchId);
+    expect(first.scoreVersion).toBe(0);
+    expect(second.scoreVersion).toBe(0);
     expect(mockDb.get("courts/c1").activeMatchId).toBe(first.matchId);
     const matchDoc = mockDb.get(`matches/${first.matchId}`);
     expect(matchDoc).toMatchObject({ status: "live", currentCourtId: "c1", kind: "casual" });
@@ -127,6 +129,7 @@ describe("match foundation", () => {
     expect(mockDb.get(`matches/${matchId}/score/current`).A.points).toBe(0);
     expect(mockDb.list(`matches/${matchId}/events`)).toHaveLength(0);
     expect(mockDb.get("courts/c1").activeMatchId).toBe(matchId);
+    expect((await match("ensureCourtMatch", { courtId: "c1" })).scoreVersion).toBe(1);
   });
 
   test("a court has at most one live match and moves are atomic", async () => {

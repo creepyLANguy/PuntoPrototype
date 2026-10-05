@@ -12,24 +12,28 @@ import { showToast } from "../ui/toast.js";
 // Points go to the live match on this court. When the match shown has
 // finished (for example a tournament match that completed and freed the
 // court), the next point starts a new casual match on the court.
-async function resolveScorableMatchId() {
+async function resolveScorableMatch() {
   const matchIsOnCourt =
     session.currentMatchId &&
     session.currentMatchStatus === "live" &&
     session.currentMatchCourtId === session.currentCourtId;
-  if (matchIsOnCourt) return session.currentMatchId;
+  if (matchIsOnCourt) {
+    return {
+      matchId: session.currentMatchId,
+      scoreVersion: Number(session.currentScoreVersion) || 0,
+    };
+  }
 
   const result = await manageMatch("ensureCourtMatch", {
     courtId: session.currentCourtId,
   });
   if (!result?.matchId) throw new Error("No match is available on this court.");
-  if (result.matchId !== session.currentMatchId) {
-    session.currentMatchId = result.matchId;
-    session.currentMatchStatus = "live";
-    session.currentMatchCourtId = session.currentCourtId;
-    session.currentScoreVersion = 0;
-  }
-  return result.matchId;
+  const scoreVersion = Number(result.scoreVersion) || 0;
+  session.currentMatchId = result.matchId;
+  session.currentMatchStatus = "live";
+  session.currentMatchCourtId = session.currentCourtId;
+  session.currentScoreVersion = scoreVersion;
+  return { matchId: result.matchId, scoreVersion };
 }
 
 export async function addPoint(addpointevent) {
@@ -39,12 +43,12 @@ export async function addPoint(addpointevent) {
   playSound(SOUND_IDS.POINT);
 
   try {
-    const matchId = await resolveScorableMatchId();
+    const { matchId, scoreVersion } = await resolveScorableMatch();
     await addMatchEvent(matchId, {
       eventType: addpointevent,
       createdBy: appState.thisDeviceId,
       courtId: session.currentCourtId,
-      scoreVersion: Number(session.currentScoreVersion) || 0,
+      scoreVersion,
     });
   } catch (err) {
     console.error("Add point failed:", err);
