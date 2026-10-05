@@ -15,6 +15,13 @@ const CLUB_ID_LENGTH = 6;
 // easy to read out and type into a search box.
 const CLUB_ID_ALPHABET = "abcdefghjkmnpqrstuxyz";
 
+const CLUB_STATES = Object.freeze({
+  OPEN: "open",
+  MAINTENANCE: "maintenance",
+  CLOSED: "closed",
+});
+const DEFAULT_CLUB_STATE = CLUB_STATES.MAINTENANCE;
+
 const MEMBER_KINDS = {
   courts: { collection: "courts", listField: "courtIds", label: "court", max: MAX_CLUB_COURTS },
   devices: {
@@ -39,7 +46,9 @@ const invalid = (message) => new ClubError("invalid-argument", message);
 
 function normalizeClubState(state) {
   if (state === undefined || state === null || state === "") return DEFAULT_CLUB_STATE;
-  if (typeof state !== "string") throw invalid("Club state must be one of: open, maintenance, closed.");
+  if (typeof state !== "string") {
+    throw invalid("Club state must be one of: open, maintenance, closed.");
+  }
 
   const normalized = state.trim().toLowerCase();
   if (!Object.values(CLUB_STATES).includes(normalized)) {
