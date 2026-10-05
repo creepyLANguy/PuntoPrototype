@@ -73,8 +73,18 @@ test.before(async () => {
   seedCourt("jkmn", { name: "Gamma Court" });
   seedCourt("pqrs", { name: "Delta Court", status: "private" });
   seedCourt("stux", { name: "Closed Court", status: "closed" });
-  seedDoc("clubs/rvside", { name: "Riverside Padel", courtIds: ["abcd"], deviceIds: [] });
-  seedDoc("clubs/hiltop", { name: "Hilltop Club", courtIds: ["jkmn", "pqrs"], deviceIds: [] });
+  seedDoc("clubs/rvside", {
+    name: "Riverside Padel",
+    state: "open",
+    courtIds: ["abcd"],
+    deviceIds: [],
+  });
+  seedDoc("clubs/hiltop", {
+    name: "Hilltop Club",
+    state: "open",
+    courtIds: ["jkmn", "pqrs"],
+    deviceIds: [],
+  });
 
   const dom = await bootFrontend();
   window = dom.window;
@@ -205,6 +215,27 @@ test("lists still load, without club names, when clubs cannot be read", async ()
   }
 
   await closeList("closeSpectateBtn");
+});
+
+test("courts belonging to maintenance or closed clubs stay out of user lists", async () => {
+  firestoreState.docs.set("clubs/closedc", {
+    name: "Closed Club",
+    state: "closed",
+    courtIds: ["cclos"],
+    deviceIds: [],
+  });
+  firestoreState.docs.set("clubs/maintc", {
+    name: "Maintenance Club",
+    state: "maintenance",
+    courtIds: ["cmaint"],
+    deviceIds: [],
+  });
+  seedCourt("cclos", { name: "Closed Club Court", status: "open", clubId: "closedc" });
+  seedCourt("cmaint", { name: "Maintenance Court", status: "open", clubId: "maintc" });
+
+  await loadCourtsWithInlineLoader(document.getElementById("playCourtList"), true);
+  const names = [...document.querySelectorAll("#playCourtList .court-item")].map((el) => el.textContent);
+  assert.equal(names.some((text) => /Closed Club Court|Maintenance Court/.test(text)), false);
 });
 
 test("the club column is hidden when no court belongs to a club", async () => {
