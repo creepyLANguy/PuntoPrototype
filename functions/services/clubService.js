@@ -255,22 +255,23 @@ async function saveClubInTransaction(tx, { clubId, isNew, name, state, courtIds,
   const otherClubIds = new Set(
     Object.values(plans).flatMap((plan) => [...plan.removeFromClubs.keys()]),
   );
-  const closureEffects = await readClosedClubEffects(tx, {
-    clubId,
-    previousState,
-    nextState,
-    courtIds,
-  });
-  const cancelledTournamentIds = applyClosedClubEffects(tx, closureEffects, {
-    clubId,
-    clubName: name,
-  });
-
   for (const otherClubId of otherClubIds) {
     if (knownClubs.has(otherClubId)) continue;
     const snap = await tx.get(clubRef(otherClubId));
     knownClubs.set(otherClubId, snap.exists ? snap.data() : undefined);
   }
+
+  // All reads must happen before the first queued write in a Firestore transaction.
+  const closureEffects = await readClosedClubEffects(tx, {
+    clubId,
+    previousState,
+    nextState,
+    courtIds: listOf(existing, MEMBER_KINDS.courts.listField),
+  });
+  const cancelledTournamentIds = applyClosedClubEffects(tx, closureEffects, {
+    clubId,
+    clubName: name,
+  });
 
   const now = FieldValue.serverTimestamp();
 
