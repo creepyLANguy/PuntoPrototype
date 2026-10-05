@@ -197,7 +197,7 @@ function applyClosedClubEffects(tx, effects, { clubId, clubName }) {
       patch.status = "cancelled";
       patch.cancelledAt = FieldValue.serverTimestamp();
     }
-    tx.set(memberRef("matches", match.matchId), patch, { merge: true });
+    tx.set(db.doc(`matches/${match.matchId}`), patch, { merge: true });
 
     if (match.currentCourtId && !closingCourtIds.has(match.currentCourtId)) {
       releasedOtherCourtIds.add(match.currentCourtId);
