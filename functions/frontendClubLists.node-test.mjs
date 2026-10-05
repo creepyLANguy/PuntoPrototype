@@ -14,7 +14,6 @@ import {
   settle,
   waitFor,
 } from "./frontendHarness/harness.mjs";
-import { loadCourtsWithInlineLoader } from "../app/js/court/courtLists.js";
 
 let window;
 let document;
@@ -219,6 +218,9 @@ test("lists still load, without club names, when clubs cannot be read", async ()
 });
 
 test("courts belonging to maintenance or closed clubs stay out of user lists", async () => {
+  await openList("Play", "playCourtList", 3);
+  await closeList("closePlayBtn");
+
   firestoreState.docs.set("clubs/closedc", {
     name: "Closed Club",
     state: "closed",
@@ -234,14 +236,14 @@ test("courts belonging to maintenance or closed clubs stay out of user lists", a
   seedCourt("cclos", { name: "Closed Club Court", status: "open", clubId: "closedc" });
   seedCourt("cmaint", { name: "Maintenance Court", status: "open", clubId: "maintc" });
 
-  await loadCourtsWithInlineLoader(document.getElementById("playCourtList"), true);
-  const names = [...document.querySelectorAll("#playCourtList .court-item")].map(
-    (el) => el.textContent,
-  );
+  await openList("Play", "playCourtList", 3);
+  assert.deepEqual(rowIds("playCourtList"), ["abcd", "efgh", "jkmn"]);
   assert.equal(
-    names.some((text) => /Closed Club Court|Maintenance Court/.test(text)),
+    rowIds("playCourtList").some((id) => /cclos|cmaint/.test(id)),
     false,
   );
+
+  await closeList("closePlayBtn");
 });
 
 test("the club column is hidden when no court belongs to a club", async () => {
