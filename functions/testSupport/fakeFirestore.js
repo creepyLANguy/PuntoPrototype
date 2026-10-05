@@ -190,6 +190,9 @@ class FakeQuery {
         const actual = doc.data[field];
         if (op === "==") return actual === value;
         if (op === "in") return value.includes(actual);
+        if (op === "array-contains") {
+          return Array.isArray(actual) && actual.includes(value);
+        }
         if (op === "array-contains-any") {
           return Array.isArray(actual) && actual.some((entry) => value.includes(entry));
         }
