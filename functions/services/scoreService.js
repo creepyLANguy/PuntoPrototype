@@ -15,6 +15,51 @@ const { getLatestCheckpoint, buildCheckpointPayload } = require("./checkpointSer
 const { paths } = require("./firestorePaths");
 const { buildScoreSummary } = require("../domain/matches/lifecycle");
 
+function shouldAutoChangeover(previousScore, nextScore, scoringOptions) {
+  return (
+    scoringOptions?.scoringMode === "fixedTotalPoints" &&
+    scoringOptions?.serving?.sideSwapRule === "after_each_player_serves_once" &&
+    Boolean(previousScore?.fixedTotal?.sidesSwapped) !==
+      Boolean(nextScore?.fixedTotal?.sidesSwapped)
+  );
+}
+
+async function stageAutomaticChangeover(
+  tx,
+  matchId,
+  matchData,
+  previousScore,
+  nextScore,
+  scoringOptions,
+) {
+  if (!shouldAutoChangeover(previousScore, nextScore, scoringOptions)) return;
+
+  const courtId = matchData?.currentCourtId || null;
+  if (!courtId) return;
+
+  const courtRef = db.doc(paths.court(courtId));
+  const courtSnap = await tx.get(courtRef);
+  if (!courtSnap.exists || courtSnap.data()?.activeMatchId !== matchId) {
+    return;
+  }
+
+  const currentBeaconSidesSwapped = courtSnap.data()?.beaconSidesSwapped === true;
+  const changeoverEventId = db.collection("_changeoverEvents").doc().id;
+
+  tx.set(
+    courtRef,
+    {
+      beaconSidesSwapped: !currentBeaconSidesSwapped,
+      changeoverEvent: {
+        id: changeoverEventId,
+        createdAt: FieldValue.serverTimestamp(),
+        source: "automatic_scoring",
+      },
+    },
+    { merge: true },
+  );
+}
+
 async function processScoreEvent(event) {
   const { matchId, eventId } = event.params;
   const newEvent = event.data?.data();
@@ -136,6 +181,14 @@ async function processScoreEvent(event) {
             lastProcessedCreatedAt: replayOrdering.createdAt,
             updatedAt: FieldValue.serverTimestamp(),
           });
+          await stageAutomaticChangeover(
+            tx,
+            matchId,
+            matchData,
+            score,
+            replayResult.score,
+            activeScoringOptions,
+          );
           writeSummary(replayResult.score);
 
           return;
@@ -195,6 +248,15 @@ async function processScoreEvent(event) {
           );
           const replayedScore = applyEvent(replayResult.score, incomingEvent, activeScoringOptions);
 
+          await stageAutomaticChangeover(
+            tx,
+            matchId,
+            matchData,
+            score,
+            replayedScore,
+            activeScoringOptions,
+          );
+
           tx.set(scoreRef, {
             ...toLiveScorePayload(replayedScore),
             lastEventId: eventId,
@@ -252,6 +314,15 @@ async function processScoreEvent(event) {
 
         console.debug(
           `Updating score for match ${matchId}. New points: A:${nextScore.A.points}, B:${nextScore.B.points}`,
+        );
+
+        await stageAutomaticChangeover(
+          tx,
+          matchId,
+          matchData,
+          previousScore,
+          nextScore,
+          activeScoringOptions,
         );
 
         tx.set(scoreRef, {

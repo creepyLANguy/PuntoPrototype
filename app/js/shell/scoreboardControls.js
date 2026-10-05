@@ -112,7 +112,7 @@ export function registerScoreboardControls()
       }
 
       elements.settingsModal.classList.add("hidden");
-      openPlayerJoinPrompt(session.currentCourtId);
+      openPlayerJoinPrompt(session.currentCourtId, session.currentMatchId);
     });
   }
 

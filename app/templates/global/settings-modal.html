@@ -71,8 +71,41 @@
               <option value="standard">Games and sets</option>
               <option value="straight">Straight points</option>
               <option value="tiebreakTen">Tiebreak Tens</option>
+              <option value="fixedTotalPoints">Fixed total points</option>
             </select>
           </label>
+          <div id="fixedScoringOptions" class="fixed-scoring-options hidden">
+            <label class="scoring-field">
+              <span>Total points</span>
+              <input id="fixedPointsTargetInput" type="number" min="1" max="500" step="1" inputmode="numeric" />
+            </label>
+            <label class="scoring-field">
+              <span>Serve order</span>
+              <input id="fixedServeOrderInput" type="text" placeholder="A1, B1, A2, B2" autocomplete="off" />
+            </label>
+            <label class="scoring-field">
+              <span>Serves per player</span>
+              <input id="fixedServesPerPlayerInput" type="number" min="1" max="100" step="1" inputmode="numeric" />
+            </label>
+            <label class="scoring-field">
+              <span>Serves per block</span>
+              <input id="fixedServeBlockLengthInput" type="number" min="1" max="20" step="1" inputmode="numeric" />
+            </label>
+            <label class="scoring-field">
+              <span>Side swap</span>
+              <select id="fixedSideSwapRuleSelect">
+                <option value="after_each_player_serves_once">After each player serves once</option>
+                <option value="none">Never automatically</option>
+              </select>
+            </label>
+            <label class="scoring-field">
+              <span>Tie resolution</span>
+              <select id="fixedTieResolutionSelect">
+                <option value="allow_draw">Allow draw</option>
+                <option value="golden_point">Golden point</option>
+              </select>
+            </label>
+          </div>
           <label class="scoring-field">
             <span>Deuce</span>
             <select id="deuceModeSelect">

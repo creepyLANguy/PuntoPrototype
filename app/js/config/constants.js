@@ -10,6 +10,21 @@ export const DEFAULT_SCORING_OPTIONS = {
   tiebreakMode: "sixAllSeven",
 };
 
+export const DEFAULT_FIXED_TOTAL_POINTS = {
+  pointsTarget: 36,
+  serving: {
+    enabled: true,
+    order: ["A1", "B1", "A2", "B2"],
+    servesPerPlayer: 4,
+    serveBlockLength: 1,
+    sideSwapRule: "after_each_player_serves_once",
+  },
+  completion: {
+    rule: "exact_total_points",
+    tieResolution: "allow_draw",
+  },
+};
+
 export const DEFAULT_TEAM_NAMES = {
   A: "Team A",
   B: "Team B",
@@ -26,6 +41,7 @@ export const SCORING_LABELS = {
   standard: "Games and sets",
   straight: "Straight points",
   tiebreakTen: "Tiebreak Tens",
+  fixedTotalPoints: "Fixed total points",
   golden: "Golden point",
   silver: "Silver deuce",
   star: "Star point",

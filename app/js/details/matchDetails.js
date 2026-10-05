@@ -74,15 +74,14 @@ function setDetailsPanelExpanded(isExpanded) {
   }
 }
 
-export function syncDetailsPanelAvailability() {
+function syncDetailsPanelAvailability() {
   if (!elements.dmDetailsPanel || !elements.dmDetailsToggle) {
     return;
   }
 
-  // The panel reveals only once stats are available. Momentum alone is not
-  // enough to show the panel: it must have data from the normal details
-  // endpoint. This keeps an empty "Detailed Stats" toggle from sitting there
-  // while everything's still loading.
+  // The panel reveals once either statistics or useful mode-specific match
+  // information is available. This keeps an empty "Match details" toggle from
+  // sitting there while everything's still loading.
   const hasStats =
     elements.dmStatsWrap && !elements.dmStatsWrap.classList.contains("hidden");
 
@@ -217,11 +216,21 @@ export async function showMatchDetails(
         session.currentMatchId || session.currentCourtId;
     }
 
-    const { sets, currentGames, points, mode, scoringMode, matchComplete } =
-      result.data;
-    const resolvedMode = normalizeScoringOptions({
+    const {
+      sets,
+      currentGames,
+      points,
+      mode,
+      scoringMode,
+      scoringOptions,
+      matchComplete,
+    } = result.data;
+    const resolvedOptions = normalizeScoringOptions({
+      ...(scoringOptions || {}),
       scoringMode: scoringMode || mode,
-    }).scoringMode;
+    });
+    const resolvedMode = resolvedOptions.scoringMode;
+
     const isStraight =
       resolvedMode === "straight" || resolvedMode === "fixedTotalPoints";
     const isTiebreakTen = resolvedMode === "tiebreakTen";
@@ -251,9 +260,7 @@ export async function showMatchDetails(
       if (dmTableWrap) {
         dmTableWrap.classList.add("hidden");
       }
-      if (elements.dmDetailsPanel) {
-        elements.dmDetailsPanel.classList.add("hidden");
-      }
+      syncDetailsPanelAvailability();
       return;
     }
 

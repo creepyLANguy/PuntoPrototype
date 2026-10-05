@@ -547,6 +547,78 @@ describe("onEventCreate", () => {
     expect(nextScore.B.points).toBe(0);
   });
 
+  test("fixed-total automatic side changes broadcast through the court changeover event", async () => {
+    const courtId = "court-auto-changeover";
+    const matchId = "m-auto-changeover";
+    const scoringOptions = {
+      scoringMode: "fixedTotalPoints",
+      deuceMode: "standard",
+      tiebreakMode: "off",
+      pointsTarget: 36,
+      serving: {
+        enabled: true,
+        order: ["A1", "B1", "A2", "B2"],
+        servesPerPlayer: 4,
+        serveBlockLength: 1,
+        sideSwapRule: "after_each_player_serves_once",
+      },
+      completion: {
+        rule: "exact_total_points",
+        tieResolution: "allow_draw",
+      },
+    };
+
+    mockDb = new FakeFirestore({
+      ...seedMatchDocs({
+        courtId,
+        matchId,
+        scoringOptions,
+        score: toLiveScorePayload(replayEvents([], scoringOptions)),
+      }),
+    });
+
+    let onEventCreate;
+    jest.isolateModules(() => {
+      ({ onEventCreate } = require("./index"));
+    });
+
+    const process = async (index) => {
+      const event = {
+        id: `auto-${index}`,
+        eventType: index % 2 === 0 ? "POINT_TEAM_A" : "POINT_TEAM_B",
+        createdAt: timestamp(index),
+        scoreVersion: 0,
+      };
+      mockDb.docs.set(`matches/${matchId}/events/${event.id}`, event);
+      await onEventCreate({
+        params: { matchId, eventId: event.id },
+        data: { data: () => structuredClone(event) },
+      });
+    };
+
+    for (let index = 1; index <= 4; index += 1) {
+      await process(index);
+    }
+
+    const firstCourtChangeover = mockDb.docs.get(`courts/${courtId}`);
+    expect(firstCourtChangeover.beaconSidesSwapped).toBe(true);
+    expect(firstCourtChangeover.changeoverEvent).toMatchObject({
+      source: "automatic_scoring",
+    });
+    const firstEventId = firstCourtChangeover.changeoverEvent.id;
+
+    for (let index = 5; index <= 8; index += 1) {
+      await process(index);
+    }
+
+    const secondCourtChangeover = mockDb.docs.get(`courts/${courtId}`);
+    expect(secondCourtChangeover.beaconSidesSwapped).toBe(false);
+    expect(secondCourtChangeover.changeoverEvent).toMatchObject({
+      source: "automatic_scoring",
+    });
+    expect(secondCourtChangeover.changeoverEvent.id).not.toBe(firstEventId);
+  });
+
   test("scoring events on a completed match are ignored", async () => {
     const matchId = "m1";
     const scorePath = `matches/${matchId}/score/current`;

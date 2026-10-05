@@ -13,6 +13,10 @@ export function normalizeViewState(viewState = {})
     spectate: Boolean(viewState.spectate),
     modal: typeof viewState.modal === "string" ? viewState.modal : null,
     returnToScoreboard: Boolean(viewState.returnToScoreboard),
+    playTargetId: typeof viewState.playTargetId === "string" ? viewState.playTargetId : null,
+    playTargetType: ["court", "match", "unknown"].includes(viewState.playTargetType)
+      ? viewState.playTargetType
+      : null,
     entityId: typeof viewState.entityId === "string" ? viewState.entityId : null
   };
 
@@ -25,6 +29,12 @@ export function normalizeViewState(viewState = {})
   {
     normalized.courtId = null;
     normalized.spectate = false;
+  }
+
+  if (normalized.page !== NAV_PAGES.PLAY || !normalized.returnToScoreboard)
+  {
+    normalized.playTargetId = null;
+    normalized.playTargetType = null;
   }
 
   return normalized;
@@ -59,5 +69,7 @@ export function viewStatesEqual(left, right)
     a.spectate === b.spectate &&
     a.modal === b.modal &&
     a.returnToScoreboard === b.returnToScoreboard &&
+    a.playTargetId === b.playTargetId &&
+    a.playTargetType === b.playTargetType &&
     a.entityId === b.entityId;
 }

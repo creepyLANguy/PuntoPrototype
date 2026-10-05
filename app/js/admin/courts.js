@@ -51,6 +51,49 @@ import { showToast } from "../ui/toast.js";
 
 let allAdminCourts = [];
 
+function readFixedCourtScoringControls(prefix) {
+  const byId = (suffix) => elements[prefix + suffix];
+  const order = (byId("FixedServeOrder")?.value || "")
+    .split(",")
+    .map((slot) => slot.trim().toUpperCase())
+    .filter(Boolean);
+
+  return {
+    pointsTarget: Number(byId("FixedPointsTarget")?.value),
+    serving: {
+      enabled: true,
+      order,
+      servesPerPlayer: Number(byId("FixedServesPerPlayer")?.value),
+      serveBlockLength: Number(byId("FixedServeBlockLength")?.value),
+      sideSwapRule: byId("FixedSideSwapRule")?.value,
+    },
+    completion: {
+      rule: "exact_total_points",
+      tieResolution: byId("FixedTieResolution")?.value,
+    },
+  };
+}
+
+function populateFixedCourtScoringControls(prefix, options = {}) {
+  const byId = (suffix) => elements[prefix + suffix];
+  const order = options.serving?.order || ["A1", "B1", "A2", "B2"];
+
+  if (byId("FixedPointsTarget"))
+    byId("FixedPointsTarget").value = options.pointsTarget ?? 36;
+  if (byId("FixedServeOrder"))
+    byId("FixedServeOrder").value = order.join(", ");
+  if (byId("FixedServesPerPlayer"))
+    byId("FixedServesPerPlayer").value = options.serving?.servesPerPlayer ?? 4;
+  if (byId("FixedServeBlockLength"))
+    byId("FixedServeBlockLength").value = options.serving?.serveBlockLength ?? 1;
+  if (byId("FixedSideSwapRule"))
+    byId("FixedSideSwapRule").value =
+      options.serving?.sideSwapRule || "after_each_player_serves_once";
+  if (byId("FixedTieResolution"))
+    byId("FixedTieResolution").value =
+      options.completion?.tieResolution || "allow_draw";
+}
+
 export function registerAdminCourtFilters() {
   // ADMIN DASHBOARD SEARCH & FILTER
   elements.adminCourtSearch.addEventListener(
@@ -251,10 +294,23 @@ export function openEditModal(court, syncHistory = true) {
   if (elements.editCourtTiebreakMode) {
     elements.editCourtTiebreakMode.value = scoringOptions.tiebreakMode;
   }
+  populateFixedCourtScoringControls("editCourt", scoringOptions);
   syncCourtScoringRuleControlsDisabled(
     elements.editCourtScoringMode,
     elements.editCourtDeuceMode,
     elements.editCourtTiebreakMode,
+    [
+      elements.editCourtFixedPointsTarget,
+      elements.editCourtFixedServeOrder,
+      elements.editCourtFixedServesPerPlayer,
+      elements.editCourtFixedServeBlockLength,
+      elements.editCourtFixedSideSwapRule,
+      elements.editCourtFixedTieResolution,
+    ],
+  );
+  elements.editCourtFixedScoringOptions?.classList.toggle(
+    "hidden",
+    scoringOptions.scoringMode !== "fixedTotalPoints",
   );
 
   elements.adminDashboardPage.style.display = "none";
@@ -293,9 +349,10 @@ export function registerAdminCourtEditor() {
 
       if (!newName) throw new Error("Court name cannot be empty");
 
+      const scoringMode = elements.editCourtScoringMode.value;
       const scoringOptions = normalizeScoringOptions({
         ...(appState.courtToEdit.scoringOptions || {}),
-        scoringMode: elements.editCourtScoringMode.value,
+        scoringMode,
         deuceMode:
           elements.editCourtDeuceMode?.value ||
           appState.courtToEdit.scoringOptions?.deuceMode ||
@@ -304,6 +361,9 @@ export function registerAdminCourtEditor() {
           elements.editCourtTiebreakMode?.value ||
           appState.courtToEdit.scoringOptions?.tiebreakMode ||
           DEFAULT_SCORING_OPTIONS.tiebreakMode,
+        ...(scoringMode === "fixedTotalPoints"
+          ? readFixedCourtScoringControls("editCourt")
+          : {}),
       });
       const playerNames = normalizePlayerNames({
         A1: elements.editPlayerA1Name.value.trim(),
@@ -451,6 +511,9 @@ export function registerCreateCourt() {
       scoringMode,
       deuceMode,
       tiebreakMode,
+      ...(scoringMode === "fixedTotalPoints"
+        ? readFixedCourtScoringControls("court")
+        : {}),
     });
 
     elements.courtNameError.textContent = "";
@@ -523,6 +586,17 @@ export function registerCreateCourt() {
 
     elements.courtName.value = "";
     elements.courtPassword.value = "";
+    populateFixedCourtScoringControls("court", {
+      pointsTarget: 36,
+      serving: {
+        order: ["A1", "B1", "A2", "B2"],
+        servesPerPlayer: 4,
+        serveBlockLength: 1,
+        sideSwapRule: "after_each_player_serves_once",
+      },
+      completion: { tieResolution: "allow_draw" },
+    });
+    elements.courtFixedScoringOptions?.classList.add("hidden");
     if (elements.courtScoringMode)
       elements.courtScoringMode.value = DEFAULT_SCORING_OPTIONS.scoringMode;
     if (elements.courtDeuceMode)
@@ -535,6 +609,14 @@ export function registerCreateCourt() {
       elements.courtScoringMode,
       elements.courtDeuceMode,
       elements.courtTiebreakMode,
+      [
+        elements.courtFixedPointsTarget,
+        elements.courtFixedServeOrder,
+        elements.courtFixedServesPerPlayer,
+        elements.courtFixedServeBlockLength,
+        elements.courtFixedSideSwapRule,
+        elements.courtFixedTieResolution,
+      ],
     );
     syncCurrentViewState("replace");
   });

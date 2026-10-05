@@ -40,9 +40,13 @@ export function buildUrlForViewState(viewState, pathname = window.location.pathn
     return `${basePath}/c/${encodeURIComponent(state.courtId)}`;
   }
 
-  if (state.page === NAV_PAGES.PLAY && state.returnToScoreboard && state.courtId)
+  if (state.page === NAV_PAGES.PLAY && state.returnToScoreboard)
   {
-    return `${basePath}/p/${encodeURIComponent(state.courtId)}`;
+    const targetId = state.playTargetId || state.courtId;
+    if (targetId)
+    {
+      return `${basePath}/p/${encodeURIComponent(targetId)}`;
+    }
   }
 
   if (state.page === NAV_PAGES.PLAY)
@@ -78,9 +82,15 @@ export function getCourtIdFromPathname(pathname = window.location.pathname)
   return matchCourtIdInPathname(/^\/(?:app\/)?(?:court|c)\/([^/]+)\/?$/i, pathname);
 }
 
-export function getPlayCourtIdFromPathname(pathname = window.location.pathname)
+export function getPlayTargetIdFromPathname(pathname = window.location.pathname)
 {
   return matchCourtIdInPathname(/^\/(?:app\/)?(?:play|p)\/([^/]+)\/?$/i, pathname);
+}
+
+// Backwards-compatible name for callers/tests that specifically mean a court target.
+export function getPlayCourtIdFromPathname(pathname = window.location.pathname)
+{
+  return getPlayTargetIdFromPathname(pathname);
 }
 
 export function isPlayRootPathname(pathname = window.location.pathname)
@@ -96,14 +106,14 @@ export function isSpectateRootPathname(pathname = window.location.pathname)
 // The view state a URL requests (deep links and history entries without app state).
 export function getViewStateFromLocation(pathname = window.location.pathname)
 {
-  const playCourtId = getPlayCourtIdFromPathname(pathname);
+  const playTargetId = getPlayTargetIdFromPathname(pathname);
 
-  if (playCourtId)
+  if (playTargetId)
   {
     return createViewState({
       page: NAV_PAGES.PLAY,
-      courtId: playCourtId,
-      selectedCourtId: playCourtId,
+      playTargetId,
+      playTargetType: "unknown",
       spectate: true,
       returnToScoreboard: true
     });

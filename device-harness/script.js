@@ -24,6 +24,9 @@ const state = {
   devices: [],
   devicesLoading: true,
   courts: [],
+  clubs: [],
+  clubByCourtId: new Map(),
+  clubByDeviceId: new Map(),
   selectedDeviceId: null,
   selectedCourtId: null,
   trace: [],
@@ -401,7 +404,42 @@ function showToast(message, type = "info") {
   setTimeout(() => toast.remove(), 2800);
 }
 
+async function loadClubs() {
+  const snapshot = await getDocs(collection(db, "clubs"));
+  state.clubs = snapshot.docs.map((item) => ({
+    id: item.id,
+    ...item.data(),
+  }));
+  state.clubByCourtId = new Map();
+  state.clubByDeviceId = new Map();
+
+  state.clubs.forEach((club) => {
+    (club.courtIds || []).forEach((courtId) => {
+      state.clubByCourtId.set(courtId, club);
+    });
+    (club.deviceIds || []).forEach((deviceId) => {
+      state.clubByDeviceId.set(deviceId, club);
+    });
+  });
+}
+
+function clubForCourt(courtId) {
+  return courtId ? state.clubByCourtId.get(courtId) || null : null;
+}
+
+function clubForDevice(device) {
+  return (
+    (device?.clubId ? state.clubs.find((club) => club.id === device.clubId) : null) ||
+    state.clubByDeviceId.get(device?.id) ||
+    clubForCourt(device?.courtId) ||
+    null
+  );
+}
+
 async function loadCourts() {
+  if (state.clubs.length === 0) {
+    await loadClubs();
+  }
   const snapshot = await getDocs(collection(db, "courts"));
   state.courts = snapshot.docs.map((item) => ({ id: item.id, ...item.data() }));
   state.courts.sort((a, b) => a.id.localeCompare(b.id));
@@ -624,9 +662,14 @@ function renderSelectedDevice() {
   $("deviceStatus").className =
     "status-pill " + (device.disabled === true ? "disabled" : "");
 
+  const deviceCourt = state.courts.find((court) => court.id === device.courtId);
+  const deviceClub = clubForDevice(device);
   const fields = [
     ["deviceId", device.id],
     ["type / SKU", device.deviceSKU || "Not provisioned"],
+    ["court", deviceCourt ? (deviceCourt.name || deviceCourt.id) + " · " + deviceCourt.id : "Unbound"],
+    ["club", deviceClub ? (deviceClub.name || deviceClub.id) + " · " + deviceClub.id : "Unassigned"],
+    ["club state", deviceClub?.state || "—"],
     ["courtId", device.courtId || "Unbound"],
     ["virtual", device.isVirtual === true ? "Yes" : "No"],
     ["simulator profile", device.simulatorProfile || profile.label],
@@ -694,10 +737,23 @@ function renderCourtState({ court, score } = {}) {
     return;
   }
   const mergedCourt = court || current;
+  const club = clubForCourt(mergedCourt.id);
   $("selectedCourtValue").textContent = mergedCourt.id;
+  $("selectedClubValue").textContent = club ? (club.name || club.id) : "Unassigned";
   $("courtTitle").textContent = mergedCourt.name || mergedCourt.id;
+  const clubLabel = club
+    ? (club.name || club.id) +
+      " · " +
+      club.id +
+      " · club " +
+      (club.state || "unknown")
+    : "No club assignment";
   $("courtMeta").textContent =
+    mergedCourt.name +
+    " · " +
     mergedCourt.id +
+    " · club " +
+    clubLabel +
     " · status " +
     (mergedCourt.status || "unknown") +
     " · Beacon changeover " +
@@ -1471,13 +1527,18 @@ function initHarness() {
   updateFailureUi();
   renderTrace();
   updateEnvironmentUi();
-  void Promise.all([loadCourts(), loadDevices()]).catch((error) => {
-    console.error(error);
-    showToast(
-      "Failed to load courts/devices: " + (error?.message || error),
-      "error",
-    );
-  });
+  void (async () => {
+    try {
+      await loadClubs();
+      await Promise.all([loadCourts(), loadDevices()]);
+    } catch (error) {
+      console.error(error);
+      showToast(
+        "Failed to load courts/devices/clubs: " + (error?.message || error),
+        "error",
+      );
+    }
+  })();
 
   openProductionGateIfNeeded();
 }

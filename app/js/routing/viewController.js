@@ -107,6 +107,8 @@ export function getCurrentViewState()
       page: NAV_PAGES.PLAY,
       courtId: session.currentCourtId,
       selectedCourtId: appState.selectedPlayCourt || session.currentCourtId,
+      playTargetId: appState.playPageTargetId || session.currentCourtId,
+      playTargetType: appState.playPageTargetType || "court",
       returnToScoreboard: true
     });
   }
@@ -129,7 +131,9 @@ export function getCurrentViewState()
   {
     return createViewState({
       page: NAV_PAGES.PLAY,
-      selectedCourtId: appState.selectedPlayCourt
+      selectedCourtId: appState.selectedPlayCourt,
+      playTargetId: appState.playPageTargetId || null,
+      playTargetType: appState.playPageTargetType || null
     });
   }
 
@@ -226,7 +230,11 @@ export async function restoreViewState(viewState)
     ) || (
       state.page === NAV_PAGES.PLAY &&
       state.returnToScoreboard &&
-      state.courtId === session.currentCourtId
+      state.courtId === session.currentCourtId &&
+      (
+        state.playTargetType !== "match" ||
+        state.playTargetId === session.currentMatchId
+      )
     );
 
     if (session.currentCourtId && !shouldKeepCurrentCourt)
@@ -279,10 +287,37 @@ export async function restoreViewState(viewState)
     if (state.page === NAV_PAGES.PLAY)
     {
       appState.playPageReturnToScoreboard = state.returnToScoreboard;
+      appState.playPageTargetId = state.playTargetId || state.courtId || null;
+      appState.playPageTargetType = state.playTargetType || (state.playTargetId ? "unknown" : null);
+      appState.selectedPlayMatchId =
+        state.playTargetType === "match"
+          ? state.playTargetId
+          : session.currentMatchId;
 
-      if (state.returnToScoreboard && session.currentCourtId === state.courtId)
+      if (state.returnToScoreboard && state.courtId)
       {
-        showCurrentScoreboardView();
+        const requestedMatchId =
+          state.playTargetType === "match" ? state.playTargetId : null;
+        const needsCourtReload =
+          session.currentCourtId !== state.courtId ||
+          (requestedMatchId && session.currentMatchId !== requestedMatchId);
+
+        if (needsCourtReload)
+        {
+          await enterCourt(state.courtId, true, {
+            historyMode: "skip",
+            matchId: requestedMatchId
+          });
+        }
+
+        if (session.currentCourtId === state.courtId)
+        {
+          showCurrentScoreboardView();
+          if (!requestedMatchId)
+          {
+            appState.selectedPlayMatchId = session.currentMatchId;
+          }
+        }
       }
 
       setPlayPageVisible(true);

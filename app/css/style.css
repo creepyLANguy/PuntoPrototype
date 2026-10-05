@@ -2284,6 +2284,65 @@ body.light-mode .colour-edit-icon {
   margin-top: 10px;
 }
 
+
+
+.fixed-scoring-options {
+  margin-top: 12px;
+  padding: 10px 12px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.fixed-scoring-options.hidden {
+  display: none;
+}
+
+.scoring-field input {
+  min-width: 0;
+  min-height: 40px;
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.08);
+  color: inherit;
+  font: inherit;
+  font-weight: 700;
+  padding: 0 10px;
+}
+
+.scoring-field input:focus-visible {
+  outline: none;
+  border-color: rgba(255, 255, 255, 0.78);
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.12);
+}
+
+.scoring-field input:disabled {
+  opacity: 0.48;
+  cursor: not-allowed;
+  border-style: dashed;
+}
+
+body.light-mode .fixed-scoring-options {
+  border-color: rgba(0, 0, 0, 0.12);
+  background: rgba(0, 0, 0, 0.02);
+}
+
+body.light-mode .scoring-field input {
+  border-color: rgba(0, 0, 0, 0.18);
+  background: rgba(0, 0, 0, 0.04);
+}
+
+body.light-mode .scoring-field input:focus-visible {
+  border-color: rgba(0, 0, 0, 0.6);
+  box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.08);
+}
+
+body.light-mode .scoring-field input:disabled {
+  background: rgba(0, 0, 0, 0.025);
+  border-color: rgba(0, 0, 0, 0.26);
+}
 /* =======================================================
    DETAILS MODAL  (dm-* namespace)
 ======================================================= */
@@ -2640,6 +2699,7 @@ body.light-mode .dm-table thead th {
   padding: 0;
 }
 
+
 /* ── Responsive ── */
 
 /* Portrait: tighten name width */
@@ -2932,6 +2992,8 @@ body.light-mode .vs-text {
   font-size: 2rem;
   opacity: 0.5;
 }
+
+
 
 /* === SCORE GRID WRAPPER === */
 .score-grid-wrapper {

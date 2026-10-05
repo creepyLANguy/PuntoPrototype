@@ -27,6 +27,9 @@ export function registerPlayAndSpectatePages()
         setPlayPageVisible(true);
         elements.playPasswordSection.style.display = "none";
         appState.selectedPlayCourt = null;
+        appState.selectedPlayMatchId = null;
+        appState.playPageTargetId = null;
+        appState.playPageTargetType = null;
         elements.playCourtSearch.value = "";
         elements.playCourtPassword.value = "";
         elements.playCourtNameError.style.display = "none";
@@ -126,7 +129,11 @@ export function registerPlayAndSpectatePages()
       var adminPassword = await getSkeleton();
       if (password === adminPassword)
       {
-        await enterCourt(courtId, false, { historyMode: "replace", adminEntry: true });
+        await enterCourt(courtId, false, {
+          historyMode: "replace",
+          adminEntry: true,
+          matchId: appState.selectedPlayMatchId
+        });
         return;
       }
 
@@ -137,8 +144,14 @@ export function registerPlayAndSpectatePages()
       }
 
       session.currentCourtPassword = password;
-      await enterCourt(courtId, false, { historyMode: "replace" });
+      await enterCourt(courtId, false, {
+        historyMode: "replace",
+        matchId: appState.selectedPlayMatchId
+      });
       appState.playPageReturnToScoreboard = false;
+      appState.selectedPlayMatchId = null;
+      appState.playPageTargetId = null;
+      appState.playPageTargetType = null;
 
       elements.playCourtPassword.value = "";
     }
@@ -155,10 +168,13 @@ export function setPlayPageVisible(isVisible)
   document.body.classList.toggle("play-page-open", isVisible);
 }
 
-export async function openPlayerJoinPrompt(courtId)
+export async function openPlayerJoinPrompt(courtId, matchId = null)
 {
   appState.playPageReturnToScoreboard = true;
   appState.selectedPlayCourt = courtId;
+  appState.selectedPlayMatchId = matchId || session.currentMatchId || null;
+  appState.playPageTargetId = courtId;
+  appState.playPageTargetType = "court";
 
   if (appState.allCourts.length === 0)
   {

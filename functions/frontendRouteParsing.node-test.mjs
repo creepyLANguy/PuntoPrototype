@@ -8,6 +8,7 @@ import {
   buildUrlForViewState,
   getCourtIdFromPathname,
   getPlayCourtIdFromPathname,
+  getPlayTargetIdFromPathname,
   getViewStateFromLocation,
   isAdminRootPathname,
   isPlayRootPathname,
@@ -28,6 +29,8 @@ const VIEW = {
   modal: null,
   returnToScoreboard: false,
   entityId: null,
+  playTargetId: null,
+  playTargetType: null,
 };
 
 test("every supported route maps to the same view state as before", () => {
@@ -46,10 +49,10 @@ test("every supported route maps to the same view state as before", () => {
       {
         ...VIEW,
         page: "play",
-        courtId: "abcd",
-        selectedCourtId: "abcd",
         spectate: true,
         returnToScoreboard: true,
+        playTargetId: "abcd",
+        playTargetType: "unknown",
       },
     ],
     [
@@ -57,10 +60,10 @@ test("every supported route maps to the same view state as before", () => {
       {
         ...VIEW,
         page: "play",
-        courtId: "abcd",
-        selectedCourtId: "abcd",
         spectate: true,
         returnToScoreboard: true,
+        playTargetId: "abcd",
+        playTargetType: "unknown",
       },
     ],
     ["/admin", { ...VIEW, page: "adminDashboard" }],
@@ -80,6 +83,7 @@ test("court ids are decoded, trimmed and lower-cased", () => {
   assert.equal(getCourtIdFromPathname("/c/%E0%A4%A"), "%e0%a4%a", "malformed escapes fall back");
   assert.equal(getCourtIdFromPathname("/c/a/b"), null);
   assert.equal(getPlayCourtIdFromPathname("/p/XyZ/"), "xyz");
+  assert.equal(getPlayTargetIdFromPathname("/p/Match-123/"), "match-123");
   assert.equal(getPlayCourtIdFromPathname("/c/xyz"), null);
 });
 
@@ -101,6 +105,14 @@ test("view states build the canonical URLs, honouring the /app prefix", () => {
 
   const joinPrompt = createViewState({ page: "play", courtId: "abcd", returnToScoreboard: true });
   assert.equal(buildUrlForViewState(joinPrompt, "/"), "/p/abcd");
+  const matchJoinPrompt = createViewState({
+    page: "play",
+    courtId: "court-1",
+    playTargetId: "match-1",
+    playTargetType: "match",
+    returnToScoreboard: true,
+  });
+  assert.equal(buildUrlForViewState(matchJoinPrompt, "/"), "/p/match-1");
   assert.equal(buildUrlForViewState(createViewState({ page: "play" }), "/"), "/p");
   assert.equal(buildUrlForViewState(createViewState({ page: "spectate" }), "/app"), "/app/c");
   assert.equal(buildUrlForViewState(createViewState({ page: "menu" }), "/"), "/");
