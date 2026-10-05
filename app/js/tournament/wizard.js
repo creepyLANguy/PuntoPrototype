@@ -471,7 +471,7 @@ export function renderWizard(
         h(
           "div",
           { className: "ev-header-main" },
-          h("div", { className: "ev-eyebrow" }, "Padel Push"),
+          h("div", { className: "ev-eyebrow" }, "Padel Push™"),
           h("h1", { className: "ev-title" }, "New tournament"),
         ),
       ),

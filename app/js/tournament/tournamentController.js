@@ -93,7 +93,7 @@ export function createTournamentController(
       if (openKeys.has(key)) details.open = true;
     });
     window.scrollTo(0, scrollY);
-    document.title = `${ctx.view.name} | Padel Push`;
+    document.title = `${ctx.view.name} | Padel Push™`;
   };
 
   // Live points only refresh the score text of the affected cards.

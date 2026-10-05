@@ -148,7 +148,7 @@ export function renderMatchPage(
     MATCH_STATUS_LABELS[status] || status.toUpperCase(),
   );
   const header = el("header", "mp-header");
-  header.appendChild(el("div", "ev-eyebrow", "Padel Push"));
+  header.appendChild(el("div", "ev-eyebrow", "Padel Push™"));
   header.appendChild(el("h1", "mp-title", resolveMatchTitle(match, matchId)));
 
   const meta = el("div", "mp-meta");
@@ -246,7 +246,7 @@ export function renderMatchPage(
   page.appendChild(el("p", "mp-id", `Match ${matchId}`));
 
   container.appendChild(page);
-  document.title = `${resolveMatchTitle(match, matchId)} | Padel Push`;
+  document.title = `${resolveMatchTitle(match, matchId)} | Padel Push™`;
 }
 
 export function renderMatchNotFound(container, matchId) {
@@ -266,5 +266,5 @@ export function renderMatchNotFound(container, matchId) {
   back.href = "/app/";
   page.appendChild(back);
   container.appendChild(page);
-  document.title = "Match not found | Padel Push";
+  document.title = "Match not found | Padel Push™";
 }

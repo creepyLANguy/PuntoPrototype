@@ -40,7 +40,7 @@ async function shareTournament(view) {
     if (navigator.share) {
       await navigator.share({
         title: view.name,
-        text: `${view.name} - live on Padel Push`,
+        text: `${view.name} - live on Padel Push™`,
         url,
       });
       return "Shared.";
