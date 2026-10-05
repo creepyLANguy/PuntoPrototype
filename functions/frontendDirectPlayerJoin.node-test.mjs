@@ -84,10 +84,14 @@ test("/p/<court> player submit primes and plays the join sound", async () => {
 
   document.getElementById("enterCourtBtn").click();
 
-  await waitFor(() => document.getElementById("scoreboardPage").style.display !== "none", {
-    label: "player scoreboard to be shown",
-  });
-  await waitFor(() => window.__audioTestState.starts === 1, { label: "direct player join sound" });
+  await waitFor(
+    () => document.getElementById("scoreboardPage").style.display !== "none",
+    { label: "player scoreboard to be shown" },
+  );
+  await waitFor(
+    () => window.__audioTestState.starts === 1,
+    { label: "direct player join sound" },
+  );
 
   assert.ok(
     window.__audioTestState.resumeCalls > 0,
@@ -96,7 +100,6 @@ test("/p/<court> player submit primes and plays the join sound", async () => {
   assert.equal(window.__audioTestState.starts, 1);
 });
 
-
 test("/p/<matchId> loads that match on its court as a spectator and then authenticates as a player", async () => {
   window.history.pushState({}, "", "/p/linked-match");
   window.dispatchEvent(new window.PopStateEvent("popstate"));
@@ -104,7 +107,9 @@ test("/p/<matchId> loads that match on its court as a spectator and then authent
   await waitFor(
     () =>
       document.getElementById("playPage").style.display !== "none" &&
-      document.querySelector('#playCourtList .court-item[data-court-id="matchroute"].active'),
+      document.querySelector(
+        '#playCourtList .court-item[data-court-id="matchroute"].active',
+      ),
     { label: "match-target join prompt" },
   );
   await waitFor(
@@ -122,7 +127,8 @@ test("/p/<matchId> loads that match on its court as a spectator and then authent
   document.getElementById("enterCourtBtn").click();
 
   await waitFor(
-    () => document.getElementById("scoreboardPage").style.display !== "none" &&
+    () =>
+      document.getElementById("scoreboardPage").style.display !== "none" &&
       !document.body.classList.contains("spectating-mode"),
     { label: "linked match player join" },
   );
