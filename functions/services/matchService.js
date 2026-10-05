@@ -710,20 +710,24 @@ async function archiveMatchEvents(matchId, activeScoreVersion, actor = null) {
     (docSnap) => normalizeScoreVersion(docSnap.data()?.scoreVersion) < activeScoreVersion,
   );
 
-  const archiveBatch = db.batch();
-  staleEvents.forEach((docSnap) => {
-    archiveBatch.set(db.doc(paths.matchArchiveEvent(matchId, archiveId, docSnap.id)), {
-      ...docSnap.data(),
-      archivedAt: now(),
-      resetBy: actor?.uid || actor?.type || "system",
+  for (let offset = 0; offset < staleEvents.length; offset += 500) {
+    const archiveBatch = db.batch();
+    staleEvents.slice(offset, offset + 500).forEach((docSnap) => {
+      archiveBatch.set(db.doc(paths.matchArchiveEvent(matchId, archiveId, docSnap.id)), {
+        ...docSnap.data(),
+        archivedAt: now(),
+        resetBy: actor?.uid || actor?.type || "system",
+      });
     });
-  });
-  await archiveBatch.commit();
+    await archiveBatch.commit();
+  }
 
-  const deleteBatch = db.batch();
-  staleEvents.forEach((docSnap) => deleteBatch.delete(docSnap.ref));
-  staleCheckpoints.forEach((docSnap) => deleteBatch.delete(docSnap.ref));
-  await deleteBatch.commit();
+  const docsToDelete = [...staleEvents, ...staleCheckpoints];
+  for (let offset = 0; offset < docsToDelete.length; offset += 500) {
+    const deleteBatch = db.batch();
+    docsToDelete.slice(offset, offset + 500).forEach((docSnap) => deleteBatch.delete(docSnap.ref));
+    await deleteBatch.commit();
+  }
 
   return archiveId;
 }
