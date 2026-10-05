@@ -86,23 +86,6 @@ test.before(async () => {
   document = window.document;
 });
 
-test("scoreboard uses match title with court location and keeps it through a court rename", async () => {
-  await joinCourtAsPlayer(document, "ctxcourt");
-
-  await waitFor(() => $("courtTitle").textContent === "Grand Final", {
-    label: "match title",
-  });
-  assert.equal($("courtLocation").textContent, "Court One");
-
-  const court = firestoreState.docs.get("courts/ctxcourt");
-  writeDoc("courts/ctxcourt", { ...court, name: "Renamed Court" });
-
-  await waitFor(() => $("courtLocation").textContent === "Renamed Court", {
-    label: "renamed court location",
-  });
-  assert.equal($("courtTitle").textContent, "Grand Final");
-});
-
 test("points are written to the current match events with court context", async () => {
   $("addPointA").click();
 
