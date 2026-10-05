@@ -237,7 +237,10 @@ test("courts belonging to maintenance or closed clubs stay out of user lists", a
   const names = [...document.querySelectorAll("#playCourtList .court-item")].map(
     (el) => el.textContent,
   );
-  assert.equal(names.some((text) => /Closed Club Court|Maintenance Court/.test(text)), false);
+  assert.equal(
+    names.some((text) => /Closed Club Court|Maintenance Court/.test(text)),
+    false,
+  );
 });
 
 test("the club column is hidden when no court belongs to a club", async () => {
