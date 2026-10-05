@@ -10,6 +10,7 @@ import { JSDOM } from "jsdom";
 const require = createRequire(import.meta.url);
 const { getFormat } = require("./domain/tournaments");
 const { buildTournamentView } = require("./domain/tournaments/view");
+const { generateSchedule } = require("./domain/tournaments/forecast");
 
 const dom = new JSDOM("<!DOCTYPE html><body></body>", { url: "https://padel.test/t/abcdef" });
 for (const name of ["window", "document", "Node", "HTMLElement", "Event"]) {
@@ -187,7 +188,12 @@ function americanoState() {
     participantMode: "individual",
     format: { id: "americano", version: 1, config: getFormat("americano").normalizeConfig({}) },
     courtPool: ["c1", "c2"],
-    scheduling: { timezone: "UTC", startAt: null, defaultMatchDurationMinutes: 15 },
+    scheduling: {
+      timezone: "UTC",
+      startAt: null,
+      defaultMatchDurationMinutes: 15,
+      targetRoundCount: 3,
+    },
   };
   const state = {
     tournament,
@@ -197,11 +203,11 @@ function americanoState() {
     fixtures: [],
     generationSeed: "abcdef",
   };
-  const generation = getFormat("americano").generateInitialRound(state);
+  const generation = generateSchedule(getFormat("americano"), state);
   const fixtures = generation.fixtures.map((fixture, index) => ({
     ...fixture,
     matchId: `m${index + 1}`,
-    courtId: index === 0 ? "c1" : "c2",
+    courtId: index % 2 === 0 ? "c1" : "c2",
   }));
   fixtures[0] = {
     ...fixtures[0],
@@ -255,6 +261,7 @@ test("the public dashboard shows identity, live matches, round, sitting out, sta
   assert.ok(page.querySelector(".fx-card.fx-live"), "live match card");
   assert.match(text, /Live now/);
   assert.match(text, /Round 1/);
+  assert.match(text, /Round 3 - scheduled/);
   assert.match(text, /SITTING OUT/);
   assert.match(text, /36 total points/);
   assert.match(text, /4 serves per player/);
@@ -268,6 +275,24 @@ test("the public dashboard shows identity, live matches, round, sitting out, sta
 
   const liveLink = page.querySelector('.fx-live a[href="/m/m2"]');
   assert.ok(liveLink, "live cards link to the durable match page");
+});
+
+test("result-dependent formats forecast slots without pretending future pairings are known", () => {
+  const state = americanoState();
+  state.tournament.format = { id: "mexicano", config: getFormat("mexicano").normalizeConfig({}) };
+  state.rounds = state.rounds.slice(0, 1);
+  state.fixtures = state.fixtures.filter((fixture) => fixture.roundNumber === 1);
+  const view = buildTournamentView({ ...state, teams: [], matches: [], courts: [], now: 100000 });
+  assert.deepEqual(
+    view.roundForecast.map((round) => round.roundNumber),
+    [2, 3],
+  );
+  assert.equal(view.fixtures.length, 2);
+  assert.equal(view.nextRound.allowed, false);
+  assert.equal(view.format.supportsNextRound, true);
+  const page = renderPublicDashboard(view, new Map());
+  assert.match(page.textContent, /Round 3 - forecast \(pairings pending\)/);
+  assert.match(page.textContent, /this is not a playable match/);
 });
 
 test("live points update the card score from the live match listener", () => {
@@ -310,10 +335,11 @@ test("the host control room shows KPIs, primary controls and inline court operat
   assert.match(text, /Current round/);
   assert.match(text, /Courts free/);
   const buttons = [...page.querySelectorAll("button")].map((button) => button.textContent);
-  assert.ok(buttons.includes("Generate Round 2"));
+  assert.ok(!buttons.some((label) => /^Generate Round/.test(label)));
+  assert.ok(buttons.includes("Recalculate remaining schedule"));
   assert.ok(
-    page.querySelector("button[disabled]")?.textContent === "Generate Round 2",
-    "the next round waits for the current round",
+    [...page.querySelectorAll("button[disabled]")].some((button) => button.textContent === "Start"),
+    "future rounds are forecast, not immediately startable",
   );
   assert.ok(buttons.includes("Move"));
   assert.ok(buttons.includes("Complete"));

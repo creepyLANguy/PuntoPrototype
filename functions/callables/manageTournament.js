@@ -47,7 +47,8 @@ const HOST_OPERATIONS = {
   completeFixture: tournamentService.completeFixture,
   createFixtureMatch: tournamentService.createFixtureMatch,
   correctTournamentResult: tournamentService.correctTournamentResult,
-  recalculateTournament: (data) => tournamentService.recalculateTournament(data),
+  recalculateTournament: (data, ctx) =>
+    tournamentService.recalculateTournament({ ...data, rebuildSchedule: true }, ctx),
 };
 
 async function manageTournament(request) {

@@ -106,6 +106,10 @@ function socialConfigValidation(config) {
 }
 
 function canGenerateAfterComplete(state) {
+  const target = state.tournament?.scheduling?.targetRoundCount;
+  if (target && maxRoundNumber(state) >= target) {
+    return { allowed: false, reason: "Planned round count reached." };
+  }
   const lastRound = [...(state.rounds || [])].sort((a, b) => b.roundNumber - a.roundNumber)[0];
   if (!lastRound) return { allowed: true, reason: null };
   const fixtures = (state.fixtures || []).filter(

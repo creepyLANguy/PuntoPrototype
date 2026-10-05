@@ -262,6 +262,24 @@ async function startMatch({ matchId, courtId, displace = false, actor = null, re
 
     const plan = await planCourtAttachment(tx, { matchId, courtId, displace });
     const effects = await planTournamentEffects(tx, match);
+    if (
+      match.status === "scheduled" &&
+      effects.tournament &&
+      ["americano", "teamAmericano"].includes(effects.tournament.format?.id)
+    ) {
+      const fixtures = await tx.get(db.collection(paths.tournamentFixtures(match.tournamentId)));
+      const current = fixtures.docs.find((doc) => doc.id === match.fixtureId)?.data();
+      if (!current) throw precondition("This tournament fixture no longer exists.");
+      const incomplete = fixtures.docs.some((doc) => {
+        const fixture = doc.data();
+        return (
+          fixture.roundNumber < current.roundNumber &&
+          !["completed", "bye", "cancelled"].includes(fixture.status)
+        );
+      });
+      if (incomplete)
+        throw precondition("Previous rounds must finish before this forecast match can start.");
+    }
 
     writeDisplacement(tx, plan.displaced);
     writeAttachment(tx, { match, court: plan.court, resetOrientation: match.status !== "live" });

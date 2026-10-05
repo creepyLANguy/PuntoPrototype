@@ -2,7 +2,7 @@
 // sections 26.4, 27 and 28). Columns that carry no information for the format
 // are left out instead of showing rows of zeros.
 import { fixtureCard } from "./fixtureCard.js";
-import { emptyState, h, statusChip } from "./elements.js";
+import { emptyState, formatDateTime, h, statusChip } from "./elements.js";
 
 const SOCIAL_KINDS = new Set(["rotating"]);
 
@@ -221,6 +221,18 @@ export function renderRounds(view, options = {}) {
   return h(
     "div",
     { className: "rounds" },
+    (view.roundForecast || []).map((round) =>
+      h(
+        "details",
+        { className: "round-details" },
+        h("summary", {}, `${round.label} - forecast (pairings pending)`),
+        h(
+          "p",
+          { className: "ev-hint" },
+          `Estimated start: ${formatDateTime(round.scheduledStartAt, view.scheduling?.timezone)}. Pairings are calculated after the previous round's results; this is not a playable match.`,
+        ),
+      ),
+    ),
     ordered.map((round) =>
       h(
         "details",

@@ -105,9 +105,27 @@ Round generation is deterministic and server-authoritative:
 - format algorithms use tournament id, round number and optional suffixes as
   their deterministic seed source.
 
-Formats that generate additional rounds only allow the next round when the
-previous playable fixtures are completed. Full-bracket formats generate the
-bracket up front and progress it through fixture result ingestion.
+Americano and Team Americano generate the entire schedule, including pairings,
+sit-outs, courts, times and scheduled matches, on the initial generation request.
+The length is `scheduling.targetRoundCount` when supplied. Otherwise, a configured
+start/end window determines the number of rounds that fit; without a window,
+the default is one social cycle (players minus one, or teams minus one with an
+extra round for an odd team count). This is a pairing forecast, not a guarantee
+that every possible partner/opponent will appear exactly once. Planned pairings
+count towards repeat avoidance and sit-out fairness before any scores exist.
+The selected length is stored so withdrawals do not silently shorten the event.
+Future rounds remain visible but cannot start until earlier rounds have finished;
+this is enforced in the match transaction as well as the host controls.
+Forecasts that exceed the atomic write budget are rejected with instructions
+to reduce the round count or court count.
+
+Mexicano, Team Mexicano, Swiss and King/Queen of the Court still calculate actual
+pairings after the previous playable fixtures complete because results determine
+the next draw. Their dashboards show estimated future round slots explicitly
+marked "forecast (pairings pending)", never fake playable matches. Planned round
+counts bound generation; Swiss uses its configured round count first.
+Full-bracket formats generate the bracket up front and progress it through
+fixture result ingestion. Round Robin retains its existing full-schedule mode.
 
 ## Scheduling and club-first court picker
 
@@ -151,6 +169,17 @@ records before/after summaries and reason.
 `recalculateTournament` rebuilds fixture statuses, standings, bracket
 progression, round statuses and read models from stored tournament state,
 fixtures, matches, courts and club data.
+
+The host operation also rebuilds the remaining Americano/Team Americano schedule
+using the current active roster and available courts. All rounds through the
+latest round with a live, completed or scored match are preserved, including
+unstarted fixtures in that round. Only later rounds are regenerated. Scheduled
+match ids are reused and their player names follow the new pairings; obsolete
+unplayed matches are cancelled. Results, event history and historical scoring
+snapshots are never overwritten. The rebuild is transactional and audited as
+`schedule.recalculate`. Ordinary score/read-model refreshes do not reshuffle or
+retime the forecast. Existing one-round Americano tournaments gain their full
+remaining forecast when the host recalculates.
 
 ## Bracket progression
 

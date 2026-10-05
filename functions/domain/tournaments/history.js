@@ -1,7 +1,7 @@
 const { entryIdsOfSide } = require("./entities");
 const { fixtureOutcome } = require("./results");
 
-function buildHistory(state) {
+function buildHistory(state, { includeScheduled = false } = {}) {
   const history = {
     partnerCounts: {},
     opponentCounts: {},
@@ -30,7 +30,11 @@ function buildHistory(state) {
         for (const id of [...a, ...b]) increment(history.byeCounts, id);
         continue;
       }
-      if (!fixtureOutcome(fixture)) continue;
+      if (
+        !fixtureOutcome(fixture) &&
+        !(includeScheduled && ["scheduled", "live"].includes(fixture.status))
+      )
+        continue;
       const all = [...a, ...b];
       for (const id of all) increment(history.playedCounts, id);
       addGroup(history.groupCounts, all);

@@ -76,7 +76,7 @@ function generateRound(state) {
   const roundNumber = nextRoundNumber(state);
   const seed = seedFor(state, roundNumber);
   const rng = createRng(seed);
-  const history = buildHistory(state);
+  const history = buildHistory(state, { includeScheduled: Boolean(state.scheduleForecast) });
   const courtLimit =
     cfg.maxCourts || state.tournament?.courtPool?.length || Number.MAX_SAFE_INTEGER;
   const matchCount = Math.min(Math.floor(active.length / 4), courtLimit);

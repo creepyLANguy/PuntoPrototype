@@ -271,7 +271,7 @@ Steps:
 2. If a club is selected, club courts are shown first; the club never auto-selects courts.
 3. Host receives and stores the tournament host key. Private tournaments also receive an access code.
 4. Host publishes or starts the tournament.
-5. Host generates the first or next round. The server uses deterministic round and fixture ids and treats duplicate generation requests idempotently.
+5. Host generates the schedule. Americano and Team Americano create all planned rounds and pairings upfront; recalculation rebuilds only rounds after the latest started or completed round. Result-dependent formats show future time slots with pairings pending and generate the next draw after results exist. The server uses deterministic round and fixture ids and treats duplicate generation requests idempotently.
 6. Each playable fixture creates a normal match with a durable matchId and snapshotted scoring profile.
 7. Host assigns, moves, detaches, starts and completes fixture matches through the host control room.
 8. Fixed-end tournament matches can auto-complete from scoring; standings and bracket progression recalculate from stored results.

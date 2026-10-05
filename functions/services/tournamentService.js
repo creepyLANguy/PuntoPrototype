@@ -34,6 +34,11 @@ const {
   buildRulesSummary,
   buildFormatState,
 } = require("../domain/tournaments/view");
+const {
+  supportsFullSchedule,
+  forecastRoundCount,
+  generateSchedule,
+} = require("../domain/tournaments/forecast");
 
 const now = () => FieldValue.serverTimestamp();
 const BRACKET_KINDS = new Set(["bracket", "groupBracket"]);
@@ -1018,7 +1023,14 @@ async function generateRound(data, ctx) {
     const formatState = buildFormatState(state);
     let generation;
     try {
-      if (state.rounds.length === 0) {
+      if (supportsFullSchedule(format)) {
+        if (state.rounds.length) {
+          throw precondition(
+            "The schedule already exists. Recalculate to rebuild remaining rounds.",
+          );
+        }
+        generation = generateSchedule(format, formatState);
+      } else if (state.rounds.length === 0) {
         generation = format.generateInitialRound(formatState);
       } else {
         const check = format.supportsNextRound
@@ -1033,6 +1045,7 @@ async function generateRound(data, ctx) {
       throw formatDomainError(error);
     }
     if (!generation?.rounds?.length) throw precondition("No new round could be generated.");
+    assertScheduleSize(generation);
     if (
       generation.rounds.some((round) =>
         state.rounds.some((existing) => existing.roundId === round.roundId),
@@ -1085,6 +1098,7 @@ async function generateRound(data, ctx) {
         generation.rounds[0].roundNumber,
       ),
       lastGeneratedRoundNumber: lastRoundNumber,
+      ...(supportsFullSchedule(format) ? { forecastRoundCount: lastRoundNumber } : {}),
     });
     writeAudit(tx, {
       operation: "round.generate",
@@ -1566,7 +1580,128 @@ function applyBracketProgression(format, state) {
   return changed;
 }
 
-async function recalculateTournament({ tournamentId }) {
+function assertScheduleSize(generation, extraWrites = 0) {
+  if (generation.fixtures.length * 3 + generation.rounds.length * 2 + extraWrites + 5 > 450) {
+    throw precondition(
+      "This forecast is too large to save atomically. Choose fewer rounds or courts.",
+    );
+  }
+}
+
+function rebuildRemainingSchedule(tx, state, format, matchesById, courts, actor) {
+  const { tournament } = state;
+  const protectedRound = state.fixtures.reduce((last, fixture) => {
+    const match = matchesById[fixture.matchId];
+    const protectedFixture =
+      fixture.resultSnapshot ||
+      ["live", "completed"].includes(fixture.status) ||
+      ["live", "completed"].includes(match?.status) ||
+      matchService.hasPoints(match?.scoreSummary);
+    return protectedFixture ? Math.max(last, fixture.roundNumber) : last;
+  }, 0);
+  const retainedRounds = state.rounds.filter((round) => round.roundNumber <= protectedRound);
+  const retainedFixtures = state.fixtures.filter(
+    (fixture) => fixture.roundNumber <= protectedRound,
+  );
+  const target = Math.max(protectedRound, forecastRoundCount(format, state));
+  let generation;
+  try {
+    generation = generateSchedule(
+      format,
+      {
+        ...buildFormatState(state),
+        rounds: retainedRounds,
+        fixtures: retainedFixtures,
+      },
+      target,
+    );
+  } catch (error) {
+    throw formatDomainError(error);
+  }
+  const generatedIds = new Set(generation.fixtures.map((fixture) => fixture.fixtureId));
+  const removedFixtures = state.fixtures.filter(
+    (fixture) => fixture.roundNumber > protectedRound && !generatedIds.has(fixture.fixtureId),
+  );
+  const removedRounds = state.rounds.filter((round) => round.roundNumber > target);
+  const oldFixtures = indexBy(state.fixtures, "fixtureId");
+  const newMatches = generation.fixtures.filter(
+    (fixture) => matchesById[oldFixtures[fixture.fixtureId]?.matchId]?.status !== "scheduled",
+  ).length;
+  assertScheduleSize(generation, removedFixtures.length * 2 + removedRounds.length + newMatches);
+  const duration =
+    (tournament.scheduling.defaultMatchDurationMinutes +
+      tournament.scheduling.defaultChangeoverMinutes) *
+    60000;
+  const startAt = Math.max(
+    Date.now(),
+    ...retainedFixtures.map((fixture) => Number(fixture.scheduledStartAt || 0) + duration),
+  );
+  const scheduled = scheduleGeneration(generation, { tournament, courts, nowMs: startAt });
+  const previous = indexBy(state.fixtures, "fixtureId");
+  const futureIds = new Set(scheduled.map((fixture) => fixture.fixtureId));
+  state.fixtures
+    .filter((fixture) => fixture.roundNumber > protectedRound)
+    .forEach((fixture) => {
+      const match = matchesById[fixture.matchId];
+      if (match && match.status !== "cancelled" && !futureIds.has(fixture.fixtureId)) {
+        tx.set(
+          db.doc(paths.match(fixture.matchId)),
+          {
+            status: "cancelled",
+            cancelledAt: now(),
+            updatedAt: now(),
+          },
+          { merge: true },
+        );
+      }
+      if (!futureIds.has(fixture.fixtureId))
+        tx.delete(fixtureRef(tournament.tournamentId, fixture.fixtureId));
+    });
+  const fixtures = scheduled.map((fixture) => {
+    const old = previous[fixture.fixtureId];
+    const reusableMatch = old?.matchId && matchesById[old.matchId]?.status === "scheduled";
+    const stored = {
+      ...stripFixtureForStorage(fixture),
+      createdAt: old?.createdAt || now(),
+      ...(reusableMatch ? { matchId: old.matchId } : {}),
+    };
+    tx.set(fixtureRef(tournament.tournamentId, fixture.fixtureId), stored);
+    return stored;
+  });
+  const futureRoundIds = new Set(generation.rounds.map((round) => round.roundId));
+  state.rounds
+    .filter((round) => round.roundNumber > protectedRound && !futureRoundIds.has(round.roundId))
+    .forEach((round) => tx.delete(roundRef(tournament.tournamentId, round.roundId)));
+  const rounds = generation.rounds.map((round) => ({
+    ...JSON.parse(JSON.stringify(round)),
+    tournamentId: tournament.tournamentId,
+    generatedAt: now(),
+    startedAt: null,
+    completedAt: null,
+    notes: null,
+  }));
+  rounds.forEach((round) => tx.set(roundRef(tournament.tournamentId, round.roundId), round));
+  state.rounds = [...retainedRounds, ...rounds];
+  state.fixtures = [...retainedFixtures, ...fixtures];
+  tournament.forecastRoundCount = target;
+  writeTournamentPatch(tx, tournament, {
+    forecastRoundCount: target,
+    lastGeneratedRoundNumber: target,
+  });
+  tournament.revision = Number(tournament.revision || 0) + 1;
+  writeAudit(tx, {
+    operation: "schedule.recalculate",
+    tournamentId: tournament.tournamentId,
+    actor,
+    afterSummary: {
+      protectedThroughRound: protectedRound,
+      rounds: rounds.length,
+      fixtures: fixtures.length,
+    },
+  });
+}
+
+async function recalculateTournament({ tournamentId, rebuildSchedule = false }, ctx = {}) {
   return db.runTransaction(async (tx) => {
     const state = await loadTournamentState(tx, tournamentId);
     const { tournament } = state;
@@ -1584,6 +1719,10 @@ async function recalculateTournament({ tournamentId }) {
 
     const fixtureWrites = new Map();
     const finished = ["completed", "cancelled"].includes(tournament.status);
+    if (rebuildSchedule && supportsFullSchedule(format) && state.rounds.length) {
+      assertNotFinished(tournament);
+      rebuildRemainingSchedule(tx, state, format, matchesById, courts, ctx.actor);
+    }
 
     // Fixture status mirrors its match when they ever disagree.
     state.fixtures.forEach((fixture) => {
@@ -1838,9 +1977,17 @@ function previewTournament(data) {
   let firstRound = null;
   if (!validation.errors.length) {
     try {
-      const generation = format.generateInitialRound(
-        buildFormatState({ tournament, participants, teams, rounds: [], fixtures: [] }),
-      );
+      const previewState = buildFormatState({
+        tournament,
+        participants,
+        teams,
+        rounds: [],
+        fixtures: [],
+      });
+      const generation = supportsFullSchedule(format)
+        ? generateSchedule(format, previewState)
+        : format.generateInitialRound(previewState);
+      assertScheduleSize(generation);
       const playable = generation.fixtures.filter((f) => f.status === "scheduled");
       const courts = Math.max(1, input.courtPool.length || 1);
       const waves = generation.rounds.reduce((sum, round) => {

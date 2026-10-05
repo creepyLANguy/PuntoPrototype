@@ -498,7 +498,11 @@ export function renderWizard(
           { className: "ev-field-row" },
           field("Match minutes", duration),
           field("Changeover minutes", changeover),
-          field("Planned rounds", targetRounds),
+          field(
+            "Planned rounds",
+            targetRounds,
+            "Americano formats generate every round upfront. Leave blank for a time-window estimate or one social cycle. Result-dependent formats forecast times; pairings wait for results.",
+          ),
         ),
         field("Schedule", generation),
       ),

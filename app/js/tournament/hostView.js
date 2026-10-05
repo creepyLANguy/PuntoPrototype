@@ -190,12 +190,24 @@ export function fixtureActions(ctx, fixture) {
       "div",
       { className: "fx-actions" },
       select,
-      actionButton("Start", () =>
-        ctx.run(
-          "startFixture",
-          { fixtureId: fixture.fixtureId, courtId: select.value },
-          "Match started.",
-        ),
+      h(
+        "button",
+        {
+          className: "ev-btn",
+          type: "button",
+          disabled: fixture.canStart === false ? true : null,
+          title:
+            fixture.canStart === false
+              ? "Previous rounds must finish first."
+              : null,
+          onClick: () =>
+            ctx.run(
+              "startFixture",
+              { fixtureId: fixture.fixtureId, courtId: select.value },
+              "Match started.",
+            ),
+        },
+        "Start",
       ),
       actionButton("Set court", () =>
         ctx.run(
@@ -268,7 +280,10 @@ function renderPrimaryControls(ctx) {
   if (view.status === "live" || view.status === "published") {
     if (
       view.stats?.ready ||
-      view.fixtures.some((f) => f.displayStatus === "SCHEDULED" && f.matchId)
+      view.fixtures.some(
+        (f) =>
+          f.displayStatus === "SCHEDULED" && f.matchId && f.canStart !== false,
+      )
     ) {
       buttons.push(
         actionButton(
@@ -316,7 +331,9 @@ function renderPrimaryControls(ctx) {
   }
   buttons.push(
     actionButton(
-      "Recalculate",
+      view.format.supportsFullSchedule
+        ? "Recalculate remaining schedule"
+        : "Recalculate",
       () => ctx.run("recalculateTournament", {}, "Tournament recalculated."),
       "ev-btn ev-btn-ghost",
     ),

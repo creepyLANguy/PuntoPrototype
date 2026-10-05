@@ -65,7 +65,9 @@ function generateRound(state, rankedMode, rankedTeams = null) {
   const roundNumber = nextRoundNumber(state);
   const seed = seedFor(state, roundNumber);
   const rng = createRng(seed);
-  const history = buildHistory(state);
+  const history = buildHistory(state, {
+    includeScheduled: !rankedMode && Boolean(state.scheduleForecast),
+  });
   const active = rankedTeams || (state.teams || []).filter((team) => team.status === "active");
   const byeCount = active.length % 2;
   const sitters = chooseSitters(

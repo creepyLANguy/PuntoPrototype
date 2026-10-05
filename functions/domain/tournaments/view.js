@@ -4,6 +4,7 @@
 const { getFormat } = require("./formats");
 const { validateTournamentSetup } = require("./validation");
 const { resolveMatchScoringOptions } = require("./scoringProfiles");
+const { supportsFullSchedule, forecastRemainingRounds } = require("./forecast");
 
 const DELAY_GRACE_MS = 5 * 60 * 1000;
 const SOCIAL_FORMATS = new Set(["americano", "mexicano", "teamAmericano", "teamMexicano"]);
@@ -203,6 +204,14 @@ function buildTournamentView({
       const match = fixture.matchId ? lookups.matches[fixture.matchId] : null;
       const courtId = match?.currentCourtId || fixture.courtId || null;
       const court = courtId ? lookups.courts[courtId] : null;
+      const canStart =
+        !supportsFullSchedule(format) ||
+        !fixtures.some(
+          (earlier) =>
+            earlier.roundNumber < fixture.roundNumber &&
+            !["completed", "bye", "cancelled"].includes(earlier.status),
+        );
+      const status = displayStatus(fixture, { match, court, now });
       return {
         fixtureId: fixture.fixtureId,
         roundId: fixture.roundId,
@@ -224,9 +233,10 @@ function buildTournamentView({
           return acc;
         }, {}),
         status: fixture.status,
-        displayStatus: displayStatus(fixture, { match, court, now }),
+        displayStatus: status === "READY" && !canStart ? "SCHEDULED" : status,
         matchId: fixture.matchId || null,
         matchStatus: match?.status || null,
+        canStart,
         courtId,
         courtName: court?.name || courtId,
         scheduledStartAt: fixture.scheduledStartAt ?? null,
@@ -309,7 +319,8 @@ function buildTournamentView({
     .filter(Boolean);
   const completedCount = countBy("COMPLETED");
 
-  const nextRoundCheck = format.supportsNextRound
+  const incremental = format.supportsNextRound && !supportsFullSchedule(format);
+  const nextRoundCheck = incremental
     ? rounds.length === 0
       ? { allowed: false, reason: "Generate the first round first." }
       : format.canGenerateNextRound(state)
@@ -327,7 +338,8 @@ function buildTournamentView({
       label: format.label,
       kind: format.kind,
       entryMode: tournament.participantMode,
-      supportsNextRound: Boolean(format.supportsNextRound),
+      supportsNextRound: Boolean(incremental),
+      supportsFullSchedule: supportsFullSchedule(format),
       config: tournament.format.config,
     },
     rulesSummary: { title: rulesSummary.title, lines: rulesSummary.lines },
@@ -365,6 +377,7 @@ function buildTournamentView({
         }
       : null,
     rounds: roundViews,
+    roundForecast: forecastRemainingRounds(format, state, now),
     fixtures: fixtureViews,
     liveMatches,
     standings,

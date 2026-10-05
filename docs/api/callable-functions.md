@@ -126,6 +126,21 @@ createTournament returns the plaintext `hostKey` once and an `accessCode` for
 private tournaments. The server stores only hashes in
 `tournamentSecrets/{tournamentId}`.
 
+`generateRound` creates the full Americano/Team Americano forecast, rather than
+one round. Its `roundIds` response contains every generated round. Set
+`scheduling.targetRoundCount` to choose its length; otherwise a configured time
+window or one social cycle supplies the default. `expectedRoundNumber` retains
+its duplicate-request behaviour. Once the schedule exists, use
+`recalculateTournament` rather than `generateNextRound` for these formats.
+
+The host `recalculateTournament` operation transactionally rebuilds unstarted
+Americano/Team Americano rounds after the latest round containing a live,
+completed or scored match, using the current roster and court availability.
+Historical matches/results are preserved and the operation is audited. Internal
+read-model refreshes do not rebuild the schedule. Result-dependent formats
+retain result-gated generation; their read model includes `roundForecast` slots
+with pending pairings, not playable fixtures.
+
 ### createClub
 
 Creates a club. The backend generates the clubId.

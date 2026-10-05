@@ -64,7 +64,10 @@ const swiss = {
   canGenerateNextRound(state) {
     const cfg = this.normalizeConfig(state.tournament?.format?.config || {});
     const activeCount = (state.teams || []).filter((team) => team.status === "active").length;
-    const roundCount = cfg.roundCount || Math.ceil(Math.log2(Math.max(2, activeCount))) + 1;
+    const roundCount =
+      cfg.roundCount ||
+      state.tournament?.scheduling?.targetRoundCount ||
+      Math.ceil(Math.log2(Math.max(2, activeCount))) + 1;
     if ((state.rounds || []).length >= roundCount)
       return { allowed: false, reason: "Swiss round count reached." };
     const last = [...(state.rounds || [])].sort((a, b) => b.roundNumber - a.roundNumber)[0];

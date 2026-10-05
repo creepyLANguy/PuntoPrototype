@@ -201,7 +201,7 @@ describe("match foundation", () => {
 });
 
 describe("tournament flow", () => {
-  test("Americano end to end: create, generate, play, move, extend, correct, complete", async () => {
+  test("Americano end to end: create, forecast, play, move, recalculate, correct, complete", async () => {
     const created = await createAmericano({ requestId: "req-1" });
     const { tournamentId, hostKey } = created;
     const host = { hostKey };
@@ -227,17 +227,33 @@ describe("tournament flow", () => {
       { tournamentId, expectedRoundNumber: 1 },
       host,
     );
-    expect(round1.roundIds).toEqual(["r1"]);
+    expect(round1.roundIds).toEqual(["r1", "r2", "r3", "r4", "r5", "r6", "r7"]);
     const duplicate = await tournament(
       "generateRound",
       { tournamentId, expectedRoundNumber: 1 },
       host,
     );
     expect(duplicate.duplicate).toBe(true);
-    expect(mockDb.list(`tournaments/${tournamentId}/rounds`)).toHaveLength(1);
+    expect(mockDb.list(`tournaments/${tournamentId}/rounds`)).toHaveLength(7);
 
     const fixtures = mockDb.list(`tournaments/${tournamentId}/fixtures`);
-    expect(fixtures).toHaveLength(2);
+    expect(fixtures).toHaveLength(14);
+    expect(view(tournamentId).currentRound.roundNumber).toBe(1);
+    expect(view(tournamentId).format.supportsNextRound).toBe(false);
+    const firstStart = fixtures.find((fixture) => fixture.roundId === "r1").scheduledStartAt;
+    const future = fixtures.find((fixture) => fixture.roundId === "r2");
+    await expect(
+      tournament("startFixture", { tournamentId, fixtureId: future.id, courtId: "c3" }, host),
+    ).rejects.toThrow(/Previous rounds must finish/);
+    await expect(
+      match("startMatch", { matchId: future.matchId, courtId: "c3" }, { adminKey: ADMIN_KEY }),
+    ).rejects.toThrow(/Previous rounds must finish/);
+    expect(
+      view(tournamentId).fixtures.find((fixture) => fixture.fixtureId === future.id).canStart,
+    ).toBe(false);
+    expect(fixtures.find((fixture) => fixture.roundId === "r7").scheduledStartAt).toBe(
+      firstStart + 6 * 17 * 60000,
+    );
     fixtures.forEach((fixture) => {
       const matchDoc = mockDb.get(`matches/${fixture.matchId}`);
       expect(matchDoc).toMatchObject({
@@ -294,10 +310,16 @@ describe("tournament flow", () => {
     f1.sides.A.participantIds.forEach((id) => expect(pointsById[id]).toBe(19));
     f1.sides.B.participantIds.forEach((id) => expect(pointsById[id]).toBe(17));
     f2.participantIds.forEach((id) => expect(pointsById[id]).toBe(18));
-    expect(afterRound1.nextRound.allowed).toBe(true);
+    expect(afterRound1.nextRound.allowed).toBe(false);
+    expect(afterRound1.currentRound.roundNumber).toBe(2);
+    expect(afterRound1.fixtures.find((fixture) => fixture.fixtureId === future.id).canStart).toBe(
+      true,
+    );
 
-    // Extend: round 2 is appended and avoids repeating partners.
-    await tournament("generateNextRound", { tournamentId, expectedRoundNumber: 2 }, host);
+    // Recalculation rebuilds unplayed rounds while preserving round 1.
+    const completedBefore = mockDb.get(`tournaments/${tournamentId}/fixtures/${f1.id}`);
+    await tournament("recalculateTournament", { tournamentId }, host);
+    expect(mockDb.get(`tournaments/${tournamentId}/fixtures/${f1.id}`)).toEqual(completedBefore);
     const round2 = mockDb
       .list(`tournaments/${tournamentId}/fixtures`)
       .filter((fixture) => fixture.roundId === "r2");
@@ -357,7 +379,7 @@ describe("tournament flow", () => {
       { tournamentId, early: true, reason: "Out of court time" },
       host,
     );
-    expect(finished.cancelledFixtures).toBe(2);
+    expect(finished.cancelledFixtures).toBe(12);
     expect(view(tournamentId).status).toBe("completed");
     round2.forEach((fixture) =>
       expect(mockDb.get(`matches/${fixture.matchId}`).status).toBe("cancelled"),
@@ -458,6 +480,146 @@ describe("tournament flow", () => {
     expect(row.losses || 0).toBe(0);
   });
 
+  test("remaining forecast uses withdrawals and closed courts without changing a live round", async () => {
+    const { tournamentId, hostKey } = await createAmericano({
+      participantText: [...PLAYERS, "Iris", "James", "Kate", "Liam"].join("\n"),
+      scheduling: {
+        targetRoundCount: 4,
+        defaultMatchDurationMinutes: 15,
+        defaultChangeoverMinutes: 2,
+      },
+    });
+    const host = { hostKey };
+    await tournament("generateRound", { tournamentId }, host);
+    await tournament("startRound", { tournamentId }, host);
+    const all = mockDb.list(`tournaments/${tournamentId}/fixtures`);
+    const live = all.find((fixture) => mockDb.get(`matches/${fixture.matchId}`).status === "live");
+    await score(live.matchId, "AAB");
+    const fixtureBefore = mockDb.get(`tournaments/${tournamentId}/fixtures/${live.id}`);
+    const matchBefore = mockDb.get(`matches/${live.matchId}`);
+    const eventsBefore = mockDb.list(`matches/${live.matchId}/events`);
+    const roundBefore = mockDb.get(`tournaments/${tournamentId}/rounds/r1`);
+    const withdrawn = live.participantIds[0];
+    await tournament("withdrawParticipant", { tournamentId, participantId: withdrawn }, host);
+    await mockDb.doc("courts/c2").set({ status: "closed" }, { merge: true });
+    await tournament("recalculateTournament", { tournamentId }, host);
+    expect(mockDb.get(`tournaments/${tournamentId}/fixtures/${live.id}`)).toEqual(fixtureBefore);
+    expect(mockDb.get(`matches/${live.matchId}`)).toEqual(matchBefore);
+    expect(mockDb.list(`matches/${live.matchId}/events`)).toEqual(eventsBefore);
+    expect(mockDb.get(`tournaments/${tournamentId}/rounds/r1`)).toEqual(roundBefore);
+    const remaining = mockDb
+      .list(`tournaments/${tournamentId}/fixtures`)
+      .filter((fixture) => fixture.roundNumber > 1);
+    expect(remaining).toHaveLength(6);
+    remaining.forEach((fixture) => {
+      expect(fixture.participantIds).not.toContain(withdrawn);
+      expect(fixture.courtId).toBe("c1");
+      expect(mockDb.get(`matches/${fixture.matchId}`).playerNames).toEqual(
+        Object.fromEntries(
+          ["A", "B"].flatMap((side) =>
+            fixture.sides[side].participantIds.map((id, index) => [
+              `${side}${index + 1}`,
+              mockDb.get(`tournaments/${tournamentId}/participants/${id}`).displayName,
+            ]),
+          ),
+        ),
+      );
+    });
+    const obsolete = all.filter(
+      (fixture) =>
+        fixture.roundNumber > 1 && !remaining.some((next) => next.matchId === fixture.matchId),
+    );
+    obsolete.forEach((fixture) =>
+      expect(mockDb.get(`matches/${fixture.matchId}`).status).toBe("cancelled"),
+    );
+    const draw = remaining.map(({ id, sides, matchId, courtId }) => ({
+      id,
+      sides,
+      matchId,
+      courtId,
+    }));
+    await tournament("recalculateTournament", { tournamentId }, host);
+    expect(
+      mockDb
+        .list(`tournaments/${tournamentId}/fixtures`)
+        .filter((fixture) => fixture.roundNumber > 1)
+        .map(({ id, sides, matchId, courtId }) => ({ id, sides, matchId, courtId })),
+    ).toEqual(draw);
+    expect(
+      mockDb
+        .list(`tournaments/${tournamentId}/audits`)
+        .some(
+          (audit) =>
+            audit.operation === "schedule.recalculate" &&
+            audit.afterSummary.protectedThroughRound === 1,
+        ),
+    ).toBe(true);
+  });
+
+  test("Team Americano creates every round and reuses untouched scheduled match ids", async () => {
+    const { tournamentId, hostKey } = await tournament("createTournament", {
+      name: "Team Social",
+      format: { id: "teamAmericano" },
+      courtPool: ["c1", "c2"],
+      teams: [1, 2, 3, 4].map((n) => ({ name: `Team ${n}`, players: [`P${n}a`, `P${n}b`] })),
+      scheduling: { targetRoundCount: 3 },
+    });
+    const host = { hostKey };
+    const generated = await tournament(
+      "generateRound",
+      { tournamentId, expectedRoundNumber: 1 },
+      host,
+    );
+    expect(generated.roundIds).toEqual(["r1", "r2", "r3"]);
+    expect(generated.matches).toBe(6);
+    const original = mockDb
+      .list(`tournaments/${tournamentId}/fixtures`)
+      .map(({ id, sides, matchId }) => ({ id, sides, matchId }));
+    await tournament("recalculateTournament", { tournamentId }, host);
+    expect(
+      mockDb
+        .list(`tournaments/${tournamentId}/fixtures`)
+        .map(({ id, sides, matchId }) => ({ id, sides, matchId })),
+    ).toEqual(original);
+    await expect(
+      tournament("generateNextRound", { tournamentId, expectedRoundNumber: 4 }, host),
+    ).rejects.toThrow(/Recalculate/);
+  });
+
+  test("recalculation expands an existing single-round Americano schedule", async () => {
+    const { tournamentId, hostKey } = await createAmericano({
+      scheduling: { targetRoundCount: 3 },
+    });
+    const host = { hostKey };
+    await tournament("generateRound", { tournamentId }, host);
+    // Simulate a tournament persisted by the incremental scheduler.
+    for (const fixture of mockDb
+      .list(`tournaments/${tournamentId}/fixtures`)
+      .filter((f) => f.roundNumber > 1)) {
+      mockDb.docs.delete(`tournaments/${tournamentId}/fixtures/${fixture.id}`);
+      mockDb.docs.delete(`matches/${fixture.matchId}`);
+      mockDb.docs.delete(`matches/${fixture.matchId}/score/current`);
+    }
+    mockDb.docs.delete(`tournaments/${tournamentId}/rounds/r2`);
+    mockDb.docs.delete(`tournaments/${tournamentId}/rounds/r3`);
+    await tournament("startRound", { tournamentId }, host);
+    await tournament("recalculateTournament", { tournamentId }, host);
+    expect(view(tournamentId).rounds.map((round) => round.roundNumber)).toEqual([1, 2, 3]);
+    expect(view(tournamentId).currentRound.roundNumber).toBe(1);
+    expect(view(tournamentId).fixtures).toHaveLength(6);
+  });
+
+  test("large forecasts fail explicitly before any schedule is persisted", async () => {
+    const { tournamentId, hostKey } = await createAmericano({
+      scheduling: { targetRoundCount: 200 },
+    });
+    await expect(tournament("generateRound", { tournamentId }, { hostKey })).rejects.toThrow(
+      /too large/,
+    );
+    expect(mockDb.list(`tournaments/${tournamentId}/rounds`)).toHaveLength(0);
+    expect(mockDb.list(`tournaments/${tournamentId}/fixtures`)).toHaveLength(0);
+  });
+
   test("private tournaments need the access code or host key to read", async () => {
     const { tournamentId, accessCode, hostKey } = await createAmericano({ visibility: "private" });
     expect(view(tournamentId)).toMatchObject({ visibility: "private" });
@@ -478,7 +640,12 @@ describe("tournament flow", () => {
       scheduling: { defaultMatchDurationMinutes: 15, defaultChangeoverMinutes: 5 },
     });
     expect(preview.errors).toEqual([]);
-    expect(preview.preview).toMatchObject({ matches: 2, sittingOut: 1, estimatedMinutes: 20 });
+    expect(preview.preview).toMatchObject({
+      rounds: 8,
+      matches: 16,
+      sittingOut: 1,
+      estimatedMinutes: 160,
+    });
     expect(preview.warnings.map((warning) => warning.code)).toContain("SITTING_OUT");
     expect(preview.rulesSummary.title).toBe("AMERICANO");
   });
