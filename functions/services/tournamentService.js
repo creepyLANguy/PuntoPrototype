@@ -39,6 +39,7 @@ const {
   forecastRoundCount,
   generateSchedule,
 } = require("../domain/tournaments/forecast");
+const { CLUB_STATES, normalizeClubState } = require("../domain/clubs/membership");
 
 const now = () => FieldValue.serverTimestamp();
 const BRACKET_KINDS = new Set(["bracket", "groupBracket"]);
@@ -154,16 +155,34 @@ function firstValidationError(validation) {
 }
 
 async function assertClubAndCourts(tx, { clubId, courtPool }) {
+  const clubsById = new Map();
+
   if (clubId) {
     const club = await loadClub(tx, clubId);
     if (!club) throw invalid("The selected club could not be found.");
+    clubsById.set(club.clubId, club);
+    if (normalizeClubState(club.state) !== CLUB_STATES.OPEN) {
+      throw precondition("The selected club is not open.");
+    }
   }
+
   if (courtPool.length) {
     const courts = await loadCourts(tx, courtPool);
     if (courts.length !== courtPool.length) {
       const found = new Set(courts.map((court) => court.courtId));
       const missing = courtPool.filter((courtId) => !found.has(courtId));
       throw invalid(`These courts could not be found: ${missing.join(", ")}.`);
+    }
+
+    for (const court of courts) {
+      if (!court.clubId) continue;
+      if (!clubsById.has(court.clubId)) {
+        clubsById.set(court.clubId, await loadClub(tx, court.clubId));
+      }
+      const club = clubsById.get(court.clubId);
+      if (!club || normalizeClubState(club.state) !== CLUB_STATES.OPEN) {
+        throw precondition(`Court ${court.courtId} belongs to a club that is not open.`);
+      }
     }
   }
 }
@@ -1793,6 +1812,8 @@ async function recalculateTournament({ tournamentId, rebuildSchedule = false }, 
       tx.set(fixtureRef(tournamentId, fixtureId), data, { merge: true });
     });
 
+    const publicClub =
+      club && normalizeClubState(club.state) === CLUB_STATES.OPEN ? club : null;
     const view = buildTournamentView({
       tournament,
       participants: state.participants.filter((p) => p.status !== "removed"),
@@ -1801,7 +1822,7 @@ async function recalculateTournament({ tournamentId, rebuildSchedule = false }, 
       fixtures,
       matches: [...Object.values(matchesById), ...createdMatches],
       courts,
-      club,
+      club: publicClub,
       now: Date.now(),
     });
 
@@ -1845,8 +1866,8 @@ async function recalculateTournament({ tournamentId, rebuildSchedule = false }, 
         name: tournament.name,
         status: tournament.status,
         visibility: "public",
-        clubId: tournament.clubId || null,
-        clubName: club?.name || null,
+        clubId: publicClub?.clubId || null,
+        clubName: publicClub?.name || null,
         formatId: tournament.format.id,
         formatLabel: format.label,
         startAt: tournament.scheduling?.startAt ?? null,
@@ -1904,9 +1925,24 @@ async function getTournamentView(data, credentials) {
 }
 
 async function getCourtOptions(data) {
-  const snap = await db.collection("courts").get();
-  const courts = snap.docs.map((docSnap) => ({ courtId: docSnap.id, ...docSnap.data() }));
-  const club = await loadClub(null, data.clubId || null);
+  const [courtSnap, clubSnap] = await Promise.all([
+    db.collection("courts").get(),
+    db.collection("clubs").get(),
+  ]);
+  const clubsById = new Map(
+    clubSnap.docs.map((docSnap) => [
+      docSnap.id,
+      { clubId: docSnap.id, ...docSnap.data() },
+    ]),
+  );
+  const courts = courtSnap.docs
+    .map((docSnap) => ({ courtId: docSnap.id, ...docSnap.data() }))
+    .filter((court) => {
+      if (!court.clubId) return true;
+      const club = clubsById.get(court.clubId);
+      return Boolean(club) && normalizeClubState(club.state) === CLUB_STATES.OPEN;
+    });
+  const club = data.clubId ? clubsById.get(data.clubId) || null : null;
   return {
     club: club ? { clubId: club.clubId, name: club.name } : null,
     courts: orderCourtCandidates(courts, {
