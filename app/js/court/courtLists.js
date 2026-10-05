@@ -74,7 +74,7 @@ async function loadAllActiveCourts(includePrivateCourts = true) {
         clubAllowed &&
         (data.status === STATUS.OPEN ||
           (includePrivateCourts && data.status === STATUS.PRIVATE))
-      {
+      ) {
         appState.allCourts.push({
           id: doc.id,
           name: data.name || doc.id,
