@@ -236,8 +236,8 @@ test("courts belonging to maintenance or closed clubs stay out of user lists", a
   seedCourt("cclos", { name: "Closed Club Court", status: "open", clubId: "closedc" });
   seedCourt("cmaint", { name: "Maintenance Court", status: "open", clubId: "maintc" });
 
-  await openList("Play", "playCourtList", 3);
-  assert.deepEqual(rowIds("playCourtList"), ["abcd", "efgh", "jkmn"]);
+  await openList("Play", "playCourtList", 4);
+  assert.deepEqual(rowIds("playCourtList"), ["abcd", "efgh", "pqrs", "jkmn"]);
   assert.equal(
     rowIds("playCourtList").some((id) => /cclos|cmaint/.test(id)),
     false,
