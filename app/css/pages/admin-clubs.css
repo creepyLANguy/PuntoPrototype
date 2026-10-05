@@ -91,12 +91,12 @@ body.light-mode #adminClubSearch {
 
 /* Club rows: name, court count, device count and actions. */
 .admin-court-item.admin-club-item {
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) auto;
 }
 
 @media (orientation: landscape) and (max-height: 520px), (min-width: 769px) {
   .admin-court-item.admin-club-item {
-    grid-template-columns: minmax(0, 1.8fr) minmax(0, 1fr) minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1.8fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) auto;
   }
 }
 
