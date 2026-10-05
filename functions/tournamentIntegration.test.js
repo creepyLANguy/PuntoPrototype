@@ -29,7 +29,12 @@ const ADMIN_KEY = "skeleton-key";
 function seed() {
   return new FakeFirestore({
     "admin/goodies": { skeletonKey: ADMIN_KEY },
-    "clubs/club1": { name: "Example Padel Club", courtIds: ["c1", "c2"], deviceIds: [] },
+    "clubs/club1": {
+      name: "Example Padel Club",
+      state: "open",
+      courtIds: ["c1", "c2"],
+      deviceIds: [],
+    },
     "courts/c1": { name: "Court 1", password: "pass1", status: "open", clubId: "club1" },
     "courts/c2": { name: "Court 2", password: "pass2", status: "open", clubId: "club1" },
     "courts/c3": { name: "Court 3", password: "pass3", status: "open", clubId: null },
