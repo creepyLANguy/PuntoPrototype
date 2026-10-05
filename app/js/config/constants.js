@@ -80,6 +80,12 @@ export const STATUS = {
   PRIVATE: "private",
 };
 
+export const CLUB_STATES = {
+  OPEN: "open",
+  MAINTENANCE: "maintenance",
+  CLOSED: "closed",
+};
+
 export const TOAST_TYPES = {
   SUCCESS: "success",
   ERROR: "error",
