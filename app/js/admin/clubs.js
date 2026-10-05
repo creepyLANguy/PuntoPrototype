@@ -1,5 +1,5 @@
 // Admin club list: the Clubs tab of the dashboard (search by club name or id,
-// one row per club with its court and device counts). Owns #adminClubList;
+// one row per club with its state and court/device counts). Owns #adminClubList;
 // creating and editing a club is the club editor (clubEditor.js).
 import { openClubEditor } from "./clubEditor.js";
 import { anyValueMatches, normalizeSearchTerm } from "../clubs/clubIndex.js";
@@ -66,6 +66,9 @@ function renderClubList(clubs)
 
     item.querySelector(".club-name").textContent = club.name;
     item.querySelector(".aci-id").textContent = `ID: ${club.id.toUpperCase()}`;
+    const stateBadge = item.querySelector(".club-state-cell .status-badge");
+    stateBadge.textContent = club.state.charAt(0).toUpperCase() + club.state.slice(1);
+    stateBadge.classList.add(`status-${club.state}`);
     item.querySelector(".club-courts-cell .aci-value").textContent = countLabel(club.courtIds.length, "court");
     item.querySelector(".club-devices-cell .aci-value").textContent = countLabel(club.deviceIds.length, "device");
     item.querySelector(".edit-btn").addEventListener("click", () => void openClubEditor(club));
