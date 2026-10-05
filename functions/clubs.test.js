@@ -446,11 +446,11 @@ describe("createClub", () => {
   test("members of another club are moved to the new club", async () => {
     const { functions, db } = loadFunctions({
       "clubs/other1": {
-      name: "Old Club",
-      state: DEFAULT_CLUB_STATE,
-      courtIds: ["abcd", "efgh"],
-      deviceIds: ["HUB-1"],
-    },
+        name: "Old Club",
+        state: DEFAULT_CLUB_STATE,
+        courtIds: ["abcd", "efgh"],
+        deviceIds: ["HUB-1"],
+      },
       "courts/abcd": { clubId: "other1" },
       "courts/efgh": { clubId: "other1" },
       "devices/HUB-1": { clubId: "other1" },
