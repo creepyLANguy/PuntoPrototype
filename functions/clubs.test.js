@@ -475,8 +475,18 @@ describe("createClub", () => {
 
 describe("updateClub", () => {
   const seed = () => ({
-    "clubs/club01": { name: "Club One", state: CLUB_STATES.OPEN, courtIds: ["abcd", "efgh"], deviceIds: ["HUB-1"] },
-    "clubs/club02": { name: "Club Two", state: CLUB_STATES.OPEN, courtIds: ["jkmn"], deviceIds: ["PULSE-9"] },
+    "clubs/club01": {
+      name: "Club One",
+      state: CLUB_STATES.OPEN,
+      courtIds: ["abcd", "efgh"],
+      deviceIds: ["HUB-1"],
+    },
+    "clubs/club02": {
+      name: "Club Two",
+      state: CLUB_STATES.OPEN,
+      courtIds: ["jkmn"],
+      deviceIds: ["PULSE-9"],
+    },
     "courts/abcd": { name: "A", clubId: "club01" },
     "courts/efgh": { name: "E", clubId: "club01" },
     "courts/jkmn": { name: "J", clubId: "club02" },
