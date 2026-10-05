@@ -133,7 +133,9 @@ function applyClosedClubEffects(tx, effects, { clubId, clubName }) {
 
   const closingCourtIds = new Set(effects.courts.map((court) => court.courtId));
   const cancelledTournamentIds = [];
-  const tournamentIds = new Set(effects.tournaments.map((tournament) => tournament.tournamentId));
+  const tournamentIds = new Set(
+    effects.tournaments.map((tournament) => tournament.tournamentId),
+  );
 
   for (const tournament of effects.tournaments) {
     const wasCancelled = tournament.status === "cancelled";
@@ -184,11 +186,12 @@ function applyClosedClubEffects(tx, effects, { clubId, clubName }) {
 
   const releasedOtherCourtIds = new Set();
   effects.matches.forEach((match) => {
-    const tournamentCancelled = Boolean(match.tournamentId && tournamentIds.has(match.tournamentId));
+    const tournamentCancelled = Boolean(
+      match.tournamentId && tournamentIds.has(match.tournamentId),
+    );
     const needsCancellation =
       tournamentCancelled && !["completed", "cancelled"].includes(match.status);
-    const needsUnlink =
-      match.currentCourtId && closingCourtIds.has(match.currentCourtId);
+    const needsUnlink = match.currentCourtId && closingCourtIds.has(match.currentCourtId);
 
     if (!needsCancellation && !needsUnlink) return;
 
@@ -326,7 +329,10 @@ async function saveClubInTransaction(tx, { clubId, isNew, name, state, courtIds,
     state: nextState,
     courtIds,
     deviceIds: effectiveDeviceIds,
-    moved: { courts: describeMoves(plans.courts), devices: describeMoves(plans.devices) },
+    moved: {
+      courts: describeMoves(plans.courts),
+      devices: describeMoves(plans.devices),
+    },
     closedTournamentIds: cancelledTournamentIds,
   };
 }
@@ -357,7 +363,8 @@ async function createClub(input = {}, { random = Math.random } = {}) {
 async function updateClub(input = {}) {
   const clubId = normalizeClubId(input.clubId);
   const name = normalizeClubName(input.name);
-  const state = input.state === undefined ? undefined : normalizeClubState(input.state);
+  const state =
+    input.state === undefined ? undefined : normalizeClubState(input.state);
   const membership = normalizeMembership(input);
 
   const result = await db.runTransaction((tx) =>
