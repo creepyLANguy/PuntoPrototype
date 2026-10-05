@@ -179,6 +179,7 @@ test("the Clubs tab lists every club with its court and device counts", async ()
   const rows = [...document.querySelectorAll("#adminClubList .admin-club-item")].map((item) => [
     item.querySelector(".club-name").textContent,
     item.querySelector(".aci-id").textContent,
+    item.querySelector(".club-state-cell .status-badge").textContent,
     item.querySelector(".club-courts-cell .aci-value").textContent,
     item.querySelector(".club-devices-cell .aci-value").textContent,
   ]);
