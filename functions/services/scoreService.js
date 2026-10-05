@@ -34,6 +34,7 @@ async function processScoreEvent(event) {
   const scoreRef = db.doc(paths.matchScore(matchId));
   const matchRef = db.doc(paths.match(matchId));
   let completedFixedEndMatch = false;
+  let completedTournamentId = null;
 
   try {
     await db.runTransaction(
@@ -54,6 +55,8 @@ async function processScoreEvent(event) {
         const matchData = matchSnap.data() || {};
         if (matchData.status && matchData.status !== "live") {
           console.debug(`Ignoring event ${eventId}: match ${matchId} is ${matchData.status}.`);
+          if (matchData.status === "completed")
+            completedTournamentId = matchData.tournamentId || null;
           return;
         }
         const scoreSnap = await tx.get(scoreRef);
@@ -282,6 +285,12 @@ async function processScoreEvent(event) {
     // Rethrow so Cloud Functions retries delivery (see retry:true above) instead of
     // silently dropping this point/undo when the score doc is under heavy contention.
     throw err;
+  }
+
+  if (completedTournamentId) {
+    const { onTournamentMatchChanged } = require("./tournamentHooks");
+    await onTournamentMatchChanged({ tournamentId: completedTournamentId });
+    return;
   }
 
   // A tournament match whose scoring mode has a defined end (fixed total

@@ -288,6 +288,20 @@ describe("tournament flow", () => {
     const f1Done = mockDb.get(`tournaments/${tournamentId}/fixtures/${f1.id}`);
     expect(f1Done.resultSnapshot).toMatchObject({ winner: "A", points: { A: 19, B: 17 } });
 
+    const completedScore = mockDb.get(`matches/${f1.matchId}/score/current`);
+    const lastEvent = mockDb.list(`matches/${f1.matchId}/events`).at(-1);
+    const tournamentView = view(tournamentId);
+    mockDb.write(`tournamentViews/${tournamentId}`, {
+      ...tournamentView,
+      standings: { ...tournamentView.standings, rows: [] },
+    });
+    await api.onEventCreate({
+      params: { matchId: f1.matchId, eventId: lastEvent.id },
+      data: { data: () => lastEvent },
+    });
+    expect(view(tournamentId).standings.rows).not.toHaveLength(0);
+    expect(mockDb.get(`matches/${f1.matchId}/score/current`)).toEqual(completedScore);
+
     // Move a live match: the match id survives and both courts update.
     const moved = await tournament(
       "moveFixtureCourt",
