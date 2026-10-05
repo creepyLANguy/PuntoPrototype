@@ -197,8 +197,12 @@ async function postEvent(req, res) {
         courtId: actingCourtId,
         actor: { type: "device", uid: null },
       }));
-      const matchSnap = await db.doc(paths.match(matchId)).get();
+      const [matchSnap, refreshedCourtSnap] = await Promise.all([
+        db.doc(paths.match(matchId)).get(),
+        db.doc(paths.court(actingCourtId)).get(),
+      ]);
       matchData = matchSnap.exists ? matchSnap.data() : {};
+      actingCourtData.beaconSidesSwapped = refreshedCourtSnap.data()?.beaconSidesSwapped === true;
     }
 
     const effectiveEventType = mapBeaconEventType(
