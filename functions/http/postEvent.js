@@ -205,6 +205,13 @@ async function postEvent(req, res) {
       actingCourtData.beaconSidesSwapped = refreshedCourtSnap.data()?.beaconSidesSwapped === true;
     }
 
+    if (eventType === "RESET" && matchData?.tournamentId) {
+      return sendJson(res, 403, {
+        success: false,
+        error: "Tournament matches must be reset through the authorized reset flow.",
+      });
+    }
+
     const effectiveEventType = mapBeaconEventType(
       eventType,
       deviceSku,

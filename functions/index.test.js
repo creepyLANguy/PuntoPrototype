@@ -947,6 +947,38 @@ describe("postEvent", () => {
     expect(eventEntry[1].scoreVersion).toBe(3);
   });
 
+  test("requires the authorized reset flow for tournament matches", async () => {
+    const courtId = "court-tournament";
+    const matchId = "m-tournament";
+    const deviceId = "device-tournament";
+
+    mockDb = new FakeFirestore({
+      [`devices/${deviceId}`]: { courtId },
+      ...seedMatchDocs({
+        courtId,
+        matchId,
+        match: { tournamentId: "tournament-1", fixtureId: "fixture-1" },
+      }),
+    });
+
+    let postEvent;
+    jest.isolateModules(() => {
+      ({ postEvent } = require("./index"));
+    });
+
+    const res = makePostRes();
+    await postEvent({ method: "POST", body: { deviceId, eventType: "RESET" } }, res);
+
+    expect(res.statusCode).toBe(403);
+    expect(res.payload).toMatchObject({
+      success: false,
+      error: "Tournament matches must be reset through the authorized reset flow.",
+    });
+    expect(
+      [...mockDb.docs.keys()].some((path) => path.startsWith(`matches/${matchId}/events/`)),
+    ).toBe(false);
+  });
+
   test("creates a casual match when the court has none", async () => {
     const courtId = "court-empty";
     const deviceId = "device-empty";
