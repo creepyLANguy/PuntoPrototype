@@ -470,7 +470,13 @@ test("members that no longer exist are dropped, also when deleted from the edito
   await waitForDashboardClubs(4);
   assert.deepEqual(clubRequests.at(-1), [
     "updateClub",
-    { clubId: "ghostc", name: "Ghost Club", courtIds: [], deviceIds: [] },
+    {
+      clubId: "ghostc",
+      name: "Ghost Club",
+      state: "closed",
+      courtIds: [],
+      deviceIds: [],
+    },
   ]);
   assert.deepEqual(stored("clubs/ghostc").courtIds, []);
   assert.deepEqual(stored("clubs/ghostc").deviceIds, []);
