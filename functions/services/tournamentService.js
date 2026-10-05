@@ -155,9 +155,7 @@ function firstValidationError(validation) {
 }
 
 async function loadClubForCourt(tx, courtId) {
-  const snap = await tx.get(
-    db.collection("clubs").where("courtIds", "array-contains", courtId),
-  );
+  const snap = await tx.get(db.collection("clubs").where("courtIds", "array-contains", courtId));
   const record = snap.docs[0];
   return record ? { clubId: record.id, ...record.data() } : null;
 }
@@ -1947,9 +1945,7 @@ async function getTournamentView(data, credentials) {
   });
 
   return {
-    view: privateSnap.exists
-      ? await sanitizeTournamentClubView(privateSnap.data())
-      : publicView,
+    view: privateSnap.exists ? await sanitizeTournamentClubView(privateSnap.data()) : publicView,
     liveMatches,
   };
 }
@@ -1960,10 +1956,7 @@ async function getCourtOptions(data) {
     db.collection("clubs").get(),
   ]);
   const clubsById = new Map(
-    clubSnap.docs.map((docSnap) => [
-      docSnap.id,
-      { clubId: docSnap.id, ...docSnap.data() },
-    ]),
+    clubSnap.docs.map((docSnap) => [docSnap.id, { clubId: docSnap.id, ...docSnap.data() }]),
   );
   const clubByCourtId = new Map();
   for (const club of clubsById.values()) {
@@ -1976,8 +1969,7 @@ async function getCourtOptions(data) {
     .map((docSnap) => ({ courtId: docSnap.id, ...docSnap.data() }))
     .filter((court) => {
       const club =
-        (court.clubId && clubsById.get(court.clubId)) ||
-        clubByCourtId.get(court.courtId);
+        (court.clubId && clubsById.get(court.clubId)) || clubByCourtId.get(court.courtId);
       if (!club) return true;
       return normalizeClubState(club.state) === CLUB_STATES.OPEN;
     });
