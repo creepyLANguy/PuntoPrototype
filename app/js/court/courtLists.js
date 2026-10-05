@@ -3,7 +3,7 @@
 // players and tournaments (spec section 31), the inline loader and the
 // scroll-fade affordance. Owns #playCourtList, #spectateCourtList and
 // #spectateDiscoveryResults.
-import { clubSummary } from "../clubs/clubIndex.js";
+import { clubSummary, isClubOpen } from "../clubs/clubIndex.js";
 import { loadClubIndex } from "../clubs/clubLoader.js";
 import { STATUS } from "../config/constants.js";
 import { enterCourt } from "./session.js";
@@ -67,11 +67,14 @@ async function loadAllActiveCourts(includePrivateCourts = true) {
     appState.discovery = { matches: liveMatches, tournaments };
     appState.allCourts = [];
     snapshot.forEach((doc) => {
-      let data = doc.data();
+      const data = doc.data();
+      const club = data.clubId ? clubIndex.byId.get(data.clubId) : null;
+      const clubAllowed = !data.clubId ? true : isClubOpen(club);
       if (
-        data.status === STATUS.OPEN ||
-        (includePrivateCourts && data.status === STATUS.PRIVATE)
-      ) {
+        clubAllowed &&
+        (data.status === STATUS.OPEN ||
+          (includePrivateCourts && data.status === STATUS.PRIVATE))
+      {
         appState.allCourts.push({
           id: doc.id,
           name: data.name || doc.id,
@@ -79,7 +82,7 @@ async function loadAllActiveCourts(includePrivateCourts = true) {
           createdAt: data.createdAt,
           status: data.status,
           match: matchByCourtId.get(doc.id) || null,
-          club: clubSummary(clubIndex.clubByCourtId.get(doc.id)),
+          club: clubSummary(club),
         });
       }
     });
