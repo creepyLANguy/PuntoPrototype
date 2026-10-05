@@ -790,6 +790,17 @@
           <div class="error" id="editClubNameError"></div>
         </div>
 
+        <div class="form-group">
+          <label for="editClubState">Club State</label>
+          <div class="select-wrapper">
+            <select id="editClubState">
+              <option value="open">🟢 Open</option>
+              <option value="maintenance">🟠 Maintenance</option>
+              <option value="closed">🔴 Closed</option>
+            </select>
+          </div>
+        </div>
+
         <section class="club-member-section">
           <div class="club-member-header">
             <h3 id="clubCourtsHeading">Courts</h3>
@@ -815,7 +826,6 @@
         <button id="deleteClubBtn" class="danger-btn" style="background: #ff4444;">Delete Club</button>
       </div>
     </div>
-
     <!-- ================= TOAST NOTIFICATIONS ================= -->
     <div id="toastContainer" class="toast-container"></div>
 
