@@ -91,8 +91,8 @@ test.before(async () => {
   seedCourt("jkmn", { name: "Gamma Court", clubId: "hiltop" });
   seedCourt("pqrs", { name: "Delta Court", status: "private" });
   seedCourt("stux", { name: "Echo Court", clubId: "ghostc" });
-  seedDoc("clubs/rvside", { name: "Riverside Padel", courtIds: ["abcd"], deviceIds: ["HUB-1"] });
-  seedDoc("clubs/hiltop", { name: "Hilltop Club", courtIds: ["jkmn"], deviceIds: [] });
+  seedDoc("clubs/rvside", { name: "Riverside Padel", state: "open", courtIds: ["abcd"], deviceIds: ["HUB-1"] });
+  seedDoc("clubs/hiltop", { name: "Hilltop Club", state: "open", courtIds: ["jkmn"], deviceIds: [] });
   // Lists a court and a device that no longer exist.
   seedDoc("clubs/ghostc", {
     name: "Ghost Club",
