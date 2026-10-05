@@ -51,6 +51,10 @@ function renderClubList(clubs)
         <strong class="club-name"></strong>
         <div class="aci-id"></div>
       </div>
+      <div class="aci-field club-state-cell">
+        <div class="aci-label">State</div>
+        <div class="aci-value"><span class="status-badge"></span></div>
+      </div>
       <div class="aci-field club-courts-cell">
         <div class="aci-label">Courts</div>
         <div class="aci-value"></div>
