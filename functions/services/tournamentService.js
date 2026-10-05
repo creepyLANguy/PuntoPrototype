@@ -1900,7 +1900,7 @@ async function recalculateTournament({ tournamentId, rebuildSchedule = false }, 
 
 // ---------------------------------------------------------------------------
 // Reads
-// Club visibility is resolved at read time so stale views cannot expose closed or maintenance clubs.
+// Resolve club visibility at read time so stale views cannot expose closed or maintenance clubs.
 // ---------------------------------------------------------------------------
 
 async function sanitizeTournamentClubView(view) {
