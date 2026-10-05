@@ -433,7 +433,9 @@ export function renderWizard(
         adminCredentials,
       );
       if (created.duplicate) {
-        status.textContent = "This tournament was already created.";
+        state.requestId = newRequestId();
+        status.textContent =
+          "This request already created a tournament, but its credentials cannot be recovered. Create again to start a new tournament.";
         return;
       }
       onCreated(created);
