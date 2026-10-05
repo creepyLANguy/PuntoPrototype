@@ -218,7 +218,7 @@ test("lists still load, without club names, when clubs cannot be read", async ()
 });
 
 test("courts belonging to maintenance or closed clubs stay out of user lists", async () => {
-  await openList("Play", "playCourtList", 3);
+  await openList("Play", "playCourtList", 4);
   await closeList("closePlayBtn");
 
   firestoreState.docs.set("clubs/closedc", {
