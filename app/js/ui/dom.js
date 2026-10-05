@@ -275,6 +275,7 @@ export function initElements() {
   elements.editClubIdLine = $("editClubIdLine");
   elements.editClubName = $("editClubName");
   elements.editClubNameError = $("editClubNameError");
+  elements.editClubState = $("editClubState");
   elements.clubCourtsCount = $("clubCourtsCount");
   elements.clubCourtSearch = $("clubCourtSearch");
   elements.clubCourtList = $("clubCourtList");
