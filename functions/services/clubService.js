@@ -91,9 +91,7 @@ async function readClosedClubEffects(tx, { clubId, previousState, nextState, cou
     .map((snap, index) => (snap.exists ? { courtId: courtIds[index], ...snap.data() } : null))
     .filter(Boolean);
 
-  const tournamentSnap = await tx.get(
-    db.collection("tournaments").where("clubId", "==", clubId),
-  );
+  const tournamentSnap = await tx.get(db.collection("tournaments").where("clubId", "==", clubId));
   const tournaments = tournamentSnap.docs.map((snap) => ({
     tournamentId: snap.id,
     ...snap.data(),
@@ -133,9 +131,7 @@ function applyClosedClubEffects(tx, effects, { clubId, clubName }) {
 
   const closingCourtIds = new Set(effects.courts.map((court) => court.courtId));
   const cancelledTournamentIds = [];
-  const tournamentIds = new Set(
-    effects.tournaments.map((tournament) => tournament.tournamentId),
-  );
+  const tournamentIds = new Set(effects.tournaments.map((tournament) => tournament.tournamentId));
 
   for (const tournament of effects.tournaments) {
     const wasCancelled = tournament.status === "cancelled";
@@ -363,8 +359,7 @@ async function createClub(input = {}, { random = Math.random } = {}) {
 async function updateClub(input = {}) {
   const clubId = normalizeClubId(input.clubId);
   const name = normalizeClubName(input.name);
-  const state =
-    input.state === undefined ? undefined : normalizeClubState(input.state);
+  const state = input.state === undefined ? undefined : normalizeClubState(input.state);
   const membership = normalizeMembership(input);
 
   const result = await db.runTransaction((tx) =>
