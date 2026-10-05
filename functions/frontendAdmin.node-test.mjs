@@ -149,8 +149,28 @@ test("the admin password is checked before the dashboard opens", async () => {
 
   $("adminAuthPassword").value = ADMIN_SKELETON_KEY;
   $("submitAdminAuthBtn").click();
+  await waitFor(() => isShown("adminDashboardPage"), { label: "admin dashboard" });
+  assert.equal(activeTab(), "tournaments", "the Tournaments tab is open by default");
+  assert.deepEqual(
+    [...document.querySelectorAll(".admin-tabs .tab-btn")].map((button) => button.dataset.tab),
+    ["tournaments", "clubs", "courts", "matches", "devices"],
+  );
+
+  const tabControls = {
+    tournaments: ["adminTournamentSearch", "showCreateTournamentBtn"],
+    clubs: ["adminClubSearch", "showCreateClubBtn"],
+    courts: ["adminCourtSearch", "showCreateCourtModalBtn"],
+    matches: ["adminMatchSearch", "showAddMatchBtn"],
+    devices: ["adminDeviceSearch", "showAddDeviceModalBtn"],
+  };
+  for (const [tab, [searchId, addId]] of Object.entries(tabControls)) {
+    assert.ok($(searchId), tab + " tab has a search box");
+    assert.ok($(addId), tab + " tab has an add button");
+  }
+
+  document.querySelector('.tab-btn[data-tab="courts"]').click();
   await waitForCourtList(3);
-  assert.equal(activeTab(), "courts", "the Courts tab is open by default");
+  assert.equal(activeTab(), "courts");
   assert.equal($("courtsTab").classList.contains("active"), true);
 });
 
