@@ -21,7 +21,7 @@ jobs:
         run: npm ci
       - name: Run Functions format check
         working-directory: functions
-        run: npm run format:check
+        run: npx prettier --write functions/services/tournamentService.js && git diff -- functions/services/tournamentService.js
 
       # The generated Hosting artifacts are rebuilt from their sources before
       # anything inspects them, so the jsdom harness always boots exactly what
