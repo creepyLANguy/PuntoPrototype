@@ -84,6 +84,7 @@ test.before(async () => {
   const dom = await bootFrontend();
   window = dom.window;
   document = window.document;
+  await joinCourtAsPlayer(document, "ctxcourt");
 });
 
 test("points are written to the current match events with court context", async () => {
