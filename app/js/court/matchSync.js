@@ -56,10 +56,7 @@ export function refreshScoreboardTitle() {
     session.currentCourtName ||
     session.currentCourtId ||
     "";
-  showCourtTitle(
-    title,
-    session.currentMatchId ? session.currentCourtName : null,
-  );
+  showCourtTitle(title, session.currentMatchId ?? null);
   updatePageTitle(
     session.currentCourtName,
     session.currentCourtId,
