@@ -1812,8 +1812,7 @@ async function recalculateTournament({ tournamentId, rebuildSchedule = false }, 
       tx.set(fixtureRef(tournamentId, fixtureId), data, { merge: true });
     });
 
-    const publicClub =
-      club && normalizeClubState(club.state) === CLUB_STATES.OPEN ? club : null;
+    const publicClub = club && normalizeClubState(club.state) === CLUB_STATES.OPEN ? club : null;
     const view = buildTournamentView({
       tournament,
       participants: state.participants.filter((p) => p.status !== "removed"),
@@ -1930,10 +1929,7 @@ async function getCourtOptions(data) {
     db.collection("clubs").get(),
   ]);
   const clubsById = new Map(
-    clubSnap.docs.map((docSnap) => [
-      docSnap.id,
-      { clubId: docSnap.id, ...docSnap.data() },
-    ]),
+    clubSnap.docs.map((docSnap) => [docSnap.id, { clubId: docSnap.id, ...docSnap.data() }]),
   );
   const courts = courtSnap.docs
     .map((docSnap) => ({ courtId: docSnap.id, ...docSnap.data() }))
