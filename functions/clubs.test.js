@@ -37,10 +37,13 @@ const {
   CLUB_NAME_MAX_LENGTH,
   MAX_CLUB_COURTS,
   MAX_CLUB_DEVICES,
+  CLUB_STATES,
+  DEFAULT_CLUB_STATE,
   ClubError,
   generateClubId,
   normalizeClubId,
   normalizeClubName,
+  normalizeClubState,
   normalizeMemberIds,
   planMembershipChange,
 } = require("./domain/clubs/membership");
@@ -209,6 +212,15 @@ describe("club rules", () => {
     );
   });
 
+  test("club state defaults to maintenance and only accepts known states", () => {
+    expect(normalizeClubState()).toBe(DEFAULT_CLUB_STATE);
+    expect(normalizeClubState(" OPEN ")).toBe(CLUB_STATES.OPEN);
+    expect(normalizeClubState("maintenance")).toBe(CLUB_STATES.MAINTENANCE);
+    expect(normalizeClubState("closed")).toBe(CLUB_STATES.CLOSED);
+    expect(() => normalizeClubState("private")).toThrow(ClubError);
+    expect(() => normalizeClubState(42)).toThrow(ClubError);
+  });
+
   test("club ids are normalised to lower case and must be usable as a document id", () => {
     expect(normalizeClubId(" ABCDEF ")).toBe("abcdef");
     for (const bad of [undefined, "", "a/b", 12]) {
@@ -277,9 +289,12 @@ describe("createClub", () => {
     expect(result).toEqual({
       clubId: "aaaaaa",
       name: "Central Padel",
+      state: DEFAULT_CLUB_STATE,
       courtIds: ["abcd", "efgh"],
       deviceIds: ["HUB-1"],
       moved: { courts: [], devices: [] },
+      closedTournamentIds: [],
+      state: DEFAULT_CLUB_STATE,
     });
     expect(doc(db, "clubs/aaaaaa")).toEqual({
       name: "Central Padel",
@@ -327,6 +342,107 @@ describe("createClub", () => {
     });
   });
 
+  test("closing a club cascades to its courts, devices, active matches and tournaments", async () => {
+    const { functions, db } = loadFunctions({
+      "clubs/club01": {
+        name: "Club One",
+        state: CLUB_STATES.OPEN,
+        courtIds: ["abcd"],
+        deviceIds: ["HUB-1"],
+      },
+      "courts/abcd": {
+        name: "A",
+        clubId: "club01",
+        status: "open",
+        activeMatchId: "live-match",
+      },
+      "devices/HUB-1": { clubId: "club01" },
+      "matches/live-match": {
+        status: "live",
+        currentCourtId: "abcd",
+      },
+      "matches/tournament-match": {
+        status: "scheduled",
+        currentCourtId: null,
+        tournamentId: "club-tournament",
+      },
+      "tournaments/club-tournament": {
+        tournamentId: "club-tournament",
+        name: "Saturday Tournament",
+        status: "published",
+        clubId: "club01",
+        revision: 3,
+      },
+      "tournaments/club-tournament/fixtures/f1": {
+        fixtureId: "f1",
+        status: "scheduled",
+        matchId: "tournament-match",
+      },
+    });
+
+    await call(functions.updateClub, {
+      clubId: "club01",
+      name: "Club One",
+      state: CLUB_STATES.CLOSED,
+      courtIds: ["abcd"],
+      deviceIds: [],
+    });
+
+    expect(doc(db, "clubs/club01")).toMatchObject({
+      state: CLUB_STATES.CLOSED,
+      courtIds: ["abcd"],
+      deviceIds: [],
+    });
+    expect(doc(db, "courts/abcd")).toMatchObject({
+      status: "closed",
+      clubId: "club01",
+      activeMatchId: null,
+    });
+    expect(doc(db, "devices/HUB-1").clubId).toBeNull();
+    expect(doc(db, "matches/live-match")).toMatchObject({
+      status: "live",
+      currentCourtId: null,
+    });
+    expect(doc(db, "matches/tournament-match")).toMatchObject({
+      status: "cancelled",
+      currentCourtId: null,
+    });
+    expect(doc(db, "tournaments/club-tournament").status).toBe("cancelled");
+    expect(doc(db, "tournaments/club-tournament/fixtures/f1").status).toBe("cancelled");
+  });
+
+  test("moving an open club to maintenance does not cascade its entities", async () => {
+    const { functions, db } = loadFunctions({
+      "clubs/club01": {
+        name: "Club One",
+        state: CLUB_STATES.OPEN,
+        courtIds: ["abcd"],
+        deviceIds: ["HUB-1"],
+      },
+      "courts/abcd": {
+        name: "A",
+        clubId: "club01",
+        status: "open",
+        activeMatchId: "live-match",
+      },
+      "devices/HUB-1": { clubId: "club01" },
+      "matches/live-match": { status: "live", currentCourtId: "abcd" },
+    });
+
+    await call(functions.updateClub, {
+      clubId: "club01",
+      name: "Club One",
+      state: CLUB_STATES.MAINTENANCE,
+      courtIds: ["abcd"],
+      deviceIds: ["HUB-1"],
+    });
+
+    expect(doc(db, "clubs/club01").state).toBe(CLUB_STATES.MAINTENANCE);
+    expect(doc(db, "courts/abcd")).toMatchObject({ status: "open", activeMatchId: "live-match" });
+    expect(doc(db, "devices/HUB-1").clubId).toBe("club01");
+    expect(doc(db, "matches/live-match").currentCourtId).toBe("abcd");
+  });
+
   test("members of another club are moved to the new club", async () => {
     const { functions, db } = loadFunctions({
       "clubs/other1": { name: "Old Club", courtIds: ["abcd", "efgh"], deviceIds: ["HUB-1"] },
@@ -354,8 +470,8 @@ describe("createClub", () => {
 
 describe("updateClub", () => {
   const seed = () => ({
-    "clubs/club01": { name: "Club One", courtIds: ["abcd", "efgh"], deviceIds: ["HUB-1"] },
-    "clubs/club02": { name: "Club Two", courtIds: ["jkmn"], deviceIds: ["PULSE-9"] },
+    "clubs/club01": { name: "Club One", state: CLUB_STATES.OPEN, courtIds: ["abcd", "efgh"], deviceIds: ["HUB-1"] },
+    "clubs/club02": { name: "Club Two", state: CLUB_STATES.OPEN, courtIds: ["jkmn"], deviceIds: ["PULSE-9"] },
     "courts/abcd": { name: "A", clubId: "club01" },
     "courts/efgh": { name: "E", clubId: "club01" },
     "courts/jkmn": { name: "J", clubId: "club02" },
@@ -378,9 +494,11 @@ describe("updateClub", () => {
     expect(result).toEqual({
       clubId: "club01",
       name: "Club One Renamed",
+      state: CLUB_STATES.OPEN,
       courtIds: ["efgh", "pqrs"],
       deviceIds: ["BEACON-3"],
       moved: { courts: [], devices: [] },
+      closedTournamentIds: [],
     });
     expect(doc(db, "clubs/club01")).toMatchObject({
       name: "Club One Renamed",
@@ -402,6 +520,7 @@ describe("updateClub", () => {
     const result = await call(functions.updateClub, {
       clubId: "club01",
       name: "Club One",
+      state: CLUB_STATES.OPEN,
       courtIds: ["abcd", "efgh", "jkmn"],
       deviceIds: ["HUB-1", "PULSE-9"],
     });
