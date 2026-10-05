@@ -5409,7 +5409,7 @@ body.light-mode .tab-btn.active {
 
 .admin-tabs {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: 1fr 1fr;
   width: 100%;
 }
 
@@ -7221,4 +7221,3 @@ body.light-mode .dm-meta-value {
   display: inline-flex;
   align-items: center;
 }
-
