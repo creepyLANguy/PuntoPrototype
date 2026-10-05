@@ -21,7 +21,7 @@ jobs:
         run: npm ci
       - name: Run Functions format check
         working-directory: functions
-        run: npx prettier --write "**/*.{js,mjs}" && git -C .. diff -- functions/clubs.test.js functions/frontendClubLists.node-test.mjs functions/services/clubService.js functions/services/tournamentService.js && cd .. && node scripts/build-frontend.mjs && git diff -- app/index.html app/css/style.css
+        run: npm run format:check
 
       # The generated Hosting artifacts are rebuilt from their sources before
       # anything inspects them, so the jsdom harness always boots exactly what
