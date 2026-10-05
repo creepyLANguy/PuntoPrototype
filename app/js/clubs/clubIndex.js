@@ -8,6 +8,9 @@ export function clubFromData(id, data = {})
   return {
     id,
     name: typeof data.name === "string" && data.name.trim() ? data.name.trim() : id,
+    state: Object.values(CLUB_STATES).includes(data.state)
+      ? data.state
+      : CLUB_STATES.MAINTENANCE,
     courtIds: ids(data.courtIds),
     deviceIds: ids(data.deviceIds)
   };
@@ -50,6 +53,11 @@ export const EMPTY_CLUB_INDEX = buildClubIndex([]);
 export function clubSummary(club)
 {
   return club ? { id: club.id, name: club.name } : null;
+}
+
+export function isClubOpen(club)
+{
+  return Boolean(club) && club.state === CLUB_STATES.OPEN;
 }
 
 export function normalizeSearchTerm(term)
