@@ -150,7 +150,7 @@ test("the admin password is checked before the dashboard opens", async () => {
   $("adminAuthPassword").value = ADMIN_SKELETON_KEY;
   $("submitAdminAuthBtn").click();
   await waitFor(() => isShown("adminDashboardPage"), { label: "admin dashboard" });
-  assert.equal(activeTab(), "tournaments", "the Tournaments tab is open by default");
+  assert.equal(activeTab(), "courts", "the Courts tab is open by default");
   assert.deepEqual(
     [...document.querySelectorAll(".admin-tabs .tab-btn")].map((button) => button.dataset.tab),
     ["tournaments", "clubs", "courts", "matches", "devices"],
