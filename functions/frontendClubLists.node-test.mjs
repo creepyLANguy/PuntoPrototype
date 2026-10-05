@@ -14,6 +14,7 @@ import {
   settle,
   waitFor,
 } from "./frontendHarness/harness.mjs";
+import { loadCourtsWithInlineLoader } from "../app/js/court/courtLists.js";
 
 let window;
 let document;
