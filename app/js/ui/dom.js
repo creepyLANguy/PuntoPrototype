@@ -74,6 +74,13 @@ export function initElements() {
     deuceModeSelect: $("deuceModeSelect"),
     tiebreakModeSelect: $("tiebreakModeSelect"),
     scoringStatus: $("scoringStatus"),
+    fixedPointsTargetInput: $("fixedPointsTargetInput"),
+    fixedServeOrderInput: $("fixedServeOrderInput"),
+    fixedServesPerPlayerInput: $("fixedServesPerPlayerInput"),
+    fixedServeBlockLengthInput: $("fixedServeBlockLengthInput"),
+    fixedSideSwapRuleSelect: $("fixedSideSwapRuleSelect"),
+    fixedTieResolutionSelect: $("fixedTieResolutionSelect"),
+    fixedScoringOptions: $("fixedScoringOptions"),
     scoreFormatBadge: $("scoreFormatBadge"),
     straightPointsTotal: $("straightPointsTotal"),
     straightTotalValue: $("straightTotalValue"),
@@ -147,6 +154,13 @@ export function initElements() {
   elements.courtScoringMode = $("courtScoringMode");
   elements.courtDeuceMode = $("courtDeuceMode");
   elements.courtTiebreakMode = $("courtTiebreakMode");
+  elements.courtFixedScoringOptions = $("courtFixedScoringOptions");
+  elements.courtFixedPointsTarget = $("courtFixedPointsTarget");
+  elements.courtFixedServeOrder = $("courtFixedServeOrder");
+  elements.courtFixedServesPerPlayer = $("courtFixedServesPerPlayer");
+  elements.courtFixedServeBlockLength = $("courtFixedServeBlockLength");
+  elements.courtFixedSideSwapRule = $("courtFixedSideSwapRule");
+  elements.courtFixedTieResolution = $("courtFixedTieResolution");
 
   // ADMIN AUTH ELEMENTS
   elements.adminLoginBtn = $("adminLoginBtn");
@@ -180,6 +194,13 @@ export function initElements() {
   elements.editCourtScoringMode = $("editCourtScoringMode");
   elements.editCourtDeuceMode = $("editCourtDeuceMode");
   elements.editCourtTiebreakMode = $("editCourtTiebreakMode");
+  elements.editCourtFixedScoringOptions = $("editCourtFixedScoringOptions");
+  elements.editCourtFixedPointsTarget = $("editCourtFixedPointsTarget");
+  elements.editCourtFixedServeOrder = $("editCourtFixedServeOrder");
+  elements.editCourtFixedServesPerPlayer = $("editCourtFixedServesPerPlayer");
+  elements.editCourtFixedServeBlockLength = $("editCourtFixedServeBlockLength");
+  elements.editCourtFixedSideSwapRule = $("editCourtFixedSideSwapRule");
+  elements.editCourtFixedTieResolution = $("editCourtFixedTieResolution");
   elements.clearCourtScoreBtn = $("clearCourtScoreBtn");
   elements.saveEditBtn = $("saveEditBtn");
   elements.deleteCourtBtn = $("deleteCourtBtn");

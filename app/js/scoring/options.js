@@ -1,6 +1,9 @@
 // Scoring options: normalising the scoring mode / deuce / tiebreak options and
 // resolving which options apply to the court and to the current score.
-import { DEFAULT_SCORING_OPTIONS } from "../config/constants.js";
+import {
+  DEFAULT_FIXED_TOTAL_POINTS,
+  DEFAULT_SCORING_OPTIONS,
+} from "../config/constants.js";
 import { session } from "../state/sessionState.js";
 
 // fixedTotalPoints is the tournament profile (spec section 8.2); its serve and
@@ -33,7 +36,60 @@ export function normalizeScoringOptions(options = {}) {
     normalized.tiebreakMode = DEFAULT_SCORING_OPTIONS.tiebreakMode;
   }
 
-  if (normalized.scoringMode !== "fixedTotalPoints") {
+  if (normalized.scoringMode === "fixedTotalPoints") {
+    const fixed = DEFAULT_FIXED_TOTAL_POINTS;
+    const serving = {
+      ...fixed.serving,
+      ...(normalized.serving || {}),
+    };
+    const completion = {
+      ...fixed.completion,
+      ...(normalized.completion || {}),
+    };
+    const allowedSlots = new Set(fixed.serving.order);
+    const orderIsValid =
+      Array.isArray(serving.order) &&
+      serving.order.length === fixed.serving.order.length &&
+      serving.order.every((slot) => allowedSlots.has(slot)) &&
+      new Set(serving.order).size === fixed.serving.order.length;
+
+    const pointsTarget = Number(normalized.pointsTarget);
+    normalized.pointsTarget =
+      Number.isInteger(pointsTarget) && pointsTarget >= 1 && pointsTarget <= 500
+        ? pointsTarget
+        : fixed.pointsTarget;
+    normalized.serving = {
+      ...serving,
+      order: orderIsValid ? [...serving.order] : [...fixed.serving.order],
+      enabled: serving.enabled !== false,
+      servesPerPlayer:
+        Number.isInteger(Number(serving.servesPerPlayer)) &&
+        Number(serving.servesPerPlayer) >= 1 &&
+        Number(serving.servesPerPlayer) <= 100
+          ? Number(serving.servesPerPlayer)
+          : fixed.serving.servesPerPlayer,
+      serveBlockLength:
+        Number.isInteger(Number(serving.serveBlockLength)) &&
+        Number(serving.serveBlockLength) >= 1 &&
+        Number(serving.serveBlockLength) <= 20
+          ? Number(serving.serveBlockLength)
+          : fixed.serving.serveBlockLength,
+      sideSwapRule: ["after_each_player_serves_once", "none"].includes(
+        serving.sideSwapRule,
+      )
+        ? serving.sideSwapRule
+        : fixed.serving.sideSwapRule,
+    };
+    normalized.completion = {
+      ...completion,
+      rule: "exact_total_points",
+      tieResolution: ["allow_draw", "golden_point"].includes(
+        completion.tieResolution,
+      )
+        ? completion.tieResolution
+        : fixed.completion.tieResolution,
+    };
+  } else {
     FIXED_TOTAL_FIELDS.forEach((field) => delete normalized[field]);
   }
 

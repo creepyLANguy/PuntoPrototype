@@ -1,6 +1,7 @@
 // Scoring options controls: the settings modal's scoring selects and the shared
 // rule that disables deuce / tiebreak controls outside games-and-sets scoring.
 import {
+  DEFAULT_FIXED_TOTAL_POINTS,
   DEFAULT_SCORING_OPTIONS,
   SCORING_LABELS,
   TOAST_TYPES,
@@ -23,10 +24,12 @@ export function syncCourtScoringRuleControlsDisabled(
   scoringSelect,
   deuceSelect,
   tiebreakSelect,
+  fixedControls = [],
 ) {
   if (!scoringSelect) return;
 
   const disabled = scoringSelect.value !== "standard";
+  const fixedDisabled = scoringSelect.value !== "fixedTotalPoints";
   const controlledSelects = [deuceSelect, tiebreakSelect].filter(Boolean);
 
   controlledSelects.forEach((select) => {
@@ -38,6 +41,20 @@ export function syncCourtScoringRuleControlsDisabled(
       field.setAttribute("aria-disabled", String(disabled));
     }
   });
+
+  fixedControls.filter(Boolean).forEach((control) => {
+    control.disabled = fixedDisabled;
+    const field = control.closest(".scoring-field, .form-group");
+    if (field) {
+      field.classList.toggle("is-disabled", fixedDisabled);
+      field.setAttribute("aria-disabled", String(fixedDisabled));
+    }
+  });
+
+  const fixedGroup = fixedControls.find(Boolean)?.closest(".fixed-scoring-options");
+  if (fixedGroup) {
+    fixedGroup.classList.toggle("hidden", fixedDisabled);
+  }
 }
 
 export function registerCourtScoringRuleControls() {
@@ -47,12 +64,28 @@ export function registerCourtScoringRuleControls() {
         elements.courtScoringMode,
         elements.courtDeuceMode,
         elements.courtTiebreakMode,
+        [
+          elements.courtFixedPointsTarget,
+          elements.courtFixedServeOrder,
+          elements.courtFixedServesPerPlayer,
+          elements.courtFixedServeBlockLength,
+          elements.courtFixedSideSwapRule,
+          elements.courtFixedTieResolution,
+        ],
       ),
     );
     syncCourtScoringRuleControlsDisabled(
       elements.courtScoringMode,
       elements.courtDeuceMode,
       elements.courtTiebreakMode,
+      [
+        elements.courtFixedPointsTarget,
+        elements.courtFixedServeOrder,
+        elements.courtFixedServesPerPlayer,
+        elements.courtFixedServeBlockLength,
+        elements.courtFixedSideSwapRule,
+        elements.courtFixedTieResolution,
+      ],
     );
   }
 
@@ -62,6 +95,14 @@ export function registerCourtScoringRuleControls() {
         elements.editCourtScoringMode,
         elements.editCourtDeuceMode,
         elements.editCourtTiebreakMode,
+        [
+          elements.editCourtFixedPointsTarget,
+          elements.editCourtFixedServeOrder,
+          elements.editCourtFixedServesPerPlayer,
+          elements.editCourtFixedServeBlockLength,
+          elements.editCourtFixedSideSwapRule,
+          elements.editCourtFixedTieResolution,
+        ],
       ),
     );
 
@@ -69,6 +110,14 @@ export function registerCourtScoringRuleControls() {
       elements.editCourtScoringMode,
       elements.editCourtDeuceMode,
       elements.editCourtTiebreakMode,
+      [
+        elements.editCourtFixedPointsTarget,
+        elements.editCourtFixedServeOrder,
+        elements.editCourtFixedServesPerPlayer,
+        elements.editCourtFixedServeBlockLength,
+        elements.editCourtFixedSideSwapRule,
+        elements.editCourtFixedTieResolution,
+      ],
     );
   }
 }
@@ -86,7 +135,21 @@ export function syncScoringControls() {
   if (elements.tiebreakModeSelect)
     elements.tiebreakModeSelect.value = options.tiebreakMode;
 
+  if (elements.fixedPointsTargetInput)
+    elements.fixedPointsTargetInput.value = options.pointsTarget ?? DEFAULT_FIXED_TOTAL_POINTS.pointsTarget;
+  if (elements.fixedServeOrderInput)
+    elements.fixedServeOrderInput.value = (options.serving?.order || DEFAULT_FIXED_TOTAL_POINTS.serving.order).join(", ");
+  if (elements.fixedServesPerPlayerInput)
+    elements.fixedServesPerPlayerInput.value = options.serving?.servesPerPlayer ?? DEFAULT_FIXED_TOTAL_POINTS.serving.servesPerPlayer;
+  if (elements.fixedServeBlockLengthInput)
+    elements.fixedServeBlockLengthInput.value = options.serving?.serveBlockLength ?? DEFAULT_FIXED_TOTAL_POINTS.serving.serveBlockLength;
+  if (elements.fixedSideSwapRuleSelect)
+    elements.fixedSideSwapRuleSelect.value = options.serving?.sideSwapRule ?? DEFAULT_FIXED_TOTAL_POINTS.serving.sideSwapRule;
+  if (elements.fixedTieResolutionSelect)
+    elements.fixedTieResolutionSelect.value = options.completion?.tieResolution ?? DEFAULT_FIXED_TOTAL_POINTS.completion.tieResolution;
+
   const standardFormat = options.scoringMode === "standard";
+  const fixedFormat = options.scoringMode === "fixedTotalPoints";
   // Tournament matches carry a snapshotted rule set that cannot change.
   const locked =
     session.isSpectating ||
@@ -96,6 +159,12 @@ export function syncScoringControls() {
     elements.scoringModeSelect,
     elements.deuceModeSelect,
     elements.tiebreakModeSelect,
+    elements.fixedPointsTargetInput,
+    elements.fixedServeOrderInput,
+    elements.fixedServesPerPlayerInput,
+    elements.fixedServeBlockLengthInput,
+    elements.fixedSideSwapRuleSelect,
+    elements.fixedTieResolutionSelect,
   ].forEach((select) => {
     if (select) select.disabled = locked;
   });
@@ -104,6 +173,22 @@ export function syncScoringControls() {
     elements.deuceModeSelect.disabled = locked || !standardFormat;
   if (elements.tiebreakModeSelect)
     elements.tiebreakModeSelect.disabled = locked || !standardFormat;
+
+  const fixedControls = [
+    elements.fixedPointsTargetInput,
+    elements.fixedServeOrderInput,
+    elements.fixedServesPerPlayerInput,
+    elements.fixedServeBlockLengthInput,
+    elements.fixedSideSwapRuleSelect,
+    elements.fixedTieResolutionSelect,
+  ].filter(Boolean);
+
+  fixedControls.forEach((control) => {
+    control.disabled = locked || !fixedFormat;
+  });
+  if (elements.fixedScoringOptions) {
+    elements.fixedScoringOptions.classList.toggle("hidden", !fixedFormat);
+  }
 
   if (elements.scoringStatus) {
     if (session.isSpectating) {
@@ -128,6 +213,12 @@ function readScoringControls() {
   const scoringMode =
     elements.scoringModeSelect?.value || DEFAULT_SCORING_OPTIONS.scoringMode;
   const standardFormat = scoringMode === "standard";
+  const fixedFormat = scoringMode === "fixedTotalPoints";
+
+  const serveOrder = (elements.fixedServeOrderInput?.value || "")
+    .split(",")
+    .map((slot) => slot.trim().toUpperCase())
+    .filter(Boolean);
 
   return normalizeScoringOptions({
     scoringMode,
@@ -137,6 +228,26 @@ function readScoringControls() {
     tiebreakMode: standardFormat
       ? elements.tiebreakModeSelect?.value
       : DEFAULT_SCORING_OPTIONS.tiebreakMode,
+    pointsTarget: fixedFormat
+      ? Number(elements.fixedPointsTargetInput?.value)
+      : undefined,
+    serving: fixedFormat
+      ? {
+          enabled: true,
+          order: serveOrder.length
+            ? serveOrder
+            : DEFAULT_FIXED_TOTAL_POINTS.serving.order,
+          servesPerPlayer: Number(elements.fixedServesPerPlayerInput?.value),
+          serveBlockLength: Number(elements.fixedServeBlockLengthInput?.value),
+          sideSwapRule: elements.fixedSideSwapRuleSelect?.value,
+        }
+      : undefined,
+    completion: fixedFormat
+      ? {
+          rule: "exact_total_points",
+          tieResolution: elements.fixedTieResolutionSelect?.value,
+        }
+      : undefined,
   });
 }
 

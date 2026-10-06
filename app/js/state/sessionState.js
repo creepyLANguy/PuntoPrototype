@@ -64,6 +64,7 @@ export const session = {
   // The match the scoreboard follows (spec section 46 MatchContext): the
   // court's active match, else its most recent match.
   currentMatchId: null,
+  requestedMatchId: null,
   currentMatchName: null,
   currentMatchTitle: null,
   currentMatchStatus: null,
@@ -73,6 +74,7 @@ export const session = {
 
 export function clearMatchContext() {
   session.currentMatchId = null;
+  session.requestedMatchId = null;
   session.currentMatchName = null;
   session.currentMatchTitle = null;
   session.currentMatchStatus = null;

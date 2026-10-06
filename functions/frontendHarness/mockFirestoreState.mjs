@@ -193,7 +193,33 @@ function processScoringEvent(matchId, eventId, event) {
     score = scoringEngine.defaultScore(activeOptions);
   }
 
+  const previousSidesSwapped = Boolean(score?.fixedTotal?.sidesSwapped);
   score = scoringEngine.applyEvent(score, { id: eventId, ...event }, activeOptions);
+  const nextSidesSwapped = Boolean(score?.fixedTotal?.sidesSwapped);
+
+  if (
+    activeOptions.scoringMode === "fixedTotalPoints" &&
+    activeOptions.serving?.sideSwapRule === "after_each_player_serves_once" &&
+    previousSidesSwapped !== nextSidesSwapped
+  ) {
+    const courtId = matchData.currentCourtId || null;
+    const courtPath = courtId ? `courts/${courtId}` : null;
+    const court = courtPath ? firestoreState.docs.get(courtPath) : null;
+
+    if (court && court.activeMatchId === matchId) {
+      const changeoverEventId = nextAutoId();
+      writeDoc(courtPath, {
+        ...court,
+        beaconSidesSwapped: court.beaconSidesSwapped !== true,
+        changeoverEvent: {
+          id: changeoverEventId,
+          createdAt: nextTimestamp(),
+          source: "automatic_scoring",
+        },
+      });
+    }
+  }
+
   firestoreState.backendScores.set(matchId, score);
 
   writeDoc(scorePath, {

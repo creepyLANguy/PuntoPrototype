@@ -53,7 +53,7 @@ import { syncSettingsTiles } from "../ui/settingsTiles.js";
 export async function enterCourt(
   courtId,
   spectate,
-  { historyMode = "push", adminEntry = false } = {},
+  { historyMode = "push", adminEntry = false, matchId = null, followRequestedMatch = false } = {},
 ) {
   //console.log(`Entering court: ${courtId}, spectate: ${spectate}`);
   session.enteredCourtAsAdmin = Boolean(adminEntry) || appState.isAdmin;
@@ -87,22 +87,46 @@ export async function enterCourt(
   session.currentCourtStatus = data.status;
   session.beaconSidesSwapped = data.beaconSidesSwapped === true;
 
-  // The scoreboard plays the match on this court; a court without a live
-  // match gets a casual one (the backend creates it atomically).
-  const matchId = await resolveCourtMatchId(courtId, data);
+  // The scoreboard follows a specific match when supplied (used by /p/<matchId>
+  // and browser-history restoration); otherwise resolve/create the court's
+  // current casual match as before.
+  let resolvedMatchId = matchId;
+  if (resolvedMatchId)
+  {
+    const requestedMatchSnap = await getMatch(resolvedMatchId);
+    const requestedMatch = requestedMatchSnap.exists() ? requestedMatchSnap.data() : null;
+    const belongsToCourt =
+      Boolean(requestedMatch) &&
+      (
+        requestedMatch.currentCourtId === courtId ||
+        data.activeMatchId === resolvedMatchId ||
+        data.lastMatchId === resolvedMatchId
+      );
+
+    if (!belongsToCourt)
+    {
+      throw new Error("The requested match is not currently assigned to this court.");
+    }
+  }
+  else
+  {
+    resolvedMatchId = await resolveCourtMatchId(courtId, data);
+  }
+
   clearMatchContext();
+  session.requestedMatchId = followRequestedMatch ? matchId : null;
   session.currentScoreVersion = -1;
-  if (matchId) {
+  if (resolvedMatchId) {
     // Warm the Firestore connection and the scoring Cloud Function.
-    await getMatchScore(matchId);
-    await addMatchEvent(matchId, {
+    await getMatchScore(resolvedMatchId);
+    await addMatchEvent(resolvedMatchId, {
       eventType: "WARMUP",
       createdBy: appState.thisDeviceId,
       courtId,
     });
-    const matchSnap = await getMatch(matchId);
+    const matchSnap = await getMatch(resolvedMatchId);
     if (matchSnap.exists()) {
-      applyMatchData(matchId, matchSnap.data(), {
+      applyMatchData(resolvedMatchId, matchSnap.data(), {
         courtBeaconSidesSwapped: data.beaconSidesSwapped === true,
       });
     }

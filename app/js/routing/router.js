@@ -7,6 +7,7 @@ import { NAV_HISTORY_STATE_KEY, NAV_PAGES } from "../config/routes.js";
 import { closePlayPage } from "../court/playJoin.js";
 import { enterCourt } from "../court/session.js";
 import { getCourt } from "../firebase/courtRepository.js";
+import { getMatch } from "../firebase/matchRepository.js";
 import { pushNavigationState, replaceNavigationState, stepBackInApp } from "./history.js";
 import { getCourtIdFromPathname, getViewStateFromLocation, isAdminRootPathname } from "./routeParsers.js";
 import { getCurrentViewState, restoreViewState } from "./viewController.js";
@@ -161,28 +162,58 @@ export async function initializeAppNavigation()
     }
     else if (routeState.page === NAV_PAGES.PLAY)
     {
-      // /play/<court> (and /p/<court>) drop straight into the join prompt on top of the
-      // court's spectator view, so dismissing the prompt leaves the viewer spectating.
-      const opened = routeState.courtId
-        ? await openCourtFromRoute("skip", routeState.courtId)
-        : true;
+      // /play/<target> and /p/<target> express intent to join as a player. Resolve
+      // the target first; whether it is a court or a live match determines the
+      // spectator scoreboard we stage underneath the password prompt.
+      let resolvedRouteState = routeState;
+      let opened = true;
+
+      if (routeState.playTargetId)
+      {
+        const resolved = await resolvePlayRouteTarget(routeState.playTargetId);
+        if (resolved)
+        {
+          resolvedRouteState = createViewState({
+            ...routeState,
+            courtId: resolved.courtId,
+            selectedCourtId: resolved.courtId,
+            playTargetId: routeState.playTargetId,
+            playTargetType: resolved.type,
+            spectate: true,
+            returnToScoreboard: true
+          });
+          opened = await openCourtFromRoute(
+            "skip",
+            resolved.courtId,
+            resolved.type === "match" ? resolved.matchId : null
+          );
+        }
+        else
+        {
+          opened = false;
+        }
+      }
 
       if (opened)
       {
-        if (routeState.courtId)
+        if (resolvedRouteState.courtId)
         {
           // Make the spectator view the entry the prompt falls back to when dismissed.
           replaceNavigationState(createViewState({
             page: NAV_PAGES.SCOREBOARD,
-            courtId: routeState.courtId,
+            courtId: resolvedRouteState.courtId,
             spectate: true
           }));
         }
 
-        await restoreViewState(routeState);
+        await restoreViewState(resolvedRouteState);
         pushNavigationState(getCurrentViewState());
         return;
       }
+
+      await restoreViewState(createViewState({ page: NAV_PAGES.PLAY }));
+      pushNavigationState(getCurrentViewState());
+      return;
     }
     else if (
       routeState.page === NAV_PAGES.ADMIN_DASHBOARD ||
@@ -212,9 +243,9 @@ export async function initializeAppNavigation()
 
 export function registerHistoryNavigation()
 {
-  window.addEventListener("popstate", (event) =>
+  window.addEventListener("popstate", async (event) =>
   {
-    const nextState = event.state?.[NAV_HISTORY_STATE_KEY]
+    let nextState = event.state?.[NAV_HISTORY_STATE_KEY]
       ? event.state.viewState
       : getViewStateFromLocation();
 
@@ -233,11 +264,26 @@ export function registerHistoryNavigation()
       navigationState.appNavigationIndex -= 1;
     }
 
-    void restoreViewState(nextState);
+    if (nextState.page === NAV_PAGES.PLAY && nextState.playTargetType === "unknown" && nextState.playTargetId)
+    {
+      const resolved = await resolvePlayRouteTarget(nextState.playTargetId);
+      nextState = resolved
+        ? createViewState({
+          ...nextState,
+          courtId: resolved.courtId,
+          selectedCourtId: resolved.courtId,
+          playTargetType: resolved.type,
+          spectate: true,
+          returnToScoreboard: true
+        })
+        : createViewState({ page: NAV_PAGES.PLAY });
+    }
+
+    await restoreViewState(nextState);
   });
 }
 
-async function openCourtFromRoute(historyMode = "replace", courtId = null)
+async function openCourtFromRoute(historyMode = "replace", courtId = null, matchId = null)
 {
   const resolvedCourtId = courtId !== null ? courtId : getCourtIdFromPathname();
   if (!resolvedCourtId) return false;
@@ -252,7 +298,21 @@ async function openCourtFromRoute(historyMode = "replace", courtId = null)
   elements.menuPage.style.display = "none";
   elements.spectatePage.style.display = "none";
 
-  await enterCourt(resolvedCourtId, true, { historyMode });
+  try
+  {
+    await enterCourt(resolvedCourtId, true, {
+      historyMode,
+      matchId,
+      followRequestedMatch: Boolean(matchId)
+    });
+  }
+  catch (error)
+  {
+    console.warn("Could not open the requested court/match:", error);
+    showToast(error?.message || "Could not open the requested match.", TOAST_TYPES.ERROR);
+    return false;
+  }
+
   if (!session.currentCourtId)
   {
     elements.menuPage.style.display = "flex";
@@ -261,4 +321,45 @@ async function openCourtFromRoute(historyMode = "replace", courtId = null)
   }
 
   return session.currentCourtId !== null;
+}
+
+async function resolvePlayRouteTarget(targetId)
+{
+  const courtSnap = await getCourt(targetId);
+  if (courtSnap.exists())
+  {
+    const court = courtSnap.data();
+    return {
+      type: "court",
+      courtId: targetId,
+      matchId: court.activeMatchId || court.lastMatchId || null
+    };
+  }
+
+  const matchSnap = await getMatch(targetId);
+  if (!matchSnap.exists())
+  {
+    showToast(`Court or match "${targetId}" not found.`, TOAST_TYPES.ERROR);
+    return null;
+  }
+
+  const match = matchSnap.data() || {};
+  if (match.status !== "live" || !match.currentCourtId)
+  {
+    showToast("This match is not currently being played on a court.", TOAST_TYPES.ERROR);
+    return null;
+  }
+
+  const matchCourtSnap = await getCourt(match.currentCourtId);
+  if (!matchCourtSnap.exists())
+  {
+    showToast("The court for this match could not be found.", TOAST_TYPES.ERROR);
+    return null;
+  }
+
+  return {
+    type: "match",
+    courtId: match.currentCourtId,
+    matchId: targetId
+  };
 }
