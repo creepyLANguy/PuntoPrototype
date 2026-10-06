@@ -146,7 +146,7 @@ test(
     await settle(30);
 
     assert.equal(getRenderedScoreForDirectJoin(document).pointsA, "7");
-      assert.equal(getRenderedScoreForDirectJoin(document).pointsB, "2");
+    assert.equal(getRenderedScoreForDirectJoin(document).pointsB, "2");
   },
 );
 
