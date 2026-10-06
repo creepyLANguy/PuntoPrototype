@@ -130,12 +130,16 @@ export function updateUI() {
     options.scoringMode === "fixedTotalPoints";
   if (elements.straightPointsTotal) {
     elements.straightPointsTotal.classList.toggle("hidden", !isStraight);
+    elements.straightPointsTotal.classList.toggle(
+      "fixed-total",
+      options.scoringMode === "fixedTotalPoints",
+    );
     if (isStraight && elements.straightTotalValue) {
       const total =
         (session.score.A.totalPoints || 0) + (session.score.B.totalPoints || 0);
       elements.straightTotalValue.textContent =
         options.scoringMode === "fixedTotalPoints"
-          ? `${total}/${options.pointsTarget}`
+          ? `${total} / ${options.pointsTarget}`
           : total;
     }
   }

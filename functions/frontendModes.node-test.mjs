@@ -106,6 +106,7 @@ test("straight mode: sets/games rows are hidden and total is shown", async () =>
   const totalEl = document.getElementById("straightPointsTotal");
   assert.equal(totalEl.classList.contains("hidden"), false);
   assert.equal(document.getElementById("straightTotalValue").textContent, "3");
+  assert.equal(document.getElementById("straightPointsTotal").classList.contains("fixed-total"), false);
 
   const badge = document.getElementById("scoreFormatBadge");
   assert.equal(badge.classList.contains("hidden"), false);
@@ -266,17 +267,30 @@ test("fixed scoring sliders use a white accent", () => {
   assert.match(styles, /\.scoring-field input\[type="range"\]\s*\{[^}]*accent-color:\s*#fff;/);
 });
 
+test("fixed scoring totals reset circular sizing and border rules", () => {
+  const styles = readFileSync(new URL("../app/css/style.css", import.meta.url), "utf8");
+  const rule = styles.match(/\.straight-total\.fixed-total\s*\{([^}]+)\}/)?.[1];
+  assert.ok(rule);
+  assert.match(rule, /width:\s*unset;/);
+  assert.match(rule, /padding:\s*unset\s*!important;/);
+  assert.match(rule, /border-radius:\s*unset\s*!important;/);
+  assert.match(rule, /aspect-ratio:\s*auto;/);
+  assert.match(rule, /height:\s*auto;/);
+  assert.match(rule, /max-width:\s*none;/);
+});
+
 test("fixed points celebrate the winner only after the last point is scored", async () => {
   await leaveCourtViaBackButton();
   await joinCourtAsPlayer(document, "fixedwinner");
   const overlay = document.getElementById("setWinOverlay");
   overlay.click();
   await awardFixedPoint("A");
-  assert.equal(document.getElementById("straightTotalValue").textContent, "1/12");
+  assert.equal(document.getElementById("straightTotalValue").textContent, "1 / 12");
+  assert.equal(document.getElementById("straightPointsTotal").classList.contains("fixed-total"), true);
   for (let i = 1; i < 6; i++) await awardFixedPoint("A");
   await awardFixedPoint("B");
   await awardFixedPoint("B");
-  assert.equal(document.getElementById("straightTotalValue").textContent, "8/12");
+  assert.equal(document.getElementById("straightTotalValue").textContent, "8 / 12");
   assertFixedGlow(true, false);
   assert.equal(overlay.classList.contains("hidden"), true);
 
@@ -300,7 +314,7 @@ test("fixed points celebrate the winner only after the last point is scored", as
     assert.equal(overlay.classList.contains("hidden"), i < 2, "celebrate only on the final point");
   }
   assert.equal(getBackendScore("fixedwinner").matchComplete, true);
-  assert.equal(document.getElementById("straightTotalValue").textContent, "12/12");
+  assert.equal(document.getElementById("straightTotalValue").textContent, "12 / 12");
   assert.equal(overlay.dataset.winner, "A");
   assert.equal(overlay.querySelector(".set-win-label").textContent, "WINS THE MATCH!");
   assert.equal(overlay.querySelector(".sw-score-a").textContent, "7");
@@ -357,7 +371,7 @@ test("fixed golden points glow for both teams and celebrate the deciding winner"
   assert.equal(overlay.dataset.winner, "B");
   assert.equal(overlay.querySelector(".set-win-label").textContent, "WINS THE MATCH!");
   assert.equal(getBackendScore("fixedgolden").matchComplete, true);
-  assert.equal(document.getElementById("straightTotalValue").textContent, "13/12");
+  assert.equal(document.getElementById("straightTotalValue").textContent, "13 / 12");
   overlay.click();
 
   await leaveCourtViaBackButton();

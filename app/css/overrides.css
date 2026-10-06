@@ -185,3 +185,11 @@ body.light-mode .straight-total {
   display: none;
 }
 
+.straight-total.fixed-total {
+  width: unset;
+  padding: unset !important;
+  border-radius: unset !important;
+  aspect-ratio: auto;
+  height: auto;
+  max-width: none;
+}
