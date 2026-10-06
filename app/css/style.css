@@ -5652,7 +5652,8 @@ body.light-mode #adminCourtSearch {
 
 /* Dashboard tabs: Clubs, Courts and Devices. */
 .admin-tabs {
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: auto;
+  grid-auto-flow: column;
 }
 
 body.light-mode #adminClubSearch {
