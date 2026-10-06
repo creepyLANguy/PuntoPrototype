@@ -273,9 +273,9 @@ test("fixed scoring totals use responsive sizing", () => {
   assert.match(rule, /width:\s*max-content;/);
   assert.match(
     rule,
-    /padding:\s*clamp\(10px,\s*1\.8vmin,\s*18px\)\s+clamp\(8px,\s*1\.2vmin,\s*14px\);/,
+    /padding:\s*clamp\(10px,\s*1\.8vmin,\s*18px\)\s+clamp\(8px,\s*1\.2vmin,\s*14px\)(?:\s*!important)?;/,
   );
-  assert.match(rule, /border-radius:\s*clamp\(10px,\s*1\.8vmin,\s*18px\);/);
+  assert.match(rule, /border-radius:\s*clamp\(10px,\s*1\.8vmin,\s*18px\)(?:\s*!important)?;/);
 });
 
 test("fixed points celebrate the winner only after the last point is scored", async () => {
