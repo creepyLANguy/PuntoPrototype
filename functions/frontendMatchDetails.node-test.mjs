@@ -294,6 +294,152 @@ test("long final-column stats values tighten the label column just enough", asyn
   );
 });
 
+test("serve statistics appear only when serving is valid, preserving legitimate 0/0 values", async () => {
+  const scenarios = [
+    {
+      name: "standard scoring",
+      scoringMode: "standard",
+      scoringOptions: {
+        scoringMode: "standard",
+        deuceMode: "standard",
+        tiebreakMode: "sixAllSeven",
+      },
+      expectServeStats: true,
+    },
+    {
+      name: "straight points",
+      scoringMode: "straight",
+      scoringOptions: {
+        scoringMode: "straight",
+        deuceMode: "standard",
+        tiebreakMode: "sixAllSeven",
+      },
+      expectServeStats: false,
+    },
+    {
+      name: "tiebreak tens",
+      scoringMode: "tiebreakTen",
+      scoringOptions: {
+        scoringMode: "tiebreakTen",
+        deuceMode: "standard",
+        tiebreakMode: "off",
+      },
+      expectServeStats: true,
+    },
+    {
+      name: "fixed total points with serving enabled",
+      scoringMode: "fixedTotalPoints",
+      scoringOptions: {
+        scoringMode: "fixedTotalPoints",
+        deuceMode: "standard",
+        tiebreakMode: "off",
+        pointsTarget: 36,
+        serving: {
+          enabled: true,
+          order: ["A1", "B1", "A2", "B2"],
+          servesPerPlayer: 4,
+          serveBlockLength: 1,
+          sideSwapRule: "after_each_player_serves_once",
+        },
+      },
+      expectServeStats: true,
+    },
+    {
+      name: "fixed total points with serving disabled",
+      scoringMode: "fixedTotalPoints",
+      scoringOptions: {
+        scoringMode: "fixedTotalPoints",
+        deuceMode: "standard",
+        tiebreakMode: "off",
+        pointsTarget: 36,
+        serving: {
+          enabled: false,
+          order: ["A1", "B1", "A2", "B2"],
+          servesPerPlayer: 4,
+          serveBlockLength: 1,
+          sideSwapRule: "after_each_player_serves_once",
+        },
+      },
+      expectServeStats: false,
+    },
+  ];
+
+  for (const [index, scenario] of scenarios.entries()) {
+    DETAILED_SCORE.scoringMode = scenario.scoringMode;
+    DETAILED_SCORE.scoringOptions = scenario.scoringOptions;
+    DETAILED_SCORE.advancedStats.scoringMode = scenario.scoringMode;
+    DETAILED_SCORE.advancedStats.deuceMode = scenario.scoringOptions.deuceMode;
+    DETAILED_SCORE.advancedStats.servePlayerStats = {
+      A1: { pointsServed: 1, pointsWonOnServe: 1, serveWinPct: 100 },
+      A2: { pointsServed: 0, pointsWonOnServe: 0, serveWinPct: 0 },
+      B1: { pointsServed: 0, pointsWonOnServe: 0, serveWinPct: 0 },
+      B2: { pointsServed: 0, pointsWonOnServe: 0, serveWinPct: 0 },
+    };
+
+    const pointCount = index + 2;
+    DETAILED_SCORE.points = { A: pointCount, B: 1 };
+    DETAILED_SCORE.currentGames = {
+      A: scenario.scoringMode === "standard" ? 1 : 0,
+      B: 0,
+    };
+    DETAILED_SCORE.advancedStats.matchStats.totalPoints = pointCount + 1;
+    DETAILED_SCORE.advancedStats.teamStats.A.pointsWon = pointCount;
+    DETAILED_SCORE.advancedStats.teamStats.B.pointsWon = 1;
+
+    pushScoreSnapshot(
+      COURT_ID,
+      makeScore({
+        A: {
+          points: pointCount,
+          games: scenario.scoringMode === "standard" ? 1 : 0,
+          sets: 0,
+          totalPoints: pointCount,
+        },
+        B: { points: 1, games: 0, sets: 0, totalPoints: 1 },
+      }),
+    );
+
+    document.getElementById("detailsBtn").click();
+
+    await waitFor(
+      () => document.querySelector("#dmStatsTeam .dm-stats-table"),
+      { label: `${scenario.name} stats table` },
+    );
+
+    const statsTable = document.querySelector("#dmStatsTeam .dm-stats-table");
+    assert.ok(statsTable, `${scenario.name}: stats table should render`);
+
+    const serveHeader = Array.from(
+      statsTable.querySelectorAll(".dm-st-section-hdr"),
+    ).find((row) => row.textContent.trim() === "On Serve");
+
+    assert.equal(
+      Boolean(serveHeader),
+      scenario.expectServeStats,
+      `${scenario.name}: serve section applicability`,
+    );
+
+    if (scenario.expectServeStats) {
+      const firstServeRow = serveHeader.nextElementSibling;
+      const secondServeRow = firstServeRow?.nextElementSibling;
+
+      assert.ok(firstServeRow, `${scenario.name}: Player 1 serve row should exist`);
+      assert.ok(secondServeRow, `${scenario.name}: Player 2 serve row should exist`);
+      assert.match(firstServeRow.textContent, /0\/0 \(0%\)/,
+        `${scenario.name}: an unserved Player 1 slot should show 0/0 (0%)`);
+      assert.match(secondServeRow.textContent, /0\/0 \(0%\)/,
+        `${scenario.name}: unserved Player 2 slots should show 0/0 (0%)`);
+      assert.match(firstServeRow.textContent, /1\/1 \(100%\)/,
+        `${scenario.name}: the player who has served must show actual serve statistics`);
+    } else {
+      assert.doesNotMatch(
+        statsTable.textContent,
+        /On Serve/,
+        `${scenario.name}: no On Serve section should be rendered`,
+      );
+    }
+  }
+});
 test("a match with no momentum data keeps the panel hidden", async () => {
   momentumPayload = EMPTY_MOMENTUM;
   momentumRequests = [];
