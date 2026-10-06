@@ -108,19 +108,21 @@ describe("tournament format registry and scoring", () => {
     ]);
   });
 
-  test("builds fixed-total-points profile and rules summary verbatim", () => {
+  test("builds fixed-total-points profile and rules summary with block serving", () => {
     const profile = tournaments.buildFixedTotalPointsProfile({
       pointsTarget: 36,
-      servesPerPlayer: 4,
+      serveBlockLength: 2,
+      servesPerPlayer: 99,
     });
     expect(profile).toMatchObject({
       scoringMode: "fixedTotalPoints",
       pointsTarget: 36,
-      serving: { order: ["A1", "B1", "A2", "B2"], servesPerPlayer: 4, serveBlockLength: 1 },
+      serving: { order: ["A1", "B1", "A2", "B2"], serveBlockLength: 2 },
       completion: { rule: "exact_total_points", tieResolution: "allow_draw" },
     });
+    expect(profile.serving).not.toHaveProperty("servesPerPlayer");
     expect(tournaments.getRulesSummary("americano", {}).lines).toContain("36 total points");
-    expect(tournaments.getRulesSummary("americano", {}).lines).toContain("4 serves per player");
+    expect(tournaments.getRulesSummary("americano", {}).lines).toContain("1 consecutive serves");
   });
 
   test("validates setup constraints", () => {
