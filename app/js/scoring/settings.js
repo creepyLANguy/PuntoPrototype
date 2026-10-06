@@ -51,9 +51,7 @@ export function syncCourtScoringRuleControlsDisabled(
     }
   });
 
-  const fixedGroup = fixedControls
-    .find(Boolean)
-    ?.closest(".fixed-scoring-options");
+  const fixedGroup = fixedControls.find(Boolean)?.closest(".fixed-scoring-options");
   if (fixedGroup) {
     fixedGroup.classList.toggle("hidden", fixedDisabled);
   }
@@ -138,28 +136,17 @@ export function syncScoringControls() {
     elements.tiebreakModeSelect.value = options.tiebreakMode;
 
   if (elements.fixedPointsTargetInput)
-    elements.fixedPointsTargetInput.value =
-      options.pointsTarget ?? DEFAULT_FIXED_TOTAL_POINTS.pointsTarget;
+    elements.fixedPointsTargetInput.value = options.pointsTarget ?? DEFAULT_FIXED_TOTAL_POINTS.pointsTarget;
   if (elements.fixedServeOrderInput)
-    elements.fixedServeOrderInput.value = (
-      options.serving?.order || DEFAULT_FIXED_TOTAL_POINTS.serving.order
-    ).join(", ");
+    elements.fixedServeOrderInput.value = (options.serving?.order || DEFAULT_FIXED_TOTAL_POINTS.serving.order).join(", ");
   if (elements.fixedServesPerPlayerInput)
-    elements.fixedServesPerPlayerInput.value =
-      options.serving?.servesPerPlayer ??
-      DEFAULT_FIXED_TOTAL_POINTS.serving.servesPerPlayer;
+    elements.fixedServesPerPlayerInput.value = options.serving?.servesPerPlayer ?? DEFAULT_FIXED_TOTAL_POINTS.serving.servesPerPlayer;
   if (elements.fixedServeBlockLengthInput)
-    elements.fixedServeBlockLengthInput.value =
-      options.serving?.serveBlockLength ??
-      DEFAULT_FIXED_TOTAL_POINTS.serving.serveBlockLength;
+    elements.fixedServeBlockLengthInput.value = options.serving?.serveBlockLength ?? DEFAULT_FIXED_TOTAL_POINTS.serving.serveBlockLength;
   if (elements.fixedSideSwapRuleSelect)
-    elements.fixedSideSwapRuleSelect.value =
-      options.serving?.sideSwapRule ??
-      DEFAULT_FIXED_TOTAL_POINTS.serving.sideSwapRule;
+    elements.fixedSideSwapRuleSelect.value = options.serving?.sideSwapRule ?? DEFAULT_FIXED_TOTAL_POINTS.serving.sideSwapRule;
   if (elements.fixedTieResolutionSelect)
-    elements.fixedTieResolutionSelect.value =
-      options.completion?.tieResolution ??
-      DEFAULT_FIXED_TOTAL_POINTS.completion.tieResolution;
+    elements.fixedTieResolutionSelect.value = options.completion?.tieResolution ?? DEFAULT_FIXED_TOTAL_POINTS.completion.tieResolution;
 
   const standardFormat = options.scoringMode === "standard";
   const fixedFormat = options.scoringMode === "fixedTotalPoints";

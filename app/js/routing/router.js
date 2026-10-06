@@ -8,16 +8,8 @@ import { closePlayPage } from "../court/playJoin.js";
 import { enterCourt } from "../court/session.js";
 import { getCourt } from "../firebase/courtRepository.js";
 import { getMatch } from "../firebase/matchRepository.js";
-import {
-  pushNavigationState,
-  replaceNavigationState,
-  stepBackInApp,
-} from "./history.js";
-import {
-  getCourtIdFromPathname,
-  getViewStateFromLocation,
-  isAdminRootPathname,
-} from "./routeParsers.js";
+import { pushNavigationState, replaceNavigationState, stepBackInApp } from "./history.js";
+import { getCourtIdFromPathname, getViewStateFromLocation, isAdminRootPathname } from "./routeParsers.js";
 import { getCurrentViewState, restoreViewState } from "./viewController.js";
 import { createViewState } from "./viewState.js";
 import { appState } from "../state/appState.js";
@@ -27,142 +19,160 @@ import { elements } from "../ui/dom.js";
 import { finishStartupLoading } from "../ui/loading.js";
 import { showToast } from "../ui/toast.js";
 
-export function registerEscapeKeyNavigation() {
-  document.addEventListener("keydown", (e) => {
+export function registerEscapeKeyNavigation()
+{
+  document.addEventListener("keydown", (e) =>
+  {
     if (e.key !== "Escape") return;
 
-    const isVisible = (el) => window.getComputedStyle(el).display !== "none";
+    const isVisible = (el) =>
+      window.getComputedStyle(el).display !== "none";
 
-    if (appState.playPageReturnToScoreboard) {
+    if (appState.playPageReturnToScoreboard)
+    {
       void closePlayPage();
       return;
     }
 
-    if (isVisible(elements.resetModal)) {
-      void stepBackInApp(
-        createViewState({
-          page: NAV_PAGES.SCOREBOARD,
-          courtId: session.currentCourtId,
-          spectate: session.isSpectating,
-        }),
-      );
+    if (isVisible(elements.resetModal))
+    {
+      void stepBackInApp(createViewState({
+        page: NAV_PAGES.SCOREBOARD,
+        courtId: session.currentCourtId,
+        spectate: session.isSpectating
+      }));
       return;
     }
 
-    if (isVisible(elements.settingsModal)) {
-      void stepBackInApp(
-        createViewState({
-          page: NAV_PAGES.SCOREBOARD,
-          courtId: session.currentCourtId,
-          spectate: session.isSpectating,
-        }),
-      );
+    if (isVisible(elements.settingsModal))
+    {
+      void stepBackInApp(createViewState({
+        page: NAV_PAGES.SCOREBOARD,
+        courtId: session.currentCourtId,
+        spectate: session.isSpectating
+      }));
       return;
     }
 
-    if (isVisible(elements.detailsModal)) {
-      void stepBackInApp(
-        createViewState({
-          page: NAV_PAGES.SCOREBOARD,
-          courtId: session.currentCourtId,
-          spectate: session.isSpectating,
-        }),
-      );
+    if (isVisible(elements.detailsModal))
+    {
+      void stepBackInApp(createViewState({
+        page: NAV_PAGES.SCOREBOARD,
+        courtId: session.currentCourtId,
+        spectate: session.isSpectating
+      }));
       return;
     }
 
-    if (isVisible(elements.confirmModal)) {
+    if (isVisible(elements.confirmModal))
+    {
       elements.confirmCancelBtn.click();
       return;
     }
 
-    if (isVisible(elements.playPage)) {
-      void stepBackInApp(
-        createViewState({
-          page:
-            appState.playPageReturnToScoreboard && session.currentCourtId
-              ? NAV_PAGES.SCOREBOARD
-              : NAV_PAGES.MENU,
-          courtId: session.currentCourtId,
-          spectate: session.isSpectating,
-        }),
-      );
+    if (isVisible(elements.playPage))
+    {
+      void stepBackInApp(createViewState({
+        page: appState.playPageReturnToScoreboard && session.currentCourtId ? NAV_PAGES.SCOREBOARD : NAV_PAGES.MENU,
+        courtId: session.currentCourtId,
+        spectate: session.isSpectating
+      }));
       return;
     }
 
-    if (isVisible(elements.spectatePage)) {
+    if (isVisible(elements.spectatePage))
+    {
       void stepBackInApp(createViewState({ page: NAV_PAGES.MENU }));
       return;
     }
 
-    if (isVisible(elements.scoreboardPage)) {
+    if (isVisible(elements.scoreboardPage))
+    {
       void stepBackInApp(createViewState({ page: NAV_PAGES.MENU }));
       return;
     }
 
-    if (isVisible(elements.adminAuthPage)) {
+    if (isVisible(elements.adminAuthPage))
+    {
       void stepBackInApp(createViewState({ page: NAV_PAGES.MENU }));
       return;
     }
 
-    if (isVisible(elements.adminDashboardPage)) {
+    if (isVisible(elements.adminDashboardPage))
+    {
       appState.isAdmin = false;
       void stepBackInApp(createViewState({ page: NAV_PAGES.MENU }));
       return;
     }
 
-    if (isVisible(elements.createPage)) {
+    if (isVisible(elements.createPage))
+    {
       void stepBackInApp(createViewState({ page: NAV_PAGES.ADMIN_DASHBOARD }));
       return;
     }
 
-    if (isVisible(elements.addDevicePage)) {
+    if (isVisible(elements.addDevicePage))
+    {
       void stepBackInApp(createViewState({ page: NAV_PAGES.ADMIN_DASHBOARD }));
       return;
     }
 
-    if (isVisible(elements.editCourtPage)) {
+    if (isVisible(elements.editCourtPage))
+    {
       void stepBackInApp(createViewState({ page: NAV_PAGES.ADMIN_DASHBOARD }));
       return;
     }
 
-    if (isVisible(elements.editDevicePage)) {
+    if (isVisible(elements.editDevicePage))
+    {
       void stepBackInApp(createViewState({ page: NAV_PAGES.ADMIN_DASHBOARD }));
       return;
     }
 
-    if (isVisible(elements.editClubPage)) {
+    if (isVisible(elements.editClubPage))
+    {
       void closeClubEditor();
       return;
     }
   });
 }
 
-export async function initializeAppNavigation() {
-  try {
+export async function initializeAppNavigation()
+{
+  try
+  {
     const routeState = getViewStateFromLocation();
-    if (isAdminRootPathname()) {
+    if (isAdminRootPathname())
+    {
       replaceNavigationState(routeState);
-    } else {
+    }
+    else
+    {
       replaceNavigationState(createViewState({ page: NAV_PAGES.MENU }));
     }
 
-    if (routeState.page === NAV_PAGES.SCOREBOARD && routeState.courtId) {
+    if (routeState.page === NAV_PAGES.SCOREBOARD && routeState.courtId)
+    {
       const opened = await openCourtFromRoute("skip", routeState.courtId);
-      if (opened) {
+      if (opened)
+      {
         pushNavigationState(getCurrentViewState());
         return;
       }
-    } else if (routeState.page === NAV_PAGES.PLAY) {
+    }
+    else if (routeState.page === NAV_PAGES.PLAY)
+    {
       // /play/<target> and /p/<target> express intent to join as a player. Resolve
       // the target first; whether it is a court or a live match determines the
       // spectator scoreboard we stage underneath the password prompt.
       let resolvedRouteState = routeState;
       let opened = true;
 
-      if (routeState.playTargetId) {
+      if (routeState.playTargetId)
+      {
         const resolved = await resolvePlayRouteTarget(routeState.playTargetId);
-        if (resolved) {
+        if (resolved)
+        {
           resolvedRouteState = createViewState({
             ...routeState,
             courtId: resolved.courtId,
@@ -170,28 +180,30 @@ export async function initializeAppNavigation() {
             playTargetId: routeState.playTargetId,
             playTargetType: resolved.type,
             spectate: true,
-            returnToScoreboard: true,
+            returnToScoreboard: true
           });
           opened = await openCourtFromRoute(
             "skip",
             resolved.courtId,
-            resolved.type === "match" ? resolved.matchId : null,
+            resolved.type === "match" ? resolved.matchId : null
           );
-        } else {
+        }
+        else
+        {
           opened = false;
         }
       }
 
-      if (opened) {
-        if (resolvedRouteState.courtId) {
+      if (opened)
+      {
+        if (resolvedRouteState.courtId)
+        {
           // Make the spectator view the entry the prompt falls back to when dismissed.
-          replaceNavigationState(
-            createViewState({
-              page: NAV_PAGES.SCOREBOARD,
-              courtId: resolvedRouteState.courtId,
-              spectate: true,
-            }),
-          );
+          replaceNavigationState(createViewState({
+            page: NAV_PAGES.SCOREBOARD,
+            courtId: resolvedRouteState.courtId,
+            spectate: true
+          }));
         }
 
         await restoreViewState(resolvedRouteState);
@@ -202,15 +214,19 @@ export async function initializeAppNavigation() {
       await restoreViewState(createViewState({ page: NAV_PAGES.PLAY }));
       pushNavigationState(getCurrentViewState());
       return;
-    } else if (
+    }
+    else if (
       routeState.page === NAV_PAGES.ADMIN_DASHBOARD ||
       routeState.page === NAV_PAGES.ADMIN_AUTH ||
       isAdminRootPathname()
-    ) {
+    )
+    {
       await restoreViewState(routeState);
       pushNavigationState(getCurrentViewState());
       return;
-    } else if (routeState.page === NAV_PAGES.SPECTATE) {
+    }
+    else if (routeState.page === NAV_PAGES.SPECTATE)
+    {
       await restoreViewState(routeState);
       pushNavigationState(getCurrentViewState());
       return;
@@ -218,47 +234,48 @@ export async function initializeAppNavigation() {
 
     await restoreViewState(createViewState({ page: NAV_PAGES.MENU }));
     replaceNavigationState(getCurrentViewState());
-  } finally {
+  }
+  finally
+  {
     finishStartupLoading();
   }
 }
 
-export function registerHistoryNavigation() {
-  window.addEventListener("popstate", async (event) => {
+export function registerHistoryNavigation()
+{
+  window.addEventListener("popstate", async (event) =>
+  {
     let nextState = event.state?.[NAV_HISTORY_STATE_KEY]
       ? event.state.viewState
       : getViewStateFromLocation();
 
-    if (
-      nextState.modal &&
-      event.state?.courtSessionId !==
-        navigationState.currentCourtHistorySessionId
-    ) {
+    if (nextState.modal && event.state?.courtSessionId !== navigationState.currentCourtHistorySessionId)
+    {
       window.history.back();
       return;
     }
 
-    if (typeof event.state?.index === "number") {
+    if (typeof event.state?.index === "number")
+    {
       navigationState.appNavigationIndex = event.state.index;
-    } else if (navigationState.appNavigationIndex > 0) {
+    }
+    else if (navigationState.appNavigationIndex > 0)
+    {
       navigationState.appNavigationIndex -= 1;
     }
 
-    if (
-      nextState.page === NAV_PAGES.PLAY &&
-      nextState.playTargetType === "unknown" &&
-      nextState.playTargetId
-    ) {
+    if (nextState.page === NAV_PAGES.PLAY && nextState.playTargetType === "unknown" && nextState.playTargetId)
+    {
       const resolved = await resolvePlayRouteTarget(nextState.playTargetId);
       nextState = resolved
         ? createViewState({
-            ...nextState,
-            courtId: resolved.courtId,
-            selectedCourtId: resolved.courtId,
-            playTargetType: resolved.type,
-            spectate: true,
-            returnToScoreboard: true,
-          })
+          ...nextState,
+          courtId: resolved.courtId,
+          selectedCourtId: resolved.courtId,
+          playTargetType: resolved.type,
+          spectate: true,
+          returnToScoreboard: true
+        })
         : createViewState({ page: NAV_PAGES.PLAY });
     }
 
@@ -266,16 +283,14 @@ export function registerHistoryNavigation() {
   });
 }
 
-async function openCourtFromRoute(
-  historyMode = "replace",
-  courtId = null,
-  matchId = null,
-) {
+async function openCourtFromRoute(historyMode = "replace", courtId = null, matchId = null)
+{
   const resolvedCourtId = courtId !== null ? courtId : getCourtIdFromPathname();
   if (!resolvedCourtId) return false;
 
   const courtSnap = await getCourt(resolvedCourtId);
-  if (!courtSnap.exists()) {
+  if (!courtSnap.exists())
+  {
     showToast(`Court "${resolvedCourtId}" not found.`, TOAST_TYPES.ERROR);
     return false;
   }
@@ -283,18 +298,23 @@ async function openCourtFromRoute(
   elements.menuPage.style.display = "none";
   elements.spectatePage.style.display = "none";
 
-  try {
-    await enterCourt(resolvedCourtId, true, { historyMode, matchId });
-  } catch (error) {
+  try
+  {
+    await enterCourt(resolvedCourtId, true, {
+      historyMode,
+      matchId,
+      followRequestedMatch: Boolean(matchId)
+    });
+  }
+  catch (error)
+  {
     console.warn("Could not open the requested court/match:", error);
-    showToast(
-      error?.message || "Could not open the requested match.",
-      TOAST_TYPES.ERROR,
-    );
+    showToast(error?.message || "Could not open the requested match.", TOAST_TYPES.ERROR);
     return false;
   }
 
-  if (!session.currentCourtId) {
+  if (!session.currentCourtId)
+  {
     elements.menuPage.style.display = "flex";
     showToast(`Court "${resolvedCourtId}" not found.`, TOAST_TYPES.ERROR);
     return false;
@@ -303,44 +323,43 @@ async function openCourtFromRoute(
   return session.currentCourtId !== null;
 }
 
-async function resolvePlayRouteTarget(targetId) {
+async function resolvePlayRouteTarget(targetId)
+{
   const courtSnap = await getCourt(targetId);
-  if (courtSnap.exists()) {
+  if (courtSnap.exists())
+  {
     const court = courtSnap.data();
     return {
       type: "court",
       courtId: targetId,
-      matchId: court.activeMatchId || court.lastMatchId || null,
+      matchId: court.activeMatchId || court.lastMatchId || null
     };
   }
 
   const matchSnap = await getMatch(targetId);
-  if (!matchSnap.exists()) {
+  if (!matchSnap.exists())
+  {
     showToast(`Court or match "${targetId}" not found.`, TOAST_TYPES.ERROR);
     return null;
   }
 
   const match = matchSnap.data() || {};
-  if (match.status !== "live" || !match.currentCourtId) {
-    showToast(
-      "This match is not currently being played on a court.",
-      TOAST_TYPES.ERROR,
-    );
+  if (match.status !== "live" || !match.currentCourtId)
+  {
+    showToast("This match is not currently being played on a court.", TOAST_TYPES.ERROR);
     return null;
   }
 
   const matchCourtSnap = await getCourt(match.currentCourtId);
-  if (!matchCourtSnap.exists()) {
-    showToast(
-      "The court for this match could not be found.",
-      TOAST_TYPES.ERROR,
-    );
+  if (!matchCourtSnap.exists())
+  {
+    showToast("The court for this match could not be found.", TOAST_TYPES.ERROR);
     return null;
   }
 
   return {
     type: "match",
     courtId: match.currentCourtId,
-    matchId: targetId,
+    matchId: targetId
   };
 }

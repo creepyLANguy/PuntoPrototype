@@ -6,6 +6,8 @@ import {
   seedBaseData,
   seedCourt,
   seedDoc,
+  writeDoc,
+  firestoreState,
   pushScoreSnapshot,
   makeScore,
   waitFor,
@@ -158,6 +160,31 @@ test("switching to a court link clears the explicit match selection", async () =
     label: "court's active match score",
   });
   assert.equal(document.body.classList.contains("spectating-mode"), true);
+});
+
+test("an ordinary court player join follows subsequent active match changes", async () => {
+  document.getElementById("playCourtPassword").value = "pw";
+  document.getElementById("enterCourtBtn").click();
+  await waitFor(() => !document.body.classList.contains("spectating-mode"), {
+    label: "court player join",
+  });
+
+  seedDoc("matches/next-match", {
+    ...firestoreState.docs.get("matches/active-match"),
+    matchId: "next-match",
+  });
+  pushScoreSnapshot(
+    "next-match",
+    makeScore({ A: { points: 2, games: 0, sets: 0, totalPoints: 2 } }),
+  );
+  writeDoc("courts/matchroute", {
+    ...firestoreState.docs.get("courts/matchroute"),
+    activeMatchId: "next-match",
+    lastMatchId: "next-match",
+  });
+  await waitFor(() => getRenderedScoreForDirectJoin(document).pointsA === "30", {
+    label: "new active match score after player join",
+  });
 });
 
 function getRenderedScoreForDirectJoin(document) {

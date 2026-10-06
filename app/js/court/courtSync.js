@@ -192,10 +192,7 @@ export async function listenToCourt(courtId) {
       // Explicit match links keep their target; court links follow whichever
       // match is active on the court, or its most recent match.
       const courtMatchId =
-        session.requestedMatchId ||
-        data.activeMatchId ||
-        data.lastMatchId ||
-        null;
+        session.requestedMatchId || data.activeMatchId || data.lastMatchId || null;
       if (courtMatchId) {
         followMatch(courtMatchId, listenerToken, {
           onError: onMatchListenerError,

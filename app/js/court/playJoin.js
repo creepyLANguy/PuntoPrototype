@@ -132,7 +132,8 @@ export function registerPlayAndSpectatePages()
         await enterCourt(courtId, false, {
           historyMode: "replace",
           adminEntry: true,
-          matchId: appState.selectedPlayMatchId
+          matchId: appState.selectedPlayMatchId,
+          followRequestedMatch: Boolean(session.requestedMatchId)
         });
         return;
       }
@@ -146,7 +147,8 @@ export function registerPlayAndSpectatePages()
       session.currentCourtPassword = password;
       await enterCourt(courtId, false, {
         historyMode: "replace",
-        matchId: appState.selectedPlayMatchId
+        matchId: appState.selectedPlayMatchId,
+        followRequestedMatch: Boolean(session.requestedMatchId)
       });
       appState.playPageReturnToScoreboard = false;
       appState.selectedPlayMatchId = null;
