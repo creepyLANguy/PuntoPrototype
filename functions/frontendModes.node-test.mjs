@@ -139,7 +139,7 @@ test("fixed scoring controls commit on release and retain their profile across m
   const mode = document.getElementById("scoringModeSelect");
   mode.value = "fixedTotalPoints";
   mode.dispatchEvent(new window.Event("change", { bubbles: true }));
-  await waitFor(() => scoringUpdateRequests.length === 1, {
+  await waitFor(() => scoringUpdateRequests.length === 1 && !mode.disabled, {
     label: "fixed mode save",
   });
 
@@ -156,7 +156,7 @@ test("fixed scoring controls commit on release and retain their profile across m
   assert.equal(scoringUpdateRequests.length, 1);
 
   total.dispatchEvent(new window.Event("change", { bubbles: true }));
-  await waitFor(() => scoringUpdateRequests.length === 2, {
+  await waitFor(() => scoringUpdateRequests.length === 2 && !total.disabled, {
     label: "total points save",
   });
   assert.equal(scoringUpdateRequests.at(-1).scoringOptions.pointsTarget, 52);
@@ -174,7 +174,7 @@ test("fixed scoring controls commit on release and retain their profile across m
   assert.equal(scoringUpdateRequests.length, 2);
 
   block.dispatchEvent(new window.Event("change", { bubbles: true }));
-  await waitFor(() => scoringUpdateRequests.length === 3, {
+  await waitFor(() => scoringUpdateRequests.length === 3 && !block.disabled, {
     label: "block length save",
   });
   assert.equal(
@@ -187,7 +187,7 @@ test("fixed scoring controls commit on release and retain their profile across m
   serveOrder.dispatchEvent(new window.Event("input", { bubbles: true }));
   assert.equal(scoringUpdateRequests.length, 3);
   serveOrder.dispatchEvent(new window.Event("change", { bubbles: true }));
-  await waitFor(() => scoringUpdateRequests.length === 4, {
+  await waitFor(() => scoringUpdateRequests.length === 4 && !serveOrder.disabled, {
     label: "serve order save",
   });
   assert.deepEqual(
@@ -208,7 +208,7 @@ test("fixed scoring controls commit on release and retain their profile across m
 
   mode.value = "fixedTotalPoints";
   mode.dispatchEvent(new window.Event("change", { bubbles: true }));
-  await waitFor(() => scoringUpdateRequests.length === 6, {
+  await waitFor(() => scoringUpdateRequests.length === 6 && !mode.disabled, {
     label: "fixed mode restore save",
   });
 
