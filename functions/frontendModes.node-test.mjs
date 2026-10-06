@@ -1,6 +1,7 @@
 // Frontend integration tests: alternative scoring modes on the scoreboard.
 import assert from "node:assert/strict";
 import test from "node:test";
+import { readFileSync } from "node:fs";
 
 import {
   bootFrontend,
@@ -260,14 +261,22 @@ function assertFixedGlow(a, b) {
   }
 }
 
+test("fixed scoring sliders use a white accent", () => {
+  const styles = readFileSync(new URL("../app/css/style.css", import.meta.url), "utf8");
+  assert.match(styles, /\.scoring-field input\[type="range"\]\s*\{[^}]*accent-color:\s*#fff;/);
+});
+
 test("fixed points celebrate the winner only after the last point is scored", async () => {
   await leaveCourtViaBackButton();
   await joinCourtAsPlayer(document, "fixedwinner");
   const overlay = document.getElementById("setWinOverlay");
   overlay.click();
-  for (let i = 0; i < 6; i++) await awardFixedPoint("A");
+  await awardFixedPoint("A");
+  assert.equal(document.getElementById("straightTotalValue").textContent, "1/12");
+  for (let i = 1; i < 6; i++) await awardFixedPoint("A");
   await awardFixedPoint("B");
   await awardFixedPoint("B");
+  assert.equal(document.getElementById("straightTotalValue").textContent, "8/12");
   assertFixedGlow(true, false);
   assert.equal(overlay.classList.contains("hidden"), true);
 
@@ -291,6 +300,7 @@ test("fixed points celebrate the winner only after the last point is scored", as
     assert.equal(overlay.classList.contains("hidden"), i < 2, "celebrate only on the final point");
   }
   assert.equal(getBackendScore("fixedwinner").matchComplete, true);
+  assert.equal(document.getElementById("straightTotalValue").textContent, "12/12");
   assert.equal(overlay.dataset.winner, "A");
   assert.equal(overlay.querySelector(".set-win-label").textContent, "WINS THE MATCH!");
   assert.equal(overlay.querySelector(".sw-score-a").textContent, "7");
@@ -347,6 +357,7 @@ test("fixed golden points glow for both teams and celebrate the deciding winner"
   assert.equal(overlay.dataset.winner, "B");
   assert.equal(overlay.querySelector(".set-win-label").textContent, "WINS THE MATCH!");
   assert.equal(getBackendScore("fixedgolden").matchComplete, true);
+  assert.equal(document.getElementById("straightTotalValue").textContent, "13/12");
   overlay.click();
 
   await leaveCourtViaBackButton();

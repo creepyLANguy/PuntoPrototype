@@ -133,7 +133,10 @@ export function updateUI() {
     if (isStraight && elements.straightTotalValue) {
       const total =
         (session.score.A.totalPoints || 0) + (session.score.B.totalPoints || 0);
-      elements.straightTotalValue.textContent = total;
+      elements.straightTotalValue.textContent =
+        options.scoringMode === "fixedTotalPoints"
+          ? `${total}/${options.pointsTarget}`
+          : total;
     }
   }
 

@@ -106,7 +106,7 @@ body.light-mode .settings-scoring {
 .scoring-field input[type="range"] {
   width: 100%;
   min-width: 0;
-  accent-color: var(--teamAcolour);
+  accent-color: #fff;
 }
 
 .scoring-field input[type="range"]:disabled {
