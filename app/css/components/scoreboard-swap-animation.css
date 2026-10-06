@@ -1,0 +1,83 @@
+.scoreboard.swap-animating::after,
+.scoreboard.changeover-animating::after {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 20;
+  padding: clamp(8px, 1.5vmin, 14px) clamp(14px, 3vmin, 28px);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.82);
+  color: #fff;
+  font-size: clamp(0.8rem, 2.5vmin, 1.5rem);
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  line-height: 1;
+  pointer-events: none;
+  white-space: nowrap;
+  box-shadow: 0 0 24px rgba(255, 255, 255, 0.45);
+  animation: scoreboardSwapCue 650ms ease-in-out both;
+}
+
+.scoreboard.swap-animating::after {
+  content: "⇄ SWAPPING SIDES";
+}
+
+.scoreboard.changeover-animating::after {
+  content: "CHANGEOVER";
+  animation-duration: 1.5s;
+  box-shadow: 0 0 28px color-mix(in srgb, var(--teamBcolour) 70%, transparent);
+}
+
+.scoreboard.swap-animating .team,
+.scoreboard.changeover-animating .team {
+  animation: scoreboardSwapGlow 650ms ease-in-out both;
+}
+
+.scoreboard.changeover-animating .team {
+  animation-duration: 900ms;
+}
+
+@keyframes scoreboardSwapCue {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.7);
+  }
+
+  25%,
+  70% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.9);
+  }
+}
+
+@keyframes scoreboardSwapGlow {
+  0%,
+  100% {
+    box-shadow: 0 0 0 transparent;
+  }
+
+  45% {
+    box-shadow: 0 0 26px color-mix(in srgb, currentColor 75%, transparent);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scoreboard.swap-animating::after,
+  .scoreboard.changeover-animating::after,
+  .scoreboard.swap-animating .team,
+  .scoreboard.changeover-animating .team {
+    animation: none;
+  }
+
+  .scoreboard.swap-animating::after,
+  .scoreboard.changeover-animating::after {
+    opacity: 1;
+    transform: translate(-50%, -50%);
+  }
+}

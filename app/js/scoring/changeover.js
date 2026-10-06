@@ -13,8 +13,12 @@ import { playClashSound } from "../audio/audio.js";
 import { TOAST_TYPES } from "../config/constants.js";
 import { changeoverCourt } from "../firebase/callables.js";
 import { listenToCourtDocument } from "../firebase/courtRepository.js";
-import { getCourtIdFromHistoryState, observeHistoryChanges } from "../routing/history.js";
+import {
+  getCourtIdFromHistoryState,
+  observeHistoryChanges,
+} from "../routing/history.js";
 import { session } from "../state/sessionState.js";
+import { swapScoreboardViews } from "../ui/animations.js";
 import { syncSettingsTiles } from "../ui/settingsTiles.js";
 import { appendToast } from "../ui/toast.js";
 
@@ -24,18 +28,15 @@ let activeChangeoverCourtId = null;
 let changeoverListenerInitialized = false;
 let lastChangeoverEventId = null;
 
-function getCurrentCourtId()
-{
+function getCurrentCourtId() {
   return getCourtIdFromHistoryState();
 }
 
-function showChangeoverToast()
-{
+function showChangeoverToast() {
   appendToast(CHANGEOVER_TOAST, TOAST_TYPES.SUCCESS);
 }
 
-function syncSwapViewsButton()
-{
+function syncSwapViewsButton() {
   const scoreboard = document.querySelector(".scoreboard");
   const swapButton = document.getElementById("swapBtn");
   if (!scoreboard || !swapButton) return;
@@ -48,27 +49,24 @@ function syncSwapViewsButton()
   tile?.classList.toggle("active", swapped);
 }
 
-function triggerSwapViews()
-{
+function triggerSwapViews() {
   const scoreboard = document.querySelector(".scoreboard");
   if (!scoreboard) return;
 
   // Deliberately invert the current UI state rather than applying the
   // Firestore Beacon mapping. Each device may have chosen its own view.
-  scoreboard.classList.toggle("swapped");
+  swapScoreboardViews({ changeover: true });
   syncSwapViewsButton();
 
   // If Match Details is open, ask the existing details action to rebuild its
   // presentation using the newly selected view.
   const detailsModal = document.getElementById("detailsModal");
-  if (detailsModal && !detailsModal.classList.contains("hidden"))
-  {
+  if (detailsModal && !detailsModal.classList.contains("hidden")) {
     document.getElementById("detailsBtn")?.click();
   }
 }
 
-function handleChangeoverEvent(event)
-{
+function handleChangeoverEvent(event) {
   const eventId = event?.id;
   if (!eventId || eventId === lastChangeoverEventId) return;
 
@@ -86,8 +84,7 @@ function handleChangeoverEvent(event)
   showChangeoverToast();
 }
 
-function attachChangeoverListener()
-{
+function attachChangeoverListener() {
   const courtId = getCurrentCourtId();
   if (!courtId || courtId === activeChangeoverCourtId) return;
 
@@ -99,14 +96,12 @@ function attachChangeoverListener()
 
   changeoverUnsubscribe = listenToCourtDocument(
     courtId,
-    (snapshot) =>
-    {
+    (snapshot) => {
       if (!snapshot.exists()) return;
 
       const event = snapshot.data()?.changeoverEvent;
 
-      if (!changeoverListenerInitialized)
-      {
+      if (!changeoverListenerInitialized) {
         // Establish the baseline without replaying an old changeover after a
         // page reload or court switch. This also works when the court has no
         // changeoverEvent field yet.
@@ -122,8 +117,7 @@ function attachChangeoverListener()
   );
 }
 
-function announceChangeoverProcessing(processing)
-{
+function announceChangeoverProcessing(processing) {
   window.dispatchEvent(
     new CustomEvent("punto:changeover-processing", {
       detail: { processing: processing === true },
@@ -131,57 +125,52 @@ function announceChangeoverProcessing(processing)
   );
 }
 
-function installChangeoverBehaviour()
-{
+function installChangeoverBehaviour() {
   const changeoverButton = document.getElementById("changeoverBtn");
   if (!changeoverButton) return;
 
   // Capture phase, registered before any other listener, so changeover owns
   // the interaction and does not also run the normal Swap views sound/cue.
-  changeoverButton.addEventListener("click", async (event) =>
-  {
-    event.preventDefault();
-    event.stopImmediatePropagation();
+  changeoverButton.addEventListener(
+    "click",
+    async (event) => {
+      event.preventDefault();
+      event.stopImmediatePropagation();
 
-    const courtId = getCurrentCourtId();
-    if (!courtId) return;
+      const courtId = getCurrentCourtId();
+      if (!courtId) return;
 
-    announceChangeoverProcessing(true);
+      announceChangeoverProcessing(true);
 
-    try
-    {
-      const result = await changeoverCourt({ courtId });
+      try {
+        const result = await changeoverCourt({ courtId });
 
-      // This is deliberately local-only: remote devices only receive the
-      // changeover event through Firestore and must not play the sound.
-      playClashSound();
+        // This is deliberately local-only: remote devices only receive the
+        // changeover event through Firestore and must not play the sound.
+        playClashSound();
 
-      const eventId = result.data?.changeoverEventId;
-      // The listener normally handles this first. This fallback makes the
-      // success cue immediate if the callable resolves before the snapshot.
-      if (eventId && lastChangeoverEventId !== eventId)
-      {
-        handleChangeoverEvent({ id: eventId });
+        const eventId = result.data?.changeoverEventId;
+        // The listener normally handles this first. This fallback makes the
+        // success cue immediate if the callable resolves before the snapshot.
+        if (eventId && lastChangeoverEventId !== eventId) {
+          handleChangeoverEvent({ id: eventId });
+        }
+      } catch (error) {
+        console.error("Changeover failed", error);
+        announceChangeoverProcessing(false);
+
+        appendToast(error?.message || "Changeover failed", TOAST_TYPES.ERROR);
+
+        return;
+      } finally {
+        announceChangeoverProcessing(false);
       }
-    }
-    catch (error)
-    {
-      console.error("Changeover failed", error);
-      announceChangeoverProcessing(false);
-
-      appendToast(error?.message || "Changeover failed", TOAST_TYPES.ERROR);
-
-      return;
-    }
-    finally
-    {
-      announceChangeoverProcessing(false);
-    }
-  }, { capture: true });
+    },
+    { capture: true },
+  );
 }
 
-function installChangeoverNavigationHooks()
-{
+function installChangeoverNavigationHooks() {
   const notifyNavigation = () => window.setTimeout(attachChangeoverListener, 0);
 
   observeHistoryChanges(notifyNavigation);
@@ -190,23 +179,19 @@ function installChangeoverNavigationHooks()
 // Installed at module-evaluation time of the entry point (before
 // DOMContentLoaded): the capture listener must precede every other listener on
 // the button, and the history hooks must precede the first navigation.
-export function installChangeover()
-{
-  if (typeof window !== "undefined")
-  {
+export function installChangeover() {
+  if (typeof window !== "undefined") {
     installChangeoverBehaviour();
     installChangeoverNavigationHooks();
     window.setTimeout(attachChangeoverListener, 0);
   }
 }
 
-export function registerChangeoverStateListeners()
-{
+export function registerChangeoverStateListeners() {
   // Changeover is a backend state transition. It also causes a blind local
   // toggle of this client's changeover state and Swap views state, without
   // using either view state as an input to the other.
-  window.addEventListener("punto:changeover", () =>
-  {
+  window.addEventListener("punto:changeover", () => {
     session.beaconSidesSwapped = !session.beaconSidesSwapped;
     syncSettingsTiles();
   });
@@ -214,8 +199,7 @@ export function registerChangeoverStateListeners()
   // The backend request lifecycle owns the temporary processing state. Keeping
   // that state here means every settings sync renders it consistently rather
   // than allowing an unrelated court/UI snapshot to overwrite the feedback.
-  window.addEventListener("punto:changeover-processing", (event) =>
-  {
+  window.addEventListener("punto:changeover-processing", (event) => {
     session.changeoverProcessing = event?.detail?.processing === true;
     syncSettingsTiles();
   });
