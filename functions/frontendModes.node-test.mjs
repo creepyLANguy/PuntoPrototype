@@ -200,6 +200,9 @@ test("fixed scoring controls commit on release and retain their profile across m
   await waitFor(() => scoringUpdateRequests.length === 5, {
     label: "standard mode save",
   });
+  await waitFor(() => !mode.disabled, {
+    label: "standard mode save complete",
+  });
 
   mode.value = "fixedTotalPoints";
   mode.dispatchEvent(new window.Event("change", { bubbles: true }));
