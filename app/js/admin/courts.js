@@ -63,7 +63,6 @@ function readFixedCourtScoringControls(prefix) {
     serving: {
       enabled: true,
       order,
-      servesPerPlayer: Number(byId("FixedServesPerPlayer")?.value),
       serveBlockLength: Number(byId("FixedServeBlockLength")?.value),
       sideSwapRule: byId("FixedSideSwapRule")?.value,
     },
@@ -82,8 +81,6 @@ function populateFixedCourtScoringControls(prefix, options = {}) {
     byId("FixedPointsTarget").value = options.pointsTarget ?? 36;
   if (byId("FixedServeOrder"))
     byId("FixedServeOrder").value = order.join(", ");
-  if (byId("FixedServesPerPlayer"))
-    byId("FixedServesPerPlayer").value = options.serving?.servesPerPlayer ?? 4;
   if (byId("FixedServeBlockLength"))
     byId("FixedServeBlockLength").value = options.serving?.serveBlockLength ?? 1;
   if (byId("FixedSideSwapRule"))
@@ -302,7 +299,6 @@ export function openEditModal(court, syncHistory = true) {
     [
       elements.editCourtFixedPointsTarget,
       elements.editCourtFixedServeOrder,
-      elements.editCourtFixedServesPerPlayer,
       elements.editCourtFixedServeBlockLength,
       elements.editCourtFixedSideSwapRule,
       elements.editCourtFixedTieResolution,
@@ -612,7 +608,6 @@ export function registerCreateCourt() {
       [
         elements.courtFixedPointsTarget,
         elements.courtFixedServeOrder,
-        elements.courtFixedServesPerPlayer,
         elements.courtFixedServeBlockLength,
         elements.courtFixedSideSwapRule,
         elements.courtFixedTieResolution,
