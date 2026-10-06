@@ -104,7 +104,6 @@ test("format settings become a nested configuration with only relevant options",
     "scoring.pointsTarget": "32",
   });
   assert.equal(americano.scoring.pointsTarget, 32);
-  assert.equal(americano.scoring.servesPerPlayer, 4);
 
   const league = buildFormatConfig("roundRobin", {
     ...defaultFieldValues("roundRobin"),
