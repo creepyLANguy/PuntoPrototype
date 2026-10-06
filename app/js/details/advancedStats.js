@@ -70,7 +70,13 @@ export function fitAdvancedStatsColumns()
   table.style.setProperty("--dm-st-secondary-width", ((secondaryWidth / tableWidth) * 100) + "%");
 }
 
-export function renderAdvancedStats(advancedStats, teamNames, isSwapped = false, playerNames = DEFAULT_PLAYER_NAMES)
+export function renderAdvancedStats(
+  advancedStats,
+  teamNames,
+  isSwapped = false,
+  playerNames = DEFAULT_PLAYER_NAMES,
+  scoringOptions = {},
+)
 {
   if (!elements.dmStatsWrap || !elements.dmStatsTeam)
   {
@@ -268,25 +274,36 @@ export function renderAdvancedStats(advancedStats, teamNames, isSwapped = false,
   }
 
   const servePlayerStats = advancedStats?.servePlayerStats || {};
-  rows.push(sectionRow("On Serve"));
-  [1, 2].forEach(serverIndex =>
+  const showServeStats =
+    isGamesAndSetsMode ||
+    isTiebreakTen ||
+    (
+      resolvedScoringMode === "fixedTotalPoints" &&
+      scoringOptions?.serving?.enabled !== false
+    );
+
+  if (showServeStats)
   {
-    const primarySlot = `${primaryTeamKey}${serverIndex}`;
-    const secondarySlot = `${secondaryTeamKey}${serverIndex}`;
-    var primaryServerName = getPlayerDisplayName(primarySlot, playerNames);
-    var secondaryServerName = getPlayerDisplayName(secondarySlot, playerNames);
-    primaryServerName = primaryServerName + (primaryServerName == "" ? "" : " - ");
-    secondaryServerName = secondaryServerName + (secondaryServerName == "" ? "" : " - ");
+    rows.push(sectionRow("On Serve"));
+    [1, 2].forEach(serverIndex =>
+    {
+      const primarySlot = `${primaryTeamKey}${serverIndex}`;
+      const secondarySlot = `${secondaryTeamKey}${serverIndex}`;
+      var primaryServerName = getPlayerDisplayName(primarySlot, playerNames);
+      var secondaryServerName = getPlayerDisplayName(secondarySlot, playerNames);
+      primaryServerName = primaryServerName + (primaryServerName == "" ? "" : " - ");
+      secondaryServerName = secondaryServerName + (secondaryServerName == "" ? "" : " - ");
 
-    const primaryServeStat = servePlayerStats[primarySlot] || { pointsWonOnServe: 0, pointsServed: 0, serveWinPct: 0 };
-    const secondaryServeStat = servePlayerStats[secondarySlot] || { pointsWonOnServe: 0, pointsServed: 0, serveWinPct: 0 };
+      const primaryServeStat = servePlayerStats[primarySlot] || { pointsWonOnServe: 0, pointsServed: 0, serveWinPct: 0 };
+      const secondaryServeStat = servePlayerStats[secondarySlot] || { pointsWonOnServe: 0, pointsServed: 0, serveWinPct: 0 };
 
-    rows.push(row(
-      `Player ${serverIndex}`,
-      `${primaryServerName}${primaryServeStat.pointsWonOnServe}/${primaryServeStat.pointsServed} (${formatPct(primaryServeStat.serveWinPct)})`,
-      `${secondaryServerName}${secondaryServeStat.pointsWonOnServe}/${secondaryServeStat.pointsServed} (${formatPct(secondaryServeStat.serveWinPct)})`
-    ));
-  });
+      rows.push(row(
+        `Player ${serverIndex}`,
+        `${primaryServerName}${primaryServeStat.pointsWonOnServe}/${primaryServeStat.pointsServed} (${formatPct(primaryServeStat.serveWinPct)})`,
+        `${secondaryServerName}${secondaryServeStat.pointsWonOnServe}/${secondaryServeStat.pointsServed} (${formatPct(secondaryServeStat.serveWinPct)})`
+      ));
+    });
+  }
 
   elements.dmStatsTeam.innerHTML = `
       <table class="dm-stats-table">
