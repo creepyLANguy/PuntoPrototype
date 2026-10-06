@@ -231,9 +231,13 @@ test("fixed points flag majority-clinching points for either team", () => {
       assert.equal(getCriticalPointStatus(s)[team], "Match");
       assert.equal(getFixedTotalDisplayResult(s), null);
       s[team].points++;
-      assert.equal(getFixedTotalDisplayResult(s), team);
+      assert.equal(getFixedTotalDisplayResult(s), null, "a majority does not announce an unfinished match");
       assert.deepEqual(getCriticalPointStatus(s), { A: null, B: null });
       assert.notEqual(getCurrentServerLabel(s), null, "remaining points still have a server");
+      const opponent = team === "A" ? "B" : "A";
+      s[opponent].points = pointsTarget - s[team].points;
+      s.matchComplete = true;
+      assert.equal(getFixedTotalDisplayResult(s), team);
     }
   }
 });

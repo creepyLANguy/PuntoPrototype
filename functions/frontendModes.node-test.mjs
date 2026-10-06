@@ -260,7 +260,7 @@ function assertFixedGlow(a, b) {
   }
 }
 
-test("fixed points celebrate a majority once while remaining points are still scored", async () => {
+test("fixed points celebrate the winner only after the last point is scored", async () => {
   await leaveCourtViaBackButton();
   await joinCourtAsPlayer(document, "fixedwinner");
   const overlay = document.getElementById("setWinOverlay");
@@ -273,11 +273,7 @@ test("fixed points celebrate a majority once while remaining points are still sc
 
   await awardFixedPoint("A");
   assertFixedGlow(false, false);
-  assert.equal(overlay.classList.contains("hidden"), false);
-  assert.equal(overlay.dataset.winner, "A");
-  assert.equal(overlay.querySelector(".set-win-label").textContent, "WINS THE MATCH!");
-  assert.equal(overlay.querySelector(".sw-score-a").textContent, "7");
-  assert.equal(overlay.querySelector(".sw-score-b").textContent, "2");
+  assert.equal(overlay.classList.contains("hidden"), true, "no early majority win screen");
   assert.equal(getBackendScore("fixedwinner").matchComplete, false);
   overlay.click();
 
@@ -287,18 +283,32 @@ test("fixed points celebrate a majority once while remaining points are still sc
   await waitFor(() => document.getElementById("pointsA").textContent === "6");
   assertFixedGlow(true, false);
   await awardFixedPoint("A");
-  assert.equal(overlay.classList.contains("hidden"), false, "undo re-arms the celebration");
+  assert.equal(overlay.classList.contains("hidden"), true, "re-scoring a majority does not celebrate");
   overlay.click();
 
   for (let i = 0; i < 3; i++) {
     await awardFixedPoint("B");
-    assert.equal(overlay.classList.contains("hidden"), true, "no repeated win screen");
+    assert.equal(overlay.classList.contains("hidden"), i < 2, "celebrate only on the final point");
   }
   assert.equal(getBackendScore("fixedwinner").matchComplete, true);
+  assert.equal(overlay.dataset.winner, "A");
+  assert.equal(overlay.querySelector(".set-win-label").textContent, "WINS THE MATCH!");
+  assert.equal(overlay.querySelector(".sw-score-a").textContent, "7");
+  assert.equal(overlay.querySelector(".sw-score-b").textContent, "5");
+  overlay.click();
+  document.getElementById("undoBtn").click();
+  await waitFor(() => !document.getElementById("confirmModal").classList.contains("hidden"));
+  document.getElementById("confirmOkBtn").click();
+  await waitFor(() => document.getElementById("pointsB").textContent === "4");
+  assert.equal(overlay.classList.contains("hidden"), true);
+  await awardFixedPoint("B");
+  assert.equal(overlay.classList.contains("hidden"), false, "undo re-arms the final celebration");
+  overlay.click();
   assert.equal(getRenderedScore(document).pointsB, "5");
   document.getElementById("addPointB").click();
   await settle();
   assert.equal(getRenderedScore(document).pointsB, "5");
+  assert.equal(overlay.classList.contains("hidden"), true, "completed scores do not repeat the celebration");
 });
 
 test("fixed points show a draw screen when the target is reached tied", async () => {

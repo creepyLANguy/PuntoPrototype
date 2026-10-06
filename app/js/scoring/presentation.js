@@ -116,11 +116,13 @@ export function getCurrentServerLabel(currentScore) {
   return getGameServerLabel(totalCompletedGames);
 }
 
-// A majority clinches the result, but scoring continues to the target.
+// Celebrate the result only after all points, including a golden point, are played.
 export function getFixedTotalDisplayResult(currentScore) {
   if (!currentScore) return null;
   const options = resolveScoreDisplayOptions(currentScore);
-  if (options.scoringMode !== "fixedTotalPoints") return null;
+  if (options.scoringMode !== "fixedTotalPoints" || !currentScore.matchComplete) {
+    return null;
+  }
 
   const majority = Math.floor(options.pointsTarget / 2) + 1;
   if (currentScore.A.points >= majority) return "A";
@@ -153,7 +155,11 @@ export function getCriticalPointStatus(currentScore) {
   }
 
   if (options.scoringMode === "fixedTotalPoints") {
-    if (currentScore.matchComplete || getFixedTotalDisplayResult(currentScore)) {
+    if (
+      currentScore.matchComplete ||
+      currentScore.A.points > options.pointsTarget / 2 ||
+      currentScore.B.points > options.pointsTarget / 2
+    ) {
       return status;
     }
     const majorityPoint = Math.floor(options.pointsTarget / 2);
