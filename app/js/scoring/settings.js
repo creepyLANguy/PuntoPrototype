@@ -217,10 +217,10 @@ function readScoringControls() {
   const current = normalizeScoringOptions(
     session.currentScoringOptions || DEFAULT_SCORING_OPTIONS,
   );
-  const fixedProfile = FIXED_TOTAL_FIELDS.reduce((profile, field) => {
-    if (current[field] !== undefined) profile[field] = current[field];
-    return profile;
-  }, {});
+  const fixedProfile = {};
+  ["pointsTarget", "serving", "completion"].forEach((field) => {
+    if (current[field] !== undefined) fixedProfile[field] = current[field];
+  });
 
   if (scoringMode === "fixedTotalPoints") {
     const serveOrder = (elements.fixedServeOrderInput?.value || "")
