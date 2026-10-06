@@ -88,10 +88,22 @@ export function applyMatchData(
   session.currentTournamentId = data.tournamentId || null;
   session.currentMatchTitle = resolveMatchTitle({ ...data, matchId }, matchId);
 
-  const nextScoringOptions = normalizeScoringOptions({
+  const incomingScoringOptions = {
     ...(data.scoringOptions || {}),
     scoringMode: data.scoringMode || data.scoringOptions?.scoringMode,
-  });
+  };
+  const retainedScoringOptions = session.currentScoringOptions || {};
+  if (incomingScoringOptions.scoringMode !== "fixedTotalPoints") {
+    ["pointsTarget", "serving", "completion"].forEach((field) => {
+      if (
+        incomingScoringOptions[field] === undefined &&
+        retainedScoringOptions[field] !== undefined
+      ) {
+        incomingScoringOptions[field] = retainedScoringOptions[field];
+      }
+    });
+  }
+  const nextScoringOptions = normalizeScoringOptions(incomingScoringOptions);
   if (
     !areScoringOptionsEqual(nextScoringOptions, session.currentScoringOptions)
   ) {
