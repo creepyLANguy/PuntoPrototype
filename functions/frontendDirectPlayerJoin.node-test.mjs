@@ -117,9 +117,18 @@ test("/p/<matchId> loads that match on its court as a spectator and then authent
     { label: "linked match score" },
   );
 
-  assert.equal(document.getElementById("playCourtSearch").value, "Match Route Court");
-  assert.equal(document.getElementById("playPasswordSection").style.display, "block");
-  assert.notEqual(document.getElementById("scoreboardPage").style.display, "none");
+  assert.equal(
+    document.getElementById("playCourtSearch").value,
+    "Match Route Court",
+  );
+  assert.equal(
+    document.getElementById("playPasswordSection").style.display,
+    "block",
+  );
+  assert.notEqual(
+    document.getElementById("scoreboardPage").style.display,
+    "none",
+  );
   assert.equal(window.location.pathname, "/p/linked-match");
   assert.equal(document.body.classList.contains("spectating-mode"), true);
 
