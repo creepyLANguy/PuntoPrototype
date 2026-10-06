@@ -187,6 +187,6 @@ body.light-mode .straight-total {
 
 .straight-total.fixed-total {
   width: max-content;
-  padding: clamp(10px, 1.8vmin, 18px) clamp(8px, 1.2vmin, 14px);
-  border-radius: clamp(10px, 1.8vmin, 18px);
+  padding: clamp(10px, 1.8vmin, 18px) clamp(8px, 1.2vmin, 14px) !important;
+  border-radius: clamp(10px, 1.8vmin, 18px) !important;
 }
