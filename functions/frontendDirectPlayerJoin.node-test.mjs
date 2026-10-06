@@ -19,7 +19,7 @@ test.before(async () => {
   seedBaseData();
   seedCourt("directplayer", { name: "Direct Player Court" });
 
-  const matchRouteCourt = seedCourt("matchroute", {
+  seedCourt("matchroute", {
     name: "Match Route Court",
     activeMatchId: "active-match",
     matchName: "Active Match",
@@ -42,11 +42,6 @@ test.before(async () => {
     },
     scoreVersion: 0,
     tournamentId: "tournament-1",
-  });
-  seedDoc("courts/matchroute", {
-    ...matchRouteCourt,
-    activeMatchId: "active-match",
-    lastMatchId: "active-match",
   });
   pushScoreSnapshot(
     "linked-match",
@@ -84,14 +79,10 @@ test("/p/<court> player submit primes and plays the join sound", async () => {
 
   document.getElementById("enterCourtBtn").click();
 
-  await waitFor(
-    () => document.getElementById("scoreboardPage").style.display !== "none",
-    { label: "player scoreboard to be shown" },
-  );
-  await waitFor(
-    () => window.__audioTestState.starts === 1,
-    { label: "direct player join sound" },
-  );
+  await waitFor(() => document.getElementById("scoreboardPage").style.display !== "none", {
+    label: "player scoreboard to be shown",
+  });
+  await waitFor(() => window.__audioTestState.starts === 1, { label: "direct player join sound" });
 
   assert.ok(
     window.__audioTestState.resumeCalls > 0,
@@ -100,55 +91,74 @@ test("/p/<court> player submit primes and plays the join sound", async () => {
   assert.equal(window.__audioTestState.starts, 1);
 });
 
-test(
-  "/p/<matchId> loads that match on its court as a spectator and then authenticates as a player",
-  async () => {
-    window.history.pushState({}, "", "/p/linked-match");
-    window.dispatchEvent(new window.PopStateEvent("popstate"));
+test("/p/<matchId> loads that match on its court as a spectator and then authenticates as a player", async () => {
+  window.history.pushState({}, "", "/p/linked-match");
+  window.dispatchEvent(new window.PopStateEvent("popstate"));
 
-    await waitFor(
-      () =>
-        document.getElementById("playPage").style.display !== "none" &&
-        document.querySelector(
-          '#playCourtList .court-item[data-court-id="matchroute"].active',
-        ),
-      { label: "match-target join prompt" },
-    );
-    await waitFor(
-      () => getRenderedScoreForDirectJoin(document).pointsA === "7",
-      { label: "linked match score" },
-    );
+  await waitFor(
+    () =>
+      document.getElementById("playPage").style.display !== "none" &&
+      document.querySelector('#playCourtList .court-item[data-court-id="matchroute"].active'),
+    { label: "match-target join prompt" },
+  );
+  await waitFor(() => getRenderedScoreForDirectJoin(document).pointsA === "7", {
+    label: "linked match score",
+  });
 
-    assert.equal(
-      document.getElementById("playCourtSearch").value,
-      "Match Route Court",
-    );
-    assert.equal(
-      document.getElementById("playPasswordSection").style.display,
-      "block",
-    );
-    assert.notEqual(
-      document.getElementById("scoreboardPage").style.display,
-      "none",
-    );
-    assert.equal(window.location.pathname, "/p/linked-match");
-    assert.equal(document.body.classList.contains("spectating-mode"), true);
+  assert.equal(document.getElementById("playCourtSearch").value, "Match Route Court");
+  assert.equal(document.getElementById("playPasswordSection").style.display, "block");
+  assert.notEqual(document.getElementById("scoreboardPage").style.display, "none");
+  assert.equal(window.location.pathname, "/p/linked-match");
+  assert.equal(document.body.classList.contains("spectating-mode"), true);
 
-    document.getElementById("playCourtPassword").value = "pw";
-    document.getElementById("enterCourtBtn").click();
+  document.getElementById("playCourtPassword").value = "pw";
+  document.getElementById("enterCourtBtn").click();
 
-    await waitFor(
-      () =>
-        document.getElementById("scoreboardPage").style.display !== "none" &&
-        !document.body.classList.contains("spectating-mode"),
-      { label: "linked match player join" },
-    );
-    await settle(30);
+  await waitFor(
+    () =>
+      document.getElementById("scoreboardPage").style.display !== "none" &&
+      !document.body.classList.contains("spectating-mode"),
+    { label: "linked match player join" },
+  );
+  await settle(30);
 
-    assert.equal(getRenderedScoreForDirectJoin(document).pointsA, "7");
-    assert.equal(getRenderedScoreForDirectJoin(document).pointsB, "2");
-  },
-);
+  assert.equal(getRenderedScoreForDirectJoin(document).pointsA, "7");
+  assert.equal(getRenderedScoreForDirectJoin(document).pointsB, "2");
+});
+
+test("an explicit match link keeps its score after listener refresh", async () => {
+  document.dispatchEvent(new window.Event("visibilitychange"));
+  await settle(30);
+  pushScoreSnapshot(
+    "linked-match",
+    makeScore({
+      A: { points: 8, games: 0, sets: 0, totalPoints: 8 },
+      B: { points: 2, games: 0, sets: 0, totalPoints: 2 },
+      scoringOptions: {
+        scoringMode: "straight",
+        deuceMode: "standard",
+        tiebreakMode: "sixAllSeven",
+      },
+    }),
+  );
+  await waitFor(() => getRenderedScoreForDirectJoin(document).pointsA === "8", {
+    label: "linked match score after reconnect",
+  });
+});
+
+test("switching to a court link clears the explicit match selection", async () => {
+  pushScoreSnapshot(
+    "active-match",
+    makeScore({ A: { points: 1, games: 0, sets: 0, totalPoints: 1 } }),
+  );
+  window.history.pushState({}, "", "/p/matchroute");
+  window.dispatchEvent(new window.PopStateEvent("popstate"));
+
+  await waitFor(() => getRenderedScoreForDirectJoin(document).pointsA === "15", {
+    label: "court's active match score",
+  });
+  assert.equal(document.body.classList.contains("spectating-mode"), true);
+});
 
 function getRenderedScoreForDirectJoin(document) {
   return {

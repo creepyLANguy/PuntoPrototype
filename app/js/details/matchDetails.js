@@ -74,7 +74,7 @@ function setDetailsPanelExpanded(isExpanded) {
   }
 }
 
-function syncDetailsPanelAvailability() {
+export function syncDetailsPanelAvailability() {
   if (!elements.dmDetailsPanel || !elements.dmDetailsToggle) {
     return;
   }

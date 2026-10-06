@@ -91,29 +91,28 @@ export async function enterCourt(
   // and browser-history restoration); otherwise resolve/create the court's
   // current casual match as before.
   let resolvedMatchId = matchId;
-  if (resolvedMatchId)
-  {
+  if (resolvedMatchId) {
     const requestedMatchSnap = await getMatch(resolvedMatchId);
-    const requestedMatch = requestedMatchSnap.exists() ? requestedMatchSnap.data() : null;
+    const requestedMatch = requestedMatchSnap.exists()
+      ? requestedMatchSnap.data()
+      : null;
     const belongsToCourt =
       Boolean(requestedMatch) &&
-      (
-        requestedMatch.currentCourtId === courtId ||
+      (requestedMatch.currentCourtId === courtId ||
         data.activeMatchId === resolvedMatchId ||
-        data.lastMatchId === resolvedMatchId
-      );
+        data.lastMatchId === resolvedMatchId);
 
-    if (!belongsToCourt)
-    {
-      throw new Error("The requested match is not currently assigned to this court.");
+    if (!belongsToCourt) {
+      throw new Error(
+        "The requested match is not currently assigned to this court.",
+      );
     }
-  }
-  else
-  {
+  } else {
     resolvedMatchId = await resolveCourtMatchId(courtId, data);
   }
 
   clearMatchContext();
+  session.requestedMatchId = matchId;
   session.currentScoreVersion = -1;
   if (resolvedMatchId) {
     // Warm the Firestore connection and the scoring Cloud Function.

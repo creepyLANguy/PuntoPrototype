@@ -189,9 +189,13 @@ export async function listenToCourt(courtId) {
       session.currentCourtName = data.name || snap.id;
       refreshScoreboardTitle();
 
-      // A different match on this court (a tournament match starting, a moved
-      // match, or a new casual match) switches the scoreboard to that match.
-      const courtMatchId = data.activeMatchId || data.lastMatchId || null;
+      // Explicit match links keep their target; court links follow whichever
+      // match is active on the court, or its most recent match.
+      const courtMatchId =
+        session.requestedMatchId ||
+        data.activeMatchId ||
+        data.lastMatchId ||
+        null;
       if (courtMatchId) {
         followMatch(courtMatchId, listenerToken, {
           onError: onMatchListenerError,
