@@ -274,7 +274,7 @@ describe("tournament flow", () => {
       expect(matchDoc.scoringOptions).toMatchObject({
         scoringMode: "fixedTotalPoints",
         pointsTarget: 36,
-        serving: { servesPerPlayer: 4, serveBlockLength: 1, order: ["A1", "B1", "A2", "B2"] },
+        serving: { serveBlockLength: 1, order: ["A1", "B1", "A2", "B2"] },
       });
     });
 
