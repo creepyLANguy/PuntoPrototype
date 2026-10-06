@@ -276,7 +276,7 @@ export function renderAdvancedStats(
   const servePlayerStats = advancedStats?.servePlayerStats || {};
   const showServeStats =
     isGamesAndSetsMode ||
-    isTiebreakTen ||
+    resolvedScoringMode === "tiebreakTen" ||
     (
       resolvedScoringMode === "fixedTotalPoints" &&
       scoringOptions?.serving?.enabled !== false
