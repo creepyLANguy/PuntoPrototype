@@ -103,50 +103,50 @@ test("/p/<court> player submit primes and plays the join sound", async () => {
 test(
   "/p/<matchId> loads that match on its court as a spectator and then authenticates as a player",
   async () => {
-  window.history.pushState({}, "", "/p/linked-match");
-  window.dispatchEvent(new window.PopStateEvent("popstate"));
+    window.history.pushState({}, "", "/p/linked-match");
+    window.dispatchEvent(new window.PopStateEvent("popstate"));
 
-  await waitFor(
-    () =>
-      document.getElementById("playPage").style.display !== "none" &&
-      document.querySelector(
-        '#playCourtList .court-item[data-court-id="matchroute"].active',
-      ),
-    { label: "match-target join prompt" },
-  );
-  await waitFor(
-    () => getRenderedScoreForDirectJoin(document).pointsA === "7",
-    { label: "linked match score" },
-  );
+    await waitFor(
+      () =>
+        document.getElementById("playPage").style.display !== "none" &&
+        document.querySelector(
+          '#playCourtList .court-item[data-court-id="matchroute"].active',
+        ),
+      { label: "match-target join prompt" },
+    );
+    await waitFor(
+      () => getRenderedScoreForDirectJoin(document).pointsA === "7",
+      { label: "linked match score" },
+    );
 
-  assert.equal(
-    document.getElementById("playCourtSearch").value,
-    "Match Route Court",
-  );
-  assert.equal(
-    document.getElementById("playPasswordSection").style.display,
-    "block",
-  );
-  assert.notEqual(
-    document.getElementById("scoreboardPage").style.display,
-    "none",
-  );
-  assert.equal(window.location.pathname, "/p/linked-match");
-  assert.equal(document.body.classList.contains("spectating-mode"), true);
+    assert.equal(
+      document.getElementById("playCourtSearch").value,
+      "Match Route Court",
+    );
+    assert.equal(
+      document.getElementById("playPasswordSection").style.display,
+      "block",
+    );
+    assert.notEqual(
+      document.getElementById("scoreboardPage").style.display,
+      "none",
+    );
+    assert.equal(window.location.pathname, "/p/linked-match");
+    assert.equal(document.body.classList.contains("spectating-mode"), true);
 
-  document.getElementById("playCourtPassword").value = "pw";
-  document.getElementById("enterCourtBtn").click();
+    document.getElementById("playCourtPassword").value = "pw";
+    document.getElementById("enterCourtBtn").click();
 
-  await waitFor(
-    () =>
-      document.getElementById("scoreboardPage").style.display !== "none" &&
-      !document.body.classList.contains("spectating-mode"),
-    { label: "linked match player join" },
-  );
-  await settle(30);
+    await waitFor(
+      () =>
+        document.getElementById("scoreboardPage").style.display !== "none" &&
+        !document.body.classList.contains("spectating-mode"),
+      { label: "linked match player join" },
+    );
+    await settle(30);
 
-  assert.equal(getRenderedScoreForDirectJoin(document).pointsA, "7");
-    assert.equal(getRenderedScoreForDirectJoin(document).pointsB, "2");
+    assert.equal(getRenderedScoreForDirectJoin(document).pointsA, "7");
+      assert.equal(getRenderedScoreForDirectJoin(document).pointsB, "2");
   },
 );
 
