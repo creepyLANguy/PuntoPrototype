@@ -35,9 +35,6 @@ export function describeScoringOptions(options = {}) {
         serving.enabled === false
           ? null
           : `${serving.serveBlockLength} consecutive serves`,
-        serving.enabled === false
-          ? null
-          : `Serve rotation: ${(serving.order || []).join(", ")}`,
         serving.sideSwapRule === "after_each_player_serves_once"
           ? "Swap sides after each player serves once"
           : null,
