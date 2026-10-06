@@ -100,7 +100,9 @@ test("/p/<court> player submit primes and plays the join sound", async () => {
   assert.equal(window.__audioTestState.starts, 1);
 });
 
-test("/p/<matchId> loads that match on its court as a spectator and then authenticates as a player", async () => {
+test(
+  "/p/<matchId> loads that match on its court as a spectator and then authenticates as a player",
+  async () => {
   window.history.pushState({}, "", "/p/linked-match");
   window.dispatchEvent(new window.PopStateEvent("popstate"));
 
@@ -144,8 +146,9 @@ test("/p/<matchId> loads that match on its court as a spectator and then authent
   await settle(30);
 
   assert.equal(getRenderedScoreForDirectJoin(document).pointsA, "7");
-  assert.equal(getRenderedScoreForDirectJoin(document).pointsB, "2");
-});
+    assert.equal(getRenderedScoreForDirectJoin(document).pointsB, "2");
+  },
+);
 
 function getRenderedScoreForDirectJoin(document) {
   return {
