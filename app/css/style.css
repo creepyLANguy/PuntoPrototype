@@ -1978,6 +1978,41 @@ body.light-mode .settings-scoring {
   opacity: 0.78;
 }
 
+.scoring-range-field {
+  grid-template-columns: 1fr;
+  gap: 6px;
+}
+
+.scoring-range-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.scoring-range-header > span {
+  min-width: 0;
+}
+
+.scoring-range-header output {
+  font-size: 0.95rem;
+  font-weight: 900;
+  opacity: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.scoring-field input[type="range"] {
+  width: 100%;
+  min-width: 0;
+  accent-color: var(--teamAcolour);
+}
+
+.scoring-field input[type="range"]:disabled {
+  opacity: 0.48;
+  cursor: not-allowed;
+  filter: grayscale(0.7);
+}
+
 .scoring-field select {
   min-width: 0;
   min-height: 40px;

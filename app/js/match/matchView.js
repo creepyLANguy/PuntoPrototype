@@ -31,7 +31,10 @@ export function describeScoringOptions(options = {}) {
         `${options.pointsTarget} total points`,
         serving.enabled === false
           ? null
-          : `${serving.servesPerPlayer} serves per player`,
+          : `Serve rotation: ${(serving.order || []).join(", ")}`,
+        serving.enabled === false
+          ? null
+          : `${serving.serveBlockLength} consecutive serves`,
         serving.enabled === false
           ? null
           : `Serve rotation: ${(serving.order || []).join(", ")}`,
