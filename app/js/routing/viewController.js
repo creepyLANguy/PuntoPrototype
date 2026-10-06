@@ -233,7 +233,8 @@ export async function restoreViewState(viewState)
       state.courtId === session.currentCourtId &&
       (
         state.playTargetType === "match"
-          ? state.playTargetId === session.currentMatchId
+          ? state.playTargetId === session.currentMatchId &&
+            state.playTargetId === session.requestedMatchId
           : !session.requestedMatchId
       )
     );

@@ -187,6 +187,31 @@ test("an ordinary court player join follows subsequent active match changes", as
   });
 });
 
+test("an explicit link pins a match already followed through its court", async () => {
+  window.history.pushState({}, "", "/p/next-match");
+  window.dispatchEvent(new window.PopStateEvent("popstate"));
+  await waitFor(
+    () =>
+      document.getElementById("playPage").style.display !== "none" &&
+      document.body.classList.contains("spectating-mode"),
+    { label: "explicit link to the current match" },
+  );
+
+  writeDoc("courts/matchroute", {
+    ...firestoreState.docs.get("courts/matchroute"),
+    activeMatchId: "active-match",
+    lastMatchId: "active-match",
+  });
+  await settle(30);
+  pushScoreSnapshot(
+    "next-match",
+    makeScore({ A: { points: 3, games: 0, sets: 0, totalPoints: 3 } }),
+  );
+  await waitFor(() => getRenderedScoreForDirectJoin(document).pointsA === "40", {
+    label: "explicitly pinned current match score",
+  });
+});
+
 function getRenderedScoreForDirectJoin(document) {
   return {
     pointsA: document.getElementById("pointsA").textContent,
