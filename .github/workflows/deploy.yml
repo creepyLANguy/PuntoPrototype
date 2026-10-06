@@ -156,6 +156,9 @@ jobs:
       - name: Install Functions dependencies
         run: npm ci --prefix functions
 
+      - name: Auto-format Functions JavaScript
+        run: npm run format --prefix functions
+
       - name: Run Functions lint
         run: npm run lint --prefix functions
 
@@ -210,6 +213,9 @@ jobs:
       # unchanged).
       - name: Install Functions dependencies
         run: npm ci --prefix functions
+
+      - name: Auto-format Functions JavaScript
+        run: npm run format --prefix functions
 
       # Rebuild the generated Hosting artifacts (app/index.html, app/overlay.html,
       # app/css/style.css) from their sources after the environment has been
@@ -301,6 +307,9 @@ jobs:
       # unchanged).
       - name: Install Functions dependencies
         run: npm ci --prefix functions
+
+      - name: Auto-format Functions JavaScript
+        run: npm run format --prefix functions
 
       # Rebuild the generated Hosting artifacts (app/index.html, app/overlay.html,
       # app/css/style.css) from their sources after the environment has been

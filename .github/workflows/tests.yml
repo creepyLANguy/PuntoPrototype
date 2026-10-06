@@ -22,6 +22,9 @@ jobs:
       - name: Install dependencies
         working-directory: functions
         run: npm ci
+      - name: Auto-format Functions JavaScript
+        working-directory: functions
+        run: npm run format
       - name: Run Functions format check
         working-directory: functions
         run: npm run format:check
