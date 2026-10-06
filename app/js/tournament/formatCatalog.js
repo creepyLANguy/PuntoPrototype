@@ -13,16 +13,8 @@ const SOCIAL_SCORING_FIELDS = [
     value: 36,
   },
   {
-    key: "scoring.servesPerPlayer",
-    label: "Serves per player",
-    type: "number",
-    min: 1,
-    max: 50,
-    value: 4,
-  },
-  {
     key: "scoring.serveBlockLength",
-    label: "Serves in a row before rotation",
+    label: "Consecutive serves",
     type: "number",
     min: 1,
     max: 10,
