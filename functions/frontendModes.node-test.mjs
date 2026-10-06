@@ -106,7 +106,10 @@ test("straight mode: sets/games rows are hidden and total is shown", async () =>
   const totalEl = document.getElementById("straightPointsTotal");
   assert.equal(totalEl.classList.contains("hidden"), false);
   assert.equal(document.getElementById("straightTotalValue").textContent, "3");
-  assert.equal(document.getElementById("straightPointsTotal").classList.contains("fixed-total"), false);
+  assert.equal(
+    document.getElementById("straightPointsTotal").classList.contains("fixed-total"),
+    false,
+  );
 
   const badge = document.getElementById("scoreFormatBadge");
   assert.equal(badge.classList.contains("hidden"), false);
@@ -139,17 +142,15 @@ test("tiebreakTen mode: numeric points and match completion at 10", async () => 
   assert.equal(getRenderedScore(document).pointsB, "1");
 });
 
-
 test("fixed scoring controls commit on release and retain their profile across mode switches", async () => {
   await leaveCourtViaBackButton();
   await joinCourtAsPlayer(document, "settingscourt");
 
   scoringUpdateRequests = [];
   document.getElementById("settingsBtn").click();
-  await waitFor(
-    () => !document.getElementById("settingsModal").classList.contains("hidden"),
-    { label: "settings modal" },
-  );
+  await waitFor(() => !document.getElementById("settingsModal").classList.contains("hidden"), {
+    label: "settings modal",
+  });
 
   const mode = document.getElementById("scoringModeSelect");
   mode.value = "fixedTotalPoints";
@@ -192,10 +193,7 @@ test("fixed scoring controls commit on release and retain their profile across m
   await waitFor(() => scoringUpdateRequests.length === 3 && !block.disabled, {
     label: "block length save",
   });
-  assert.equal(
-    scoringUpdateRequests.at(-1).scoringOptions.serving.serveBlockLength,
-    3,
-  );
+  assert.equal(scoringUpdateRequests.at(-1).scoringOptions.serving.serveBlockLength, 3);
 
   const serveOrder = document.getElementById("fixedServeOrderInput");
   serveOrder.value = "B1, A1, B2, A2";
@@ -205,20 +203,21 @@ test("fixed scoring controls commit on release and retain their profile across m
   await waitFor(() => scoringUpdateRequests.length === 4 && !serveOrder.disabled, {
     label: "serve order save",
   });
-  assert.deepEqual(
-    scoringUpdateRequests.at(-1).scoringOptions.serving.order,
-    ["B1", "A1", "B2", "A2"],
-  );
+  assert.deepEqual(scoringUpdateRequests.at(-1).scoringOptions.serving.order, [
+    "B1",
+    "A1",
+    "B2",
+    "A2",
+  ]);
 
   mode.value = "standard";
   mode.dispatchEvent(new window.Event("change", { bubbles: true }));
   await waitFor(() => scoringUpdateRequests.length === 5, {
     label: "standard mode save",
   });
-  await waitFor(
-    () => !mode.disabled && mode.value === "standard",
-    { label: "standard mode applied" },
-  );
+  await waitFor(() => !mode.disabled && mode.value === "standard", {
+    label: "standard mode applied",
+  });
   await settle(50);
 
   mode.value = "fixedTotalPoints";
@@ -230,18 +229,9 @@ test("fixed scoring controls commit on release and retain their profile across m
   assert.equal(total.value, "52");
   assert.equal(block.value, "3");
   assert.deepEqual(serveOrder.value, "B1, A1, B2, A2");
-  assert.equal(
-    scoringUpdateRequests.at(-1).scoringOptions.pointsTarget,
-    52,
-  );
-  assert.equal(
-    scoringUpdateRequests.at(-1).scoringOptions.serving.serveBlockLength,
-    3,
-  );
-  assert.equal(
-    scoringUpdateRequests.at(-1).scoringOptions.serving.servesPerPlayer,
-    undefined,
-  );
+  assert.equal(scoringUpdateRequests.at(-1).scoringOptions.pointsTarget, 52);
+  assert.equal(scoringUpdateRequests.at(-1).scoringOptions.serving.serveBlockLength, 3);
+  assert.equal(scoringUpdateRequests.at(-1).scoringOptions.serving.servesPerPlayer, undefined);
   document.getElementById("closeSettingsBtn").click();
   await waitFor(() => document.getElementById("settingsModal").classList.contains("hidden"), {
     label: "settings modal closed",
@@ -256,9 +246,18 @@ async function awardFixedPoint(team) {
 }
 
 function assertFixedGlow(a, b) {
-  for (const [team, expected] of [["A", a], ["B", b]]) {
-    assert.equal(document.getElementById(`points${team}`).classList.contains("is-critical"), expected);
-    assert.equal(document.getElementById(`criticalGlow${team}`).classList.contains("is-critical"), expected);
+  for (const [team, expected] of [
+    ["A", a],
+    ["B", b],
+  ]) {
+    assert.equal(
+      document.getElementById(`points${team}`).classList.contains("is-critical"),
+      expected,
+    );
+    assert.equal(
+      document.getElementById(`criticalGlow${team}`).classList.contains("is-critical"),
+      expected,
+    );
   }
 }
 
@@ -267,16 +266,16 @@ test("fixed scoring sliders use a white accent", () => {
   assert.match(styles, /\.scoring-field input\[type="range"\]\s*\{[^}]*accent-color:\s*#fff;/);
 });
 
-test("fixed scoring totals reset circular sizing and border rules", () => {
+test("fixed scoring totals use responsive sizing", () => {
   const styles = readFileSync(new URL("../app/css/style.css", import.meta.url), "utf8");
   const rule = styles.match(/\.straight-total\.fixed-total\s*\{([^}]+)\}/)?.[1];
   assert.ok(rule);
-  assert.match(rule, /width:\s*unset;/);
-  assert.match(rule, /padding:\s*unset\s*!important;/);
-  assert.match(rule, /border-radius:\s*unset\s*!important;/);
-  assert.match(rule, /aspect-ratio:\s*auto;/);
-  assert.match(rule, /height:\s*auto;/);
-  assert.match(rule, /max-width:\s*none;/);
+  assert.match(rule, /width:\s*max-content;/);
+  assert.match(
+    rule,
+    /padding:\s*clamp\(10px,\s*1\.8vmin,\s*18px\)\s+clamp\(8px,\s*1\.2vmin,\s*14px\);/,
+  );
+  assert.match(rule, /border-radius:\s*clamp\(10px,\s*1\.8vmin,\s*18px\);/);
 });
 
 test("fixed points celebrate the winner only after the last point is scored", async () => {
@@ -286,7 +285,10 @@ test("fixed points celebrate the winner only after the last point is scored", as
   overlay.click();
   await awardFixedPoint("A");
   assert.equal(document.getElementById("straightTotalValue").textContent, "1 / 12");
-  assert.equal(document.getElementById("straightPointsTotal").classList.contains("fixed-total"), true);
+  assert.equal(
+    document.getElementById("straightPointsTotal").classList.contains("fixed-total"),
+    true,
+  );
   for (let i = 1; i < 6; i++) await awardFixedPoint("A");
   await awardFixedPoint("B");
   await awardFixedPoint("B");
@@ -306,7 +308,11 @@ test("fixed points celebrate the winner only after the last point is scored", as
   await waitFor(() => document.getElementById("pointsA").textContent === "6");
   assertFixedGlow(true, false);
   await awardFixedPoint("A");
-  assert.equal(overlay.classList.contains("hidden"), true, "re-scoring a majority does not celebrate");
+  assert.equal(
+    overlay.classList.contains("hidden"),
+    true,
+    "re-scoring a majority does not celebrate",
+  );
   overlay.click();
 
   for (let i = 0; i < 3; i++) {
@@ -332,7 +338,11 @@ test("fixed points celebrate the winner only after the last point is scored", as
   document.getElementById("addPointB").click();
   await settle();
   assert.equal(getRenderedScore(document).pointsB, "5");
-  assert.equal(overlay.classList.contains("hidden"), true, "completed scores do not repeat the celebration");
+  assert.equal(
+    overlay.classList.contains("hidden"),
+    true,
+    "completed scores do not repeat the celebration",
+  );
 });
 
 test("fixed points show a draw screen when the target is reached tied", async () => {
@@ -376,5 +386,9 @@ test("fixed golden points glow for both teams and celebrate the deciding winner"
 
   await leaveCourtViaBackButton();
   await joinCourtAsPlayer(document, "fixedgolden");
-  assert.equal(overlay.classList.contains("hidden"), true, "joining a decided match does not replay its celebration");
+  assert.equal(
+    overlay.classList.contains("hidden"),
+    true,
+    "joining a decided match does not replay its celebration",
+  );
 });
