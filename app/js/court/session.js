@@ -260,6 +260,7 @@ function BlankOutScoreboard() {
   }
   session.score = defaultScore();
   session.lastKnownSets = { A: 0, B: 0 };
+  session.lastKnownFixedResult = null;
   session.sessionInitialized = false;
   updateUI();
 }

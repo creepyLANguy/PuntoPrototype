@@ -11,6 +11,7 @@ import {
   waitFor,
   settle,
   callableHandlers,
+  getBackendScore,
 } from "./frontendHarness/harness.mjs";
 
 let document;
@@ -51,6 +52,18 @@ test.before(async () => {
       tiebreakMode: "sixAllSeven",
     },
   });
+  for (const courtId of ["fixedwinner", "fixeddraw", "fixedgolden"]) {
+    seedCourt(courtId, {
+      scoringMode: "fixedTotalPoints",
+      scoringOptions: {
+        scoringMode: "fixedTotalPoints",
+        pointsTarget: 12,
+        completion: {
+          tieResolution: courtId === "fixedgolden" ? "golden_point" : "allow_draw",
+        },
+      },
+    });
+  }
   scoringUpdateRequests = [];
   callableHandlers.set("updateScoringOptions", async (payload) => {
     scoringUpdateRequests.push(structuredClone(payload));
@@ -227,4 +240,106 @@ test("fixed scoring controls commit on release and retain their profile across m
     scoringUpdateRequests.at(-1).scoringOptions.serving.servesPerPlayer,
     undefined,
   );
+  document.getElementById("closeSettingsBtn").click();
+  await waitFor(() => document.getElementById("settingsModal").classList.contains("hidden"), {
+    label: "settings modal closed",
+  });
+});
+
+async function awardFixedPoint(team) {
+  const points = document.getElementById(`points${team}`);
+  const next = String(Number(points.textContent) + 1);
+  document.getElementById(`addPoint${team}`).click();
+  await waitFor(() => points.textContent === next, { label: `${team} at ${next}` });
+}
+
+function assertFixedGlow(a, b) {
+  for (const [team, expected] of [["A", a], ["B", b]]) {
+    assert.equal(document.getElementById(`points${team}`).classList.contains("is-critical"), expected);
+    assert.equal(document.getElementById(`criticalGlow${team}`).classList.contains("is-critical"), expected);
+  }
+}
+
+test("fixed points celebrate a majority once while remaining points are still scored", async () => {
+  await leaveCourtViaBackButton();
+  await joinCourtAsPlayer(document, "fixedwinner");
+  const overlay = document.getElementById("setWinOverlay");
+  overlay.click();
+  for (let i = 0; i < 6; i++) await awardFixedPoint("A");
+  await awardFixedPoint("B");
+  await awardFixedPoint("B");
+  assertFixedGlow(true, false);
+  assert.equal(overlay.classList.contains("hidden"), true);
+
+  await awardFixedPoint("A");
+  assertFixedGlow(false, false);
+  assert.equal(overlay.classList.contains("hidden"), false);
+  assert.equal(overlay.dataset.winner, "A");
+  assert.equal(overlay.querySelector(".set-win-label").textContent, "WINS THE MATCH!");
+  assert.equal(overlay.querySelector(".sw-score-a").textContent, "7");
+  assert.equal(overlay.querySelector(".sw-score-b").textContent, "2");
+  assert.equal(getBackendScore("fixedwinner").matchComplete, false);
+  overlay.click();
+
+  document.getElementById("undoBtn").click();
+  await waitFor(() => !document.getElementById("confirmModal").classList.contains("hidden"));
+  document.getElementById("confirmOkBtn").click();
+  await waitFor(() => document.getElementById("pointsA").textContent === "6");
+  assertFixedGlow(true, false);
+  await awardFixedPoint("A");
+  assert.equal(overlay.classList.contains("hidden"), false, "undo re-arms the celebration");
+  overlay.click();
+
+  for (let i = 0; i < 3; i++) {
+    await awardFixedPoint("B");
+    assert.equal(overlay.classList.contains("hidden"), true, "no repeated win screen");
+  }
+  assert.equal(getBackendScore("fixedwinner").matchComplete, true);
+  assert.equal(getRenderedScore(document).pointsB, "5");
+  document.getElementById("addPointB").click();
+  await settle();
+  assert.equal(getRenderedScore(document).pointsB, "5");
+});
+
+test("fixed points show a draw screen when the target is reached tied", async () => {
+  await leaveCourtViaBackButton();
+  await joinCourtAsPlayer(document, "fixeddraw");
+  for (let i = 0; i < 6; i++) {
+    await awardFixedPoint("A");
+    await awardFixedPoint("B");
+  }
+  assertFixedGlow(false, false);
+  const overlay = document.getElementById("setWinOverlay");
+  assert.equal(overlay.classList.contains("hidden"), false);
+  assert.equal(overlay.dataset.winner, "draw");
+  assert.equal(overlay.querySelector(".set-win-label").textContent, "MATCH DRAW!");
+  assert.equal(overlay.querySelector(".set-win-team-name").textContent, "Team A & Team B");
+  assert.equal(overlay.querySelector(".sw-score-a").textContent, "6");
+  assert.equal(overlay.querySelector(".sw-score-b").textContent, "6");
+  assert.equal(getBackendScore("fixeddraw").result, "draw");
+  overlay.click();
+});
+
+test("fixed golden points glow for both teams and celebrate the deciding winner", async () => {
+  await leaveCourtViaBackButton();
+  await joinCourtAsPlayer(document, "fixedgolden");
+  for (let i = 0; i < 6; i++) {
+    await awardFixedPoint("A");
+    await awardFixedPoint("B");
+  }
+  const overlay = document.getElementById("setWinOverlay");
+  assertFixedGlow(true, true);
+  assert.equal(overlay.classList.contains("hidden"), true);
+  assert.equal(getBackendScore("fixedgolden").matchComplete, false);
+  await awardFixedPoint("B");
+  assertFixedGlow(false, false);
+  assert.equal(overlay.classList.contains("hidden"), false);
+  assert.equal(overlay.dataset.winner, "B");
+  assert.equal(overlay.querySelector(".set-win-label").textContent, "WINS THE MATCH!");
+  assert.equal(getBackendScore("fixedgolden").matchComplete, true);
+  overlay.click();
+
+  await leaveCourtViaBackButton();
+  await joinCourtAsPlayer(document, "fixedgolden");
+  assert.equal(overlay.classList.contains("hidden"), true, "joining a decided match does not replay its celebration");
 });

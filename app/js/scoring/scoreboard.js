@@ -4,7 +4,11 @@ import { playSound } from "../audio/audio.js";
 import { SOUND_IDS } from "../config/constants.js";
 import BRAND from "../brand.mjs";
 import { resolveScoreDisplayOptions } from "./options.js";
-import { getCriticalPointStatus, pointLabel } from "./presentation.js";
+import {
+  getCriticalPointStatus,
+  getFixedTotalDisplayResult,
+  pointLabel,
+} from "./presentation.js";
 import { updateServerIndicator } from "./serverIndicator.js";
 import { session } from "../state/sessionState.js";
 import { $, elements } from "../ui/dom.js";
@@ -166,7 +170,12 @@ export function updateUI() {
 
   // Detect Set Win - Only check if session is baseline-synced
   if (session.sessionInitialized) {
-    if (session.score.A.sets > session.lastKnownSets.A) {
+    const fixedResult = getFixedTotalDisplayResult(session.score);
+    if (options.scoringMode === "fixedTotalPoints") {
+      if (fixedResult && fixedResult !== session.lastKnownFixedResult) {
+        triggerSetWinAnimation(fixedResult);
+      }
+    } else if (session.score.A.sets > session.lastKnownSets.A) {
       triggerSetWinAnimation("A");
     } else if (session.score.B.sets > session.lastKnownSets.B) {
       triggerSetWinAnimation("B");
@@ -175,6 +184,7 @@ export function updateUI() {
     // Update baseline after detecting increments
     session.lastKnownSets.A = session.score.A.sets;
     session.lastKnownSets.B = session.score.B.sets;
+    session.lastKnownFixedResult = fixedResult;
   }
 
   updateServerIndicator();
@@ -195,15 +205,18 @@ function triggerSetWinAnimation(team) {
   const nameA = $("teamA").querySelector(".name-text").textContent;
   const nameB = $("teamB").querySelector(".name-text").textContent;
 
-  teamNameEl.textContent = team === "A" ? nameA : nameB;
+  const isDraw = team === "draw";
+  teamNameEl.textContent = isDraw
+    ? `${nameA} & ${nameB}`
+    : team === "A" ? nameA : nameB;
   overlay.dataset.winner = team;
 
   const displayMode = resolveScoreDisplayOptions(session.score).scoringMode;
   const endsMatch =
     displayMode === "tiebreakTen" || displayMode === "fixedTotalPoints";
-  overlay.querySelector(".set-win-label").textContent = endsMatch
-    ? "WINS THE MATCH!"
-    : "WINS THE SET!";
+  overlay.querySelector(".set-win-label").textContent = isDraw
+    ? "MATCH DRAW!"
+    : endsMatch ? "WINS THE MATCH!" : "WINS THE SET!";
 
   overlay.querySelector(".sw-score-a").textContent = endsMatch
     ? session.score.A.points

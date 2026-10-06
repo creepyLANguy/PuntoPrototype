@@ -13,6 +13,7 @@ import {
 import {
   getCriticalPointStatus,
   getCurrentServerLabel,
+  getFixedTotalDisplayResult,
   pointLabel,
 } from "../app/js/scoring/presentation.js";
 import { defaultScore, session } from "../app/js/state/sessionState.js";
@@ -216,4 +217,54 @@ test("the session starts from an empty default score", () => {
     scoringOptions: DEFAULTS,
   });
   assert.notEqual(defaultScore(), defaultScore(), "each call returns a fresh object");
+});
+
+test("fixed points flag majority-clinching points for either team", () => {
+  for (const pointsTarget of [12, 13, 36]) {
+    const options = { scoringMode: "fixedTotalPoints", pointsTarget };
+    const threshold = Math.floor(pointsTarget / 2);
+    for (const team of ["A", "B"]) {
+      const s = score({ options });
+      s[team].points = threshold - 1;
+      assert.deepEqual(getCriticalPointStatus(s), { A: null, B: null });
+      s[team].points = threshold;
+      assert.equal(getCriticalPointStatus(s)[team], "Match");
+      assert.equal(getFixedTotalDisplayResult(s), null);
+      s[team].points++;
+      assert.equal(getFixedTotalDisplayResult(s), team);
+      assert.deepEqual(getCriticalPointStatus(s), { A: null, B: null });
+      assert.notEqual(getCurrentServerLabel(s), null, "remaining points still have a server");
+    }
+  }
+});
+
+test("fixed points distinguish a golden point from a completed draw", () => {
+  const options = {
+    scoringMode: "fixedTotalPoints",
+    pointsTarget: 12,
+    completion: { tieResolution: "golden_point" },
+  };
+  const tied = score({ a: { points: 6 }, b: { points: 6 }, options });
+  assert.deepEqual(getCriticalPointStatus(tied), { A: "Match", B: "Match" });
+  assert.equal(getFixedTotalDisplayResult(tied), null);
+  const draw = {
+    ...tied,
+    matchComplete: true,
+    scoringOptions: { ...options, completion: { tieResolution: "allow_draw" } },
+  };
+  assert.equal(getFixedTotalDisplayResult(draw), "draw");
+  assert.deepEqual(getCriticalPointStatus(draw), { A: null, B: null });
+  assert.equal(getCurrentServerLabel(draw), null);
+  for (const team of ["A", "B"]) {
+    const decided = structuredClone(tied);
+    decided[team].points++;
+    decided.matchComplete = true;
+    assert.equal(getFixedTotalDisplayResult(decided), team);
+    assert.deepEqual(getCriticalPointStatus(decided), { A: null, B: null });
+  }
+  assert.equal(
+    getFixedTotalDisplayResult(score({ a: { points: 20 } })),
+    null,
+    "majority celebrations only apply to fixed points",
+  );
 });
