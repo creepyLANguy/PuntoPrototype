@@ -19,6 +19,8 @@
 @import "pages/scoreboard.css";
 /* Scoreboard team cards: straight-points total, team card, names, set / game dots, points, critical-point glow and tap zones. */
 @import "components/scoreboard-teams.css";
+/* Animated scoreboard side swaps and changeovers. */
+@import "components/scoreboard-swap-animation.css";
 /* Floating circular buttons and the floating controls container. */
 @import "components/floating-controls.css";
 /* Point-scored animation. */

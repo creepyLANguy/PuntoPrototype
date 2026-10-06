@@ -21,6 +21,7 @@ import {
 let document;
 let window;
 let changeoverEventCounter = 0;
+const swapAnimations = [];
 
 test.before(async () => {
   seedBaseData();
@@ -75,6 +76,11 @@ test.before(async () => {
   const dom = await bootFrontend();
   window = dom.window;
   document = window.document;
+  window.HTMLElement.prototype.animate = function (keyframes, options) {
+    const animation = { id: "", cancel() {} };
+    swapAnimations.push({ keyframes, options, animation });
+    return animation;
+  };
 });
 
 test("set win: winning a set fills a set dot and shows the celebration overlay", async () => {
@@ -123,6 +129,8 @@ test("Changeover toggles its own state and independently toggles the local view"
   // from this view state.
   swapViewsButton.click();
   assert.equal(document.querySelector(".scoreboard").classList.contains("swapped"), true);
+  assert.equal(document.querySelector(".scoreboard").classList.contains("swap-animating"), true);
+  assert.equal(swapAnimations.at(-1).options.duration, 650);
   assert.equal(swapViewsLabel(), "Unswap views", "the swapped view offers to unswap");
   assert.equal(
     firestoreState.docs.get("courts/lifecourt").beaconSidesSwapped,
@@ -141,6 +149,11 @@ test("Changeover toggles its own state and independently toggles the local view"
       label: "local changeover blindly toggles local view",
     },
   );
+  assert.equal(
+    document.querySelector(".scoreboard").classList.contains("changeover-animating"),
+    true,
+  );
+  assert.equal(swapAnimations.at(-1).options.duration, 900);
   await waitFor(
     () =>
       document.getElementById("changeoverTile").querySelector("span").textContent ===

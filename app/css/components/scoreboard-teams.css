@@ -541,4 +541,3 @@ body.light-mode .game-dot.filled {
 .team-b .ref-zone:active {
   background: color-mix(in srgb, var(--teamBcolour) 18%, transparent);
 }
-
