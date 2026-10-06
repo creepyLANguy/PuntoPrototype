@@ -116,7 +116,7 @@ describe("fixedTotalPoints scoring profile", () => {
     expect(servers).toEqual(["A1", "B1", "A2", "B2", "A1", "B1", "A2", "B2"]);
   });
 
-test("serve block length 3 gives each player three consecutive serves", () => {
+  test("serve block length 3 gives each player three consecutive serves", () => {
     const options = {
       ...AMERICANO_36,
       serving: { ...AMERICANO_36.serving, serveBlockLength: 3 },
