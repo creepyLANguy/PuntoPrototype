@@ -15,7 +15,6 @@ const AMERICANO_36 = {
   serving: {
     enabled: true,
     order: ["A1", "B1", "A2", "B2"],
-    servesPerPlayer: 4,
     serveBlockLength: 1,
     sideSwapRule: "after_each_player_serves_once",
   },
@@ -54,10 +53,20 @@ describe("fixedTotalPoints scoring profile", () => {
     expect(options.completion.tieResolution).toBe("allow_draw");
   });
 
-  test("other modes drop fixed-total fields", () => {
+  test("other modes preserve the fixed profile for later reuse", () => {
     const options = normalizeScoringOptions({ ...AMERICANO_36, scoringMode: "standard" });
-    expect(options.pointsTarget).toBeUndefined();
-    expect(options.serving).toBeUndefined();
+    expect(options.pointsTarget).toBe(36);
+    expect(options.serving.serveBlockLength).toBe(1);
+    expect(options.serving).not.toHaveProperty("servesPerPlayer");
+  });
+
+  test("legacy servesPerPlayer is ignored and never emitted", () => {
+    const options = normalizeScoringOptions({
+      ...AMERICANO_36,
+      serving: { ...AMERICANO_36.serving, servesPerPlayer: 99 },
+    });
+    expect(options.serving).not.toHaveProperty("servesPerPlayer");
+    expect(options.serving.serveBlockLength).toBe(1);
   });
 
   test("buildScoringOptions keeps top-level fixed-total fields", () => {
@@ -107,6 +116,25 @@ describe("fixedTotalPoints scoring profile", () => {
     expect(servers).toEqual(["A1", "B1", "A2", "B2", "A1", "B1", "A2", "B2"]);
   });
 
+test("serve block length 3 gives each player three consecutive serves", () => {
+    const options = {
+      ...AMERICANO_36,
+      serving: { ...AMERICANO_36.serving, serveBlockLength: 3 },
+    };
+    const servers = [];
+    let score = defaultScore(options);
+    for (let i = 0; i < 12; i++) {
+      servers.push(getCurrentServerLabel(score));
+      score = applyEvent(score, { id: `p${i}`, eventType: "POINT_TEAM_A" }, options);
+    }
+    expect(servers).toEqual([
+      "A1", "A1", "A1",
+      "B1", "B1", "B1",
+      "A2", "A2", "A2",
+      "B2", "B2", "B2",
+    ]);
+  });
+
   test("serve block length 2 gives each player two consecutive serves", () => {
     const options = { ...AMERICANO_36, serving: { ...AMERICANO_36.serving, serveBlockLength: 2 } };
     const servers = [];
@@ -118,7 +146,7 @@ describe("fixedTotalPoints scoring profile", () => {
     expect(servers).toEqual(["A1", "A1", "B1", "B1", "A2", "A2", "B2", "B2"]);
   });
 
-  test("tracks serves per player and side swaps after every full cycle", () => {
+  test("tracks block-derived serve counts and side swaps after every full cycle", () => {
     const score = play("ABBA".repeat(4) + "AB");
     expect(score.fixedTotal.rallyPoints).toBe(18);
     expect(score.fixedTotal.servesCompleted).toEqual({ A1: 5, B1: 5, A2: 4, B2: 4 });
