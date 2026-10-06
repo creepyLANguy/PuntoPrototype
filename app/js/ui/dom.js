@@ -75,9 +75,10 @@ export function initElements() {
     tiebreakModeSelect: $("tiebreakModeSelect"),
     scoringStatus: $("scoringStatus"),
     fixedPointsTargetInput: $("fixedPointsTargetInput"),
+    fixedPointsTargetValue: $("fixedPointsTargetValue"),
     fixedServeOrderInput: $("fixedServeOrderInput"),
-    fixedServesPerPlayerInput: $("fixedServesPerPlayerInput"),
     fixedServeBlockLengthInput: $("fixedServeBlockLengthInput"),
+    fixedServeBlockLengthValue: $("fixedServeBlockLengthValue"),
     fixedSideSwapRuleSelect: $("fixedSideSwapRuleSelect"),
     fixedTieResolutionSelect: $("fixedTieResolutionSelect"),
     fixedScoringOptions: $("fixedScoringOptions"),
@@ -157,7 +158,6 @@ export function initElements() {
   elements.courtFixedScoringOptions = $("courtFixedScoringOptions");
   elements.courtFixedPointsTarget = $("courtFixedPointsTarget");
   elements.courtFixedServeOrder = $("courtFixedServeOrder");
-  elements.courtFixedServesPerPlayer = $("courtFixedServesPerPlayer");
   elements.courtFixedServeBlockLength = $("courtFixedServeBlockLength");
   elements.courtFixedSideSwapRule = $("courtFixedSideSwapRule");
   elements.courtFixedTieResolution = $("courtFixedTieResolution");
@@ -197,7 +197,6 @@ export function initElements() {
   elements.editCourtFixedScoringOptions = $("editCourtFixedScoringOptions");
   elements.editCourtFixedPointsTarget = $("editCourtFixedPointsTarget");
   elements.editCourtFixedServeOrder = $("editCourtFixedServeOrder");
-  elements.editCourtFixedServesPerPlayer = $("editCourtFixedServesPerPlayer");
   elements.editCourtFixedServeBlockLength = $("editCourtFixedServeBlockLength");
   elements.editCourtFixedSideSwapRule = $("editCourtFixedSideSwapRule");
   elements.editCourtFixedTieResolution = $("editCourtFixedTieResolution");
