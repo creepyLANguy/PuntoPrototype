@@ -300,6 +300,7 @@ export async function showMatchDetails(
         { A: nameA, B: nameB },
         isSwapped,
         detailsPlayerNames,
+        resolvedOptions,
       );
       syncDetailsPanelAvailability();
       return;
@@ -377,6 +378,7 @@ export async function showMatchDetails(
       { A: nameA, B: nameB },
       isSwapped,
       detailsPlayerNames,
+      resolvedOptions,
     );
     syncDetailsPanelAvailability();
 
