@@ -15,7 +15,6 @@ export const DEFAULT_FIXED_TOTAL_POINTS = {
   serving: {
     enabled: true,
     order: ["A1", "B1", "A2", "B2"],
-    servesPerPlayer: 4,
     serveBlockLength: 1,
     sideSwapRule: "after_each_player_serves_once",
   },
