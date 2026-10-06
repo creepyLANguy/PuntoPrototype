@@ -214,33 +214,44 @@ function readScoringControls() {
   const scoringMode =
     elements.scoringModeSelect?.value || DEFAULT_SCORING_OPTIONS.scoringMode;
   const standardFormat = scoringMode === "standard";
+  const current = normalizeScoringOptions(
+    session.currentScoringOptions || DEFAULT_SCORING_OPTIONS,
+  );
+  const fixedProfile = FIXED_TOTAL_FIELDS.reduce((profile, field) => {
+    if (current[field] !== undefined) profile[field] = current[field];
+    return profile;
+  }, {});
 
-  const serveOrder = (elements.fixedServeOrderInput?.value || "")
-    .split(",")
-    .map((slot) => slot.trim().toUpperCase())
-    .filter(Boolean);
+  if (scoringMode === "fixedTotalPoints") {
+    const serveOrder = (elements.fixedServeOrderInput?.value || "")
+      .split(",")
+      .map((slot) => slot.trim().toUpperCase())
+      .filter(Boolean);
 
-  return normalizeScoringOptions({
-    scoringMode,
-    deuceMode: standardFormat
-      ? elements.deuceModeSelect?.value
-      : DEFAULT_SCORING_OPTIONS.deuceMode,
-    tiebreakMode: standardFormat
-      ? elements.tiebreakModeSelect?.value
-      : DEFAULT_SCORING_OPTIONS.tiebreakMode,
-    pointsTarget: Number(elements.fixedPointsTargetInput?.value),
-    serving: {
+    fixedProfile.pointsTarget = Number(elements.fixedPointsTargetInput?.value);
+    fixedProfile.serving = {
       enabled: true,
       order: serveOrder.length
         ? serveOrder
         : DEFAULT_FIXED_TOTAL_POINTS.serving.order,
       serveBlockLength: Number(elements.fixedServeBlockLengthInput?.value),
       sideSwapRule: elements.fixedSideSwapRuleSelect?.value,
-    },
-    completion: {
+    };
+    fixedProfile.completion = {
       rule: "exact_total_points",
       tieResolution: elements.fixedTieResolutionSelect?.value,
-    },
+    };
+  }
+
+  return normalizeScoringOptions({
+    scoringMode,
+    deuceMode: standardFormat
+      ? elements.deuceModeSelect?.value
+      : current.deuceMode || DEFAULT_SCORING_OPTIONS.deuceMode,
+    tiebreakMode: standardFormat
+      ? elements.tiebreakModeSelect?.value
+      : current.tiebreakMode || DEFAULT_SCORING_OPTIONS.tiebreakMode,
+    ...fixedProfile,
   });
 }
 
