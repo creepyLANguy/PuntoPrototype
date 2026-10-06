@@ -68,6 +68,8 @@ Crossing that majority shows the winning team's celebration immediately, but
 does not set `matchComplete`: all remaining rally points still count towards
 Americano standings. A tied finish with draws allowed shows a draw celebration.
 The early win celebration is not repeated when the target is reached.
+Changeovers stop once the total reaches `pointsTarget`, including a tied score
+awaiting a golden point; no changeover is performed after the deciding rally.
 
 ## Server
 

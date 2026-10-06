@@ -1,4 +1,5 @@
 const { db, FieldValue } = require("../infrastructure/firebase");
+const { buildScoringOptions } = require("../domain/scoring/modes");
 
 async function changeoverCourt(request) {
   const { courtId } = request.data || {};
@@ -16,7 +17,29 @@ async function changeoverCourt(request) {
       throw new Error("Court not found");
     }
 
-    const currentValue = courtSnap.data()?.beaconSidesSwapped === true;
+    const courtData = courtSnap.data() || {};
+    const matchId = courtData.activeMatchId || courtData.lastMatchId;
+    if (matchId) {
+      const matchSnap = await tx.get(db.doc(`matches/${matchId}`));
+      const scoreSnap = await tx.get(db.doc(`matches/${matchId}/score/current`));
+      const match = matchSnap.data() || {};
+      const score = scoreSnap.data() || {};
+      const options = buildScoringOptions({
+        ...(match.scoringOptions || {}),
+        scoringMode: match.scoringMode || match.scoringOptions?.scoringMode,
+      });
+      if (
+        ["completed", "cancelled"].includes(match.status) ||
+        (["fixedTotalPoints", "tiebreakTen"].includes(options.scoringMode) &&
+          score.matchComplete) ||
+        (options.scoringMode === "fixedTotalPoints" &&
+          (Number(score.A?.points) || 0) + (Number(score.B?.points) || 0) >= options.pointsTarget)
+      ) {
+        throw new Error("Match has concluded; changeover is not available");
+      }
+    }
+
+    const currentValue = courtData.beaconSidesSwapped === true;
     nextValue = !currentValue;
 
     tx.set(

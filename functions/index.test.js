@@ -581,10 +581,10 @@ describe("onEventCreate", () => {
       ({ onEventCreate } = require("./index"));
     });
 
-    const process = async (index) => {
+    const process = async (index, eventType) => {
       const event = {
         id: `auto-${index}`,
-        eventType: index % 2 === 0 ? "POINT_TEAM_A" : "POINT_TEAM_B",
+        eventType: eventType || (index % 2 === 0 ? "POINT_TEAM_A" : "POINT_TEAM_B"),
         createdAt: timestamp(index),
         scoreVersion: 0,
       };
@@ -616,7 +616,83 @@ describe("onEventCreate", () => {
       source: "automatic_scoring",
     });
     expect(secondCourtChangeover.changeoverEvent.id).not.toBe(firstEventId);
+
+    for (let index = 9; index <= 35; index += 1) {
+      await process(index);
+    }
+    const beforeFinalPoint = structuredClone(mockDb.docs.get(`courts/${courtId}`));
+    await process(36);
+    expect(mockDb.docs.get(`matches/${matchId}/score/current`)).toMatchObject({
+      matchComplete: true,
+      result: "draw",
+    });
+    expect(mockDb.docs.get(`courts/${courtId}`)).toEqual(beforeFinalPoint);
+    await process(37, "UNDO");
+    expect(mockDb.docs.get(`matches/${matchId}/score/current`).matchComplete).toBe(false);
+    expect(mockDb.docs.get(`courts/${courtId}`)).toEqual(beforeFinalPoint);
+    await process(38);
+    expect(mockDb.docs.get(`matches/${matchId}/score/current`).matchComplete).toBe(true);
+    expect(mockDb.docs.get(`courts/${courtId}`)).toEqual(beforeFinalPoint);
   });
+
+  test.each([
+    ["allow_draw", "POINT_TEAM_A"],
+    ["allow_draw", "POINT_TEAM_B"],
+    ["golden_point", "POINT_TEAM_B"],
+  ])(
+    "fixed-total target suppresses changeovers with %s and a final %s",
+    async (tieResolution, finalEventType) => {
+      const courtId = "court-final-changeover";
+      const matchId = "m-final-changeover";
+      const scoringOptions = {
+        scoringMode: "fixedTotalPoints",
+        pointsTarget: 12,
+        serving: { serveBlockLength: 1, sideSwapRule: "after_each_player_serves_once" },
+        completion: { tieResolution },
+      };
+      const events = Array.from({ length: 11 }, (_, index) => ({
+        id: `point-${index}`,
+        eventType: index % 2 === 0 ? "POINT_TEAM_A" : "POINT_TEAM_B",
+        createdAt: timestamp(index + 1),
+        scoreVersion: 0,
+      }));
+      mockDb = new FakeFirestore(
+        seedMatchDocs({
+          courtId,
+          matchId,
+          scoringOptions,
+          events,
+          score: toLiveScorePayload(replayEvents(events, scoringOptions)),
+        }),
+      );
+      const before = structuredClone(mockDb.docs.get(`courts/${courtId}`));
+      let onEventCreate;
+      jest.isolateModules(() => {
+        ({ onEventCreate } = require("./index"));
+      });
+      const process = async (id, eventType, time) => {
+        const event = { id, eventType, createdAt: timestamp(time), scoreVersion: 0 };
+        mockDb.docs.set(`matches/${matchId}/events/${id}`, event);
+        await onEventCreate({
+          params: { matchId, eventId: id },
+          data: { data: () => structuredClone(event) },
+        });
+      };
+      await process("final", finalEventType, 12);
+      const tied = mockDb.docs.get(`matches/${matchId}/score/current`);
+      expect(tied.A.points + tied.B.points).toBe(12);
+      expect(tied.matchComplete).toBe(tieResolution === "allow_draw");
+      expect(mockDb.docs.get(`courts/${courtId}`)).toEqual(before);
+      if (tieResolution === "golden_point") {
+        await process("golden", "POINT_TEAM_A", 13);
+        expect(mockDb.docs.get(`matches/${matchId}/score/current`)).toMatchObject({
+          matchComplete: true,
+          result: "A",
+        });
+        expect(mockDb.docs.get(`courts/${courtId}`)).toEqual(before);
+      }
+    },
+  );
 
   test("scoring events on a completed match are ignored", async () => {
     const matchId = "m1";
@@ -1272,6 +1348,73 @@ describe("postEvent", () => {
 });
 
 describe("changeoverCourt", () => {
+  test.each([
+    ["completed match", { status: "completed" }, {}, false],
+    ["cancelled match", { status: "cancelled" }, {}, false],
+    ["finished tiebreak", { scoringMode: "tiebreakTen" }, { matchComplete: true }, false],
+    [
+      "fixed points at target",
+      {
+        scoringMode: "fixedTotalPoints",
+        scoringOptions: {
+          scoringMode: "fixedTotalPoints",
+          pointsTarget: 12,
+          completion: { tieResolution: "golden_point" },
+        },
+      },
+      { A: { points: 6 }, B: { points: 6 }, matchComplete: false },
+      false,
+    ],
+    [
+      "fixed points after golden point",
+      {
+        scoringMode: "fixedTotalPoints",
+        scoringOptions: {
+          scoringMode: "fixedTotalPoints",
+          pointsTarget: 12,
+        },
+      },
+      { A: { points: 7 }, B: { points: 6 }, matchComplete: true },
+      true,
+    ],
+  ])("rejects a changeover for a %s", async (_label, match, score, lastMatchOnly) => {
+    const courtId = "concluded-court";
+    const matchId = "concluded-match";
+    const docs = seedMatchDocs({ courtId, matchId, match, score });
+    if (lastMatchOnly) {
+      docs[`courts/${courtId}`].activeMatchId = null;
+      docs[`courts/${courtId}`].lastMatchId = matchId;
+    }
+    mockDb = new FakeFirestore(docs);
+    const before = structuredClone(mockDb.docs.get(`courts/${courtId}`));
+    let changeoverCourt;
+    jest.isolateModules(() => {
+      ({ changeoverCourt } = require("./index"));
+    });
+    await expect(changeoverCourt({ data: { courtId } })).rejects.toThrow("Match has concluded");
+    expect(mockDb.docs.get(`courts/${courtId}`)).toEqual(before);
+  });
+
+  test("allows a fixed-points changeover after an early majority win below the target", async () => {
+    const courtId = "majority-court";
+    mockDb = new FakeFirestore(
+      seedMatchDocs({
+        courtId,
+        matchId: "majority-match",
+        scoringOptions: { scoringMode: "fixedTotalPoints", pointsTarget: 12 },
+        score: { A: { points: 7 }, B: { points: 2 }, matchComplete: false },
+      }),
+    );
+    let changeoverCourt;
+    jest.isolateModules(() => {
+      ({ changeoverCourt } = require("./index"));
+    });
+    await expect(changeoverCourt({ data: { courtId } })).resolves.toMatchObject({
+      success: true,
+      beaconSidesSwapped: true,
+    });
+  });
+
   test("atomically toggles the current Beacon side mapping without altering other court fields", async () => {
     const courtId = "changeover-court";
     mockDb = new FakeFirestore({
