@@ -229,21 +229,23 @@
             </select>
           </label>
           <div id="fixedScoringOptions" class="fixed-scoring-options hidden">
-            <label class="scoring-field">
-              <span>Total points</span>
-              <input id="fixedPointsTargetInput" type="number" min="1" max="500" step="1" inputmode="numeric" />
+            <label class="scoring-field scoring-range-field">
+              <span class="scoring-range-header">
+                <span>Total points</span>
+                <output id="fixedPointsTargetValue" for="fixedPointsTargetInput">36</output>
+              </span>
+              <input id="fixedPointsTargetInput" type="range" min="12" max="100" step="4" value="36" />
             </label>
             <label class="scoring-field">
               <span>Serve order</span>
               <input id="fixedServeOrderInput" type="text" placeholder="A1, B1, A2, B2" autocomplete="off" />
             </label>
-            <label class="scoring-field">
-              <span>Serves per player</span>
-              <input id="fixedServesPerPlayerInput" type="number" min="1" max="100" step="1" inputmode="numeric" />
-            </label>
-            <label class="scoring-field">
-              <span>Serves per block</span>
-              <input id="fixedServeBlockLengthInput" type="number" min="1" max="20" step="1" inputmode="numeric" />
+            <label class="scoring-field scoring-range-field">
+              <span class="scoring-range-header">
+                <span>Consecutive serves</span>
+                <output id="fixedServeBlockLengthValue" for="fixedServeBlockLengthInput">1</output>
+              </span>
+              <input id="fixedServeBlockLengthInput" type="range" min="1" max="4" step="1" value="1" />
             </label>
             <label class="scoring-field">
               <span>Side swap</span>
@@ -709,11 +711,7 @@
             <input id="courtFixedServeOrder" type="text" value="A1, B1, A2, B2" placeholder="A1, B1, A2, B2" autocomplete="off" />
           </div>
           <div class="form-group">
-            <label>Serves Per Player</label>
-            <input id="courtFixedServesPerPlayer" type="number" min="1" max="100" step="1" value="4" />
-          </div>
-          <div class="form-group">
-            <label>Serve Block Length</label>
+            <label>Consecutive Serves</label>
             <input id="courtFixedServeBlockLength" type="number" min="1" max="20" step="1" value="1" />
           </div>
           <div class="form-group">
@@ -830,11 +828,7 @@
             <input id="editCourtFixedServeOrder" type="text" value="A1, B1, A2, B2" placeholder="A1, B1, A2, B2" autocomplete="off" />
           </div>
           <div class="form-group">
-            <label>Serves Per Player</label>
-            <input id="editCourtFixedServesPerPlayer" type="number" min="1" max="100" step="1" value="4" />
-          </div>
-          <div class="form-group">
-            <label>Serve Block Length</label>
+            <label>Consecutive Serves</label>
             <input id="editCourtFixedServeBlockLength" type="number" min="1" max="20" step="1" value="1" />
           </div>
           <div class="form-group">

@@ -104,7 +104,6 @@ test("format settings become a nested configuration with only relevant options",
     "scoring.pointsTarget": "32",
   });
   assert.equal(americano.scoring.pointsTarget, 32);
-  assert.equal(americano.scoring.servesPerPlayer, 4);
 
   const league = buildFormatConfig("roundRobin", {
     ...defaultFieldValues("roundRobin"),
@@ -264,7 +263,7 @@ test("the public dashboard shows identity, live matches, round, sitting out, sta
   assert.match(text, /Round 3 - scheduled/);
   assert.match(text, /SITTING OUT/);
   assert.match(text, /36 total points/);
-  assert.match(text, /4 serves per player/);
+  assert.match(text, /1 consecutive serves/);
   assert.match(text, /Swap sides after each player serves once/);
 
   const headers = [...page.querySelectorAll(".standings-table th")].map((th) => th.textContent);

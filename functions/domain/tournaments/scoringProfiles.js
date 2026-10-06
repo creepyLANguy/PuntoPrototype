@@ -1,7 +1,6 @@
 const DEFAULT_SERVE_ORDER = ["A1", "B1", "A2", "B2"];
 const SOCIAL_DEFAULT_SCORING = {
   pointsTarget: 36,
-  servesPerPlayer: 4,
   serveOrder: DEFAULT_SERVE_ORDER,
   serveBlockLength: 1,
   sideSwapRule: "after_each_player_serves_once",
@@ -18,7 +17,6 @@ function buildFixedTotalPointsProfile(scoringConfig = {}) {
     serving: {
       enabled: true,
       order: [...cfg.serveOrder],
-      servesPerPlayer: cfg.servesPerPlayer,
       serveBlockLength: cfg.serveBlockLength,
       sideSwapRule: cfg.sideSwapRule,
     },
@@ -29,7 +27,6 @@ function buildFixedTotalPointsProfile(scoringConfig = {}) {
 function normalizeFixedTotalPointsConfig(scoringConfig = {}) {
   return {
     pointsTarget: toInt(scoringConfig.pointsTarget, SOCIAL_DEFAULT_SCORING.pointsTarget),
-    servesPerPlayer: toInt(scoringConfig.servesPerPlayer, SOCIAL_DEFAULT_SCORING.servesPerPlayer),
     serveOrder: isServeOrder(scoringConfig.serveOrder)
       ? [...scoringConfig.serveOrder]
       : [...SOCIAL_DEFAULT_SCORING.serveOrder],
@@ -51,13 +48,6 @@ function validateFixedTotalPointsConfig(scoringConfig = {}) {
   const errors = [];
   if (!Number.isInteger(cfg.pointsTarget) || cfg.pointsTarget < 4 || cfg.pointsTarget > 200) {
     errors.push({ code: "INVALID_POINTS_TARGET", message: "pointsTarget must be 4..200." });
-  }
-  if (
-    !Number.isInteger(cfg.servesPerPlayer) ||
-    cfg.servesPerPlayer < 1 ||
-    cfg.servesPerPlayer > 50
-  ) {
-    errors.push({ code: "INVALID_SERVES_PER_PLAYER", message: "servesPerPlayer must be 1..50." });
   }
   if (
     !Number.isInteger(cfg.serveBlockLength) ||

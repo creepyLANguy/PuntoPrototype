@@ -67,7 +67,6 @@ export function registerCourtScoringRuleControls() {
         [
           elements.courtFixedPointsTarget,
           elements.courtFixedServeOrder,
-          elements.courtFixedServesPerPlayer,
           elements.courtFixedServeBlockLength,
           elements.courtFixedSideSwapRule,
           elements.courtFixedTieResolution,
@@ -81,7 +80,6 @@ export function registerCourtScoringRuleControls() {
       [
         elements.courtFixedPointsTarget,
         elements.courtFixedServeOrder,
-        elements.courtFixedServesPerPlayer,
         elements.courtFixedServeBlockLength,
         elements.courtFixedSideSwapRule,
         elements.courtFixedTieResolution,
@@ -98,7 +96,6 @@ export function registerCourtScoringRuleControls() {
         [
           elements.editCourtFixedPointsTarget,
           elements.editCourtFixedServeOrder,
-          elements.editCourtFixedServesPerPlayer,
           elements.editCourtFixedServeBlockLength,
           elements.editCourtFixedSideSwapRule,
           elements.editCourtFixedTieResolution,
@@ -113,7 +110,6 @@ export function registerCourtScoringRuleControls() {
       [
         elements.editCourtFixedPointsTarget,
         elements.editCourtFixedServeOrder,
-        elements.editCourtFixedServesPerPlayer,
         elements.editCourtFixedServeBlockLength,
         elements.editCourtFixedSideSwapRule,
         elements.editCourtFixedTieResolution,
@@ -135,14 +131,21 @@ export function syncScoringControls() {
   if (elements.tiebreakModeSelect)
     elements.tiebreakModeSelect.value = options.tiebreakMode;
 
-  if (elements.fixedPointsTargetInput)
-    elements.fixedPointsTargetInput.value = options.pointsTarget ?? DEFAULT_FIXED_TOTAL_POINTS.pointsTarget;
+  if (elements.fixedPointsTargetInput) {
+    elements.fixedPointsTargetInput.value =
+      options.pointsTarget ?? DEFAULT_FIXED_TOTAL_POINTS.pointsTarget;
+    if (elements.fixedPointsTargetValue)
+      elements.fixedPointsTargetValue.textContent = String(elements.fixedPointsTargetInput.value);
+  }
   if (elements.fixedServeOrderInput)
     elements.fixedServeOrderInput.value = (options.serving?.order || DEFAULT_FIXED_TOTAL_POINTS.serving.order).join(", ");
-  if (elements.fixedServesPerPlayerInput)
-    elements.fixedServesPerPlayerInput.value = options.serving?.servesPerPlayer ?? DEFAULT_FIXED_TOTAL_POINTS.serving.servesPerPlayer;
-  if (elements.fixedServeBlockLengthInput)
-    elements.fixedServeBlockLengthInput.value = options.serving?.serveBlockLength ?? DEFAULT_FIXED_TOTAL_POINTS.serving.serveBlockLength;
+  if (elements.fixedServeBlockLengthInput) {
+    elements.fixedServeBlockLengthInput.value =
+      options.serving?.serveBlockLength ??
+      DEFAULT_FIXED_TOTAL_POINTS.serving.serveBlockLength;
+    if (elements.fixedServeBlockLengthValue)
+      elements.fixedServeBlockLengthValue.textContent = String(elements.fixedServeBlockLengthInput.value);
+  }
   if (elements.fixedSideSwapRuleSelect)
     elements.fixedSideSwapRuleSelect.value = options.serving?.sideSwapRule ?? DEFAULT_FIXED_TOTAL_POINTS.serving.sideSwapRule;
   if (elements.fixedTieResolutionSelect)
@@ -161,7 +164,6 @@ export function syncScoringControls() {
     elements.tiebreakModeSelect,
     elements.fixedPointsTargetInput,
     elements.fixedServeOrderInput,
-    elements.fixedServesPerPlayerInput,
     elements.fixedServeBlockLengthInput,
     elements.fixedSideSwapRuleSelect,
     elements.fixedTieResolutionSelect,
@@ -177,7 +179,6 @@ export function syncScoringControls() {
   const fixedControls = [
     elements.fixedPointsTargetInput,
     elements.fixedServeOrderInput,
-    elements.fixedServesPerPlayerInput,
     elements.fixedServeBlockLengthInput,
     elements.fixedSideSwapRuleSelect,
     elements.fixedTieResolutionSelect,
@@ -194,7 +195,7 @@ export function syncScoringControls() {
     if (session.isSpectating) {
       elements.scoringStatus.textContent = "Spectating";
     } else if (options.scoringMode === "fixedTotalPoints") {
-      elements.scoringStatus.textContent = `${options.pointsTarget} total points - tournament rules`;
+      elements.scoringStatus.textContent = `${options.pointsTarget} total points`;
     } else if (session.currentTournamentId) {
       elements.scoringStatus.textContent = "Tournament rules";
     } else if (options.scoringMode === "straight") {
@@ -213,41 +214,44 @@ function readScoringControls() {
   const scoringMode =
     elements.scoringModeSelect?.value || DEFAULT_SCORING_OPTIONS.scoringMode;
   const standardFormat = scoringMode === "standard";
-  const fixedFormat = scoringMode === "fixedTotalPoints";
+  const current = normalizeScoringOptions(
+    session.currentScoringOptions || DEFAULT_SCORING_OPTIONS,
+  );
+  const fixedProfile = {};
+  ["pointsTarget", "serving", "completion"].forEach((field) => {
+    if (current[field] !== undefined) fixedProfile[field] = current[field];
+  });
 
-  const serveOrder = (elements.fixedServeOrderInput?.value || "")
-    .split(",")
-    .map((slot) => slot.trim().toUpperCase())
-    .filter(Boolean);
+  if (scoringMode === "fixedTotalPoints") {
+    const serveOrder = (elements.fixedServeOrderInput?.value || "")
+      .split(",")
+      .map((slot) => slot.trim().toUpperCase())
+      .filter(Boolean);
+
+    fixedProfile.pointsTarget = Number(elements.fixedPointsTargetInput?.value);
+    fixedProfile.serving = {
+      enabled: true,
+      order: serveOrder.length
+        ? serveOrder
+        : DEFAULT_FIXED_TOTAL_POINTS.serving.order,
+      serveBlockLength: Number(elements.fixedServeBlockLengthInput?.value),
+      sideSwapRule: elements.fixedSideSwapRuleSelect?.value,
+    };
+    fixedProfile.completion = {
+      rule: "exact_total_points",
+      tieResolution: elements.fixedTieResolutionSelect?.value,
+    };
+  }
 
   return normalizeScoringOptions({
     scoringMode,
     deuceMode: standardFormat
       ? elements.deuceModeSelect?.value
-      : DEFAULT_SCORING_OPTIONS.deuceMode,
+      : current.deuceMode || DEFAULT_SCORING_OPTIONS.deuceMode,
     tiebreakMode: standardFormat
       ? elements.tiebreakModeSelect?.value
-      : DEFAULT_SCORING_OPTIONS.tiebreakMode,
-    pointsTarget: fixedFormat
-      ? Number(elements.fixedPointsTargetInput?.value)
-      : undefined,
-    serving: fixedFormat
-      ? {
-          enabled: true,
-          order: serveOrder.length
-            ? serveOrder
-            : DEFAULT_FIXED_TOTAL_POINTS.serving.order,
-          servesPerPlayer: Number(elements.fixedServesPerPlayerInput?.value),
-          serveBlockLength: Number(elements.fixedServeBlockLengthInput?.value),
-          sideSwapRule: elements.fixedSideSwapRuleSelect?.value,
-        }
-      : undefined,
-    completion: fixedFormat
-      ? {
-          rule: "exact_total_points",
-          tieResolution: elements.fixedTieResolutionSelect?.value,
-        }
-      : undefined,
+      : current.tiebreakMode || DEFAULT_SCORING_OPTIONS.tiebreakMode,
+    ...fixedProfile,
   });
 }
 
@@ -271,6 +275,11 @@ async function saveScoringOptionsFromSettings() {
       elements.scoringModeSelect,
       elements.deuceModeSelect,
       elements.tiebreakModeSelect,
+      elements.fixedPointsTargetInput,
+      elements.fixedServeOrderInput,
+      elements.fixedServeBlockLengthInput,
+      elements.fixedSideSwapRuleSelect,
+      elements.fixedTieResolutionSelect,
     ].forEach((select) => {
       if (select) select.disabled = true;
     });
@@ -311,13 +320,31 @@ async function saveScoringOptionsFromSettings() {
   }
 }
 
+function syncFixedSliderValue(input, output) {
+  if (!input || !output) return;
+  output.textContent = String(input.value);
+}
+
 export function registerScoringOptionControls() {
   [
     elements.scoringModeSelect,
     elements.deuceModeSelect,
     elements.tiebreakModeSelect,
-  ].forEach((select) => {
-    if (!select) return;
-    select.addEventListener("change", saveScoringOptionsFromSettings);
+    elements.fixedSideSwapRuleSelect,
+    elements.fixedTieResolutionSelect,
+    elements.fixedServeOrderInput,
+  ].forEach((control) => {
+    if (!control) return;
+    control.addEventListener("change", saveScoringOptionsFromSettings);
+  });
+
+  [elements.fixedPointsTargetInput, elements.fixedServeBlockLengthInput].forEach((slider) => {
+    if (!slider) return;
+    const output =
+      slider === elements.fixedPointsTargetInput
+        ? elements.fixedPointsTargetValue
+        : elements.fixedServeBlockLengthValue;
+    slider.addEventListener("input", () => syncFixedSliderValue(slider, output));
+    slider.addEventListener("change", saveScoringOptionsFromSettings);
   });
 }

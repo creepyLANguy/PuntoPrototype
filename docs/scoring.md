@@ -60,6 +60,17 @@ one-serve blocks, serve order `A1, B1, A2, B2`, side swap after each player has
 served once, and draws allowed. A configured golden-point tie resolution keeps
 playing at the target until one team leads by one.
 
+### Fixed-points scoreboard celebrations
+
+The scoreboard highlights a team one point away from a strict majority of
+`pointsTarget`, and highlights both teams before a deciding golden point.
+Crossing that majority does not show a win screen: all remaining rally points
+still count towards Americano standings. The winner's celebration appears only
+when the last point is played, including a deciding golden point if configured.
+A tied finish with draws allowed shows a draw celebration.
+Changeovers stop once the total reaches `pointsTarget`, including a tied score
+awaiting a golden point; no changeover is performed after the deciding rally.
+
 ## Server
 
 `server` is `A1`, `A2`, `B1`, `B2`, or `null`. For `fixedTotalPoints`, server

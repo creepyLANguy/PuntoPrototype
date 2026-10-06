@@ -194,11 +194,15 @@ function processScoringEvent(matchId, eventId, event) {
   }
 
   const previousSidesSwapped = Boolean(score?.fixedTotal?.sidesSwapped);
+  const previousRallyPoints = score.A.points + score.B.points;
   score = scoringEngine.applyEvent(score, { id: eventId, ...event }, activeOptions);
   const nextSidesSwapped = Boolean(score?.fixedTotal?.sidesSwapped);
 
   if (
     activeOptions.scoringMode === "fixedTotalPoints" &&
+    !score.matchComplete &&
+    previousRallyPoints < activeOptions.pointsTarget &&
+    score.A.points + score.B.points < activeOptions.pointsTarget &&
     activeOptions.serving?.sideSwapRule === "after_each_player_serves_once" &&
     previousSidesSwapped !== nextSidesSwapped
   ) {

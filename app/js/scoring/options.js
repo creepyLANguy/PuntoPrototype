@@ -6,8 +6,8 @@ import {
 } from "../config/constants.js";
 import { session } from "../state/sessionState.js";
 
-// fixedTotalPoints is the tournament profile (spec section 8.2); its serve and
-// completion settings are snapshotted on the match and only displayed here.
+// Fixed Total Points keeps its profile available even when another scoring mode
+// is active so switching modes never discards the user's configuration.
 const SCORING_MODES = [
   "standard",
   "straight",
@@ -38,13 +38,17 @@ export function normalizeScoringOptions(options = {}) {
 
   if (normalized.scoringMode === "fixedTotalPoints") {
     const fixed = DEFAULT_FIXED_TOTAL_POINTS;
+    const sourceServing = normalized.serving || {};
+    const sourceCompletion = normalized.completion || {};
     const serving = {
-      ...fixed.serving,
-      ...(normalized.serving || {}),
+      enabled: sourceServing.enabled !== false,
+      order: sourceServing.order,
+      serveBlockLength: sourceServing.serveBlockLength,
+      sideSwapRule: sourceServing.sideSwapRule,
     };
     const completion = {
-      ...fixed.completion,
-      ...(normalized.completion || {}),
+      rule: sourceCompletion.rule,
+      tieResolution: sourceCompletion.tieResolution,
     };
     const allowedSlots = new Set(fixed.serving.order);
     const orderIsValid =
@@ -59,15 +63,8 @@ export function normalizeScoringOptions(options = {}) {
         ? pointsTarget
         : fixed.pointsTarget;
     normalized.serving = {
-      ...serving,
-      order: orderIsValid ? [...serving.order] : [...fixed.serving.order],
       enabled: serving.enabled !== false,
-      servesPerPlayer:
-        Number.isInteger(Number(serving.servesPerPlayer)) &&
-        Number(serving.servesPerPlayer) >= 1 &&
-        Number(serving.servesPerPlayer) <= 100
-          ? Number(serving.servesPerPlayer)
-          : fixed.serving.servesPerPlayer,
+      order: orderIsValid ? [...serving.order] : [...fixed.serving.order],
       serveBlockLength:
         Number.isInteger(Number(serving.serveBlockLength)) &&
         Number(serving.serveBlockLength) >= 1 &&
@@ -89,8 +86,44 @@ export function normalizeScoringOptions(options = {}) {
         ? completion.tieResolution
         : fixed.completion.tieResolution,
     };
-  } else {
-    FIXED_TOTAL_FIELDS.forEach((field) => delete normalized[field]);
+  } else if (FIXED_TOTAL_FIELDS.some((field) => normalized[field] !== undefined)) {
+    const fixed = DEFAULT_FIXED_TOTAL_POINTS;
+    const sourceServing = normalized.serving || {};
+    const sourceCompletion = normalized.completion || {};
+    const allowedSlots = new Set(fixed.serving.order);
+    const orderIsValid =
+      Array.isArray(sourceServing.order) &&
+      sourceServing.order.length === fixed.serving.order.length &&
+      sourceServing.order.every((slot) => allowedSlots.has(slot)) &&
+      new Set(sourceServing.order).size === fixed.serving.order.length;
+    const pointsTarget = Number(normalized.pointsTarget);
+    normalized.pointsTarget =
+      Number.isInteger(pointsTarget) && pointsTarget >= 1 && pointsTarget <= 500
+        ? pointsTarget
+        : fixed.pointsTarget;
+    normalized.serving = {
+      enabled: sourceServing.enabled !== false,
+      order: orderIsValid ? [...sourceServing.order] : [...fixed.serving.order],
+      serveBlockLength:
+        Number.isInteger(Number(sourceServing.serveBlockLength)) &&
+        Number(sourceServing.serveBlockLength) >= 1 &&
+        Number(sourceServing.serveBlockLength) <= 20
+          ? Number(sourceServing.serveBlockLength)
+          : fixed.serving.serveBlockLength,
+      sideSwapRule: ["after_each_player_serves_once", "none"].includes(
+        sourceServing.sideSwapRule,
+      )
+        ? sourceServing.sideSwapRule
+        : fixed.serving.sideSwapRule,
+    };
+    normalized.completion = {
+      rule: "exact_total_points",
+      tieResolution: ["allow_draw", "golden_point"].includes(
+        sourceCompletion.tieResolution,
+      )
+        ? sourceCompletion.tieResolution
+        : fixed.completion.tieResolution,
+    };
   }
 
   return normalized;

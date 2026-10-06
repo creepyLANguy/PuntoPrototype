@@ -249,7 +249,6 @@ test("Add Court validates its input and creates the court and its score", async 
   choose($("courtScoringMode"), "fixedTotalPoints");
   $("courtFixedPointsTarget").value = "24";
   $("courtFixedServeOrder").value = "A1, B1, A2, B2";
-  $("courtFixedServesPerPlayer").value = "3";
   $("courtFixedServeBlockLength").value = "1";
   choose($("courtFixedSideSwapRule"), "after_each_player_serves_once");
   choose($("courtFixedTieResolution"), "golden_point");
@@ -269,7 +268,6 @@ test("Add Court validates its input and creates the court and its score", async 
   assert.equal(court.scoringMode, "fixedTotalPoints");
   assert.equal(court.scoringOptions.pointsTarget, 24);
   assert.deepEqual(court.scoringOptions.serving.order, ["A1", "B1", "A2", "B2"]);
-  assert.equal(court.scoringOptions.serving.servesPerPlayer, 3);
   assert.equal(court.scoringOptions.completion.tieResolution, "golden_point");
   assert.equal(stored(`courts/${id}/score/current`), undefined, "courts no longer own score docs");
   assert.ok(courtNames().includes("Delta Court"));
@@ -288,7 +286,6 @@ test("editing a court saves it and returns to the court list", async () => {
   choose($("editCourtScoringMode"), "fixedTotalPoints");
   $("editCourtFixedPointsTarget").value = "32";
   $("editCourtFixedServeOrder").value = "A1, B1, A2, B2";
-  $("editCourtFixedServesPerPlayer").value = "4";
   $("editCourtFixedServeBlockLength").value = "1";
   choose($("editCourtFixedSideSwapRule"), "after_each_player_serves_once");
   choose($("editCourtFixedTieResolution"), "allow_draw");

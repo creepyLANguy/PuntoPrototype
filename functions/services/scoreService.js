@@ -18,6 +18,11 @@ const { buildScoreSummary } = require("../domain/matches/lifecycle");
 function shouldAutoChangeover(previousScore, nextScore, scoringOptions) {
   return (
     scoringOptions?.scoringMode === "fixedTotalPoints" &&
+    !nextScore?.matchComplete &&
+    (Number(previousScore?.A?.points) || 0) + (Number(previousScore?.B?.points) || 0) <
+      scoringOptions.pointsTarget &&
+    (Number(nextScore?.A?.points) || 0) + (Number(nextScore?.B?.points) || 0) <
+      scoringOptions.pointsTarget &&
     scoringOptions?.serving?.sideSwapRule === "after_each_player_serves_once" &&
     Boolean(previousScore?.fixedTotal?.sidesSwapped) !==
       Boolean(nextScore?.fixedTotal?.sidesSwapped)

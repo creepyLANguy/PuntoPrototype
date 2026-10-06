@@ -116,6 +116,24 @@ export function getCurrentServerLabel(currentScore) {
   return getGameServerLabel(totalCompletedGames);
 }
 
+// Celebrate the result only after all points, including a golden point, are played.
+export function getFixedTotalDisplayResult(currentScore) {
+  if (!currentScore) return null;
+  const options = resolveScoreDisplayOptions(currentScore);
+  if (options.scoringMode !== "fixedTotalPoints" || !currentScore.matchComplete) {
+    return null;
+  }
+
+  const majority = Math.floor(options.pointsTarget / 2) + 1;
+  if (currentScore.A.points >= majority) return "A";
+  if (currentScore.B.points >= majority) return "B";
+  return currentScore.matchComplete &&
+    currentScore.A.points === currentScore.B.points &&
+    options.completion.tieResolution === "allow_draw"
+    ? "draw"
+    : null;
+}
+
 export function getCriticalPointStatus(currentScore) {
   const status = {
     A: null, // "Game", "Set", "Match", or null
@@ -136,10 +154,28 @@ export function getCriticalPointStatus(currentScore) {
     return status;
   }
 
-  if (
-    options.scoringMode === "straight" ||
-    options.scoringMode === "fixedTotalPoints"
-  ) {
+  if (options.scoringMode === "fixedTotalPoints") {
+    if (
+      currentScore.matchComplete ||
+      currentScore.A.points > options.pointsTarget / 2 ||
+      currentScore.B.points > options.pointsTarget / 2
+    ) {
+      return status;
+    }
+    const majorityPoint = Math.floor(options.pointsTarget / 2);
+    const goldenPoint =
+      options.completion.tieResolution === "golden_point" &&
+      currentScore.A.points === currentScore.B.points &&
+      currentScore.A.points + currentScore.B.points >= options.pointsTarget;
+    for (const team of ["A", "B"]) {
+      if (goldenPoint || currentScore[team].points === majorityPoint) {
+        status[team] = "Match";
+      }
+    }
+    return status;
+  }
+
+  if (options.scoringMode === "straight") {
     return status;
   }
 

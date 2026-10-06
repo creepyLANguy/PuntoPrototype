@@ -23,7 +23,6 @@ const DEFAULT_FIXED_TOTAL_POINTS = {
   serving: {
     enabled: true,
     order: [...SERVE_SLOTS],
-    servesPerPlayer: 4,
     serveBlockLength: 1,
     sideSwapRule: "after_each_player_serves_once",
   },
@@ -67,7 +66,6 @@ function normalizeFixedTotalPointsOptions(options) {
     serving: {
       enabled: serving.enabled !== false,
       order: isServeOrder(serving.order) ? [...serving.order] : [...SERVE_SLOTS],
-      servesPerPlayer: clampInteger(serving.servesPerPlayer, 1, 100, 4),
       serveBlockLength: clampInteger(serving.serveBlockLength, 1, 20, 1),
       sideSwapRule: SIDE_SWAP_RULES.has(serving.sideSwapRule)
         ? serving.sideSwapRule
@@ -102,7 +100,10 @@ function normalizeScoringOptions(options = {}) {
     normalized.tiebreakMode = DEFAULT_SCORING_OPTIONS.tiebreakMode;
   }
 
-  if (normalized.scoringMode === "fixedTotalPoints") {
+  const hasFixedTotalProfile = ["pointsTarget", "serving", "completion"].some(
+    (field) => normalized[field] !== undefined,
+  );
+  if (normalized.scoringMode === "fixedTotalPoints" || hasFixedTotalProfile) {
     Object.assign(normalized, normalizeFixedTotalPointsOptions(normalized));
   } else {
     delete normalized.pointsTarget;

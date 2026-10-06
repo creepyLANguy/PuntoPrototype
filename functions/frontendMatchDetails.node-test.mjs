@@ -337,7 +337,6 @@ test("serve statistics appear only when serving is valid, preserving legitimate 
         serving: {
           enabled: true,
           order: ["A1", "B1", "A2", "B2"],
-          servesPerPlayer: 4,
           serveBlockLength: 1,
           sideSwapRule: "after_each_player_serves_once",
         },
@@ -355,7 +354,6 @@ test("serve statistics appear only when serving is valid, preserving legitimate 
         serving: {
           enabled: false,
           order: ["A1", "B1", "A2", "B2"],
-          servesPerPlayer: 4,
           serveBlockLength: 1,
           sideSwapRule: "after_each_player_serves_once",
         },

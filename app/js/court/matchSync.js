@@ -22,6 +22,7 @@ import {
 } from "../scoring/scoreboard.js";
 import { updateServerIndicator } from "../scoring/serverIndicator.js";
 import { syncScoringControls } from "../scoring/settings.js";
+import { getFixedTotalDisplayResult } from "../scoring/presentation.js";
 import {
   defaultScore,
   invalidateMatchDetailsCache,
@@ -88,10 +89,22 @@ export function applyMatchData(
   session.currentTournamentId = data.tournamentId || null;
   session.currentMatchTitle = resolveMatchTitle({ ...data, matchId }, matchId);
 
-  const nextScoringOptions = normalizeScoringOptions({
+  const incomingScoringOptions = {
     ...(data.scoringOptions || {}),
     scoringMode: data.scoringMode || data.scoringOptions?.scoringMode,
-  });
+  };
+  const retainedScoringOptions = session.currentScoringOptions || {};
+  if (incomingScoringOptions.scoringMode !== "fixedTotalPoints") {
+    ["pointsTarget", "serving", "completion"].forEach((field) => {
+      if (
+        incomingScoringOptions[field] === undefined &&
+        retainedScoringOptions[field] !== undefined
+      ) {
+        incomingScoringOptions[field] = retainedScoringOptions[field];
+      }
+    });
+  }
+  const nextScoringOptions = normalizeScoringOptions(incomingScoringOptions);
   if (
     !areScoringOptionsEqual(nextScoringOptions, session.currentScoringOptions)
   ) {
@@ -113,6 +126,7 @@ export function applyMatchData(
 function resetScoreBaseline() {
   session.score = defaultScore();
   session.lastKnownSets = { A: 0, B: 0 };
+  session.lastKnownFixedResult = null;
   session.sessionInitialized = false;
   invalidateMatchDetailsCache();
   updateUI();
@@ -161,6 +175,7 @@ export function followMatch(
       // Establish baseline on first successful sync of this match
       if (!session.sessionInitialized) {
         session.lastKnownSets = { A: newData.A.sets, B: newData.B.sets };
+        session.lastKnownFixedResult = getFixedTotalDisplayResult(newData);
         session.sessionInitialized = true;
 
         finishScoreboardLoading();

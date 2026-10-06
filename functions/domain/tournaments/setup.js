@@ -86,7 +86,6 @@ function normalizeLeagueScoring(scoring = {}) {
   if (scoringMode === "fixedTotalPoints") {
     Object.assign(normalized, {
       pointsTarget: scoring.pointsTarget,
-      servesPerPlayer: scoring.servesPerPlayer,
       serveOrder: scoring.serveOrder,
       serveBlockLength: scoring.serveBlockLength,
       sideSwapRule: scoring.sideSwapRule,

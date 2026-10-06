@@ -223,7 +223,7 @@ describe("tournament flow", () => {
     expect(mockDb.get(`tournamentSecrets/${tournamentId}`).hostKeyHash).not.toContain(hostKey);
     expect(view(tournamentId).club).toEqual({ clubId: "club1", name: "Example Padel Club" });
     expect(view(tournamentId).rulesSummary.lines).toEqual(
-      expect.arrayContaining(["36 total points", "4 serves per player"]),
+      expect.arrayContaining(["36 total points", "1 consecutive serves"]),
     );
 
     await expect(tournament("generateRound", { tournamentId })).rejects.toMatchObject({
@@ -274,7 +274,7 @@ describe("tournament flow", () => {
       expect(matchDoc.scoringOptions).toMatchObject({
         scoringMode: "fixedTotalPoints",
         pointsTarget: 36,
-        serving: { servesPerPlayer: 4, serveBlockLength: 1, order: ["A1", "B1", "A2", "B2"] },
+        serving: { serveBlockLength: 1, order: ["A1", "B1", "A2", "B2"] },
       });
     });
 

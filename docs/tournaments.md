@@ -43,7 +43,6 @@ Social formats use the shared fixed-total-points scoring profile by default:
 ```js
 {
   pointsTarget: 36,
-  servesPerPlayer: 4,
   serveOrder: ["A1", "B1", "A2", "B2"],
   serveBlockLength: 1,
   sideSwapRule: "after_each_player_serves_once",

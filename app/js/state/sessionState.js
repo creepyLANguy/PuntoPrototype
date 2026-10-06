@@ -45,6 +45,7 @@ export const session = {
   // drawing over whatever is on screen now.
   momentumRequestToken: 0,
   lastKnownSets: { A: 0, B: 0 },
+  lastKnownFixedResult: null,
   sessionInitialized: false,
   currentCourtId: null,
   currentCourtPassword: null,

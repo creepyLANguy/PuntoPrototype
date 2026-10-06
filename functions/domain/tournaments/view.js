@@ -22,11 +22,8 @@ function describeScoring(options = {}) {
       const serving = options.serving || {};
       const lines = [`${options.pointsTarget} total points`];
       if (serving.enabled !== false) {
-        lines.push(`${serving.servesPerPlayer} serves per player`);
         lines.push(`Serve rotation: ${(serving.order || []).join(", ")}`);
-        lines.push(
-          `${serving.serveBlockLength} serve${serving.serveBlockLength === 1 ? "" : "s"} per player before rotation repeats`,
-        );
+        lines.push(`${serving.serveBlockLength} consecutive serves`);
       }
       lines.push(
         serving.sideSwapRule === "after_each_player_serves_once"
