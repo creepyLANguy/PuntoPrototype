@@ -559,7 +559,7 @@ describe("onEventCreate", () => {
         enabled: true,
         order: ["A1", "B1", "A2", "B2"],
         serveBlockLength: 1,
-        sideSwapRule: "after_each_player_serves_once",
+        sideSwapRule: "after_all_players_serve_once",
       },
       completion: {
         rule: "exact_total_points",
@@ -647,7 +647,7 @@ describe("onEventCreate", () => {
       const scoringOptions = {
         scoringMode: "fixedTotalPoints",
         pointsTarget: 12,
-        serving: { serveBlockLength: 1, sideSwapRule: "after_each_player_serves_once" },
+        serving: { serveBlockLength: 1, sideSwapRule: "after_all_players_serve_once" },
         completion: { tieResolution },
       };
       const events = Array.from({ length: 11 }, (_, index) => ({

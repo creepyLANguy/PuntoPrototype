@@ -61,6 +61,14 @@ test("scoring options preserve the renamed changeover rule", () => {
   assert.equal(options.serving.sideSwapRule, "after_all_players_serve_once");
 });
 
+test("scoring options replace the unsupported legacy changeover rule with the default", () => {
+  const options = normalizeScoringOptions({
+    scoringMode: "fixedTotalPoints",
+    serving: { sideSwapRule: "after_each_player_serves_once" },
+  });
+  assert.equal(options.serving.sideSwapRule, "after_all_players_serve_once");
+});
+
 test("scoring options compare on the three normalised fields only", () => {
   assert.equal(areScoringOptionsEqual({}, DEFAULTS), true);
   assert.equal(areScoringOptionsEqual({ deuceMode: "golden" }, { deuceMode: "silver" }), false);

@@ -3,7 +3,7 @@ const SOCIAL_DEFAULT_SCORING = {
   pointsTarget: 36,
   serveOrder: DEFAULT_SERVE_ORDER,
   serveBlockLength: 1,
-  sideSwapRule: "after_each_player_serves_once",
+  sideSwapRule: "after_all_players_serve_once",
   tieResolution: "allow_draw",
 };
 
@@ -34,11 +34,9 @@ function normalizeFixedTotalPointsConfig(scoringConfig = {}) {
       scoringConfig.serveBlockLength,
       SOCIAL_DEFAULT_SCORING.serveBlockLength,
     ),
-    sideSwapRule: [
-      "after_each_player_serves_once",
-      "after_all_players_serve_once",
-      "none",
-    ].includes(scoringConfig.sideSwapRule)
+    sideSwapRule: ["after_all_players_serve_once", "none"].includes(
+      scoringConfig.sideSwapRule,
+    )
       ? scoringConfig.sideSwapRule
       : SOCIAL_DEFAULT_SCORING.sideSwapRule,
     tieResolution: ["allow_draw", "golden_point"].includes(scoringConfig.tieResolution)

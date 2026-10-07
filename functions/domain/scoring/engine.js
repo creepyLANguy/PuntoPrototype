@@ -8,11 +8,7 @@ const TIEBREAK_MODES = new Set(["off", "sixAllSeven", "sixAllTen"]);
 const FIXED_END_MODES = new Set(["tiebreakTen", "fixedTotalPoints"]);
 
 const SERVE_SLOTS = ["A1", "B1", "A2", "B2"];
-const SIDE_SWAP_RULES = new Set([
-  "after_each_player_serves_once",
-  "after_all_players_serve_once",
-  "none",
-]);
+const SIDE_SWAP_RULES = new Set(["after_all_players_serve_once", "none"]);
 const COMPLETION_RULES = new Set(["exact_total_points"]);
 const TIE_RESOLUTIONS = new Set(["allow_draw", "golden_point"]);
 
@@ -28,7 +24,7 @@ const DEFAULT_FIXED_TOTAL_POINTS = {
     enabled: true,
     order: [...SERVE_SLOTS],
     serveBlockLength: 1,
-    sideSwapRule: "after_each_player_serves_once",
+    sideSwapRule: "after_all_players_serve_once",
   },
   completion: {
     rule: "exact_total_points",
@@ -141,7 +137,9 @@ function buildFixedTotalState(rallyPoints, options) {
 
   const cycleLength = order.length * blockLength;
   const sideSwapCycles =
-    serving.sideSwapRule !== "none" ? Math.floor(rallyPoints / cycleLength) : 0;
+    serving.sideSwapRule === "after_all_players_serve_once"
+      ? Math.floor(rallyPoints / cycleLength)
+      : 0;
 
   return {
     pointsTarget,
