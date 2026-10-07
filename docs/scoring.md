@@ -60,6 +60,13 @@ one-serve blocks, serve order `A1, B1, A2, B2`, swap sides after all players hav
 served once, and draws allowed. A configured golden-point tie resolution keeps
 playing at the target until one team leads by one.
 
+### Fixed-points scoreboard display
+
+The fixed-points total shows the sum of both teams' points over the configured
+`pointsTarget`. In landscape, this is a vertically stacked fraction with the
+current total above a dividing line and the target below it. Portrait retains
+the inline `total / target` display; straight scoring shows only its running total.
+
 ### Fixed-points scoreboard celebrations
 
 The scoreboard highlights a team one point away from a strict majority of
