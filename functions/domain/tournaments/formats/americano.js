@@ -156,7 +156,7 @@ function socialRules(title, cfg, standingsLine) {
       `${scoring.serveBlockLength} consecutive serves`,
       scoring.sideSwapRule === "after_all_players_serve_once"
         ? "Swap sides after all players serve once"
-        : "No automatic changeover",
+        : "No automatic side swap",
       standingsLine,
     ],
   };

@@ -79,13 +79,13 @@ function populateFixedCourtScoringControls(prefix, options = {}) {
 
   if (byId("FixedPointsTarget"))
     byId("FixedPointsTarget").value = options.pointsTarget ?? 36;
-  if (byId("FixedServeOrder"))
-    byId("FixedServeOrder").value = order.join(", ");
+  if (byId("FixedServeOrder")) byId("FixedServeOrder").value = order.join(", ");
   if (byId("FixedServeBlockLength"))
-    byId("FixedServeBlockLength").value = options.serving?.serveBlockLength ?? 1;
+    byId("FixedServeBlockLength").value =
+      options.serving?.serveBlockLength ?? 1;
   if (byId("FixedSideSwapRule"))
     byId("FixedSideSwapRule").value =
-      options.serving?.sideSwapRule || "after_each_player_serves_once";
+      options.serving?.sideSwapRule || "after_all_players_serve_once";
   if (byId("FixedTieResolution"))
     byId("FixedTieResolution").value =
       options.completion?.tieResolution || "allow_draw";
@@ -587,7 +587,7 @@ export function registerCreateCourt() {
       serving: {
         order: ["A1", "B1", "A2", "B2"],
         serveBlockLength: 1,
-        sideSwapRule: "after_each_player_serves_once",
+        sideSwapRule: "after_all_players_serve_once",
       },
       completion: { tieResolution: "allow_draw" },
     });

@@ -16,7 +16,7 @@ const AMERICANO_36 = {
     enabled: true,
     order: ["A1", "B1", "A2", "B2"],
     serveBlockLength: 1,
-    sideSwapRule: "after_each_player_serves_once",
+    sideSwapRule: "after_all_players_serve_once",
   },
   completion: { rule: "exact_total_points", tieResolution: "allow_draw" },
 };
@@ -49,8 +49,25 @@ describe("fixedTotalPoints scoring profile", () => {
     });
     expect(options.pointsTarget).toBe(36);
     expect(options.serving.order).toEqual(["A1", "B1", "A2", "B2"]);
-    expect(options.serving.sideSwapRule).toBe("after_each_player_serves_once");
+    expect(options.serving.sideSwapRule).toBe("after_all_players_serve_once");
     expect(options.completion.tieResolution).toBe("allow_draw");
+  });
+
+  test("normalizes the changeover rule and swaps sides after each serve cycle", () => {
+    const options = normalizeScoringOptions({
+      ...AMERICANO_36,
+      serving: { ...AMERICANO_36.serving, sideSwapRule: "after_all_players_serve_once" },
+    });
+    expect(options.serving.sideSwapRule).toBe("after_all_players_serve_once");
+    expect(play("ABBA", options).fixedTotal.sideSwapCycles).toBe(1);
+  });
+
+  test("does not accept the legacy side-swap rule", () => {
+    const options = normalizeScoringOptions({
+      ...AMERICANO_36,
+      serving: { ...AMERICANO_36.serving, sideSwapRule: "after_each_player_serves_once" },
+    });
+    expect(options.serving.sideSwapRule).toBe("after_all_players_serve_once");
   });
 
   test("other modes preserve the fixed profile for later reuse", () => {

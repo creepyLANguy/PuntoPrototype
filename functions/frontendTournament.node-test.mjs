@@ -185,7 +185,13 @@ function americanoState() {
     status: "live",
     visibility: "public",
     participantMode: "individual",
-    format: { id: "americano", version: 1, config: getFormat("americano").normalizeConfig({}) },
+    format: {
+      id: "americano",
+      version: 1,
+      config: getFormat("americano").normalizeConfig({
+        scoring: { sideSwapRule: "after_all_players_serve_once" },
+      }),
+    },
     courtPool: ["c1", "c2"],
     scheduling: {
       timezone: "UTC",
