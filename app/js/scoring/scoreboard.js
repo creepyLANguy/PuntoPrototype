@@ -137,10 +137,24 @@ export function updateUI() {
     if (isStraight && elements.straightTotalValue) {
       const total =
         (session.score.A.totalPoints || 0) + (session.score.B.totalPoints || 0);
-      elements.straightTotalValue.textContent =
-        options.scoringMode === "fixedTotalPoints"
-          ? `${total} / ${options.pointsTarget}`
-          : total;
+      if (options.scoringMode === "fixedTotalPoints") {
+        const numerator = document.createElement("span");
+        numerator.className = "straight-total-numerator";
+        numerator.textContent = total;
+        const separator = document.createElement("span");
+        separator.className = "straight-total-separator";
+        separator.textContent = " / ";
+        const denominator = document.createElement("span");
+        denominator.className = "straight-total-denominator";
+        denominator.textContent = options.pointsTarget;
+        elements.straightTotalValue.replaceChildren(
+          numerator,
+          separator,
+          denominator,
+        );
+      } else {
+        elements.straightTotalValue.textContent = total;
+      }
     }
   }
 
@@ -215,7 +229,9 @@ function triggerSetWinAnimation(team) {
   const isDraw = team === "draw";
   teamNameEl.textContent = isDraw
     ? `${nameA} & ${nameB}`
-    : team === "A" ? nameA : nameB;
+    : team === "A"
+      ? nameA
+      : nameB;
   overlay.dataset.winner = team;
 
   const displayMode = resolveScoreDisplayOptions(session.score).scoringMode;
@@ -223,7 +239,9 @@ function triggerSetWinAnimation(team) {
     displayMode === "tiebreakTen" || displayMode === "fixedTotalPoints";
   overlay.querySelector(".set-win-label").textContent = isDraw
     ? "MATCH DRAW!"
-    : endsMatch ? "WINS THE MATCH!" : "WINS THE SET!";
+    : endsMatch
+      ? "WINS THE MATCH!"
+      : "WINS THE SET!";
 
   overlay.querySelector(".sw-score-a").textContent = endsMatch
     ? session.score.A.points

@@ -278,13 +278,59 @@ test("fixed scoring totals use responsive sizing", () => {
   assert.match(rule, /border-radius:\s*clamp\(10px,\s*1\.8vmin,\s*18px\)(?:\s*!important)?;/);
 });
 
+test("fixed scoring fractions are stacked only in landscape", () => {
+  const styles = readFileSync(new URL("../app/css/style.css", import.meta.url), "utf8");
+  const sheet = document.createElement("style");
+  sheet.textContent = styles;
+  document.head.append(sheet);
+  try {
+    const fractionRules = [...sheet.sheet.cssRules].filter(
+      (rule) =>
+        rule.conditionText === "(orientation: landscape)" &&
+        [...rule.cssRules].some(
+          (child) => child.selectorText === ".straight-total.fixed-total .straight-total-numerator",
+        ),
+    );
+    assert.equal(fractionRules.length, 1);
+    const rules = new Map(
+      [...fractionRules[0].cssRules].map((rule) => [rule.selectorText, rule.style]),
+    );
+    const value = rules.get(".straight-total.fixed-total .straight-total-value");
+    assert.equal(value.display, "flex");
+    assert.equal(value.getPropertyValue("flex-direction"), "column");
+    assert.equal(value.getPropertyValue("font-size"), "clamp(1.2rem, 4vmin, 2rem)");
+    assert.equal(
+      rules
+        .get(".straight-total.fixed-total .straight-total-numerator")
+        .getPropertyValue("border-bottom"),
+      "1px solid currentColor",
+    );
+    assert.equal(rules.get(".straight-total.fixed-total").height, "auto");
+    assert.equal(
+      rules
+        .get(".straight-total.fixed-total .straight-total-separator")
+        .getPropertyValue("clip-path"),
+      "inset(50%)",
+    );
+  } finally {
+    sheet.remove();
+  }
+});
+
+function assertFixedFraction(total, target) {
+  const value = document.getElementById("straightTotalValue");
+  assert.equal(value.querySelector(".straight-total-numerator").textContent, String(total));
+  assert.equal(value.querySelector(".straight-total-denominator").textContent, String(target));
+  assert.equal(value.textContent, `${total} / ${target}`);
+}
+
 test("fixed points celebrate the winner only after the last point is scored", async () => {
   await leaveCourtViaBackButton();
   await joinCourtAsPlayer(document, "fixedwinner");
   const overlay = document.getElementById("setWinOverlay");
   overlay.click();
   await awardFixedPoint("A");
-  assert.equal(document.getElementById("straightTotalValue").textContent, "1 / 12");
+  assertFixedFraction(1, 12);
   assert.equal(
     document.getElementById("straightPointsTotal").classList.contains("fixed-total"),
     true,
@@ -292,7 +338,7 @@ test("fixed points celebrate the winner only after the last point is scored", as
   for (let i = 1; i < 6; i++) await awardFixedPoint("A");
   await awardFixedPoint("B");
   await awardFixedPoint("B");
-  assert.equal(document.getElementById("straightTotalValue").textContent, "8 / 12");
+  assertFixedFraction(8, 12);
   assertFixedGlow(true, false);
   assert.equal(overlay.classList.contains("hidden"), true);
 
@@ -306,6 +352,7 @@ test("fixed points celebrate the winner only after the last point is scored", as
   await waitFor(() => !document.getElementById("confirmModal").classList.contains("hidden"));
   document.getElementById("confirmOkBtn").click();
   await waitFor(() => document.getElementById("pointsA").textContent === "6");
+  assertFixedFraction(8, 12);
   assertFixedGlow(true, false);
   await awardFixedPoint("A");
   assert.equal(
@@ -320,7 +367,7 @@ test("fixed points celebrate the winner only after the last point is scored", as
     assert.equal(overlay.classList.contains("hidden"), i < 2, "celebrate only on the final point");
   }
   assert.equal(getBackendScore("fixedwinner").matchComplete, true);
-  assert.equal(document.getElementById("straightTotalValue").textContent, "12 / 12");
+  assertFixedFraction(12, 12);
   assert.equal(overlay.dataset.winner, "A");
   assert.equal(overlay.querySelector(".set-win-label").textContent, "WINS THE MATCH!");
   assert.equal(overlay.querySelector(".sw-score-a").textContent, "7");
@@ -381,7 +428,7 @@ test("fixed golden points glow for both teams and celebrate the deciding winner"
   assert.equal(overlay.dataset.winner, "B");
   assert.equal(overlay.querySelector(".set-win-label").textContent, "WINS THE MATCH!");
   assert.equal(getBackendScore("fixedgolden").matchComplete, true);
-  assert.equal(document.getElementById("straightTotalValue").textContent, "13 / 12");
+  assertFixedFraction(13, 12);
   overlay.click();
 
   await leaveCourtViaBackButton();
@@ -391,4 +438,9 @@ test("fixed golden points glow for both teams and celebrate the deciding winner"
     true,
     "joining a decided match does not replay its celebration",
   );
+  await leaveCourtViaBackButton();
+  await joinCourtAsPlayer(document, "straightcourt");
+  const value = document.getElementById("straightTotalValue");
+  assert.equal(value.textContent, "3");
+  assert.equal(value.children.length, 0, "straight mode removes the fixed-points fraction");
 });
