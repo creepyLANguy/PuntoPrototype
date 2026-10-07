@@ -1,11 +1,61 @@
 // Score feedback animations on the team cards and point displays.
 import { $, elements } from "./dom.js";
 
+const pointAnimationRuns = new WeakMap();
+
+function getPointAnimations(cards) {
+  return cards
+    .flatMap((card) => card.getAnimations?.({ subtree: true }) || [])
+    .filter(
+      (animation) =>
+        ["team-pop", "burst"].includes(animation.animationName) &&
+        (animation.playState === "running" || animation.pending),
+    );
+}
+
+function finishPointAnimations(animations) {
+  return Promise.all(
+    animations.map((animation) =>
+      animation.finished.catch((error) => {
+        if (error.name !== "AbortError") throw error;
+      }),
+    ),
+  );
+}
+
 export function animate(team) {
   const el = $(`team${team}`);
+  pointAnimationRuns.get(el)?.removeListeners?.();
+  const run = {};
+  pointAnimationRuns.set(el, run);
   el.classList.remove("score-animate");
   void el.offsetWidth;
   el.classList.add("score-animate");
+
+  const cleanup = () => {
+    if (pointAnimationRuns.get(el) !== run) return;
+    run.removeListeners?.();
+    el.classList.remove("score-animate");
+    pointAnimationRuns.delete(el);
+  };
+
+  if (typeof el.getAnimations === "function") {
+    finishPointAnimations(getPointAnimations([el]))
+      .then(cleanup)
+      .catch((error) => console.error("Point animation failed", error));
+  } else {
+    const onEnd = (event) => {
+      if (
+        event.target === el &&
+        event.animationName === "team-pop" &&
+        !event.pseudoElement
+      ) {
+        cleanup();
+      }
+    };
+    run.removeListeners = () => el.removeEventListener("animationend", onEnd);
+    el.addEventListener("animationend", onEnd);
+  }
 }
 
 export function animateUndo(team) {
@@ -18,22 +68,12 @@ export function animateUndo(team) {
 
 export async function waitForPointAnimations() {
   for (;;) {
-    const animations = [...document.querySelectorAll(".team.score-animate")]
-      .flatMap((card) => card.getAnimations?.({ subtree: true }) || [])
-      .filter(
-        (animation) =>
-          ["team-pop", "burst"].includes(animation.animationName) &&
-          (animation.playState === "running" || animation.pending),
-      );
+    const animations = getPointAnimations([
+      ...document.querySelectorAll(".team.score-animate"),
+    ]);
     if (!animations.length) return;
 
-    await Promise.all(
-      animations.map((animation) =>
-        animation.finished.catch((error) => {
-          if (error.name !== "AbortError") throw error;
-        }),
-      ),
-    );
+    await finishPointAnimations(animations);
   }
 }
 
@@ -74,6 +114,12 @@ export function swapScoreboardViews({ changeover = false } = {}) {
     );
   }
 
+  // Manual swaps can interrupt feedback; do not let it restart after the cue.
+  cards.forEach((card) => {
+    pointAnimationRuns.get(card)?.removeListeners?.();
+    pointAnimationRuns.delete(card);
+    card.classList.remove("score-animate");
+  });
   const swapped = scoreboard.classList.toggle("swapped");
 
   const duration = changeover ? CHANGEOVER_DURATION_MS : SWAP_DURATION_MS;

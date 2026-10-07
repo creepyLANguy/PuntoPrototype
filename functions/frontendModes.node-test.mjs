@@ -500,6 +500,7 @@ test("automatic changeovers finish point feedback before swapping and discard st
     await waitFor(() => scoreboard.classList.contains("swapped") !== initiallySwapped);
     assert.deepEqual(swaps, ["finished", "finished"]);
     assert.equal(scoreboard.classList.contains("changeover-animating"), true);
+    assert.equal(card.classList.contains("score-animate"), false);
 
     const swappedAfterPoint = scoreboard.classList.contains("swapped");
     pointAnimation.playState = "running";
@@ -557,6 +558,7 @@ test("point feedback waiting handles cancellation and a restarted animation", as
     const waiting = waitForPointAnimations().then(() => {
       completed = true;
     });
+
     active = second;
     first.playState = "idle";
     cancelFirst(new window.DOMException("Animation restarted", "AbortError"));
@@ -573,4 +575,74 @@ test("point feedback waiting handles cancellation and a restarted animation", as
     delete card.getAnimations;
     card.classList.toggle("score-animate", hadScoreAnimation);
   }
+});
+
+test("point feedback cleans up both animations without clearing a newer scoring run", async () => {
+  const { animate } = await import("../app/js/ui/animations.js");
+  const card = document.getElementById("teamA");
+  const deferredAnimation = (animationName) => {
+    let finish;
+    let cancel;
+    const animation = {
+      animationName,
+      playState: "running",
+      finished: new Promise((resolve, reject) => {
+        finish = () => {
+          animation.playState = "finished";
+          resolve();
+        };
+        cancel = () => {
+          animation.playState = "idle";
+          reject(new window.DOMException("Animation restarted", "AbortError"));
+        };
+      }),
+    };
+    return { animation, finish, cancel };
+  };
+  const pop = deferredAnimation("team-pop");
+  const burst = deferredAnimation("burst");
+  const next = deferredAnimation("team-pop");
+  let animations = [pop.animation, burst.animation];
+  card.getAnimations = () => animations;
+  try {
+    animate("A");
+    pop.finish();
+    await settle();
+    assert.equal(card.classList.contains("score-animate"), true, "the burst is still running");
+    animations = [next.animation];
+    animate("A");
+    burst.cancel();
+    await settle();
+    assert.equal(
+      card.classList.contains("score-animate"),
+      true,
+      "old cleanup must not clear new feedback",
+    );
+    next.finish();
+    await settle();
+    assert.equal(card.classList.contains("score-animate"), false);
+    animations = [];
+    animate("A");
+    await settle();
+    assert.equal(
+      card.classList.contains("score-animate"),
+      false,
+      "disabled animations leave no stale class",
+    );
+  } finally {
+    pop.finish();
+    burst.finish();
+    next.finish();
+    delete card.getAnimations;
+    card.classList.remove("score-animate");
+  }
+});
+
+test("manual swaps clear interrupted point feedback", async () => {
+  const { animate, swapScoreboardViews } = await import("../app/js/ui/animations.js");
+  const card = document.getElementById("teamA");
+  animate("A");
+  assert.equal(card.classList.contains("score-animate"), true);
+  swapScoreboardViews();
+  assert.equal(card.classList.contains("score-animate"), false);
 });
