@@ -18,7 +18,10 @@ import {
   observeHistoryChanges,
 } from "../routing/history.js";
 import { session } from "../state/sessionState.js";
-import { swapScoreboardViews } from "../ui/animations.js";
+import {
+  swapScoreboardViews,
+  waitForPointAnimations,
+} from "../ui/animations.js";
 import { syncSettingsTiles } from "../ui/settingsTiles.js";
 import { appendToast } from "../ui/toast.js";
 
@@ -71,7 +74,29 @@ function handleChangeoverEvent(event) {
   if (!eventId || eventId === lastChangeoverEventId) return;
 
   lastChangeoverEventId = eventId;
-  triggerSwapViews();
+  if (event.source === "automatic_scoring") {
+    const courtId = getCurrentCourtId();
+    const listenerToken = session.activeCourtListenerToken;
+    const matchId = session.currentMatchId;
+    const scoreVersion = session.currentScoreVersion;
+    waitForPointAnimations()
+      .then(() => {
+        if (
+          getCurrentCourtId() !== courtId ||
+          session.activeCourtListenerToken !== listenerToken ||
+          session.currentMatchId !== matchId ||
+          session.currentScoreVersion !== scoreVersion
+        )
+          return;
+        triggerSwapViews();
+      })
+      .catch((error) => {
+        console.error("Automatic changeover animation failed", error);
+        appendToast("Automatic changeover animation failed", TOAST_TYPES.ERROR);
+      });
+  } else {
+    triggerSwapViews();
+  }
 
   // Notify the session state so its local Beacon changeover state and control
   // state toggle independently of the user's local Swap views preference.
