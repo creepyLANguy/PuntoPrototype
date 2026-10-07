@@ -22,7 +22,7 @@ const SOCIAL_SCORING_FIELDS = [
   },
   {
     key: "scoring.sideSwapRule",
-    label: "Side swap",
+    label: "Changeover",
     type: "select",
     value: "after_all_players_serve_once",
     options: [
