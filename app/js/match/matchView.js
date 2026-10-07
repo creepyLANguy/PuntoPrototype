@@ -35,8 +35,13 @@ export function describeScoringOptions(options = {}) {
         serving.enabled === false
           ? null
           : `${serving.serveBlockLength} consecutive serves`,
-        serving.sideSwapRule === "after_each_player_serves_once"
-          ? "Swap sides after each player serves once"
+        [
+          "after_each_player_serves_once",
+          "after_all_players_serve_once",
+        ].includes(serving.sideSwapRule)
+          ? serving.sideSwapRule === "after_all_players_serve_once"
+            ? "Swap sides after all players serve once"
+            : "Swap sides after each player serves once"
           : null,
         options.completion?.tieResolution === "golden_point"
           ? "A tie is decided by a golden point"

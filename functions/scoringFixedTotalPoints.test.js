@@ -53,6 +53,15 @@ describe("fixedTotalPoints scoring profile", () => {
     expect(options.completion.tieResolution).toBe("allow_draw");
   });
 
+  test("supports the renamed changeover rule", () => {
+    const options = normalizeScoringOptions({
+      ...AMERICANO_36,
+      serving: { ...AMERICANO_36.serving, sideSwapRule: "after_all_players_serve_once" },
+    });
+    expect(options.serving.sideSwapRule).toBe("after_all_players_serve_once");
+    expect(play("ABBA", options).fixedTotal.sideSwapCycles).toBe(1);
+  });
+
   test("other modes preserve the fixed profile for later reuse", () => {
     const options = normalizeScoringOptions({ ...AMERICANO_36, scoringMode: "standard" });
     expect(options.pointsTarget).toBe(36);
@@ -128,10 +137,18 @@ describe("fixedTotalPoints scoring profile", () => {
       score = applyEvent(score, { id: `p${i}`, eventType: "POINT_TEAM_A" }, options);
     }
     expect(servers).toEqual([
-      "A1", "A1", "A1",
-      "B1", "B1", "B1",
-      "A2", "A2", "A2",
-      "B2", "B2", "B2",
+      "A1",
+      "A1",
+      "A1",
+      "B1",
+      "B1",
+      "B1",
+      "A2",
+      "A2",
+      "A2",
+      "B2",
+      "B2",
+      "B2",
     ]);
   });
 

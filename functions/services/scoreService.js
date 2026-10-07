@@ -23,7 +23,9 @@ function shouldAutoChangeover(previousScore, nextScore, scoringOptions) {
       scoringOptions.pointsTarget &&
     (Number(nextScore?.A?.points) || 0) + (Number(nextScore?.B?.points) || 0) <
       scoringOptions.pointsTarget &&
-    scoringOptions?.serving?.sideSwapRule === "after_each_player_serves_once" &&
+    ["after_each_player_serves_once", "after_all_players_serve_once"].includes(
+      scoringOptions?.serving?.sideSwapRule,
+    ) &&
     Boolean(previousScore?.fixedTotal?.sidesSwapped) !==
       Boolean(nextScore?.fixedTotal?.sidesSwapped)
   );

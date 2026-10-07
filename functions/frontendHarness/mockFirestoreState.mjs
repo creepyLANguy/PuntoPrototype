@@ -203,7 +203,9 @@ function processScoringEvent(matchId, eventId, event) {
     !score.matchComplete &&
     previousRallyPoints < activeOptions.pointsTarget &&
     score.A.points + score.B.points < activeOptions.pointsTarget &&
-    activeOptions.serving?.sideSwapRule === "after_each_player_serves_once" &&
+    ["after_each_player_serves_once", "after_all_players_serve_once"].includes(
+      activeOptions.serving?.sideSwapRule,
+    ) &&
     previousSidesSwapped !== nextSidesSwapped
   ) {
     const courtId = matchData.currentCourtId || null;
