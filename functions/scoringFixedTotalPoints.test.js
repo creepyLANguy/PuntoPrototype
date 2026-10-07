@@ -128,10 +128,18 @@ describe("fixedTotalPoints scoring profile", () => {
       score = applyEvent(score, { id: `p${i}`, eventType: "POINT_TEAM_A" }, options);
     }
     expect(servers).toEqual([
-      "A1", "A1", "A1",
-      "B1", "B1", "B1",
-      "A2", "A2", "A2",
-      "B2", "B2", "B2",
+      "A1",
+      "A1",
+      "A1",
+      "B1",
+      "B1",
+      "B1",
+      "A2",
+      "A2",
+      "A2",
+      "B2",
+      "B2",
+      "B2",
     ]);
   });
 
@@ -146,7 +154,7 @@ describe("fixedTotalPoints scoring profile", () => {
     expect(servers).toEqual(["A1", "A1", "B1", "B1", "A2", "A2", "B2", "B2"]);
   });
 
-  test("tracks block-derived serve counts and side swaps after every full cycle", () => {
+  test("tracks block-derived serve counts and changeovers after every full cycle", () => {
     const score = play("ABBA".repeat(4) + "AB");
     expect(score.fixedTotal.rallyPoints).toBe(18);
     expect(score.fixedTotal.servesCompleted).toEqual({ A1: 5, B1: 5, A2: 4, B2: 4 });
@@ -167,7 +175,7 @@ describe("fixedTotalPoints scoring profile", () => {
     expect(score.fixedTotal.servesCompleted).toEqual({ A1: 4, B1: 4, A2: 4, B2: 4 });
   });
 
-  test("no side swaps when the rule is none", () => {
+  test("no changeovers when the rule is none", () => {
     const options = { ...AMERICANO_36, serving: { ...AMERICANO_36.serving, sideSwapRule: "none" } };
     const score = play("A".repeat(12), options);
     expect(score.fixedTotal.sideSwapCycles).toBe(0);
