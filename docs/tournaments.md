@@ -45,7 +45,7 @@ Social formats use the shared fixed-total-points scoring profile by default:
   pointsTarget: 36,
   serveOrder: ["A1", "B1", "A2", "B2"],
   serveBlockLength: 1,
-  sideSwapRule: "after_each_player_serves_once",
+  sideSwapRule: "after_all_players_serve_once",
   tieResolution: "allow_draw"
 }
 ```

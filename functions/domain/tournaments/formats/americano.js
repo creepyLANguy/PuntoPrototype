@@ -154,8 +154,8 @@ function socialRules(title, cfg, standingsLine) {
       `${scoring.pointsTarget} total points`,
       `Serve rotation: ${scoring.serveOrder.join(", ")}`,
       `${scoring.serveBlockLength} consecutive serves`,
-      scoring.sideSwapRule === "after_each_player_serves_once"
-        ? "Swap sides after each player serves once"
+      scoring.sideSwapRule === "after_all_players_serve_once"
+        ? "Swap sides after all players serve once"
         : "No automatic side swap",
       standingsLine,
     ],

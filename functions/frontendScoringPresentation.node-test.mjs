@@ -53,6 +53,22 @@ test("scoring options fall back to the defaults field by field", () => {
   assert.equal(normalizeScoringOptions({ extra: 1 }).extra, 1, "unknown keys are preserved");
 });
 
+test("scoring options preserve the renamed changeover rule", () => {
+  const options = normalizeScoringOptions({
+    scoringMode: "fixedTotalPoints",
+    serving: { sideSwapRule: "after_all_players_serve_once" },
+  });
+  assert.equal(options.serving.sideSwapRule, "after_all_players_serve_once");
+});
+
+test("scoring options replace the unsupported legacy changeover rule with the default", () => {
+  const options = normalizeScoringOptions({
+    scoringMode: "fixedTotalPoints",
+    serving: { sideSwapRule: "after_each_player_serves_once" },
+  });
+  assert.equal(options.serving.sideSwapRule, "after_all_players_serve_once");
+});
+
 test("scoring options compare on the three normalised fields only", () => {
   assert.equal(areScoringOptionsEqual({}, DEFAULTS), true);
   assert.equal(areScoringOptionsEqual({ deuceMode: "golden" }, { deuceMode: "silver" }), false);
@@ -231,7 +247,11 @@ test("fixed points flag majority-clinching points for either team", () => {
       assert.equal(getCriticalPointStatus(s)[team], "Match");
       assert.equal(getFixedTotalDisplayResult(s), null);
       s[team].points++;
-      assert.equal(getFixedTotalDisplayResult(s), null, "a majority does not announce an unfinished match");
+      assert.equal(
+        getFixedTotalDisplayResult(s),
+        null,
+        "a majority does not announce an unfinished match",
+      );
       assert.deepEqual(getCriticalPointStatus(s), { A: null, B: null });
       assert.notEqual(getCurrentServerLabel(s), null, "remaining points still have a server");
       const opponent = team === "A" ? "B" : "A";

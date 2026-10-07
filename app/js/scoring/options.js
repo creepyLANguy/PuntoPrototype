@@ -71,7 +71,7 @@ export function normalizeScoringOptions(options = {}) {
         Number(serving.serveBlockLength) <= 20
           ? Number(serving.serveBlockLength)
           : fixed.serving.serveBlockLength,
-      sideSwapRule: ["after_each_player_serves_once", "none"].includes(
+      sideSwapRule: ["after_all_players_serve_once", "none"].includes(
         serving.sideSwapRule,
       )
         ? serving.sideSwapRule
@@ -86,7 +86,9 @@ export function normalizeScoringOptions(options = {}) {
         ? completion.tieResolution
         : fixed.completion.tieResolution,
     };
-  } else if (FIXED_TOTAL_FIELDS.some((field) => normalized[field] !== undefined)) {
+  } else if (
+    FIXED_TOTAL_FIELDS.some((field) => normalized[field] !== undefined)
+  ) {
     const fixed = DEFAULT_FIXED_TOTAL_POINTS;
     const sourceServing = normalized.serving || {};
     const sourceCompletion = normalized.completion || {};
@@ -110,7 +112,7 @@ export function normalizeScoringOptions(options = {}) {
         Number(sourceServing.serveBlockLength) <= 20
           ? Number(sourceServing.serveBlockLength)
           : fixed.serving.serveBlockLength,
-      sideSwapRule: ["after_each_player_serves_once", "none"].includes(
+      sideSwapRule: ["after_all_players_serve_once", "none"].includes(
         sourceServing.sideSwapRule,
       )
         ? sourceServing.sideSwapRule

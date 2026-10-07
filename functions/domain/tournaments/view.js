@@ -26,8 +26,8 @@ function describeScoring(options = {}) {
         lines.push(`${serving.serveBlockLength} consecutive serves`);
       }
       lines.push(
-        serving.sideSwapRule === "after_each_player_serves_once"
-          ? "Swap sides after each player serves once"
+        serving.sideSwapRule === "after_all_players_serve_once"
+          ? "Swap sides after all players serve once"
           : "No automatic side swap",
       );
       lines.push(

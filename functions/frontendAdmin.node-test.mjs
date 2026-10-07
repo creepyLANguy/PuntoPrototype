@@ -250,7 +250,7 @@ test("Add Court validates its input and creates the court and its score", async 
   $("courtFixedPointsTarget").value = "24";
   $("courtFixedServeOrder").value = "A1, B1, A2, B2";
   $("courtFixedServeBlockLength").value = "1";
-  choose($("courtFixedSideSwapRule"), "after_each_player_serves_once");
+  choose($("courtFixedSideSwapRule"), "after_all_players_serve_once");
   choose($("courtFixedTieResolution"), "golden_point");
   await attempt("Delta Court", "delta-pw");
   await waitForCourtList(4);
@@ -287,7 +287,7 @@ test("editing a court saves it and returns to the court list", async () => {
   $("editCourtFixedPointsTarget").value = "32";
   $("editCourtFixedServeOrder").value = "A1, B1, A2, B2";
   $("editCourtFixedServeBlockLength").value = "1";
-  choose($("editCourtFixedSideSwapRule"), "after_each_player_serves_once");
+  choose($("editCourtFixedSideSwapRule"), "after_all_players_serve_once");
   choose($("editCourtFixedTieResolution"), "allow_draw");
   $("saveEditBtn").click();
   await waitFor(() => courtNames().includes("Beta Court Renamed"), { label: "renamed court" });
