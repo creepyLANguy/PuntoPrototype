@@ -304,7 +304,14 @@ test("fixed scoring fractions are stacked only in landscape", () => {
     const value = rules.get(".straight-total.fixed-total .straight-total-value");
     assert.equal(value.display, "flex");
     assert.equal(value.getPropertyValue("flex-direction"), "column");
-    assert.equal(value.getPropertyValue("font-size"), "clamp(1.2rem, 4vmin, 2rem)");
+    assert.equal(value.getPropertyValue("font-size"), "clamp(1.5rem, 5vmin, 2.5rem)");
+    const total = rules.get(".straight-total.fixed-total");
+    assert.equal(total.getPropertyValue("max-width"), "none");
+    assert.equal(
+      total.getPropertyValue("padding"),
+      "clamp(10px, 1.8vmin, 18px) clamp(16px, 2.4vmin, 28px)",
+    );
+    assert.equal(total.getPropertyPriority("padding"), "important");
     assert.equal(
       rules
         .get(".straight-total.fixed-total .straight-total-numerator")

@@ -6662,13 +6662,15 @@ body.light-mode .straight-total {
   .straight-total.fixed-total {
     height: auto;
     aspect-ratio: auto;
+    max-width: none;
+    padding: clamp(10px, 1.8vmin, 18px) clamp(16px, 2.4vmin, 28px) !important;
   }
 
   .straight-total.fixed-total .straight-total-value {
     display: flex;
     flex-direction: column;
     align-items: stretch;
-    font-size: clamp(1.2rem, 4vmin, 2rem);
+    font-size: clamp(1.5rem, 5vmin, 2.5rem);
   }
 
   .straight-total.fixed-total .straight-total-numerator {
