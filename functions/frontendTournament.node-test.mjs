@@ -264,7 +264,7 @@ test("the public dashboard shows identity, live matches, round, sitting out, sta
   assert.match(text, /SITTING OUT/);
   assert.match(text, /36 total points/);
   assert.match(text, /1 consecutive serves/);
-  assert.match(text, /Swap sides after each player serves once/);
+  assert.match(text, /Swap sides after all players serve once/);
 
   const headers = [...page.querySelectorAll(".standings-table th")].map((th) => th.textContent);
   assert.deepEqual(headers.slice(0, 4), ["#", "Player", "Rounds", "Points"]);

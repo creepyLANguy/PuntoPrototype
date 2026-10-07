@@ -56,7 +56,7 @@ For `fixedTotalPoints`, the score may include `fixedTotal`:
 | `sidesSwapped` | Whether an odd number of side-swap cycles has completed |
 
 The default social profile is 36 total points, four serves per player,
-one-serve blocks, serve order `A1, B1, A2, B2`, side swap after each player has
+one-serve blocks, serve order `A1, B1, A2, B2`, changeover after all players have
 served once, and draws allowed. A configured golden-point tie resolution keeps
 playing at the target until one team leads by one.
 

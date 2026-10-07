@@ -26,9 +26,9 @@ function describeScoring(options = {}) {
         lines.push(`${serving.serveBlockLength} consecutive serves`);
       }
       lines.push(
-        serving.sideSwapRule === "after_each_player_serves_once"
-          ? "Swap sides after each player serves once"
-          : "No automatic side swap",
+        serving.sideSwapRule === "after_all_players_serve_once"
+          ? "Swap sides after all players serve once"
+          : "No automatic changeover",
       );
       lines.push(
         options.completion?.tieResolution === "golden_point"
