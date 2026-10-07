@@ -77,6 +77,8 @@ when the last point is played, including a deciding golden point if configured.
 A tied finish with draws allowed shows a draw celebration.
 Changeovers stop once the total reaches `pointsTarget`, including a tied score
 awaiting a golden point; no changeover is performed after the deciding rally.
+Automatic changeover swaps wait for any active point-scored animation to finish.
+Manual changeovers and local view swaps remain immediate.
 
 ## Server
 

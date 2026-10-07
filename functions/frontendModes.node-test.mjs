@@ -13,6 +13,8 @@ import {
   settle,
   callableHandlers,
   getBackendScore,
+  firestoreState,
+  writeDoc,
 } from "./frontendHarness/harness.mjs";
 
 let document;
@@ -65,6 +67,10 @@ test.before(async () => {
       },
     });
   }
+  seedCourt("fixedanimation", {
+    scoringMode: "fixedTotalPoints",
+    scoringOptions: { scoringMode: "fixedTotalPoints", pointsTarget: 12 },
+  });
   scoringUpdateRequests = [];
   callableHandlers.set("updateScoringOptions", async (payload) => {
     scoringUpdateRequests.push(structuredClone(payload));
@@ -443,4 +449,121 @@ test("fixed golden points glow for both teams and celebrate the deciding winner"
   const value = document.getElementById("straightTotalValue");
   assert.equal(value.textContent, "3");
   assert.equal(value.children.length, 0, "straight mode removes the fixed-points fraction");
+});
+
+test("automatic changeovers finish point feedback before swapping and discard stale swaps", async () => {
+  if (document.getElementById("menuPage").style.display === "none") {
+    await leaveCourtViaBackButton();
+  }
+  await joinCourtAsPlayer(document, "fixedanimation");
+  const scoreboard = document.querySelector(".scoreboard");
+  const card = document.getElementById("teamA");
+  for (let i = 0; i < 3; i++) await awardFixedPoint("A");
+
+  let finishPoint;
+  const pointAnimation = {
+    animationName: "team-pop",
+    playState: "running",
+    finished: new Promise((resolve) => {
+      finishPoint = resolve;
+    }),
+  };
+  card.getAnimations = () => [pointAnimation];
+  const initiallySwapped = scoreboard.classList.contains("swapped");
+  const swaps = [];
+  for (const team of document.querySelectorAll(".team")) {
+    team.animate = () => {
+      swaps.push(pointAnimation.playState);
+      return { id: "" };
+    };
+  }
+  try {
+    await awardFixedPoint("A");
+    assert.equal(card.classList.contains("score-animate"), true);
+    assert.equal(
+      firestoreState.docs.get("courts/fixedanimation").changeoverEvent.source,
+      "automatic_scoring",
+    );
+    assert.equal(scoreboard.classList.contains("swapped"), initiallySwapped);
+    assert.equal(scoreboard.classList.contains("changeover-animating"), false);
+    assert.equal(swaps.length, 0, "swap motion must not interrupt point feedback");
+
+    pointAnimation.playState = "finished";
+    finishPoint();
+    await waitFor(() => scoreboard.classList.contains("swapped") !== initiallySwapped);
+    assert.deepEqual(swaps, ["finished", "finished"]);
+    assert.equal(scoreboard.classList.contains("changeover-animating"), true);
+
+    const swappedAfterPoint = scoreboard.classList.contains("swapped");
+    pointAnimation.playState = "running";
+    pointAnimation.finished = new Promise((resolve) => {
+      finishPoint = resolve;
+    });
+    await awardFixedPoint("A");
+    const court = firestoreState.docs.get("courts/fixedanimation");
+    writeDoc("courts/fixedanimation", {
+      ...court,
+      changeoverEvent: { id: "pending-navigation-swap", source: "automatic_scoring" },
+    });
+    await settle();
+    await leaveCourtViaBackButton();
+    const swappedAfterLeaving = scoreboard.classList.contains("swapped");
+    pointAnimation.playState = "finished";
+    finishPoint();
+    await settle();
+    assert.equal(scoreboard.classList.contains("swapped"), swappedAfterLeaving);
+    assert.equal(swaps.length, 2, "leaving the court discards its pending swap");
+    assert.equal(swappedAfterPoint, !initiallySwapped);
+  } finally {
+    pointAnimation.playState = "finished";
+    finishPoint();
+    delete card.getAnimations;
+    for (const team of document.querySelectorAll(".team")) delete team.animate;
+  }
+});
+
+test("point feedback waiting handles cancellation and a restarted animation", async () => {
+  const { waitForPointAnimations } = await import("../app/js/ui/animations.js");
+  const card = document.getElementById("teamA");
+  const hadScoreAnimation = card.classList.contains("score-animate");
+  card.classList.add("score-animate");
+  let cancelFirst;
+  let finishSecond;
+  const first = {
+    animationName: "team-pop",
+    playState: "running",
+    finished: new Promise((_resolve, reject) => {
+      cancelFirst = reject;
+    }),
+  };
+  const second = {
+    animationName: "burst",
+    playState: "running",
+    finished: new Promise((resolve) => {
+      finishSecond = resolve;
+    }),
+  };
+  let active = first;
+  card.getAnimations = () => [active];
+  try {
+    let completed = false;
+    const waiting = waitForPointAnimations().then(() => {
+      completed = true;
+    });
+    active = second;
+    first.playState = "idle";
+    cancelFirst(new window.DOMException("Animation restarted", "AbortError"));
+    await settle();
+    assert.equal(completed, false, "a restart must not allow the swap to overtake feedback");
+    second.playState = "finished";
+    finishSecond();
+    await waiting;
+    assert.equal(completed, true);
+    await waitForPointAnimations();
+  } finally {
+    second.playState = "finished";
+    finishSecond();
+    delete card.getAnimations;
+    card.classList.toggle("score-animate", hadScoreAnimation);
+  }
 });
