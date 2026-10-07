@@ -79,10 +79,10 @@ function populateFixedCourtScoringControls(prefix, options = {}) {
 
   if (byId("FixedPointsTarget"))
     byId("FixedPointsTarget").value = options.pointsTarget ?? 36;
-  if (byId("FixedServeOrder"))
-    byId("FixedServeOrder").value = order.join(", ");
+  if (byId("FixedServeOrder")) byId("FixedServeOrder").value = order.join(", ");
   if (byId("FixedServeBlockLength"))
-    byId("FixedServeBlockLength").value = options.serving?.serveBlockLength ?? 1;
+    byId("FixedServeBlockLength").value =
+      options.serving?.serveBlockLength ?? 1;
   if (byId("FixedSideSwapRule"))
     byId("FixedSideSwapRule").value =
       options.serving?.sideSwapRule || "after_all_players_serve_once";
