@@ -36,11 +36,11 @@ async function undoViaButton() {
 
 test.before(async () => {
   seedBaseData();
-  seedCourt("undocourt");
+  seedCourt("undu");
   const dom = await bootFrontend();
   window = dom.window;
   document = window.document;
-  await joinCourtAsPlayer(document, "undocourt");
+  await joinCourtAsPlayer(document, "undu");
 });
 
 test("undo with nothing to undo gives no undo feedback", async () => {
@@ -74,8 +74,8 @@ test("score rendering follows the score document's own options during a mode cha
 
   // Simulate a remote scoring-mode change: the court document flips to
   // "straight" while the recalculated score document has not arrived yet.
-  writeDoc("courts/undocourt", {
-    name: "undocourt",
+  writeDoc("courts/undu", {
+    name: "undu",
     password: "pw",
     status: "open",
     scoreVersion: 0,
@@ -90,7 +90,7 @@ test("score rendering follows the score document's own options during a mode cha
   // standard scoring, so they must keep their tennis labels until a score
   // recalculated under the new mode actually arrives.
   pushScoreSnapshot(
-    "undocourt",
+    "undu",
     makeScore({
       A: { points: 3, games: 0, sets: 0, totalPoints: 3 },
       lastPointTeam: "A",
@@ -115,7 +115,7 @@ test("a stale matchComplete flag outside tiebreakTen does not suppress critical-
   // Set point in standard scoring (5-0 games, 40-0), but with a stale
   // matchComplete flag such as one persisted before a mode change.
   pushScoreSnapshot(
-    "undocourt",
+    "undu",
     makeScore({
       A: { points: 3, games: 5, sets: 0, totalPoints: 23 },
       B: { points: 0, games: 0, sets: 0, totalPoints: 0 },

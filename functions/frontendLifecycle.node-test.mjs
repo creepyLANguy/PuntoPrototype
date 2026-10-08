@@ -25,8 +25,8 @@ const swapAnimations = [];
 
 test.before(async () => {
   seedBaseData();
-  seedCourt("lifecourt");
-  seedCourt("watchcourt", { teamNames: { A: "Reds", B: "Blues" } });
+  seedCourt("abcd");
+  seedCourt("xyzz", { teamNames: { A: "Reds", B: "Blues" } });
 
   callableHandlers.set("changeoverCourt", async ({ courtId }) => {
     const courtPath = `courts/${courtId}`;
@@ -50,7 +50,7 @@ test.before(async () => {
   callableHandlers.set("resetCourt", async ({ courtId, newPassword }) => {
     const courtPath = `courts/${courtId}`;
     const court = firestoreState.docs.get(courtPath) || {};
-    const matchId = court.activeMatchId || `m-${courtId}`;
+    const matchId = court.activeMatchId || `${courtId}aaaa`;
     const matchPath = `matches/${matchId}`;
     const match = firestoreState.docs.get(matchPath) || {};
     const scoreVersion = (Number(match.scoreVersion) || 0) + 1;
@@ -84,7 +84,7 @@ test.before(async () => {
 });
 
 test("set win: winning a set fills a set dot and shows the celebration overlay", async () => {
-  await joinCourtAsPlayer(document, "lifecourt");
+  await joinCourtAsPlayer(document, "abcd");
 
   // Take team A to 5-0 games, 40-0, entirely through real point events.
   for (let i = 0; i < 23; i++) {
@@ -109,7 +109,7 @@ test("set win: winning a set fills a set dot and shows the celebration overlay",
 });
 
 test("Changeover toggles its own state and independently toggles the local view", async () => {
-  const courtBefore = firestoreState.docs.get("courts/lifecourt");
+  const courtBefore = firestoreState.docs.get("courts/abcd");
   assert.equal(courtBefore.beaconSidesSwapped, false);
 
   document.getElementById("settingsBtn").click();
@@ -133,14 +133,14 @@ test("Changeover toggles its own state and independently toggles the local view"
   assert.equal(swapAnimations.at(-1).options.duration, 650);
   assert.equal(swapViewsLabel(), "Unswap views", "the swapped view offers to unswap");
   assert.equal(
-    firestoreState.docs.get("courts/lifecourt").beaconSidesSwapped,
+    firestoreState.docs.get("courts/abcd").beaconSidesSwapped,
     false,
     "Swap views remains visual-only",
   );
 
   document.getElementById("changeoverBtn").click();
 
-  await waitFor(() => firestoreState.docs.get("courts/lifecourt").beaconSidesSwapped === true, {
+  await waitFor(() => firestoreState.docs.get("courts/abcd").beaconSidesSwapped === true, {
     label: "local changeover toggles backend Beacon state",
   });
   await waitFor(
@@ -174,7 +174,7 @@ test("Changeover toggles its own state and independently toggles the local view"
   swapViewsButton.click();
   assert.equal(document.querySelector(".scoreboard").classList.contains("swapped"), true);
   assert.equal(swapViewsLabel(), "Unswap views");
-  assert.equal(firestoreState.docs.get("courts/lifecourt").beaconSidesSwapped, true);
+  assert.equal(firestoreState.docs.get("courts/abcd").beaconSidesSwapped, true);
   assert.equal(
     document.getElementById("changeoverTile").querySelector("span").textContent,
     "Changeover *",
@@ -186,11 +186,11 @@ test("Changeover toggles its own state and independently toggles the local view"
   swapViewsButton.click();
   assert.equal(document.querySelector(".scoreboard").classList.contains("swapped"), false);
   assert.equal(swapViewsLabel(), "Swap views");
-  assert.equal(firestoreState.docs.get("courts/lifecourt").beaconSidesSwapped, true);
+  assert.equal(firestoreState.docs.get("courts/abcd").beaconSidesSwapped, true);
 
   document.getElementById("changeoverBtn").click();
 
-  await waitFor(() => firestoreState.docs.get("courts/lifecourt").beaconSidesSwapped === false, {
+  await waitFor(() => firestoreState.docs.get("courts/abcd").beaconSidesSwapped === false, {
     label: "second local changeover toggles backend independently of view",
   });
   await waitFor(
@@ -210,8 +210,8 @@ test("Changeover toggles its own state and independently toggles the local view"
 
   // Remote changeover broadcasts use the same blind local toggles and do not
   // play the local-only clash sound.
-  const remoteCourt = firestoreState.docs.get("courts/lifecourt");
-  writeDoc("courts/lifecourt", {
+  const remoteCourt = firestoreState.docs.get("courts/abcd");
+  writeDoc("courts/abcd", {
     ...remoteCourt,
     beaconSidesSwapped: true,
     changeoverEvent: { id: "remote-changeover-1" },
@@ -249,7 +249,7 @@ test("Changeover toggles its own state and independently toggles the local view"
   document.getElementById("muteBtn").click();
   assert.equal(document.getElementById("muteBtn").getAttribute("aria-pressed"), "true");
   document.getElementById("changeoverBtn").click();
-  await waitFor(() => firestoreState.docs.get("courts/lifecourt").beaconSidesSwapped === false, {
+  await waitFor(() => firestoreState.docs.get("courts/abcd").beaconSidesSwapped === false, {
     label: "muted changeover toggles backend",
   });
   await waitFor(() => document.getElementById("changeoverBtn").disabled === false, {
@@ -275,7 +275,7 @@ test("changeover shows backend processing feedback and recovers from failure", a
   const label = document.getElementById("changeoverTile").querySelector("span");
   const originalHandler = callableHandlers.get("changeoverCourt");
   const initialBeaconSidesSwapped =
-    firestoreState.docs.get("courts/lifecourt").beaconSidesSwapped === true;
+    firestoreState.docs.get("courts/abcd").beaconSidesSwapped === true;
 
   try {
     let backendReadyToComplete = null;
@@ -295,7 +295,7 @@ test("changeover shows backend processing feedback and recovers from failure", a
 
     assert.equal(backendStarted, true);
     assert.equal(
-      firestoreState.docs.get("courts/lifecourt").beaconSidesSwapped,
+      firestoreState.docs.get("courts/abcd").beaconSidesSwapped,
       initialBeaconSidesSwapped,
       "backend changeover must not complete while its response is held",
     );
@@ -318,7 +318,7 @@ test("changeover shows backend processing feedback and recovers from failure", a
     );
 
     assert.equal(
-      firestoreState.docs.get("courts/lifecourt").beaconSidesSwapped,
+      firestoreState.docs.get("courts/abcd").beaconSidesSwapped,
       !initialBeaconSidesSwapped,
       "backend changeover should complete after the held callable resolves",
     );
@@ -357,8 +357,8 @@ test("changeover shows backend processing feedback and recovers from failure", a
     callableHandlers.set("changeoverCourt", originalHandler);
   }
 
-  const postTestCourt = firestoreState.docs.get("courts/lifecourt");
-  writeDoc("courts/lifecourt", {
+  const postTestCourt = firestoreState.docs.get("courts/abcd");
+  writeDoc("courts/abcd", {
     ...postTestCourt,
     beaconSidesSwapped: initialBeaconSidesSwapped,
   });
@@ -382,13 +382,13 @@ test("active changeover state is applied on join without changing the local view
     label: "menu after leaving court",
   });
 
-  const court = firestoreState.docs.get("courts/lifecourt");
-  writeDoc("courts/lifecourt", {
+  const court = firestoreState.docs.get("courts/abcd");
+  writeDoc("courts/abcd", {
     ...court,
     beaconSidesSwapped: true,
   });
 
-  await joinCourtAsPlayer(document, "lifecourt");
+  await joinCourtAsPlayer(document, "abcd");
 
   // An active backend changeover controls Beacon semantics, not this client's
   // preferred view order.
@@ -412,7 +412,7 @@ test("active changeover state is applied on join without changing the local view
 
   document.getElementById("changeoverBtn").click();
 
-  await waitFor(() => firestoreState.docs.get("courts/lifecourt").beaconSidesSwapped === false, {
+  await waitFor(() => firestoreState.docs.get("courts/abcd").beaconSidesSwapped === false, {
     label: "player toggles active changeover off",
   });
   await waitFor(
@@ -444,7 +444,7 @@ test("shallow reset through the UI zeroes the scoreboard", async () => {
     () => getRenderedScore(document).setsA === 0 && getRenderedScore(document).pointsA === "0",
     { label: "scoreboard zeroed after reset" },
   );
-  assert.equal(firestoreState.docs.get("courts/lifecourt").beaconSidesSwapped, false);
+  assert.equal(firestoreState.docs.get("courts/abcd").beaconSidesSwapped, false);
 });
 
 test("CORE: scoring still works after a reset bumps the scoreVersion", async () => {
@@ -460,8 +460,8 @@ test("CORE: scoring still works after a reset bumps the scoreVersion", async () 
 });
 
 test("court closed by admin kicks the player back to the menu", async () => {
-  const court = firestoreState.docs.get("courts/lifecourt");
-  writeDoc("courts/lifecourt", { ...court, status: "closed" });
+  const court = firestoreState.docs.get("courts/abcd");
+  writeDoc("courts/abcd", { ...court, status: "closed" });
 
   await waitFor(() => document.getElementById("menuPage").style.display !== "none", {
     label: "menu page after closure",
@@ -470,8 +470,8 @@ test("court closed by admin kicks the player back to the menu", async () => {
 });
 
 test("spectator joins with the court's active changeover visual state", async () => {
-  const court = firestoreState.docs.get("courts/watchcourt");
-  writeDoc("courts/watchcourt", {
+  const court = firestoreState.docs.get("courts/xyzz");
+  writeDoc("courts/xyzz", {
     ...court,
     beaconSidesSwapped: true,
   });
@@ -482,10 +482,10 @@ test("spectator joins with the court's active changeover visual state", async ()
   assert.ok(spectateButton, "Spectate menu button exists");
   spectateButton.click();
 
-  await waitFor(() => document.querySelector(`#spectateCourtList [data-court-name="watchcourt"]`), {
-    label: "watchcourt in spectate list",
+  await waitFor(() => document.querySelector(`#spectateCourtList [data-court-name="xyzz"]`), {
+    label: "xyzz in spectate list",
   });
-  document.querySelector(`#spectateCourtList [data-court-name="watchcourt"]`).click();
+  document.querySelector(`#spectateCourtList [data-court-name="xyzz"]`).click();
 
   await waitFor(() => document.getElementById("scoreboardPage").style.display !== "none", {
     label: "scoreboard shown for spectator",
@@ -506,10 +506,10 @@ test("spectator sees live score updates pushed by other devices", async () => {
   assert.ok(spectateButton, "Spectate menu button exists");
   spectateButton.click();
 
-  await waitFor(() => document.querySelector(`#spectateCourtList [data-court-name="watchcourt"]`), {
-    label: "watchcourt in spectate list",
+  await waitFor(() => document.querySelector(`#spectateCourtList [data-court-name="xyzz"]`), {
+    label: "xyzz in spectate list",
   });
-  document.querySelector(`#spectateCourtList [data-court-name="watchcourt"]`).click();
+  document.querySelector(`#spectateCourtList [data-court-name="xyzz"]`).click();
 
   await waitFor(() => document.getElementById("scoreboardPage").style.display !== "none", {
     label: "scoreboard shown for spectator",
@@ -520,7 +520,7 @@ test("spectator sees live score updates pushed by other devices", async () => {
   });
 
   pushScoreSnapshot(
-    "watchcourt",
+    "xyzz",
     makeScore({
       A: { points: 3, games: 2, sets: 0, totalPoints: 11 },
       B: { points: 1, games: 3, sets: 1, totalPoints: 17 },

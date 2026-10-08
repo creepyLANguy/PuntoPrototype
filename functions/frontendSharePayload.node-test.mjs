@@ -84,7 +84,7 @@ test("the share payload carries brand, teams, score, court and link", () => {
   Object.assign(session, {
     currentCourtId: "abcd",
     currentCourtName: "Centre",
-    currentMatchId: "m-abcd",
+    currentMatchId: "abcdaaaa",
     currentRawTeamNames: { A: "Reds", B: "Blues" },
     currentPlayerNames: { A1: "", A2: "", B1: "", B2: "" },
     score: score({ completedSets: [{ A: 6, B: 2 }] }),
@@ -104,13 +104,13 @@ test("the share payload carries brand, teams, score, court and link", () => {
         "View live scoreboard:",
         "https://padel.test/c/abcd",
         "\nThis match:",
-        "https://padel.test/m/m-abcd",
+        "https://padel.test/m/abcdaaaa",
       ].join("\n"),
     );
 
     shareCardState.shareableScoreCardImage = { name: "share-image.png" };
     const details = getSharePayload("details");
-    assert.match(details.text, /View full match details:\nhttps:\/\/padel\.test\/m\/m-abcd$/);
+    assert.match(details.text, /View full match details:\nhttps:\/\/padel\.test\/m\/abcdaaaa$/);
     assert.deepEqual(details.files, [{ name: "share-image.png" }]);
     assert.deepEqual(getSharePayload("scoreboard").files, [], "only details shares the image");
   } finally {

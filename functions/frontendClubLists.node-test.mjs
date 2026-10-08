@@ -73,13 +73,13 @@ test.before(async () => {
   seedCourt("jkmn", { name: "Gamma Court" });
   seedCourt("pqrs", { name: "Delta Court", status: "private" });
   seedCourt("stux", { name: "Closed Court", status: "closed" });
-  seedDoc("clubs/rvside", {
+  seedDoc("clubs/abcdefghjk", {
     name: "Riverside Padel",
     state: "open",
     courtIds: ["abcd"],
     deviceIds: [],
   });
-  seedDoc("clubs/hiltop", {
+  seedDoc("clubs/jkmnpqrstu", {
     name: "Hilltop Club",
     state: "open",
     courtIds: ["jkmn", "pqrs"],
@@ -133,10 +133,10 @@ test("Spectate search matches court names, court ids, club names and club ids", 
   const search = $("spectateCourtSearch");
   const cases = [
     ["riverside", ["abcd"]],
-    ["HILTOP", ["jkmn"]],
+    ["JKMNPQRSTU", ["jkmn"]],
     ["club", ["jkmn"]],
     ["beta", ["efgh"]],
-    ["EFGH", ["efgh"]],
+    ["EFGH", ["efgh", "abcd"]],
     ["court", ["abcd", "efgh", "jkmn"]],
     ["nothing-matches", []],
     ["", ["abcd", "efgh", "jkmn"]],
@@ -221,25 +221,25 @@ test("courts belonging to maintenance or closed clubs stay out of user lists", a
   await openList("Play", "playCourtList", 4);
   await closeList("closePlayBtn");
 
-  firestoreState.docs.set("clubs/closedc", {
+  firestoreState.docs.set("clubs/cdefghjkmn", {
     name: "Closed Club",
     state: "closed",
-    courtIds: ["cclos"],
+    courtIds: ["cqas"],
     deviceIds: [],
   });
-  firestoreState.docs.set("clubs/maintc", {
+  firestoreState.docs.set("clubs/pqrstuxyza", {
     name: "Maintenance Club",
     state: "maintenance",
-    courtIds: ["cmaint"],
+    courtIds: ["cman"],
     deviceIds: [],
   });
-  seedCourt("cclos", { name: "Closed Club Court", status: "open", clubId: "closedc" });
-  seedCourt("cmaint", { name: "Maintenance Court", status: "open", clubId: "maintc" });
+  seedCourt("cqas", { name: "Closed Club Court", status: "open", clubId: "cdefghjkmn" });
+  seedCourt("cman", { name: "Maintenance Court", status: "open", clubId: "pqrstuxyza" });
 
   await openList("Play", "playCourtList", 4);
   assert.deepEqual(rowIds("playCourtList"), ["abcd", "efgh", "pqrs", "jkmn"]);
   assert.equal(
-    rowIds("playCourtList").some((id) => /cclos|cmaint/.test(id)),
+    rowIds("playCourtList").some((id) => /cqas|cman/.test(id)),
     false,
   );
 
@@ -247,8 +247,8 @@ test("courts belonging to maintenance or closed clubs stay out of user lists", a
 });
 
 test("the club column is hidden when no court belongs to a club", async () => {
-  firestoreState.docs.delete("clubs/rvside");
-  firestoreState.docs.delete("clubs/hiltop");
+  firestoreState.docs.delete("clubs/abcdefghjk");
+  firestoreState.docs.delete("clubs/jkmnpqrstu");
 
   await openList("Play", "playCourtList", 4);
   assert.equal($("playCourtList").classList.contains("has-clubs"), false);

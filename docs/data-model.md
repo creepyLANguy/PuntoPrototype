@@ -29,9 +29,33 @@ The collection relationships are visualized in [PP_Data_Model.mmd](PP_Data_Model
 | devices/{deviceId} | Device identity, SKU, current court binding and club |
 | clubs/{clubId} | Club identity and the courts and devices that belong to it |
 
+## Resource IDs
+
+All resource IDs use only the 21-character alphabet `abcdefghjkmnpqrstuxyz`:
+
+| Type | Length |
+|---|---|
+| courtId | 4 |
+| tournamentId | 6 |
+| matchId | 8 |
+| clubId | 10 |
+
+Backend allocation checks only the target type's collection within the same
+Firestore transaction that creates its document. The canonical allocator tries
+at most `MAX_ID_ALLOCATION_ATTEMPTS = 5` candidates before returning an `aborted`
+error. Transaction retries recheck collisions; create-only writes prevent
+overwriting an existing resource. Multiple allocations in one transaction also
+reserve candidates locally before any writes.
+
+The frontend requests creation through `createWithUniqueId(type, data,
+credentials)`; it never generates a resource ID or separately checks uniqueness.
+Supplied internal IDs must satisfy their type's exact lowercase length and
+alphabet. Legacy formats are not supported; clear and repopulate the database
+before using this contract.
+
 ## Court document
 
-The current frontend creates court documents with fields including:
+The backend `createCourt` callable creates court documents with fields including:
 
 - name
 - password

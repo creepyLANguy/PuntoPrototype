@@ -4,6 +4,7 @@
 const { db } = require("../infrastructure/firebase");
 const matchService = require("../services/matchService");
 const { paths } = require("../services/firestorePaths");
+const { validateId } = require("../services/ids");
 const {
   readCredentials,
   requireAdmin,
@@ -47,26 +48,19 @@ const OPERATIONS = {
 
   async createMatch(data, credentials) {
     const actor = await requireAdmin(credentials);
-    const prepared = matchService.prepareMatch({
-      name: data.name,
-      teamNames: data.teamNames,
-      playerNames: data.playerNames,
-      scoringOptions: data.scoringOptions || {},
-      kind: "casual",
-      visibility: data.visibility === "private" ? "private" : "public",
-    });
-    await db.runTransaction(async (tx) => {
-      matchService.writePreparedMatch(tx, prepared);
-    });
-    if (data.courtId) {
-      await matchService.startMatch({
-        matchId: prepared.matchId,
+    return matchService.createMatchDocument(
+      {
+        name: data.name,
+        teamNames: data.teamNames,
+        playerNames: data.playerNames,
+        scoringOptions: data.scoringOptions || {},
+        kind: "casual",
+        visibility: data.visibility === "private" ? "private" : "public",
         courtId: data.courtId,
         displace: Boolean(data.displace),
-        actor,
-      });
-    }
-    return { matchId: prepared.matchId };
+      },
+      { actor },
+    );
   },
 
   async startMatch(data, credentials) {
@@ -175,6 +169,8 @@ const OPERATIONS = {
 
 async function manageMatch(request) {
   const data = request.data || {};
+  if (data.matchId !== undefined) validateId("match", data.matchId);
+  if (data.courtId !== undefined && data.courtId !== null) validateId("court", data.courtId);
   const handler = OPERATIONS[data.operation];
   if (!handler) throw invalid("Unknown match operation.");
 

@@ -31,7 +31,7 @@ function state(formatId, config = {}, participantMode = "team", entryCount = 8) 
         version: 1,
         config: tournaments.getFormat(formatId).normalizeConfig(config),
       },
-      courtPool: ["c1", "c2", "c3", "c4"],
+      courtPool: ["abcd", "efgh", "jkmn", "pqrs"],
       scheduling: {
         startAt: 1000,
         defaultMatchDurationMinutes: 30,
@@ -233,12 +233,12 @@ describe("king court and scheduling", () => {
     expect(next.assignments.length).toBeGreaterThan(0);
     expect(next.queue.length).toBeGreaterThan(0);
     const scheduled = tournaments.assignCourts(target.fixtures, {
-      courtPool: ["c1", "c2"],
+      courtPool: ["abcd", "efgh"],
       unavailableCourtIds: [],
       startAt: 1000,
       matchDurationMinutes: 20,
       changeoverMinutes: 5,
     });
-    expect(scheduled[0]).toMatchObject({ courtId: "c1", scheduledStartAt: 1000, wave: 1 });
+    expect(scheduled[0]).toMatchObject({ courtId: "abcd", scheduledStartAt: 1000, wave: 1 });
   });
 });

@@ -86,31 +86,31 @@ async function openClub(clubId) {
 
 test.before(async () => {
   seedBaseData();
-  seedCourt("abcd", { name: "Alpha Court", clubId: "rvside" });
+  seedCourt("abcd", { name: "Alpha Court", clubId: "abcdefghjk" });
   seedCourt("efgh", { name: "Beta Court" });
-  seedCourt("jkmn", { name: "Gamma Court", clubId: "hiltop" });
+  seedCourt("jkmn", { name: "Gamma Court", clubId: "jkmnpqrstu" });
   seedCourt("pqrs", { name: "Delta Court", status: "private" });
-  seedCourt("stux", { name: "Echo Court", clubId: "ghostc" });
-  seedDoc("clubs/rvside", {
+  seedCourt("stux", { name: "Echo Court", clubId: "qrstuxyzab" });
+  seedDoc("clubs/abcdefghjk", {
     name: "Riverside Padel",
     state: "open",
     courtIds: ["abcd"],
     deviceIds: ["HUB-1"],
   });
-  seedDoc("clubs/hiltop", {
+  seedDoc("clubs/jkmnpqrstu", {
     name: "Hilltop Club",
     state: "open",
     courtIds: ["jkmn"],
     deviceIds: [],
   });
   // Lists a court and a device that no longer exist.
-  seedDoc("clubs/ghostc", {
+  seedDoc("clubs/qrstuxyzab", {
     name: "Ghost Club",
     state: "closed",
     courtIds: ["stux", "zzzz"],
     deviceIds: ["GONE-9"],
   });
-  seedDoc("devices/HUB-1", { courtId: "abcd", clubId: "rvside" });
+  seedDoc("devices/HUB-1", { courtId: "abcd", clubId: "abcdefghjk" });
   seedDoc("devices/PULSE-2", { courtId: "efgh" });
 
   clubRequests = installClubBackend();
@@ -138,13 +138,13 @@ test("the admin court and device lists show each item's club and search by it", 
       .closest(".admin-court-item")
       .querySelector(".club-cell");
   assert.equal(courtClub("abcd").querySelector(".aci-value").textContent, "Riverside Padel");
-  assert.equal(courtClub("abcd").querySelector(".aci-value").title, "Riverside Padel (RVSIDE)");
+  assert.equal(courtClub("abcd").querySelector(".aci-value").title, "Riverside Padel (ABCDEFGHJK)");
   assert.equal(courtClub("abcd").classList.contains("is-empty"), false);
   assert.equal(courtClub("efgh").querySelector(".aci-value").textContent, "—");
   assert.equal(courtClub("efgh").classList.contains("is-empty"), true);
 
   assert.match($("adminCourtSearch").placeholder, /club/i);
-  typeInto($("adminCourtSearch"), "hiltop");
+  typeInto($("adminCourtSearch"), "jkmnpqrstu");
   assert.deepEqual(texts("#adminCourtList .aci-name strong"), ["Gamma Court"]);
   typeInto($("adminCourtSearch"), "");
 
@@ -159,8 +159,8 @@ test("the admin court and device lists show each item's club and search by it", 
   assert.deepEqual(texts("#adminDeviceList .club-cell .aci-value"), ["Riverside Padel", "—"]);
   for (const [term, count] of [
     ["riverside", 1],
-    ["RVSIDE", 1],
-    ["efgh", 1],
+    ["ABCDEFGHJK", 1],
+    ["efgh", 2],
     ["pulse", 1],
     ["", 2],
   ]) {
@@ -195,13 +195,13 @@ test("the Clubs tab lists every club with its court and device counts", async ()
     item.querySelector(".club-devices-cell .aci-value").textContent,
   ]);
   assert.deepEqual(rows, [
-    ["Ghost Club", "ID: GHOSTC", "Closed", "2 courts", "1 device"],
-    ["Hilltop Club", "ID: HILTOP", "Open", "1 court", "0 devices"],
-    ["Riverside Padel", "ID: RVSIDE", "Open", "1 court", "1 device"],
+    ["Ghost Club", "ID: QRSTUXYZAB", "Closed", "2 courts", "1 device"],
+    ["Hilltop Club", "ID: JKMNPQRSTU", "Open", "1 court", "0 devices"],
+    ["Riverside Padel", "ID: ABCDEFGHJK", "Open", "1 court", "1 device"],
   ]);
 
   for (const [term, expected] of [
-    ["rvs", ["Riverside Padel"]],
+    ["abcdefghjk", ["Riverside Padel"]],
     ["CLUB", ["Ghost Club", "Hilltop Club"]],
     ["nope", []],
   ]) {
@@ -257,7 +257,7 @@ test("Add Club creates the club and moves members from their old club", async ()
   assert.equal(gamma.querySelector(".club-member-club").textContent, "Hilltop Club");
   assert.equal(
     gamma.querySelector(".club-member-club").title,
-    "Currently in Hilltop Club (HILTOP)",
+    "Currently in Hilltop Club (JKMNPQRSTU)",
   );
   gamma.querySelector("input").click();
   assert.equal(gamma.classList.contains("will-move"), true);
@@ -289,7 +289,7 @@ test("Add Club creates the club and moves members from their old club", async ()
   ]);
 
   const seasideId = clubIdNamed("Seaside Club");
-  assert.match(seasideId, /^[a-z]{6}$/);
+  assert.match(seasideId, /^[abcdefghjkmnpqrstuxyz]{10}$/);
   assert.match(
     lastToast(),
     new RegExp(`Club "Seaside Club" created\\. ID: ${seasideId.toUpperCase()}`),
@@ -299,11 +299,11 @@ test("Add Club creates the club and moves members from their old club", async ()
   assert.equal(stored("courts/efgh").clubId, seasideId);
   assert.equal(stored("courts/jkmn").clubId, seasideId);
   assert.equal(stored("devices/PULSE-2").clubId, seasideId);
-  assert.deepEqual(stored("clubs/hiltop").courtIds, [], "Gamma Court left Hilltop Club");
+  assert.deepEqual(stored("clubs/jkmnpqrstu").courtIds, [], "Gamma Court left Hilltop Club");
 
   assert.equal($("clubsTab").classList.contains("active"), true, "lands on the Clubs tab");
   assert.equal(
-    clubRow("hiltop").querySelector(".club-courts-cell .aci-value").textContent,
+    clubRow("jkmnpqrstu").querySelector(".club-courts-cell .aci-value").textContent,
     "0 courts",
   );
 });
@@ -327,11 +327,11 @@ test("a club the backend rejects stays open with the reason shown", async () => 
 });
 
 test("a club's courts and devices open their edit pages and return to the club", async () => {
-  await openClub("rvside");
+  await openClub("abcdefghjk");
   assert.deepEqual(window.history.state.viewState.page, "editClub");
-  assert.equal(window.history.state.viewState.entityId, "rvside");
+  assert.equal(window.history.state.viewState.entityId, "abcdefghjk");
   assert.equal($("editClubTitle").textContent, "Riverside Padel");
-  assert.equal($("editClubIdLine").textContent, "ID: RVSIDE");
+  assert.equal($("editClubIdLine").textContent, "ID: ABCDEFGHJK");
   assert.equal($("saveClubBtn").textContent, "Save Club");
   assert.equal(memberChecked("clubCourtList", "abcd"), true);
   assert.equal(memberChecked("clubDeviceList", "HUB-1"), true);
@@ -374,7 +374,7 @@ test("a club's courts and devices open their edit pages and return to the club",
     },
   );
   assert.equal(stored("courts/abcd").name, "Alpha Court Renamed");
-  assert.equal(stored("courts/abcd").clubId, "rvside", "editing a court keeps its club");
+  assert.equal(stored("courts/abcd").clubId, "abcdefghjk", "editing a court keeps its club");
   assert.equal(memberChecked("clubCourtList", "efgh"), true);
 
   // Unticking a member releases it from the club on save.
@@ -388,7 +388,7 @@ test("a club's courts and devices open their edit pages and return to the club",
   assert.deepEqual(clubRequests.at(-1), [
     "updateClub",
     {
-      clubId: "rvside",
+      clubId: "abcdefghjk",
       name: "Riverside Padel",
       state: "open",
       courtIds: ["abcd", "efgh"],
@@ -396,15 +396,15 @@ test("a club's courts and devices open their edit pages and return to the club",
     },
   ]);
   assert.equal(lastToast(), 'Club "Riverside Padel" saved.');
-  assert.deepEqual(stored("clubs/rvside").courtIds, ["abcd", "efgh"]);
-  assert.deepEqual(stored("clubs/rvside").deviceIds, []);
+  assert.deepEqual(stored("clubs/abcdefghjk").courtIds, ["abcd", "efgh"]);
+  assert.deepEqual(stored("clubs/abcdefghjk").deviceIds, []);
   assert.equal(stored("devices/HUB-1").clubId, null, "the unticked device was released");
-  assert.equal(stored("courts/efgh").clubId, "rvside");
+  assert.equal(stored("courts/efgh").clubId, "abcdefghjk");
   assert.deepEqual(stored(`clubs/${seasideId}`).courtIds, ["jkmn"]);
 });
 
 test("browser back and forward leave and restore the editor with its unsaved changes", async () => {
-  await openClub("hiltop");
+  await openClub("jkmnpqrstu");
   memberRow("clubCourtList", "pqrs").querySelector("input").click();
 
   window.history.back();
@@ -428,7 +428,7 @@ test("browser back and forward leave and restore the editor with its unsaved cha
 });
 
 test("an editor without changes closes straight away", async () => {
-  await openClub("hiltop");
+  await openClub("jkmnpqrstu");
   assert.equal(
     memberChecked("clubCourtList", "pqrs"),
     false,
@@ -440,7 +440,7 @@ test("an editor without changes closes straight away", async () => {
   assert.equal(confirmIsOpen(), false);
   await waitForDashboardClubs(4);
 
-  await openClub("hiltop");
+  await openClub("jkmnpqrstu");
   $("closeEditClubBtn").click();
   await settle(20);
   assert.equal(confirmIsOpen(), false);
@@ -448,7 +448,7 @@ test("an editor without changes closes straight away", async () => {
 });
 
 test("members that no longer exist are dropped, also when deleted from the editor", async () => {
-  await openClub("ghostc");
+  await openClub("qrstuxyzab");
   // zzzz and GONE-9 do not exist any more, so only Echo Court counts.
   assert.equal($("clubCourtsCount").textContent, "1 selected");
   assert.equal($("clubDevicesCount").textContent, "0 selected");
@@ -462,7 +462,7 @@ test("members that no longer exist are dropped, also when deleted from the edito
   assert.equal(memberRow("clubCourtList", "stux"), null);
   assert.equal($("clubCourtsCount").textContent, "0 selected");
   assert.equal(stored("courts/stux"), undefined);
-  await waitFor(() => !stored("clubs/ghostc").courtIds.includes("stux"), {
+  await waitFor(() => !stored("clubs/qrstuxyzab").courtIds.includes("stux"), {
     label: "the court deletion trigger drops the court from its club",
   });
 
@@ -471,29 +471,29 @@ test("members that no longer exist are dropped, also when deleted from the edito
   assert.deepEqual(clubRequests.at(-1), [
     "updateClub",
     {
-      clubId: "ghostc",
+      clubId: "qrstuxyzab",
       name: "Ghost Club",
       state: "closed",
       courtIds: [],
       deviceIds: [],
     },
   ]);
-  assert.deepEqual(stored("clubs/ghostc").courtIds, []);
-  assert.deepEqual(stored("clubs/ghostc").deviceIds, []);
+  assert.deepEqual(stored("clubs/qrstuxyzab").courtIds, []);
+  assert.deepEqual(stored("clubs/qrstuxyzab").deviceIds, []);
 });
 
 test("club names are shown as text, never as markup", async () => {
   const markupName = "<b>Bold</b> & Co";
-  await openClub("ghostc");
+  await openClub("qrstuxyzab");
   typeInto($("editClubName"), markupName);
   $("saveClubBtn").click();
   await waitForDashboardClubs(4);
 
-  const name = clubRow("ghostc").querySelector(".club-name");
+  const name = clubRow("qrstuxyzab").querySelector(".club-name");
   assert.equal(name.textContent, markupName);
   assert.equal(name.querySelector("b"), null);
 
-  await openClub("ghostc");
+  await openClub("qrstuxyzab");
   assert.equal($("editClubTitle").textContent, markupName);
   $("deleteClubBtn").click();
   await waitFor(confirmIsOpen, { label: "delete confirmation" });
@@ -502,24 +502,24 @@ test("club names are shown as text, never as markup", async () => {
   $("confirmCancelBtn").click();
   await settle();
   assert.equal(isShown("editClubPage"), true, "cancelling keeps the club");
-  assert.ok(stored("clubs/ghostc"));
+  assert.ok(stored("clubs/qrstuxyzab"));
   $("closeEditClubBtn").click();
   await waitForDashboardClubs(4);
 });
 
 test("Delete Club removes the club and releases its courts and devices", async () => {
-  await openClub("rvside");
+  await openClub("abcdefghjk");
   $("deleteClubBtn").click();
   assert.match(await confirmDialog(true), /no longer belong to a club/);
 
   await waitForDashboardClubs(3);
-  assert.deepEqual(clubRequests.at(-1), ["deleteClub", { clubId: "rvside" }]);
+  assert.deepEqual(clubRequests.at(-1), ["deleteClub", { clubId: "abcdefghjk" }]);
   assert.equal(lastToast(), "Club deleted.");
-  assert.equal(stored("clubs/rvside"), undefined);
+  assert.equal(stored("clubs/abcdefghjk"), undefined);
   assert.equal(stored("courts/abcd").clubId, null);
   assert.equal(stored("courts/efgh").clubId, null);
   assert.equal(stored("devices/HUB-1").clubId, null);
-  assert.equal(clubRow("rvside"), null);
+  assert.equal(clubRow("abcdefghjk"), null);
 });
 
 test("the Clubs tab explains how to start when there are no clubs", async () => {

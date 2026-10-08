@@ -12,8 +12,10 @@ import {
   limit,
 } from "./firestore.js";
 import { db } from "./client.js";
+import { assertId } from "../config/idContract.js";
 
 export function listenToTournamentView(tournamentId, onNext, onError) {
+  assertId("tournament", tournamentId);
   return onSnapshot(doc(db, "tournamentViews", tournamentId), onNext, onError);
 }
 
@@ -24,6 +26,7 @@ export function getAllTournaments() {
 }
 
 export function getTournamentDirectoryEntry(tournamentId) {
+  assertId("tournament", tournamentId);
   return getDoc(doc(db, "tournamentDirectory", tournamentId));
 }
 

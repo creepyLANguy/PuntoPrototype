@@ -1,12 +1,13 @@
 const { db, FieldValue } = require("../infrastructure/firebase");
 const { buildScoringOptions } = require("../domain/scoring/modes");
+const { paths } = require("../services/firestorePaths");
 
 async function changeoverCourt(request) {
   const { courtId } = request.data || {};
 
   if (!courtId) throw new Error("Missing courtId");
 
-  const courtRef = db.doc(`courts/${courtId}`);
+  const courtRef = db.doc(paths.court(courtId));
   const changeoverEventId = db.collection("_changeoverEvents").doc().id;
   let nextValue;
 
@@ -20,8 +21,8 @@ async function changeoverCourt(request) {
     const courtData = courtSnap.data() || {};
     const matchId = courtData.activeMatchId || courtData.lastMatchId;
     if (matchId) {
-      const matchSnap = await tx.get(db.doc(`matches/${matchId}`));
-      const scoreSnap = await tx.get(db.doc(`matches/${matchId}/score/current`));
+      const matchSnap = await tx.get(db.doc(paths.match(matchId)));
+      const scoreSnap = await tx.get(db.doc(paths.matchScore(matchId)));
       const match = matchSnap.data() || {};
       const score = scoreSnap.data() || {};
       const options = buildScoringOptions({

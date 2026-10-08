@@ -15,26 +15,36 @@ import {
 
 test("club documents are normalised to plain records", () => {
   assert.deepEqual(
-    clubFromData("rvside", { name: "  Riverside  ", courtIds: ["abcd", 7], deviceIds: "x" }),
-    { id: "rvside", name: "Riverside", state: "maintenance", courtIds: ["abcd"], deviceIds: [] },
+    clubFromData("abcdefghjk", { name: "  Riverside  ", courtIds: ["abcd", 7], deviceIds: "x" }),
+    {
+      id: "abcdefghjk",
+      name: "Riverside",
+      state: "maintenance",
+      courtIds: ["abcd"],
+      deviceIds: [],
+    },
   );
   assert.equal(clubFromData("noname", {}).name, "noname", "a club without a name shows its id");
 });
 
 test("the index maps courts and devices to their club and sorts clubs by name", () => {
-  const riverside = clubFromData("rvside", {
+  const riverside = clubFromData("abcdefghjk", {
     name: "Riverside",
     courtIds: ["abcd"],
     deviceIds: ["HUB-1"],
   });
-  const hilltop = clubFromData("hiltop", { name: "Hilltop", courtIds: ["jkmn"], deviceIds: [] });
+  const hilltop = clubFromData("jkmnpqrstu", {
+    name: "Hilltop",
+    courtIds: ["jkmn"],
+    deviceIds: [],
+  });
   const index = buildClubIndex([riverside, hilltop]);
 
   assert.deepEqual(
     index.clubs.map((club) => club.id),
-    ["hiltop", "rvside"],
+    ["jkmnpqrstu", "abcdefghjk"],
   );
-  assert.equal(index.byId.get("rvside"), riverside);
+  assert.equal(index.byId.get("abcdefghjk"), riverside);
   assert.equal(index.clubByCourtId.get("abcd"), riverside);
   assert.equal(index.clubByCourtId.get("jkmn"), hilltop);
   assert.equal(index.clubByDeviceId.get("HUB-1"), riverside);
@@ -42,23 +52,26 @@ test("the index maps courts and devices to their club and sorts clubs by name", 
   assert.equal(EMPTY_CLUB_INDEX.clubByCourtId.size, 0);
 });
 
-test("legacy clubs default to maintenance state", () => {
-  assert.equal(clubFromData("legacy", {}).state, "maintenance");
-  assert.equal(clubFromData("open", { state: "open" }).state, "open");
-  assert.equal(clubFromData("closed", { state: "closed" }).state, "closed");
+test("clubs without a state default to maintenance state", () => {
+  assert.equal(clubFromData("abcdefghjk", {}).state, "maintenance");
+  assert.equal(clubFromData("jkmnpqrstu", { state: "open" }).state, "open");
+  assert.equal(clubFromData("qrstuxyzab", { state: "closed" }).state, "closed");
 });
 
 test("a member listed by two clubs resolves deterministically to the first by name", () => {
-  const zulu = clubFromData("zzzzzz", { name: "Zulu", courtIds: ["abcd"] });
-  const alpha = clubFromData("aaaaaa", { name: "Alpha", courtIds: ["abcd"] });
-  assert.equal(buildClubIndex([zulu, alpha]).clubByCourtId.get("abcd").id, "aaaaaa");
+  const zulu = clubFromData("zzzzzzzzzz", { name: "Zulu", courtIds: ["abcd"] });
+  const alpha = clubFromData("aaaaaaaaaa", { name: "Alpha", courtIds: ["abcd"] });
+  assert.equal(buildClubIndex([zulu, alpha]).clubByCourtId.get("abcd").id, "aaaaaaaaaa");
 });
 
 test("club summaries carry only the id and name", () => {
-  assert.deepEqual(clubSummary(clubFromData("rvside", { name: "Riverside", courtIds: ["a"] })), {
-    id: "rvside",
-    name: "Riverside",
-  });
+  assert.deepEqual(
+    clubSummary(clubFromData("abcdefghjk", { name: "Riverside", courtIds: ["a"] })),
+    {
+      id: "abcdefghjk",
+      name: "Riverside",
+    },
+  );
   assert.equal(clubSummary(undefined), null);
 });
 
@@ -66,11 +79,11 @@ test("court search matches the court or its club, by name or id, ignoring case",
   const court = {
     id: "abcd",
     name: "Centre Court",
-    club: { id: "rvside", name: "Riverside Padel" },
+    club: { id: "abcdefghjk", name: "Riverside Padel" },
   };
   const clubless = { id: "efgh", name: "Side Court", club: null };
 
-  for (const term of ["centre", "ABCD", "riverside", "PADEL", "rvsi", "  river  ", ""]) {
+  for (const term of ["centre", "ABCD", "riverside", "PADEL", "abcdefghjk", "  river  ", ""]) {
     assert.equal(courtMatchesSearch(court, term), true, `matches "${term}"`);
   }
   assert.equal(courtMatchesSearch(court, "hilltop"), false);

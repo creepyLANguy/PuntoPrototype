@@ -14,18 +14,18 @@ const {
   ClubError,
   CLUB_STATES,
   MEMBER_KINDS,
-  generateClubId,
   normalizeClubId,
   normalizeClubName,
   normalizeClubState,
   normalizeMemberIds,
   planMembershipChange,
 } = require("../domain/clubs/membership");
+const { allocateId } = require("./ids");
+const { paths } = require("./firestorePaths");
 
 const CLUBS_COLLECTION = "clubs";
 // array-contains-any accepts at most 30 values per query.
 const ARRAY_CONTAINS_ANY_LIMIT = 30;
-const MAX_CLUB_ID_ATTEMPTS = 5;
 
 function chunk(values, size) {
   const chunks = [];
@@ -34,11 +34,11 @@ function chunk(values, size) {
 }
 
 function clubRef(clubId) {
-  return db.doc(`${CLUBS_COLLECTION}/${clubId}`);
+  return db.doc(paths.club(clubId));
 }
 
 function memberRef(kind, id) {
-  return db.doc(`${MEMBER_KINDS[kind].collection}/${id}`);
+  return db.doc(kind === "courts" ? paths.court(id) : `devices/${id}`);
 }
 
 function listOf(data, field) {
@@ -103,7 +103,7 @@ async function readClosedClubEffects(tx, { clubId, previousState, nextState, cou
   for (const tournament of tournaments) {
     const [matchSnap, fixtureSnap] = await Promise.all([
       tx.get(db.collection("matches").where("tournamentId", "==", tournament.tournamentId)),
-      tx.get(db.collection(`tournaments/${tournament.tournamentId}/fixtures`)),
+      tx.get(db.collection(paths.tournamentFixtures(tournament.tournamentId))),
     ]);
     matchSnap.docs.forEach((snap) => {
       matches.set(snap.id, { matchId: snap.id, ...snap.data() });
@@ -143,7 +143,7 @@ function applyClosedClubEffects(tx, effects, { clubId, clubName }) {
     if (!wasCancelled && nextStatus === "cancelled") {
       cancelledTournamentIds.push(tournament.tournamentId);
       tx.set(
-        db.doc(`tournaments/${tournament.tournamentId}`),
+        db.doc(paths.tournament(tournament.tournamentId)),
         {
           status: "cancelled",
           cancelledAt: timestamp,
@@ -156,17 +156,17 @@ function applyClosedClubEffects(tx, effects, { clubId, clubName }) {
     }
 
     tx.set(
-      db.doc(`tournamentDirectory/${tournament.tournamentId}`),
+      db.doc(paths.tournamentDirectory(tournament.tournamentId)),
       { status: nextStatus, clubId, clubName: null, updatedAt: timestamp },
       { merge: true },
     );
     tx.set(
-      db.doc(`tournamentViews/${tournament.tournamentId}`),
+      db.doc(paths.tournamentView(tournament.tournamentId)),
       { status: nextStatus, club: null, updatedAt: timestamp },
       { merge: true },
     );
     tx.set(
-      db.doc(`tournamentPrivateViews/${tournament.tournamentId}`),
+      db.doc(paths.tournamentPrivateView(tournament.tournamentId)),
       { status: nextStatus, club: null, updatedAt: timestamp },
       { merge: true },
     );
@@ -196,7 +196,7 @@ function applyClosedClubEffects(tx, effects, { clubId, clubName }) {
       patch.status = "cancelled";
       patch.cancelledAt = FieldValue.serverTimestamp();
     }
-    tx.set(db.doc(`matches/${match.matchId}`), patch, { merge: true });
+    tx.set(db.doc(paths.match(match.matchId)), patch, { merge: true });
 
     if (match.currentCourtId && !closingCourtIds.has(match.currentCourtId)) {
       releasedOtherCourtIds.add(match.currentCourtId);
@@ -211,7 +211,7 @@ function applyClosedClubEffects(tx, effects, { clubId, clubName }) {
     fixtureList.forEach((fixture) => {
       if (["completed", "cancelled", "bye"].includes(fixture.status)) return;
       tx.set(
-        db.doc(`tournaments/${tournamentId}/fixtures/${fixture.fixtureId}`),
+        db.doc(`${paths.tournamentFixtures(tournamentId)}/${fixture.fixtureId}`),
         { status: "cancelled", updatedAt: FieldValue.serverTimestamp() },
         { merge: true },
       );
@@ -226,7 +226,6 @@ async function saveClubInTransaction(tx, { clubId, isNew, name, state, courtIds,
   const ref = clubRef(clubId);
   const clubSnap = await tx.get(ref);
 
-  if (isNew && clubSnap.exists) return null; // id collision: caller retries
   if (!isNew && !clubSnap.exists) {
     throw new ClubError("not-found", `Club ${clubId} not found.`);
   }
@@ -299,18 +298,16 @@ async function saveClubInTransaction(tx, { clubId, isNew, name, state, courtIds,
     }
   }
 
-  tx.set(
-    ref,
-    {
-      name,
-      courtIds,
-      deviceIds: effectiveDeviceIds,
-      state: nextState,
-      updatedAt: now,
-      ...(isNew ? { createdAt: now } : {}),
-    },
-    { merge: true },
-  );
+  const savedClub = {
+    name,
+    courtIds,
+    deviceIds: effectiveDeviceIds,
+    state: nextState,
+    updatedAt: now,
+    ...(isNew ? { createdAt: now } : {}),
+  };
+  if (isNew) tx.create(ref, savedClub);
+  else tx.set(ref, savedClub, { merge: true });
 
   const describeMoves = (plan) =>
     plan.moved.map(({ id, fromClubId }) => ({
@@ -340,20 +337,23 @@ function normalizeMembership({ courtIds, deviceIds }) {
   };
 }
 
-async function createClub(input = {}, { random = Math.random } = {}) {
+async function createClub(input = {}, allocationOptions = {}) {
+  if (input.clubId !== undefined) {
+    throw new ClubError("invalid-argument", "Club ids are allocated by the server.");
+  }
   const name = normalizeClubName(input.name);
   const state = normalizeClubState(input.state);
   const membership = normalizeMembership(input);
 
-  for (let attempt = 0; attempt < MAX_CLUB_ID_ATTEMPTS; attempt++) {
-    const clubId = generateClubId(random);
-    const result = await db.runTransaction((tx) =>
-      saveClubInTransaction(tx, { clubId, isNew: true, name, state, ...membership }),
-    );
-    if (result) return result;
+  try {
+    return await db.runTransaction(async (tx) => {
+      const clubId = await allocateId(tx, "club", { ...allocationOptions, db });
+      return saveClubInTransaction(tx, { clubId, isNew: true, name, state, ...membership });
+    });
+  } catch (error) {
+    if (error.code === "ABORTED") throw new ClubError("aborted", error.message);
+    throw error;
   }
-
-  throw new ClubError("aborted", "Could not allocate a unique club id. Please try again.");
 }
 
 async function updateClub(input = {}) {
@@ -413,6 +413,7 @@ async function deleteClub(input = {}) {
 
 // Drops a deleted court or device from every club that lists it.
 async function removeDeletedMember(kind, memberId) {
+  normalizeMemberIds([memberId], kind);
   const { listField } = MEMBER_KINDS[kind];
   const clubs = await db
     .collection(CLUBS_COLLECTION)

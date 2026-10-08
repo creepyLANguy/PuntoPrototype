@@ -4,7 +4,7 @@
 // normal Padel Push match.
 const { db, FieldValue } = require("../infrastructure/firebase");
 const { paths } = require("./firestorePaths");
-const { newTournamentId, newSecret, hashSecret, randomId, secretsMatch } = require("./ids");
+const { allocateId, validateId, newSecret, hashSecret, randomId, secretsMatch } = require("./ids");
 const { writeAudit } = require("./auditService");
 const { invalid, notFound, precondition, conflict, denied } = require("./errors");
 const matchService = require("./matchService");
@@ -269,9 +269,9 @@ function writeRosterInput(tx, tournamentId, { participants = [], text = null, te
 }
 
 async function createTournament(data, { actor }) {
+  if (data.tournamentId !== undefined) throw invalid("Tournament ids are allocated by the server.");
   const input = normalizeTournamentInput(data);
   const requestId = typeof data.requestId === "string" ? data.requestId.slice(0, 64) : null;
-  const tournamentId = newTournamentId();
   const hostKey = newSecret();
   const accessCode = input.visibility === "private" ? randomId(8) : null;
 
@@ -282,8 +282,7 @@ async function createTournament(data, { actor }) {
         return { duplicate: true, tournamentId: creationSnap.data().tournamentId };
     }
     await assertClubAndCourts(tx, input);
-    const existing = await tx.get(tournamentRef(tournamentId));
-    if (existing.exists) throw conflict("Please retry creating the tournament.");
+    const tournamentId = await allocateId(tx, "tournament");
 
     const timestamp = now();
     const roster = writeRosterInput(tx, tournamentId, {
@@ -295,7 +294,7 @@ async function createTournament(data, { actor }) {
       throw invalid(`A tournament can have at most ${MAX_PARTICIPANTS} players.`);
     }
 
-    tx.set(tournamentRef(tournamentId), {
+    tx.create(tournamentRef(tournamentId), {
       tournamentId,
       ...input,
       status: "draft",
@@ -311,13 +310,16 @@ async function createTournament(data, { actor }) {
       completedAt: null,
       cancelledAt: null,
     });
-    tx.set(db.doc(paths.tournamentSecret(tournamentId)), {
+    tx.create(db.doc(paths.tournamentSecret(tournamentId)), {
       hostKeyHash: hashSecret(hostKey),
       accessCodeHash: accessCode ? hashSecret(accessCode) : null,
       createdAt: timestamp,
     });
     if (requestId) {
-      tx.set(db.doc(paths.tournamentCreation(requestId)), { tournamentId, createdAt: timestamp });
+      tx.create(db.doc(paths.tournamentCreation(requestId)), {
+        tournamentId,
+        createdAt: timestamp,
+      });
     }
     writeAudit(tx, {
       operation: "tournament.create",
@@ -336,6 +338,7 @@ async function createTournament(data, { actor }) {
   });
 
   if (outcome.duplicate) return { tournamentId: outcome.tournamentId, duplicate: true };
+  const tournamentId = outcome.tournamentId;
   await recalculateTournament({ tournamentId });
   return { tournamentId, hostKey, accessCode, duplicate: false };
 }
@@ -994,7 +997,7 @@ function scheduleGeneration(generation, { tournament, courts, nowMs }) {
   return scheduled;
 }
 
-function prepareFixtureMatch({ tournament, fixture, lookups }) {
+async function prepareFixtureMatch(tx, { tournament, fixture, lookups }) {
   const spec = buildFixtureMatchSpec({
     tournament,
     fixture,
@@ -1002,6 +1005,7 @@ function prepareFixtureMatch({ tournament, fixture, lookups }) {
     teamsById: lookups.teamsById,
   });
   return matchService.prepareMatch({
+    matchId: await allocateId(tx, "match"),
     ...spec,
     kind: "tournament",
     tournamentId: tournament.tournamentId,
@@ -1092,12 +1096,21 @@ async function generateRound(data, ctx) {
       teamsById: indexBy(state.teams, "teamId"),
     };
 
+    const preparedMatches = new Map();
+    for (const fixture of scheduledFixtures) {
+      if (fixture.status === "scheduled" && fixtureSidesComplete(fixture)) {
+        preparedMatches.set(
+          fixture.fixtureId,
+          await prepareFixtureMatch(tx, { tournament, fixture, lookups }),
+        );
+      }
+    }
     const timestamp = now();
     let matchCount = 0;
     scheduledFixtures.forEach((fixture) => {
       const stored = stripFixtureForStorage(fixture);
       if (fixture.status === "scheduled" && fixtureSidesComplete(fixture)) {
-        const prepared = prepareFixtureMatch({ tournament, fixture, lookups });
+        const prepared = preparedMatches.get(fixture.fixtureId);
         matchService.writePreparedMatch(tx, prepared);
         stored.matchId = prepared.matchId;
         matchCount += 1;
@@ -1374,7 +1387,7 @@ async function createFixtureMatch(data, ctx) {
     if (fixture.status !== "scheduled" || !fixtureSidesComplete(fixture)) {
       throw precondition("Both sides must be known before a match can be created.");
     }
-    const prepared = prepareFixtureMatch({
+    const prepared = await prepareFixtureMatch(tx, {
       tournament: state.tournament,
       fixture,
       lookups: {
@@ -1729,7 +1742,16 @@ function rebuildRemainingSchedule(tx, state, format, matchesById, courts, actor)
 }
 
 async function recalculateTournament({ tournamentId, rebuildSchedule = false }, ctx = {}) {
-  return db.runTransaction(async (tx) => {
+  return db.runTransaction(async (transaction) => {
+    // Rebuilding/progression plans writes before discovering new fixture matches.
+    // Defer every write until all collision reads and reservations are complete.
+    const writes = [];
+    const tx = {
+      get: (ref) => transaction.get(ref),
+      set: (...args) => writes.push(() => transaction.set(...args)),
+      create: (...args) => writes.push(() => transaction.create(...args)),
+      delete: (...args) => writes.push(() => transaction.delete(...args)),
+    };
     const state = await loadTournamentState(tx, tournamentId);
     const { tournament } = state;
     const [matches, courts, club] = await Promise.all([
@@ -1783,15 +1805,20 @@ async function recalculateTournament({ tournamentId, rebuildSchedule = false }, 
     // a scheduled match follows its fixture's sides.
     const createdMatches = [];
     if (!finished) {
-      fixtures = fixtures.map((fixture) => {
-        if (fixture.status !== "scheduled" || !fixtureSidesComplete(fixture)) return fixture;
+      const nextFixtures = [];
+      for (const fixture of fixtures) {
+        if (fixture.status !== "scheduled" || !fixtureSidesComplete(fixture)) {
+          nextFixtures.push(fixture);
+          continue;
+        }
         if (!fixture.matchId) {
-          const prepared = prepareFixtureMatch({ tournament, fixture, lookups });
+          const prepared = await prepareFixtureMatch(tx, { tournament, fixture, lookups });
           matchService.writePreparedMatch(tx, prepared);
           createdMatches.push({ matchId: prepared.matchId, ...prepared.match });
           const next = { ...fixture, matchId: prepared.matchId };
           fixtureWrites.set(fixture.fixtureId, next);
-          return next;
+          nextFixtures.push(next);
+          continue;
         }
         const match = matchesById[fixture.matchId];
         if (match && match.status === "scheduled") {
@@ -1809,8 +1836,9 @@ async function recalculateTournament({ tournamentId, rebuildSchedule = false }, 
             };
           }
         }
-        return fixture;
-      });
+        nextFixtures.push(fixture);
+      }
+      fixtures = nextFixtures;
     }
 
     const fixtureIds = new Set(state.fixtures.map((fixture) => fixture.fixtureId));
@@ -1888,6 +1916,7 @@ async function recalculateTournament({ tournamentId, rebuildSchedule = false }, 
         { merge: true },
       );
     }
+    writes.forEach((write) => write());
     return {
       tournamentId,
       fixturesUpdated: fixtureWrites.size,
@@ -1951,6 +1980,11 @@ async function getTournamentView(data, credentials) {
 }
 
 async function getCourtOptions(data) {
+  if (data.clubId !== undefined && data.clubId !== null) validateId("club", data.clubId);
+  if (data.selectedCourtIds !== undefined) {
+    if (!Array.isArray(data.selectedCourtIds)) throw invalid("Court ids must be a list.");
+    data.selectedCourtIds.forEach((id) => validateId("court", id));
+  }
   const [courtSnap, clubSnap] = await Promise.all([
     db.collection("courts").get(),
     db.collection("clubs").get(),

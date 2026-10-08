@@ -23,7 +23,7 @@ let window;
 
 test.before(async () => {
   seedBaseData();
-  seedCourt("courtone", { teamNames: { A: "Smashers", B: "Lobbers" } });
+  seedCourt("crtn", { teamNames: { A: "Smashers", B: "Lobbers" } });
   const dom = await bootFrontend();
   window = dom.window;
   document = window.document;
@@ -35,7 +35,7 @@ test("app boots to the main menu with the scoreboard hidden", () => {
 });
 
 test("player can join a court through the play flow", async () => {
-  await joinCourtAsPlayer(document, "courtone");
+  await joinCourtAsPlayer(document, "crtn");
   assert.equal(document.getElementById("scoreboardPage").style.display, "flex");
 });
 
@@ -123,7 +123,7 @@ test("winning advantage point takes the game", async () => {
 test("CORE: an externally pushed score snapshot re-renders the scoreboard", async () => {
   // Simulates another device / the backend writing courts/{id}/score/current.
   pushScoreSnapshot(
-    "courtone",
+    "crtn",
     makeScore({
       A: { points: 2, games: 5, sets: 1, totalPoints: 40 },
       B: { points: 1, games: 4, sets: 0, totalPoints: 33 },
@@ -144,13 +144,13 @@ test("CORE: an externally pushed score snapshot re-renders the scoreboard", asyn
 });
 
 test("CORE: consecutive external snapshots each render (no dedupe/stall)", async () => {
-  pushScoreSnapshot("courtone", makeScore({ A: { points: 1, games: 0, sets: 0, totalPoints: 1 } }));
+  pushScoreSnapshot("crtn", makeScore({ A: { points: 1, games: 0, sets: 0, totalPoints: 1 } }));
   await waitFor(() => getRenderedScore(document).pointsA === "15", { label: "first snapshot" });
 
-  pushScoreSnapshot("courtone", makeScore({ A: { points: 2, games: 0, sets: 0, totalPoints: 2 } }));
+  pushScoreSnapshot("crtn", makeScore({ A: { points: 2, games: 0, sets: 0, totalPoints: 2 } }));
   await waitFor(() => getRenderedScore(document).pointsA === "30", { label: "second snapshot" });
 
-  pushScoreSnapshot("courtone", makeScore({ A: { points: 3, games: 0, sets: 0, totalPoints: 3 } }));
+  pushScoreSnapshot("crtn", makeScore({ A: { points: 3, games: 0, sets: 0, totalPoints: 3 } }));
   await waitFor(() => getRenderedScore(document).pointsA === "40", { label: "third snapshot" });
 });
 
@@ -174,7 +174,7 @@ test("last-point indicator follows the scoring team", async () => {
 
 test("frontend score state matches the authoritative backend score", async () => {
   await settle(25);
-  const backend = getBackendScore("courtone");
+  const backend = getBackendScore("crtn");
   const rendered = getRenderedScore(document);
   assert.equal(rendered.gamesA, backend.A.games);
   assert.equal(rendered.gamesB, backend.B.games);
@@ -185,17 +185,17 @@ test("frontend score state matches the authoritative backend score", async () =>
 test("stale events posted with an outdated scoreVersion are ignored by the backend", async () => {
   // Bump the match's scoreVersion server-side without telling this client yet:
   // events sent with the old version must not corrupt the score.
-  const matchBefore = firestoreState.docs.get("matches/m-courtone");
+  const matchBefore = firestoreState.docs.get("matches/crtnaaaa");
   const scoreBefore = getRenderedScore(document);
 
-  firestoreState.docs.set("matches/m-courtone", { ...matchBefore, scoreVersion: 99 });
+  firestoreState.docs.set("matches/crtnaaaa", { ...matchBefore, scoreVersion: 99 });
 
   document.getElementById("addPointA").click();
   await settle(60);
   assert.deepEqual(getRenderedScore(document), scoreBefore);
 
   // Restore the version; scoring works again.
-  firestoreState.docs.set("matches/m-courtone", { ...matchBefore });
+  firestoreState.docs.set("matches/crtnaaaa", { ...matchBefore });
   document.getElementById("addPointA").click();
   await waitFor(() => getRenderedScore(document).pointsA !== scoreBefore.pointsA, {
     label: "scoring resumes after version restore",

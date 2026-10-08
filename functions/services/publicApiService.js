@@ -14,6 +14,7 @@ const { buildScoringOptions } = require("../domain/scoring/modes");
 const { normalizeScoreVersion } = require("../domain/events/validation");
 const { DEFAULT_TEAM_NAMES, DEFAULT_PLAYER_NAMES } = require("./constants");
 const { paths } = require("./firestorePaths");
+const { validateId } = require("./ids");
 const { resolveMatchTitle } = require("../domain/matches/lifecycle");
 
 const SCORE_API_REWRITE_PREFIXES = new Set(["a", "r", "s", "m"]);
@@ -56,20 +57,19 @@ function decodePathSegments(reqPath) {
     });
 }
 
-function isValidId(id) {
-  return typeof id === "string" && id.length > 0 && id.length <= 64;
-}
-
 // Public read paths address either a physical court (/score/{courtId}: the
 // match currently on that court) or a durable match (/score/match/{matchId}).
 function extractScoreApiTarget(reqPath) {
   const segments = decodePathSegments(reqPath);
   const id = segments.length ? segments[segments.length - 1] : null;
-  if (!isValidId(id)) return null;
-
-  if (segments.length >= 2 && segments[segments.length - 2] === "match") {
-    return { kind: "match", id };
+  const kind =
+    segments.length >= 2 && segments[segments.length - 2] === "match" ? "match" : "court";
+  try {
+    validateId(kind, id);
+  } catch {
+    return null;
   }
+  if (kind === "match") return { kind, id };
 
   // When the function URL is hit directly, or through the Hosting redirect,
   // the court id is the last segment.

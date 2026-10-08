@@ -24,12 +24,12 @@ completion.
 
 ## Court and match IDs
 
-Generated court ids are lowercase short codes. The JSON endpoints currently
-enforce non-empty ids up to 64 characters. Clients should URL-encode path
-parameters.
+Court IDs contain exactly four lowercase characters from
+`abcdefghjkmnpqrstuxyz`. Clients should URL-encode path parameters.
 
-A `matchId` is the durable match document id. It is also limited to 64
-characters in public endpoint parsing. Clients should URL-encode it.
+A `matchId` is the durable match document ID and contains exactly eight
+characters from the same alphabet. Invalid lengths or characters return `400`;
+legacy formats are not accepted. Clients should URL-encode it.
 
 ## CORS and caching
 

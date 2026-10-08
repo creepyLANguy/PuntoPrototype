@@ -21,7 +21,7 @@ const markup = readFileSync(new URL("../app/index.html", import.meta.url), "utf8
 const brand = readFileSync(new URL("../app/js/brand.mjs", import.meta.url), "utf8");
 const qrLibrary = readFileSync(new URL("../app/js/qrcode.min.js", import.meta.url), "utf8");
 
-const COURT_ID = "qrcourt";
+const COURT_ID = "qrrt";
 const DEFAULT_PANEL_WIDTH = 200;
 const PANEL_ASPECT = 1.24;
 

@@ -1,4 +1,4 @@
-// Club rules: input normalisation, club id generation and the plan for moving
+// Club rules: input normalisation and the plan for moving
 // courts and devices between clubs. Pure functions; the club service applies
 // the plan inside a Firestore transaction.
 //
@@ -10,10 +10,7 @@
 const CLUB_NAME_MAX_LENGTH = 80;
 const MAX_CLUB_COURTS = 100;
 const MAX_CLUB_DEVICES = 100;
-const CLUB_ID_LENGTH = 6;
-// The court id alphabet (no easily confused letters), so club ids are just as
-// easy to read out and type into a search box.
-const CLUB_ID_ALPHABET = "abcdefghjkmnpqrstuxyz";
+const { validateId } = require("../../services/ids");
 
 const CLUB_STATES = Object.freeze({
   OPEN: "open",
@@ -89,6 +86,13 @@ function normalizeMemberIds(ids, kind) {
       throw invalid(`Invalid ${label} id: ${JSON.stringify(id)}.`);
     }
     const trimmed = id.trim();
+    if (kind === "courts") {
+      try {
+        validateId("court", id);
+      } catch {
+        throw invalid(`Invalid court id: ${JSON.stringify(id)}.`);
+      }
+    }
     if (!seen.has(trimmed)) {
       seen.add(trimmed);
       normalized.push(trimmed);
@@ -102,18 +106,11 @@ function normalizeMemberIds(ids, kind) {
 }
 
 function normalizeClubId(clubId) {
-  if (typeof clubId !== "string" || !clubId.trim() || clubId.includes("/")) {
+  try {
+    return validateId("club", clubId);
+  } catch {
     throw invalid("A valid clubId is required.");
   }
-  return clubId.trim().toLowerCase();
-}
-
-function generateClubId(random = Math.random) {
-  let id = "";
-  for (let i = 0; i < CLUB_ID_LENGTH; i++) {
-    id += CLUB_ID_ALPHABET[Math.floor(random() * CLUB_ID_ALPHABET.length)];
-  }
-  return id;
 }
 
 // Works out every write needed to give club `clubId` exactly `nextIds` as its
@@ -182,8 +179,6 @@ module.exports = {
   CLUB_NAME_MAX_LENGTH,
   MAX_CLUB_COURTS,
   MAX_CLUB_DEVICES,
-  CLUB_ID_ALPHABET,
-  CLUB_ID_LENGTH,
   CLUB_STATES,
   DEFAULT_CLUB_STATE,
   MEMBER_KINDS,
@@ -192,6 +187,5 @@ module.exports = {
   normalizeClubState,
   normalizeMemberIds,
   normalizeClubId,
-  generateClubId,
   planMembershipChange,
 };

@@ -15,20 +15,25 @@ import {
   limit,
 } from "./firestore.js";
 import { db } from "./client.js";
+import { assertId } from "../config/idContract.js";
 
 export function getMatch(matchId) {
+  assertId("match", matchId);
   return getDoc(doc(db, "matches", matchId));
 }
 
 export function listenToMatch(matchId, onNext, onError) {
+  assertId("match", matchId);
   return onSnapshot(doc(db, "matches", matchId), onNext, onError);
 }
 
 export function getMatchScore(matchId) {
+  assertId("match", matchId);
   return getDoc(doc(db, "matches", matchId, "score", "current"));
 }
 
 export function listenToMatchScore(matchId, onNext, onError) {
+  assertId("match", matchId);
   return onSnapshot(
     doc(db, "matches", matchId, "score", "current"),
     onNext,
@@ -39,6 +44,7 @@ export function listenToMatchScore(matchId, onNext, onError) {
 // Team and player names of a casual match. Tournament match names come from
 // the tournament roster and are changed through the tournament host tools.
 export function updateMatch(matchId, data) {
+  assertId("match", matchId);
   return updateDoc(doc(db, "matches", matchId), {
     ...data,
     updatedAt: serverTimestamp(),
@@ -48,12 +54,14 @@ export function updateMatch(matchId, data) {
 // Score events are processed by the onEventCreate Cloud Function. The court
 // on the event is audit context only.
 export function addMatchEvent(matchId, { eventType, createdBy, ...fields }) {
+  assertId("match", matchId);
+  if (fields.courtId != null) assertId("court", fields.courtId);
   return addDoc(collection(db, "matches", matchId, "events"), {
     eventType,
     createdAt: serverTimestamp(),
     createdBy,
-    matchId,
     ...fields,
+    matchId,
   });
 }
 
@@ -81,6 +89,7 @@ export function getMatchesByStatus(status, maxResults = 200) {
 }
 
 export function listenToTournamentLiveMatches(tournamentId, onNext, onError) {
+  assertId("tournament", tournamentId);
   return onSnapshot(
     query(
       collection(db, "matches"),

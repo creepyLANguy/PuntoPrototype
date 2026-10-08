@@ -7,6 +7,7 @@ const { changeoverCourt } = require("./callables/changeoverCourt");
 const { updateScoringOptions } = require("./callables/updateScoringOptions");
 const { getDetailedScore } = require("./callables/getDetailedScore");
 const { createClub } = require("./callables/createClub");
+const { createCourt } = require("./callables/createCourt");
 const { updateClub } = require("./callables/updateClub");
 const { deleteClub } = require("./callables/deleteClub");
 const { manageMatch } = require("./callables/manageMatch");
@@ -31,6 +32,7 @@ exports.getDetailedScore = onCall({ region: REGION }, wrapCallable(getDetailedSc
 exports.manageMatch = onCall({ region: REGION }, wrapCallable(manageMatch));
 exports.manageTournament = onCall({ region: REGION }, wrapCallable(manageTournament));
 exports.createClub = onCall({ region: REGION }, createClub);
+exports.createCourt = onCall({ region: REGION }, wrapCallable(createCourt));
 exports.updateClub = onCall({ region: REGION }, updateClub);
 exports.deleteClub = onCall({ region: REGION }, deleteClub);
 

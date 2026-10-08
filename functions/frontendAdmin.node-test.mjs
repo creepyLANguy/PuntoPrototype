@@ -115,7 +115,7 @@ test.before(async () => {
   seedCourt("efgh", { name: "Beta Court", status: "private" });
   seedCourt("jkmn", { name: "Gamma Court", status: "closed" });
   seedDoc("devices/HUB-1", { courtId: "abcd", deviceSKU: "HUB" });
-  seedDoc("devices/PULSE-2", { courtId: "efgh", deviceSKU: "PULSE", clubId: "club01" });
+  seedDoc("devices/PULSE-2", { courtId: "efgh", deviceSKU: "PULSE", clubId: "abcdefghjk" });
 
   for (const name of ["updateScoringOptions", "resetCourt"]) {
     callableHandlers.set(name, async (payload) => {
@@ -125,6 +125,21 @@ test.before(async () => {
       };
     });
   }
+  callableHandlers.set("createCourt", async (payload) => {
+    callableRequests.push(["createCourt", structuredClone(payload)]);
+    const courtId = "pqrs";
+    seedCourt(courtId, {
+      name: payload.name,
+      password: payload.password,
+      status: payload.status,
+      scoringMode: payload.scoringOptions.scoringMode,
+      scoringOptions: payload.scoringOptions,
+      activeMatchId: null,
+      lastMatchId: null,
+      clubId: null,
+    });
+    return { data: { courtId } };
+  });
 
   const dom = await bootFrontend();
   window = dom.window;
@@ -225,7 +240,7 @@ test("the tabs switch between the court and device lists", async () => {
   assert.equal($("devicesTab").classList.contains("active"), false);
 });
 
-test("Add Court validates its input and creates the court and its score", async () => {
+test("Add Court validates its input and requests backend court creation", async () => {
   $("showCreateCourtModalBtn").click();
   await waitFor(() => isShown("createPage"), { label: "add court page" });
 
@@ -252,6 +267,21 @@ test("Add Court validates its input and creates the court and its score", async 
   $("courtFixedServeBlockLength").value = "1";
   choose($("courtFixedSideSwapRule"), "after_all_players_serve_once");
   choose($("courtFixedTieResolution"), "golden_point");
+  const createHandler = callableHandlers.get("createCourt");
+  let failedRequests = 0;
+  callableHandlers.set("createCourt", async () => {
+    failedRequests += 1;
+    throw Object.assign(new Error("Could not allocate a unique court id. Please try again."), {
+      code: "functions/aborted",
+    });
+  });
+  await attempt("Delta Court", "delta-pw");
+  assert.equal(failedRequests, 1, "the browser does not retry allocation itself");
+  assert.equal(isShown("createPage"), true, "failed creation keeps the form open");
+  assert.equal($("createCourtBtn").disabled, false, "creation can be retried");
+  assert.equal($("courtName").value, "Delta Court");
+  assert.match(lastToast(), /Could not allocate a unique court id/);
+  callableHandlers.set("createCourt", createHandler);
   await attempt("Delta Court", "delta-pw");
   await waitForCourtList(4);
 
@@ -259,11 +289,16 @@ test("Add Court validates its input and creates the court and its score", async 
     ([path, data]) => /^courts\/[^/]+$/.test(path) && data.name === "Delta Court",
   );
   const id = courtId.split("/")[1];
-  assert.match(id, /^[a-z]{4}$/);
+  assert.match(id, /^[abcdefghjkmnpqrstuxyz]{4}$/);
+  assert.equal(id, "pqrs", "the backend assigns the ID");
+  const [callable, payload] = callableRequests.at(-1);
+  assert.equal(callable, "createCourt");
+  assert.equal(payload.courtId, undefined, "the browser does not allocate an ID");
+  assert.equal(payload.credentials.adminKey, ADMIN_SKELETON_KEY);
   assert.equal(lastToast(), `Court "Delta Court" created successfully. ID: ${id.toUpperCase()}`);
   assert.equal(court.password, "delta-pw");
   assert.equal(court.status, "private");
-  assert.equal(court.clubId, undefined, "new courts belong to no club");
+  assert.equal(court.clubId, null, "new courts belong to no club");
   assert.equal(court.activeMatchId, null, "a new court has no live match until play starts");
   assert.equal(court.scoringMode, "fixedTotalPoints");
   assert.equal(court.scoringOptions.pointsTarget, 24);
@@ -385,10 +420,14 @@ test("Add Device also accepts a court id typed by hand", async () => {
   $("newDeviceManualToggle").click();
   assert.equal($("newDeviceCourtIdManual").style.display, "");
   $("newDeviceId").value = "BEACON-8";
-  $("newDeviceCourtIdManual").value = "  manual-court  ";
+  $("newDeviceCourtIdManual").value = "legacy-court";
+  $("saveNewDeviceBtn").click();
+  await waitFor(() => lastToast() === "Failed to add device", { label: "invalid court id error" });
+  assert.equal(stored("devices/BEACON-8"), undefined, "invalid court references are not stored");
+  $("newDeviceCourtIdManual").value = "  mnua  ";
   $("saveNewDeviceBtn").click();
   await waitFor(() => stored("devices/BEACON-8"), { label: "manually mapped device" });
-  assert.deepEqual(stored("devices/BEACON-8"), { courtId: "manual-court" });
+  assert.deepEqual(stored("devices/BEACON-8"), { courtId: "mnua" });
 });
 
 test("re-adding a registered device replaces its record but keeps its club", async () => {
@@ -401,7 +440,7 @@ test("re-adding a registered device replaces its record but keeps its club", asy
   choose($("newDeviceCourtIdSelect"), "abcd");
   $("saveNewDeviceBtn").click();
   await waitFor(() => stored("devices/PULSE-2").courtId === "abcd", { label: "re-added device" });
-  assert.deepEqual(stored("devices/PULSE-2"), { courtId: "abcd", clubId: "club01" });
+  assert.deepEqual(stored("devices/PULSE-2"), { courtId: "abcd", clubId: "abcdefghjk" });
 });
 
 test("editing a device changes its court and returns to the device list", async () => {
@@ -423,7 +462,7 @@ test("editing a device changes its court and returns to the device list", async 
   // A court id that is not in the list opens in manual mode.
   await openDeviceEditor("BEACON-8");
   assert.equal($("editDeviceCourtIdManual").style.display, "");
-  assert.equal($("editDeviceCourtIdManual").value, "manual-court");
+  assert.equal($("editDeviceCourtIdManual").value, "mnua");
   $("closeEditDeviceBtn").click();
   await waitForDeviceList(4);
   assert.equal(activeTab(), "devices", "returning keeps the Devices tab and reloads it");

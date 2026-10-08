@@ -6,6 +6,7 @@ const {
 } = require("../services/eventService");
 const { ensureCourtMatch, resetMatch } = require("../services/matchService");
 const { paths } = require("../services/firestorePaths");
+const { validateId } = require("../services/ids");
 const { mapBeaconEventType, normalizeDeviceSku } = require("../services/beaconService");
 const {
   SCORING_EVENTS,
@@ -61,6 +62,13 @@ async function postEvent(req, res) {
       registeringDeviceId,
       deviceSKU: requestedDeviceSku,
     } = req.body || {};
+    if (targetCourtId !== undefined && targetCourtId !== null) {
+      try {
+        validateId("court", targetCourtId);
+      } catch {
+        return sendJson(res, 400, { success: false, error: "Invalid courtId." });
+      }
+    }
 
     if (!deviceId || !eventType) {
       return sendJson(res, 400, {
@@ -100,7 +108,7 @@ async function postEvent(req, res) {
         });
       }
 
-      const targetCourtRef = db.doc(`courts/${targetCourtId}`);
+      const targetCourtRef = db.doc(paths.court(targetCourtId));
       const targetCourtSnap = await targetCourtRef.get();
       if (!targetCourtSnap.exists) {
         return sendJson(res, 400, {

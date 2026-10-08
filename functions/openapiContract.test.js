@@ -156,7 +156,7 @@ function makeSeed(
   events = [],
   matchOverrides = {},
 ) {
-  const matchId = matchOverrides.matchId || "m1";
+  const matchId = matchOverrides.matchId || "abcdefgh";
   const score = replayEvents(events, scoringOptions);
   const seed = {
     [`courts/${courtId}`]: {
@@ -502,15 +502,15 @@ describe("public API OpenAPI contract", () => {
   test("validates the match-addressed score response and title fields", async () => {
     resetEnvironment(
       makeSeed("bnrm", DEFAULT_SCORING_OPTIONS, [], {
-        matchId: "namedmatch",
+        matchId: "jkmnpqrs",
         name: "Friday Final",
       }),
     );
 
-    const response = await invoke(getCourtScore, "/score/match/namedmatch");
+    const response = await invoke(getCourtScore, "/score/match/jkmnpqrs");
     await assertSuccessfulResponseMatchesContract(contract, "/score/match/{matchId}", response);
 
-    expect(response.payload.matchId).toBe("namedmatch");
+    expect(response.payload.matchId).toBe("jkmnpqrs");
     expect(response.payload.title).toBe("Friday Final");
     expect(response.payload.match.title).toBe("Friday Final");
   });
@@ -526,12 +526,12 @@ describe("public API OpenAPI contract", () => {
 
     const revision = await invoke(getCourtScoreRevision, "/revision/bnrm");
     await assertSuccessfulResponseMatchesContract(contract, "/revision/{courtId}", revision);
-    expect(revision.payload.matchId).toBe("m1");
+    expect(revision.payload.matchId).toBe("abcdefgh");
 
     const score = await invoke(getCourtScore, "/score/bnrm");
     expect(score.payload.revision).toBe(revision.payload.revision);
 
-    const matchRevision = await invoke(getCourtScoreRevision, "/revision/match/m1");
+    const matchRevision = await invoke(getCourtScoreRevision, "/revision/match/abcdefgh");
     await assertSuccessfulResponseMatchesContract(
       contract,
       "/revision/match/{matchId}",
@@ -549,7 +549,7 @@ describe("public API OpenAPI contract", () => {
 
     const emptyStats = await invoke(getCourtStats, "/stats/bnrm");
     await assertSuccessfulResponseMatchesContract(contract, "/stats/{courtId}", emptyStats);
-    expect(emptyStats.payload.matchId).toBe("m1");
+    expect(emptyStats.payload.matchId).toBe("abcdefgh");
 
     const events = makeEvents(["A", "A", "B", "A", "A"]);
     resetEnvironment(
@@ -562,9 +562,9 @@ describe("public API OpenAPI contract", () => {
     await assertSuccessfulResponseMatchesContract(contract, "/stats/{courtId}", populatedStats);
     expect(populatedStats.payload.totalPoints).toBe(5);
 
-    const matchStats = await invoke(getCourtStats, "/stats/match/m1");
+    const matchStats = await invoke(getCourtStats, "/stats/match/abcdefgh");
     await assertSuccessfulResponseMatchesContract(contract, "/stats/match/{matchId}", matchStats);
-    expect(matchStats.payload.matchId).toBe("m1");
+    expect(matchStats.payload.matchId).toBe("abcdefgh");
   });
 
   test("validates /momentum and preserves one-to-one marker alignment", async () => {
@@ -573,20 +573,20 @@ describe("public API OpenAPI contract", () => {
 
     const momentum = await invoke(getCourtMomentum, "/momentum/bnrm");
     await assertSuccessfulResponseMatchesContract(contract, "/momentum/{courtId}", momentum);
-    expect(momentum.payload.matchId).toBe("m1");
+    expect(momentum.payload.matchId).toBe("abcdefgh");
 
     expect(momentum.payload.pointHistory).toEqual(["A", "A", "B", "A", "A"]);
     expect(momentum.payload.momentumTimeline).toHaveLength(5);
     expect(momentum.payload.gameMarkers).toEqual([5]);
     expect(momentum.payload.setPointMarkers).toEqual([]);
 
-    const matchMomentum = await invoke(getCourtMomentum, "/momentum/match/m1");
+    const matchMomentum = await invoke(getCourtMomentum, "/momentum/match/abcdefgh");
     await assertSuccessfulResponseMatchesContract(
       contract,
       "/momentum/match/{matchId}",
       matchMomentum,
     );
-    expect(matchMomentum.payload.matchId).toBe("m1");
+    expect(matchMomentum.payload.matchId).toBe("abcdefgh");
   });
 
   test("rejects an implementation payload with an incompatible enum", async () => {

@@ -28,6 +28,7 @@ class FakeFirestore {
     this.docs = new Map();
     this.clock = 1000;
     this.autoId = 0;
+    this.transactionAttempts = 0;
     Object.entries(initialDocs).forEach(([path, data]) =>
       this.docs.set(path, structuredClone(data)),
     );
@@ -57,9 +58,37 @@ class FakeFirestore {
       if (value === undefined) throw new Error(`Undefined field "${key}" written to ${path}`);
       return value;
     });
-    const next = this.materialize(structuredClone(data));
     const existing = this.docs.get(path);
+    const next = {};
+    Object.entries(data).forEach(([key, value]) => {
+      next[key] = value?.__arrayRemove
+        ? (existing?.[key] || []).filter((entry) => !value.__arrayRemove.includes(entry))
+        : this.materialize(structuredClone(value));
+    });
     this.docs.set(path, options?.merge && existing ? { ...existing, ...next } : next);
+  }
+
+  commitOperations(ops) {
+    const before = this.docs;
+    const clock = this.clock;
+    const writeCount = this.writes?.length;
+    this.docs = new Map(before);
+    try {
+      for (const { type, path, data, options } of ops) {
+        if (type === "create" && this.docs.has(path)) {
+          const error = new Error(`Document already exists: ${path}`);
+          error.code = 6;
+          throw error;
+        }
+        if (type === "delete") this.docs.delete(path);
+        else this.write(path, data, options);
+      }
+    } catch (error) {
+      this.docs = before;
+      this.clock = clock;
+      if (writeCount !== undefined) this.writes.length = writeCount;
+      throw error;
+    }
   }
 
   doc(path) {
@@ -70,6 +99,7 @@ class FakeFirestore {
       id: path.split("/").pop(),
       get: async () => store.snapshot(path),
       set: async (data, options) => store.write(path, data, options),
+      create: async (data) => store.commitOperations([{ type: "create", path, data }]),
       delete: async () => store.docs.delete(path),
       collection: (name) => store.collection(`${path}/${name}`),
     };
@@ -92,33 +122,60 @@ class FakeFirestore {
   batch() {
     const ops = [];
     return {
-      set: (ref, data, options) => ops.push(() => this.write(ref.path, data, options)),
-      delete: (ref) => ops.push(() => this.docs.delete(ref.path)),
-      commit: async () => ops.forEach((op) => op()),
+      set: (ref, data, options) => ops.push({ type: "set", path: ref.path, data, options }),
+      create: (ref, data) => ops.push({ type: "create", path: ref.path, data }),
+      delete: (ref) => ops.push({ type: "delete", path: ref.path }),
+      commit: async () => this.commitOperations(ops),
     };
   }
 
-  async runTransaction(callback) {
-    const ops = [];
-    let wrote = false;
-    const tx = {
-      get: async (target) => {
-        if (wrote) throw new Error("Transaction reads must happen before writes.");
-        return target.kind === "doc" ? this.snapshot(target.path) : target.get();
-      },
-      set: (ref, data, options) => {
-        wrote = true;
-        if (data === undefined) throw new Error(`Cannot write undefined to ${ref.path}`);
-        ops.push(() => this.write(ref.path, data, options));
-      },
-      delete: (ref) => {
-        wrote = true;
-        ops.push(() => this.docs.delete(ref.path));
-      },
-    };
-    const result = await callback(tx);
-    ops.forEach((op) => op());
-    return result;
+  async runTransaction(callback, { maxAttempts = 5 } = {}) {
+    if (this.failNextTransaction) {
+      const error = this.failNextTransaction;
+      this.failNextTransaction = null;
+      throw error;
+    }
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      this.transactionAttempts += 1;
+      const ops = [];
+      const reads = [];
+      const enqueue = (type, ref, data, options) => {
+        ops.push({ type, path: ref.path, data, options });
+      };
+      const tx = {
+        get: async (target) => {
+          if (ops.length) throw new Error("Transaction reads must happen before writes.");
+          if (target.kind === "doc") {
+            const snapshot = this.snapshot(target.path);
+            const value = JSON.stringify(snapshot.data());
+            reads.push(() => JSON.stringify(this.docs.get(target.path)) === value);
+            return snapshot;
+          }
+          const fingerprint = () =>
+            JSON.stringify(
+              [...this.docs.entries()].filter(
+                ([path]) =>
+                  path.startsWith(`${target.path}/`) &&
+                  !path.slice(target.path.length + 1).includes("/"),
+              ),
+            );
+          const value = fingerprint();
+          const result = await target.get();
+          reads.push(() => fingerprint() === value);
+          return result;
+        },
+        set: (ref, data, options) => enqueue("set", ref, data, options),
+        create: (ref, data) => enqueue("create", ref, data),
+        delete: (ref) => enqueue("delete", ref),
+      };
+      const result = await callback(tx);
+      if (reads.some((check) => !check())) continue;
+      this.commitOperations(ops);
+      return result;
+    }
+    const error = new Error("Transaction conflict retry limit exceeded.");
+    error.code = 10;
+    throw error;
   }
 
   // Test helpers

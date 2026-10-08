@@ -6,6 +6,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { JSDOM } from "jsdom";
+import { ID_ALPHABET, assertId } from "../../app/js/config/idContract.js";
 
 import {
   firestoreState,
@@ -216,7 +217,7 @@ export function seedBaseData() {
 const MATCH_FIELDS = ["teamNames", "playerNames", "scoringMode", "scoringOptions", "scoreVersion"];
 
 export function matchIdForCourt(courtId) {
-  return `m-${courtId}`;
+  return `${assertId("court", courtId)}aaaa`;
 }
 
 // Seeds a court and the live casual match on it. Name, scoring and score
@@ -297,7 +298,14 @@ callableHandlers.set("manageMatch", async ({ operation, courtId }) => {
     };
   }
   createdMatchCounter += 1;
-  const matchId = `m-${courtId}-${createdMatchCounter}`;
+  const suffix = Array.from(
+    { length: 4 },
+    (_, index) =>
+      ID_ALPHABET[
+        Math.floor(createdMatchCounter / ID_ALPHABET.length ** index) % ID_ALPHABET.length
+      ],
+  ).join("");
+  const matchId = `${courtId}${suffix}`;
   const scoringOptions = court.scoringOptions || {
     scoringMode: "standard",
     deuceMode: "standard",

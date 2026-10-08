@@ -50,32 +50,32 @@ function typeInto(input, value) {
 
 test.before(async () => {
   seedBaseData();
-  seedCourt("ctxcourt", {
+  seedCourt("ctxq", {
     name: "Court One",
     matchName: "Grand Final",
     teamNames: { A: "Alpha", B: "Beta" },
   });
-  seedDoc("matches/tour-match", {
-    matchId: "tour-match",
+  seedDoc("matches/tuxyzabc", {
+    matchId: "tuxyzabc",
     name: null,
     status: "live",
     visibility: "public",
-    currentCourtId: "ctxcourt",
-    lastCourtId: "ctxcourt",
+    currentCourtId: "ctxq",
+    lastCourtId: "ctxq",
     teamNames: { A: "Wolves", B: "Foxes" },
     playerNames: { A1: "", A2: "", B1: "", B2: "" },
     scoringMode: "standard",
     scoringOptions: { scoringMode: "standard", deuceMode: "standard", tiebreakMode: "sixAllSeven" },
     scoreVersion: 0,
-    tournamentId: "tour1",
+    tournamentId: "abcdef",
   });
-  pushScoreSnapshot("tour-match", makeScore({ A: team(1), B: team(0) }));
+  pushScoreSnapshot("tuxyzabc", makeScore({ A: team(1), B: team(0) }));
 
-  seedCourt("searchcourt", {
+  seedCourt("srch", {
     name: "Search Court",
     playerNames: { A1: "Needle Player", A2: "", B1: "Haystack Rival", B2: "" },
   });
-  seedDoc("tournamentDirectory/tour1", {
+  seedDoc("tournamentDirectory/abcdef", {
     name: "Autumn Cup",
     visibility: "public",
     status: "live",
@@ -84,7 +84,7 @@ test.before(async () => {
   const dom = await bootFrontend();
   window = dom.window;
   document = window.document;
-  await joinCourtAsPlayer(document, "ctxcourt");
+  await joinCourtAsPlayer(document, "ctxq");
 });
 
 test("points are written to the current match events with court context", async () => {
@@ -92,25 +92,25 @@ test("points are written to the current match events with court context", async 
 
   await waitFor(
     () =>
-      [...firestoreState.docs.keys()].find((path) => path.startsWith("matches/m-ctxcourt/events/")),
+      [...firestoreState.docs.keys()].find((path) => path.startsWith("matches/ctxqaaaa/events/")),
     { label: "match event" },
   );
   const [eventPath, event] = [...firestoreState.docs.entries()].find(
     ([path, data]) =>
-      path.startsWith("matches/m-ctxcourt/events/") && data.eventType === "POINT_TEAM_A",
+      path.startsWith("matches/ctxqaaaa/events/") && data.eventType === "POINT_TEAM_A",
   );
   assert.equal(event.eventType, "POINT_TEAM_A");
-  assert.equal(event.courtId, "ctxcourt");
-  assert.equal(event.matchId, "m-ctxcourt");
+  assert.equal(event.courtId, "ctxq");
+  assert.equal(event.matchId, "ctxqaaaa");
   assert.equal(
-    [...firestoreState.docs.keys()].some((path) => path.startsWith("courts/ctxcourt/events/")),
+    [...firestoreState.docs.keys()].some((path) => path.startsWith("courts/ctxq/events/")),
     false,
     eventPath,
   );
 });
 
 test("a resolved live match supplies its current score version before the listener catches up", async () => {
-  const matchPath = "matches/m-ctxcourt";
+  const matchPath = "matches/ctxqaaaa";
   seedDoc(matchPath, { ...firestoreState.docs.get(matchPath), scoreVersion: 7 });
   session.currentMatchStatus = "completed";
   session.currentScoreVersion = 0;
@@ -130,8 +130,8 @@ test("a resolved live match supplies its current score version before the listen
 });
 
 test("scoreboard follows a new active match's names, score and tournament lock", async () => {
-  const court = firestoreState.docs.get("courts/ctxcourt");
-  writeDoc("courts/ctxcourt", { ...court, activeMatchId: "tour-match", lastMatchId: "tour-match" });
+  const court = firestoreState.docs.get("courts/ctxq");
+  writeDoc("courts/ctxq", { ...court, activeMatchId: "tuxyzabc", lastMatchId: "tuxyzabc" });
 
   await waitFor(() => $("courtTitle").textContent === "Wolves vs Foxes", {
     label: "new match title",
@@ -163,7 +163,7 @@ test("spectate search finds live match players and discovery tournament results"
     () =>
       [...document.querySelectorAll("#spectateCourtList .court-item")]
         .map((row) => row.dataset.courtId)
-        .join(",") === "searchcourt",
+        .join(",") === "srch",
     { label: "player search result" },
   );
   assert.ok(document.querySelector("#spectateDiscoveryResults .discovery-match"));

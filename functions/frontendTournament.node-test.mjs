@@ -26,7 +26,7 @@ const { orderCourtCandidates, reconcileSelection, renderCourtPicker } =
   await import("../app/js/tournament/courtPicker.js");
 const { buildFormatConfig, defaultFieldValues, parseTeamLines } =
   await import("../app/js/tournament/formatCatalog.js");
-const { searchCourts, searchMatchesAndTournaments, SEARCH_PLACEHOLDER } =
+const { looksLikeMatchId, searchCourts, searchMatchesAndTournaments, SEARCH_PLACEHOLDER } =
   await import("../app/js/match/discoverySearch.js");
 const { renderPublicDashboard } = await import("../app/js/tournament/publicView.js");
 const { renderHostDashboard } = await import("../app/js/tournament/hostView.js");
@@ -34,18 +34,18 @@ const { renderMatchNotFound, renderMatchPage } = await import("../app/js/match/m
 const { resolveMatchTitle } = await import("../app/js/match/matchIdentity.js");
 
 const COURTS = [
-  { courtId: "c4", name: "Court 4", status: "closed", clubId: "club1" },
-  { courtId: "c3", name: "Court 3", status: "open", clubId: null },
-  { courtId: "c2", name: "Court 2", status: "open", clubId: "club1" },
-  { courtId: "c1", name: "Court 1", status: "open", clubId: "club1" },
-  { courtId: "c9", name: "Court 9", status: "open", clubId: "club2" },
+  { courtId: "aaad", name: "Court 4", status: "closed", clubId: "abcdefghjk" },
+  { courtId: "aaac", name: "Court 3", status: "open", clubId: null },
+  { courtId: "aaab", name: "Court 2", status: "open", clubId: "abcdefghjk" },
+  { courtId: "aaaa", name: "Court 1", status: "open", clubId: "abcdefghjk" },
+  { courtId: "aaae", name: "Court 9", status: "open", clubId: "jkmnpqrstu" },
 ];
 
 test("club courts are surfaced first, then other courts, then unavailable ones", () => {
-  const ordered = orderCourtCandidates(COURTS, { clubId: "club1" });
+  const ordered = orderCourtCandidates(COURTS, { clubId: "abcdefghjk" });
   assert.deepEqual(
     ordered.map((court) => court.courtId),
-    ["c1", "c2", "c3", "c9", "c4"],
+    ["aaaa", "aaab", "aaac", "aaae", "aaad"],
   );
   assert.deepEqual(
     ordered.map((court) => court.group),
@@ -67,13 +67,13 @@ test("without a club every open court is equally eligible", () => {
 });
 
 test("changing the club re-ranks courts and keeps explicit selections", () => {
-  const selected = ["c9", "c3"];
-  const ranked = orderCourtCandidates(COURTS, { clubId: "club1", selectedCourtIds: selected });
+  const selected = ["aaae", "aaac"];
+  const ranked = orderCourtCandidates(COURTS, { clubId: "abcdefghjk", selectedCourtIds: selected });
   assert.deepEqual(
     ranked.filter((court) => court.selected).map((court) => court.courtId),
-    ["c3", "c9"],
+    ["aaac", "aaae"],
   );
-  assert.deepEqual(reconcileSelection([...selected, "gone"], COURTS), ["c9", "c3"]);
+  assert.deepEqual(reconcileSelection([...selected, "gone"], COURTS), ["aaae", "aaac"]);
 });
 
 test("the court picker labels the selected club's group and courts outside it stay selectable", () => {
@@ -81,21 +81,21 @@ test("the court picker labels the selected club's group and courts outside it st
   let changed = null;
   renderCourtPicker(container, {
     courts: COURTS,
-    clubId: "club1",
+    clubId: "abcdefghjk",
     clubName: "Example Padel Club",
-    selectedCourtIds: ["c3"],
+    selectedCourtIds: ["aaac"],
     onChange: (next) => {
       changed = next;
     },
   });
   const legends = [...container.querySelectorAll("legend")].map((legend) => legend.textContent);
   assert.deepEqual(legends, ["Example Padel Club courts", "Other courts", "Unavailable"]);
-  assert.equal(container.querySelector('input[data-court-id="c3"]').checked, true);
+  assert.equal(container.querySelector('input[data-court-id="aaac"]').checked, true);
 
-  const outside = container.querySelector('input[data-court-id="c9"]');
+  const outside = container.querySelector('input[data-court-id="aaae"]');
   outside.checked = true;
   outside.dispatchEvent(new dom.window.Event("change"));
-  assert.deepEqual(changed, ["c3", "c9"]);
+  assert.deepEqual(changed, ["aaac", "aaae"]);
 });
 
 test("format settings become a nested configuration with only relevant options", () => {
@@ -126,8 +126,8 @@ test("discovery search ranks exact ids first and finds players, matches and tour
       id: "efgh",
       name: "Court 2",
       match: {
-        matchId: "m1234567",
-        name: "Friday Night Final",
+        matchId: "mnprstux",
+        name: "Sunday Night Final",
         playerNames: { A1: "Alice", A2: "Ben", B1: "", B2: "" },
         teamNames: { A: "Team A", B: "Team B" },
       },
@@ -146,22 +146,42 @@ test("discovery search ranks exact ids first and finds players, matches and tour
     {
       matches: [
         {
-          matchId: "m1234567",
-          name: "Friday Night Final",
+          matchId: "mnprstux",
+          name: "Sunday Night Final",
           status: "live",
           courtName: "Court 2",
           teamNames: { A: "Team A", B: "Team B" },
           playerNames: { A1: "Alice", A2: "Ben", B1: "Sam", B2: "Dave" },
         },
       ],
-      tournaments: [{ tournamentId: "friday", name: "Friday Social", status: "live" }],
+      tournaments: [{ tournamentId: "sunday", name: "Sunday Social", status: "live" }],
     },
-    "friday",
+    "sunday",
   );
   assert.equal(results[0].kind, "tournament", "an exact tournament id outranks substrings");
-  assert.equal(results[1].label, "Friday Night Final");
+  assert.equal(results[1].label, "Sunday Night Final");
   assert.ok(results[1].lines.includes("Court: Court 2"));
-  assert.ok(results[1].lines.includes("LIVE - Match m1234567"));
+  assert.ok(results[1].lines.includes("LIVE - Match mnprstux"));
+});
+
+test("historical match discovery accepts only normalized eight-letter match IDs", () => {
+  assert.equal(looksLikeMatchId("  ABCDEFGH  "), true);
+  for (const term of [
+    "abcd",
+    "abcdef",
+    "abcdefghjk",
+    "abc12345",
+    "abcdefgi",
+    "abcdefgl",
+    "abcdefgo",
+    "abcdefgv",
+    "abcdefgw",
+    "abcd-efg",
+    null,
+    12345678,
+  ]) {
+    assert.equal(looksLikeMatchId(term), false, String(term));
+  }
 });
 
 // ---------------------------------------------------------------------------
@@ -192,7 +212,7 @@ function americanoState() {
         scoring: { sideSwapRule: "after_all_players_serve_once" },
       }),
     },
-    courtPool: ["c1", "c2"],
+    courtPool: ["aaaa", "aaab"],
     scheduling: {
       timezone: "UTC",
       startAt: null,
@@ -211,8 +231,8 @@ function americanoState() {
   const generation = generateSchedule(getFormat("americano"), state);
   const fixtures = generation.fixtures.map((fixture, index) => ({
     ...fixture,
-    matchId: `m${index + 1}`,
-    courtId: index % 2 === 0 ? "c1" : "c2",
+    matchId: `m${"abcdefghjkmnpqrstuxyz"[index]}aaaaaa`,
+    courtId: index % 2 === 0 ? "aaaa" : "aaab",
   }));
   fixtures[0] = {
     ...fixtures[0],
@@ -236,9 +256,9 @@ function buildView() {
     teams: [],
     matches: [
       {
-        matchId: "m2",
+        matchId: "mbaaaaaa",
         status: "live",
-        currentCourtId: "c2",
+        currentCourtId: "aaab",
         name: "Round 1 - Match 2",
         scoreSummary: {
           A: { points: 12, games: 0, sets: 0 },
@@ -248,10 +268,10 @@ function buildView() {
       },
     ],
     courts: [
-      { courtId: "c1", name: "Court 1", status: "open" },
-      { courtId: "c2", name: "Court 2", status: "open", activeMatchId: "m2" },
+      { courtId: "aaaa", name: "Court 1", status: "open" },
+      { courtId: "aaab", name: "Court 2", status: "open", activeMatchId: "mbaaaaaa" },
     ],
-    club: { clubId: "club1", name: "Example Padel Club" },
+    club: { clubId: "abcdefghjk", name: "Example Padel Club" },
     now: Date.now(),
   });
 }
@@ -278,7 +298,7 @@ test("the public dashboard shows identity, live matches, round, sitting out, sta
   const top = page.querySelector(".standings-table tbody tr");
   assert.match(top.textContent, /19/);
 
-  const liveLink = page.querySelector('.fx-live a[href="/m/m2"]');
+  const liveLink = page.querySelector('.fx-live a[href="/m/mbaaaaaa"]');
   assert.ok(liveLink, "live cards link to the durable match page");
 });
 
@@ -304,7 +324,7 @@ test("live points update the card score from the live match listener", () => {
   const view = buildView();
   const live = new Map([
     [
-      "m2",
+      "mbaaaaaa",
       {
         scoreSummary: {
           A: { points: 20, games: 0, sets: 0 },
@@ -355,11 +375,11 @@ test("the host control room shows KPIs, primary controls and inline court operat
 test("the match page puts the match name first and the court second", () => {
   const container = document.createElement("div");
   renderMatchPage(container, {
-    matchId: "k3h8fq2a",
+    matchId: "khfqabcd",
     match: {
       name: "Friday Night Final",
       status: "live",
-      currentCourtId: "c7",
+      currentCourtId: "aaaf",
       teamNames: { A: "John & Mike", B: "Sam & Dave" },
       playerNames: { A1: "John", A2: "Mike", B1: "Sam", B2: "Dave" },
       scoringOptions: { scoringMode: "standard", deuceMode: "golden", tiebreakMode: "sixAllSeven" },
@@ -381,7 +401,7 @@ test("the match page puts the match name first and the court second", () => {
     "Club Championship - Round 3",
   );
   assert.equal(container.querySelector(".mp-tournament").getAttribute("href"), "/t/abcdef");
-  assert.equal(container.querySelector('a[href="/c/c7"]').textContent, "Open live scoreboard");
+  assert.equal(container.querySelector('a[href="/c/aaaf"]').textContent, "Open live scoreboard");
   assert.match(container.textContent, /Golden point at deuce/);
 
   renderMatchNotFound(container, "nope");
@@ -396,5 +416,5 @@ test("match identity falls back to the matchup, then the match id, never the cou
     }),
     "Ann & Al vs Team B",
   );
-  assert.equal(resolveMatchTitle({ currentCourtId: "c1" }, "k3h8fq2a"), "k3h8fq2a");
+  assert.equal(resolveMatchTitle({ currentCourtId: "aaaa" }, "khfqabcd"), "khfqabcd");
 });

@@ -1,11 +1,14 @@
 const { buildDetailedScoreData } = require("../services/analyticsService");
 const { resolveCourtMatchId } = require("../services/matchService");
 const { invalid } = require("../services/errors");
+const { validateId } = require("../services/ids");
 
 // Detailed score for a match, addressed directly or through the court it is
 // (or was most recently) played on.
 async function getDetailedScore(request) {
   const { courtId, matchId: requestedMatchId } = request.data || {};
+  if (courtId !== undefined) validateId("court", courtId);
+  if (requestedMatchId !== undefined) validateId("match", requestedMatchId);
   if (!courtId && !requestedMatchId) throw invalid("Missing courtId");
 
   const matchId = requestedMatchId || (await resolveCourtMatchId(courtId));

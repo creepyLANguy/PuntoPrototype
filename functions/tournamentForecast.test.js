@@ -23,7 +23,7 @@ function stateFor(id, count, rounds) {
       tournamentId: "quality",
       participantMode: teamMode ? "team" : "individual",
       format: { id, config: format.normalizeConfig({}) },
-      courtPool: ["c1", "c2", "c3", "c4"],
+      courtPool: ["abcd", "efgh", "jkmn", "pqrs"],
       scheduling: {
         targetRoundCount: rounds,
         defaultMatchDurationMinutes: 15,

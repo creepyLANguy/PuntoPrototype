@@ -1,7 +1,5 @@
 // Application constants: scoring defaults and labels, event types, sound ids, court
 // statuses, toast types, storage keys and timing values.
-export const ALLOWED_COURT_ID_CHARS = "abcdefghjkmnpqrstuxyz";
-
 export const POINTS = [0, 15, 30, 40];
 
 export const DEFAULT_SCORING_OPTIONS = {

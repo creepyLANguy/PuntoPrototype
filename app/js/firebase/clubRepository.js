@@ -3,13 +3,13 @@
 // court and device membership stays consistent (see callables.js).
 import { collection, doc, getDoc, getDocs } from "./firestore.js";
 import { db } from "./client.js";
+import { assertId } from "../config/idContract.js";
 
-export function getAllClubs()
-{
+export function getAllClubs() {
   return getDocs(collection(db, "clubs"));
 }
 
-export function getClub(clubId)
-{
+export function getClub(clubId) {
+  assertId("club", clubId);
   return getDoc(doc(db, "clubs", clubId));
 }

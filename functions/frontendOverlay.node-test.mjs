@@ -286,7 +286,7 @@ test("the match name is the overlay's primary identity and the court is secondar
   const page = await bootOverlay({
     scorePayload: {
       ...SCORE_PAYLOAD,
-      matchId: "k3h8fq2a",
+      matchId: "khfqabcd",
       matchName: "Friday Night Final",
       title: "Friday Night Final",
       courtName: "Court 03",
@@ -300,17 +300,17 @@ test("the match name is the overlay's primary identity and the court is secondar
 
 test("/overlay/match/{matchId} follows the durable match through the match endpoints", async () => {
   const page = await bootOverlay({
-    pathname: "/overlay/match/k3h8fq2a",
+    pathname: "/overlay/match/khfqabcd",
     scorePayload: {
       ...SCORE_PAYLOAD,
       courtId: "zzzz",
-      matchId: "k3h8fq2a",
+      matchId: "khfqabcd",
       matchName: "Semi-final 1",
     },
   });
 
-  assert.ok(page.requested.some((url) => url.endsWith("/revision/match/k3h8fq2a")));
-  assert.ok(page.requested.some((url) => url.endsWith("/score/match/k3h8fq2a")));
+  assert.ok(page.requested.some((url) => url.endsWith("/revision/match/khfqabcd")));
+  assert.ok(page.requested.some((url) => url.endsWith("/score/match/khfqabcd")));
   assert.equal(page.$("matchTitle").textContent, "Semi-final 1");
   assert.equal(page.$("courtLabel").textContent, "Join: ZZZZ");
   page.dom.window.close();
