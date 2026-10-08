@@ -20,7 +20,7 @@ const {
   normalizeMemberIds,
   planMembershipChange,
 } = require("../domain/clubs/membership");
-const { allocateId } = require("./ids");
+const { allocateId, runIdTransaction } = require("./ids");
 const { paths } = require("./firestorePaths");
 
 const CLUBS_COLLECTION = "clubs";
@@ -346,7 +346,7 @@ async function createClub(input = {}, allocationOptions = {}) {
   const membership = normalizeMembership(input);
 
   try {
-    return await db.runTransaction(async (tx) => {
+    return await runIdTransaction(db, async (tx) => {
       const clubId = await allocateId(tx, "club", { ...allocationOptions, db });
       return saveClubInTransaction(tx, { clubId, isNew: true, name, state, ...membership });
     });

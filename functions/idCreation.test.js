@@ -50,6 +50,109 @@ function candidateSource(...ids) {
   });
 }
 
+function retryFirstCreationAttempt() {
+  const runTransaction = mockDb.runTransaction.bind(mockDb);
+  let failed = false;
+  return jest.spyOn(mockDb, "runTransaction").mockImplementation((callback, options) =>
+    runTransaction(async (tx) => {
+      const result = await callback(tx);
+      if (!failed) {
+        failed = true;
+        const error = new Error("SDK-style retry after queued writes.");
+        error.code = 10;
+        throw error;
+      }
+      return result;
+    }, options),
+  );
+}
+
+describe("production allocation callbacks reset SDK-reused transactions", () => {
+  test.each([
+    ["court", "jkmn", () => court({ name: "Court C", password: "different" }), "courts"],
+    ["club", "aaaaaaaaaa", () => api.createClub({ data: { name: "New Club" } }), "clubs"],
+    ["manual match", "aaaaaaaa", () => match({ name: "New Match" }), "matches"],
+    [
+      "casual match",
+      "aaaaaaaa",
+      () =>
+        api.manageMatch({
+          data: { operation: "ensureCourtMatch", courtId: "abcd" },
+        }),
+      "matches",
+    ],
+    [
+      "tournament",
+      "aaaaaa",
+      () =>
+        createTournament({
+          participantText: null,
+          courtPool: [],
+        }),
+      "tournaments",
+    ],
+  ])("%s can reuse a rolled-back candidate on retry", async (_type, id, create, collection) => {
+    retryFirstCreationAttempt();
+    const source = candidateSource(id, id);
+    await create();
+    expect(source).toHaveBeenCalledTimes(id.length * 2);
+    expect(mockDb.get(`${collection}/${id}`)).toBeDefined();
+    if (collection !== "courts") expect(mockDb.list(collection)).toHaveLength(1);
+  });
+
+  test("round generation reuses all rolled-back candidates on the same Transaction", async () => {
+    const { tournamentId } = await createTournament();
+    retryFirstCreationAttempt();
+    candidateSource("aaaaaaaa", "bbbbbbbb", "aaaaaaaa", "bbbbbbbb");
+    await tournament("generateRound", { tournamentId });
+    expect(
+      mockDb
+        .list("matches")
+        .map((entry) => entry.id)
+        .sort(),
+    ).toEqual(["aaaaaaaa", "bbbbbbbb"]);
+  });
+
+  test("fixture creation reuses its rolled-back candidate on the same Transaction", async () => {
+    const { tournamentId } = await createTournament();
+    await tournament("generateRound", { tournamentId });
+    const fixture = mockDb.list(`tournaments/${tournamentId}/fixtures`)[0];
+    mockDb.write(
+      `tournaments/${tournamentId}/fixtures/${fixture.id}`,
+      { matchId: null },
+      { merge: true },
+    );
+    retryFirstCreationAttempt();
+    candidateSource("aaaaaaaa", "aaaaaaaa");
+    const result = await tournament("createFixtureMatch", { tournamentId, fixtureId: fixture.id });
+    expect(result.matchId).toBe("aaaaaaaa");
+    expect(mockDb.get("matches/aaaaaaaa")).toBeDefined();
+  });
+
+  test("recalculation reuses its rolled-back batch on the same Transaction", async () => {
+    const { tournamentId } = await createTournament();
+    await tournament("generateRound", { tournamentId });
+    const fixtures = mockDb.list(`tournaments/${tournamentId}/fixtures`);
+    fixtures.forEach((fixture) => {
+      mockDb.write(
+        `tournaments/${tournamentId}/fixtures/${fixture.id}`,
+        { matchId: null },
+        { merge: true },
+      );
+    });
+    retryFirstCreationAttempt();
+    candidateSource("aaaaaaaa", "bbbbbbbb", "aaaaaaaa", "bbbbbbbb");
+    const result = await tournament("recalculateTournament", { tournamentId });
+    expect(result.matchesCreated).toBe(2);
+    expect(
+      mockDb
+        .list(`tournaments/${tournamentId}/fixtures`)
+        .map((entry) => entry.matchId)
+        .sort(),
+    ).toEqual(["aaaaaaaa", "bbbbbbbb"]);
+  });
+});
+
 describe("court creation boundary", () => {
   test("exports admin-only createCourt with the existing flat court shape", async () => {
     const before = mockDb.docs.size;

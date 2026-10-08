@@ -135,43 +135,50 @@ class FakeFirestore {
       this.failNextTransaction = null;
       throw error;
     }
+    let ops = [];
+    let reads = [];
+    const enqueue = (type, ref, data, options) => {
+      ops.push({ type, path: ref.path, data, options });
+    };
+    // Like the Admin SDK, retries reuse this object and reset only attempt state.
+    const tx = {
+      get: async (target) => {
+        if (ops.length) throw new Error("Transaction reads must happen before writes.");
+        if (target.kind === "doc") {
+          const snapshot = this.snapshot(target.path);
+          const value = JSON.stringify(snapshot.data());
+          reads.push(() => JSON.stringify(this.docs.get(target.path)) === value);
+          return snapshot;
+        }
+        const fingerprint = () =>
+          JSON.stringify(
+            [...this.docs.entries()].filter(
+              ([path]) =>
+                path.startsWith(`${target.path}/`) &&
+                !path.slice(target.path.length + 1).includes("/"),
+            ),
+          );
+        const value = fingerprint();
+        const result = await target.get();
+        reads.push(() => fingerprint() === value);
+        return result;
+      },
+      set: (ref, data, options) => enqueue("set", ref, data, options),
+      create: (ref, data) => enqueue("create", ref, data),
+      delete: (ref) => enqueue("delete", ref),
+    };
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
       this.transactionAttempts += 1;
-      const ops = [];
-      const reads = [];
-      const enqueue = (type, ref, data, options) => {
-        ops.push({ type, path: ref.path, data, options });
-      };
-      const tx = {
-        get: async (target) => {
-          if (ops.length) throw new Error("Transaction reads must happen before writes.");
-          if (target.kind === "doc") {
-            const snapshot = this.snapshot(target.path);
-            const value = JSON.stringify(snapshot.data());
-            reads.push(() => JSON.stringify(this.docs.get(target.path)) === value);
-            return snapshot;
-          }
-          const fingerprint = () =>
-            JSON.stringify(
-              [...this.docs.entries()].filter(
-                ([path]) =>
-                  path.startsWith(`${target.path}/`) &&
-                  !path.slice(target.path.length + 1).includes("/"),
-              ),
-            );
-          const value = fingerprint();
-          const result = await target.get();
-          reads.push(() => fingerprint() === value);
-          return result;
-        },
-        set: (ref, data, options) => enqueue("set", ref, data, options),
-        create: (ref, data) => enqueue("create", ref, data),
-        delete: (ref) => enqueue("delete", ref),
-      };
-      const result = await callback(tx);
-      if (reads.some((check) => !check())) continue;
-      this.commitOperations(ops);
-      return result;
+      ops = [];
+      reads = [];
+      try {
+        const result = await callback(tx);
+        if (reads.some((check) => !check())) continue;
+        this.commitOperations(ops);
+        return result;
+      } catch (error) {
+        if (error.code !== 10 || attempt + 1 === maxAttempts) throw error;
+      }
     }
     const error = new Error("Transaction conflict retry limit exceeded.");
     error.code = 10;

@@ -41,11 +41,19 @@ All resource IDs use only the 21-character alphabet `abcdefghjkmnpqrstuxyz`:
 | clubId | 10 |
 
 Backend allocation checks only the target type's collection within the same
-Firestore transaction that creates its document. The canonical allocator tries
-at most `MAX_ID_ALLOCATION_ATTEMPTS = 5` candidates before returning an `aborted`
-error. Transaction retries recheck collisions; create-only writes prevent
-overwriting an existing resource. Multiple allocations in one transaction also
-reserve candidates locally before any writes.
+Firestore transaction that creates its document. Allocating transactions use
+`services/ids.runIdTransaction(db, callback, options)` to start a fresh reservation
+context at every callback invocation: the Admin SDK reuses its Transaction object
+across retry attempts. Rolled-back reservations must not survive that retry.
+The canonical allocator tries at most `MAX_ID_ALLOCATION_ATTEMPTS = 5` candidates
+per allocation within each attempt before returning an `aborted` error. Retries
+recheck collisions; create-only writes prevent overwriting an existing resource.
+Multiple allocations in one attempt reserve candidates synchronously before
+awaiting collision reads, and all reads precede the transaction's actual writes.
+`allocateId` rejects calls outside an active `runIdTransaction` callback.
+Tournament planners use `deferIdTransactionWrites(transaction)` to share that
+attempt's reservation context while queuing writes, then flush only after all
+collision and relationship reads finish.
 
 The frontend requests creation through `createWithUniqueId(type, data,
 credentials)`; it never generates a resource ID or separately checks uniqueness.

@@ -4,7 +4,16 @@
 // normal Padel Push match.
 const { db, FieldValue } = require("../infrastructure/firebase");
 const { paths } = require("./firestorePaths");
-const { allocateId, validateId, newSecret, hashSecret, randomId, secretsMatch } = require("./ids");
+const {
+  allocateId,
+  runIdTransaction,
+  deferIdTransactionWrites,
+  validateId,
+  newSecret,
+  hashSecret,
+  randomId,
+  secretsMatch,
+} = require("./ids");
 const { writeAudit } = require("./auditService");
 const { invalid, notFound, precondition, conflict, denied } = require("./errors");
 const matchService = require("./matchService");
@@ -275,7 +284,7 @@ async function createTournament(data, { actor }) {
   const hostKey = newSecret();
   const accessCode = input.visibility === "private" ? randomId(8) : null;
 
-  const outcome = await db.runTransaction(async (tx) => {
+  const outcome = await runIdTransaction(db, async (tx) => {
     if (requestId) {
       const creationSnap = await tx.get(db.doc(paths.tournamentCreation(requestId)));
       if (creationSnap.exists)
@@ -1024,7 +1033,7 @@ function stripFixtureForStorage(fixture) {
 
 async function generateRound(data, ctx) {
   const tournamentId = data.tournamentId;
-  const outcome = await db.runTransaction(async (tx) => {
+  const outcome = await runIdTransaction(db, async (tx) => {
     const state = await loadTournamentState(tx, tournamentId);
     const { tournament } = state;
     assertNotFinished(tournament);
@@ -1378,7 +1387,7 @@ async function completeFixture(data, ctx) {
 
 async function createFixtureMatch(data, ctx) {
   const tournamentId = data.tournamentId;
-  const result = await db.runTransaction(async (tx) => {
+  const result = await runIdTransaction(db, async (tx) => {
     const state = await loadTournamentState(tx, tournamentId);
     assertNotFinished(state.tournament);
     const fixture = state.fixtures.find((f) => f.fixtureId === data.fixtureId);
@@ -1742,16 +1751,10 @@ function rebuildRemainingSchedule(tx, state, format, matchesById, courts, actor)
 }
 
 async function recalculateTournament({ tournamentId, rebuildSchedule = false }, ctx = {}) {
-  return db.runTransaction(async (transaction) => {
+  return runIdTransaction(db, async (transaction) => {
     // Rebuilding/progression plans writes before discovering new fixture matches.
     // Defer every write until all collision reads and reservations are complete.
-    const writes = [];
-    const tx = {
-      get: (ref) => transaction.get(ref),
-      set: (...args) => writes.push(() => transaction.set(...args)),
-      create: (...args) => writes.push(() => transaction.create(...args)),
-      delete: (...args) => writes.push(() => transaction.delete(...args)),
-    };
+    const { tx, flushWrites } = deferIdTransactionWrites(transaction);
     const state = await loadTournamentState(tx, tournamentId);
     const { tournament } = state;
     const [matches, courts, club] = await Promise.all([
@@ -1916,7 +1919,7 @@ async function recalculateTournament({ tournamentId, rebuildSchedule = false }, 
         { merge: true },
       );
     }
-    writes.forEach((write) => write());
+    flushWrites();
     return {
       tournamentId,
       fixturesUpdated: fixtureWrites.size,

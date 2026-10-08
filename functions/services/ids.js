@@ -1,5 +1,5 @@
 const crypto = require("crypto");
-const { invalid, conflict } = require("./errors");
+const { invalid, conflict, precondition } = require("./errors");
 
 const ID_ALPHABET = "abcdefghjkmnpqrstuxyz";
 const ID_LENGTHS = Object.freeze({ court: 4, tournament: 6, match: 8, club: 10 });
@@ -11,6 +11,49 @@ const COLLECTIONS = Object.freeze({
   club: "clubs",
 });
 const reservations = new WeakMap();
+
+// The Admin SDK reuses its Transaction across retries: reset reservations at
+// callback entry, not when a Transaction object is first encountered.
+function runIdTransaction(db, callback, options) {
+  return db.runTransaction(async (tx) => {
+    const context = { reserved: new Set(), active: true };
+    reservations.set(tx, context);
+    try {
+      return await callback(tx);
+    } finally {
+      context.active = false;
+      if (reservations.get(tx) === context) reservations.delete(tx);
+    }
+  }, options);
+}
+
+function allocationContext(tx) {
+  const context = reservations.get(tx);
+  if (!context?.active) {
+    throw precondition("ID allocation requires an active runIdTransaction callback.");
+  }
+  return context;
+}
+
+function deferIdTransactionWrites(transaction) {
+  const context = allocationContext(transaction);
+  const writes = [];
+  const tx = {
+    get: (ref) => transaction.get(ref),
+    set: (...args) => writes.push(() => transaction.set(...args)),
+    create: (...args) => writes.push(() => transaction.create(...args)),
+    delete: (...args) => writes.push(() => transaction.delete(...args)),
+  };
+  reservations.set(tx, context);
+  return {
+    tx,
+    flushWrites: () => {
+      allocationContext(tx);
+      writes.forEach((write) => write());
+      writes.length = 0;
+    },
+  };
+}
 
 function validateId(type, id) {
   const length = ID_LENGTHS[type];
@@ -39,15 +82,11 @@ function randomId(length, randomInt = crypto.randomInt) {
   return id;
 }
 
-// Must be called in the caller's transaction read phase; callers commit with tx.create.
+// Allocate in runIdTransaction's read phase; callers persist with tx.create.
 async function allocateId(tx, type, { db, randomInt = crypto.randomInt } = {}) {
   if (!Object.hasOwn(ID_LENGTHS, type)) throw invalid("Unknown ID type.");
+  const { reserved } = allocationContext(tx);
   if (!db) db = require("../infrastructure/firebase").db;
-  let reserved = reservations.get(tx);
-  if (!reserved) {
-    reserved = new Set();
-    reservations.set(tx, reserved);
-  }
   for (let attempt = 0; attempt < MAX_ID_ALLOCATION_ATTEMPTS; attempt++) {
     const id = randomId(ID_LENGTHS[type], randomInt);
     const path = `${COLLECTIONS[type]}/${id}`;
@@ -84,6 +123,8 @@ module.exports = {
   ID_LENGTHS,
   MAX_ID_ALLOCATION_ATTEMPTS,
   validateId,
+  runIdTransaction,
+  deferIdTransactionWrites,
   allocateId,
   randomId,
   newSecret,

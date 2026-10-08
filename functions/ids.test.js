@@ -8,6 +8,8 @@ const {
   ID_LENGTHS,
   MAX_ID_ALLOCATION_ATTEMPTS,
   allocateId,
+  runIdTransaction,
+  deferIdTransactionWrites,
   validateId,
   randomId,
 } = require("./services/ids");
@@ -49,7 +51,7 @@ describe("canonical typed IDs", () => {
     "%s allocation has its exact length",
     async (type, length) => {
       const db = new FakeFirestore();
-      const id = await db.runTransaction(async (tx) => {
+      const id = await runIdTransaction(db, async (tx) => {
         const candidate = await allocateId(tx, type, { db });
         tx.create(db.doc(paths[type](candidate)), { type });
         return candidate;
@@ -103,6 +105,65 @@ describe("canonical typed IDs", () => {
     expect(() => paths.tournamentCreation("a/b")).toThrow();
   });
 
+  test("unmanaged transactions fail before generating or reading any candidate", async () => {
+    const db = new FakeFirestore();
+    const source = jest.fn(() => 0);
+    await expect(
+      db.runTransaction((tx) => allocateId(tx, "match", { db, randomInt: source })),
+    ).rejects.toMatchObject({ code: "FAILED_PRECONDITION" });
+    expect(source).not.toHaveBeenCalled();
+    expect(db.docs.size).toBe(0);
+    await expect(db.runTransaction((tx) => deferIdTransactionWrites(tx))).rejects.toMatchObject({
+      code: "FAILED_PRECONDITION",
+    });
+  });
+
+  test("managed reservation contexts expire when their callback returns", async () => {
+    const db = new FakeFirestore();
+    let escapedTransaction;
+    await runIdTransaction(db, async (tx) => {
+      escapedTransaction = tx;
+      await allocateId(tx, "match", { db, randomInt: () => 0 });
+    });
+    const source = jest.fn(() => 0);
+    await expect(
+      allocateId(escapedTransaction, "match", { db, randomInt: source }),
+    ).rejects.toMatchObject({ code: "FAILED_PRECONDITION" });
+    expect(source).not.toHaveBeenCalled();
+  });
+
+  test("deferred writers share their parent's reservations and keep reads before writes", async () => {
+    const db = new FakeFirestore();
+    const candidates = [..."aaaaaaaabbbbbbbb"].map((char) => ID_ALPHABET.indexOf(char));
+    const ids = await runIdTransaction(db, async (transaction) => {
+      const first = await allocateId(transaction, "match", { db, randomInt: () => 0 });
+      const { tx, flushWrites } = deferIdTransactionWrites(transaction);
+      tx.create(db.doc(paths.match(first)), { first: true });
+      const second = await allocateId(tx, "match", { db, randomInt: () => candidates.shift() });
+      tx.create(db.doc(paths.match(second)), { second: true });
+      expect(db.docs.size).toBe(0);
+      flushWrites();
+      return [first, second];
+    });
+    expect(ids).toEqual(["aaaaaaaa", "bbbbbbbb"]);
+    expect(db.list("matches")).toHaveLength(2);
+  });
+
+  test("deferred transaction facades also expire after the managed callback", async () => {
+    const db = new FakeFirestore();
+    let deferred;
+    await runIdTransaction(db, async (transaction) => {
+      deferred = deferIdTransactionWrites(transaction);
+      const id = await allocateId(deferred.tx, "match", { db, randomInt: () => 0 });
+      deferred.tx.create(db.doc(paths.match(id)), { delayed: true });
+    });
+    await expect(
+      allocateId(deferred.tx, "match", { db, randomInt: () => 1 }),
+    ).rejects.toMatchObject({ code: "FAILED_PRECONDITION" });
+    expect(() => deferred.flushWrites()).toThrow("active runIdTransaction callback");
+    expect(db.docs.size).toBe(0);
+  });
+
   test.each(Object.keys(ID_LENGTHS))(
     "%s collision retries and never touches the existing doc",
     async (type) => {
@@ -111,7 +172,7 @@ describe("canonical typed IDs", () => {
       const db = new FakeFirestore({ [paths[type](oldId)]: { historical: true } });
       const source = jest.fn().mockReturnValueOnce(0);
       source.mockImplementation(() => (source.mock.calls.length <= length ? 0 : 1));
-      const id = await db.runTransaction(async (tx) => {
+      const id = await runIdTransaction(db, async (tx) => {
         const candidate = await allocateId(tx, type, { db, randomInt: source });
         tx.create(db.doc(paths[type](candidate)), { created: true });
         return candidate;
@@ -129,7 +190,7 @@ describe("canonical typed IDs", () => {
       const db = new FakeFirestore({ [paths[type](id)]: { historical: true } });
       const source = jest.fn(() => 0);
       await expect(
-        db.runTransaction(async (tx) => {
+        runIdTransaction(db, async (tx) => {
           const allocated = await allocateId(tx, type, { db, randomInt: source });
           tx.create(db.doc(paths[type](allocated)), { overwritten: true });
         }),
@@ -142,7 +203,7 @@ describe("canonical typed IDs", () => {
   test("reserves candidates before awaits in parallel allocations on the same transaction", async () => {
     const db = new FakeFirestore();
     const candidates = [..."aaaaaaaaaaaaaaaabbbbbbbb"].map((char) => ID_ALPHABET.indexOf(char));
-    const ids = await db.runTransaction(async (tx) => {
+    const ids = await runIdTransaction(db, async (tx) => {
       const allocated = await Promise.all([
         allocateId(tx, "match", { db, randomInt: () => candidates.shift() }),
         allocateId(tx, "match", { db, randomInt: () => candidates.shift() }),
@@ -158,7 +219,7 @@ describe("canonical typed IDs", () => {
     const db = new FakeFirestore();
     const source = jest.fn(() => 0);
     await expect(
-      db.runTransaction(async (tx) => {
+      runIdTransaction(db, async (tx) => {
         await allocateId(tx, "match", { db, randomInt: source });
         await allocateId(tx, "match", { db, randomInt: source });
       }),
@@ -179,15 +240,17 @@ describe("canonical typed IDs", () => {
           : Promise.resolve(db.snapshot(ref.path)),
       ),
     };
-    const pending = allocateId(tx, "match", { db, randomInt: () => 0 });
-    const second = await allocateId(tx, "match", { db, randomInt: () => 1 });
-    rejectRead(new Error("read failed"));
-    await expect(pending).rejects.toThrow("read failed");
-    expect(await allocateId(tx, "match", { db, randomInt: () => 0 })).toBe("aaaaaaaa");
-    await expect(allocateId(tx, "match", { db, randomInt: () => 1 })).rejects.toMatchObject({
-      code: "ABORTED",
+    await runIdTransaction({ runTransaction: (callback) => callback(tx) }, async () => {
+      const pending = allocateId(tx, "match", { db, randomInt: () => 0 });
+      const second = await allocateId(tx, "match", { db, randomInt: () => 1 });
+      rejectRead(new Error("read failed"));
+      await expect(pending).rejects.toThrow("read failed");
+      expect(await allocateId(tx, "match", { db, randomInt: () => 0 })).toBe("aaaaaaaa");
+      await expect(allocateId(tx, "match", { db, randomInt: () => 1 })).rejects.toMatchObject({
+        code: "ABORTED",
+      });
+      expect(second).toBe("bbbbbbbb");
     });
-    expect(second).toBe("bbbbbbbb");
   });
 
   test.each(Object.keys(ID_LENGTHS))(
@@ -197,7 +260,7 @@ describe("canonical typed IDs", () => {
       const length = ID_LENGTHS[type];
       let retries = 0;
       const create = (value) =>
-        db.runTransaction(async (tx) => {
+        runIdTransaction(db, async (tx) => {
           const candidate = await allocateId(tx, type, {
             db,
             randomInt: () => (value === "second" && ++retries > length ? 1 : 0),
@@ -213,18 +276,90 @@ describe("canonical typed IDs", () => {
     },
   );
 
+  test.each(Object.keys(ID_LENGTHS))(
+    "%s reuses an uncommitted candidate after a conflict on the same Transaction",
+    async (type) => {
+      const db = new FakeFirestore({ "allocationControl/current": { revision: 0 } });
+      const source = jest.fn(() => 0);
+      const seenTransactions = [];
+      const id = await runIdTransaction(db, async (tx) => {
+        seenTransactions.push(tx);
+        await tx.get(db.doc("allocationControl/current"));
+        const candidate = await allocateId(tx, type, { db, randomInt: source });
+        tx.create(db.doc(paths[type](candidate)), { attempt: seenTransactions.length });
+        if (seenTransactions.length === 1) {
+          tx.create(db.doc("attemptWrites/rolled-back"), { attempt: 1 });
+          db.write("allocationControl/current", { revision: 1 });
+        }
+        return candidate;
+      });
+      expect(seenTransactions).toHaveLength(2);
+      expect(seenTransactions[0]).toBe(seenTransactions[1]);
+      expect(id).toBe("a".repeat(ID_LENGTHS[type]));
+      expect(source).toHaveBeenCalledTimes(ID_LENGTHS[type] * 2);
+      expect(db.get(paths[type](id))).toEqual({ attempt: 2 });
+      expect(db.get("attemptWrites/rolled-back")).toBeUndefined();
+    },
+  );
+
+  test("retryable callback failure resets reservations without committing queued creates", async () => {
+    const db = new FakeFirestore();
+    const source = jest.fn(() => 0);
+    const seenTransactions = [];
+    const id = await runIdTransaction(
+      db,
+      async (tx) => {
+        seenTransactions.push(tx);
+        const candidate = await allocateId(tx, "match", { db, randomInt: source });
+        tx.create(db.doc(paths.match(candidate)), { attempt: seenTransactions.length });
+        if (seenTransactions.length === 1) {
+          const error = new Error("Retry this attempt.");
+          error.code = 10;
+          throw error;
+        }
+        return candidate;
+      },
+      { maxAttempts: 2 },
+    );
+    expect(seenTransactions[0]).toBe(seenTransactions[1]);
+    expect(id).toBe("aaaaaaaa");
+    expect(source).toHaveBeenCalledTimes(8 * 2);
+    expect(db.list("matches")).toEqual([{ id: "aaaaaaaa", attempt: 2 }]);
+  });
+
+  test("a retry resets old reservations but still bounds same-attempt collisions to five", async () => {
+    const db = new FakeFirestore();
+    const source = jest.fn(() => 0);
+    let attempts = 0;
+    await expect(
+      runIdTransaction(db, async (tx) => {
+        attempts += 1;
+        await allocateId(tx, "match", { db, randomInt: source });
+        if (attempts === 1) {
+          const error = new Error("Retry this attempt.");
+          error.code = 10;
+          throw error;
+        }
+        await allocateId(tx, "match", { db, randomInt: source });
+      }),
+    ).rejects.toMatchObject({ code: "ABORTED" });
+    expect(attempts).toBe(2);
+    expect(source).toHaveBeenCalledTimes(8 * (2 + MAX_ID_ALLOCATION_ATTEMPTS));
+    expect(db.docs.size).toBe(0);
+  });
+
   test("create preconditions and callback errors roll back every queued write", async () => {
     const db = new FakeFirestore({ "matches/aaaaaaaa": { historical: true } });
     const before = [...db.docs.entries()];
     await expect(
-      db.runTransaction(async (tx) => {
+      runIdTransaction(db, async (tx) => {
         tx.create(db.doc("matches/bbbbbbbb"), { new: true });
         tx.create(db.doc("matches/aaaaaaaa"), { overwritten: true });
       }),
     ).rejects.toMatchObject({ code: 6 });
     expect([...db.docs.entries()]).toEqual(before);
     await expect(
-      db.runTransaction(async (tx) => {
+      runIdTransaction(db, async (tx) => {
         const id = await allocateId(tx, "match", { db, randomInt: () => 1 });
         tx.create(db.doc(paths.match(id)), { new: true });
         throw new Error("rollback");
@@ -232,14 +367,14 @@ describe("canonical typed IDs", () => {
     ).rejects.toThrow("rollback");
     expect([...db.docs.entries()]).toEqual(before);
     expect(
-      await db.runTransaction((tx) => allocateId(tx, "match", { db, randomInt: () => 1 })),
+      await runIdTransaction(db, (tx) => allocateId(tx, "match", { db, randomInt: () => 1 })),
     ).toBe("bbbbbbbb");
   });
 
   test("allocation cannot run after the caller starts writing", async () => {
     const db = new FakeFirestore();
     await expect(
-      db.runTransaction(async (tx) => {
+      runIdTransaction(db, async (tx) => {
         tx.create(db.doc("matches/bbbbbbbb"), {});
         await allocateId(tx, "match", { db, randomInt: () => 0 });
       }),

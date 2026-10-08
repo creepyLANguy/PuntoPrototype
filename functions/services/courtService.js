@@ -1,5 +1,5 @@
 const { db, FieldValue } = require("../infrastructure/firebase");
-const { allocateId } = require("./ids");
+const { allocateId, runIdTransaction } = require("./ids");
 const { paths } = require("./firestorePaths");
 const { invalid } = require("./errors");
 const { buildScoringOptions } = require("../domain/scoring/modes");
@@ -109,7 +109,7 @@ async function createCourt(input = {}) {
   if (input.beaconEnabled !== undefined && typeof input.beaconEnabled !== "boolean") {
     throw invalid("Invalid beacon enabled flag.");
   }
-  return db.runTransaction(async (tx) => {
+  return runIdTransaction(db, async (tx) => {
     const courtId = await allocateId(tx, "court");
     const timestamp = FieldValue.serverTimestamp();
     tx.create(db.doc(paths.court(courtId)), {

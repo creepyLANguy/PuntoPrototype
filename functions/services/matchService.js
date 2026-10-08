@@ -15,7 +15,7 @@ const {
 } = require("../domain/matches/lifecycle");
 const { normalizeScoreVersion } = require("../domain/events/validation");
 const { paths } = require("./firestorePaths");
-const { allocateId, validateId } = require("./ids");
+const { allocateId, validateId, runIdTransaction } = require("./ids");
 const { writeAudit } = require("./auditService");
 const { invalid, notFound, precondition } = require("./errors");
 
@@ -101,7 +101,7 @@ function writePreparedMatch(tx, prepared) {
 async function createMatchDocument(input, { actor = null } = {}) {
   if (input.matchId !== undefined) throw invalid("Match ids are allocated by the server.");
   if (input.courtId !== undefined && input.courtId !== null) validateId("court", input.courtId);
-  return db.runTransaction(async (tx) => {
+  return runIdTransaction(db, async (tx) => {
     const matchId = await allocateId(tx, "match");
     const prepared = prepareMatch({ ...input, matchId });
     const plan = input.courtId
@@ -233,7 +233,7 @@ async function planTournamentEffects(tx, match) {
 }
 
 async function ensureCourtMatch({ courtId, actor = null }) {
-  return db.runTransaction(async (tx) => {
+  return runIdTransaction(db, async (tx) => {
     const court = await readCourt(tx, courtId);
 
     if (court.activeMatchId) {
