@@ -43,11 +43,13 @@ async function authorizeFor(matchId, credentials, targetCourtId = null) {
 
 const OPERATIONS = {
   async ensureCourtMatch(data) {
+    if (data.matchId !== undefined) throw invalid("Match ids are allocated by the server.");
     return matchService.ensureCourtMatch({ courtId: data.courtId, actor: { type: "court" } });
   },
 
   async createMatch(data, credentials) {
     const actor = await requireAdmin(credentials);
+    if (data.matchId !== undefined) throw invalid("Match ids are allocated by the server.");
     return matchService.createMatchDocument(
       {
         name: data.name,

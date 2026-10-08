@@ -145,6 +145,22 @@ describe("court creation boundary", () => {
 });
 
 describe("match creation is canonical and create-only", () => {
+  test("creation rejects supplied IDs instead of replacing them", async () => {
+    const before = [...mockDb.docs.entries()];
+    await expect(matchService.createMatchDocument({ matchId: "abcdefgh" })).rejects.toMatchObject({
+      code: "INVALID_ARGUMENT",
+    });
+    await expect(match({ matchId: "abcdefgh" })).rejects.toMatchObject({
+      code: "INVALID_ARGUMENT",
+    });
+    await expect(
+      api.manageMatch({
+        data: { operation: "ensureCourtMatch", courtId: "abcd", matchId: "abcdefgh" },
+      }),
+    ).rejects.toMatchObject({ code: "INVALID_ARGUMENT" });
+    expect([...mockDb.docs.entries()]).toEqual(before);
+  });
+
   test("prepareMatch requires an explicit canonical allocated ID", () => {
     expect(() => matchService.prepareMatch({})).toThrow();
     expect(() => matchService.prepareMatch({ matchId: "legacy" })).toThrow();

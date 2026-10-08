@@ -1,4 +1,7 @@
 const crypto = require("crypto");
+const fs = require("node:fs");
+const path = require("node:path");
+const { SourceTextModule } = require("node:vm");
 const { FakeFirestore } = require("./testSupport/fakeFirestore");
 const {
   ID_ALPHABET,
@@ -19,6 +22,27 @@ describe("canonical typed IDs", () => {
     const id = randomId(100, source);
     expect([...id].every((letter) => ID_ALPHABET.includes(letter))).toBe(true);
     expect(id).not.toMatch(/[0-9]/);
+  });
+
+  test("frontend and backend ID contracts cannot drift", async () => {
+    const identifier = path.join(__dirname, "../app/js/config/idContract.js");
+    const frontend = new SourceTextModule(fs.readFileSync(identifier, "utf8"), { identifier });
+    await frontend.link(() => {
+      throw new Error("The frontend ID contract must be standalone.");
+    });
+    await frontend.evaluate();
+    const contract = frontend.namespace;
+    expect(contract.ID_ALPHABET).toBe(ID_ALPHABET);
+    expect(contract.ID_LENGTHS).toEqual(ID_LENGTHS);
+    expect(Object.isFrozen(contract.ID_LENGTHS)).toBe(true);
+    for (const [type, length] of Object.entries(ID_LENGTHS)) {
+      const id = "a".repeat(length);
+      expect(contract.assertId(type, id)).toBe(validateId(type, id));
+      for (const invalid of [id.toUpperCase(), ` ${id} `, `${id}a`, `${id.slice(1)}2`]) {
+        expect(contract.isValidId(type, invalid)).toBe(false);
+        expect(() => validateId(type, invalid)).toThrow();
+      }
+    }
   });
 
   test.each(Object.entries(ID_LENGTHS))(
