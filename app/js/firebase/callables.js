@@ -19,8 +19,10 @@ function assertResourceIds(data) {
     const id = data[`${type}Id`];
     if (id !== undefined && id !== null) assertId(type, id);
   }
-  if (Array.isArray(data.courtIds)) {
-    data.courtIds.forEach((id) => assertId("court", id));
+  for (const field of ["courtIds", "courtPool", "selectedCourtIds"]) {
+    if (Array.isArray(data[field])) {
+      data[field].forEach((id) => assertId("court", id));
+    }
   }
 }
 
