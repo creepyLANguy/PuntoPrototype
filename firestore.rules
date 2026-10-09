@@ -76,6 +76,7 @@ service cloud.firestore {
       match /events/{eventId} {
         allow read: if true;
         allow create: if validId(matchId, 8)
+          && request.resource.data.matchId == matchId
           && validId(request.resource.data.courtId, 4)
           && matchDoc(matchId).data.status == 'live'
           && matchDoc(matchId).data.currentCourtId == request.resource.data.courtId
