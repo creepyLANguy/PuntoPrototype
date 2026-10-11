@@ -29,16 +29,16 @@ const ADMIN_KEY = "skeleton-key";
 function seed() {
   return new FakeFirestore({
     "admin/goodies": { skeletonKey: ADMIN_KEY },
-    "clubs/abcdefghjk": {
+    "clubs/hjkm": {
       name: "Example Padel Club",
       state: "open",
-      courtIds: ["abcd", "efgh"],
+      courtIds: ["abcde", "efghj"],
       deviceIds: [],
     },
-    "courts/abcd": { name: "Court 1", password: "pass1", status: "open", clubId: "abcdefghjk" },
-    "courts/efgh": { name: "Court 2", password: "pass2", status: "open", clubId: "abcdefghjk" },
-    "courts/jkmn": { name: "Court 3", password: "pass3", status: "open", clubId: null },
-    "courts/pqrs": { name: "Court 4", password: "pass4", status: "closed", clubId: "abcdefghjk" },
+    "courts/abcde": { name: "Court 1", password: "pass1", status: "open", clubId: "hjkm" },
+    "courts/efghj": { name: "Court 2", password: "pass2", status: "open", clubId: "hjkm" },
+    "courts/jkmnp": { name: "Court 3", password: "pass3", status: "open", clubId: null },
+    "courts/pqrst": { name: "Court 4", password: "pass4", status: "closed", clubId: "hjkm" },
   });
 }
 
@@ -76,6 +76,8 @@ async function score(matchId, sequence) {
       eventType: team === "A" ? "POINT_TEAM_A" : "POINT_TEAM_B",
       createdAt: { seconds: 100000 + eventCounter, nanoseconds: 0 },
       scoreVersion: matchDoc.scoreVersion || 0,
+      // Clients bind each event to the match generation they scored.
+      allocationId: matchDoc.allocationId ?? null,
       matchId,
     };
     mockDb.docs.set(`matches/${matchId}/events/${eventId}`, event);
@@ -88,9 +90,9 @@ const PLAYERS = ["Alice", "Ben", "Chris", "Dan", "Eva", "Finn", "Gina", "Hugo"];
 async function createAmericano(extra = {}) {
   const created = await tournament("createTournament", {
     name: "Friday Night Padel Social",
-    clubId: "abcdefghjk",
+    clubId: "hjkm",
     format: { id: "americano", config: { scoring: { pointsTarget: 36 } } },
-    courtPool: ["abcd", "efgh"],
+    courtPool: ["abcde", "efghj"],
     participantText: PLAYERS.join("\n"),
     scheduling: { defaultMatchDurationMinutes: 15, defaultChangeoverMinutes: 2 },
     ...extra,
@@ -102,29 +104,29 @@ const view = (tournamentId) => mockDb.get(`tournamentViews/${tournamentId}`);
 
 describe("match foundation", () => {
   test("a court gets a durable casual match on demand, idempotently", async () => {
-    const first = await match("ensureCourtMatch", { courtId: "abcd" });
-    const second = await match("ensureCourtMatch", { courtId: "abcd" });
+    const first = await match("ensureCourtMatch", { courtId: "abcde" });
+    const second = await match("ensureCourtMatch", { courtId: "abcde" });
     expect(first.created).toBe(true);
     expect(second.matchId).toBe(first.matchId);
     expect(first.scoreVersion).toBe(0);
     expect(second.scoreVersion).toBe(0);
-    expect(mockDb.get("courts/abcd").activeMatchId).toBe(first.matchId);
+    expect(mockDb.get("courts/abcde").activeMatchId).toBe(first.matchId);
     const matchDoc = mockDb.get(`matches/${first.matchId}`);
-    expect(matchDoc).toMatchObject({ status: "live", currentCourtId: "abcd", kind: "casual" });
+    expect(matchDoc).toMatchObject({ status: "live", currentCourtId: "abcde", kind: "casual" });
     expect(mockDb.get(`matches/${first.matchId}/score/current`)).toBeDefined();
   });
 
   test("scoring events are match-scoped and replay never depends on the court", async () => {
-    const { matchId } = await match("ensureCourtMatch", { courtId: "abcd" });
+    const { matchId } = await match("ensureCourtMatch", { courtId: "abcde" });
     await score(matchId, "AAB");
     const current = mockDb.get(`matches/${matchId}/score/current`);
     expect(current.A.points).toBe(2);
     expect(mockDb.get(`matches/${matchId}`).scoreSummary.A.totalPoints).toBe(2);
-    expect(mockDb.list("courts/abcd/events")).toHaveLength(0);
+    expect(mockDb.list("courts/abcde/events")).toHaveLength(0);
   });
 
   test("reset keeps the match id, bumps the score version and archives history", async () => {
-    const { matchId } = await match("ensureCourtMatch", { courtId: "abcd" });
+    const { matchId } = await match("ensureCourtMatch", { courtId: "abcde" });
     await score(matchId, "AA");
     await expect(match("resetMatch", { matchId })).rejects.toMatchObject({
       code: "PERMISSION_DENIED",
@@ -134,34 +136,34 @@ describe("match foundation", () => {
     expect(result.scoreVersion).toBe(1);
     expect(mockDb.get(`matches/${matchId}/score/current`).A.points).toBe(0);
     expect(mockDb.list(`matches/${matchId}/events`)).toHaveLength(0);
-    expect(mockDb.get("courts/abcd").activeMatchId).toBe(matchId);
-    expect((await match("ensureCourtMatch", { courtId: "abcd" })).scoreVersion).toBe(1);
+    expect(mockDb.get("courts/abcde").activeMatchId).toBe(matchId);
+    expect((await match("ensureCourtMatch", { courtId: "abcde" })).scoreVersion).toBe(1);
   });
 
   test("a court has at most one live match and moves are atomic", async () => {
-    const casual = await match("ensureCourtMatch", { courtId: "efgh" });
+    const casual = await match("ensureCourtMatch", { courtId: "efghj" });
     await score(casual.matchId, "A");
     const { matchId } = await match("createMatch", { name: "Exhibition" }, { adminKey: ADMIN_KEY });
 
     await expect(
-      match("startMatch", { matchId, courtId: "efgh" }, { adminKey: ADMIN_KEY }),
+      match("startMatch", { matchId, courtId: "efghj" }, { adminKey: ADMIN_KEY }),
     ).rejects.toThrow(/already occupied/);
     await expect(
-      match("startMatch", { matchId, courtId: "pqrs" }, { adminKey: ADMIN_KEY }),
+      match("startMatch", { matchId, courtId: "pqrst" }, { adminKey: ADMIN_KEY }),
     ).rejects.toThrow(/closed/);
 
-    await match("startMatch", { matchId, courtId: "abcd" }, { adminKey: ADMIN_KEY });
-    await match("moveMatch", { matchId, courtId: "jkmn" }, { adminKey: ADMIN_KEY });
-    expect(mockDb.get("courts/abcd").activeMatchId).toBeNull();
-    expect(mockDb.get("courts/jkmn").activeMatchId).toBe(matchId);
+    await match("startMatch", { matchId, courtId: "abcde" }, { adminKey: ADMIN_KEY });
+    await match("moveMatch", { matchId, courtId: "jkmnp" }, { adminKey: ADMIN_KEY });
+    expect(mockDb.get("courts/abcde").activeMatchId).toBeNull();
+    expect(mockDb.get("courts/jkmnp").activeMatchId).toBe(matchId);
     expect(mockDb.get(`matches/${matchId}`)).toMatchObject({
-      currentCourtId: "jkmn",
+      currentCourtId: "jkmnp",
       name: "Exhibition",
     });
 
     await match(
       "startMatch",
-      { matchId: casual.matchId, courtId: "efgh" },
+      { matchId: casual.matchId, courtId: "efghj" },
       { adminKey: ADMIN_KEY },
     );
     await match("detachMatch", { matchId }, { adminKey: ADMIN_KEY });
@@ -169,29 +171,29 @@ describe("match foundation", () => {
       status: "live",
       currentCourtId: null,
     });
-    expect(mockDb.get("courts/jkmn").activeMatchId).toBeNull();
+    expect(mockDb.get("courts/jkmnp").activeMatchId).toBeNull();
 
-    await match("startMatch", { matchId, courtId: "jkmn" }, { adminKey: ADMIN_KEY });
+    await match("startMatch", { matchId, courtId: "jkmnp" }, { adminKey: ADMIN_KEY });
     await match("completeMatch", { matchId }, { adminKey: ADMIN_KEY });
     expect(mockDb.get(`matches/${matchId}`).status).toBe("completed");
-    expect(mockDb.get("courts/jkmn").activeMatchId).toBeNull();
+    expect(mockDb.get("courts/jkmnp").activeMatchId).toBeNull();
   });
 
   test("an empty placeholder match is displaced silently", async () => {
-    const casual = await match("ensureCourtMatch", { courtId: "abcd" });
+    const casual = await match("ensureCourtMatch", { courtId: "abcde" });
     const { matchId } = await match(
       "createMatch",
-      { name: "Final", courtId: "abcd" },
+      { name: "Final", courtId: "abcde" },
       { adminKey: ADMIN_KEY },
     );
     expect(mockDb.get(`matches/${casual.matchId}`).status).toBe("cancelled");
-    expect(mockDb.get("courts/abcd").activeMatchId).toBe(matchId);
+    expect(mockDb.get("courts/abcde").activeMatchId).toBe(matchId);
   });
 
   test("public score API resolves courts and matches with match-name identity", async () => {
     const { matchId } = await match(
       "createMatch",
-      { name: "Friday Night Final", courtId: "abcd" },
+      { name: "Friday Night Final", courtId: "abcde" },
       { adminKey: ADMIN_KEY },
     );
     const respond = async (handler, path) => {
@@ -203,12 +205,12 @@ describe("match foundation", () => {
       await handler({ method: "GET", path }, res);
       return payload;
     };
-    const byCourt = await respond(api.getCourtScore, "/abcd");
-    expect(byCourt.body).toMatchObject({ matchId, title: "Friday Night Final", courtId: "abcd" });
-    await match("moveMatch", { matchId, courtId: "jkmn" }, { adminKey: ADMIN_KEY });
+    const byCourt = await respond(api.getCourtScore, "/abcde");
+    expect(byCourt.body).toMatchObject({ matchId, title: "Friday Night Final", courtId: "abcde" });
+    await match("moveMatch", { matchId, courtId: "jkmnp" }, { adminKey: ADMIN_KEY });
     const byMatch = await respond(api.getCourtScore, `/match/${matchId}`);
-    expect(byMatch.body).toMatchObject({ matchId, title: "Friday Night Final", courtId: "jkmn" });
-    const missing = await respond(api.getCourtScore, "/match/zzzzzzzz");
+    expect(byMatch.body).toMatchObject({ matchId, title: "Friday Night Final", courtId: "jkmnp" });
+    const missing = await respond(api.getCourtScore, "/match/zzzzzz");
     expect(missing.code).toBe(404);
   });
 });
@@ -225,12 +227,12 @@ describe("tournament flow", () => {
 
     const stored = mockDb.get(`tournaments/${tournamentId}`);
     expect(stored).toMatchObject({
-      clubId: "abcdefghjk",
+      clubId: "hjkm",
       status: "draft",
-      courtPool: ["abcd", "efgh"],
+      courtPool: ["abcde", "efghj"],
     });
     expect(mockDb.get(`tournamentSecrets/${tournamentId}`).hostKeyHash).not.toContain(hostKey);
-    expect(view(tournamentId).club).toEqual({ clubId: "abcdefghjk", name: "Example Padel Club" });
+    expect(view(tournamentId).club).toEqual({ clubId: "hjkm", name: "Example Padel Club" });
     expect(view(tournamentId).rulesSummary.lines).toEqual(
       expect.arrayContaining(["36 total points", "1 consecutive serves"]),
     );
@@ -260,10 +262,10 @@ describe("tournament flow", () => {
     const firstStart = fixtures.find((fixture) => fixture.roundId === "r1").scheduledStartAt;
     const future = fixtures.find((fixture) => fixture.roundId === "r2");
     await expect(
-      tournament("startFixture", { tournamentId, fixtureId: future.id, courtId: "jkmn" }, host),
+      tournament("startFixture", { tournamentId, fixtureId: future.id, courtId: "jkmnp" }, host),
     ).rejects.toThrow(/Previous rounds must finish/);
     await expect(
-      match("startMatch", { matchId: future.matchId, courtId: "jkmn" }, { adminKey: ADMIN_KEY }),
+      match("startMatch", { matchId: future.matchId, courtId: "jkmnp" }, { adminKey: ADMIN_KEY }),
     ).rejects.toThrow(/Previous rounds must finish/);
     expect(
       view(tournamentId).fixtures.find((fixture) => fixture.fixtureId === future.id).canStart,
@@ -322,11 +324,11 @@ describe("tournament flow", () => {
     // Move a live match: the match id survives and both courts update.
     const moved = await tournament(
       "moveFixtureCourt",
-      { tournamentId, fixtureId: f2.id, courtId: "jkmn" },
+      { tournamentId, fixtureId: f2.id, courtId: "jkmnp" },
       host,
     );
     expect(moved.matchId).toBe(f2.matchId);
-    expect(mockDb.get("courts/jkmn").activeMatchId).toBe(f2.matchId);
+    expect(mockDb.get("courts/jkmnp").activeMatchId).toBe(f2.matchId);
     expect(mockDb.get(`courts/${f2.courtId}`).activeMatchId).toBeNull();
 
     await score(f2.matchId, "AB".repeat(18));
@@ -421,29 +423,34 @@ describe("tournament flow", () => {
     const { tournamentId } = await tournament("createTournament", {
       name: "No Club Cup",
       format: { id: "roundRobin", config: { scoring: { scoringMode: "straight" } } },
-      courtPool: ["jkmn"],
+      courtPool: ["jkmnp"],
       teams: [{ players: ["A1", "A2"] }, { players: ["B1", "B2"] }, { players: ["C1", "C2"] }],
     });
     expect(mockDb.get(`tournaments/${tournamentId}`).clubId).toBeNull();
     expect(view(tournamentId).club).toBeNull();
 
     const options = await tournament("getCourtOptions", {
-      clubId: "abcdefghjk",
-      selectedCourtIds: ["jkmn"],
+      clubId: "hjkm",
+      selectedCourtIds: ["jkmnp"],
     });
-    expect(options.courts.map((court) => court.courtId)).toEqual(["abcd", "efgh", "jkmn", "pqrs"]);
+    expect(options.courts.map((court) => court.courtId)).toEqual([
+      "abcde",
+      "efghj",
+      "jkmnp",
+      "pqrst",
+    ]);
     expect(options.courts.map((court) => court.group)).toEqual([
       "club",
       "club",
       "other",
       "unavailable",
     ]);
-    expect(options.courts.find((court) => court.courtId === "jkmn").selected).toBe(true);
+    expect(options.courts.find((court) => court.courtId === "jkmnp").selected).toBe(true);
 
     await expect(
       tournament("createTournament", {
         name: "Bad",
-        clubId: "zzzzzzzzzz",
+        clubId: "zzzz",
         format: { id: "americano" },
       }),
     ).rejects.toThrow(/club could not be found/);
@@ -451,7 +458,7 @@ describe("tournament flow", () => {
       tournament("createTournament", {
         name: "Bad",
         format: { id: "americano" },
-        courtPool: ["zzzz"],
+        courtPool: ["zzzzz"],
       }),
     ).rejects.toThrow(/could not be found: zzzz/);
   });
@@ -460,7 +467,7 @@ describe("tournament flow", () => {
     const { tournamentId, hostKey } = await tournament("createTournament", {
       name: "Knockout Cup",
       format: { id: "singleElimination", config: { scoring: { scoringMode: "straight" } } },
-      courtPool: ["abcd", "efgh"],
+      courtPool: ["abcde", "efghj"],
       teams: [1, 2, 3, 4].map((n) => ({
         name: `Team ${n}`,
         seed: n,
@@ -536,7 +543,7 @@ describe("tournament flow", () => {
     const roundBefore = mockDb.get(`tournaments/${tournamentId}/rounds/r1`);
     const withdrawn = live.participantIds[0];
     await tournament("withdrawParticipant", { tournamentId, participantId: withdrawn }, host);
-    await mockDb.doc("courts/efgh").set({ status: "closed" }, { merge: true });
+    await mockDb.doc("courts/efghj").set({ status: "closed" }, { merge: true });
     await tournament("recalculateTournament", { tournamentId }, host);
     expect(mockDb.get(`tournaments/${tournamentId}/fixtures/${live.id}`)).toEqual(fixtureBefore);
     expect(mockDb.get(`matches/${live.matchId}`)).toEqual(matchBefore);
@@ -548,7 +555,7 @@ describe("tournament flow", () => {
     expect(remaining).toHaveLength(6);
     remaining.forEach((fixture) => {
       expect(fixture.participantIds).not.toContain(withdrawn);
-      expect(fixture.courtId).toBe("abcd");
+      expect(fixture.courtId).toBe("abcde");
       expect(mockDb.get(`matches/${fixture.matchId}`).playerNames).toEqual(
         Object.fromEntries(
           ["A", "B"].flatMap((side) =>
@@ -595,7 +602,7 @@ describe("tournament flow", () => {
     const { tournamentId, hostKey } = await tournament("createTournament", {
       name: "Team Social",
       format: { id: "teamAmericano" },
-      courtPool: ["abcd", "efgh"],
+      courtPool: ["abcde", "efghj"],
       teams: [1, 2, 3, 4].map((n) => ({ name: `Team ${n}`, players: [`P${n}a`, `P${n}b`] })),
       scheduling: { targetRoundCount: 3 },
     });
@@ -695,7 +702,7 @@ describe("tournament flow", () => {
     const preview = await tournament("previewTournament", {
       name: "Preview",
       format: { id: "americano" },
-      courtPool: ["abcd", "efgh"],
+      courtPool: ["abcde", "efghj"],
       participants: Array.from({ length: 9 }, (_, i) => ({ displayName: `P${i}` })),
       scheduling: { defaultMatchDurationMinutes: 15, defaultChangeoverMinutes: 5 },
     });

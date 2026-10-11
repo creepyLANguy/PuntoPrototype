@@ -24,6 +24,7 @@ const {
   retentionPaths,
 } = require("../services/retentionConfig");
 const { maintenance, staleGeneration, precondition } = require("../services/errors");
+const { validateId } = require("../services/ids");
 
 const RAW = Symbol.for("padelpush.firestore.raw");
 const GUARDED = Symbol.for("padelpush.firestore.guarded");
@@ -78,7 +79,33 @@ function runInOperationScope(fn) {
 }
 
 function withOperationScope(handler) {
-  return (...args) => runInOperationScope(() => handler(...args));
+  return (...args) =>
+    runInOperationScope(() => {
+      const expected = args[0]?.data?.expectedAllocations;
+      currentScope().requested = Object.entries(ROOT_COLLECTIONS)
+        .filter(([type]) => args[0]?.data?.[`${type}Id`] != null)
+        .map(([type, collection]) => `${collection}/${args[0].data[`${type}Id`]}`);
+      currentScope().expected = new Set();
+      if (expected) {
+        for (const [type, entries] of Object.entries(expected)) {
+          if (!Object.hasOwn(ROOT_COLLECTIONS, type) || !entries || typeof entries !== "object") {
+            throw precondition("Invalid expected allocations.");
+          }
+          for (const [id, allocationId] of Object.entries(entries)) {
+            validateId(type, id);
+            if (typeof allocationId !== "string" || !allocationId) {
+              throw precondition("An allocation token is required.");
+            }
+            currentScope().observed.set(`${ROOT_COLLECTIONS[type]}/${id}`, {
+              exists: true,
+              allocationId,
+            });
+            currentScope().expected.add(`${ROOT_COLLECTIONS[type]}/${id}`);
+          }
+        }
+      }
+      return handler(...args);
+    });
 }
 
 // Retention worker only: bypasses the gate and root checks it enforces.
@@ -96,13 +123,15 @@ function sameState(left, right) {
   return left.exists === right.exists && left.allocationId === right.allocationId;
 }
 
+// First observation wins: a later different generation is a reuse.
+// Transaction reads stay attempt-local until that attempt commits, so a
+// retried attempt never pins state that the retry has since moved past.
 function observe(path, state, attempt) {
   const info = rootOf(path);
-  if (!info?.isRoot) return;
-  const scope = currentScope();
-  // First observation wins: a later different generation is a reuse.
-  if (scope && !scope.observed.has(path)) scope.observed.set(path, state);
-  if (attempt && !attempt.observed.has(path)) attempt.observed.set(path, state);
+  if (!info || (!info.isRoot && !SIDECAR_NAMES.has(path.split("/")[0]))) return;
+  path = info.rootPath;
+  const target = attempt ? attempt.observed : currentScope()?.observed;
+  if (target && !target.has(path)) target.set(path, state);
 }
 
 function referencedRoots(data) {
@@ -215,6 +244,10 @@ function createGuardedFirestore(raw) {
 
     const gate = await rawTx.get(raw.doc(GATE_PATH));
     if (gate.exists && gate.data()?.active === true) throw maintenance();
+    for (const path of scope?.requested || []) {
+      if (!scope.expected.has(path))
+        throw precondition("An expected allocation token is required.");
+    }
 
     const rootPaths = new Set();
     queue.forEach((op) => {
@@ -226,7 +259,7 @@ function createGuardedFirestore(raw) {
     queue.forEach((op) => {
       if (op.type === "delete") return;
       referencedRoots(op.data).forEach((path) => {
-        if (observedOf(path)) referenced.add(path);
+        referenced.add(path);
       });
     });
     const toRead = [...new Set([...rootPaths, ...referenced])];
@@ -288,6 +321,25 @@ function createGuardedFirestore(raw) {
       }
     });
     referenced.forEach(assertGeneration);
+    queue.forEach((op) => {
+      if (!op.data || op.type === "delete") return;
+      const payload = { ...op.data };
+      for (const [field, collection] of Object.entries(REFERENCE_FIELDS)) {
+        if (!Object.hasOwn(payload, field)) continue;
+        const id = payload[field];
+        const tokenField = field.replace(/Id$/, "AllocationId");
+        if (id == null && !Object.hasOwn(payload, tokenField)) continue;
+        const path = `${collection}/${id}`;
+        payload[tokenField] =
+          id == null ? null : createdRoots.get(path) || current.get(path)?.allocationId || null;
+      }
+      const info = rootOf(op.ref.path);
+      if (info && !info.isRoot && SIDECAR_NAMES.has(op.ref.path.split("/")[0])) {
+        payload.allocationId =
+          createdRoots.get(info.rootPath) || current.get(info.rootPath)?.allocationId;
+      }
+      op.data = payload;
+    });
   }
 
   function flush(rawTx, queue) {
@@ -303,6 +355,9 @@ function createGuardedFirestore(raw) {
 
   function afterCommit(attempt, scope) {
     if (!scope || !attempt) return;
+    attempt.observed.forEach((state, path) => {
+      if (!scope.observed.has(path)) scope.observed.set(path, state);
+    });
     attempt.queue.forEach((op) => {
       const info = rootOf(op.ref.path);
       if (!info?.isRoot) return;

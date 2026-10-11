@@ -2,6 +2,7 @@ const { onDocumentDeleted } = require("firebase-functions/v2/firestore");
 const { removeDeletedMember } = require("../services/clubService");
 const { accountRootDeletion } = require("../services/retentionService");
 const { REGION } = require("../services/constants");
+const { withOperationScope } = require("../infrastructure/dataGuard");
 
 function deletedData(event) {
   const snapshot = event?.data;
@@ -22,10 +23,10 @@ exports.handleCourtDeleted = handleCourtDeleted;
 
 exports.onCourtDeleted = onDocumentDeleted(
   { document: "courts/{courtId}", region: REGION, retry: true },
-  handleCourtDeleted,
+  withOperationScope(handleCourtDeleted),
 );
 
 exports.onDeviceDeleted = onDocumentDeleted(
   { document: "devices/{deviceId}", region: REGION, retry: true },
-  (event) => removeDeletedMember("devices", event.params.deviceId),
+  withOperationScope((event) => removeDeletedMember("devices", event.params.deviceId)),
 );

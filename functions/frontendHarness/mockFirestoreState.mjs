@@ -143,7 +143,10 @@ export function seedDoc(path, data) {
     /^(courts|matches|tournaments|clubs|tournamentDirectory|tournamentViews)\/([^/]+)$/,
   );
   if (root && !Object.hasOwn(data, "allocationId")) {
-    data = { allocationId: `allocation-${root[1]}-${root[2]}`, ...data };
+    const collection = ["tournamentDirectory", "tournamentViews"].includes(root[1])
+      ? "tournaments"
+      : root[1];
+    data = { allocationId: `allocation-${collection}-${root[2]}`, ...data };
   }
   firestoreState.docs.set(path, materialize(cloneValue(data)));
 }
@@ -181,6 +184,7 @@ function processScoringEvent(matchId, eventId, event) {
   const matchPath = `matches/${matchId}`;
   const scorePath = `matches/${matchId}/score/current`;
   const matchData = firestoreState.docs.get(matchPath) || {};
+  if (!matchData.allocationId || event.allocationId !== matchData.allocationId) return;
   if (matchData.status && matchData.status !== "live") return;
 
   const activeOptions = scoringEngine.normalizeScoringOptions({

@@ -143,6 +143,8 @@ export async function manageTournament(operation, data = {}, credentials = {}) {
     return createWithUniqueId("tournament", data, credentials);
   }
   const readOnly = [
+    "listFormats",
+    "getCourtOptions",
     "getTournamentView",
     "previewTournament",
     "verifyHost",

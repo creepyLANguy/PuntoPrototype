@@ -16,6 +16,7 @@ const { DEFAULT_TEAM_NAMES, DEFAULT_PLAYER_NAMES } = require("./constants");
 const { paths } = require("./firestorePaths");
 const { validateId } = require("./ids");
 const { resolveMatchTitle } = require("../domain/matches/lifecycle");
+const { GATE_PATH } = require("./retentionConfig");
 
 const SCORE_API_REWRITE_PREFIXES = new Set(["a", "r", "s", "m"]);
 const SCORE_API_POINT_LABELS = ["0", "15", "30", "40"];
@@ -137,7 +138,31 @@ function buildMatchContext(match, court) {
   };
 }
 
+// Instance caches are tied to the ID generation epoch: every cull bumps the
+// maintenance gate epoch (at start and completion), which clears them, and
+// they are bypassed while a cull runs. The gate is re-read at most once per
+// GATE_EPOCH_CHECK_MS per instance.
+const GATE_EPOCH_CHECK_MS = 1000;
+const cacheGeneration = { epoch: null, checkedAtMs: 0 };
+
+async function syncApiCacheGeneration(nowMs = Date.now()) {
+  if (cacheGeneration.epoch !== null && nowMs - cacheGeneration.checkedAtMs < GATE_EPOCH_CHECK_MS) {
+    return;
+  }
+  const gateSnap = await db.doc(GATE_PATH).get();
+  const gate = (gateSnap.exists && gateSnap.data()) || {};
+  const epoch = Number.isInteger(gate.epoch) ? gate.epoch : 0;
+  const caches = [scoreApiCache, statsApiCache, momentumApiCache];
+  if (cacheGeneration.epoch !== null && cacheGeneration.epoch !== epoch) {
+    caches.forEach((cache) => cache.clearAll());
+  }
+  caches.forEach((cache) => cache.setBypass(gate.active === true));
+  cacheGeneration.epoch = epoch;
+  cacheGeneration.checkedAtMs = nowMs;
+}
+
 async function buildScoreResponse(target) {
+  await syncApiCacheGeneration();
   const cacheKey = targetCacheKey(target);
   const cached = scoreApiCache.get(cacheKey);
   if (cached) {
@@ -260,6 +285,7 @@ module.exports = {
   extractScoreApiTarget,
   targetCacheKey,
   prepareScoreApiRequest,
+  syncApiCacheGeneration,
   scoreApiCache,
   statsApiCache,
   momentumApiCache,

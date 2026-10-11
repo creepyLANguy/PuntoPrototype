@@ -41,12 +41,14 @@ const SCRUB_KEYS = {
   court: {
     scalar: ["courtId", "currentCourtId", "lastCourtId", "sourceCourtId", "targetCourtId"],
     list: ["courtIds", "courtPool", "assignedCourtIds", "unavailableCourtIds"],
+    // Display copies next to a cleared reference (view.js may store the id).
+    companions: { courtId: ["courtName"] },
   },
   match: {
     scalar: ["matchId", "activeMatchId", "lastMatchId", "occupiedByMatchId"],
     list: ["matchIds"],
   },
-  club: { scalar: ["clubId"], list: ["clubIds"] },
+  club: { scalar: ["clubId"], list: ["clubIds"], companions: { clubId: ["clubName"] } },
   tournament: { scalar: ["tournamentId"], list: ["tournamentIds"] },
 };
 
@@ -115,8 +117,10 @@ const hashPath = (value) => crypto.createHash("sha256").update(value).digest("he
 
 function isPlainObject(value) {
   if (!value || typeof value !== "object") return false;
+  // Realm-independent: Timestamps, GeoPoints and references have longer
+  // prototype chains and are kept verbatim.
   const proto = Object.getPrototypeOf(value);
-  return proto === Object.prototype || proto === null;
+  return proto === null || Object.getPrototypeOf(proto) === null;
 }
 
 function estimateBytes(value, depth = 0) {
@@ -149,10 +153,12 @@ function scrubValue(value, keys, id) {
   if (!isPlainObject(value)) return { value, changed: false };
   let changed = false;
   const next = {};
+  const cleared = new Set();
   Object.entries(value).forEach(([key, entry]) => {
     if (keys.scalar.includes(key) && entry === id) {
       next[key] = null;
       changed = true;
+      (keys.companions?.[key] || []).forEach((companion) => cleared.add(companion));
     } else if (keys.list.includes(key) && Array.isArray(entry) && entry.includes(id)) {
       next[key] = entry.filter((item) => item !== id);
       changed = true;
@@ -161,6 +167,9 @@ function scrubValue(value, keys, id) {
       next[key] = result.value;
       changed = changed || result.changed;
     }
+  });
+  cleared.forEach((companion) => {
+    if (companion in next) next[companion] = null;
   });
   return { value: changed ? next : value, changed };
 }

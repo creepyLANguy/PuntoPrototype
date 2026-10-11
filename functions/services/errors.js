@@ -83,8 +83,24 @@ function wrapCallable(handler) {
   };
 }
 
+// For handlers that keep their own error contract: only retention errors
+// (maintenance gate, stale generation) are mapped to callable errors.
+function mapRetentionErrors(handler) {
+  return async (...args) => {
+    try {
+      return await handler(...args);
+    } catch (error) {
+      if (error instanceof OperationError && ["UNAVAILABLE", "ABORTED"].includes(error.code)) {
+        throw toCallableError(error);
+      }
+      throw error;
+    }
+  };
+}
+
 module.exports = {
   OperationError,
+  mapRetentionErrors,
   invalid,
   notFound,
   denied,

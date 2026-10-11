@@ -7,7 +7,6 @@ import {
   HOST_KEYS_STORAGE_KEY,
 } from "../config/constants.js";
 import { session } from "./sessionState.js";
-import { getAllocationId } from "../firebase/assignmentContext.js";
 
 export function getAdminKey() {
   try {
@@ -99,49 +98,54 @@ export function getAccessCode(tournamentId) {
 export function getCourtCredentials(
   courtId = session.currentCourtId,
   matchId = courtId === session.currentCourtId ? session.currentMatchId : null,
+  allocations = {},
 ) {
   const courtAllocationId =
-    courtId === session.currentCourtId
-      ? session.currentCourtAllocationId
-      : courtId
-        ? getAllocationId("court", courtId)
-        : null;
+    allocations.courtAllocationId !== undefined
+      ? allocations.courtAllocationId
+      : courtId === session.currentCourtId
+        ? session.currentCourtAllocationId
+        : undefined;
   const matchAllocationId =
-    matchId === session.currentMatchId
-      ? session.currentMatchAllocationId
-      : matchId
-        ? getAllocationId("match", matchId)
-        : null;
+    allocations.matchAllocationId !== undefined
+      ? allocations.matchAllocationId
+      : matchId === session.currentMatchId
+        ? session.currentMatchAllocationId
+        : undefined;
   return {
     courtPassword: session.currentCourtPassword || null,
     adminKey: getAdminKey(),
-    ...(courtId
+    ...(courtId && courtAllocationId !== undefined
       ? {
           courtAllocationId,
         }
       : {}),
-    ...(matchId
+    ...(matchId && matchAllocationId !== undefined
       ? {
           matchAllocationId,
         }
       : {}),
     expectedAllocations: {
-      ...(courtId ? { court: { [courtId]: courtAllocationId } } : {}),
-      ...(matchId ? { match: { [matchId]: matchAllocationId } } : {}),
+      ...(courtId && courtAllocationId !== undefined
+        ? { court: { [courtId]: courtAllocationId } }
+        : {}),
+      ...(matchId && matchAllocationId !== undefined
+        ? { match: { [matchId]: matchAllocationId } }
+        : {}),
     },
   };
 }
 
-export function getTournamentCredentials(tournamentId) {
+export function getTournamentCredentials(tournamentId, allocationId) {
   return {
     hostKey: getHostKey(tournamentId),
     adminKey: getAdminKey(),
-    ...(tournamentId
+    ...(tournamentId && allocationId !== undefined
       ? {
-          tournamentAllocationId: getAllocationId("tournament", tournamentId),
+          tournamentAllocationId: allocationId,
           expectedAllocations: {
             tournament: {
-              [tournamentId]: getAllocationId("tournament", tournamentId),
+              [tournamentId]: allocationId,
             },
           },
         }

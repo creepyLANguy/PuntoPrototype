@@ -45,6 +45,11 @@ test("resource repositories reject invalid IDs before contacting Firestore", asy
   const { seedDoc, firestoreState } = await import("./frontendHarness/mockFirestoreState.mjs");
   const noOp = () => {};
   const operations = {
+    court: [
+      (id) => courts.getCourt(id),
+      (id) => courts.updateCourt(id, {}),
+      (id) => courts.listenToCourt(id, noOp),
+    ],
     match: [
       (id) => matches.getMatch(id),
       (id) => matches.listenToMatch(id, noOp),
@@ -60,7 +65,7 @@ test("resource repositories reject invalid IDs before contacting Firestore", asy
     ],
     club: [(id) => clubs.getClub(id)],
   };
-  const lengths = { match: 6, tournament: 7, club: 4 };
+  const lengths = { court: 5, match: 6, tournament: 7, club: 4 };
   for (const [type, boundaryCalls] of Object.entries(operations)) {
     const length = lengths[type];
     for (const invalid of [

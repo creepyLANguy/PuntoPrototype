@@ -101,10 +101,10 @@ export async function enterCourt(
     return;
   }
 
-  session.currentCourtId = courtId;
   const data = snap.data();
   const courtAllocationId = data.allocationId || null;
   assertCurrentAssignment("court", courtId, courtAllocationId);
+  session.currentCourtId = courtId;
   session.currentCourtAllocationId = courtAllocationId;
   session.currentCourtName = data.name || courtId;
   session.currentCourtPassword = data.password;
@@ -120,6 +120,13 @@ export async function enterCourt(
     const requestedMatch = requestedMatchSnap.exists()
       ? requestedMatchSnap.data()
       : null;
+    if (requestedMatch) {
+      assertCurrentAssignment(
+        "match",
+        resolvedMatchId,
+        requestedMatch.allocationId,
+      );
+    }
     const belongsToCourt =
       Boolean(requestedMatch) &&
       (requestedMatch.currentCourtId === courtId ||

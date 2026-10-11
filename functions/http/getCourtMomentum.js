@@ -4,6 +4,7 @@ const {
   resolveScoreTarget,
   targetCacheKey,
   momentumApiCache,
+  syncApiCacheGeneration,
 } = require("../services/publicApiService");
 const { buildMomentumData } = require("../services/analyticsService");
 function sendJson(res, status, body) {
@@ -24,6 +25,7 @@ async function getCourtMomentum(req, res) {
       });
     }
 
+    await syncApiCacheGeneration();
     const cacheKey = targetCacheKey(target);
     const cached = momentumApiCache.get(cacheKey);
     if (cached) {

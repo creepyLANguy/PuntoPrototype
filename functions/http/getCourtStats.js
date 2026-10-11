@@ -4,6 +4,7 @@ const {
   resolveScoreTarget,
   targetCacheKey,
   statsApiCache,
+  syncApiCacheGeneration,
 } = require("../services/publicApiService");
 const { buildDetailedScoreData } = require("../services/analyticsService");
 function sendJson(res, status, body) {
@@ -24,6 +25,7 @@ async function getCourtStats(req, res) {
       });
     }
 
+    await syncApiCacheGeneration();
     const cacheKey = targetCacheKey(target);
     const cached = statsApiCache.get(cacheKey);
     if (cached) {

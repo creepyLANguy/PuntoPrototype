@@ -1,11 +1,11 @@
 //AL.
 const isDebugCourt =
   location.hostname === "localhost" || location.hostname === "127.0.0.1";
-const debugCourt_revisionUrl = "https://qa.padelpush.co.za/revision/bnrm";
-const debugCourt_fullScoreUrl = "https://qa.padelpush.co.za/score/bnrm";
-const debugCourt_statsUrl = "https://qa.padelpush.co.za/stats/bnrm";
-const debugCourt_momentumUrl = "https://qa.padelpush.co.za/momentum/bnrm";
-const debugCourt_id = "bnrm";
+const debugCourt_revisionUrl = "https://qa.padelpush.co.za/revision/bnrma";
+const debugCourt_fullScoreUrl = "https://qa.padelpush.co.za/score/bnrma";
+const debugCourt_statsUrl = "https://qa.padelpush.co.za/stats/bnrma";
+const debugCourt_momentumUrl = "https://qa.padelpush.co.za/momentum/bnrma";
+const debugCourt_id = "bnrma";
 //
 
 const POLL_INTERVAL_MS = 2 * 1000;

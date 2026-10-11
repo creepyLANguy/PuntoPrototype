@@ -299,6 +299,11 @@ test("Add Club creates the club and moves members from their old club", async ()
 
   const seasideId = clubIdNamed("Seaside Club");
   assert.match(seasideId, /^[abcdefghjkmnpqrstuxyz]{4}$/);
+  const allocationId = stored(`clubs/${seasideId}`).allocationId;
+  assert.ok(allocationId);
+  assert.equal(stored(`_idLedger/club/allocations/${seasideId}`).allocationId, allocationId);
+  assert.equal(stored(`_idLedger/club/allocations/${seasideId}`).state, "live");
+  assert.equal(stored("_idLedger/club").live, 1);
   assert.match(
     lastToast(),
     new RegExp(`Club "Seaside Club" created\\. ID: ${seasideId.toUpperCase()}`),
@@ -572,4 +577,41 @@ test("the Clubs tab explains how to start when there are no clubs", async () => 
     label: "empty club list",
   });
   assert.equal(texts("#adminClubList .no-courts")[0], "No clubs yet. Use Add Club to add one.");
+});
+
+test("maintenance refuses club allocation without changing roots or the ledger", async () => {
+  seedDoc("_idMaintenance/control", { active: true, jobId: "maintenance-job", epoch: 1 });
+  const before = structuredClone([...firestoreState.docs]);
+  try {
+    await assert.rejects(callableHandlers.get("createClub")({ name: "Paused Club" }), {
+      code: "unavailable",
+      details: { code: "MAINTENANCE", retryable: true },
+    });
+    assert.deepEqual([...firestoreState.docs], before);
+  } finally {
+    firestoreState.docs.delete("_idMaintenance/control");
+  }
+});
+
+test("maintenance fences club edits and deletions through the real guarded backend", async () => {
+  const clubId = "xyzz";
+  const club = { name: "Paused Club", state: "open", courtIds: [], deviceIds: [] };
+  seedDoc(`clubs/${clubId}`, club);
+  seedDoc("_idMaintenance/control", { active: true, jobId: "maintenance-job", epoch: 1 });
+  const before = structuredClone([...firestoreState.docs]);
+  try {
+    for (const [name, payload] of [
+      ["updateClub", { clubId, ...club, name: "Changed Club" }],
+      ["deleteClub", { clubId }],
+    ]) {
+      await assert.rejects(callableHandlers.get(name)(payload), {
+        code: "unavailable",
+        details: { code: "MAINTENANCE", retryable: true },
+      });
+      assert.deepEqual([...firestoreState.docs], before);
+    }
+  } finally {
+    firestoreState.docs.delete(`clubs/${clubId}`);
+    firestoreState.docs.delete("_idMaintenance/control");
+  }
 });

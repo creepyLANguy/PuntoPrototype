@@ -66,7 +66,7 @@ function finalizeAllocations(tx, context) {
     byType.get(allocation.type).push(allocation);
   });
   if (!byType.size) return;
-  const { db, gate } = context;
+  const { refDb: db, gate } = context;
   const nowMs = Date.now();
   const cullTypes = {};
   const ledgerWrites = [];
@@ -142,6 +142,7 @@ function runIdTransaction(db, callback, options) {
       reserved: new Set(),
       active: true,
       db,
+      refDb: null,
       gate: null,
       gatePromise: null,
       ledgerPromises: new Map(),
@@ -153,6 +154,14 @@ function runIdTransaction(db, callback, options) {
     try {
       const result = await callback(tx);
       finalizeAllocations(rawTx, context);
+      if (result && typeof result === "object") {
+        for (const allocation of context.allocations.values()) {
+          if (allocation.created && result[`${allocation.type}Id`] === allocation.id) {
+            result.allocationId = allocation.allocationId;
+            if (result.view) result.view.allocationId = allocation.allocationId;
+          }
+        }
+      }
       return result;
     } finally {
       context.active = false;
@@ -194,7 +203,7 @@ function deferIdTransactionWrites(transaction) {
 // Reads the maintenance gate and the type's ledger once per attempt. New IDs
 // are refused while a cull is pending so the ledger reaches its target exactly.
 function loadLedger(tx, context, type) {
-  const { db } = context;
+  const db = context.refDb;
   if (!context.gatePromise) {
     context.gatePromise = tx.get(db.doc(GATE_PATH)).then((snapshot) => {
       context.gate = (snapshot.exists && snapshot.data()) || {};
@@ -251,8 +260,9 @@ async function allocateId(tx, type, { db, randomInt = crypto.randomInt } = {}) {
   if (!Object.hasOwn(ID_LENGTHS, type)) throw invalid("Unknown ID type.");
   const context = allocationContext(tx);
   const { reserved } = context;
-  if (!context.db) context.db = db || require("../infrastructure/firebase").db;
-  if (!db) db = context.db;
+  if (!db) db = typeof context.db?.doc === "function" ? context.db : null;
+  if (!db) db = require("../infrastructure/firebase").db;
+  if (!context.refDb) context.refDb = db;
   await loadLedger(tx, context, type);
   for (let attempt = 0; attempt < MAX_ID_ALLOCATION_ATTEMPTS; attempt++) {
     const id = randomId(ID_LENGTHS[type], randomInt);

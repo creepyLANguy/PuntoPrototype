@@ -98,6 +98,7 @@ test("existing creation wrappers use the same typed path", async () => {
 });
 
 test("all creation types reject malformed backend IDs and preserve backend errors", async () => {
+  const legacyLengths = { court: 4, club: 10, match: 8, tournament: 6 };
   for (const type of Object.keys(ID_LENGTHS)) {
     const callable = {
       court: "createCourt",
@@ -105,10 +106,24 @@ test("all creation types reject malformed backend IDs and preserve backend error
       match: "manageMatch",
       tournament: "manageTournament",
     }[type];
-    for (const id of ["legacy123", "A".repeat(ID_LENGTHS[type]), "i".repeat(ID_LENGTHS[type])]) {
-      callableHandlers.set(callable, async () => ({ data: { [`${type}Id`]: id } }));
+    for (const id of [
+      "a".repeat(legacyLengths[type]),
+      "legacy123",
+      "A".repeat(ID_LENGTHS[type]),
+      "i".repeat(ID_LENGTHS[type]),
+    ]) {
+      callableHandlers.set(callable, async () => ({
+        data: { [`${type}Id`]: id, allocationId: "allocation-test" },
+      }));
       await assert.rejects(createWithUniqueId(type), TypeError);
     }
+    callableHandlers.set(callable, async () => ({
+      data: { [`${type}Id`]: "a".repeat(ID_LENGTHS[type]) },
+    }));
+    await assert.rejects(createWithUniqueId(type), {
+      name: "TypeError",
+      message: "The resource allocation is missing from the response.",
+    });
     const error = Object.assign(new Error("Allocation exhausted"), { code: "functions/aborted" });
     callableHandlers.set(callable, async () => {
       throw error;
@@ -132,6 +147,28 @@ test("reused IDs invalidate old assignment pins without upgrading them", () => {
       code: "assignment-changed",
     });
   }
+});
+
+test("tournament roots and public projections share one allocation pin", async () => {
+  const { seedDoc } = await import("./frontendHarness/mockFirestoreState.mjs");
+  const { getAllTournaments, getTournamentDirectoryEntry, listenToTournamentView } =
+    await import("../app/js/firebase/tournamentRepository.js");
+  const tournamentId = "xyzzabc";
+  clearAssignment("tournament", tournamentId);
+  for (const collection of ["tournaments", "tournamentDirectory", "tournamentViews"]) {
+    seedDoc(`${collection}/${tournamentId}`, { name: "Tournament" });
+  }
+  await getAllTournaments();
+  const allocationId = assertCurrentAssignment("tournament", tournamentId);
+  await getTournamentDirectoryEntry(tournamentId);
+  const view = await new Promise((resolve) => {
+    const stop = listenToTournamentView(tournamentId, (snapshot) => {
+      stop();
+      resolve(snapshot.data());
+    });
+  });
+  assert.equal(view.allocationId, allocationId);
+  assert.equal(assertCurrentAssignment("tournament", tournamentId), allocationId);
 });
 
 test("match events and updates retain allocation pins and reject reused IDs before writing", async () => {
@@ -188,4 +225,29 @@ test("mutating callables capture observed allocations and reject stale drafts be
     code: "assignment-changed",
   });
   assert.equal(requests.length, 1);
+});
+
+test("a delayed score event cannot score a replacement match with the same short ID", async () => {
+  const { addMatchEvent, getMatch } = await import("../app/js/firebase/matchRepository.js");
+  const { flushBackendWork, seedDoc, writeDoc } =
+    await import("./frontendHarness/mockFirestoreState.mjs");
+  const matchId = "qrstum";
+  clearAssignment("match", matchId);
+  seedDoc(`matches/${matchId}`, {
+    allocationId: "original-match",
+    scoreVersion: 0,
+    status: "live",
+  });
+  await getMatch(matchId);
+  firestoreState.backendEnabled = false;
+  await addMatchEvent(matchId, { eventType: "POINT_TEAM_A", scoreVersion: 0 });
+  writeDoc(`matches/${matchId}`, {
+    allocationId: "replacement-match",
+    scoreVersion: 0,
+    status: "live",
+  });
+  flushBackendWork();
+  firestoreState.backendEnabled = true;
+  assert.equal(firestoreState.docs.has(`matches/${matchId}/score/current`), false);
+  assert.equal(firestoreState.backendScores.has(matchId), false);
 });

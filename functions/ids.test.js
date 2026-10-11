@@ -18,7 +18,7 @@ const { paths } = require("./services/firestorePaths");
 describe("canonical typed IDs", () => {
   test("uses the exact letter-only alphabet and one retry limit", () => {
     expect(ID_ALPHABET).toBe("abcdefghjkmnpqrstuxyz");
-    expect(ID_LENGTHS).toEqual({ court: 4, tournament: 6, match: 8, club: 10 });
+    expect(ID_LENGTHS).toEqual({ court: 5, tournament: 7, match: 6, club: 4 });
     expect(MAX_ID_ALLOCATION_ATTEMPTS).toBe(5);
     const source = jest.fn((size) => source.mock.calls.length % size);
     const id = randomId(100, source);
@@ -58,7 +58,7 @@ describe("canonical typed IDs", () => {
       });
       expect(id).toHaveLength(length);
       expect(validateId(type, id)).toBe(id);
-      expect(db.get(paths[type](id))).toEqual({ type });
+      expect(db.get(paths[type](id))).toEqual({ type, allocationId: expect.any(String) });
     },
   );
 
@@ -99,9 +99,9 @@ describe("canonical typed IDs", () => {
     for (const [name, builder] of Object.entries(paths)) {
       if (["admin", "tournamentCreation"].includes(name)) continue;
       expect(() => builder("legacy", "safe-event", "safe-event")).toThrow();
-      expect(() => builder("aaaa/../../admin", "safe-event", "safe-event")).toThrow();
+      expect(() => builder("aaaaa/../../admin", "safe-event", "safe-event")).toThrow();
     }
-    expect(() => paths.matchEvent("abcdefgh", "a/b")).toThrow();
+    expect(() => paths.matchEvent("fghjkm", "a/b")).toThrow();
     expect(() => paths.tournamentCreation("a/b")).toThrow();
   });
 
@@ -134,7 +134,7 @@ describe("canonical typed IDs", () => {
 
   test("deferred writers share their parent's reservations and keep reads before writes", async () => {
     const db = new FakeFirestore();
-    const candidates = [..."aaaaaaaabbbbbbbb"].map((char) => ID_ALPHABET.indexOf(char));
+    const candidates = [..."aaaaaabbbbbb"].map((char) => ID_ALPHABET.indexOf(char));
     const ids = await runIdTransaction(db, async (transaction) => {
       const first = await allocateId(transaction, "match", { db, randomInt: () => 0 });
       const { tx, flushWrites } = deferIdTransactionWrites(transaction);
@@ -145,7 +145,7 @@ describe("canonical typed IDs", () => {
       flushWrites();
       return [first, second];
     });
-    expect(ids).toEqual(["aaaaaaaa", "bbbbbbbb"]);
+    expect(ids).toEqual(["aaaaaa", "bbbbbb"]);
     expect(db.list("matches")).toHaveLength(2);
   });
 
@@ -202,7 +202,7 @@ describe("canonical typed IDs", () => {
 
   test("reserves candidates before awaits in parallel allocations on the same transaction", async () => {
     const db = new FakeFirestore();
-    const candidates = [..."aaaaaaaaaaaaaaaabbbbbbbb"].map((char) => ID_ALPHABET.indexOf(char));
+    const candidates = [..."aaaaaaaaaaaabbbbbb"].map((char) => ID_ALPHABET.indexOf(char));
     const ids = await runIdTransaction(db, async (tx) => {
       const allocated = await Promise.all([
         allocateId(tx, "match", { db, randomInt: () => candidates.shift() }),
@@ -211,7 +211,7 @@ describe("canonical typed IDs", () => {
       allocated.forEach((id, index) => tx.create(db.doc(paths.match(id)), { index }));
       return allocated;
     });
-    expect(ids).toEqual(["aaaaaaaa", "bbbbbbbb"]);
+    expect(ids).toEqual(["aaaaaa", "bbbbbb"]);
     expect(db.list("matches")).toHaveLength(2);
   });
 
@@ -224,7 +224,7 @@ describe("canonical typed IDs", () => {
         await allocateId(tx, "match", { db, randomInt: source });
       }),
     ).rejects.toMatchObject({ code: "ABORTED" });
-    expect(source).toHaveBeenCalledTimes(8 * (1 + MAX_ID_ALLOCATION_ATTEMPTS));
+    expect(source).toHaveBeenCalledTimes(ID_LENGTHS.match * (1 + MAX_ID_ALLOCATION_ATTEMPTS));
     expect(db.docs.size).toBe(0);
   });
 
@@ -233,7 +233,7 @@ describe("canonical typed IDs", () => {
     let rejectRead;
     const tx = {
       get: jest.fn((ref) =>
-        ref.id === "aaaaaaaa" && tx.get.mock.calls.length === 1
+        ref.path === "matches/aaaaaa" && !rejectRead
           ? new Promise((_resolve, reject) => {
               rejectRead = reject;
             })
@@ -245,11 +245,11 @@ describe("canonical typed IDs", () => {
       const second = await allocateId(tx, "match", { db, randomInt: () => 1 });
       rejectRead(new Error("read failed"));
       await expect(pending).rejects.toThrow("read failed");
-      expect(await allocateId(tx, "match", { db, randomInt: () => 0 })).toBe("aaaaaaaa");
+      expect(await allocateId(tx, "match", { db, randomInt: () => 0 })).toBe("aaaaaa");
       await expect(allocateId(tx, "match", { db, randomInt: () => 1 })).rejects.toMatchObject({
         code: "ABORTED",
       });
-      expect(second).toBe("bbbbbbbb");
+      expect(second).toBe("bbbbbb");
     });
   });
 
@@ -271,8 +271,14 @@ describe("canonical typed IDs", () => {
       const result = await Promise.all([create("first"), create("second")]);
       expect(result).toEqual(["a".repeat(length), "b".repeat(length)]);
       expect(db.transactionAttempts).toBe(3);
-      expect(db.get(paths[type](result[0]))).toEqual({ value: "first" });
-      expect(db.get(paths[type](result[1]))).toEqual({ value: "second" });
+      expect(db.get(paths[type](result[0]))).toEqual({
+        value: "first",
+        allocationId: expect.any(String),
+      });
+      expect(db.get(paths[type](result[1]))).toEqual({
+        value: "second",
+        allocationId: expect.any(String),
+      });
     },
   );
 
@@ -297,7 +303,7 @@ describe("canonical typed IDs", () => {
       expect(seenTransactions[0]).toBe(seenTransactions[1]);
       expect(id).toBe("a".repeat(ID_LENGTHS[type]));
       expect(source).toHaveBeenCalledTimes(ID_LENGTHS[type] * 2);
-      expect(db.get(paths[type](id))).toEqual({ attempt: 2 });
+      expect(db.get(paths[type](id))).toEqual({ attempt: 2, allocationId: expect.any(String) });
       expect(db.get("attemptWrites/rolled-back")).toBeUndefined();
     },
   );
@@ -322,9 +328,11 @@ describe("canonical typed IDs", () => {
       { maxAttempts: 2 },
     );
     expect(seenTransactions[0]).toBe(seenTransactions[1]);
-    expect(id).toBe("aaaaaaaa");
-    expect(source).toHaveBeenCalledTimes(8 * 2);
-    expect(db.list("matches")).toEqual([{ id: "aaaaaaaa", attempt: 2 }]);
+    expect(id).toBe("aaaaaa");
+    expect(source).toHaveBeenCalledTimes(ID_LENGTHS.match * 2);
+    expect(db.list("matches")).toEqual([
+      { id: "aaaaaa", attempt: 2, allocationId: expect.any(String) },
+    ]);
   });
 
   test("a retry resets old reservations but still bounds same-attempt collisions to five", async () => {
@@ -344,17 +352,17 @@ describe("canonical typed IDs", () => {
       }),
     ).rejects.toMatchObject({ code: "ABORTED" });
     expect(attempts).toBe(2);
-    expect(source).toHaveBeenCalledTimes(8 * (2 + MAX_ID_ALLOCATION_ATTEMPTS));
+    expect(source).toHaveBeenCalledTimes(ID_LENGTHS.match * (2 + MAX_ID_ALLOCATION_ATTEMPTS));
     expect(db.docs.size).toBe(0);
   });
 
   test("create preconditions and callback errors roll back every queued write", async () => {
-    const db = new FakeFirestore({ "matches/aaaaaaaa": { historical: true } });
+    const db = new FakeFirestore({ "matches/aaaaaa": { historical: true } });
     const before = [...db.docs.entries()];
     await expect(
       runIdTransaction(db, async (tx) => {
-        tx.create(db.doc("matches/bbbbbbbb"), { new: true });
-        tx.create(db.doc("matches/aaaaaaaa"), { overwritten: true });
+        tx.create(db.doc("matches/bbbbbb"), { new: true });
+        tx.create(db.doc("matches/aaaaaa"), { overwritten: true });
       }),
     ).rejects.toMatchObject({ code: 6 });
     expect([...db.docs.entries()]).toEqual(before);
@@ -368,14 +376,14 @@ describe("canonical typed IDs", () => {
     expect([...db.docs.entries()]).toEqual(before);
     expect(
       await runIdTransaction(db, (tx) => allocateId(tx, "match", { db, randomInt: () => 1 })),
-    ).toBe("bbbbbbbb");
+    ).toBe("bbbbbb");
   });
 
   test("allocation cannot run after the caller starts writing", async () => {
     const db = new FakeFirestore();
     await expect(
       runIdTransaction(db, async (tx) => {
-        tx.create(db.doc("matches/bbbbbbbb"), {});
+        tx.create(db.doc("matches/bbbbbb"), {});
         await allocateId(tx, "match", { db, randomInt: () => 0 });
       }),
     ).rejects.toThrow("reads must happen before writes");

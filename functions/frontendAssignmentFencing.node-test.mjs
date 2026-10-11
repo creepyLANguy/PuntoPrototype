@@ -374,7 +374,20 @@ test("an open match rejects a reused-id listener and leave clears session genera
   const dom = await bootFrontend();
   const { enterCourt, leaveCourt } = await import("../app/js/court/session.js");
   const { isCurrentMatchScorable } = await import("../app/js/court/matchSync.js");
-  await enterCourt(ids.court, false, { historyMode: "skip" });
+  await assert.rejects(
+    enterCourt(ids.court, false, {
+      historyMode: "skip",
+      courtAllocationId: "old-url-court",
+    }),
+    { code: "assignment-changed" },
+  );
+  context.clearAssignment();
+  await enterCourt(ids.court, false, {
+    historyMode: "skip",
+    courtAllocationId: "court-old",
+    matchId,
+    matchAllocationId: "match-old",
+  });
   await settle();
   assert.equal(session.currentCourtAllocationId, "court-old");
   assert.equal(session.currentMatchAllocationId, "match-old");

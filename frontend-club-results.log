@@ -1,6 +1,0 @@
-Device ID: WEB-Linux-Generic-Unknown-0x0-uuid_UOLM0Q
-✔ the admin court and device lists show each item's club and search by it (884.649526ms)
-✔ the Clubs tab lists every club with its court and device counts (102.261238ms)
-✖ Add Club creates the club and moves members from their old club (472.842493ms)
-✖ a club the backend rejects stays open with the reason shown (91.135675ms)
-✖ a club's courts and devices open their edit pages and return to the club (3577.390977ms)

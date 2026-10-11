@@ -77,6 +77,9 @@ archives later; archive deletion is not part of automatic culling.
 Counts track currently allocated assignments, not failed candidate attempts,
 updates, archived assignments, or lifetime creation totals. Reusing a freed
 short ID is a new assignment and does not reuse its allocation identity.
+Deleting a resource root does not by itself release the short ID: its
+allocation remains reserved until its descendants and references are safely
+retired. Such reservations still count toward the culling threshold.
 All four lengths are distinct, so collisions are checked only within the
 requested ID type. Repeated characters remain valid.
 
@@ -106,6 +109,20 @@ resource types. Existing displays may remain readable, but starting matches,
 scoring, and administrative edits must wait until maintenance completes.
 Large culls may take a substantial time; do not expect all work to complete
 inside the creation request.
+
+The archive key is `{id}_{allocationId}`. Its `documents` subcollection contains
+the source path and original Firestore data for each document, including
+descendants of missing ancestor documents. The `unlinks` subcollection records
+previous values of documents changed to remove references. Tournament
+read-model and secret sidecars are included, not just the tournament subtree.
+
+The job-created trigger starts maintenance, and `idRetentionWorker` resumes
+unfinished work every minute. Progress, traversal state, and worker leases are
+persisted; a crash must not free IDs or reopen mutations before processing
+finishes. Deploy the Functions, Firestore rules, and supplied collection-group
+indexes together. If a job is stuck, inspect the job and function logs and
+correct the cause before resuming; do not manually clear the gate or delete
+allocation records to bypass unfinished archival.
 
 ## Court document
 
