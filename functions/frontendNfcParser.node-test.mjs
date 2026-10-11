@@ -8,11 +8,11 @@ import { parseNfcTagText, readNfcRecordText } from "../app/js/nfc/parser.js";
 const encode = (text) => new TextEncoder().encode(text);
 
 test("key:value tags are parsed case-insensitively by key", () => {
-  assert.deepEqual(parseNfcTagText(" event:spectate; CourtId: abcd ;deviceid:pulse-1 "), {
-    rawText: "event:spectate; CourtId: abcd ;deviceid:pulse-1",
-    fields: { EVENT: "spectate", COURTID: "abcd", DEVICEID: "pulse-1" },
+  assert.deepEqual(parseNfcTagText(" event:spectate; CourtId: abcda ;deviceid:pulse-1 "), {
+    rawText: "event:spectate; CourtId: abcda ;deviceid:pulse-1",
+    fields: { EVENT: "spectate", COURTID: "abcda", DEVICEID: "pulse-1" },
     eventType: "SPECTATE",
-    courtId: "abcd",
+    courtId: "abcda",
     deviceId: "pulse-1",
     ssid: "",
     password: "",
@@ -34,7 +34,7 @@ test("every supported key alias is honoured", () => {
 test("a bare tag is its own event type; values may contain colons", () => {
   assert.equal(parseNfcTagText("  point_team_a ").eventType, "POINT_TEAM_A");
   assert.equal(parseNfcTagText("EVENT:SPECTATE;COURTID:a:b").courtId, "a:b");
-  assert.equal(parseNfcTagText("COURTID:abcd").eventType, "", "fields without an event key");
+  assert.equal(parseNfcTagText("COURTID:abcda").eventType, "", "fields without an event key");
   assert.deepEqual(parseNfcTagText("EVENT:;COURTID:x").fields, { COURTID: "x" });
 });
 
@@ -44,8 +44,8 @@ test("record text is decoded for text, URL and other record types", () => {
     "EVENT:UNDO",
   );
   assert.equal(
-    readNfcRecordText({ recordType: "url", data: encode("\u0004padelpush.co.za/c/abcd") }),
-    "padelpush.co.za/c/abcd",
+    readNfcRecordText({ recordType: "url", data: encode("\u0004padelpush.co.za/c/abcda") }),
+    "padelpush.co.za/c/abcda",
   );
   assert.equal(readNfcRecordText({ recordType: "mime", data: encode("payload") }), "payload");
   assert.equal(readNfcRecordText({ recordType: "mime", data: encode("   ") }), "");

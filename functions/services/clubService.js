@@ -411,7 +411,9 @@ async function deleteClub(input = {}) {
   });
 }
 
-// Drops a deleted court or device from every club that lists it.
+// Drops a deleted court or device from every club that lists it. Each club is
+// updated in its own transaction that re-checks the member is still gone, so
+// a delayed or retried delivery never unlinks a court id that was reused.
 async function removeDeletedMember(kind, memberId) {
   normalizeMemberIds([memberId], kind);
   const { listField } = MEMBER_KINDS[kind];
@@ -423,17 +425,27 @@ async function removeDeletedMember(kind, memberId) {
   const updates = [];
   clubs.forEach((clubDoc) => {
     updates.push(
-      clubDoc.ref.set(
-        {
-          [listField]: FieldValue.arrayRemove(memberId),
-          updatedAt: FieldValue.serverTimestamp(),
-        },
-        { merge: true },
-      ),
+      db.runTransaction(async (tx) => {
+        const [member, club] = await Promise.all([
+          tx.get(memberRef(kind, memberId)),
+          tx.get(clubDoc.ref),
+        ]);
+        if (member.exists || !club.exists) return false;
+        if (!(club.data()[listField] || []).includes(memberId)) return false;
+        tx.set(
+          clubDoc.ref,
+          {
+            [listField]: FieldValue.arrayRemove(memberId),
+            updatedAt: FieldValue.serverTimestamp(),
+          },
+          { merge: true },
+        );
+        return true;
+      }),
     );
   });
-  await Promise.all(updates);
-  return updates.length;
+  const results = await Promise.all(updates);
+  return results.filter(Boolean).length;
 }
 
 module.exports = {

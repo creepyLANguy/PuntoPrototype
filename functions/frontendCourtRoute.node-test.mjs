@@ -12,7 +12,7 @@ import {
 
 test("/c opens the spectator selection screen without a court id", async () => {
   seedBaseData();
-  seedCourt("rrtt", { name: "Root Court" });
+  seedCourt("rrtta", { name: "Root Court" });
 
   const dom = await bootFrontend({ url: "https://padel.test/c" });
   const document = dom.window.document;

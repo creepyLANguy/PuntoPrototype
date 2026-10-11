@@ -10,12 +10,20 @@ import {
 } from "./firestore.js";
 import { db } from "./client.js";
 import { assertId } from "../config/idContract.js";
+import { assertCurrentAssignment } from "./assignmentContext.js";
 
 function assertResourceIds(data) {
+  const payload = { ...data };
   for (const type of ["court", "club"]) {
     const id = data[`${type}Id`];
-    if (id !== undefined && id !== null) assertId(type, id);
+    if (id === undefined) continue;
+    if (id !== null) assertId(type, id);
+    payload[`${type}AllocationId`] =
+      id === null
+        ? null
+        : assertCurrentAssignment(type, id, data[`${type}AllocationId`]);
   }
+  return payload;
 }
 
 export function getDevice(deviceId) {
@@ -27,13 +35,11 @@ export function getAllDevices() {
 }
 
 export function setDevice(deviceId, data) {
-  assertResourceIds(data);
-  return setDoc(doc(db, "devices", deviceId), data);
+  return setDoc(doc(db, "devices", deviceId), assertResourceIds(data));
 }
 
 export function updateDevice(deviceId, data) {
-  assertResourceIds(data);
-  return updateDoc(doc(db, "devices", deviceId), data);
+  return updateDoc(doc(db, "devices", deviceId), assertResourceIds(data));
 }
 
 export function deleteDevice(deviceId) {

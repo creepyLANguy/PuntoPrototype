@@ -10,6 +10,7 @@ const CALLABLE_CODES = {
   FAILED_PRECONDITION: "failed-precondition",
   ALREADY_EXISTS: "already-exists",
   ABORTED: "aborted",
+  UNAVAILABLE: "unavailable",
 };
 
 class OperationError extends Error {
@@ -28,6 +29,19 @@ const denied = (message = "You are not allowed to do that.") =>
 const precondition = (message, details) =>
   new OperationError("FAILED_PRECONDITION", message, details);
 const conflict = (message, details) => new OperationError("ABORTED", message, details);
+// Every live write is fenced while an ID retention cull runs; callers retry.
+const maintenance = () =>
+  new OperationError("UNAVAILABLE", "Padel Push is briefly in maintenance. Please retry shortly.", {
+    code: "MAINTENANCE",
+    retryable: true,
+  });
+const staleGeneration = (path) =>
+  new OperationError("ABORTED", "This record was replaced. Refresh and retry.", {
+    code: "STALE_GENERATION",
+    path,
+  });
+const isMaintenanceError = (error) =>
+  error?.code === "UNAVAILABLE" && error?.details?.code === "MAINTENANCE";
 
 // Domain errors (MatchRuleError, TournamentDomainError) are rule violations
 // with user-safe messages.
@@ -76,6 +90,9 @@ module.exports = {
   denied,
   precondition,
   conflict,
+  maintenance,
+  staleGeneration,
+  isMaintenanceError,
   toOperationError,
   toCallableError,
   wrapCallable,

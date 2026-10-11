@@ -33,12 +33,12 @@ The collection relationships are visualized in [PP_Data_Model.mmd](PP_Data_Model
 
 All resource IDs use only the 21-character alphabet `abcdefghjkmnpqrstuxyz`:
 
-| Type | Length |
-|---|---|
-| courtId | 4 |
-| tournamentId | 6 |
-| matchId | 8 |
-| clubId | 10 |
+| Type | Length | Culling trigger | Retained target |
+|---|---|---|---|
+| clubId | 4 | 96,000 | 40,000 |
+| courtId | 5 | 1,900,000 | 750,000 |
+| matchId | 6 | 42,000,000 | 16,000,000 |
+| tournamentId | 7 | 899,000,000 | 335,000,000 |
 
 Backend allocation checks only the target type's collection within the same
 Firestore transaction that creates its document. Allocating transactions use
@@ -61,6 +61,52 @@ Supplied internal IDs must satisfy their type's exact lowercase length and
 alphabet. Legacy formats are not supported; clear and repopulate the database
 before using this contract.
 
+When a committed assignment makes its type's allocation count reach or exceed
+the trigger, culling removes the oldest `total − target` assignments. Ordering
+is by assignment, not the last update or the last time an ID was used. The newest
+target assignments remain allocated.
+
+Culling preserves complete Firestore document trees, including nested
+subcollections and match reset archives, in `CULLED_CLUBS`, `CULLED_COURTS`,
+`CULLED_MATCHES`, or `CULLED_TOURNAMENTS`. Archives identify the individual
+assignment so culling a reused ID never overwrites its previous archive.
+References to the retiring assignment are unlinked before that ID can be
+assigned again. System administrators may review and manually delete retained
+archives later; archive deletion is not part of automatic culling.
+
+Counts track currently allocated assignments, not failed candidate attempts,
+updates, archived assignments, or lifetime creation totals. Reusing a freed
+short ID is a new assignment and does not reuse its allocation identity.
+All four lengths are distinct, so collisions are checked only within the
+requested ID type. Repeated characters remain valid.
+
+Culling is background maintenance, not one unbounded Firestore transaction.
+Copying, unlinking, and deleting must finish before an assignment is released.
+Archives can contain passwords, private tournament material, and scoring
+history; the `CULLED_*` collections are not client-readable. Only trusted system
+administrators should review or delete them.
+
+Resource roots carry an immutable `allocationId` identifying that assignment.
+Mutations must use the previously observed allocation, rather than rereading a
+reused ID and treating its replacement as the original entity. Device bindings
+carry `courtAllocationId` and `clubAllocationId`; court match pointers carry
+`activeMatchAllocationId` and `lastMatchAllocationId`. Scoring events identify
+both the match allocation and their court allocation.
+
+Allocation accounting is stored in `_idLedger/{type}` and
+`_idLedger/{type}/allocations/{id}`. Assignment records use monotonically
+increasing per-type sequences to choose the oldest assignments independently
+of timestamp ties. These internal collections are not client-accessible.
+The allocation that crosses a threshold also creates a durable job under
+`_idMaintenance/control/jobs` and activates the maintenance gate in the same
+transaction. A failed allocation cannot increment the ledger or create a job.
+
+During maintenance, backend and direct client mutations are blocked across
+resource types. Existing displays may remain readable, but starting matches,
+scoring, and administrative edits must wait until maintenance completes.
+Large culls may take a substantial time; do not expect all work to complete
+inside the creation request.
+
 ## Court document
 
 The backend `createCourt` callable creates court documents with fields including:
@@ -68,6 +114,7 @@ The backend `createCourt` callable creates court documents with fields including
 - name
 - password
 - createdAt
+- allocationId
 - status
 - scoringMode / scoringOptions defaults for casual matches
 - beaconSidesSwapped

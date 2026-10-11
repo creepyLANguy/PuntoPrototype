@@ -10,11 +10,13 @@ const { ID_ALPHABET, ID_LENGTHS, assertId, isValidId } =
   await import("../app/js/config/idContract.js");
 const { createWithUniqueId, createClub, manageMatch, manageTournament } =
   await import("../app/js/firebase/callables.js");
+const { assertCurrentAssignment, clearAssignment, rememberAssignment } =
+  await import("../app/js/firebase/assignmentContext.js");
 
 test("all four frontend ID contracts have distinct lengths and one alphabet", () => {
   assert.equal(ID_ALPHABET.length, 21);
   assert.equal(new Set(ID_ALPHABET).size, 21);
-  assert.deepEqual(ID_LENGTHS, { court: 4, tournament: 6, match: 8, club: 10 });
+  assert.deepEqual(ID_LENGTHS, { court: 5, tournament: 7, match: 6, club: 4 });
   assert.equal(new Set(Object.values(ID_LENGTHS)).size, 4);
   for (const [type, length] of Object.entries(ID_LENGTHS)) {
     for (const letter of ID_ALPHABET) {
@@ -49,7 +51,13 @@ test("typed creation dispatches to the backend and validates its response", asyn
         manageMatch: "match",
         manageTournament: "tournament",
       }[name];
-      return { data: { [`${type}Id`]: "a".repeat(ID_LENGTHS[type]), success: true } };
+      return {
+        data: {
+          [`${type}Id`]: "a".repeat(ID_LENGTHS[type]),
+          allocationId: `allocation-${type}`,
+          success: true,
+        },
+      };
     });
   }
   const credentials = { adminKey: "test-admin-key" };
@@ -71,20 +79,21 @@ test("existing creation wrappers use the same typed path", async () => {
   const requests = [];
   callableHandlers.set("createClub", async (payload) => {
     requests.push(["club", payload]);
-    return { data: { clubId: "abcdefghjk" } };
+    return { data: { clubId: "abch", allocationId: "allocation-club" } };
   });
   callableHandlers.set("manageTournament", async (payload) => {
     requests.push(["tournament", payload]);
-    return { data: { tournamentId: "abcdef" } };
+    return { data: { tournamentId: "abcdefg", allocationId: "allocation-tournament" } };
   });
   callableHandlers.set("manageMatch", async (payload) => {
     requests.push(["match", payload]);
-    return { data: { matchId: "abcdefgh" } };
+    return { data: { matchId: "abcdef", allocationId: "allocation-match" } };
   });
-  assert.equal((await createClub({ name: "Club" })).data.clubId, "abcdefghjk");
-  assert.equal((await manageTournament("createTournament")).tournamentId, "abcdef");
-  assert.equal((await manageMatch("createMatch")).matchId, "abcdefgh");
-  await manageMatch("ensureCourtMatch", { courtId: "abcd" });
+  assert.equal((await createClub({ name: "Club" })).data.clubId, "abch");
+  assert.equal((await manageTournament("createTournament")).tournamentId, "abcdefg");
+  assert.equal((await manageMatch("createMatch")).matchId, "abcdef");
+  rememberAssignment("court", "abcda", { allocationId: "allocation-court-abcda" });
+  await manageMatch("ensureCourtMatch", { courtId: "abcda" });
   assert.equal(requests.at(-1)[1].operation, "ensureCourtMatch");
 });
 
@@ -106,4 +115,77 @@ test("all creation types reject malformed backend IDs and preserve backend error
     });
     await assert.rejects(createWithUniqueId(type), (received) => received === error);
   }
+});
+
+test("reused IDs invalidate old assignment pins without upgrading them", () => {
+  const ids = { club: "xyzz", court: "xyzza", match: "xyzzab", tournament: "xyzzabc" };
+  for (const [type, id] of Object.entries(ids)) {
+    clearAssignment(type, id);
+    rememberAssignment(type, id, { allocationId: "original-allocation" });
+    assert.equal(assertCurrentAssignment(type, id), "original-allocation");
+    rememberAssignment(type, id, { allocationId: "replacement-allocation" });
+    assert.throws(() => assertCurrentAssignment(type, id), { code: "assignment-changed" });
+    clearAssignment(type, id);
+    rememberAssignment(type, id, { allocationId: "replacement-allocation" });
+    assert.equal(assertCurrentAssignment(type, id), "replacement-allocation");
+    assert.throws(() => assertCurrentAssignment(type, id, "original-allocation"), {
+      code: "assignment-changed",
+    });
+  }
+});
+
+test("match events and updates retain allocation pins and reject reused IDs before writing", async () => {
+  const { getCourt } = await import("../app/js/firebase/courtRepository.js");
+  const { addMatchEvent, getMatch, updateMatch } =
+    await import("../app/js/firebase/matchRepository.js");
+  const { seedDoc, writeDoc } = await import("./frontendHarness/mockFirestoreState.mjs");
+  const courtId = "pqrsa";
+  const matchId = "pqrstu";
+  clearAssignment("court", courtId);
+  clearAssignment("match", matchId);
+  seedDoc(`courts/${courtId}`, { allocationId: "original-court" });
+  seedDoc(`matches/${matchId}`, { allocationId: "original-match" });
+  await getCourt(courtId);
+  await getMatch(matchId);
+  const eventRef = await addMatchEvent(matchId, { eventType: "JOIN", courtId });
+  assert.equal(firestoreState.docs.get(eventRef.path).allocationId, "original-match");
+  assert.equal(firestoreState.docs.get(eventRef.path).courtAllocationId, "original-court");
+  await updateMatch(matchId, { name: "Pinned match" });
+  assert.equal(firestoreState.docs.get(`matches/${matchId}`).allocationId, "original-match");
+  writeDoc(`matches/${matchId}`, { allocationId: "replacement-match", name: "New match" });
+  await getMatch(matchId);
+  const count = firestoreState.docs.size;
+  assert.throws(() => addMatchEvent(matchId, { eventType: "JOIN", courtId }), {
+    code: "assignment-changed",
+  });
+  assert.throws(() => updateMatch(matchId, { name: "Stale write" }), {
+    code: "assignment-changed",
+  });
+  assert.equal(firestoreState.docs.size, count);
+  assert.equal(firestoreState.docs.get(`matches/${matchId}`).name, "New match");
+});
+
+test("mutating callables capture observed allocations and reject stale drafts before dispatch", async () => {
+  const { updateClub } = await import("../app/js/firebase/callables.js");
+  const requests = [];
+  const clubId = "tuxy";
+  const courtId = "tuxyz";
+  clearAssignment("club", clubId);
+  clearAssignment("court", courtId);
+  rememberAssignment("club", clubId, { allocationId: "original-club" });
+  rememberAssignment("court", courtId, { allocationId: "original-court" });
+  callableHandlers.set("updateClub", async (payload) => {
+    requests.push(payload);
+    return { data: { success: true } };
+  });
+  await updateClub({ clubId, name: "Club", courtIds: [courtId] });
+  assert.deepEqual(requests[0].expectedAllocations, {
+    club: { [clubId]: "original-club" },
+    court: { [courtId]: "original-court" },
+  });
+  rememberAssignment("court", courtId, { allocationId: "replacement-court" });
+  assert.throws(() => updateClub({ clubId, name: "Stale club", courtIds: [courtId] }), {
+    code: "assignment-changed",
+  });
+  assert.equal(requests.length, 1);
 });

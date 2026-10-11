@@ -527,9 +527,10 @@ body.light-mode .qr-resize-handle
   color: #ffffff;
   font-weight: 900;
 
-  font-size: clamp(1rem, 15cqi, 999rem);
-  letter-spacing: 0.5em;
-  padding-left: clamp(0.5em, 1cqi, 1em);
+  font-size: 14cqi;
+  letter-spacing: 0.25em;
+  padding-left: 0.25em;
+  box-sizing: border-box;
 
   line-height: 1.2;
   text-transform: uppercase;
@@ -711,7 +712,6 @@ body.light-mode .court-qr-label
   /* visible so borders are not cut; .app clips any animation overflow */
   overflow: visible;
 }
-
 /* =======================================================
    STRAIGHT POINTS TOTAL — sits in the gap between the two team cards
 ======================================================= */

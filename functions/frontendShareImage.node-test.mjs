@@ -23,7 +23,7 @@ import { holdToBlob, toBlobCalls } from "./frontendHarness/mocks/html-to-image.m
 const liveStyles = readFileSync(new URL("../app/css/style.css", import.meta.url), "utf8");
 const qrLibrary = readFileSync(new URL("../app/js/qrcode.min.js", import.meta.url), "utf8");
 
-const COURT_ID = "shrq";
+const COURT_ID = "shrqa";
 const SHARE_WIDTH = 1080;
 const SHARE_HEIGHT = 1350;
 // The share QR is sized from the 192px footer: max(168, min(240, 192 - 48)).
@@ -310,18 +310,14 @@ test("the QR payload keeps the full URL while the visible URL omits the protocol
   const [, text] = footer.children;
   assert.deepEqual(
     [...text.children].map((line) => line.textContent),
-    [
-      "Scan for match details",
-      `Court ID: ${COURT_ID.toUpperCase()}`,
-      `padel.test/m/${COURT_ID}aaaa`,
-    ],
+    ["Scan for match details", `Court ID: ${COURT_ID.toUpperCase()}`, `padel.test/m/${COURT_ID}a`],
   );
 
   const generator = qrGenerators.find(
-    ({ options }) => options.text.endsWith(`/m/${COURT_ID}aaaa`) && options.width === QR_SIZE,
+    ({ options }) => options.text.endsWith(`/m/${COURT_ID}a`) && options.width === QR_SIZE,
   );
   assert.ok(generator, "the share QR is generated for the match link");
-  assert.equal(generator.options.text, `https://padel.test/m/${COURT_ID}aaaa`);
+  assert.equal(generator.options.text, `https://padel.test/m/${COURT_ID}a`);
   assert.equal(generator.element.isConnected, false, "the QR is generated off-DOM");
   assert.equal(footer.querySelector("canvas, img, table"), null, "no QR raster in the export DOM");
 });
@@ -396,7 +392,7 @@ test("sharing details attaches the captured PNG file", async () => {
   assert.equal(payload.files.length, 1);
   assert.equal(payload.files[0].name, "share-image.png");
   assert.equal(payload.files[0].type, "image/png");
-  assert.match(payload.text, /View full match details:\nhttps:\/\/padel\.test\/m\/shrqaaaa$/);
+  assert.match(payload.text, /View full match details:\nhttps:\/\/padel\.test\/m\/shrqaa$/);
 });
 
 test("a fresh details render invalidates the old image and sharing waits for the new one", async () => {

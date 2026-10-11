@@ -28,8 +28,8 @@ function score(overrides = {}) {
 
 test("court links use the origin and the encoded court id", () => {
   assert.equal(
-    buildCourtQrUrl("abcd", "https://www.padelpush.co.za"),
-    "https://www.padelpush.co.za/c/abcd",
+    buildCourtQrUrl("abcda", "https://www.padelpush.co.za"),
+    "https://www.padelpush.co.za/c/abcda",
   );
   assert.equal(
     buildCourtQrUrl("a b", "https://qa.padelpush.co.za/"),
@@ -82,9 +82,9 @@ test("the share payload carries brand, teams, score, court and link", () => {
   const previous = { ...session };
   globalThis.window = { location: { origin: "https://padel.test" } };
   Object.assign(session, {
-    currentCourtId: "abcd",
+    currentCourtId: "abcda",
     currentCourtName: "Centre",
-    currentMatchId: "abcdaaaa",
+    currentMatchId: "abcdaa",
     currentRawTeamNames: { A: "Reds", B: "Blues" },
     currentPlayerNames: { A1: "", A2: "", B1: "", B2: "" },
     score: score({ completedSets: [{ A: 6, B: 2 }] }),
@@ -100,17 +100,17 @@ test("the share payload carries brand, teams, score, court and link", () => {
         BRAND.name + "\n",
         "Reds vs Blues",
         "6-2\n",
-        "Centre (ABCD)\n",
+        "Centre (ABCDA)\n",
         "View live scoreboard:",
-        "https://padel.test/c/abcd",
+        "https://padel.test/c/abcda",
         "\nThis match:",
-        "https://padel.test/m/abcdaaaa",
+        "https://padel.test/m/abcdaa",
       ].join("\n"),
     );
 
     shareCardState.shareableScoreCardImage = { name: "share-image.png" };
     const details = getSharePayload("details");
-    assert.match(details.text, /View full match details:\nhttps:\/\/padel\.test\/m\/abcdaaaa$/);
+    assert.match(details.text, /View full match details:\nhttps:\/\/padel\.test\/m\/abcdaa$/);
     assert.deepEqual(details.files, [{ name: "share-image.png" }]);
     assert.deepEqual(getSharePayload("scoreboard").files, [], "only details shares the image");
   } finally {

@@ -19,21 +19,21 @@ let window;
 
 test.before(async () => {
   seedBaseData();
-  seedCourt("drct", { name: "Direct Player Court" });
+  seedCourt("drcta", { name: "Direct Player Court" });
 
-  seedCourt("mtch", {
+  seedCourt("mtcha", {
     name: "Match Route Court",
-    activeMatchId: "qrstuxyz",
+    activeMatchId: "qrstux",
     matchName: "Active Match",
   });
-  seedDoc("matches/abcdefgh", {
-    matchId: "abcdefgh",
+  seedDoc("matches/abcdef", {
+    matchId: "abcdef",
     name: "Linked Match",
     kind: "tournament",
     visibility: "public",
     status: "live",
-    currentCourtId: "mtch",
-    lastCourtId: "mtch",
+    currentCourtId: "mtcha",
+    lastCourtId: "mtcha",
     teamNames: { A: "Linked A", B: "Linked B" },
     playerNames: { A1: "", A2: "", B1: "", B2: "" },
     scoringMode: "straight",
@@ -43,10 +43,10 @@ test.before(async () => {
       tiebreakMode: "sixAllSeven",
     },
     scoreVersion: 0,
-    tournamentId: "abcdef",
+    tournamentId: "abcdefg",
   });
   pushScoreSnapshot(
-    "abcdefgh",
+    "abcdef",
     makeScore({
       A: { points: 7, games: 0, sets: 0, totalPoints: 7 },
       B: { points: 2, games: 0, sets: 0, totalPoints: 2 },
@@ -58,7 +58,7 @@ test.before(async () => {
     }),
   );
 
-  const dom = await bootFrontend({ url: "https://padel.test/p/drct" });
+  const dom = await bootFrontend({ url: "https://padel.test/p/drcta" });
   document = dom.window.document;
   window = dom.window;
 
@@ -94,13 +94,13 @@ test("/p/<court> player submit primes and plays the join sound", async () => {
 });
 
 test("/p/<matchId> loads that match on its court as a spectator and then authenticates as a player", async () => {
-  window.history.pushState({}, "", "/p/abcdefgh");
+  window.history.pushState({}, "", "/p/abcdef");
   window.dispatchEvent(new window.PopStateEvent("popstate"));
 
   await waitFor(
     () =>
       document.getElementById("playPage").style.display !== "none" &&
-      document.querySelector('#playCourtList .court-item[data-court-id="mtch"].active'),
+      document.querySelector('#playCourtList .court-item[data-court-id="mtcha"].active'),
     { label: "match-target join prompt" },
   );
   await waitFor(() => getRenderedScoreForDirectJoin(document).pointsA === "7", {
@@ -110,7 +110,7 @@ test("/p/<matchId> loads that match on its court as a spectator and then authent
   assert.equal(document.getElementById("playCourtSearch").value, "Match Route Court");
   assert.equal(document.getElementById("playPasswordSection").style.display, "block");
   assert.notEqual(document.getElementById("scoreboardPage").style.display, "none");
-  assert.equal(window.location.pathname, "/p/abcdefgh");
+  assert.equal(window.location.pathname, "/p/abcdef");
   assert.equal(document.body.classList.contains("spectating-mode"), true);
 
   document.getElementById("playCourtPassword").value = "pw";
@@ -132,7 +132,7 @@ test("an explicit match link keeps its score after listener refresh", async () =
   document.dispatchEvent(new window.Event("visibilitychange"));
   await settle(30);
   pushScoreSnapshot(
-    "abcdefgh",
+    "abcdef",
     makeScore({
       A: { points: 8, games: 0, sets: 0, totalPoints: 8 },
       B: { points: 2, games: 0, sets: 0, totalPoints: 2 },
@@ -149,8 +149,8 @@ test("an explicit match link keeps its score after listener refresh", async () =
 });
 
 test("switching to a court link clears the explicit match selection", async () => {
-  pushScoreSnapshot("qrstuxyz", makeScore({ A: { points: 1, games: 0, sets: 0, totalPoints: 1 } }));
-  window.history.pushState({}, "", "/p/mtch");
+  pushScoreSnapshot("qrstux", makeScore({ A: { points: 1, games: 0, sets: 0, totalPoints: 1 } }));
+  window.history.pushState({}, "", "/p/mtcha");
   window.dispatchEvent(new window.PopStateEvent("popstate"));
 
   await waitFor(() => getRenderedScoreForDirectJoin(document).pointsA === "15", {
@@ -166,15 +166,15 @@ test("an ordinary court player join follows subsequent active match changes", as
     label: "court player join",
   });
 
-  seedDoc("matches/jkmnpqrs", {
-    ...firestoreState.docs.get("matches/qrstuxyz"),
-    matchId: "jkmnpqrs",
+  seedDoc("matches/jkmnpq", {
+    ...firestoreState.docs.get("matches/qrstux"),
+    matchId: "jkmnpq",
   });
-  pushScoreSnapshot("jkmnpqrs", makeScore({ A: { points: 2, games: 0, sets: 0, totalPoints: 2 } }));
-  writeDoc("courts/mtch", {
-    ...firestoreState.docs.get("courts/mtch"),
-    activeMatchId: "jkmnpqrs",
-    lastMatchId: "jkmnpqrs",
+  pushScoreSnapshot("jkmnpq", makeScore({ A: { points: 2, games: 0, sets: 0, totalPoints: 2 } }));
+  writeDoc("courts/mtcha", {
+    ...firestoreState.docs.get("courts/mtcha"),
+    activeMatchId: "jkmnpq",
+    lastMatchId: "jkmnpq",
   });
   await waitFor(() => getRenderedScoreForDirectJoin(document).pointsA === "30", {
     label: "new active match score after player join",
@@ -182,7 +182,7 @@ test("an ordinary court player join follows subsequent active match changes", as
 });
 
 test("an explicit link pins a match already followed through its court", async () => {
-  window.history.pushState({}, "", "/p/jkmnpqrs");
+  window.history.pushState({}, "", "/p/jkmnpq");
   window.dispatchEvent(new window.PopStateEvent("popstate"));
   await waitFor(
     () =>
@@ -191,13 +191,13 @@ test("an explicit link pins a match already followed through its court", async (
     { label: "explicit link to the current match" },
   );
 
-  writeDoc("courts/mtch", {
-    ...firestoreState.docs.get("courts/mtch"),
-    activeMatchId: "qrstuxyz",
-    lastMatchId: "qrstuxyz",
+  writeDoc("courts/mtcha", {
+    ...firestoreState.docs.get("courts/mtcha"),
+    activeMatchId: "qrstux",
+    lastMatchId: "qrstux",
   });
   await settle(30);
-  pushScoreSnapshot("jkmnpqrs", makeScore({ A: { points: 3, games: 0, sets: 0, totalPoints: 3 } }));
+  pushScoreSnapshot("jkmnpq", makeScore({ A: { points: 3, games: 0, sets: 0, totalPoints: 3 } }));
   await waitFor(() => getRenderedScoreForDirectJoin(document).pointsA === "40", {
     label: "explicitly pinned current match score",
   });

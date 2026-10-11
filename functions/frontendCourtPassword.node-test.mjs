@@ -55,10 +55,10 @@ async function openResetModal() {
 
 test.before(async () => {
   seedBaseData();
-  seedCourt("pqrs");
-  seedCourt("abcd");
+  seedCourt("pqrsa");
+  seedCourt("abcda");
   // A realistic court password: at least 4 characters, as the reset dialog requires.
-  seedCourt("efgh", { password: "curpw123" });
+  seedCourt("efgha", { password: "curpw123" });
 
   callableHandlers.set("resetCourt", async ({ courtId, newPassword }) => {
     resetCalls.push(newPassword);
@@ -85,24 +85,24 @@ test.before(async () => {
 });
 
 test("a player is switched to spectate when the court password changes", async () => {
-  await joinCourtAsPlayer(document, "pqrs");
+  await joinCourtAsPlayer(document, "pqrsa");
   assert.equal(isSpectating(), false, "joins as a player");
 
-  changePasswordRemotely("pqrs", "rotated1");
+  changePasswordRemotely("pqrsa", "rotated1");
 
   await waitFor(() => isSpectating(), { label: "player demoted to spectate" });
   assert.equal(document.getElementById("undoBtn").style.display, "none");
 
-  await returnToMenu("pqrs");
+  await returnToMenu("pqrsa");
 });
 
 test("a player is NOT switched to spectate when the court doc changes but the password does not", async () => {
-  await joinCourtAsPlayer(document, "abcd");
+  await joinCourtAsPlayer(document, "abcda");
   assert.equal(isSpectating(), false);
 
   // A rename of the teams must not be mistaken for a password change.
-  writeDoc("matches/abcdaaaa", {
-    ...firestoreState.docs.get("matches/abcdaaaa"),
+  writeDoc("matches/abcdaa", {
+    ...firestoreState.docs.get("matches/abcdaa"),
     teamNames: { A: "Reds", B: "Blues" },
   });
 
@@ -111,15 +111,15 @@ test("a player is NOT switched to spectate when the court doc changes but the pa
   });
   assert.equal(isSpectating(), false, "unrelated court update must not demote the player");
 
-  await returnToMenu("abcd");
+  await returnToMenu("abcda");
 });
 
 test("an admin who entered with the skeleton key keeps playing through a password change", async () => {
-  seedCourt("jkmn");
-  await joinCourtAsPlayer(document, "jkmn", ADMIN_SKELETON_KEY);
+  seedCourt("jkmna");
+  await joinCourtAsPlayer(document, "jkmna", ADMIN_SKELETON_KEY);
   assert.equal(isSpectating(), false, "admin joins as a player");
 
-  changePasswordRemotely("jkmn", "rotated2");
+  changePasswordRemotely("jkmna", "rotated2");
 
   // Give the listener the same budget the demotion test needed, then assert the
   // admin is still a player.
@@ -127,11 +127,11 @@ test("an admin who entered with the skeleton key keeps playing through a passwor
   assert.equal(isSpectating(), false, "admin must not be demoted by a password change");
   assert.notEqual(document.getElementById("undoBtn").style.display, "none");
 
-  await returnToMenu("jkmn");
+  await returnToMenu("jkmna");
 });
 
 test("a blank reset password keeps the existing court password", async () => {
-  await joinCourtAsPlayer(document, "efgh", "curpw123");
+  await joinCourtAsPlayer(document, "efgha", "curpw123");
   resetCalls.length = 0;
 
   await openResetModal();
@@ -144,7 +144,7 @@ test("a blank reset password keeps the existing court password", async () => {
 
   assert.equal(resetCalls.length, 1);
   assert.equal(resetCalls[0], null, "a blank field sends no new password");
-  assert.equal(courtDoc("efgh").password, "curpw123", "court password is unchanged");
+  assert.equal(courtDoc("efgha").password, "curpw123", "court password is unchanged");
   assert.equal(isSpectating(), false, "the resetting player keeps playing");
 });
 
@@ -161,7 +161,7 @@ test("re-entering the current password is not treated as a change", async () => 
 
   assert.equal(resetCalls.length, 1);
   assert.equal(resetCalls[0], null, "the unchanged password is not sent as a new one");
-  assert.equal(courtDoc("efgh").password, "curpw123");
+  assert.equal(courtDoc("efgha").password, "curpw123");
   assert.equal(isSpectating(), false);
 });
 
@@ -193,7 +193,7 @@ test("a genuinely new reset password is sent and applied", async () => {
   });
 
   assert.deepEqual(resetCalls, ["freshpw"]);
-  assert.equal(courtDoc("efgh").password, "freshpw");
+  assert.equal(courtDoc("efgha").password, "freshpw");
   // The device that performed the change must not demote itself.
   await settle(50);
   assert.equal(isSpectating(), false, "the resetting player keeps playing");

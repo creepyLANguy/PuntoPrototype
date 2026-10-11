@@ -19,7 +19,7 @@ import {
 
 const styles = readFileSync(new URL("../app/css/style.css", import.meta.url), "utf8");
 
-const COURT_ID = "ndge";
+const COURT_ID = "ndgea";
 
 let window;
 let document;

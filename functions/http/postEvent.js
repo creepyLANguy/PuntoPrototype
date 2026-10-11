@@ -14,6 +14,7 @@ const {
   SUPPORTED_EVENTS,
   normalizeScoreVersion,
 } = require("../domain/events/validation");
+const { isMaintenanceError } = require("../services/errors");
 
 const ALLOWED_BROWSER_ORIGINS = new Set([
   "https://qa.padelpush.co.za",
@@ -241,6 +242,8 @@ async function postEvent(req, res) {
       actorDeviceId: deviceId,
       courtId: actingCourtId,
       scoreVersion: normalizeScoreVersion(matchData?.scoreVersion),
+      // Binds the event to this match generation (see processScoreEvent).
+      allocationId: matchData?.allocationId ?? null,
       ...(effectiveEventType !== eventType
         ? { sourceEventType: eventType, beaconSidesSwapped: true }
         : {}),
@@ -248,6 +251,13 @@ async function postEvent(req, res) {
 
     return sendJson(res, 200, { success: true, eventId, matchId, courtId: actingCourtId });
   } catch (err) {
+    if (isMaintenanceError(err)) {
+      if (typeof res.set === "function") res.set("Retry-After", "30");
+      return sendJson(res, 503, { success: false, maintenance: true, error: err.message });
+    }
+    if (err?.details?.code === "STALE_GENERATION") {
+      return sendJson(res, 409, { success: false, error: err.message });
+    }
     console.error(err);
     return sendJson(res, 500, { success: false, error: "Error" });
   }

@@ -16,9 +16,9 @@ let window;
 
 test.before(async () => {
   seedBaseData();
-  seedCourt("rute", { name: "Route Court" });
+  seedCourt("rutea", { name: "Route Court" });
 
-  const dom = await bootFrontend({ url: "https://padel.test/p/rute" });
+  const dom = await bootFrontend({ url: "https://padel.test/p/rutea" });
   document = dom.window.document;
   window = dom.window;
 
@@ -37,13 +37,13 @@ test("/p/<court> opens the join prompt with the court preselected", () => {
   assert.equal(document.getElementById("playPasswordSection").style.display, "block");
   assert.equal(
     document.querySelector("#playCourtList .court-item.active")?.dataset.courtId,
-    "rute",
+    "rutea",
   );
 });
 
 test("the court is already spectated behind the prompt", () => {
   assert.notEqual(document.getElementById("scoreboardPage").style.display, "none");
-  assert.equal(window.location.pathname, "/p/rute");
+  assert.equal(window.location.pathname, "/p/rutea");
 });
 
 test("dismissing the prompt leaves the viewer on the court's spectator view", async () => {
@@ -56,5 +56,5 @@ test("dismissing the prompt leaves the viewer on the court's spectator view", as
 
   assert.notEqual(document.getElementById("scoreboardPage").style.display, "none");
   assert.equal(document.getElementById("menuPage").style.display, "none");
-  assert.equal(window.location.pathname, "/c/rute");
+  assert.equal(window.location.pathname, "/c/rutea");
 });

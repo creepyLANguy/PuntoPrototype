@@ -6,12 +6,25 @@ and are separate from the public read-only HTTP API.
 
 ## Current functions
 
-Resource IDs use `abcdefghjkmnpqrstuxyz` exclusively: court IDs have 4
-characters, tournament IDs 6, match IDs 8, and club IDs 10. Creation uses one
+Resource IDs use `abcdefghjkmnpqrstuxyz` exclusively: court IDs have 5
+characters, tournament IDs 7, match IDs 6, and club IDs 4. Creation uses one
 transactional backend allocator with at most five candidate attempts; exhaustion
 returns `aborted` without partial writes. Existing IDs cannot be overwritten by
 creation. Supplied IDs are validated against the exact type contract; legacy
 formats are not accepted.
+
+Assignment retention limits are documented in [the data model](../data-model.md#resource-ids).
+Reaching a trigger schedules oldest-first culling down to its target, preserving
+the complete document trees in backend-only `CULLED_*` Firestore collections.
+IDs are not available for reassignment until archival and reference unlinking
+have completed.
+
+Existing-resource mutations supply `expectedAllocations`, a map of resource
+types to IDs and their previously observed `allocationId` tokens. A request
+must not silently replace an old token with the replacement assignment's token.
+Creation responses include the new resource's `allocationId`; clients retain
+it with that resource's context. During culling, mutations are temporarily
+unavailable until the background job completes.
 
 Browser creation calls are centralized in `createWithUniqueId(type, data,
 credentials)`, which dispatches to the appropriate callable and validates the
@@ -19,12 +32,12 @@ returned ID. Allocation is never separated from document creation.
 
 ### createCourt
 
-Creates a physical court and allocates its four-character ID atomically.
+Creates a physical court and allocates its five-character ID atomically.
 Requires `credentials.adminKey`.
 
 Request: `{ name, password, status?, scoringOptions?, credentials }`.
 
-Returns `{ courtId }`. New courts have no active match; a match is created when
+Returns `{ courtId, allocationId }`. New courts have no active match; a match is created when
 play starts. Direct client creation of court documents is denied by security
 rules.
 

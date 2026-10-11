@@ -1,11 +1,29 @@
 // In-memory Firestore for service-level tests. Supports the Admin SDK surface
-// the services use: doc get/set(merge)/delete, collection queries with
-// where("==")/orderBy/startAt/limit, collection().doc(), batches and
-// transactions (reads must precede writes, as in production).
+// the services use: doc get/set(merge)/create/update/delete/listCollections,
+// collection and collection-group queries with where (dot paths)/orderBy/
+// startAt/startAfter/limit, listDocuments (missing ancestors included),
+// getAll, batches and transactions (reads must precede writes, as in
+// production). Unsupported calls throw instead of being silently ignored.
 const SERVER_TIMESTAMP = { __serverTimestamp: true };
 
 function isServerTimestamp(value) {
   return Boolean(value && value.__serverTimestamp === true);
+}
+
+function fieldValue(data, field) {
+  return String(field)
+    .split(".")
+    .reduce((node, key) => (node && typeof node === "object" ? node[key] : undefined), data);
+}
+
+function setFieldPath(target, field, value) {
+  const keys = String(field).split(".");
+  let node = target;
+  keys.slice(0, -1).forEach((key) => {
+    if (!node[key] || typeof node[key] !== "object" || Array.isArray(node[key])) node[key] = {};
+    node = node[key];
+  });
+  node[keys[keys.length - 1]] = value;
 }
 
 function compareValues(left, right) {
@@ -68,6 +86,27 @@ class FakeFirestore {
     this.docs.set(path, options?.merge && existing ? { ...existing, ...next } : next);
   }
 
+  update(path, data) {
+    const existing = this.docs.get(path);
+    if (existing === undefined) {
+      const error = new Error(`No document to update: ${path}`);
+      error.code = 5;
+      throw error;
+    }
+    const next = structuredClone(existing);
+    Object.entries(data).forEach(([field, value]) => {
+      const current = fieldValue(existing, field);
+      setFieldPath(
+        next,
+        field,
+        value?.__arrayRemove
+          ? (current || []).filter((entry) => !value.__arrayRemove.includes(entry))
+          : this.materialize(structuredClone(value)),
+      );
+    });
+    this.docs.set(path, next);
+  }
+
   commitOperations(ops) {
     const before = this.docs;
     const clock = this.clock;
@@ -81,6 +120,7 @@ class FakeFirestore {
           throw error;
         }
         if (type === "delete") this.docs.delete(path);
+        else if (type === "update") this.update(path, data);
         else this.write(path, data, options);
       }
     } catch (error) {
@@ -100,9 +140,38 @@ class FakeFirestore {
       get: async () => store.snapshot(path),
       set: async (data, options) => store.write(path, data, options),
       create: async (data) => store.commitOperations([{ type: "create", path, data }]),
+      update: async (data) => store.commitOperations([{ type: "update", path, data }]),
       delete: async () => store.docs.delete(path),
       collection: (name) => store.collection(`${path}/${name}`),
+      listCollections: async () => store.childCollections(path),
     };
+  }
+
+  childCollections(docPath) {
+    const prefix = `${docPath}/`;
+    const ids = new Set();
+    [...this.docs.keys()].forEach((path) => {
+      if (path.startsWith(prefix)) ids.add(path.slice(prefix.length).split("/")[0]);
+    });
+    return [...ids].sort().map((id) => this.collection(`${prefix}${id}`));
+  }
+
+  // Like the Admin SDK: includes "missing" documents that only have descendants.
+  childDocuments(collectionPath) {
+    const prefix = `${collectionPath}/`;
+    const ids = new Set();
+    [...this.docs.keys()].forEach((path) => {
+      if (path.startsWith(prefix)) ids.add(path.slice(prefix.length).split("/")[0]);
+    });
+    return [...ids].sort().map((id) => this.doc(`${prefix}${id}`));
+  }
+
+  collectionGroup(collectionId) {
+    return new FakeQuery(this, null, [], [], null, null, collectionId);
+  }
+
+  async getAll(...refs) {
+    return refs.map((ref) => this.snapshot(ref.path));
   }
 
   snapshot(path) {
@@ -124,6 +193,7 @@ class FakeFirestore {
     return {
       set: (ref, data, options) => ops.push({ type: "set", path: ref.path, data, options }),
       create: (ref, data) => ops.push({ type: "create", path: ref.path, data }),
+      update: (ref, data) => ops.push({ type: "update", path: ref.path, data }),
       delete: (ref) => ops.push({ type: "delete", path: ref.path }),
       commit: async () => this.commitOperations(ops),
     };
@@ -152,10 +222,11 @@ class FakeFirestore {
         }
         const fingerprint = () =>
           JSON.stringify(
-            [...this.docs.entries()].filter(
-              ([path]) =>
-                path.startsWith(`${target.path}/`) &&
-                !path.slice(target.path.length + 1).includes("/"),
+            [...this.docs.entries()].filter(([path]) =>
+              target.group
+                ? target.inGroup(path)
+                : path.startsWith(`${target.path}/`) &&
+                  !path.slice(target.path.length + 1).includes("/"),
             ),
           );
         const value = fingerprint();
@@ -165,6 +236,7 @@ class FakeFirestore {
       },
       set: (ref, data, options) => enqueue("set", ref, data, options),
       create: (ref, data) => enqueue("create", ref, data),
+      update: (ref, data) => enqueue("update", ref, data),
       delete: (ref) => enqueue("delete", ref),
     };
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
@@ -200,14 +272,33 @@ class FakeFirestore {
 }
 
 class FakeQuery {
-  constructor(db, path, filters = [], orders = [], startAtValues = null, limitCount = null) {
+  constructor(
+    db,
+    path,
+    filters = [],
+    orders = [],
+    startAtValues = null,
+    limitCount = null,
+    group = null,
+  ) {
     this.kind = "query";
     this.db = db;
     this.path = path;
     this.filters = filters;
     this.orders = orders;
     this.startAtValues = startAtValues;
+    this.startAfterValues = null;
     this.limitCount = limitCount;
+    this.group = group;
+  }
+
+  get id() {
+    return this.group || this.path.split("/").pop();
+  }
+
+  inGroup(path) {
+    const segments = path.split("/");
+    return segments.length % 2 === 0 && segments[segments.length - 2] === this.group;
   }
 
   clone(patch) {
@@ -218,8 +309,19 @@ class FakeQuery {
       this.orders,
       this.startAtValues,
       this.limitCount,
+      this.group,
     );
+    next.startAfterValues = this.startAfterValues;
     return Object.assign(next, patch);
+  }
+
+  startAfter(...values) {
+    return this.clone({ startAfterValues: values });
+  }
+
+  async listDocuments() {
+    if (this.group) throw new Error("listDocuments is not available on collection groups.");
+    return this.db.childDocuments(this.path);
   }
 
   where(field, op, value) {
@@ -239,6 +341,7 @@ class FakeQuery {
   }
 
   doc(id) {
+    if (this.group) throw new Error("Collection groups have no documents.");
     this.db.autoId += 1;
     return this.db.doc(`${this.path}/${id || `auto-${String(this.db.autoId).padStart(6, "0")}`}`);
   }
@@ -246,12 +349,16 @@ class FakeQuery {
   async get() {
     const prefix = `${this.path}/`;
     let docs = [...this.db.docs.entries()]
-      .filter(([path]) => path.startsWith(prefix) && !path.slice(prefix.length).includes("/"))
-      .map(([path, data]) => ({ id: path.slice(prefix.length), path, data }));
+      .filter(([path]) =>
+        this.group
+          ? this.inGroup(path)
+          : path.startsWith(prefix) && !path.slice(prefix.length).includes("/"),
+      )
+      .map(([path, data]) => ({ id: path.split("/").pop(), path, data }));
 
     this.filters.forEach(({ field, op, value }) => {
       docs = docs.filter((doc) => {
-        const actual = doc.data[field];
+        const actual = fieldValue(doc.data, field);
         if (op === "==") return actual === value;
         if (op === "in") return value.includes(actual);
         if (op === "array-contains") {
@@ -265,12 +372,18 @@ class FakeQuery {
     });
 
     if (this.orders.length) {
+      // Firestore omits documents that lack an ordered field.
+      docs = docs.filter((doc) =>
+        this.orders.every(
+          ({ field }) => field === "__name__" || fieldValue(doc.data, field) !== undefined,
+        ),
+      );
       docs.sort((left, right) => {
         for (const { field, direction } of this.orders) {
           const byId = field === "__name__";
           const comparison = compareValues(
-            byId ? left.id : left.data[field],
-            byId ? right.id : right.data[field],
+            byId ? left.id : fieldValue(left.data, field),
+            byId ? right.id : fieldValue(right.data, field),
           );
           if (comparison !== 0) return direction === "desc" ? -comparison : comparison;
         }
@@ -282,10 +395,21 @@ class FakeQuery {
       const field = this.orders[0].field;
       docs = docs.filter((doc) => compareValues(doc.data[field], this.startAtValues[0]) >= 0);
     }
+    if (this.startAfterValues && this.orders.length) {
+      const { field, direction } = this.orders[0];
+      docs = docs.filter((doc) => {
+        const comparison = compareValues(
+          field === "__name__" ? doc.id : fieldValue(doc.data, field),
+          this.startAfterValues[0],
+        );
+        return direction === "desc" ? comparison < 0 : comparison > 0;
+      });
+    }
     if (typeof this.limitCount === "number") docs = docs.slice(0, this.limitCount);
 
     const wrapped = docs.map((doc) => ({
       id: doc.id,
+      exists: true,
       ref: this.db.doc(doc.path),
       data: () => structuredClone(doc.data),
     }));

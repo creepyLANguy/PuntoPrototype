@@ -10,7 +10,7 @@ let setJoinModalViewportHeight;
 
 test.before(async () => {
   seedBaseData();
-  seedCourt("jmad", { name: "Join Modal Court" });
+  seedCourt("jmada", { name: "Join Modal Court" });
 
   dom = await bootFrontend({ url: "https://padel.test/" });
   document = dom.window.document;

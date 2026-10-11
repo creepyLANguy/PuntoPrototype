@@ -139,6 +139,12 @@ export function deleteDocAt(path) {
 }
 
 export function seedDoc(path, data) {
+  const root = path.match(
+    /^(courts|matches|tournaments|clubs|tournamentDirectory|tournamentViews)\/([^/]+)$/,
+  );
+  if (root && !Object.hasOwn(data, "allocationId")) {
+    data = { allocationId: `allocation-${root[1]}-${root[2]}`, ...data };
+  }
   firestoreState.docs.set(path, materialize(cloneValue(data)));
 }
 

@@ -7,6 +7,7 @@ import {
   HOST_KEYS_STORAGE_KEY,
 } from "../config/constants.js";
 import { session } from "./sessionState.js";
+import { getAllocationId } from "../firebase/assignmentContext.js";
 
 export function getAdminKey() {
   try {
@@ -95,10 +96,39 @@ export function getAccessCode(tournamentId) {
   }
 }
 
-export function getCourtCredentials() {
+export function getCourtCredentials(
+  courtId = session.currentCourtId,
+  matchId = courtId === session.currentCourtId ? session.currentMatchId : null,
+) {
+  const courtAllocationId =
+    courtId === session.currentCourtId
+      ? session.currentCourtAllocationId
+      : courtId
+        ? getAllocationId("court", courtId)
+        : null;
+  const matchAllocationId =
+    matchId === session.currentMatchId
+      ? session.currentMatchAllocationId
+      : matchId
+        ? getAllocationId("match", matchId)
+        : null;
   return {
     courtPassword: session.currentCourtPassword || null,
     adminKey: getAdminKey(),
+    ...(courtId
+      ? {
+          courtAllocationId,
+        }
+      : {}),
+    ...(matchId
+      ? {
+          matchAllocationId,
+        }
+      : {}),
+    expectedAllocations: {
+      ...(courtId ? { court: { [courtId]: courtAllocationId } } : {}),
+      ...(matchId ? { match: { [matchId]: matchAllocationId } } : {}),
+    },
   };
 }
 
@@ -106,5 +136,15 @@ export function getTournamentCredentials(tournamentId) {
   return {
     hostKey: getHostKey(tournamentId),
     adminKey: getAdminKey(),
+    ...(tournamentId
+      ? {
+          tournamentAllocationId: getAllocationId("tournament", tournamentId),
+          expectedAllocations: {
+            tournament: {
+              [tournamentId]: getAllocationId("tournament", tournamentId),
+            },
+          },
+        }
+      : {}),
   };
 }

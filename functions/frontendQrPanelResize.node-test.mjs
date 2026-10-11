@@ -21,7 +21,7 @@ const markup = readFileSync(new URL("../app/index.html", import.meta.url), "utf8
 const brand = readFileSync(new URL("../app/js/brand.mjs", import.meta.url), "utf8");
 const qrLibrary = readFileSync(new URL("../app/js/qrcode.min.js", import.meta.url), "utf8");
 
-const COURT_ID = "qrrt";
+const COURT_ID = "qrrta";
 const DEFAULT_PANEL_WIDTH = 200;
 const PANEL_ASPECT = 1.24;
 
@@ -227,6 +227,22 @@ test("QR panel spawns from the bottom-right corner", () => {
   assert.equal(panel.style.bottom, "8px");
 
   assert.match(styles, /\.court-qr-panel\s*\{[\s\S]*?bottom:\s*8px;[\s\S]*?right:\s*8px;/);
+});
+
+test("the five-letter court label fits the floating panel at every resize size", () => {
+  assert.equal(COURT_ID.length, 5);
+  const labelRule = getCssRuleBody(styles, ".court-qr-label");
+  assert.match(labelRule, /font-size:\s*14cqi;/);
+  assert.match(labelRule, /letter-spacing:\s*0\.25em;/);
+  assert.match(labelRule, /padding-left:\s*0\.25em;/);
+  assert.match(labelRule, /box-sizing:\s*border-box;/);
+  assert.match(labelRule, /white-space:\s*nowrap;/);
+  for (const width of [130, 160, 200, 300, 500]) {
+    const contentWidth = width - 24;
+    const fontSize = contentWidth * 0.14;
+    const trackedWidth = (COURT_ID.length * 1.25 + 0.25) * fontSize;
+    assert.ok(trackedWidth <= contentWidth, `full ID fits at ${width}px even with 1em-wide glyphs`);
+  }
 });
 
 test("resize handles fade in on a logarithmic curve as the pointer approaches", async () => {

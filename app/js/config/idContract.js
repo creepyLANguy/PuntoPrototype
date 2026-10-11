@@ -1,10 +1,10 @@
 export const ID_ALPHABET = "abcdefghjkmnpqrstuxyz";
 
 export const ID_LENGTHS = Object.freeze({
-  court: 4,
-  tournament: 6,
-  match: 8,
-  club: 10,
+  court: 5,
+  tournament: 7,
+  match: 6,
+  club: 4,
 });
 
 export function isValidId(type, id) {

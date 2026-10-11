@@ -50,32 +50,32 @@ function typeInto(input, value) {
 
 test.before(async () => {
   seedBaseData();
-  seedCourt("ctxq", {
+  seedCourt("ctxqa", {
     name: "Court One",
     matchName: "Grand Final",
     teamNames: { A: "Alpha", B: "Beta" },
   });
-  seedDoc("matches/tuxyzabc", {
-    matchId: "tuxyzabc",
+  seedDoc("matches/tuxyza", {
+    matchId: "tuxyza",
     name: null,
     status: "live",
     visibility: "public",
-    currentCourtId: "ctxq",
-    lastCourtId: "ctxq",
+    currentCourtId: "ctxqa",
+    lastCourtId: "ctxqa",
     teamNames: { A: "Wolves", B: "Foxes" },
     playerNames: { A1: "", A2: "", B1: "", B2: "" },
     scoringMode: "standard",
     scoringOptions: { scoringMode: "standard", deuceMode: "standard", tiebreakMode: "sixAllSeven" },
     scoreVersion: 0,
-    tournamentId: "abcdef",
+    tournamentId: "abcdefg",
   });
-  pushScoreSnapshot("tuxyzabc", makeScore({ A: team(1), B: team(0) }));
+  pushScoreSnapshot("tuxyza", makeScore({ A: team(1), B: team(0) }));
 
-  seedCourt("srch", {
+  seedCourt("srcha", {
     name: "Search Court",
     playerNames: { A1: "Needle Player", A2: "", B1: "Haystack Rival", B2: "" },
   });
-  seedDoc("tournamentDirectory/abcdef", {
+  seedDoc("tournamentDirectory/abcdefg", {
     name: "Autumn Cup",
     visibility: "public",
     status: "live",
@@ -84,33 +84,32 @@ test.before(async () => {
   const dom = await bootFrontend();
   window = dom.window;
   document = window.document;
-  await joinCourtAsPlayer(document, "ctxq");
+  await joinCourtAsPlayer(document, "ctxqa");
 });
 
 test("points are written to the current match events with court context", async () => {
   $("addPointA").click();
 
   await waitFor(
-    () =>
-      [...firestoreState.docs.keys()].find((path) => path.startsWith("matches/ctxqaaaa/events/")),
+    () => [...firestoreState.docs.keys()].find((path) => path.startsWith("matches/ctxqaa/events/")),
     { label: "match event" },
   );
   const [eventPath, event] = [...firestoreState.docs.entries()].find(
     ([path, data]) =>
-      path.startsWith("matches/ctxqaaaa/events/") && data.eventType === "POINT_TEAM_A",
+      path.startsWith("matches/ctxqaa/events/") && data.eventType === "POINT_TEAM_A",
   );
   assert.equal(event.eventType, "POINT_TEAM_A");
-  assert.equal(event.courtId, "ctxq");
-  assert.equal(event.matchId, "ctxqaaaa");
+  assert.equal(event.courtId, "ctxqa");
+  assert.equal(event.matchId, "ctxqaa");
   assert.equal(
-    [...firestoreState.docs.keys()].some((path) => path.startsWith("courts/ctxq/events/")),
+    [...firestoreState.docs.keys()].some((path) => path.startsWith("courts/ctxqa/events/")),
     false,
     eventPath,
   );
 });
 
 test("a resolved live match supplies its current score version before the listener catches up", async () => {
-  const matchPath = "matches/ctxqaaaa";
+  const matchPath = "matches/ctxqaa";
   seedDoc(matchPath, { ...firestoreState.docs.get(matchPath), scoreVersion: 7 });
   session.currentMatchStatus = "completed";
   session.currentScoreVersion = 0;
@@ -130,8 +129,8 @@ test("a resolved live match supplies its current score version before the listen
 });
 
 test("scoreboard follows a new active match's names, score and tournament lock", async () => {
-  const court = firestoreState.docs.get("courts/ctxq");
-  writeDoc("courts/ctxq", { ...court, activeMatchId: "tuxyzabc", lastMatchId: "tuxyzabc" });
+  const court = firestoreState.docs.get("courts/ctxqa");
+  writeDoc("courts/ctxqa", { ...court, activeMatchId: "tuxyza", lastMatchId: "tuxyza" });
 
   await waitFor(() => $("courtTitle").textContent === "Wolves vs Foxes", {
     label: "new match title",
@@ -151,6 +150,33 @@ test("scoreboard follows a new active match's names, score and tournament lock",
   await settle(10);
 });
 
+test("scoreboard preserves the complete six-letter match ID title in both orientations", async () => {
+  const matchPath = "matches/tuxyza";
+  const match = firestoreState.docs.get(matchPath);
+  writeDoc(matchPath, { ...match, teamNames: {}, playerNames: {} });
+  await waitFor(() => $("courtTitle").textContent === "tuxyza", {
+    label: "match ID fallback title",
+  });
+  const styles = document.querySelector("style").textContent;
+  assert.match(styles, /#courtTitle\s*\{[^}]*white-space:\s*nowrap;/);
+  assert.match(styles, /\.marquee-content\s*\{[^}]*width:\s*max-content;/);
+  assert.match(styles, /#courtTitle\s*\{[^}]*overflow:\s*visible;[^}]*text-overflow:\s*clip;/);
+  for (const [width, height] of [
+    [360, 780],
+    [932, 430],
+    [1280, 720],
+  ]) {
+    Object.defineProperty(window, "innerWidth", { configurable: true, value: width });
+    Object.defineProperty(window, "innerHeight", { configurable: true, value: height });
+    window.dispatchEvent(new window.Event("resize"));
+    assert.equal($("courtTitle").textContent, "tuxyza");
+  }
+  writeDoc(matchPath, match);
+  await waitFor(() => $("courtTitle").textContent === "Wolves vs Foxes", {
+    label: "restored title",
+  });
+});
+
 test("spectate search finds live match players and discovery tournament results", async () => {
   await leaveScoreboard();
   clickMenuButton("Spectate");
@@ -163,7 +189,7 @@ test("spectate search finds live match players and discovery tournament results"
     () =>
       [...document.querySelectorAll("#spectateCourtList .court-item")]
         .map((row) => row.dataset.courtId)
-        .join(",") === "srch",
+        .join(",") === "srcha",
     { label: "player search result" },
   );
   assert.ok(document.querySelector("#spectateDiscoveryResults .discovery-match"));

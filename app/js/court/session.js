@@ -13,6 +13,10 @@ import { setPlayPageVisible } from "./playJoin.js";
 import BRAND from "../brand.mjs";
 import { getCourt } from "../firebase/courtRepository.js";
 import {
+  assertCurrentAssignment,
+  rememberAssignment,
+} from "../firebase/assignmentContext.js";
+import {
   addMatchEvent,
   getMatch,
   getMatchScore,
@@ -53,13 +57,30 @@ import { syncSettingsTiles } from "../ui/settingsTiles.js";
 export async function enterCourt(
   courtId,
   spectate,
-  { historyMode = "push", adminEntry = false, matchId = null, followRequestedMatch = false } = {},
+  {
+    historyMode = "push",
+    adminEntry = false,
+    matchId = null,
+    followRequestedMatch = false,
+    courtAllocationId: expectedCourtAllocationId,
+    matchAllocationId: expectedMatchAllocationId,
+  } = {},
 ) {
   //console.log(`Entering court: ${courtId}, spectate: ${spectate}`);
   session.enteredCourtAsAdmin = Boolean(adminEntry) || appState.isAdmin;
   session.pendingLocalPasswordUpdate = null;
   bumpCourtHistorySessionId();
   invalidateMatchDetailsCache();
+  if (expectedCourtAllocationId !== undefined) {
+    rememberAssignment("court", courtId, {
+      allocationId: expectedCourtAllocationId,
+    });
+  }
+  if (matchId && expectedMatchAllocationId !== undefined) {
+    rememberAssignment("match", matchId, {
+      allocationId: expectedMatchAllocationId,
+    });
+  }
 
   const snap = await getCourt(courtId);
   if (!snap.exists()) {
@@ -82,6 +103,9 @@ export async function enterCourt(
 
   session.currentCourtId = courtId;
   const data = snap.data();
+  const courtAllocationId = data.allocationId || null;
+  assertCurrentAssignment("court", courtId, courtAllocationId);
+  session.currentCourtAllocationId = courtAllocationId;
   session.currentCourtName = data.name || courtId;
   session.currentCourtPassword = data.password;
   session.currentCourtStatus = data.status;
@@ -91,25 +115,23 @@ export async function enterCourt(
   // and browser-history restoration); otherwise resolve/create the court's
   // current casual match as before.
   let resolvedMatchId = matchId;
-  if (resolvedMatchId)
-  {
+  if (resolvedMatchId) {
     const requestedMatchSnap = await getMatch(resolvedMatchId);
-    const requestedMatch = requestedMatchSnap.exists() ? requestedMatchSnap.data() : null;
+    const requestedMatch = requestedMatchSnap.exists()
+      ? requestedMatchSnap.data()
+      : null;
     const belongsToCourt =
       Boolean(requestedMatch) &&
-      (
-        requestedMatch.currentCourtId === courtId ||
+      (requestedMatch.currentCourtId === courtId ||
         data.activeMatchId === resolvedMatchId ||
-        data.lastMatchId === resolvedMatchId
-      );
+        data.lastMatchId === resolvedMatchId);
 
-    if (!belongsToCourt)
-    {
-      throw new Error("The requested match is not currently assigned to this court.");
+    if (!belongsToCourt) {
+      throw new Error(
+        "The requested match is not currently assigned to this court.",
+      );
     }
-  }
-  else
-  {
+  } else {
     resolvedMatchId = await resolveCourtMatchId(courtId, data);
   }
 
@@ -117,16 +139,27 @@ export async function enterCourt(
   session.requestedMatchId = followRequestedMatch ? matchId : null;
   session.currentScoreVersion = -1;
   if (resolvedMatchId) {
+    const matchSnap = await getMatch(resolvedMatchId);
+    assertCurrentAssignment("court", courtId, courtAllocationId);
+    const match = matchSnap.exists() ? matchSnap.data() : null;
+    const matchAllocationId = match?.allocationId || null;
+    if (matchSnap.exists()) {
+      assertCurrentAssignment("match", resolvedMatchId, matchAllocationId);
+      session.currentMatchAllocationId = matchAllocationId;
+    }
     // Warm the Firestore connection and the scoring Cloud Function.
     await getMatchScore(resolvedMatchId);
-    await addMatchEvent(resolvedMatchId, {
-      eventType: "WARMUP",
-      createdBy: appState.thisDeviceId,
-      courtId,
-    });
-    const matchSnap = await getMatch(resolvedMatchId);
+    if (match?.status === "live" && match.currentCourtId === courtId) {
+      await addMatchEvent(resolvedMatchId, {
+        eventType: "WARMUP",
+        createdBy: appState.thisDeviceId,
+        courtId,
+        allocationId: matchAllocationId,
+        courtAllocationId,
+      });
+    }
     if (matchSnap.exists()) {
-      applyMatchData(resolvedMatchId, matchSnap.data(), {
+      applyMatchData(resolvedMatchId, match, {
         courtBeaconSidesSwapped: data.beaconSidesSwapped === true,
       });
     }
@@ -192,7 +225,10 @@ export async function enterCourt(
 
 async function resolveCourtMatchId(courtId, court) {
   try {
-    const result = await manageMatch("ensureCourtMatch", { courtId });
+    const result = await manageMatch("ensureCourtMatch", {
+      courtId,
+      courtAllocationId: court.allocationId,
+    });
     if (result?.matchId) return result.matchId;
   } catch (err) {
     console.warn("Could not prepare a match for this court:", err);
@@ -220,6 +256,7 @@ export function leaveCourt(historyMode = "push") {
   clearMatchContext();
 
   session.currentCourtId = null;
+  session.currentCourtAllocationId = null;
   session.currentCourtName = null;
   session.currentCourtPassword = null;
   session.currentCourtStatus = null;
