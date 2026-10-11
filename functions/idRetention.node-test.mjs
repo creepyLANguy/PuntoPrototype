@@ -267,6 +267,8 @@ test("court culls unlink live references, nested values and tournament read mode
   assert.deepEqual(raw.get("matches/cccccc"), {
     currentCourtId: null,
     lastCourtId: null,
+    currentCourtAllocationId: null,
+    lastCourtAllocationId: null,
     allocationId: raw.get("matches/cccccc").allocationId,
   });
   assert.deepEqual(raw.get("tournaments/ddddddd").courtPool, [survivor]);
@@ -380,7 +382,7 @@ test("guarded writes reject stale generations after a culled id is reused", asyn
   assert.equal(raw.get(rootPath("match", victim)).name, "replacement");
 });
 
-test("manual deletions become released ids and are culled oldest-first before live survivors", async () => {
+test("manual deletions retain allocation age and newer released reservations survive older live ones", async () => {
   const { raw, db } = freshFirestore();
   setRetentionPolicies({ court: { trigger: 5, target: 3 } });
   for (const id of ["aaaaa", "bbbbb", "ccccc", "ddddd"]) {
@@ -393,6 +395,7 @@ test("manual deletions become released ids and are culled oldest-first before li
     assert.deepEqual(await accountRootDeletion("court", id, deleted, { db }), {
       status: "released",
     });
+    assert.equal(raw.get(retentionPaths.allocation("court", id)).sequence, id === "bbbbb" ? 2 : 3);
   }
 
   await createAllocatedRoot(db, raw, "court", "eeeee", { name: "eeeee" });
@@ -404,16 +407,129 @@ test("manual deletions become released ids and are culled oldest-first before li
       .list("courts")
       .map(({ id }) => id)
       .sort(),
-    ["aaaaa", "ddddd", "eeeee"],
+    ["ddddd", "eeeee"],
   );
   assert.deepEqual(
     [0, 1].map((index) => raw.get(retentionPaths.victim(jobId, index)).id),
-    ["bbbbb", "ccccc"],
+    ["aaaaa", "bbbbb"],
   );
   assert.deepEqual(
     [0, 1].map((index) => raw.get(retentionPaths.victim(jobId, index)).sequence),
-    [2, 3],
+    [1, 2],
   );
-  assert.equal(raw.get(retentionPaths.ledger("court")).released, 0);
-  assert.equal(raw.get(retentionPaths.ledger("court")).live, 3);
+  assert.deepEqual(
+    raw
+      .list(retentionPaths.allocations("court"))
+      .map(({ id }) => id)
+      .sort(),
+    ["ccccc", "ddddd", "eeeee"],
+  );
+  assert.equal(raw.get(retentionPaths.allocation("court", "ccccc")).sequence, 3);
+  assert.equal(raw.get(retentionPaths.allocation("court", "ccccc")).state, "released");
+  assert.equal(raw.get(retentionPaths.ledger("court")).released, 1);
+  assert.equal(raw.get(retentionPaths.ledger("court")).live, 2);
+});
+
+test("all managed types retain the newest reservations and archive/unlink older live and released assignments", async () => {
+  const references = {
+    club: { collection: "courts", field: "clubId" },
+    court: { collection: "devices", field: "courtId" },
+    match: { collection: "courts", field: "activeMatchId" },
+    tournament: { collection: "matches", field: "tournamentId" },
+  };
+  for (const type of Object.keys(ROOT_COLLECTIONS)) {
+    const { raw, db } = freshFirestore();
+    setRetentionPolicies({ [type]: { trigger: 5, target: 3 } });
+    const ids = repeatedIds(type, 5).reverse();
+    const generations = [];
+    for (const id of ids.slice(0, -1)) {
+      generations.push(await createAllocatedRoot(db, raw, type, id, { name: id }));
+    }
+    const releasedVictim = ids[1];
+    const releasedSurvivor = ids[3];
+    const victimLeaf = `${rootPath(type, releasedVictim)}/events/missing/audits/leaf`;
+    const survivorLeaf = `${rootPath(type, releasedSurvivor)}/events/kept`;
+    await raw.doc(victimLeaf).set({ note: "archive this orphan" });
+    await raw.doc(survivorLeaf).set({ note: "keep this reservation's descendants" });
+    for (const index of [3, 1]) {
+      await raw.doc(rootPath(type, ids[index])).delete();
+      assert.deepEqual(await accountRootDeletion(type, ids[index], generations[index], { db }), {
+        status: "released",
+      });
+      assert.equal(raw.get(retentionPaths.allocation(type, ids[index])).sequence, index + 1);
+    }
+    const { collection, field } = references[type];
+    const generationField = field.replace(/Id$/, "AllocationId");
+    await raw
+      .doc(`${collection}/oldest-reference`)
+      .set({ [field]: ids[0], [generationField]: generations[0].allocationId });
+    await raw
+      .doc(`${collection}/released-reference`)
+      .set({ [field]: releasedVictim, [generationField]: generations[1].allocationId });
+    await raw
+      .doc(`${collection}/surviving-reference`)
+      .set({ [field]: releasedSurvivor, [generationField]: generations[3].allocationId });
+    if (type === "tournament") {
+      await raw.doc(`tournamentSecrets/${releasedVictim}`).set({ secret: "old-sidecar" });
+      await raw.doc(`tournamentSecrets/${releasedSurvivor}`).set({ secret: "keep-sidecar" });
+    }
+
+    await createAllocatedRoot(db, raw, type, ids[4]);
+    const jobId = raw.get(GATE_PATH).jobId;
+    assert.deepEqual(raw.get(retentionPaths.job(jobId)).plan[type], {
+      cullCount: 2,
+      occupiedAtStart: 5,
+    });
+    await finishWorker(raw, { batchSize: 1 });
+
+    assert.deepEqual(
+      raw
+        .list(retentionPaths.allocations(type))
+        .map(({ sequence }) => sequence)
+        .sort(),
+      [3, 4, 5],
+    );
+    assert.deepEqual(
+      [0, 1].map((index) => raw.get(retentionPaths.victim(jobId, index)).id),
+      ids.slice(0, 2),
+    );
+    assert.equal(raw.get(retentionPaths.ledger(type)).live, 2);
+    assert.equal(raw.get(retentionPaths.ledger(type)).released, 1);
+    assert.equal(raw.get(retentionPaths.ledger(type)).culled, 2);
+    assert.equal(raw.get(retentionPaths.ledger(type)).sequence, 5);
+    assert.equal(raw.get(rootPath(type, ids[0])), undefined);
+    assert.equal(raw.get(victimLeaf), undefined);
+    assert.ok(raw.get(rootPath(type, ids[2])));
+    assert.ok(raw.get(rootPath(type, ids[4])));
+    assert.ok(raw.get(survivorLeaf));
+    assert.equal(raw.get(retentionPaths.allocation(type, releasedSurvivor)).state, "released");
+    assert.equal(raw.get(`${collection}/oldest-reference`)[field], null);
+    assert.equal(raw.get(`${collection}/released-reference`)[field], null);
+    assert.equal(raw.get(`${collection}/oldest-reference`)[generationField], null);
+    assert.equal(raw.get(`${collection}/released-reference`)[generationField], null);
+    assert.equal(raw.get(`${collection}/surviving-reference`)[field], releasedSurvivor);
+    assert.equal(
+      raw.get(`${collection}/surviving-reference`)[generationField],
+      generations[3].allocationId,
+    );
+    for (const [index, priorState] of ["live", "released"].entries()) {
+      const key = `${ids[index]}_${generations[index].allocationId}`;
+      const archive = raw.get(retentionPaths.archive(type, key));
+      assert.equal(archive.sequence, index + 1);
+      assert.equal(archive.priorState, priorState);
+      assert.equal(archive.status, "complete");
+      assert.equal(archive.rootExists, index === 0);
+      assert.ok(raw.list(`${retentionPaths.archive(type, key)}/unlinks`).length);
+      if (index === 0) assert.ok(archivePaths(raw, type, key).includes(rootPath(type, ids[0])));
+      else assert.ok(archivePaths(raw, type, key).includes(victimLeaf));
+    }
+    if (type === "tournament") {
+      assert.equal(raw.get(`tournamentSecrets/${releasedVictim}`), undefined);
+      assert.ok(raw.get(`tournamentSecrets/${releasedSurvivor}`));
+    }
+    assert.deepEqual(await accountRootDeletion(type, releasedVictim, generations[1], { db }), {
+      status: "stale",
+    });
+    assert.equal(raw.get(retentionPaths.ledger(type)).released, 1);
+  }
 });

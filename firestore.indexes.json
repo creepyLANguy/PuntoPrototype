@@ -2,6 +2,21 @@
   "indexes": [],
   "fieldOverrides": [
     {
+      "collectionGroup": "documents",
+      "fieldPath": "data",
+      "indexes": []
+    },
+    {
+      "collectionGroup": "unlinks",
+      "fieldPath": "before",
+      "indexes": []
+    },
+    {
+      "collectionGroup": "payload",
+      "fieldPath": "bytes",
+      "indexes": []
+    },
+    {
       "collectionGroup": "fixtures",
       "fieldPath": "courtId",
       "indexes": [

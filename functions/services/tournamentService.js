@@ -15,7 +15,7 @@ const {
   secretsMatch,
 } = require("./ids");
 const { writeAudit } = require("./auditService");
-const { invalid, notFound, precondition, conflict, denied } = require("./errors");
+const { invalid, notFound, precondition, conflict, denied, staleGeneration } = require("./errors");
 const matchService = require("./matchService");
 const {
   getFormat,
@@ -287,11 +287,33 @@ async function createTournament(data, { actor }) {
   const outcome = await runIdTransaction(db, async (tx) => {
     if (requestId) {
       const creationSnap = await tx.get(db.doc(paths.tournamentCreation(requestId)));
-      if (creationSnap.exists)
-        return { duplicate: true, tournamentId: creationSnap.data().tournamentId };
+      if (creationSnap.exists) {
+        const creation = creationSnap.data();
+        const root = await tx.get(tournamentRef(creation.tournamentId));
+        if (!root.exists) throw notFound("That tournament could not be found.");
+        const tournament = root.data();
+        if (
+          tournament.tournamentId !== creation.tournamentId ||
+          (creation.tournamentAllocationId &&
+            creation.tournamentAllocationId !== tournament.allocationId)
+        ) {
+          throw staleGeneration(root.ref.path);
+        }
+        if (!tournament.allocationId)
+          throw precondition("This tournament has no allocation token.");
+        return {
+          duplicate: true,
+          tournamentId: creation.tournamentId,
+          allocationId: tournament.allocationId,
+        };
+      }
     }
     await assertClubAndCourts(tx, input);
     const tournamentId = await allocateId(tx, "tournament");
+    const [courts, club] = await Promise.all([
+      loadCourts(tx, input.courtPool),
+      loadClub(tx, input.clubId),
+    ]);
 
     const timestamp = now();
     const roster = writeRosterInput(tx, tournamentId, {
@@ -303,7 +325,7 @@ async function createTournament(data, { actor }) {
       throw invalid(`A tournament can have at most ${MAX_PARTICIPANTS} players.`);
     }
 
-    tx.create(tournamentRef(tournamentId), {
+    const tournament = {
       tournamentId,
       ...input,
       status: "draft",
@@ -318,7 +340,8 @@ async function createTournament(data, { actor }) {
       startedAt: null,
       completedAt: null,
       cancelledAt: null,
-    });
+    };
+    tx.create(tournamentRef(tournamentId), tournament);
     tx.create(db.doc(paths.tournamentSecret(tournamentId)), {
       hostKeyHash: hashSecret(hostKey),
       accessCodeHash: accessCode ? hashSecret(accessCode) : null,
@@ -343,13 +366,23 @@ async function createTournament(data, { actor }) {
         teams: roster.teams.length,
       },
     });
+    // A new draft has no fixtures to progress. Persist its complete initial
+    // read models with the root, before this allocation can activate maintenance.
+    const publicClub = club && normalizeClubState(club.state) === CLUB_STATES.OPEN ? club : null;
+    const view = buildTournamentView({
+      tournament,
+      participants: roster.participants,
+      teams: roster.teams,
+      courts,
+      club: publicClub,
+      now: Date.now(),
+    });
+    writeTournamentReadModels(tx, tournament, view, publicClub);
     return { duplicate: false, tournamentId };
   });
 
-  if (outcome.duplicate) return { tournamentId: outcome.tournamentId, duplicate: true };
-  const tournamentId = outcome.tournamentId;
-  await recalculateTournament({ tournamentId });
-  return { tournamentId, hostKey, accessCode, duplicate: false };
+  if (outcome.duplicate) return outcome;
+  return { ...outcome, hostKey, accessCode };
 }
 
 const UPDATABLE_FIELDS = [
@@ -1750,6 +1783,41 @@ function rebuildRemainingSchedule(tx, state, format, matchesById, courts, actor)
   });
 }
 
+function writeTournamentReadModels(tx, tournament, view, publicClub) {
+  const { tournamentId } = tournament;
+  const viewDoc = {
+    ...JSON.parse(JSON.stringify(view)),
+    revision: Number(tournament.revision || 0),
+    updatedAt: now(),
+  };
+  if (tournament.visibility === "private") {
+    tx.set(db.doc(paths.tournamentPrivateView(tournamentId)), viewDoc);
+    tx.set(db.doc(paths.tournamentView(tournamentId)), {
+      tournamentId,
+      visibility: "private",
+      status: tournament.status,
+      updatedAt: now(),
+    });
+    tx.delete(db.doc(paths.tournamentDirectory(tournamentId)));
+  } else {
+    tx.set(db.doc(paths.tournamentView(tournamentId)), viewDoc);
+    tx.delete(db.doc(paths.tournamentPrivateView(tournamentId)));
+    // Small directory entry for search and discovery (spec section 44).
+    tx.set(db.doc(paths.tournamentDirectory(tournamentId)), {
+      tournamentId,
+      name: tournament.name,
+      status: tournament.status,
+      visibility: "public",
+      clubId: publicClub?.clubId || null,
+      clubName: publicClub?.name || null,
+      formatId: tournament.format.id,
+      formatLabel: view.format.label,
+      startAt: tournament.scheduling?.startAt ?? null,
+      updatedAt: now(),
+    });
+  }
+}
+
 async function recalculateTournament({ tournamentId, rebuildSchedule = false }, ctx = {}) {
   return runIdTransaction(db, async (transaction) => {
     // Rebuilding/progression plans writes before discovering new fixture matches.
@@ -1819,6 +1887,8 @@ async function recalculateTournament({ tournamentId, rebuildSchedule = false }, 
           matchService.writePreparedMatch(tx, prepared);
           createdMatches.push({ matchId: prepared.matchId, ...prepared.match });
           const next = { ...fixture, matchId: prepared.matchId };
+          // The write guard stamps the new match's token, not the old assignment.
+          delete next.matchAllocationId;
           fixtureWrites.set(fixture.fixtureId, next);
           nextFixtures.push(next);
           continue;
@@ -1881,37 +1951,7 @@ async function recalculateTournament({ tournamentId, rebuildSchedule = false }, 
       }
     });
 
-    const viewDoc = {
-      ...JSON.parse(JSON.stringify(view)),
-      revision: Number(tournament.revision || 0),
-      updatedAt: now(),
-    };
-    if (tournament.visibility === "private") {
-      tx.set(db.doc(paths.tournamentPrivateView(tournamentId)), viewDoc);
-      tx.set(db.doc(paths.tournamentView(tournamentId)), {
-        tournamentId,
-        visibility: "private",
-        status: tournament.status,
-        updatedAt: now(),
-      });
-      tx.delete(db.doc(paths.tournamentDirectory(tournamentId)));
-    } else {
-      tx.set(db.doc(paths.tournamentView(tournamentId)), viewDoc);
-      tx.delete(db.doc(paths.tournamentPrivateView(tournamentId)));
-      // Small directory entry for search and discovery (spec section 44).
-      tx.set(db.doc(paths.tournamentDirectory(tournamentId)), {
-        tournamentId,
-        name: tournament.name,
-        status: tournament.status,
-        visibility: "public",
-        clubId: publicClub?.clubId || null,
-        clubName: publicClub?.name || null,
-        formatId: tournament.format.id,
-        formatLabel: format.label,
-        startAt: tournament.scheduling?.startAt ?? null,
-        updatedAt: now(),
-      });
-    }
+    writeTournamentReadModels(tx, tournament, view, publicClub);
     if (view.currentRound && view.currentRound.roundNumber !== tournament.currentRoundNumber) {
       tx.set(
         tournamentRef(tournamentId),

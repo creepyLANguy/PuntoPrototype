@@ -1,6 +1,10 @@
 // End-to-end service tests for the match foundation and the tournament suite
 // (spec section 66.2), against an in-memory Firestore.
 const { FakeFirestore } = require("./testSupport/fakeFirestore");
+const {
+  seedAllocationTokens,
+  withExpectedAllocations,
+} = require("./testSupport/expectedAllocations");
 
 let mockDb = null;
 
@@ -27,19 +31,21 @@ jest.mock("firebase-admin/firestore", () => ({
 const ADMIN_KEY = "skeleton-key";
 
 function seed() {
-  return new FakeFirestore({
-    "admin/goodies": { skeletonKey: ADMIN_KEY },
-    "clubs/hjkm": {
-      name: "Example Padel Club",
-      state: "open",
-      courtIds: ["abcde", "efghj"],
-      deviceIds: [],
-    },
-    "courts/abcde": { name: "Court 1", password: "pass1", status: "open", clubId: "hjkm" },
-    "courts/efghj": { name: "Court 2", password: "pass2", status: "open", clubId: "hjkm" },
-    "courts/jkmnp": { name: "Court 3", password: "pass3", status: "open", clubId: null },
-    "courts/pqrst": { name: "Court 4", password: "pass4", status: "closed", clubId: "hjkm" },
-  });
+  return new FakeFirestore(
+    seedAllocationTokens({
+      "admin/goodies": { skeletonKey: ADMIN_KEY },
+      "clubs/hjkm": {
+        name: "Example Padel Club",
+        state: "open",
+        courtIds: ["abcde", "efghj"],
+        deviceIds: [],
+      },
+      "courts/abcde": { name: "Court 1", password: "pass1", status: "open", clubId: "hjkm" },
+      "courts/efghj": { name: "Court 2", password: "pass2", status: "open", clubId: "hjkm" },
+      "courts/jkmnp": { name: "Court 3", password: "pass3", status: "open", clubId: null },
+      "courts/pqrst": { name: "Court 4", password: "pass4", status: "closed", clubId: "hjkm" },
+    }),
+  );
 }
 
 let api;
@@ -62,9 +68,13 @@ afterEach(() => {
 });
 
 const tournament = (operation, data = {}, credentials = {}) =>
-  api.manageTournament({ data: { operation, ...data, credentials } });
+  api.manageTournament({
+    data: withExpectedAllocations(mockDb, { operation, ...data, credentials }),
+  });
 const match = (operation, data = {}, credentials = {}) =>
-  api.manageMatch({ data: { operation, ...data, credentials } });
+  api.manageMatch({
+    data: withExpectedAllocations(mockDb, { operation, ...data, credentials }),
+  });
 
 let eventCounter = 0;
 async function score(matchId, sequence) {

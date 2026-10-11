@@ -1,5 +1,10 @@
 const crypto = require("crypto");
 const { FakeFirestore } = require("./testSupport/fakeFirestore");
+const {
+  seededAllocationId,
+  seedAllocationTokens,
+  withExpectedAllocations,
+} = require("./testSupport/expectedAllocations");
 
 let mockDb;
 jest.mock("firebase-functions/v2/firestore", () => ({
@@ -31,24 +36,209 @@ let api;
 let matchService;
 beforeEach(() => {
   jest.resetModules();
-  mockDb = new FakeFirestore({
-    "admin/goodies": { skeletonKey: "test-admin" },
-    "courts/abcde": { name: "Court A", status: "open", password: "court-pass" },
-    "courts/efghj": { name: "Court B", status: "open", password: "court-pass" },
-  });
+  mockDb = new FakeFirestore(
+    seedAllocationTokens({
+      "admin/goodies": { skeletonKey: "test-admin" },
+      "courts/abcde": { name: "Court A", status: "open", password: "court-pass" },
+      "courts/efghj": { name: "Court B", status: "open", password: "court-pass" },
+    }),
+  );
   api = require("./index");
   matchService = require("./services/matchService");
 });
 afterEach(() => jest.restoreAllMocks());
 
 const court = (data, credentials = { adminKey: "test-admin" }) =>
-  api.createCourt({ data: { ...data, credentials } });
+  api.createCourt({ data: withExpectedAllocations(mockDb, { ...data, credentials }) });
+const club = (data) => api.createClub({ data: withExpectedAllocations(mockDb, data) });
+const historicalRoot = (path) => ({
+  historical: true,
+  allocationId: seededAllocationId(path),
+});
 const match = (data) =>
   api.manageMatch({
-    data: { operation: "createMatch", ...data, credentials: { adminKey: "test-admin" } },
+    data: withExpectedAllocations(mockDb, {
+      operation: "createMatch",
+      ...data,
+      credentials: { adminKey: "test-admin" },
+    }),
   });
 const tournament = (operation, data) =>
-  api.manageTournament({ data: { operation, ...data, credentials: { adminKey: "test-admin" } } });
+  api.manageTournament({
+    data: withExpectedAllocations(mockDb, {
+      operation,
+      ...data,
+      credentials: { adminKey: "test-admin" },
+    }),
+  });
+const ensureCourtMatch = () =>
+  api.manageMatch({
+    data: withExpectedAllocations(mockDb, { operation: "ensureCourtMatch", courtId: "abcde" }),
+  });
+
+describe("callable allocation expectations", () => {
+  test("fixture references bind existing generations without repairing missing or stale tokens", () => {
+    const docs = seedAllocationTokens({
+      "courts/abcde": { activeMatchId: "aaaaaa", lastMatchId: "aaaaaa", clubId: "aaaa" },
+      "matches/aaaaaa": {
+        matchId: "aaaaaa",
+        currentCourtId: "abcde",
+        lastCourtId: "abcde",
+        tournamentId: "aaaaaaa",
+      },
+      "clubs/aaaa": {},
+      "tournaments/aaaaaaa": { allocationId: "observed-tournament" },
+      "devices/current": { courtId: "abcde" },
+      "devices/missing": { courtId: "abcde", courtAllocationId: null },
+      "devices/stale": { courtId: "abcde", courtAllocationId: "old-court" },
+      "matches/bbbbbb": { currentCourtId: "efghj" },
+    });
+    expect(docs["courts/abcde"]).toMatchObject({
+      activeMatchAllocationId: seededAllocationId("matches/aaaaaa"),
+      lastMatchAllocationId: seededAllocationId("matches/aaaaaa"),
+      clubAllocationId: seededAllocationId("clubs/aaaa"),
+    });
+    expect(docs["matches/aaaaaa"]).toMatchObject({
+      matchAllocationId: seededAllocationId("matches/aaaaaa"),
+      currentCourtAllocationId: seededAllocationId("courts/abcde"),
+      lastCourtAllocationId: seededAllocationId("courts/abcde"),
+      tournamentAllocationId: "observed-tournament",
+    });
+    expect(docs["devices/current"].courtAllocationId).toBe(seededAllocationId("courts/abcde"));
+    expect(docs["devices/missing"].courtAllocationId).toBeNull();
+    expect(docs["devices/stale"].courtAllocationId).toBe("old-court");
+    expect(docs["matches/bbbbbb"]).not.toHaveProperty("currentCourtAllocationId");
+    expect(
+      withExpectedAllocations(new FakeFirestore(docs), { courtId: "efghj" }).expectedAllocations,
+    ).toEqual({});
+  });
+
+  test.each([undefined, {}])(
+    "a missing court token (%j) cannot create a casual match",
+    async (tokens) => {
+      const data = { operation: "ensureCourtMatch", courtId: "abcde" };
+      if (tokens !== undefined) data.expectedAllocations = tokens;
+      const before = [...mockDb.docs.entries()];
+      await expect(api.manageMatch({ data })).rejects.toMatchObject({
+        code: "FAILED_PRECONDITION",
+        message: "An expected allocation token is required.",
+      });
+      expect([...mockDb.docs.entries()]).toEqual(before);
+    },
+  );
+
+  test("a composed request keeps its observed court token after ID reuse", async () => {
+    const data = withExpectedAllocations(mockDb, {
+      operation: "ensureCourtMatch",
+      courtId: "abcde",
+    });
+    const originalToken = data.expectedAllocations.court.abcde;
+    mockDb.write("courts/abcde", {
+      name: "Replacement Court",
+      status: "open",
+      allocationId: seededAllocationId("courts/abcde:replacement"),
+    });
+    expect(withExpectedAllocations(mockDb, data)).toBe(data);
+    expect(data.expectedAllocations.court.abcde).toBe(originalToken);
+    const before = [...mockDb.docs.entries()];
+    await expect(api.manageMatch({ data })).rejects.toMatchObject({
+      code: "ABORTED",
+      details: { code: "STALE_GENERATION", path: "courts/abcde" },
+    });
+    expect([...mockDb.docs.entries()]).toEqual(before);
+  });
+
+  test("transaction retry never refreshes a court token after concurrent ID reuse", async () => {
+    const data = withExpectedAllocations(mockDb, {
+      operation: "ensureCourtMatch",
+      courtId: "abcde",
+    });
+    const replacement = {
+      name: "Replacement Court",
+      status: "open",
+      allocationId: seededAllocationId("courts/abcde:replacement"),
+    };
+    const source = candidateSource("aaaaaa", "aaaaaa");
+    const runTransaction = mockDb.runTransaction.bind(mockDb);
+    let replaced = false;
+    jest.spyOn(mockDb, "runTransaction").mockImplementation((callback, options) =>
+      runTransaction(async (tx) => {
+        const result = await callback(tx);
+        if (!replaced) {
+          replaced = true;
+          mockDb.write("courts/abcde", replacement);
+        }
+        return result;
+      }, options),
+    );
+    const before = [...mockDb.docs.entries()].map(([path, value]) => [
+      path,
+      path === "courts/abcde" ? replacement : value,
+    ]);
+    await expect(api.manageMatch({ data })).rejects.toMatchObject({
+      code: "ABORTED",
+      details: { code: "STALE_GENERATION", path: "courts/abcde" },
+    });
+    expect(source).toHaveBeenCalledTimes(12);
+    expect(mockDb.transactionAttempts).toBe(2);
+    expect([...mockDb.docs.entries()]).toEqual(before);
+  });
+
+  test.each(["missing", "stale"])("a %s match token cannot reset a reused match", async (kind) => {
+    const { matchId } = await match({ name: "Original Match", courtId: "abcde" });
+    const data = withExpectedAllocations(mockDb, {
+      operation: "resetMatch",
+      matchId,
+      credentials: { adminKey: "test-admin" },
+    });
+    if (kind === "missing") data.expectedAllocations = {};
+    else {
+      mockDb.write(
+        `matches/${matchId}`,
+        {
+          allocationId: seededAllocationId(`matches/${matchId}:replacement`),
+        },
+        { merge: true },
+      );
+    }
+    const before = [...mockDb.docs.entries()];
+    await expect(api.manageMatch({ data })).rejects.toMatchObject(
+      kind === "missing"
+        ? { code: "FAILED_PRECONDITION", message: "An expected allocation token is required." }
+        : { code: "ABORTED", details: { code: "STALE_GENERATION", path: `matches/${matchId}` } },
+    );
+    expect([...mockDb.docs.entries()]).toEqual(before);
+  });
+
+  test.each(["missing", "stale"])("a %s tournament token cannot generate a round", async (kind) => {
+    const { tournamentId } = await createTournament();
+    const data = withExpectedAllocations(mockDb, {
+      operation: "generateRound",
+      tournamentId,
+      credentials: { adminKey: "test-admin" },
+    });
+    if (kind === "missing") data.expectedAllocations = {};
+    else {
+      mockDb.write(
+        `tournaments/${tournamentId}`,
+        {
+          allocationId: seededAllocationId(`tournaments/${tournamentId}:replacement`),
+        },
+        { merge: true },
+      );
+    }
+    const before = [...mockDb.docs.entries()];
+    await expect(api.manageTournament({ data })).rejects.toMatchObject(
+      kind === "missing"
+        ? { code: "FAILED_PRECONDITION", message: "An expected allocation token is required." }
+        : {
+            code: "ABORTED",
+            details: { code: "STALE_GENERATION", path: `tournaments/${tournamentId}` },
+          },
+    );
+    expect([...mockDb.docs.entries()]).toEqual(before);
+  });
+});
 
 function candidateSource(...ids) {
   const alphabet = "abcdefghjkmnpqrstuxyz";
@@ -79,17 +269,9 @@ function retryFirstCreationAttempt() {
 describe("production allocation callbacks reset SDK-reused transactions", () => {
   test.each([
     ["court", "jkmnp", () => court({ name: "Court C", password: "different" }), "courts"],
-    ["club", "aaaa", () => api.createClub({ data: { name: "New Club" } }), "clubs"],
+    ["club", "aaaa", () => club({ name: "New Club" }), "clubs"],
     ["manual match", "aaaaaa", () => match({ name: "New Match" }), "matches"],
-    [
-      "casual match",
-      "aaaaaa",
-      () =>
-        api.manageMatch({
-          data: { operation: "ensureCourtMatch", courtId: "abcde" },
-        }),
-      "matches",
-    ],
+    ["casual match", "aaaaaa", () => ensureCourtMatch(), "matches"],
     [
       "tournament",
       "aaaaaaa",
@@ -164,6 +346,10 @@ describe("production allocation callbacks reset SDK-reused transactions", () => 
 
 describe("court creation boundary", () => {
   test("exports admin-only createCourt with the existing flat court shape", async () => {
+    mockDb.write(
+      "clubs/aaaa",
+      seedAllocationTokens({ "clubs/aaaa": { name: "Existing Club" } })["clubs/aaaa"],
+    );
     const before = mockDb.docs.size;
     await expect(court({ name: "New Court", password: "different" }, {})).rejects.toMatchObject({
       code: "PERMISSION_DENIED",
@@ -175,7 +361,7 @@ describe("court creation boundary", () => {
       status: "private",
       scoringOptions: { scoringMode: "straight", deuceMode: "golden" },
       activeMatchId: "injected",
-      clubId: "injected",
+      clubId: "aaaa",
     });
     expect(result.courtId).toMatch(/^[abcdefghjkmnpqrstuxyz]{5}$/);
     expect(mockDb.get(`courts/${result.courtId}`)).toMatchObject({
@@ -229,7 +415,11 @@ describe("court creation boundary", () => {
     candidateSource("abcde", "jkmnp");
     const existing = mockDb.get("courts/abcde");
     const result = await court({ name: "Court C", password: "different" });
-    expect(result).toEqual({ courtId: "jkmnp" });
+    expect(result).toEqual({
+      courtId: "jkmnp",
+      allocationId: mockDb.get("courts/jkmnp").allocationId,
+    });
+    expect(result.allocationId).toMatch(/^[A-Za-z0-9_-]{16}$/);
     expect(mockDb.get("courts/abcde")).toEqual(existing);
   });
 
@@ -280,31 +470,26 @@ describe("match creation is canonical and create-only", () => {
   });
 
   test("manual match collision preserves the old match and its score", async () => {
-    mockDb.write("matches/aaaaaa", { historical: true });
+    mockDb.write("matches/aaaaaa", historicalRoot("matches/aaaaaa"));
     mockDb.write("matches/aaaaaa/score/current", { historyScore: true });
     candidateSource("aaaaaa", "bbbbbb");
     expect(await match({ name: "New Match" })).toMatchObject({ matchId: "bbbbbb" });
-    expect(mockDb.get("matches/aaaaaa")).toEqual({ historical: true });
+    expect(mockDb.get("matches/aaaaaa")).toEqual(historicalRoot("matches/aaaaaa"));
     expect(mockDb.get("matches/aaaaaa/score/current")).toEqual({ historyScore: true });
   });
 
   test("casual ensureCourtMatch collisions use the same allocator", async () => {
-    mockDb.write("matches/aaaaaa", { historical: true });
+    mockDb.write("matches/aaaaaa", historicalRoot("matches/aaaaaa"));
     candidateSource("aaaaaa", "bbbbbb");
-    const created = await api.manageMatch({
-      data: { operation: "ensureCourtMatch", courtId: "abcde" },
-    });
+    const created = await ensureCourtMatch();
     expect(created.matchId).toBe("bbbbbb");
-    expect(mockDb.get("matches/aaaaaa")).toEqual({ historical: true });
+    expect(mockDb.get("matches/aaaaaa")).toEqual(historicalRoot("matches/aaaaaa"));
     expect(mockDb.get("courts/abcde").activeMatchId).toBe("bbbbbb");
   });
 
   test("concurrent ensure calls return one match after a transaction retry", async () => {
     candidateSource("aaaaaa", "aaaaaa");
-    const result = await Promise.all([
-      api.manageMatch({ data: { operation: "ensureCourtMatch", courtId: "abcde" } }),
-      api.manageMatch({ data: { operation: "ensureCourtMatch", courtId: "abcde" } }),
-    ]);
+    const result = await Promise.all([ensureCourtMatch(), ensureCourtMatch()]);
     expect(result.map((entry) => entry.matchId)).toEqual(["aaaaaa", "aaaaaa"]);
     expect(result.map((entry) => entry.created).sort()).toEqual([false, true]);
     expect(mockDb.list("matches")).toHaveLength(1);
@@ -321,7 +506,7 @@ describe("match creation is canonical and create-only", () => {
   });
 
   test("writePreparedMatch never overwrites an existing match or score", async () => {
-    mockDb.write("matches/aaaaaa", { historical: true });
+    mockDb.write("matches/aaaaaa", historicalRoot("matches/aaaaaa"));
     const prepared = matchService.prepareMatch({ matchId: "aaaaaa" });
     const before = [...mockDb.docs.entries()];
     await expect(
@@ -364,13 +549,13 @@ async function createTournament(extra = {}) {
 
 describe("tournament allocation and batch match creation", () => {
   test("tournament collision retries within the idempotent creation transaction", async () => {
-    mockDb.write("tournaments/aaaaaaa", { historical: true });
+    mockDb.write("tournaments/aaaaaaa", historicalRoot("tournaments/aaaaaaa"));
     const source = jest.spyOn(crypto, "randomInt");
     let calls = 0;
     source.mockImplementation(() => (++calls <= 7 ? 0 : 1));
     const created = await createTournament({ requestId: "same-request" });
     expect(created.tournamentId).toBe("bbbbbbb");
-    expect(mockDb.get("tournaments/aaaaaaa")).toEqual({ historical: true });
+    expect(mockDb.get("tournaments/aaaaaaa")).toEqual(historicalRoot("tournaments/aaaaaaa"));
     const before = mockDb.list("tournaments").length;
     const duplicate = await createTournament({ requestId: "same-request" });
     expect(duplicate).toMatchObject({ duplicate: true, tournamentId: "bbbbbbb" });
@@ -389,7 +574,7 @@ describe("tournament allocation and batch match creation", () => {
   });
 
   test("tournament creation exhaustion makes no roster or secret writes", async () => {
-    mockDb.write("tournaments/aaaaaaa", { historical: true });
+    mockDb.write("tournaments/aaaaaaa", historicalRoot("tournaments/aaaaaaa"));
     const before = [...mockDb.docs.entries()];
     const source = candidateSource(...Array(5).fill("aaaaaaa"));
     await expect(createTournament()).rejects.toMatchObject({ code: "ABORTED" });
@@ -399,7 +584,7 @@ describe("tournament allocation and batch match creation", () => {
 
   test("multi-match round collision reads precede writes and reserve distinct IDs", async () => {
     const { tournamentId } = await createTournament();
-    mockDb.write("matches/aaaaaa", { historical: true });
+    mockDb.write("matches/aaaaaa", historicalRoot("matches/aaaaaa"));
     candidateSource("aaaaaa", "bbbbbb", "bbbbbb", "cccccc");
     const generated = await tournament("generateRound", { tournamentId });
     expect(generated.matches).toBe(2);
@@ -407,7 +592,7 @@ describe("tournament allocation and batch match creation", () => {
       .list(`tournaments/${tournamentId}/fixtures`)
       .map((fixture) => fixture.matchId);
     expect(ids.sort()).toEqual(["bbbbbb", "cccccc"]);
-    expect(mockDb.get("matches/aaaaaa")).toEqual({ historical: true });
+    expect(mockDb.get("matches/aaaaaa")).toEqual(historicalRoot("matches/aaaaaa"));
     expect(mockDb.list("matches")).toHaveLength(3);
   });
 
@@ -439,8 +624,8 @@ describe("tournament allocation and batch match creation", () => {
     test("concurrent club collisions and court ownership changes commit atomically", async () => {
       candidateSource("aaaa", "aaaa", "bbbb");
       const results = await Promise.all([
-        api.createClub({ data: { name: "First Club", courtIds: ["abcde"] } }),
-        api.createClub({ data: { name: "Second Club", courtIds: ["abcde"] } }),
+        club({ name: "First Club", courtIds: ["abcde"] }),
+        club({ name: "Second Club", courtIds: ["abcde"] }),
       ]);
       expect(results.map((result) => result.clubId)).toEqual(["aaaa", "bbbb"]);
       expect(mockDb.get("clubs/aaaa")).toMatchObject({ name: "First Club", courtIds: [] });
@@ -488,11 +673,11 @@ describe("tournament allocation and batch match creation", () => {
       { matchId: null },
       { merge: true },
     );
-    mockDb.write("matches/aaaaaa", { historical: true });
+    mockDb.write("matches/aaaaaa", historicalRoot("matches/aaaaaa"));
     candidateSource("aaaaaa", "bbbbbb");
     const result = await tournament("createFixtureMatch", { tournamentId, fixtureId: fixture.id });
     expect(result.matchId).toBe("bbbbbb");
-    expect(mockDb.get("matches/aaaaaa")).toEqual({ historical: true });
+    expect(mockDb.get("matches/aaaaaa")).toEqual(historicalRoot("matches/aaaaaa"));
   });
 
   test.each([

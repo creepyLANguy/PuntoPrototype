@@ -80,6 +80,9 @@ short ID is a new assignment and does not reuse its allocation identity.
 Deleting a resource root does not by itself release the short ID: its
 allocation remains reserved until its descendants and references are safely
 retired. Such reservations still count toward the culling threshold.
+Manual deletion preserves the original assignment sequence. Released reservations
+and live resources are selected together in that order; deleting a newer resource
+does not move it ahead of older assignments for culling.
 All four lengths are distinct, so collisions are checked only within the
 requested ID type. Repeated characters remain valid.
 
@@ -115,6 +118,12 @@ the source path and original Firestore data for each document, including
 descendants of missing ancestor documents. The `unlinks` subcollection records
 previous values of documents changed to remove references. Tournament
 read-model and secret sidecars are included, not just the tournament subtree.
+Documents too large or deeply nested for inline archival use a
+`firestore-document-protobuf-v1` manifest and numbered `payload` documents.
+`services/retentionArchive.readArchive` reconstructs their original Firestore
+values, including timestamps, references, bytes, and integer precision.
+Administrative deletion must recursively remove archive descendants, not just
+the archive root.
 
 The job-created trigger starts maintenance, and `idRetentionWorker` resumes
 unfinished work every minute. Progress, traversal state, and worker leases are
@@ -123,6 +132,8 @@ finishes. Deploy the Functions, Firestore rules, and supplied collection-group
 indexes together. If a job is stuck, inspect the job and function logs and
 correct the cause before resuming; do not manually clear the gate or delete
 allocation records to bypass unfinished archival.
+Archive payloads are excluded from indexing so copying a source document cannot
+exceed Firestore's index-entry limits merely by adding archival metadata.
 
 ## Court document
 

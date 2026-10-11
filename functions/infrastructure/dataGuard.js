@@ -39,9 +39,12 @@ const REFERENCE_FIELDS = {
   courtId: "courts",
   currentCourtId: "courts",
   lastCourtId: "courts",
+  sourceCourtId: "courts",
+  targetCourtId: "courts",
   activeMatchId: "matches",
   lastMatchId: "matches",
   matchId: "matches",
+  occupiedByMatchId: "matches",
   clubId: "clubs",
   tournamentId: "tournaments",
 };
@@ -64,7 +67,12 @@ function unwrap(value) {
 }
 
 function newScope(options = {}) {
-  return { observed: new Map(), maintenance: options.maintenance || null };
+  return {
+    observed: new Map(),
+    pinned: new Set(),
+    assignments: new Map(),
+    maintenance: options.maintenance || null,
+  };
 }
 
 function currentScope() {
@@ -121,6 +129,50 @@ function stateOf(snapshot) {
 
 function sameState(left, right) {
   return left.exists === right.exists && left.allocationId === right.allocationId;
+}
+
+// Stored assignments must fence even writes that do not name the assigned root,
+// such as a device SKU update. Pin before reading the root or making any writes.
+function pinRootGeneration(path, allocationId) {
+  const scope = currentScope();
+  if (!scope || !rootOf(path)?.isRoot) {
+    throw precondition("A managed root and operation scope are required.");
+  }
+  if (typeof allocationId !== "string" || !allocationId) throw staleGeneration(path);
+  const expected = { exists: true, allocationId };
+  const observed = scope.observed.get(path);
+  if (observed && !sameState(observed, expected)) throw staleGeneration(path);
+  scope.observed.set(path, expected);
+  scope.pinned.add(path);
+}
+
+function assignmentOf(data, exists = true) {
+  return {
+    exists,
+    courtId: data?.courtId || null,
+    courtAllocationId: data?.courtAllocationId ?? null,
+  };
+}
+
+function sameAssignment(left, right) {
+  return (
+    left.exists === right.exists &&
+    left.courtId === right.courtId &&
+    left.courtAllocationId === right.courtAllocationId
+  );
+}
+
+// A relocation may leave a missing source behind, but it must never overwrite
+// a concurrent device reassignment based on an earlier device snapshot.
+function pinDeviceAssignment(path, data) {
+  const scope = currentScope();
+  if (!scope || !/^devices\/[^/]+$/.test(path)) {
+    throw precondition("A device and operation scope are required.");
+  }
+  const expected = assignmentOf(data);
+  const observed = scope.assignments.get(path);
+  if (observed && !sameAssignment(observed, expected)) throw staleGeneration(path);
+  scope.assignments.set(path, expected);
 }
 
 // First observation wins: a later different generation is a reuse.
@@ -262,9 +314,22 @@ function createGuardedFirestore(raw) {
         referenced.add(path);
       });
     });
-    const toRead = [...new Set([...rootPaths, ...referenced])];
+    const toRead = [
+      ...new Set([
+        ...rootPaths,
+        ...referenced,
+        ...(scope?.pinned || []),
+        ...(scope?.assignments.keys() || []),
+      ]),
+    ];
     const snapshots = await Promise.all(toRead.map((path) => rawTx.get(raw.doc(path))));
     const current = new Map(toRead.map((path, index) => [path, stateOf(snapshots[index])]));
+    const snapshotsByPath = new Map(toRead.map((path, index) => [path, snapshots[index]]));
+    scope?.assignments.forEach((expected, path) => {
+      const snapshot = snapshotsByPath.get(path);
+      const assignment = assignmentOf(snapshot?.data(), snapshot?.exists === true);
+      if (!sameAssignment(expected, assignment)) throw staleGeneration(path);
+    });
 
     const createdRoots = new Map();
     const ledgerCreates = new Set();
@@ -321,6 +386,7 @@ function createGuardedFirestore(raw) {
       }
     });
     referenced.forEach(assertGeneration);
+    scope?.pinned.forEach(assertGeneration);
     queue.forEach((op) => {
       if (!op.data || op.type === "delete") return;
       const payload = { ...op.data };
@@ -328,10 +394,17 @@ function createGuardedFirestore(raw) {
         if (!Object.hasOwn(payload, field)) continue;
         const id = payload[field];
         const tokenField = field.replace(/Id$/, "AllocationId");
-        if (id == null && !Object.hasOwn(payload, tokenField)) continue;
         const path = `${collection}/${id}`;
-        payload[tokenField] =
+        const allocationId =
           id == null ? null : createdRoots.get(path) || current.get(path)?.allocationId || null;
+        if (
+          id != null &&
+          Object.hasOwn(payload, tokenField) &&
+          payload[tokenField] !== allocationId
+        ) {
+          throw staleGeneration(path);
+        }
+        payload[tokenField] = allocationId;
       }
       const info = rootOf(op.ref.path);
       if (info && !info.isRoot && SIDECAR_NAMES.has(op.ref.path.split("/")[0])) {
@@ -359,6 +432,16 @@ function createGuardedFirestore(raw) {
       if (!scope.observed.has(path)) scope.observed.set(path, state);
     });
     attempt.queue.forEach((op) => {
+      if (scope.assignments.has(op.ref.path)) {
+        const previous =
+          op.type === "set" && !op.options?.merge ? {} : scope.assignments.get(op.ref.path);
+        scope.assignments.set(
+          op.ref.path,
+          op.type === "delete"
+            ? assignmentOf(null, false)
+            : assignmentOf({ ...previous, ...op.data }),
+        );
+      }
       const info = rootOf(op.ref.path);
       if (!info?.isRoot) return;
       if (op.type === "create") {
@@ -508,4 +591,6 @@ module.exports = {
   runInMaintenanceScope,
   withOperationScope,
   currentScope,
+  pinRootGeneration,
+  pinDeviceAssignment,
 };

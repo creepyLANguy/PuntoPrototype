@@ -211,7 +211,7 @@ describe("allocation ledger", () => {
       id: "bbbbb",
       allocationId: "old",
       state: "released",
-      releasedSequence: 0,
+      sequence: 0,
     });
     candidateSource("aaaaa", "bbbbb", "ccccc");
     const id = await allocate("court");
@@ -425,7 +425,12 @@ describe("cull worker", () => {
     );
     expect(archived).toEqual({
       ...tree,
-      [`tournaments/${tournamentId}`]: { name: "Cup", clubId: null, allocationId },
+      [`tournaments/${tournamentId}`]: {
+        name: "Cup",
+        clubId: null,
+        clubAllocationId: null,
+        allocationId,
+      },
       "tournamentCreations/request-1": { tournamentId, uid: "u" },
     });
     Object.keys(archived).forEach((path) => expect(mockDb.get(path)).toBeUndefined());
@@ -556,6 +561,115 @@ describe("cull worker", () => {
     expect(withoutJob(mockDb.docs)).toEqual(withoutJob(before));
     expect(job().victimCount).toBe(0);
     expect(job().lease.owner).toBe("thief");
+  });
+
+  test("sequence pagination resumes after a crash without prioritizing newer released records", async () => {
+    config.setRetentionPolicies({ court: { trigger: 7, target: 3 } });
+    const created = ["ggggg", "fffff", "eeeee", "ddddd", "ccccc", "bbbbb", "aaaaa"];
+    candidateSource(...created);
+    for (const id of created.slice(0, -1)) {
+      expect(await allocate("court")).toBe(id);
+    }
+    for (const id of [created[5], created[1]]) {
+      const data = mockDb.get(`courts/${id}`);
+      await firebase.db.doc(`courts/${id}`).delete();
+      await retention.accountRootDeletion("court", id, data);
+    }
+    expect(record("court", created[1]).sequence).toBe(2);
+    expect(record("court", created[5]).sequence).toBe(6);
+    expect(await allocate("court")).toBe(created[6]);
+    expect(job().plan.court).toEqual({ cullCount: 4, occupiedAtStart: 7 });
+
+    const runTransaction = mockDb.runTransaction.bind(mockDb);
+    let calls = 0;
+    const spy = jest.spyOn(mockDb, "runTransaction").mockImplementation((callback, options) => {
+      calls += 1;
+      if (calls === 3) return Promise.reject(new Error("selection crashed"));
+      return runTransaction(callback, options);
+    });
+    const options = { db: mockDb, batchSize: 2, leaseMs: 100, now: () => 1000 };
+    await expect(retention.runRetentionWorker({ ...options, workerId: "crashed" })).rejects.toThrow(
+      "selection crashed",
+    );
+    spy.mockRestore();
+    const crashed = job();
+    expect(crashed.selection.court).toMatchObject({ selected: 2, cursor: 2, done: false });
+    expect(crashed.victimCount).toBe(2);
+    expect([0, 1].map((index) => mockDb.get(paths.victim(crashed.jobId, index)).id)).toEqual(
+      created.slice(0, 2),
+    );
+
+    expect(
+      await retention.runRetentionWorker({ ...options, workerId: "resumed", now: () => 1050 }),
+    ).toEqual({ status: "busy", jobId: crashed.jobId, steps: 0 });
+    expect(job()).toEqual(crashed);
+    expect(
+      await retention.runRetentionWorker({
+        ...options,
+        workerId: "resumed",
+        now: () => 1101,
+        maxSteps: 1,
+      }),
+    ).toMatchObject({ status: "progress", steps: 1 });
+    expect(job().selection.court).toMatchObject({ selected: 4, cursor: 4, done: true });
+    expect(
+      [0, 1, 2, 3].map((index) => mockDb.get(paths.victim(crashed.jobId, index)).sequence),
+    ).toEqual([1, 2, 3, 4]);
+    await runToCompletion({ workerId: "resumed", batchSize: 2, now: () => 1102 });
+    expect(
+      mockDb
+        .list(paths.allocations("court"))
+        .map((entry) => entry.sequence)
+        .sort(),
+    ).toEqual([5, 6, 7]);
+    expect(
+      mockDb
+        .list("courts")
+        .map((entry) => entry.id)
+        .sort(),
+    ).toEqual(["aaaaa", "ccccc"]);
+    expect(record("court", created[5])).toMatchObject({ sequence: 6, state: "released" });
+    expect(ledger("court")).toMatchObject({ sequence: 7, live: 2, released: 1, culled: 4 });
+  });
+
+  test("selection advances its cursor past culling records without duplicating victims", async () => {
+    await seedCourtCull();
+    await retention.runRetentionWorker({
+      db: mockDb,
+      workerId: "first",
+      batchSize: 1,
+      maxSteps: 1,
+    });
+    const selected = job();
+    expect(selected.selection.court).toMatchObject({ selected: 1, cursor: 1 });
+    expect(record("court", "aaaaa").state).toBe("culling");
+    mockDb.docs.set(paths.job(selected.jobId), {
+      ...selected,
+      selection: { court: { ...selected.selection.court, cursor: null } },
+    });
+
+    await retention.runRetentionWorker({
+      db: mockDb,
+      workerId: "resumed",
+      batchSize: 1,
+      maxSteps: 1,
+    });
+    expect(job().selection.court).toMatchObject({ selected: 1, cursor: 1, done: false });
+    expect(job().victimCount).toBe(1);
+    await retention.runRetentionWorker({
+      db: mockDb,
+      workerId: "resumed",
+      batchSize: 1,
+      maxSteps: 1,
+    });
+    expect(job().selection.court).toMatchObject({ selected: 2, cursor: 2, done: true });
+    expect(job().victimCount).toBe(2);
+    expect([0, 1].map((index) => mockDb.get(paths.victim(selected.jobId, index)).id)).toEqual([
+      "aaaaa",
+      "bbbbb",
+    ]);
+    await runToCompletion({ batchSize: 1 });
+    expect(ledger("court")).toMatchObject({ live: 1, released: 0, culled: 2 });
   });
 
   test("refuses incomplete Firestore clients instead of skipping accounting", async () => {
@@ -786,10 +900,10 @@ describe("manual delete accounting and delete triggers", () => {
     expect(ledger("club")).toMatchObject({ live: 0, released: 1, sequence: 1 });
     expect(record("club", id)).toMatchObject({
       state: "released",
-      releasedSequence: 1,
+      sequence: 1,
       allocationId: data.allocationId,
     });
-    expect(record("club", id).sequence).toBeUndefined();
+    expect(record("club", id).releasedSequence).toBeUndefined();
 
     // A released ID stays reserved until a cull frees it.
     candidateSource(id, "zzzz");
@@ -803,7 +917,7 @@ describe("manual delete accounting and delete triggers", () => {
     expect(ledger("match")).toMatchObject({ live: 1, released: 0 });
   });
 
-  test("released IDs are culled first, then the oldest live ones", async () => {
+  test("the oldest released and live assignments are culled in sequence order", async () => {
     candidateSource("aaaa", "bbbb", "cccc");
     await allocate("club");
     const released = mockDb.get("clubs/aaaa");

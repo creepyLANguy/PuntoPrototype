@@ -58,6 +58,42 @@ test("observed assignments remain pinned across deletion and short-id reuse", ()
   assert.throws(() => context.assertCurrentAssignment("match", ids.match));
 });
 
+test("partial mutation acknowledgements do not invalidate observed match assignments", async () => {
+  await matches.getMatch(ids.match);
+  callableHandlers.set("manageMatch", async () => ({
+    data: { success: true, matchId: ids.match },
+  }));
+  await api.manageMatch("completeMatch", { matchId: ids.match });
+  assert.equal(context.assertCurrentAssignment("match", ids.match), "match-old");
+  await api.manageMatch("resetMatch", { matchId: ids.match });
+  assert.equal(context.assertCurrentAssignment("match", ids.match), "match-old");
+
+  callableHandlers.set("manageMatch", async () => ({
+    data: { matchId: ids.match, allocationId: "match-new" },
+  }));
+  await api.manageMatch("completeMatch", { matchId: ids.match });
+  assert.throws(() => context.assertCurrentAssignment("match", ids.match), {
+    code: "assignment-changed",
+  });
+});
+
+test("partial tournament live-match projections do not invalidate captured assignments", async () => {
+  await matches.getMatch(ids.match);
+  callableHandlers.set("manageTournament", async () => ({
+    data: { liveMatches: [{ matchId: ids.match, scoreSummary: null }] },
+  }));
+  await api.manageTournament("getTournamentView", { tournamentId: ids.tournament });
+  assert.equal(context.assertCurrentAssignment("match", ids.match), "match-old");
+
+  callableHandlers.set("manageTournament", async () => ({
+    data: { liveMatches: [{ matchId: ids.match, allocationId: "match-new" }] },
+  }));
+  await api.manageTournament("getTournamentView", { tournamentId: ids.tournament });
+  assert.throws(() => context.assertCurrentAssignment("match", ids.match), {
+    code: "assignment-changed",
+  });
+});
+
 test("root/list reads preserve SDK snapshots and capture each resource generation", async () => {
   for (const [type, read] of Object.entries(reads)) {
     const snap = await read(ids[type]);

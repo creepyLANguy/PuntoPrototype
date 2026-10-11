@@ -166,6 +166,28 @@ class FakeFirestore {
     return [...ids].sort().map((id) => this.doc(`${prefix}${id}`));
   }
 
+  async retentionListDocuments({ collectionPath, pageSize, pageToken = "" }) {
+    const refs = this.childDocuments(collectionPath).filter(
+      (ref) => !pageToken || ref.path > pageToken,
+    );
+    const page = refs.slice(0, pageSize);
+    return {
+      paths: page.map((ref) => ref.path),
+      nextPageToken: refs.length > page.length ? page[page.length - 1].path : "",
+    };
+  }
+
+  async retentionListCollectionIds({ documentPath, pageSize, pageToken = "" }) {
+    const collections = this.childCollections(documentPath).filter(
+      (collection) => !pageToken || collection.id > pageToken,
+    );
+    const page = collections.slice(0, pageSize);
+    return {
+      ids: page.map((collection) => collection.id),
+      nextPageToken: collections.length > page.length ? page[page.length - 1].id : "",
+    };
+  }
+
   collectionGroup(collectionId) {
     return new FakeQuery(this, null, [], [], null, null, collectionId);
   }

@@ -242,6 +242,7 @@ async function ensureCourtMatch({ courtId, actor = null }) {
       if (active && active.status === "live" && active.currentCourtId === courtId) {
         return {
           matchId: court.activeMatchId,
+          allocationId: active.allocationId,
           scoreVersion: normalizeScoreVersion(active.scoreVersion),
           created: false,
         };

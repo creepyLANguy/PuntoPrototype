@@ -4,8 +4,8 @@
 // ledger to its trigger (services/ids.js). That same commit activates the
 // global maintenance gate, so no live write, allocation or manual-delete
 // accounting can interleave. The worker then:
-//   select   pick released records first, then the oldest live ones by
-//            ledger sequence, until the planned cull count is met;
+//   select   pick the oldest occupied assignments by ledger sequence,
+//            regardless of live/released state, up to the planned cull count;
 //   archive  copy the root, every nested descendant (missing ancestors
 //            included) and the tournament sidecars into CULLED_* under the
 //            immutable {id}_{allocationId} key;
@@ -17,6 +17,8 @@
 // the job lease (owner + attempt), and all progress (cursors, traversal
 // stacks, phases) is durable, so any worker can resume after a crash.
 const crypto = require("crypto");
+const { planArchive, writeArchive, snapshotBytes, writeBytes } = require("./retentionArchive");
+const { createDocumentListing, createCollectionListing } = require("./retentionListing");
 const {
   ID_TYPES,
   ROOT_COLLECTIONS,
@@ -29,6 +31,7 @@ const {
 const DEFAULT_BATCH_SIZE = 200;
 const DEFAULT_LEASE_MS = 2 * 60 * 1000;
 const MAX_STEP_BYTES = 4 * 1024 * 1024;
+const MAX_UNIT_BYTES = 9 * 1024 * 1024;
 
 class LeaseLostError extends Error {
   constructor(message = "The retention job lease was lost.") {
@@ -106,9 +109,8 @@ function assertRetentionDb(db) {
   ["runTransaction", "doc", "collection", "collectionGroup", "getAll"].forEach((name) =>
     requireMethod(db, name, "db"),
   );
-  requireMethod(db.doc(GATE_PATH), "listCollections", "DocumentReference");
   const collection = db.collection(retentionPaths.allocations("court"));
-  ["listDocuments", "where", "orderBy", "startAfter", "limit"].forEach((name) =>
+  ["where", "orderBy", "startAfter", "limit"].forEach((name) =>
     requireMethod(collection, name, "CollectionReference"),
   );
 }
@@ -121,19 +123,6 @@ function isPlainObject(value) {
   // prototype chains and are kept verbatim.
   const proto = Object.getPrototypeOf(value);
   return proto === null || Object.getPrototypeOf(proto) === null;
-}
-
-function estimateBytes(value, depth = 0) {
-  if (value == null) return 1;
-  if (typeof value === "string") return value.length + 1;
-  if (typeof value !== "object") return 8;
-  if (depth > 32) return 64;
-  if (Array.isArray(value)) return value.reduce((sum, v) => sum + estimateBytes(v, depth + 1), 1);
-  if (!isPlainObject(value)) return 64;
-  return Object.entries(value).reduce(
-    (sum, [key, v]) => sum + key.length + 1 + estimateBytes(v, depth + 1),
-    1,
-  );
 }
 
 function withoutUndefined(object) {
@@ -158,6 +147,7 @@ function scrubValue(value, keys, id) {
     if (keys.scalar.includes(key) && entry === id) {
       next[key] = null;
       changed = true;
+      cleared.add(key.replace(/Id$/, "AllocationId"));
       (keys.companions?.[key] || []).forEach((companion) => cleared.add(companion));
     } else if (keys.list.includes(key) && Array.isArray(entry) && entry.includes(id)) {
       next[key] = entry.filter((item) => item !== id);
@@ -235,7 +225,8 @@ function tournamentOfPath(path) {
 // returning the existing documents reached and the next stack. Missing
 // ancestor documents are visited too (listDocuments reports them), so no
 // nested subcollection is skipped.
-async function expandTraversal(db, stack, limit) {
+async function expandTraversal(ctx, stack, limit, archive = false) {
+  const { db } = ctx;
   const next = stack.map((item) => ({ ...item }));
   const docs = [];
   let units = 0;
@@ -245,30 +236,50 @@ async function expandTraversal(db, stack, limit) {
     units += 1;
     if (item.k === "d") {
       const ref = db.doc(item.p);
-      const [snapshot, collections] = await Promise.all([ref.get(), ref.listCollections()]);
-      collections
-        .map((collection) => collection.id)
-        .sort()
-        .reverse()
-        .forEach((id) => next.push({ k: "c", p: `${item.p}/${id}`, a: null }));
+      const snapshot = await ref.get();
+      const cost = snapshot.exists
+        ? snapshotBytes(snapshot, db) + (archive ? archivePlan(snapshot, ctx).bytes : 0) + 16384
+        : 0;
+      if (docs.length && bytes + cost > MAX_STEP_BYTES) {
+        next.push(item);
+        break;
+      }
+      next.push({ k: "l", p: item.p, pageToken: "" });
       if (snapshot.exists) {
         docs.push(snapshot);
-        bytes += estimateBytes(snapshot.data());
+        bytes += cost;
       }
       continue;
     }
-    const refs = await db.collection(item.p).listDocuments();
-    const ids = refs
-      .map((ref) => ref.id)
-      .filter((id) => item.a === null || id > item.a)
-      .sort();
-    if (!ids.length) continue;
-    const take = ids.slice(0, Math.max(1, limit - units));
-    if (take.length < ids.length) next.push({ ...item, a: take[take.length - 1] });
-    take
+    if (item.k === "l") {
+      const page = await ctx.listCollectionIdsPage({
+        documentPath: item.p,
+        pageSize: Math.max(
+          1,
+          Math.min(limit - units, Math.floor((128 * 1024) / (Buffer.byteLength(item.p) + 1501))),
+        ),
+        pageToken: item.pageToken || "",
+      });
+      if (page.nextPageToken) next.push({ ...item, pageToken: page.nextPageToken });
+      page.ids
+        .slice()
+        .reverse()
+        .forEach((id) => next.push({ k: "c", p: `${item.p}/${id}`, pageToken: "" }));
+      continue;
+    }
+    const page = await ctx.listDocumentsPage({
+      collectionPath: item.p,
+      pageSize: Math.max(
+        1,
+        Math.min(limit - units, Math.floor((128 * 1024) / (Buffer.byteLength(item.p) + 1501))),
+      ),
+      pageToken: item.pageToken || "",
+    });
+    if (page.nextPageToken) next.push({ ...item, pageToken: page.nextPageToken });
+    page.paths
       .slice()
       .reverse()
-      .forEach((id) => next.push({ k: "d", p: `${item.p}/${id}` }));
+      .forEach((path) => next.push({ k: "d", p: path }));
   }
   return { docs, stack: next };
 }
@@ -279,6 +290,9 @@ function createWorkerContext({
   batchSize = DEFAULT_BATCH_SIZE,
   leaseMs = DEFAULT_LEASE_MS,
   now = Date.now,
+  listDocumentsPage,
+  listCollectionIdsPage,
+  listingClientOptions,
 }) {
   if (!Number.isInteger(batchSize) || batchSize < 1 || batchSize > 200) {
     throw new Error("Retention batchSize must be an integer from 1 to 200.");
@@ -289,6 +303,11 @@ function createWorkerContext({
     batchSize,
     leaseMs,
     now,
+    listDocumentsPage: createDocumentListing(db, { listDocumentsPage, listingClientOptions }),
+    listCollectionIdsPage: createCollectionListing(db, {
+      listCollectionIdsPage,
+      listingClientOptions,
+    }),
     jobId: null,
     attempt: null,
   };
@@ -351,7 +370,6 @@ async function releaseLease(ctx) {
 function selectionState(job, type) {
   return {
     selected: 0,
-    releasedDone: false,
     cursor: null,
     done: false,
     shortfall: 0,
@@ -373,11 +391,7 @@ async function selectStep(ctx, job) {
   let candidates = [];
   let exhausted = false;
   const limit = Math.min(ctx.batchSize, Math.max(remaining, 0));
-  if (limit > 0 && !state.releasedDone) {
-    const snap = await allocations.where("state", "==", "released").limit(limit).get();
-    candidates = snap.docs.map((doc) => doc.data());
-    if (candidates.length < limit) state.releasedDone = true;
-  } else if (limit > 0) {
+  if (limit > 0) {
     let query = allocations.orderBy("sequence");
     if (state.cursor !== null) query = query.startAfter(state.cursor);
     const snap = await query.limit(limit).get();
@@ -408,7 +422,7 @@ async function selectStep(ctx, job) {
         type,
         id: record.id,
         allocationId: record.allocationId,
-        sequence: record.sequence ?? record.releasedSequence ?? null,
+        sequence: record.sequence,
         priorState: record.state,
         archiveKey: archiveKeyFor(record.id, record.allocationId),
         phase: "archive",
@@ -451,25 +465,30 @@ function archiveMeta(victim, ctx, extra = {}) {
 function archivedDocument(snapshot, ctx) {
   return withoutUndefined({
     path: snapshot.ref.path,
-    data: snapshot.data(),
     createTime: snapshot.createTime,
     updateTime: snapshot.updateTime,
     archivedAtMs: ctx.now(),
   });
 }
 
+function archivePlan(snapshot, ctx, metadata = archivedDocument(snapshot, ctx), field = "data") {
+  return planArchive(snapshot, ctx.db, metadata, field);
+}
+
 async function archiveStep(ctx, victim, victimRef) {
   const stack = victim.stack || traversalSeeds(victim);
-  const { docs, stack: nextStack } = await expandTraversal(ctx.db, stack, ctx.batchSize);
+  const { docs, stack: nextStack } = await expandTraversal(ctx, stack, ctx.batchSize, true);
   await fencedStep(ctx, async (tx) => {
     const fresh = await tx.get(victimRef);
     if (fresh.data()?.phase !== "archive") return;
     const archiveRef = ctx.db.doc(retentionPaths.archive(victim.type, victim.archiveKey));
     const documents = retentionPaths.archiveDocuments(victim.type, victim.archiveKey);
     docs.forEach((snapshot) => {
-      tx.set(
-        ctx.db.doc(`${documents}/${hashPath(snapshot.ref.path)}`),
-        archivedDocument(snapshot, ctx),
+      writeArchive(
+        tx,
+        ctx.db,
+        `${documents}/${hashPath(snapshot.ref.path)}`,
+        archivePlan(snapshot, ctx),
       );
       if (snapshot.ref.path === rootPathOf(victim)) {
         const rootAllocation = snapshot.data()?.allocationId ?? null;
@@ -512,6 +531,10 @@ function unlinkQuery(ctx, spec, victim, limit) {
 }
 
 async function unlinkStep(ctx, victim, victimRef) {
+  if (victim.unlinkViews?.paths?.length) {
+    await unlinkViewsStep(ctx, victim, victimRef);
+    return;
+  }
   const specs = UNLINK_SPECS[victim.type];
   const specIndex = victim.unlinkSpec || 0;
   if (specIndex >= specs.length) {
@@ -525,80 +548,135 @@ async function unlinkStep(ctx, victim, victimRef) {
   const spec = specs[specIndex];
   const pageSize = Math.max(1, Math.floor(ctx.batchSize / (spec.views ? 5 : 2)));
   const snap = await unlinkQuery(ctx, spec, victim, pageSize).get();
-  const paths = snap.docs.map((doc) => doc.ref.path);
+  const pagePaths = snap.docs.map((doc) => doc.ref.path);
+  const paths = [];
+  let plannedBytes = 0;
+  for (const snapshot of snap.docs) {
+    const plan = archivePlan(snapshot, ctx);
+    const cost =
+      snapshotBytes(snapshot, ctx.db) * (spec.archiveDelete ? 1 : 2) + plan.bytes + 16384;
+    if (paths.length && plannedBytes + cost > MAX_STEP_BYTES) break;
+    plannedBytes += cost;
+    paths.push(snapshot.ref.path);
+  }
 
   await fencedStep(ctx, async (tx) => {
     const fresh = await tx.get(victimRef);
     if (fresh.data()?.phase !== "unlink" || (fresh.data().unlinkSpec || 0) !== specIndex) return;
     const refs = paths.map((path) => ctx.db.doc(path));
     const snapshots = await Promise.all(refs.map((ref) => tx.get(ref)));
-    const tournaments = spec.views ? [...new Set(paths.map(tournamentOfPath).filter(Boolean))] : [];
-    const viewRefs = tournaments.flatMap((tournamentId) =>
-      TOURNAMENT_VIEW_COLLECTIONS.map((collection) => ctx.db.doc(`${collection}/${tournamentId}`)),
-    );
-    const views = await Promise.all(viewRefs.map((ref) => tx.get(ref)));
-
     const archiveBase = retentionPaths.archive(victim.type, victim.archiveKey);
     let unlinked = 0;
-    let deferred = 0;
+    let deferred = pagePaths.length - paths.length;
     let bytes = 0;
+    let writes = 2;
+    const pendingViews = new Set();
     snapshots.forEach((snapshot, index) => {
       if (!snapshot.exists) return;
-      if (bytes > MAX_STEP_BYTES) {
+      const before = snapshot.data();
+      const recordId = hashPath(`${specIndex}|${snapshot.ref.path}`);
+      const { value, changed } = unlinkData(before, victim.type, victim.id, spec);
+      if (!changed && !spec.archiveDelete) return;
+      const plan = spec.archiveDelete
+        ? archivePlan(snapshot, ctx)
+        : archivePlan(
+            snapshot,
+            ctx,
+            { path: snapshot.ref.path, field: spec.field, unlinkedAtMs: ctx.now() },
+            "before",
+          );
+      const cost =
+        snapshotBytes(snapshot, ctx.db) +
+        plan.bytes +
+        (spec.archiveDelete ? 0 : writeBytes(value, ctx.db));
+      const budget = unlinked ? MAX_STEP_BYTES : MAX_UNIT_BYTES;
+      if (bytes + cost > budget || writes + plan.writes.length + 1 > 450) {
         deferred += 1;
         return;
       }
-      const before = snapshot.data();
-      bytes += estimateBytes(before) * 2;
-      const recordId = hashPath(`${specIndex}|${snapshot.ref.path}`);
+      bytes += cost;
+      writes += plan.writes.length + 1;
       if (spec.archiveDelete) {
-        tx.set(
-          ctx.db.doc(`${archiveBase}/documents/${hashPath(snapshot.ref.path)}`),
-          archivedDocument(snapshot, ctx),
-        );
+        writeArchive(tx, ctx.db, `${archiveBase}/documents/${hashPath(snapshot.ref.path)}`, plan);
         tx.delete(refs[index]);
         unlinked += 1;
         return;
       }
-      const { value, changed } = unlinkData(before, victim.type, victim.id, spec);
-      if (!changed) return;
-      tx.set(ctx.db.doc(`${archiveBase}/unlinks/${recordId}`), {
-        path: snapshot.ref.path,
-        field: spec.field,
-        before,
-        unlinkedAtMs: ctx.now(),
-      });
+      writeArchive(tx, ctx.db, `${archiveBase}/unlinks/${recordId}`, plan);
       tx.set(refs[index], value);
       unlinked += 1;
-    });
-    views.forEach((view, index) => {
-      if (!view.exists) return;
-      const before = view.data();
-      const { value, changed } = scrubValue(before, SCRUB_KEYS[victim.type], victim.id);
-      if (!changed) return;
-      tx.set(ctx.db.doc(`${archiveBase}/unlinks/${hashPath(`${specIndex}|${view.ref.path}`)}`), {
-        path: view.ref.path,
-        field: "*",
-        before,
-        unlinkedAtMs: ctx.now(),
-      });
-      tx.set(viewRefs[index], value);
+      const tournamentId =
+        spec.collection === "tournaments" ? snapshot.id : tournamentOfPath(snapshot.ref.path);
+      if (spec.views && tournamentId) {
+        TOURNAMENT_VIEW_COLLECTIONS.forEach((collection) =>
+          pendingViews.add(`${collection}/${tournamentId}`),
+        );
+      }
     });
     // A short, fully processed page means the reference set is exhausted;
     // a page without any change (should not happen) also advances so a
     // malformed document can never hot-loop the worker.
-    const advance = (paths.length < pageSize && deferred === 0) || unlinked === 0;
+    const advance = deferred === 0 && (pagePaths.length < pageSize || unlinked === 0);
+    if (!unlinked && deferred)
+      throw new Error("Retention unlink unit exceeds its transaction budget.");
     tx.set(victimRef, {
       ...victim,
       unlinkCount: (victim.unlinkCount || 0) + unlinked,
       unlinkSpec: advance ? specIndex + 1 : specIndex,
+      unlinkViews: pendingViews.size ? { specIndex, paths: [...pendingViews] } : null,
+    });
+  });
+}
+
+async function unlinkViewsStep(ctx, victim, victimRef) {
+  const pending = victim.unlinkViews;
+  const paths = pending.paths.slice(0, 1);
+  await fencedStep(ctx, async (tx) => {
+    const fresh = await tx.get(victimRef);
+    if (fresh.data()?.phase !== "unlink") return;
+    const snapshots = await Promise.all(paths.map((path) => tx.get(ctx.db.doc(path))));
+    const archiveBase = retentionPaths.archive(victim.type, victim.archiveKey);
+    let consumed = 0;
+    let bytes = 0;
+    let writes = 2;
+    for (const snapshot of snapshots) {
+      if (snapshot.exists) {
+        const before = snapshot.data();
+        const { value, changed } = scrubValue(before, SCRUB_KEYS[victim.type], victim.id);
+        if (changed) {
+          const plan = archivePlan(
+            snapshot,
+            ctx,
+            { path: snapshot.ref.path, field: "*", unlinkedAtMs: ctx.now() },
+            "before",
+          );
+          const cost = snapshotBytes(snapshot, ctx.db) + plan.bytes + writeBytes(value, ctx.db);
+          if (bytes + cost > MAX_UNIT_BYTES || writes + plan.writes.length + 1 > 450) break;
+          bytes += cost;
+          writes += plan.writes.length + 1;
+          writeArchive(
+            tx,
+            ctx.db,
+            `${archiveBase}/unlinks/${hashPath(`${pending.specIndex}|${snapshot.ref.path}`)}`,
+            plan,
+          );
+          tx.set(snapshot.ref, value);
+        }
+      }
+      consumed += 1;
+    }
+    if (!consumed) throw new Error("Retention view unit exceeds its transaction budget.");
+    const remaining = pending.paths.slice(consumed);
+    tx.set(victimRef, {
+      ...victim,
+      unlinkViews: remaining.length ? { ...pending, paths: remaining } : null,
     });
   });
 }
 
 async function deleteStep(ctx, victim, victimRef) {
   const stack = victim.stack || traversalSeeds(victim);
-  const { docs, stack: nextStack } = await expandTraversal(ctx.db, stack, ctx.batchSize);
+  const { docs, stack: nextStack } = await expandTraversal(ctx, stack, ctx.batchSize);
   await fencedStep(ctx, async (tx) => {
     const fresh = await tx.get(victimRef);
     if (fresh.data()?.phase !== "delete") return;
@@ -786,11 +864,9 @@ async function accountRootDeletion(type, id, deletedData, { db } = {}) {
     if (data.state !== "live") return { status: data.state };
     if (root.exists) return { status: "stale" };
     const nowMs = Date.now();
-    const { sequence, ...rest } = data;
     tx.set(recordRef, {
-      ...rest,
+      ...data,
       state: "released",
-      releasedSequence: sequence ?? null,
       releasedAtMs: nowMs,
     });
     const ledgerData = ledger.exists ? ledger.data() : { type, sequence: 0, live: 0, released: 0 };

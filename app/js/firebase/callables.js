@@ -43,7 +43,9 @@ function rememberResult(data) {
     rememberAssignment("tournament", data.view.tournamentId, data.view);
   }
   for (const match of data.liveMatches || []) {
-    if (match.matchId) rememberAssignment("match", match.matchId, match);
+    if (match.matchId && match.allocationId) {
+      rememberAssignment("match", match.matchId, match);
+    }
   }
   return data;
 }
@@ -133,7 +135,9 @@ export async function manageMatch(operation, data = {}, credentials = {}) {
   );
   const result = await httpsCallable(functions, "manageMatch")(payload);
   const received = rememberResult(result?.data || {});
-  if (received.matchId) rememberAssignment("match", received.matchId, received);
+  if (received.matchId && received.allocationId) {
+    rememberAssignment("match", received.matchId, received);
+  }
   return received;
 }
 

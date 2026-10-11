@@ -83,19 +83,25 @@ function runThroughBackend(fixture) {
   resetFirestoreState();
   firestoreState.backendEnabled = false; // defer so events process in written order
 
-  const courtId = "golden";
-  const matchId = "m-golden";
+  const courtId = "abcde";
+  const matchId = "abcdef";
+  const courtAllocationId = "golden-court-assignment";
+  const allocationId = "golden-match-assignment";
   const options = normalizeScoringOptions(fixture.options);
   seedDoc(`courts/${courtId}`, {
+    allocationId: courtAllocationId,
     name: courtId,
     activeMatchId: matchId,
+    activeMatchAllocationId: allocationId,
     scoringMode: options.scoringMode,
     scoringOptions: options,
   });
   seedDoc(`matches/${matchId}`, {
+    allocationId,
     matchId,
     status: "live",
     currentCourtId: courtId,
+    currentCourtAllocationId: courtAllocationId,
     scoreVersion: 0,
     scoringMode: options.scoringMode,
     scoringOptions: options,
@@ -104,10 +110,12 @@ function runThroughBackend(fixture) {
   fixture.events.forEach((event, index) => {
     const eventId = event.id || `evt-${index + 1}`;
     writeDoc(`matches/${matchId}/events/${eventId}`, {
+      allocationId,
       eventType: event.eventType,
       scoreVersion: 0,
       createdAt: event.createdAt,
       courtId,
+      courtAllocationId,
     });
   });
 

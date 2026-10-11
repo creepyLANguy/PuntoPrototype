@@ -3,6 +3,11 @@
 let mockDb = null;
 const { FakeFirestore: TransactionalFirestore } = require("./testSupport/fakeFirestore");
 const { ID_ALPHABET, ID_LENGTHS } = require("./services/ids");
+const {
+  seededAllocationId,
+  seedAllocationTokens,
+  withExpectedAllocations,
+} = require("./testSupport/expectedAllocations");
 
 jest.mock("firebase-functions/v2/https", () => ({
   onCall: (_config, handler) => handler,
@@ -148,7 +153,7 @@ class FakeFirestore extends TransactionalFirestore {
 }
 
 function loadFunctions(docs) {
-  mockDb = new FakeFirestore(docs);
+  mockDb = new FakeFirestore(seedAllocationTokens(docs));
   let functions;
   let service;
   jest.isolateModules(() => {
@@ -158,7 +163,7 @@ function loadFunctions(docs) {
   return { functions, db: mockDb, service };
 }
 
-const call = (handler, data) => handler({ data });
+const call = (handler, data) => handler({ data: withExpectedAllocations(mockDb, data) });
 const doc = (db, path) => db.docs.get(path);
 
 describe("club rules", () => {
@@ -275,6 +280,7 @@ describe("createClub", () => {
     );
 
     expect(result).toEqual({
+      allocationId: doc(db, "clubs/aaaa").allocationId,
       clubId: "aaaa",
       name: "Central Padel",
       state: DEFAULT_CLUB_STATE,
@@ -283,6 +289,7 @@ describe("createClub", () => {
       moved: { courts: [], devices: [] },
       closedTournamentIds: [],
     });
+    expect(result.allocationId).toMatch(/^[A-Za-z0-9_-]{16}$/);
     expect(doc(db, "clubs/aaaa")).toEqual({
       allocationId: expect.any(String),
       name: "Central Padel",
@@ -292,9 +299,24 @@ describe("createClub", () => {
       createdAt: { __serverTimestamp: true },
       updatedAt: { __serverTimestamp: true },
     });
-    expect(doc(db, "courts/abcde")).toEqual({ name: "Court 1", clubId: "aaaa" });
-    expect(doc(db, "courts/efghj")).toEqual({ name: "Court 2", clubId: "aaaa" });
-    expect(doc(db, "devices/HUB-1")).toEqual({ courtId: "abcde", clubId: "aaaa" });
+    expect(doc(db, "courts/abcde")).toEqual({
+      allocationId: seededAllocationId("courts/abcde"),
+      name: "Court 1",
+      clubId: "aaaa",
+      clubAllocationId: result.allocationId,
+    });
+    expect(doc(db, "courts/efghj")).toEqual({
+      allocationId: seededAllocationId("courts/efghj"),
+      name: "Court 2",
+      clubId: "aaaa",
+      clubAllocationId: result.allocationId,
+    });
+    expect(doc(db, "devices/HUB-1")).toEqual({
+      courtId: "abcde",
+      courtAllocationId: seededAllocationId("courts/abcde"),
+      clubId: "aaaa",
+      clubAllocationId: result.allocationId,
+    });
   });
 
   test("a generated id that is already taken is replaced by a fresh one", async () => {
@@ -304,7 +326,10 @@ describe("createClub", () => {
     const result = await service.createClub({ name: "Second" }, { randomInt: () => ids.shift() });
 
     expect(result.clubId).toBe("bbbb");
-    expect(doc(db, "clubs/aaaa")).toEqual({ name: "Taken" });
+    expect(doc(db, "clubs/aaaa")).toEqual({
+      allocationId: seededAllocationId("clubs/aaaa"),
+      name: "Taken",
+    });
     expect(doc(db, "clubs/bbbb").name).toBe("Second");
   });
 
@@ -513,7 +538,7 @@ describe("updateClub", () => {
     expect(doc(db, "courts/pqrst").clubId).toBe("aaab");
     expect(doc(db, "devices/HUB-1").clubId).toBeNull();
     expect(doc(db, "devices/BEACON-3").clubId).toBe("aaab");
-    expect(doc(db, "clubs/aaac")).toEqual(seed()["clubs/aaac"]);
+    expect(doc(db, "clubs/aaac")).toEqual(seedAllocationTokens(seed())["clubs/aaac"]);
   });
 
   test("taking a member from another club removes it from that club", async () => {
@@ -633,7 +658,12 @@ describe("deleteClub", () => {
 
     expect(result).toEqual({ clubId: "aaab", releasedCount: 2 });
     expect(db.docs.has("clubs/aaab")).toBe(false);
-    expect(doc(db, "courts/abcde")).toEqual({ name: "A", clubId: null });
+    expect(doc(db, "courts/abcde")).toEqual({
+      allocationId: seededAllocationId("courts/abcde"),
+      name: "A",
+      clubId: null,
+      clubAllocationId: null,
+    });
     expect(doc(db, "courts/efghj").clubId).toBe("aaac");
     expect(doc(db, "devices/HUB-1").clubId).toBeNull();
   });
@@ -658,6 +688,43 @@ describe("member deletion triggers", () => {
 
     expect(doc(db, "clubs/aaab")).toMatchObject({ courtIds: ["efghj"], deviceIds: [] });
     expect(doc(db, "clubs/aaac")).toMatchObject({ courtIds: [] });
+  });
+});
+
+describe("club callable allocation expectations", () => {
+  test.each([
+    ["updateClub", "missing"],
+    ["updateClub", "stale"],
+    ["deleteClub", "missing"],
+    ["deleteClub", "stale"],
+  ])("%s rejects a %s club token without altering members", async (operation, kind) => {
+    const { functions, db } = loadFunctions({
+      "clubs/aaab": { name: "One", courtIds: ["abcde"], deviceIds: [] },
+      "courts/abcde": { name: "Court A", clubId: "aaab" },
+    });
+    const data = withExpectedAllocations(db, {
+      clubId: "aaab",
+      name: "Renamed",
+      courtIds: [],
+      deviceIds: [],
+    });
+    if (kind === "missing") data.expectedAllocations = {};
+    else {
+      db.write(
+        "clubs/aaab",
+        {
+          allocationId: seededAllocationId("clubs/aaab:replacement"),
+        },
+        { merge: true },
+      );
+    }
+    const before = structuredClone([...db.docs]);
+    await expect(call(functions[operation], data)).rejects.toMatchObject(
+      kind === "missing"
+        ? { code: "failed-precondition", message: "An expected allocation token is required." }
+        : { code: "aborted", message: "This record was replaced. Refresh and retry." },
+    );
+    expect([...db.docs]).toEqual(before);
   });
 });
 
@@ -827,6 +894,7 @@ describe("Cloud Functions exports", () => {
         "createClub",
         "createCourt",
         "deleteClub",
+        "deleteCourt",
         "getCourtMomentum",
         "getCourtScore",
         "getCourtScoreRevision",

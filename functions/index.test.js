@@ -1,5 +1,10 @@
 const { DEFAULT_SCORING_OPTIONS, replayEvents, toLiveScorePayload } = require("./scoringEngine");
 const { FakeFirestore: TransactionalFirestore } = require("./testSupport/fakeFirestore");
+const {
+  seededAllocationId,
+  seedAllocationTokens,
+  withExpectedAllocations,
+} = require("./testSupport/expectedAllocations");
 
 let mockDb = null;
 
@@ -51,6 +56,7 @@ function makeMatchDoc({
 }) {
   return {
     matchId,
+    allocationId: seededAllocationId(`matches/${matchId}`),
     name,
     kind: "casual",
     visibility: "public",
@@ -104,12 +110,17 @@ function seedMatchDocs({
       password: "courtpass",
       status: "open",
       activeMatchId: matchId,
+      activeMatchAllocationId: seed[`matches/${matchId}`].allocationId,
       lastMatchId: matchId,
+      lastMatchAllocationId: seed[`matches/${matchId}`].allocationId,
       ...court,
     };
   }
 
   events.forEach((event) => {
+    if (!Object.hasOwn(event, "allocationId")) {
+      event.allocationId = seed[`matches/${matchId}`].allocationId;
+    }
     seed[`matches/${matchId}/events/${event.id}`] = event;
   });
 
@@ -145,9 +156,12 @@ function compareValue(left, right) {
 
 class FakeFirestore extends TransactionalFirestore {
   constructor(initialDocs = {}) {
-    super(initialDocs);
+    super(seedAllocationTokens(initialDocs));
     this.docs = new Map(
-      Object.entries(initialDocs).map(([path, data]) => [path, structuredClone(data)]),
+      Object.entries(seedAllocationTokens(initialDocs)).map(([path, data]) => [
+        path,
+        structuredClone(data),
+      ]),
     );
   }
 
@@ -386,6 +400,7 @@ describe("onEventCreate", () => {
     const e3 = { id: "e3", eventType: "POINT_TEAM_A", createdAt: timestamp(3), scoreVersion: 0 };
     const delayed = {
       id: "e0",
+      allocationId: seededAllocationId(matchPath),
       eventType: "POINT_TEAM_A",
       createdAt: timestamp(3, 500),
       scoreVersion: 0,
@@ -472,6 +487,7 @@ describe("onEventCreate", () => {
     };
     const delayed = {
       id: "f0",
+      allocationId: seededAllocationId(matchPath),
       eventType: "POINT_TEAM_A",
       createdAt: timestamp(2, 500),
       scoreVersion: 1,
@@ -562,6 +578,7 @@ describe("onEventCreate", () => {
     const process = async (index, eventType) => {
       const event = {
         id: `auto-${index}`,
+        allocationId: mockDb.snapshot(`matches/${matchId}`).data().allocationId,
         eventType: eventType || (index % 2 === 0 ? "POINT_TEAM_A" : "POINT_TEAM_B"),
         createdAt: timestamp(index),
         scoreVersion: 0,
@@ -649,7 +666,13 @@ describe("onEventCreate", () => {
         ({ onEventCreate } = require("./index"));
       });
       const process = async (id, eventType, time) => {
-        const event = { id, eventType, createdAt: timestamp(time), scoreVersion: 0 };
+        const event = {
+          id,
+          eventType,
+          createdAt: timestamp(time),
+          scoreVersion: 0,
+          allocationId: mockDb.snapshot(`matches/${matchId}`).data().allocationId,
+        };
         mockDb.docs.set(`matches/${matchId}/events/${id}`, event);
         await onEventCreate({
           params: { matchId, eventId: id },
@@ -737,6 +760,9 @@ describe("onEventCreate - undo vs checkpoints", () => {
 
   function seedEventDocs(state, eventsPath, events) {
     events.forEach((event) => {
+      if (!Object.hasOwn(event, "allocationId")) {
+        event.allocationId = state[eventsPath.split("/").slice(0, 2).join("/")].allocationId;
+      }
       state[`${eventsPath}/${event.id}`] = event;
     });
   }
@@ -929,7 +955,7 @@ describe("onEventCreate - undo vs checkpoints", () => {
     // Switch modes mid-match: this re-replays the log under the new options
     // and writes a checkpoint anchored at the current last event (e3).
     await updateScoringOptions({
-      data: {
+      data: withExpectedAllocations(mockDb, {
         courtId,
         scoringMode: "straight",
         scoringOptions: {
@@ -938,14 +964,20 @@ describe("onEventCreate - undo vs checkpoints", () => {
           tiebreakMode: "sixAllSeven",
         },
         credentials: { courtPassword: "courtpass" },
-      },
+      }),
     });
 
     expect(mockDb.docs.get(scorePath).A.points).toBe(3);
 
     // Undo right after the mode change - the undo sits exactly at the new
     // checkpoint's boundary.
-    const undoEvent = { id: "u1", eventType: "UNDO", createdAt: timestamp(5), scoreVersion: 0 };
+    const undoEvent = {
+      id: "u1",
+      eventType: "UNDO",
+      createdAt: timestamp(5),
+      scoreVersion: 0,
+      allocationId: mockDb.snapshot(matchPath).data().allocationId,
+    };
     mockDb.docs.set(`${eventsPath}/u1`, structuredClone(undoEvent));
     await onEventCreate({
       params: { matchId, eventId: undoEvent.id },
@@ -960,6 +992,7 @@ describe("onEventCreate - undo vs checkpoints", () => {
     // undone point from the checkpoint boundary.
     const nextPoint = {
       id: "z1",
+      allocationId: mockDb.snapshot(matchPath).data().allocationId,
       eventType: "POINT_TEAM_B",
       createdAt: timestamp(6),
       scoreVersion: 0,
@@ -979,6 +1012,10 @@ describe("onEventCreate - undo vs checkpoints", () => {
 });
 
 describe("postEvent", () => {
+  function boundDevice(courtId, data = {}) {
+    return { courtId, courtAllocationId: seededAllocationId(`courts/${courtId}`), ...data };
+  }
+
   function makePostRes() {
     return {
       statusCode: null,
@@ -1048,7 +1085,7 @@ describe("postEvent", () => {
     const deviceId = "device-1";
 
     mockDb = new FakeFirestore({
-      [`devices/${deviceId}`]: { courtId },
+      [`devices/${deviceId}`]: boundDevice(courtId),
       ...seedMatchDocs({ courtId, matchId, scoreVersion: 3 }),
     });
 
@@ -1078,7 +1115,7 @@ describe("postEvent", () => {
     const deviceId = "device-tournament";
 
     mockDb = new FakeFirestore({
-      [`devices/${deviceId}`]: { courtId },
+      [`devices/${deviceId}`]: boundDevice(courtId),
       ...seedMatchDocs({
         courtId,
         matchId,
@@ -1116,7 +1153,7 @@ describe("postEvent", () => {
     };
 
     mockDb = new FakeFirestore({
-      [`devices/${deviceId}`]: { courtId },
+      [`devices/${deviceId}`]: boundDevice(courtId),
       ...seedMatchDocs({
         courtId,
         matchId,
@@ -1155,7 +1192,7 @@ describe("postEvent", () => {
     const deviceId = "device-empty";
 
     mockDb = new FakeFirestore({
-      [`devices/${deviceId}`]: { courtId },
+      [`devices/${deviceId}`]: boundDevice(courtId),
       [`courts/${courtId}`]: {
         name: "Empty Court",
         password: "courtpass",
@@ -1194,7 +1231,7 @@ describe("postEvent", () => {
     const deviceId = "device-completed";
 
     mockDb = new FakeFirestore({
-      [`devices/${deviceId}`]: { courtId },
+      [`devices/${deviceId}`]: boundDevice(courtId),
       ...seedMatchDocs({
         courtId,
         matchId: oldMatchId,
@@ -1228,7 +1265,7 @@ describe("postEvent", () => {
     const deviceId = "beacon-1";
 
     mockDb = new FakeFirestore({
-      [`devices/${deviceId}`]: { courtId, deviceSKU: "Beacon" },
+      [`devices/${deviceId}`]: boundDevice(courtId, { deviceSKU: "Beacon" }),
       ...seedMatchDocs({
         courtId,
         matchId,
@@ -1270,7 +1307,7 @@ describe("postEvent", () => {
     const deviceId = "pulse-1";
 
     mockDb = new FakeFirestore({
-      [`devices/${deviceId}`]: { courtId, deviceSKU: "Pulse" },
+      [`devices/${deviceId}`]: boundDevice(courtId, { deviceSKU: "Pulse" }),
       ...seedMatchDocs({
         courtId,
         matchId,
@@ -1303,7 +1340,7 @@ describe("postEvent", () => {
     const deviceId = "device-2";
 
     mockDb = new FakeFirestore({
-      [`devices/${deviceId}`]: { courtId },
+      [`devices/${deviceId}`]: boundDevice(courtId),
       ...seedMatchDocs({ courtId, matchId }),
     });
 
@@ -1369,7 +1406,9 @@ describe("changeoverCourt", () => {
     jest.isolateModules(() => {
       ({ changeoverCourt } = require("./index"));
     });
-    await expect(changeoverCourt({ data: { courtId } })).rejects.toThrow("Match has concluded");
+    await expect(
+      changeoverCourt({ data: withExpectedAllocations(mockDb, { courtId }) }),
+    ).rejects.toThrow("Match has concluded");
     expect(mockDb.docs.get(`courts/${courtId}`)).toEqual(before);
   });
 
@@ -1387,7 +1426,9 @@ describe("changeoverCourt", () => {
     jest.isolateModules(() => {
       ({ changeoverCourt } = require("./index"));
     });
-    await expect(changeoverCourt({ data: { courtId } })).resolves.toMatchObject({
+    await expect(
+      changeoverCourt({ data: withExpectedAllocations(mockDb, { courtId }) }),
+    ).resolves.toMatchObject({
       success: true,
       beaconSidesSwapped: true,
     });
@@ -1410,7 +1451,7 @@ describe("changeoverCourt", () => {
     });
 
     const firstResult = await changeoverCourt({
-      data: { courtId },
+      data: withExpectedAllocations(mockDb, { courtId }),
     });
 
     expect(firstResult).toEqual({
@@ -1420,6 +1461,7 @@ describe("changeoverCourt", () => {
       changeoverEventId: "auto-1",
     });
     expect(mockDb.docs.get(`courts/${courtId}`)).toEqual({
+      allocationId: seededAllocationId(`courts/${courtId}`),
       name: "Changeover",
       scoreVersion: 7,
       beaconSidesSwapped: true,
@@ -1431,7 +1473,7 @@ describe("changeoverCourt", () => {
     });
 
     const secondResult = await changeoverCourt({
-      data: { courtId },
+      data: withExpectedAllocations(mockDb, { courtId }),
     });
 
     expect(secondResult.success).toBe(true);
@@ -2113,7 +2155,9 @@ describe("resetCourt - password handling", () => {
   }
 
   function resetData(data = {}, authCredentials = credentials) {
-    return { data: { courtId, ...data, credentials: authCredentials } };
+    return {
+      data: withExpectedAllocations(mockDb, { courtId, ...data, credentials: authCredentials }),
+    };
   }
 
   test("reset always restores default Beacon side handling", async () => {
