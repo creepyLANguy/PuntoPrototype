@@ -3808,6 +3808,10 @@ body.light-mode .loading-logo {
   font-size: 14px;
 }
 
+body.light-mode .no-courts {
+  filter: invert(1);
+}
+
 .court-item {
   display: flex;
   align-items: center;
