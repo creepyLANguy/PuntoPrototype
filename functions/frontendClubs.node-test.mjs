@@ -563,6 +563,89 @@ test("Delete Club removes the club and releases its courts and devices", async (
   assert.equal(clubRow("abch"), null);
 });
 
+test("a court can be assigned to, moved between and removed from clubs when created and edited", async () => {
+  const hilltop = () => stored("clubs/jknp").courtIds;
+  const editCourtClubOptions = () => [...$("editCourtClub").options].map((option) => option.value);
+  const openCourtEditor = async (courtId) => {
+    document.querySelector('.tab-btn[data-tab="courts"]').click();
+    await waitFor(() => document.querySelector(`#adminCourtList .edit-btn[data-id="${courtId}"]`), {
+      label: `court ${courtId} in the list`,
+    });
+    document.querySelector(`#adminCourtList .edit-btn[data-id="${courtId}"]`).click();
+    await waitFor(() => isShown("editCourtPage") && !$("editCourtClub").disabled, {
+      label: "court editor with clubs",
+    });
+  };
+  const saveCourt = async () => {
+    $("saveEditBtn").click();
+    await waitFor(() => !isShown("editCourtPage") || lastToast()?.startsWith("Failed"), {
+      label: "court save",
+    });
+    assert.equal(isShown("editCourtPage"), false, lastToast());
+  };
+
+  await openCourtEditor("pqrsa");
+  assert.deepEqual(editCourtClubOptions(), ["", "qrsy", "jknp", clubIdNamed("Seaside Club")]);
+  assert.equal($("editCourtClub").value, "", "an unassigned court shows No club");
+  $("editCourtClub").value = "jknp";
+  await saveCourt();
+  assert.deepEqual(hilltop(), ["pqrsa"]);
+  assert.equal(stored("courts/pqrsa").clubId, "jknp");
+
+  // Moving to another club takes the court out of the first one.
+  await openCourtEditor("pqrsa");
+  assert.equal($("editCourtClub").value, "jknp");
+  const seasideId = clubIdNamed("Seaside Club");
+  $("editCourtClub").value = seasideId;
+  await saveCourt();
+  assert.deepEqual(hilltop(), []);
+  assert.ok(stored(`clubs/${seasideId}`).courtIds.includes("pqrsa"));
+
+  await openCourtEditor("pqrsa");
+  assert.equal($("editCourtClub").value, seasideId);
+  $("editCourtClub").value = "";
+  await saveCourt();
+  assert.ok(!stored(`clubs/${seasideId}`).courtIds.includes("pqrsa"));
+  assert.equal(stored("courts/pqrsa").clubId, null);
+
+  // Saving without touching the club sends no club request.
+  const requestCount = clubRequests.length;
+  await openCourtEditor("pqrsa");
+  await saveCourt();
+  assert.equal(clubRequests.length, requestCount);
+
+  callableHandlers.set("createCourt", async (payload) => {
+    seedCourt("hjkma", {
+      name: payload.name,
+      password: payload.password,
+      status: payload.status,
+      scoringOptions: payload.scoringOptions,
+      activeMatchId: null,
+      lastMatchId: null,
+      clubId: null,
+    });
+    return { data: { courtId: "hjkma", allocationId: stored("courts/hjkma").allocationId } };
+  });
+  document.querySelector('.tab-btn[data-tab="courts"]').click();
+  $("showCreateCourtModalBtn").click();
+  await waitFor(() => isShown("createPage") && !$("courtClub").disabled, {
+    label: "create court form with clubs",
+  });
+  assert.equal($("courtClub").value, "");
+  assert.deepEqual(
+    [...$("courtClub").options].map((option) => option.value),
+    ["", "qrsy", "jknp", seasideId],
+  );
+  $("courtName").value = "Foxtrot Court";
+  $("courtPassword").value = "foxtrot-pw";
+  $("courtClub").value = "jknp";
+  $("createCourtBtn").click();
+  await waitFor(() => stored("clubs/jknp").courtIds.includes("hjkma"), {
+    label: "new court added to the club",
+  });
+  assert.equal(stored("courts/hjkma").clubId, "jknp");
+});
+
 test("the Clubs tab explains how to start when there are no clubs", async () => {
   for (const path of [...firestoreState.docs.keys()]) {
     if (path.startsWith("clubs/")) firestoreState.docs.delete(path);

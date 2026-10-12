@@ -108,9 +108,7 @@ export async function showMatchDetails(
     rejectShareableScoreCardReady = reject;
   });
 
-  const hideShareButtonUntilReady = !refreshing;
-
-  if (hideShareButtonUntilReady && elements.shareDetailsBtn) {
+  if (!refreshing && elements.shareDetailsBtn) {
     elements.shareDetailsBtn.classList.add("hidden");
   }
 
@@ -389,6 +387,18 @@ export async function showMatchDetails(
   } finally {
     elements.detailsLoading.classList.add("hidden");
 
+    // A live-update refresh can supersede an initial render that hid the
+    // button, so the latest render always reveals it, refreshing or not.
+    const revealShareButtonIfLatest = () => {
+      if (
+        shareCaptureGeneration ===
+          shareCardState.shareableScoreCardGeneration &&
+        elements.shareDetailsBtn
+      ) {
+        elements.shareDetailsBtn.classList.remove("hidden");
+      }
+    };
+
     // Old share files are invalidated when a new details render starts, and
     // the current share waits for its capture to finish before using a file.
     if (renderedShareCard && canShareFiles()) {
@@ -410,27 +420,10 @@ export async function showMatchDetails(
 
           rejectShareableScoreCardReady(err);
         })
-        .finally(() => {
-          if (
-            hideShareButtonUntilReady &&
-            shareCaptureGeneration ===
-              shareCardState.shareableScoreCardGeneration &&
-            elements.shareDetailsBtn
-          ) {
-            elements.shareDetailsBtn.classList.remove("hidden");
-          }
-        });
+        .finally(revealShareButtonIfLatest);
     } else {
       resolveShareableScoreCardReady();
-
-      if (
-        hideShareButtonUntilReady &&
-        shareCaptureGeneration ===
-          shareCardState.shareableScoreCardGeneration &&
-        elements.shareDetailsBtn
-      ) {
-        elements.shareDetailsBtn.classList.remove("hidden");
-      }
+      revealShareButtonIfLatest();
     }
   }
 }
