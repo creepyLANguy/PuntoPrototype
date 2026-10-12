@@ -118,14 +118,21 @@ function snapshotBytes(snapshot, db) {
 function planArchive(snapshot, db, metadata, field = "data") {
   const data = snapshot.data();
   const inline = { ...metadata, [field]: data };
+  const encoded = encodeSnapshot(snapshot, db);
+  const sourceBytes = encoded.length + 8192;
   const preserveProto =
     typeof snapshot.toDocumentProto === "function" &&
     requiresProto(snapshot.toDocumentProto().fields, db);
-  if (!preserveProto && depthOf(data) < 20 && valueBytes(inline) <= INLINE_BYTES) {
+  if (
+    !preserveProto &&
+    sourceBytes <= INLINE_BYTES &&
+    depthOf(data) < 20 &&
+    valueBytes(inline) <= INLINE_BYTES
+  ) {
     const bytes = writeBytes(inline, db);
-    if (bytes <= INLINE_BYTES) return { writes: [{ suffix: "", data: inline }], bytes };
+    if (bytes <= INLINE_BYTES)
+      return { writes: [{ suffix: "", data: inline }], bytes, sourceBytes };
   }
-  const encoded = encodeSnapshot(snapshot, db);
   const compressed = deflateRawSync(encoded);
   const payload = compressed.length < encoded.length ? compressed : encoded;
   const chunkCount = Math.ceil(payload.length / CHUNK_BYTES);
@@ -144,7 +151,11 @@ function planArchive(snapshot, db, metadata, field = "data") {
       data: { bytes: payload.subarray(index * CHUNK_BYTES, (index + 1) * CHUNK_BYTES) },
     });
   }
-  return { writes, bytes: writes.reduce((sum, write) => sum + writeBytes(write.data, db), 0) };
+  return {
+    writes,
+    sourceBytes,
+    bytes: writes.reduce((sum, write) => sum + writeBytes(write.data, db), 0),
+  };
 }
 
 function writeArchive(tx, db, path, plan) {

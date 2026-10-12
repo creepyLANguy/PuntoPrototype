@@ -168,8 +168,16 @@ export async function manageTournament(operation, data = {}, credentials = {}) {
   if (received.view && data.tournamentId) {
     rememberAssignment("tournament", data.tournamentId, received.view);
   }
-  if (received.tournamentId && received.allocationId) {
-    rememberAssignment("tournament", received.tournamentId, received);
+  if (received.matchId && received.allocationId) {
+    rememberAssignment("match", received.matchId, received);
+  }
+  const tournamentAllocationId =
+    received.tournamentAllocationId ||
+    (!received.matchId ? received.allocationId : null);
+  if (received.tournamentId && tournamentAllocationId) {
+    rememberAssignment("tournament", received.tournamentId, {
+      allocationId: tournamentAllocationId,
+    });
   }
   return received;
 }

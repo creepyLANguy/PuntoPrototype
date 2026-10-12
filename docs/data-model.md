@@ -98,6 +98,9 @@ reused ID and treating its replacement as the original entity. Device bindings
 carry `courtAllocationId` and `clubAllocationId`; court match pointers carry
 `activeMatchAllocationId` and `lastMatchAllocationId`. Scoring events identify
 both the match allocation and their court allocation.
+Frontend wrappers do not treat tokenless mutation acknowledgements as resource
+snapshots. A fixture-creation response's allocation token identifies its match,
+not the owning tournament.
 
 Allocation accounting is stored in `_idLedger/{type}` and
 `_idLedger/{type}/allocations/{id}`. Assignment records use monotonically

@@ -79,7 +79,12 @@ const ensureCourtMatch = () =>
 describe("callable allocation expectations", () => {
   test("fixture references bind existing generations without repairing missing or stale tokens", () => {
     const docs = seedAllocationTokens({
-      "courts/abcde": { activeMatchId: "aaaaaa", lastMatchId: "aaaaaa", clubId: "aaaa" },
+      "courts/abcde": {
+        activeMatchId: "aaaaaa",
+        lastMatchId: "aaaaaa",
+        occupiedByMatchId: "aaaaaa",
+        clubId: "aaaa",
+      },
       "matches/aaaaaa": {
         matchId: "aaaaaa",
         currentCourtId: "abcde",
@@ -88,7 +93,7 @@ describe("callable allocation expectations", () => {
       },
       "clubs/aaaa": {},
       "tournaments/aaaaaaa": { allocationId: "observed-tournament" },
-      "devices/current": { courtId: "abcde" },
+      "devices/current": { courtId: "abcde", sourceCourtId: "abcde", targetCourtId: "efghj" },
       "devices/missing": { courtId: "abcde", courtAllocationId: null },
       "devices/stale": { courtId: "abcde", courtAllocationId: "old-court" },
       "matches/bbbbbb": { currentCourtId: "efghj" },
@@ -96,6 +101,7 @@ describe("callable allocation expectations", () => {
     expect(docs["courts/abcde"]).toMatchObject({
       activeMatchAllocationId: seededAllocationId("matches/aaaaaa"),
       lastMatchAllocationId: seededAllocationId("matches/aaaaaa"),
+      occupiedByMatchAllocationId: seededAllocationId("matches/aaaaaa"),
       clubAllocationId: seededAllocationId("clubs/aaaa"),
     });
     expect(docs["matches/aaaaaa"]).toMatchObject({
@@ -105,6 +111,10 @@ describe("callable allocation expectations", () => {
       tournamentAllocationId: "observed-tournament",
     });
     expect(docs["devices/current"].courtAllocationId).toBe(seededAllocationId("courts/abcde"));
+    expect(docs["devices/current"].sourceCourtAllocationId).toBe(
+      seededAllocationId("courts/abcde"),
+    );
+    expect(docs["devices/current"]).not.toHaveProperty("targetCourtAllocationId");
     expect(docs["devices/missing"].courtAllocationId).toBeNull();
     expect(docs["devices/stale"].courtAllocationId).toBe("old-court");
     expect(docs["matches/bbbbbb"]).not.toHaveProperty("currentCourtAllocationId");

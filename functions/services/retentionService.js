@@ -109,8 +109,9 @@ function assertRetentionDb(db) {
   ["runTransaction", "doc", "collection", "collectionGroup", "getAll"].forEach((name) =>
     requireMethod(db, name, "db"),
   );
+  requireMethod(db.doc(GATE_PATH), "listCollections", "DocumentReference");
   const collection = db.collection(retentionPaths.allocations("court"));
-  ["where", "orderBy", "startAfter", "limit"].forEach((name) =>
+  ["listDocuments", "where", "orderBy", "startAfter", "limit"].forEach((name) =>
     requireMethod(collection, name, "CollectionReference"),
   );
 }
@@ -225,20 +226,21 @@ function tournamentOfPath(path) {
 // returning the existing documents reached and the next stack. Missing
 // ancestor documents are visited too (listDocuments reports them), so no
 // nested subcollection is skipped.
-async function expandTraversal(ctx, stack, limit, archive = false) {
+async function expandTraversal(ctx, stack, limit, archive = false, documentLimit = limit) {
   const { db } = ctx;
   const next = stack.map((item) => ({ ...item }));
   const docs = [];
   let units = 0;
   let bytes = 0;
-  while (next.length && units < limit && bytes < MAX_STEP_BYTES) {
+  while (next.length && units < limit && docs.length < documentLimit && bytes < MAX_STEP_BYTES) {
     const item = next.pop();
     units += 1;
     if (item.k === "d") {
       const ref = db.doc(item.p);
       const snapshot = await ref.get();
+      const plan = snapshot.exists && archive ? archivePlan(snapshot, ctx) : null;
       const cost = snapshot.exists
-        ? snapshotBytes(snapshot, db) + (archive ? archivePlan(snapshot, ctx).bytes : 0) + 16384
+        ? (plan?.sourceBytes ?? snapshotBytes(snapshot, db)) + (plan?.bytes || 0) + 16384
         : 0;
       if (docs.length && bytes + cost > MAX_STEP_BYTES) {
         next.push(item);
@@ -531,6 +533,17 @@ function unlinkQuery(ctx, spec, victim, limit) {
 }
 
 async function unlinkStep(ctx, victim, victimRef) {
+  // Marker copies commit before their separately fenced deletion, whose
+  // index-entry cost can dwarf the document's serialized payload.
+  if (victim.unlinkDelete) {
+    await fencedStep(ctx, async (tx) => {
+      const fresh = await tx.get(victimRef);
+      if (fresh.data()?.phase !== "unlink") return;
+      tx.delete(ctx.db.doc(victim.unlinkDelete));
+      tx.set(victimRef, { ...victim, unlinkDelete: null });
+    });
+    return;
+  }
   if (victim.unlinkViews?.paths?.length) {
     await unlinkViewsStep(ctx, victim, victimRef);
     return;
@@ -546,15 +559,16 @@ async function unlinkStep(ctx, victim, victimRef) {
     return;
   }
   const spec = specs[specIndex];
-  const pageSize = Math.max(1, Math.floor(ctx.batchSize / (spec.views ? 5 : 2)));
+  const pageSize = spec.archiveDelete
+    ? 1
+    : Math.max(1, Math.floor(ctx.batchSize / (spec.views ? 5 : 2)));
   const snap = await unlinkQuery(ctx, spec, victim, pageSize).get();
   const pagePaths = snap.docs.map((doc) => doc.ref.path);
   const paths = [];
   let plannedBytes = 0;
   for (const snapshot of snap.docs) {
     const plan = archivePlan(snapshot, ctx);
-    const cost =
-      snapshotBytes(snapshot, ctx.db) * (spec.archiveDelete ? 1 : 2) + plan.bytes + 16384;
+    const cost = plan.sourceBytes * (spec.archiveDelete ? 1 : 2) + plan.bytes + 16384;
     if (paths.length && plannedBytes + cost > MAX_STEP_BYTES) break;
     plannedBytes += cost;
     paths.push(snapshot.ref.path);
@@ -571,6 +585,7 @@ async function unlinkStep(ctx, victim, victimRef) {
     let bytes = 0;
     let writes = 2;
     const pendingViews = new Set();
+    let pendingDelete = null;
     snapshots.forEach((snapshot, index) => {
       if (!snapshot.exists) return;
       const before = snapshot.data();
@@ -586,9 +601,7 @@ async function unlinkStep(ctx, victim, victimRef) {
             "before",
           );
       const cost =
-        snapshotBytes(snapshot, ctx.db) +
-        plan.bytes +
-        (spec.archiveDelete ? 0 : writeBytes(value, ctx.db));
+        plan.sourceBytes + plan.bytes + (spec.archiveDelete ? 0 : writeBytes(value, ctx.db));
       const budget = unlinked ? MAX_STEP_BYTES : MAX_UNIT_BYTES;
       if (bytes + cost > budget || writes + plan.writes.length + 1 > 450) {
         deferred += 1;
@@ -598,7 +611,7 @@ async function unlinkStep(ctx, victim, victimRef) {
       writes += plan.writes.length + 1;
       if (spec.archiveDelete) {
         writeArchive(tx, ctx.db, `${archiveBase}/documents/${hashPath(snapshot.ref.path)}`, plan);
-        tx.delete(refs[index]);
+        pendingDelete = snapshot.ref.path;
         unlinked += 1;
         return;
       }
@@ -624,6 +637,7 @@ async function unlinkStep(ctx, victim, victimRef) {
       unlinkCount: (victim.unlinkCount || 0) + unlinked,
       unlinkSpec: advance ? specIndex + 1 : specIndex,
       unlinkViews: pendingViews.size ? { specIndex, paths: [...pendingViews] } : null,
+      unlinkDelete: pendingDelete,
     });
   });
 }
@@ -650,7 +664,7 @@ async function unlinkViewsStep(ctx, victim, victimRef) {
             { path: snapshot.ref.path, field: "*", unlinkedAtMs: ctx.now() },
             "before",
           );
-          const cost = snapshotBytes(snapshot, ctx.db) + plan.bytes + writeBytes(value, ctx.db);
+          const cost = plan.sourceBytes + plan.bytes + writeBytes(value, ctx.db);
           if (bytes + cost > MAX_UNIT_BYTES || writes + plan.writes.length + 1 > 450) break;
           bytes += cost;
           writes += plan.writes.length + 1;
@@ -676,7 +690,8 @@ async function unlinkViewsStep(ctx, victim, victimRef) {
 
 async function deleteStep(ctx, victim, victimRef) {
   const stack = victim.stack || traversalSeeds(victim);
-  const { docs, stack: nextStack } = await expandTraversal(ctx, stack, ctx.batchSize);
+  // A valid document can carry 8 MiB of index entries: delete only one per commit.
+  const { docs, stack: nextStack } = await expandTraversal(ctx, stack, ctx.batchSize, false, 1);
   await fencedStep(ctx, async (tx) => {
     const fresh = await tx.get(victimRef);
     if (fresh.data()?.phase !== "delete") return;

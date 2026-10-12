@@ -76,6 +76,7 @@ class BoundedFirestore extends FakeFirestore {
       0,
     );
     expect(ops.length).toBeLessThanOrEqual(500);
+    expect(ops.filter((op) => op.type === "delete").length).toBeLessThanOrEqual(1);
     expect(readBytes + writeBytes).toBeLessThan(10 * 1024 * 1024);
     ops.forEach((op) => {
       if (!op.data) return;
@@ -274,6 +275,17 @@ test("delete-idempotency markers use the same overflow-safe archive before remov
   const db = seed("tournament");
   const padding = crypto.randomBytes(MAX_DOCUMENT_BYTES - 192);
   db.write("tournamentCreations/request", { tournamentId: "victim", padding });
+  for (let step = 0; step < 20; step++) {
+    await runRetentionWorker({ db, workerId: "archive-marker", maxSteps: 1 });
+    if (db.get(paths.victim("bounds", 0)).unlinkDelete) break;
+  }
+  expect(db.get(paths.victim("bounds", 0)).unlinkDelete).toBe("tournamentCreations/request");
+  expect(db.get("tournamentCreations/request")).toBeDefined();
+  expect(db.get(GATE_PATH).active).toBe(true);
+  expect(
+    db.get(`${archiveBase("tournament")}/documents/${hash("tournamentCreations/request")}`)
+      .chunkCount,
+  ).toBeGreaterThan(1);
   await finish(db);
   expect(db.get("tournamentCreations/request")).toBeUndefined();
   const recovered = await readArchive(
@@ -285,46 +297,108 @@ test("delete-idempotency markers use the same overflow-safe archive before remov
   expect(recovered.data.padding.equals(padding)).toBe(true);
 });
 
-test("dense arrays account for protobuf expansion while preserving a resumable unlink", async () => {
-  const db = seed();
+test("dense arrays budget protobuf expansion and use compact bounded preimages", () => {
+  const db = new Firestore({ projectId: "demo-retention" });
   const data = { currentCourtId: "victim", flags: Array(600000).fill(true) };
-  db.write("matches/dense", data);
-  expect(protobufBytes(data, db)).toBeGreaterThan(valueBytes(data) * 3);
-  await finish(db);
-  expect(db.get("matches/dense").currentCourtId).toBeNull();
-  const record = db
-    .list(`${archiveBase()}/unlinks`)
-    .find((entry) => entry.path === "matches/dense");
-  const recovered = await readArchive(db, db.doc(`${archiveBase()}/unlinks/${record.id}`));
-  expect(recovered.data.flags).toHaveLength(data.flags.length);
-  expect(recovered.data.flags.every((flag) => flag === true)).toBe(true);
+  const wireBytes = protobufBytes(data, db);
+  expect(wireBytes).toBeGreaterThan(valueBytes(data) * 3);
+  const plan = planArchive({ data: () => data }, db, { path: "matches/dense" }, "before");
+  expect(plan.writes[0].data.payloadCompression).toBe("deflate-raw");
+  expect(plan.sourceBytes + wireBytes + plan.bytes).toBeGreaterThan(4 * 1024 * 1024);
+  expect(plan.sourceBytes + wireBytes + plan.bytes).toBeLessThan(9 * 1024 * 1024);
+  plan.writes.forEach((write) =>
+    expect(documentBytes(`archives/dense${write.suffix}`, write.data)).toBeLessThanOrEqual(
+      MAX_DOCUMENT_BYTES,
+    ),
+  );
 });
 
-test("small source int64 values are archived from the SDK proto without numeric rounding", async () => {
+test.each(["scalar", "nested"])(
+  "small source int64 %s values are archived from the SDK proto without numeric rounding",
+  async (shape) => {
+    const db = new Firestore({ projectId: "demo-retention" });
+    const integer = "9223372036854775807";
+    const nested = shape === "nested";
+    const data = nested ? { nested: [{ integer: Number(integer) }] } : { integer: Number(integer) };
+    const fields = nested
+      ? {
+          nested: {
+            arrayValue: {
+              values: [{ mapValue: { fields: { integer: { integerValue: integer } } } }],
+            },
+          },
+        }
+      : { integer: { integerValue: integer } };
+    const plan = planArchive(
+      {
+        data: () => data,
+        toDocumentProto: () => ({ fields }),
+      },
+      db,
+      { path: "things/original" },
+    );
+    const manifest = plan.writes[0].data;
+    expect(manifest.format).toBe("firestore-document-protobuf-v1");
+    const records = new Map(
+      plan.writes.map((write) => [`archives/source${write.suffix}`, write.data]),
+    );
+    const storage = {
+      doc: (path) => ({
+        path,
+        get: async () => ({ exists: records.has(path), data: () => records.get(path) }),
+      }),
+      getAll: async (...refs) => Promise.all(refs.map((ref) => ref.get())),
+    };
+    const recovered = await readArchive(storage, storage.doc("archives/source"), {
+      useBigInt: true,
+    });
+    expect(nested ? recovered.data.nested[0].integer : recovered.data.integer).toBe(
+      BigInt(integer),
+    );
+  },
+);
+
+test("archive field exemptions keep maximum-indexed sources from adding payload indexes", () => {
+  const { fieldOverrides } = require("../firestore.indexes.json");
+  const exemptions = (group) =>
+    fieldOverrides
+      .filter((override) => override.collectionGroup === group && override.indexes.length === 0)
+      .map((override) => override.fieldPath);
+  expect(exemptions("documents")).toContain("data");
+  expect(exemptions("unlinks")).toContain("before");
+  expect(exemptions("payload")).toContain("bytes");
+  const leaves = (value, prefix = "") =>
+    Object.entries(value).flatMap(([key, child]) => {
+      const path = prefix ? `${prefix}.${key}` : key;
+      return child && Object.getPrototypeOf(child) === Object.prototype
+        ? leaves(child, path)
+        : [path];
+    });
+  const indexedEntries = (data, excluded = []) =>
+    leaves(data).filter(
+      (path) => !excluded.some((field) => path === field || path.startsWith(`${field}.`)),
+    ).length * 2;
+  const source = Object.fromEntries(
+    Array.from({ length: 20000 }, (_, index) => [`f${String(index).padStart(5, "0")}`, true]),
+  );
+  expect(indexedEntries(source)).toBe(40000);
   const db = new Firestore({ projectId: "demo-retention" });
-  const integer = "9223372036854775807";
-  const plan = planArchive(
-    {
-      data: () => ({ integer: Number(integer) }),
-      toDocumentProto: () => ({ fields: { integer: { integerValue: integer } } }),
-    },
-    db,
-    { path: "things/original" },
-  );
-  const manifest = plan.writes[0].data;
-  expect(manifest.format).toBe("firestore-document-protobuf-v1");
-  const records = new Map(
-    plan.writes.map((write) => [`archives/source${write.suffix}`, write.data]),
-  );
-  const storage = {
-    doc: (path) => ({
-      path,
-      get: async () => ({ exists: records.has(path), data: () => records.get(path) }),
-    }),
-    getAll: async (...refs) => Promise.all(refs.map((ref) => ref.get())),
-  };
-  const recovered = await readArchive(storage, storage.doc("archives/source"));
-  expect(recovered.data.integer).toBe(BigInt(integer));
+  for (const [group, field] of [
+    ["documents", "data"],
+    ["unlinks", "before"],
+  ]) {
+    const plan = planArchive(
+      { data: () => source },
+      db,
+      { path: "courts/source", archivedAtMs: 1 },
+      field,
+    );
+    const record = plan.writes[0].data;
+    expect(record[field]).toBe(source);
+    expect(indexedEntries(record)).toBeGreaterThan(40000);
+    expect(indexedEntries(record, exemptions(group))).toBe(4);
+  }
+  expect(indexedEntries({ bytes: Buffer.alloc(256 * 1024) }, exemptions("payload"))).toBe(0);
 });
 
 test("traversal persists bounded server pages and visits descendants of missing parents", async () => {
@@ -334,7 +408,7 @@ test("traversal persists bounded server pages and visits descendants of missing 
   }
   db.write("courts/victim/children/missing/deep/leaf", { preserved: true });
   await finish(db, { batchSize: 25 });
-  expect(db.pages.length).toBeLessThan(30);
+  expect(db.pages.length).toBeLessThan(50);
   expect(db.pages.every((page) => page.pageSize <= 25)).toBe(true);
   expect(db.pages.some((page) => page.pageToken)).toBe(true);
   expect(db.list(`${archiveBase()}/documents`)).toHaveLength(242);

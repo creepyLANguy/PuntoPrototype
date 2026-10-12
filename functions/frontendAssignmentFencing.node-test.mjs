@@ -94,6 +94,23 @@ test("partial tournament live-match projections do not invalidate captured assig
   });
 });
 
+test("fixture creation pins its match without replacing the tournament assignment", async () => {
+  context.rememberAssignment("tournament", ids.tournament, { allocationId: "tournament-old" });
+  callableHandlers.set("manageTournament", async () => ({
+    data: {
+      tournamentId: ids.tournament,
+      matchId: ids.match,
+      allocationId: "fixture-match-assignment",
+    },
+  }));
+  await api.manageTournament("createFixtureMatch", {
+    tournamentId: ids.tournament,
+    fixtureId: "fixture-1",
+  });
+  assert.equal(context.assertCurrentAssignment("tournament", ids.tournament), "tournament-old");
+  assert.equal(context.assertCurrentAssignment("match", ids.match), "fixture-match-assignment");
+});
+
 test("root/list reads preserve SDK snapshots and capture each resource generation", async () => {
   for (const [type, read] of Object.entries(reads)) {
     const snap = await read(ids[type]);
