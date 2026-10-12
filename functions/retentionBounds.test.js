@@ -271,6 +271,204 @@ test("overflow payloads round-trip native Firestore values and exact reference d
   expect(recovered.data.special).toEqual(data.special);
 });
 
+test("live unlink rewrites and immutable preimages preserve real SDK snapshot values", async () => {
+  const db = seed();
+  const sdk = new Firestore({ projectId: "demo-retention", databaseId: "named" });
+  const other = new Firestore({ projectId: "demo-other", databaseId: "different" });
+  const native = {
+    integer: 9223372036854775807n,
+    safeInteger: 42,
+    negativeInteger: -9223372036854775808n,
+    timestamp: new Timestamp(1700000000, 123456789),
+    reference: sdk.doc("things/local"),
+    foreignReference: other.doc("things/remote"),
+    point: new GeoPoint(-33.125, 151.875),
+    bytes: Buffer.from([0, 1, 127, 255]),
+    vector: new VectorValue([1.25, -2.5]),
+    special: [NaN, Infinity, -Infinity, -0, null, true],
+  };
+  const data = {
+    currentCourtId: "victim",
+    nested: [{ courtId: "victim", courtAllocationId: "generation", native }],
+    native,
+  };
+  const originalFields = sdk._serializer.encodeFields(data);
+  const sources = [
+    "matches/linked",
+    "tournamentViews/owner",
+    "tournamentPrivateViews/owner",
+    "tournamentDirectory/owner",
+  ];
+  const fields = new Map(sources.map((path) => [path, originalFields]));
+  sources.forEach((path) => db.write(path, { currentCourtId: "victim" }));
+  db.write("tournaments/owner/fixtures/f", { courtId: "victim" });
+  const snapshot = (path) =>
+    sdk.snapshot_({
+      name: `projects/${sdk.projectId}/databases/${sdk.databaseId}/documents/${path}`,
+      fields: fields.get(path),
+      createTime: { seconds: 1, nanos: 2 },
+      updateTime: { seconds: 3, nanos: 4 },
+    });
+  expect(snapshot(sources[0]).data().native.integer).toBe(Number(native.integer));
+  expect(snapshot(sources[0]).data().native.foreignReference.firestore.databaseId).toBe("named");
+
+  // Use actual SDK snapshots for transaction reads and the SDK write batch's
+  // validation/serialization for live writes, without an emulator or network.
+  const runTransaction = db.runTransaction.bind(db);
+  jest.spyOn(db, "runTransaction").mockImplementation(async (callback, options) => {
+    let staged;
+    const result = await runTransaction(async (tx) => {
+      staged = new Map();
+      return callback({
+        ...tx,
+        get: async (ref) => {
+          const current = await tx.get(ref);
+          return fields.has(ref.path) ? snapshot(ref.path) : current;
+        },
+        set: (ref, value, writeOptions) => {
+          if (!fields.has(ref.path)) return tx.set(ref, value, writeOptions);
+          const batch = sdk.batch().set(sdk.doc(ref.path), value);
+          staged.set(ref.path, batch._ops[0].op().update.fields);
+          return tx.set(ref, { currentCourtId: value.currentCourtId });
+        },
+      });
+    }, options);
+    staged.forEach((value, path) => fields.set(path, value));
+    return result;
+  });
+  await finish(db);
+  for (const path of sources) {
+    const live = snapshot(path).data();
+    expect(live.currentCourtId).toBeNull();
+    expect(live.nested[0].courtId).toBeNull();
+    expect(live.nested[0].courtAllocationId).toBeNull();
+    expect(fields.get(path).native).toEqual(originalFields.native);
+    expect(fields.get(path).nested.arrayValue.values[0].mapValue.fields.native).toEqual(
+      originalFields.native,
+    );
+    const record = db.list(`${archiveBase()}/unlinks`).find((entry) => entry.path === path);
+    const archived = await readArchive(db, db.doc(`${archiveBase()}/unlinks/${record.id}`));
+    expect(archived.data.currentCourtId).toBe("victim");
+    expect(archived.data.nested[0].courtId).toBe("victim");
+    expect(archived.data.native.integer).toBe(native.integer);
+    expect(archived.data.native.negativeInteger).toBe(native.negativeInteger);
+    expect(archived.data.native.timestamp.isEqual(native.timestamp)).toBe(true);
+    expect(archived.data.native.foreignReference.firestore.projectId).toBe(other.projectId);
+    expect(archived.data.native.foreignReference.firestore.databaseId).toBe(other.databaseId);
+    expect(archived.data.native.bytes.equals(native.bytes)).toBe(true);
+    expect(archived.data.native.vector.isEqual(native.vector)).toBe(true);
+  }
+});
+
+test.each(["match", "club"])(
+  "%s read-model scans are durable and bounded even when current court pools no longer match",
+  async (type) => {
+    const db = seed(type);
+    const courtField = type === "match" ? "activeMatchId" : "clubId";
+    for (const court of ["court-a", "court-b"]) {
+      db.write(`courts/${court}`, { [courtField]: court === "court-a" ? "victim" : "new" });
+    }
+    const padding = "é".repeat(200 * 1024);
+    const collections = ["tournamentViews", "tournamentPrivateViews", "tournamentDirectory"];
+    for (let index = 0; index < 30; index++) {
+      const id = `owner-${String(index).padStart(3, "0")}`;
+      db.write(`tournaments/${id}`, { courtPool: [], clubId: "other" });
+      collections.forEach((collection) => {
+        db.write(`${collection}/${id}`, {
+          padding,
+          courts: ["court-a", "court-b"].map((courtId) => ({ courtId, [courtField]: "victim" })),
+        });
+      });
+    }
+    const scanPages = [];
+    let crashDiscovery = false;
+    const runTransaction = db.runTransaction.bind(db);
+    jest.spyOn(db, "runTransaction").mockImplementation((callback, options) =>
+      runTransaction(
+        (tx) =>
+          callback({
+            ...tx,
+            get: async (target) => {
+              const discovery = collections.includes(target.path) && !target.filters?.length;
+              if (discovery && crashDiscovery) throw new Error("crash at scan cursor");
+              const page = await tx.get(target);
+              if (discovery) {
+                scanPages.push({
+                  count: page.size,
+                  limit: target.limitCount,
+                  after: target.startAfterValues,
+                });
+              }
+              return page;
+            },
+          }),
+        options,
+      ),
+    );
+    const victimPath = paths.victim("bounds", 0);
+    const firstWorker = {
+      db,
+      workerId: "before-crash",
+      maxSteps: 1,
+      batchSize: 1,
+      leaseMs: 100,
+      now: () => 1000,
+    };
+    for (let attempt = 0; attempt < 20; attempt++) {
+      await runRetentionWorker(firstWorker);
+      if (db.get("courts/court-a")[courtField] === null) break;
+    }
+    expect(db.get(victimPath).unlinkAfter ?? null).toBeNull();
+    expect(db.get("courts/court-a")[courtField]).toBeNull();
+    expect(db.get("courts/court-b")[courtField]).toBe("new");
+    expect(scanPages).toHaveLength(0);
+    expect(db.get("tournamentViews/owner-000").courts[0][courtField]).toBe("victim");
+    for (let step = 0; step < 20; step++) {
+      await runRetentionWorker({ ...firstWorker, workerId: "after-court-rewrite" });
+      if (db.get(victimPath).unlinkAfter) break;
+    }
+    expect(db.get(victimPath).unlinkAfter).toBe("owner-000");
+    expect(db.get(victimPath).unlinkViews).toEqual({
+      specIndex: type === "match" ? 4 : 5,
+      paths: ["tournamentViews/owner-000"],
+    });
+    expect(db.get(paths.allocation(type, "victim"))).toBeDefined();
+    expect(db.get(GATE_PATH).active).toBe(true);
+    await runRetentionWorker({ ...firstWorker, workerId: "after-scan-discovery" });
+    expect(db.get(victimPath).unlinkViews).toBeNull();
+    expect(db.get(victimPath).unlinkAfter).toBe("owner-000");
+    expect(db.get("tournamentViews/owner-000").courts[0][courtField]).toBeNull();
+    expect(db.get("tournamentPrivateViews/owner-000").courts[0][courtField]).toBe("victim");
+    expect(db.get(paths.allocation(type, "victim"))).toBeDefined();
+    const checkpoint = db.get(victimPath);
+    expect(checkpoint.unlinkViews).toBeNull();
+    crashDiscovery = true;
+    await expect(runRetentionWorker({ ...firstWorker, workerId: "crashed" })).rejects.toThrow(
+      "crash at scan cursor",
+    );
+    expect(db.get(victimPath)).toEqual(checkpoint);
+    expect(
+      await runRetentionWorker({ ...firstWorker, workerId: "too-early", now: () => 1050 }),
+    ).toMatchObject({ status: "busy", steps: 0 });
+    crashDiscovery = false;
+    await finish(db, { batchSize: 1, now: () => 1101 });
+    expect(scanPages.every((page) => page.count <= 1 && page.limit === 1)).toBe(true);
+    expect(scanPages.some((page) => page.after)).toBe(true);
+    expect(scanPages.length).toBe(93);
+    for (let index = 0; index < 30; index++) {
+      const id = `owner-${String(index).padStart(3, "0")}`;
+      for (const collection of collections) {
+        const path = `${collection}/${id}`;
+        expect(db.get(path).courts.every((court) => court[courtField] === null)).toBe(true);
+        const record = db.list(`${archiveBase(type)}/unlinks`).find((entry) => entry.path === path);
+        expect(record.before.courts.every((court) => court[courtField] === "victim")).toBe(true);
+      }
+    }
+    expect(db.get(paths.allocation(type, "victim"))).toBeUndefined();
+    expect(db.get(GATE_PATH).active).toBe(false);
+  },
+);
+
 test("delete-idempotency markers use the same overflow-safe archive before removal", async () => {
   const db = seed("tournament");
   const padding = crypto.randomBytes(MAX_DOCUMENT_BYTES - 192);

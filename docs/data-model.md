@@ -73,6 +73,13 @@ assignment so culling a reused ID never overwrites its previous archive.
 References to the retiring assignment are unlinked before that ID can be
 assigned again. System administrators may review and manually delete retained
 archives later; archive deletion is not part of automatic culling.
+Unlinking also cleans court-derived match and club references in tournament
+read models, even when the match is casual or the tournament belongs to a
+different club. Cleanup inspects persisted read models independently of current
+resource links, because cached references can outlive those links.
+Unrelated native Firestore values must remain unchanged when
+rewriting those documents, including exact 64-bit integers and references to
+other databases.
 
 Counts track currently allocated assignments, not failed candidate attempts,
 updates, archived assignments, or lifetime creation totals. Reusing a freed

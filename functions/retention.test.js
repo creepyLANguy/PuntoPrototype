@@ -480,6 +480,153 @@ describe("cull worker", () => {
     expect(mockDb.get("tournamentDirectory/ttttttt")).toEqual({ clubId: null, clubName: null });
   });
 
+  test.each([
+    ["match", "activeMatchId"],
+    ["match", "lastMatchId"],
+    ["club", "clubId"],
+  ])(
+    "%s culls clean %s court snapshots in unrelated tournaments before old IDs become reusable",
+    async (type, courtField) => {
+      const match = type === "match";
+      const oldId = match ? "aaaaaa" : "aaaa";
+      const survivors = match ? ["bbbbbb", "cccccc", "dddddd"] : ["bbbb", "cccc"];
+      candidateSource(oldId, ...survivors);
+      await allocate(type);
+      const allocationId = record(type, oldId).allocationId;
+      const fields = match
+        ? {
+            [courtField]: oldId,
+            [courtField.replace(/Id$/, "AllocationId")]: allocationId,
+          }
+        : { clubId: oldId, clubAllocationId: allocationId, clubName: "Old club" };
+      mockDb.docs.set("courts/kkkkk", { allocationId: "court-generation", ...fields });
+      // No fixture points to this casual match, and the tournament is owned by
+      // a different club. Only the court pool connects the view to the victim.
+      mockDb.docs.set("tournaments/ttttttt", {
+        allocationId: "tournament-generation",
+        courtPool: ["kkkkk"],
+        clubId: "unrelated",
+      });
+      const collections = ["tournamentViews", "tournamentPrivateViews", "tournamentDirectory"];
+      collections.forEach((collection) =>
+        mockDb.docs.set(`${collection}/ttttttt`, {
+          clubId: "unrelated",
+          courts: [{ courtId: "kkkkk", ...fields }],
+        }),
+      );
+      for (const id of survivors) expect(await allocate(type)).toBe(id);
+      const jobId = job().jobId;
+      for (let step = 0; step < 30; step++) {
+        await retention.runRetentionWorker({
+          db: mockDb,
+          workerId: "first",
+          maxSteps: 1,
+          batchSize: 1,
+        });
+        if (mockDb.get(paths.victim(jobId, 0))?.unlinkAfter) break;
+      }
+      expect(mockDb.get(paths.victim(jobId, 0)).unlinkAfter).toBe("ttttttt");
+      expect(mockDb.get(paths.victim(jobId, 0)).unlinkViews.paths).toEqual([
+        "tournamentViews/ttttttt",
+      ]);
+      expect(record(type, oldId).state).toBe("culling");
+      expect(gate().active).toBe(true);
+      await expectMaintenance(allocate(type));
+      await runToCompletion({ workerId: "resumed", maxSteps: 1 });
+      const cleared = Object.fromEntries(Object.keys(fields).map((field) => [field, null]));
+      collections.forEach((collection) => {
+        const path = `${collection}/ttttttt`;
+        expect(mockDb.get(path)).toEqual({
+          clubId: "unrelated",
+          courts: [{ courtId: "kkkkk", ...cleared }],
+        });
+        const archived = mockDb
+          .list(`${paths.archive(type, config.archiveKeyFor(oldId, allocationId))}/unlinks`)
+          .find((entry) => entry.path === path);
+        expect(archived.before.courts).toEqual([{ courtId: "kkkkk", ...fields }]);
+      });
+      expect(record(type, oldId)).toBeUndefined();
+      candidateSource(oldId);
+      expect(await allocate(type)).toBe(oldId);
+      expect(record(type, oldId).allocationId).not.toBe(allocationId);
+    },
+  );
+
+  test.each(["court", "match", "club"])(
+    "%s culls scrub orphaned view copies after current roots replace their references",
+    async (type) => {
+      const candidates = {
+        court: ["aaaaa", "bbbbb", "ccccc"],
+        match: ["aaaaaa", "bbbbbb", "cccccc", "dddddd"],
+        club: ["aaaa", "bbbb", "cccc"],
+      }[type];
+      const [oldId, ...laterIds] = candidates;
+      const replacement = candidates[2];
+      candidateSource(...candidates);
+      await allocate(type);
+      const allocationId = record(type, oldId).allocationId;
+      const copied = (id, generation) =>
+        type === "match"
+          ? {
+              activeMatchId: id,
+              lastMatchId: id,
+              activeMatchAllocationId: generation,
+              lastMatchAllocationId: generation,
+            }
+          : type === "club"
+            ? { clubId: id, clubAllocationId: generation, clubName: `Club ${id}` }
+            : { courtId: id, courtAllocationId: generation, courtName: `Court ${id}` };
+      const stale = copied(oldId, allocationId);
+      const current = copied(replacement, "new-generation");
+      // Both casual-match pointers / the club have changed without rebuilding
+      // views. Even the tournament's original court pool has disappeared.
+      mockDb.docs.set("courts/kkkkk", { ...current, allocationId: "court-generation" });
+      mockDb.docs.set("tournaments/ttttttt", { courtPool: [], clubId: "unrelated" });
+      const collections = ["tournamentViews", "tournamentPrivateViews", "tournamentDirectory"];
+      const before = {
+        clubId: "unrelated",
+        courts: [{ ...stale }, { ...current }],
+        unchanged: { label: "keep" },
+      };
+      for (const tournament of ["orphan", "ttttttt"]) {
+        collections.forEach((collection) =>
+          mockDb.docs.set(`${collection}/${tournament}`, structuredClone(before)),
+        );
+      }
+      for (const id of laterIds) expect(await allocate(type)).toBe(id);
+      expect(mockDb.get("courts/kkkkk")).toEqual({ ...current, allocationId: "court-generation" });
+      const jobId = job().jobId;
+      for (let step = 0; step < 40; step++) {
+        await retention.runRetentionWorker({
+          db: mockDb,
+          workerId: "scan-first",
+          maxSteps: 1,
+          batchSize: 1,
+        });
+        if (mockDb.get(paths.victim(jobId, 0))?.unlinkAfter) break;
+      }
+      expect(mockDb.get(paths.victim(jobId, 0)).unlinkAfter).toBe("orphan");
+      expect(record(type, oldId).state).toBe("culling");
+      await runToCompletion({ workerId: "scan-resumed", maxSteps: 1 });
+      const cleared = Object.fromEntries(Object.keys(stale).map((key) => [key, null]));
+      for (const tournament of ["orphan", "ttttttt"]) {
+        for (const collection of collections) {
+          const path = `${collection}/${tournament}`;
+          expect(mockDb.get(path)).toEqual({ ...before, courts: [cleared, current] });
+          const archived = mockDb
+            .list(`${paths.archive(type, config.archiveKeyFor(oldId, allocationId))}/unlinks`)
+            .find((entry) => entry.path === path);
+          expect(archived.before).toEqual(before);
+        }
+      }
+      expect(mockDb.get("courts/kkkkk")).toEqual({ ...current, allocationId: "court-generation" });
+      expect(record(type, oldId)).toBeUndefined();
+      candidateSource(oldId);
+      expect(await allocate(type)).toBe(oldId);
+      expect(record(type, oldId).allocationId).not.toBe(allocationId);
+    },
+  );
+
   test("bounded single steps resume across workers to the same final state", async () => {
     const { oldest, newest } = await seedCourtCull();
     const workers = ["w1", "w2", "w3"];

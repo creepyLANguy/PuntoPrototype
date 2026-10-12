@@ -90,6 +90,27 @@ function codec(db, useBigInt = false) {
   return serializer;
 }
 
+// Default SDK decoding rounds unsafe int64s and drops a reference's database.
+// Keep safe integers as Numbers so unrelated application data retains its shape.
+function decodeSnapshot(snapshot, db) {
+  if (typeof snapshot.toDocumentProto !== "function") return snapshot.data();
+  const decoder = codec(db);
+  const decode = decoder.decodeValue.bind(decoder);
+  decoder.decodeValue = (value) => {
+    if (value.integerValue !== undefined && value.integerValue !== null) {
+      const integer = BigInt(value.integerValue.toString());
+      return Number.isSafeInteger(Number(integer)) ? Number(integer) : integer;
+    }
+    return decode(value);
+  };
+  return Object.fromEntries(
+    Object.entries(snapshot.toDocumentProto().fields).map(([key, value]) => [
+      key,
+      decoder.decodeValue(value),
+    ]),
+  );
+}
+
 // Isolate the SDK's protobuf codec here: it preserves nanoseconds, bytes,
 // reference resource names, vectors and 64-bit integers rather than JSON data.
 function encodeSnapshot(snapshot, db) {
@@ -206,6 +227,7 @@ module.exports = {
   valueBytes,
   writeBytes,
   snapshotBytes,
+  decodeSnapshot,
   planArchive,
   writeArchive,
   readArchive,

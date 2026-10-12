@@ -17,7 +17,13 @@
 // the job lease (owner + attempt), and all progress (cursors, traversal
 // stacks, phases) is durable, so any worker can resume after a crash.
 const crypto = require("crypto");
-const { planArchive, writeArchive, snapshotBytes, writeBytes } = require("./retentionArchive");
+const {
+  planArchive,
+  writeArchive,
+  snapshotBytes,
+  writeBytes,
+  decodeSnapshot,
+} = require("./retentionArchive");
 const { createDocumentListing, createCollectionListing } = require("./retentionListing");
 const {
   ID_TYPES,
@@ -55,8 +61,18 @@ const SCRUB_KEYS = {
   tournament: { scalar: ["tournamentId"], list: ["tournamentIds"] },
 };
 
-// Every stored reference to a root, by victim type. `views` also scrubs the
-// owning tournament's read models; `alsoNull` clears dependent fields.
+const TOURNAMENT_VIEW_COLLECTIONS = [
+  "tournamentViews",
+  "tournamentPrivateViews",
+  "tournamentDirectory",
+];
+const VIEW_SCAN_SPECS = TOURNAMENT_VIEW_COLLECTIONS.map((collection) => ({
+  collection,
+  scan: true,
+}));
+
+// Indexed references are cleared first. Read models are also scanned because
+// their copied references can outlive the authoritative root/fixture links.
 const UNLINK_SPECS = {
   court: [
     { collection: "matches", field: "currentCourtId" },
@@ -72,17 +88,20 @@ const UNLINK_SPECS = {
     { group: "audits", field: "courtId" },
     { group: "audits", field: "beforeSummary.courtId" },
     { group: "audits", field: "afterSummary.courtId" },
+    ...VIEW_SCAN_SPECS,
   ],
   match: [
     { collection: "courts", field: "activeMatchId" },
     { collection: "courts", field: "lastMatchId" },
     { group: "fixtures", field: "matchId", views: true },
     { group: "audits", field: "matchId" },
+    ...VIEW_SCAN_SPECS,
   ],
   tournament: [
     { collection: "matches", field: "tournamentId", alsoNull: ["roundId", "fixtureId"] },
     { collection: "tournamentCreations", field: "tournamentId", archiveDelete: true },
     { group: "audits", field: "tournamentId" },
+    ...VIEW_SCAN_SPECS,
   ],
   club: [
     { collection: "courts", field: "clubId" },
@@ -90,14 +109,9 @@ const UNLINK_SPECS = {
     { collection: "tournaments", field: "clubId", views: true },
     { collection: "tournamentDirectory", field: "clubId", alsoNull: ["clubName"] },
     { group: "audits", field: "afterSummary.clubId" },
+    ...VIEW_SCAN_SPECS,
   ],
 };
-
-const TOURNAMENT_VIEW_COLLECTIONS = [
-  "tournamentViews",
-  "tournamentPrivateViews",
-  "tournamentDirectory",
-];
 
 function requireMethod(target, name, label) {
   if (!target || typeof target[name] !== "function") {
@@ -430,6 +444,7 @@ async function selectStep(ctx, job) {
         phase: "archive",
         stack: null,
         unlinkSpec: 0,
+        unlinkAfter: null,
         documentCount: 0,
         unlinkCount: 0,
         deletedCount: 0,
@@ -559,6 +574,10 @@ async function unlinkStep(ctx, victim, victimRef) {
     return;
   }
   const spec = specs[specIndex];
+  if (spec.scan) {
+    await unlinkScanStep(ctx, victim, victimRef, spec, specIndex);
+    return;
+  }
   const pageSize = spec.archiveDelete
     ? 1
     : Math.max(1, Math.floor(ctx.batchSize / (spec.views ? 5 : 2)));
@@ -588,7 +607,7 @@ async function unlinkStep(ctx, victim, victimRef) {
     let pendingDelete = null;
     snapshots.forEach((snapshot, index) => {
       if (!snapshot.exists) return;
-      const before = snapshot.data();
+      const before = decodeSnapshot(snapshot, ctx.db);
       const recordId = hashPath(`${specIndex}|${snapshot.ref.path}`);
       const { value, changed } = unlinkData(before, victim.type, victim.id, spec);
       if (!changed && !spec.archiveDelete) return;
@@ -642,6 +661,25 @@ async function unlinkStep(ctx, victim, victimRef) {
   });
 }
 
+async function unlinkScanStep(ctx, victim, victimRef, spec, specIndex) {
+  await fencedStep(ctx, async (tx) => {
+    const fresh = await tx.get(victimRef);
+    if (fresh.data()?.phase !== "unlink" || (fresh.data().unlinkSpec || 0) !== specIndex) return;
+    let query = ctx.db.collection(spec.collection).orderBy("__name__").limit(1);
+    if (victim.unlinkAfter) query = query.startAfter(victim.unlinkAfter);
+    const page = await tx.get(query);
+    const snapshot = page.docs[0];
+    // Advancing the cursor and enqueuing its rewrite are one commit. The queue
+    // drains before discovering another page or releasing the victim.
+    tx.set(victimRef, {
+      ...victim,
+      unlinkSpec: snapshot ? specIndex : specIndex + 1,
+      unlinkAfter: snapshot ? snapshot.id : null,
+      unlinkViews: snapshot ? { specIndex, paths: [snapshot.ref.path] } : null,
+    });
+  });
+}
+
 async function unlinkViewsStep(ctx, victim, victimRef) {
   const pending = victim.unlinkViews;
   const paths = pending.paths.slice(0, 1);
@@ -650,12 +688,17 @@ async function unlinkViewsStep(ctx, victim, victimRef) {
     if (fresh.data()?.phase !== "unlink") return;
     const snapshots = await Promise.all(paths.map((path) => tx.get(ctx.db.doc(path))));
     const archiveBase = retentionPaths.archive(victim.type, victim.archiveKey);
+    const archives = await Promise.all(
+      paths.map((path) =>
+        tx.get(ctx.db.doc(`${archiveBase}/unlinks/${hashPath(`${pending.specIndex}|${path}`)}`)),
+      ),
+    );
     let consumed = 0;
     let bytes = 0;
     let writes = 2;
-    for (const snapshot of snapshots) {
+    for (const [index, snapshot] of snapshots.entries()) {
       if (snapshot.exists) {
-        const before = snapshot.data();
+        const before = decodeSnapshot(snapshot, ctx.db);
         const { value, changed } = scrubValue(before, SCRUB_KEYS[victim.type], victim.id);
         if (changed) {
           const plan = archivePlan(
@@ -664,16 +707,16 @@ async function unlinkViewsStep(ctx, victim, victimRef) {
             { path: snapshot.ref.path, field: "*", unlinkedAtMs: ctx.now() },
             "before",
           );
-          const cost = plan.sourceBytes + plan.bytes + writeBytes(value, ctx.db);
-          if (bytes + cost > MAX_UNIT_BYTES || writes + plan.writes.length + 1 > 450) break;
+          const archive = archives[index];
+          const archiveBytes = archive.exists ? snapshotBytes(archive, ctx.db) : plan.bytes;
+          const archiveWrites = archive.exists ? 0 : plan.writes.length;
+          const cost = plan.sourceBytes + archiveBytes + writeBytes(value, ctx.db);
+          if (bytes + cost > MAX_UNIT_BYTES || writes + archiveWrites + 1 > 450) break;
           bytes += cost;
-          writes += plan.writes.length + 1;
-          writeArchive(
-            tx,
-            ctx.db,
-            `${archiveBase}/unlinks/${hashPath(`${pending.specIndex}|${snapshot.ref.path}`)}`,
-            plan,
-          );
+          writes += archiveWrites + 1;
+          if (!archive.exists) {
+            writeArchive(tx, ctx.db, archive.ref.path, plan);
+          }
           tx.set(snapshot.ref, value);
         }
       }
