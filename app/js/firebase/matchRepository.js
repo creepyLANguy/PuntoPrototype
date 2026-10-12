@@ -15,20 +15,36 @@ import {
   limit,
 } from "./firestore.js";
 import { db } from "./client.js";
+import { assertId } from "../config/idContract.js";
+import {
+  assertCurrentAssignment,
+  rememberQuerySnapshot,
+  rememberSnapshot,
+} from "./assignmentContext.js";
 
 export function getMatch(matchId) {
-  return getDoc(doc(db, "matches", matchId));
+  assertId("match", matchId);
+  return getDoc(doc(db, "matches", matchId)).then((snap) =>
+    rememberSnapshot("match", matchId, snap),
+  );
 }
 
 export function listenToMatch(matchId, onNext, onError) {
-  return onSnapshot(doc(db, "matches", matchId), onNext, onError);
+  assertId("match", matchId);
+  return onSnapshot(
+    doc(db, "matches", matchId),
+    (snap) => onNext(rememberSnapshot("match", matchId, snap)),
+    onError,
+  );
 }
 
 export function getMatchScore(matchId) {
+  assertId("match", matchId);
   return getDoc(doc(db, "matches", matchId, "score", "current"));
 }
 
 export function listenToMatchScore(matchId, onNext, onError) {
+  assertId("match", matchId);
   return onSnapshot(
     doc(db, "matches", matchId, "score", "current"),
     onNext,
@@ -39,8 +55,10 @@ export function listenToMatchScore(matchId, onNext, onError) {
 // Team and player names of a casual match. Tournament match names come from
 // the tournament roster and are changed through the tournament host tools.
 export function updateMatch(matchId, data) {
+  assertId("match", matchId);
   return updateDoc(doc(db, "matches", matchId), {
     ...data,
+    allocationId: assertCurrentAssignment("match", matchId, data.allocationId),
     updatedAt: serverTimestamp(),
   });
 }
@@ -48,12 +66,28 @@ export function updateMatch(matchId, data) {
 // Score events are processed by the onEventCreate Cloud Function. The court
 // on the event is audit context only.
 export function addMatchEvent(matchId, { eventType, createdBy, ...fields }) {
+  assertId("match", matchId);
+  if (fields.courtId != null) assertId("court", fields.courtId);
   return addDoc(collection(db, "matches", matchId, "events"), {
     eventType,
     createdAt: serverTimestamp(),
     createdBy,
-    matchId,
     ...fields,
+    matchId,
+    allocationId: assertCurrentAssignment(
+      "match",
+      matchId,
+      fields.allocationId,
+    ),
+    ...(fields.courtId != null
+      ? {
+          courtAllocationId: assertCurrentAssignment(
+            "court",
+            fields.courtId,
+            fields.courtAllocationId,
+          ),
+        }
+      : {}),
   });
 }
 
@@ -67,7 +101,7 @@ export function getLiveMatches(maxResults = 200) {
       where("visibility", "==", "public"),
       limit(maxResults),
     ),
-  );
+  ).then((snap) => rememberQuerySnapshot("match", snap));
 }
 
 export function getMatchesByStatus(status, maxResults = 200) {
@@ -77,10 +111,11 @@ export function getMatchesByStatus(status, maxResults = 200) {
       where("status", "==", status),
       limit(maxResults),
     ),
-  );
+  ).then((snap) => rememberQuerySnapshot("match", snap));
 }
 
 export function listenToTournamentLiveMatches(tournamentId, onNext, onError) {
+  assertId("tournament", tournamentId);
   return onSnapshot(
     query(
       collection(db, "matches"),
@@ -88,7 +123,7 @@ export function listenToTournamentLiveMatches(tournamentId, onNext, onError) {
       where("status", "==", "live"),
       where("visibility", "==", "public"),
     ),
-    onNext,
+    (snap) => onNext(rememberQuerySnapshot("match", snap)),
     onError,
   );
 }

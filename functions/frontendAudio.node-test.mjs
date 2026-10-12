@@ -10,8 +10,8 @@ import {
 let window;
 test.before(async () => {
   seedBaseData();
-  seedCourt("audiocourt");
-  const dom = await bootFrontend({ url: "https://padel.test/c/audiocourt" });
+  seedCourt("audqa");
+  const dom = await bootFrontend({ url: "https://padel.test/c/audqa" });
   window = dom.window;
 });
 test("a failed direct-link join sound is ignored and never replayed on a later gesture", async () => {

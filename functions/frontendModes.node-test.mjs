@@ -35,11 +35,11 @@ async function leaveCourtViaBackButton() {
 
 test.before(async () => {
   seedBaseData();
-  seedCourt("straightcourt", {
+  seedCourt("strta", {
     scoringMode: "straight",
     scoringOptions: { scoringMode: "straight", deuceMode: "standard", tiebreakMode: "sixAllSeven" },
   });
-  seedCourt("tiebreakcourt", {
+  seedCourt("tbrka", {
     scoringMode: "tiebreakTen",
     scoringOptions: {
       scoringMode: "tiebreakTen",
@@ -47,7 +47,7 @@ test.before(async () => {
       tiebreakMode: "sixAllSeven",
     },
   });
-  seedCourt("settingscourt", {
+  seedCourt("setga", {
     scoringMode: "standard",
     scoringOptions: {
       scoringMode: "standard",
@@ -55,19 +55,19 @@ test.before(async () => {
       tiebreakMode: "sixAllSeven",
     },
   });
-  for (const courtId of ["fixedwinner", "fixeddraw", "fixedgolden"]) {
+  for (const courtId of ["fxnaa", "fxdra", "fxgda"]) {
     seedCourt(courtId, {
       scoringMode: "fixedTotalPoints",
       scoringOptions: {
         scoringMode: "fixedTotalPoints",
         pointsTarget: 12,
         completion: {
-          tieResolution: courtId === "fixedgolden" ? "golden_point" : "allow_draw",
+          tieResolution: courtId === "fxgda" ? "golden_point" : "allow_draw",
         },
       },
     });
   }
-  seedCourt("fixedanimation", {
+  seedCourt("fxana", {
     scoringMode: "fixedTotalPoints",
     scoringOptions: { scoringMode: "fixedTotalPoints", pointsTarget: 12 },
   });
@@ -87,7 +87,7 @@ test.before(async () => {
 });
 
 test("straight mode: points render as running numbers", async () => {
-  await joinCourtAsPlayer(document, "straightcourt");
+  await joinCourtAsPlayer(document, "strta");
 
   document.getElementById("addPointA").click();
   await waitFor(() => getRenderedScore(document).pointsA === "1", { label: "A at 1" });
@@ -124,7 +124,7 @@ test("straight mode: sets/games rows are hidden and total is shown", async () =>
 
 test("tiebreakTen mode: numeric points and match completion at 10", async () => {
   await leaveCourtViaBackButton();
-  await joinCourtAsPlayer(document, "tiebreakcourt");
+  await joinCourtAsPlayer(document, "tbrka");
 
   for (let i = 0; i < 9; i++) {
     document.getElementById("addPointA").click();
@@ -150,7 +150,7 @@ test("tiebreakTen mode: numeric points and match completion at 10", async () => 
 
 test("fixed scoring controls commit on release and retain their profile across mode switches", async () => {
   await leaveCourtViaBackButton();
-  await joinCourtAsPlayer(document, "settingscourt");
+  await joinCourtAsPlayer(document, "setga");
 
   scoringUpdateRequests = [];
   document.getElementById("settingsBtn").click();
@@ -339,7 +339,7 @@ function assertFixedFraction(total, target) {
 
 test("fixed points celebrate the winner only after the last point is scored", async () => {
   await leaveCourtViaBackButton();
-  await joinCourtAsPlayer(document, "fixedwinner");
+  await joinCourtAsPlayer(document, "fxnaa");
   const overlay = document.getElementById("setWinOverlay");
   overlay.click();
   await awardFixedPoint("A");
@@ -358,7 +358,7 @@ test("fixed points celebrate the winner only after the last point is scored", as
   await awardFixedPoint("A");
   assertFixedGlow(false, false);
   assert.equal(overlay.classList.contains("hidden"), true, "no early majority win screen");
-  assert.equal(getBackendScore("fixedwinner").matchComplete, false);
+  assert.equal(getBackendScore("fxnaa").matchComplete, false);
   overlay.click();
 
   document.getElementById("undoBtn").click();
@@ -379,7 +379,7 @@ test("fixed points celebrate the winner only after the last point is scored", as
     await awardFixedPoint("B");
     assert.equal(overlay.classList.contains("hidden"), i < 2, "celebrate only on the final point");
   }
-  assert.equal(getBackendScore("fixedwinner").matchComplete, true);
+  assert.equal(getBackendScore("fxnaa").matchComplete, true);
   assertFixedFraction(12, 12);
   assert.equal(overlay.dataset.winner, "A");
   assert.equal(overlay.querySelector(".set-win-label").textContent, "WINS THE MATCH!");
@@ -407,7 +407,7 @@ test("fixed points celebrate the winner only after the last point is scored", as
 
 test("fixed points show a draw screen when the target is reached tied", async () => {
   await leaveCourtViaBackButton();
-  await joinCourtAsPlayer(document, "fixeddraw");
+  await joinCourtAsPlayer(document, "fxdra");
   for (let i = 0; i < 6; i++) {
     await awardFixedPoint("A");
     await awardFixedPoint("B");
@@ -420,13 +420,13 @@ test("fixed points show a draw screen when the target is reached tied", async ()
   assert.equal(overlay.querySelector(".set-win-team-name").textContent, "Team A & Team B");
   assert.equal(overlay.querySelector(".sw-score-a").textContent, "6");
   assert.equal(overlay.querySelector(".sw-score-b").textContent, "6");
-  assert.equal(getBackendScore("fixeddraw").result, "draw");
+  assert.equal(getBackendScore("fxdra").result, "draw");
   overlay.click();
 });
 
 test("fixed golden points glow for both teams and celebrate the deciding winner", async () => {
   await leaveCourtViaBackButton();
-  await joinCourtAsPlayer(document, "fixedgolden");
+  await joinCourtAsPlayer(document, "fxgda");
   for (let i = 0; i < 6; i++) {
     await awardFixedPoint("A");
     await awardFixedPoint("B");
@@ -434,25 +434,25 @@ test("fixed golden points glow for both teams and celebrate the deciding winner"
   const overlay = document.getElementById("setWinOverlay");
   assertFixedGlow(true, true);
   assert.equal(overlay.classList.contains("hidden"), true);
-  assert.equal(getBackendScore("fixedgolden").matchComplete, false);
+  assert.equal(getBackendScore("fxgda").matchComplete, false);
   await awardFixedPoint("B");
   assertFixedGlow(false, false);
   assert.equal(overlay.classList.contains("hidden"), false);
   assert.equal(overlay.dataset.winner, "B");
   assert.equal(overlay.querySelector(".set-win-label").textContent, "WINS THE MATCH!");
-  assert.equal(getBackendScore("fixedgolden").matchComplete, true);
+  assert.equal(getBackendScore("fxgda").matchComplete, true);
   assertFixedFraction(13, 12);
   overlay.click();
 
   await leaveCourtViaBackButton();
-  await joinCourtAsPlayer(document, "fixedgolden");
+  await joinCourtAsPlayer(document, "fxgda");
   assert.equal(
     overlay.classList.contains("hidden"),
     true,
     "joining a decided match does not replay its celebration",
   );
   await leaveCourtViaBackButton();
-  await joinCourtAsPlayer(document, "straightcourt");
+  await joinCourtAsPlayer(document, "strta");
   const value = document.getElementById("straightTotalValue");
   assert.equal(value.textContent, "3");
   assert.equal(value.children.length, 0, "straight mode removes the fixed-points fraction");
@@ -462,7 +462,7 @@ test("automatic changeovers finish point feedback before swapping and discard st
   if (document.getElementById("menuPage").style.display === "none") {
     await leaveCourtViaBackButton();
   }
-  await joinCourtAsPlayer(document, "fixedanimation");
+  await joinCourtAsPlayer(document, "fxana");
   const scoreboard = document.querySelector(".scoreboard");
   const card = document.getElementById("teamA");
   for (let i = 0; i < 3; i++) await awardFixedPoint("A");
@@ -488,7 +488,7 @@ test("automatic changeovers finish point feedback before swapping and discard st
     await awardFixedPoint("A");
     assert.equal(card.classList.contains("score-animate"), true);
     assert.equal(
-      firestoreState.docs.get("courts/fixedanimation").changeoverEvent.source,
+      firestoreState.docs.get("courts/fxana").changeoverEvent.source,
       "automatic_scoring",
     );
     assert.equal(scoreboard.classList.contains("swapped"), initiallySwapped);
@@ -508,8 +508,8 @@ test("automatic changeovers finish point feedback before swapping and discard st
       finishPoint = resolve;
     });
     await awardFixedPoint("A");
-    const court = firestoreState.docs.get("courts/fixedanimation");
-    writeDoc("courts/fixedanimation", {
+    const court = firestoreState.docs.get("courts/fxana");
+    writeDoc("courts/fxana", {
       ...court,
       changeoverEvent: { id: "pending-navigation-swap", source: "automatic_scoring" },
     });

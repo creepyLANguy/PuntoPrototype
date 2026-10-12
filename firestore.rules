@@ -7,11 +7,41 @@ rules_version = '2';
 // not constrain. Clients may read public data, append scoring events to a
 // live match and rename the players of a casual match.
 //
-// The court-centric development collections (courts, devices, admin) remain
-// open for the existing admin tooling; tightening them is tracked as
+// Court creation/deletion is server-authoritative. Court updates and devices
+// remain open for the existing admin tooling; tightening them is tracked as
 // production-hardening work (docs/architecture.md, "Operational security").
 service cloud.firestore {
   match /databases/{database}/documents {
+
+    function validId(id, length) {
+      return id is string && id.size() == length
+        && id.matches('^[abcdefghjkmnpqrstuxyz]+$');
+    }
+
+    function sameAssignment(before, after) {
+      return before.get('allocationId', null) is string
+        && before.allocationId == after.get('allocationId', null);
+    }
+
+    function validCourtReference(data) {
+      return data.get('courtId', null) == null
+        || (validId(data.courtId, 5)
+          && get(/databases/$(database)/documents/courts/$(data.courtId)).data.allocationId
+            == data.get('courtAllocationId', null));
+    }
+
+    function validClubReference(data) {
+      return data.get('clubId', null) == null
+        || (validId(data.clubId, 4)
+          && get(/databases/$(database)/documents/clubs/$(data.clubId)).data.allocationId
+            == data.get('clubAllocationId', null));
+    }
+
+    function validMatchReference(id, allocationId) {
+      return id == null
+        || (validId(id, 6)
+          && get(/databases/$(database)/documents/matches/$(id)).data.allocationId == allocationId);
+    }
 
     function matchDoc(matchId) {
       return get(/databases/$(database)/documents/matches/$(matchId));
@@ -23,7 +53,16 @@ service cloud.firestore {
 
     // ---- Physical platform (development access) ----
     match /courts/{courtId} {
-      allow read, write: if true;
+      allow read: if true;
+      allow create: if false;
+      allow delete: if false;
+      allow update: if validId(courtId, 5)
+        && sameAssignment(resource.data, request.resource.data)
+        && validMatchReference(request.resource.data.get('activeMatchId', null),
+          request.resource.data.get('activeMatchAllocationId', null))
+        && validMatchReference(request.resource.data.get('lastMatchId', null),
+          request.resource.data.get('lastMatchAllocationId', null))
+        && validClubReference(request.resource.data);
 
       match /deviceEvents/{eventId} {
         allow read: if true;
@@ -32,7 +71,10 @@ service cloud.firestore {
     }
 
     match /devices/{deviceId} {
-      allow read, write: if true;
+      allow read: if true;
+      allow delete: if true;
+      allow create, update: if validCourtReference(request.resource.data)
+        && validClubReference(request.resource.data);
     }
 
     match /admin/{docId} {
@@ -52,13 +94,20 @@ service cloud.firestore {
       allow create, delete: if false;
       // Players may name the players and teams of a casual match; tournament
       // match names come from the tournament roster.
-      allow update: if resource.data.tournamentId == null
+      allow update: if validId(matchId, 6)
+        && sameAssignment(resource.data, request.resource.data)
+        && resource.data.tournamentId == null
         && request.resource.data.diff(resource.data).affectedKeys()
           .hasOnly(['teamNames', 'playerNames', 'updatedAt']);
 
       match /events/{eventId} {
         allow read: if true;
-        allow create: if matchDoc(matchId).data.status == 'live'
+        allow create: if validId(matchId, 6)
+          && request.resource.data.matchId == matchId
+          && sameAssignment(matchDoc(matchId).data, request.resource.data)
+          && validId(request.resource.data.courtId, 5)
+          && validCourtReference(request.resource.data)
+          && matchDoc(matchId).data.status == 'live'
           && matchDoc(matchId).data.currentCourtId == request.resource.data.courtId
           && get(/databases/$(database)/documents/courts/$(request.resource.data.courtId)).data.activeMatchId == matchId
           && request.resource.data.eventType in ['POINT_TEAM_A', 'POINT_TEAM_B', 'UNDO', 'WARMUP']
@@ -106,5 +155,6 @@ service cloud.firestore {
     match /tournamentCreations/{requestId} {
       allow read, write: if false;
     }
+
   }
 }

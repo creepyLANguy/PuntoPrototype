@@ -74,8 +74,8 @@ function runQuery(collectionPath, filters) {
     .filter((path) =>
       filters.every(({ field, op, value }) => {
         const list = firestoreState.docs.get(path)[field];
-        if (!Array.isArray(list)) return false;
         if (op === "==") return firestoreState.docs.get(path)[field] === value;
+        if (!Array.isArray(list)) return false;
         if (op === "array-contains") return list.includes(value);
         if (op === "array-contains-any") {
           if (value.length > 30) throw new Error("array-contains-any supports at most 30 values");
@@ -109,6 +109,12 @@ const adminDb = {
         return target.kind === "doc" ? snapshot(target.path) : target.get();
       },
       set: (ref, data, options) => writes.push(() => applySet(ref.path, data, options)),
+      create: (ref, data) =>
+        writes.push(() => {
+          if (firestoreState.docs.has(ref.path))
+            throw new Error(`Document ${ref.path} already exists`);
+          applySet(ref.path, data);
+        }),
       delete: (ref) => writes.push(() => deleteDocAt(ref.path)),
     };
     const result = await callback(tx);
@@ -119,10 +125,17 @@ const adminDb = {
 
 function installFirebaseInfrastructure() {
   const path = require.resolve("../infrastructure/firebase.js");
+  const { createGuardedFirestore } = require("../infrastructure/dataGuard.js");
   const stub = new Module(path);
   stub.filename = path;
   stub.loaded = true;
-  stub.exports = { admin: {}, db: adminDb, FieldPath: {}, FieldValue };
+  stub.exports = {
+    admin: {},
+    db: createGuardedFirestore(adminDb),
+    rawDb: adminDb,
+    FieldPath: {},
+    FieldValue,
+  };
   require.cache[path] = stub;
 }
 

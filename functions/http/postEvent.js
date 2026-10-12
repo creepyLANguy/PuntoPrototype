@@ -6,6 +6,7 @@ const {
 } = require("../services/eventService");
 const { ensureCourtMatch, resetMatch } = require("../services/matchService");
 const { paths } = require("../services/firestorePaths");
+const { validateId } = require("../services/ids");
 const { mapBeaconEventType, normalizeDeviceSku } = require("../services/beaconService");
 const {
   SCORING_EVENTS,
@@ -13,6 +14,12 @@ const {
   SUPPORTED_EVENTS,
   normalizeScoreVersion,
 } = require("../domain/events/validation");
+const { staleGeneration } = require("../services/errors");
+const {
+  pinRootGeneration,
+  pinDeviceAssignment,
+  runInOperationScope,
+} = require("../infrastructure/dataGuard");
 
 const ALLOWED_BROWSER_ORIGINS = new Set([
   "https://qa.padelpush.co.za",
@@ -61,6 +68,13 @@ async function postEvent(req, res) {
       registeringDeviceId,
       deviceSKU: requestedDeviceSku,
     } = req.body || {};
+    if (targetCourtId !== undefined && targetCourtId !== null) {
+      try {
+        validateId("court", targetCourtId);
+      } catch {
+        return sendJson(res, 400, { success: false, error: "Invalid courtId." });
+      }
+    }
 
     if (!deviceId || !eventType) {
       return sendJson(res, 400, {
@@ -85,10 +99,31 @@ async function postEvent(req, res) {
     }
 
     const actingCourtId = actingDevice.data.courtId || null;
+    const actingCourtAllocationId = actingDevice.data.courtAllocationId;
+    pinDeviceAssignment(actingDevice.ref.path, actingDevice.data);
+    let spectateSourceCourtId = actingCourtId;
+    let actingCourtData = null;
+    if (actingCourtId) {
+      const courtPath = paths.court(actingCourtId);
+      if (typeof actingCourtAllocationId !== "string" || !actingCourtAllocationId) {
+        throw staleGeneration(courtPath);
+      }
+      if (eventType !== "SPECTATE") pinRootGeneration(courtPath, actingCourtAllocationId);
+      const actingCourtSnap = await db.doc(courtPath).get();
+      actingCourtData = actingCourtSnap.exists ? actingCourtSnap.data() : null;
+      if (!actingCourtData || actingCourtData.allocationId !== actingCourtAllocationId) {
+        if (eventType !== "SPECTATE") throw staleGeneration(courtPath);
+        // Relocation leaves an invalid source behind without retaining its reference.
+        spectateSourceCourtId = null;
+      } else {
+        pinRootGeneration(courtPath, actingCourtAllocationId);
+      }
+    }
     const requestDeviceSku = normalizeDeviceSku(requestedDeviceSku);
     const deviceSku = requestDeviceSku || normalizeDeviceSku(actingDevice.data.deviceSKU);
+    const updateDeviceSku = requestDeviceSku && requestDeviceSku !== actingDevice.data.deviceSKU;
 
-    if (requestDeviceSku && requestDeviceSku !== actingDevice.data.deviceSKU) {
+    if (updateDeviceSku && eventType !== "SPECTATE") {
       await actingDevice.ref.set({ deviceSKU: requestDeviceSku }, { merge: true });
     }
 
@@ -100,7 +135,7 @@ async function postEvent(req, res) {
         });
       }
 
-      const targetCourtRef = db.doc(`courts/${targetCourtId}`);
+      const targetCourtRef = db.doc(paths.court(targetCourtId));
       const targetCourtSnap = await targetCourtRef.get();
       if (!targetCourtSnap.exists) {
         return sendJson(res, 400, {
@@ -108,14 +143,24 @@ async function postEvent(req, res) {
           error: "Court not found for courtId: " + targetCourtId,
         });
       }
+      const targetCourtAllocationId = targetCourtSnap.data()?.allocationId;
+      pinRootGeneration(paths.court(targetCourtId), targetCourtAllocationId);
+      if (updateDeviceSku) {
+        await actingDevice.ref.set({ deviceSKU: requestDeviceSku }, { merge: true });
+      }
 
-      await actingDevice.ref.set({ courtId: targetCourtId }, { merge: true });
+      await actingDevice.ref.set(
+        { courtId: targetCourtId, courtAllocationId: targetCourtAllocationId },
+        { merge: true },
+      );
 
       const eventId = await appendCourtDeviceEvent(targetCourtId, {
         eventType,
         createdBy: deviceId,
-        sourceCourtId: actingCourtId,
+        sourceCourtId: spectateSourceCourtId,
+        sourceCourtAllocationId: spectateSourceCourtId ? actingCourtAllocationId : null,
         targetCourtId,
+        targetCourtAllocationId,
         actorDeviceId: deviceId,
       });
 
@@ -144,7 +189,10 @@ async function postEvent(req, res) {
 
       await db
         .doc(`devices/${registeringDeviceId}`)
-        .set({ courtId: actingCourtId }, { merge: true });
+        .set(
+          { courtId: actingCourtId, courtAllocationId: actingCourtAllocationId },
+          { merge: true },
+        );
 
       const eventId = await appendCourtDeviceEvent(actingCourtId, {
         eventType,
@@ -152,6 +200,7 @@ async function postEvent(req, res) {
         actorDeviceId: deviceId,
         registeringDeviceId,
         targetCourtId: actingCourtId,
+        targetCourtAllocationId: actingCourtAllocationId,
       });
 
       return sendJson(res, 200, {
@@ -175,19 +224,15 @@ async function postEvent(req, res) {
     // is stamped on the event: without it onEventCreate normalizes the
     // missing field to 0 and silently skips every device-posted point/undo
     // as "stale" once the match has been reset at least once.
-    const actingCourtSnap = await db.doc(paths.court(actingCourtId)).get();
-    if (!actingCourtSnap.exists) {
-      return sendJson(res, 400, {
-        success: false,
-        error: "Associated court not found for deviceId: " + deviceId,
-      });
-    }
-    const actingCourtData = actingCourtSnap.data() || {};
     let matchId = actingCourtData.activeMatchId || null;
     let matchData = null;
     if (matchId) {
+      pinRootGeneration(paths.match(matchId), actingCourtData.activeMatchAllocationId);
       const matchSnap = await db.doc(paths.match(matchId)).get();
       matchData = matchSnap.exists ? matchSnap.data() : null;
+      if (!matchData || matchData.allocationId !== actingCourtData.activeMatchAllocationId) {
+        throw staleGeneration(paths.match(matchId));
+      }
       if (!matchData || matchData.status !== "live" || matchData.currentCourtId !== actingCourtId) {
         matchId = null;
       }
@@ -232,7 +277,10 @@ async function postEvent(req, res) {
       createdBy: deviceId,
       actorDeviceId: deviceId,
       courtId: actingCourtId,
+      courtAllocationId: actingCourtAllocationId,
       scoreVersion: normalizeScoreVersion(matchData?.scoreVersion),
+      // Binds the event to this match generation (see processScoreEvent).
+      allocationId: matchData?.allocationId ?? null,
       ...(effectiveEventType !== eventType
         ? { sourceEventType: eventType, beaconSidesSwapped: true }
         : {}),
@@ -240,9 +288,14 @@ async function postEvent(req, res) {
 
     return sendJson(res, 200, { success: true, eventId, matchId, courtId: actingCourtId });
   } catch (err) {
+    if (err?.details?.code === "STALE_GENERATION") {
+      return sendJson(res, 409, { success: false, error: err.message });
+    }
     console.error(err);
     return sendJson(res, 500, { success: false, error: "Error" });
   }
 }
 
-module.exports = { postEvent };
+module.exports = {
+  postEvent: (...args) => runInOperationScope(() => postEvent(...args)),
+};

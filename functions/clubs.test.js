@@ -1,6 +1,13 @@
 // Clubs: the membership rules (pure) and the club callables / deletion
 // triggers running against an in-memory Firestore.
 let mockDb = null;
+const { FakeFirestore: TransactionalFirestore } = require("./testSupport/fakeFirestore");
+const { ID_ALPHABET, ID_LENGTHS } = require("./services/ids");
+const {
+  seededAllocationId,
+  seedAllocationTokens,
+  withExpectedAllocations,
+} = require("./testSupport/expectedAllocations");
 
 jest.mock("firebase-functions/v2/https", () => ({
   onCall: (_config, handler) => handler,
@@ -32,15 +39,12 @@ jest.mock("firebase-admin/firestore", () => ({
 }));
 
 const {
-  CLUB_ID_ALPHABET,
-  CLUB_ID_LENGTH,
   CLUB_NAME_MAX_LENGTH,
   MAX_CLUB_COURTS,
   MAX_CLUB_DEVICES,
   CLUB_STATES,
   DEFAULT_CLUB_STATE,
   ClubError,
-  generateClubId,
   normalizeClubId,
   normalizeClubName,
   normalizeClubState,
@@ -50,8 +54,9 @@ const {
 
 // In-memory Firestore with the surface the club service uses. Transactions
 // enforce Firestore's rule that every read happens before the first write.
-class FakeFirestore {
+class FakeFirestore extends TransactionalFirestore {
   constructor(docs = {}) {
+    super(docs);
     this.docs = new Map(Object.entries(docs).map(([path, data]) => [path, structuredClone(data)]));
     this.queries = [];
     // Every committed write, in order: { type: "set" | "delete", path }.
@@ -135,35 +140,16 @@ class FakeFirestore {
   }
 
   async runTransaction(callback) {
-    if (this.failNextTransaction) {
-      const error = this.failNextTransaction;
-      this.failNextTransaction = null;
-      throw error;
-    }
-    const writes = [];
-    const tx = {
-      get: async (target) => {
-        if (writes.length > 0)
-          throw new Error("Firestore transactions require all reads before writes");
-        return target.kind === "doc" ? this.snapshot(target.path) : target.get();
-      },
-      set: (ref, data, options) => writes.push({ type: "set", path: ref.path, data, options }),
-      delete: (ref) => writes.push({ type: "delete", path: ref.path }),
-    };
+    return super.runTransaction(callback);
+  }
 
-    const result = await callback(tx);
-    for (const write of writes) {
-      if (write.type === "delete") {
-        this.writes.push({ type: "delete", path: write.path });
-        this.docs.delete(write.path);
-      } else this.applyWrite(write.path, write.data, write.options);
-    }
-    return result;
+  write(path, data, options) {
+    this.applyWrite(path, data, options);
   }
 }
 
 function loadFunctions(docs) {
-  mockDb = new FakeFirestore(docs);
+  mockDb = new FakeFirestore(seedAllocationTokens(docs));
   let functions;
   let service;
   jest.isolateModules(() => {
@@ -173,7 +159,7 @@ function loadFunctions(docs) {
   return { functions, db: mockDb, service };
 }
 
-const call = (handler, data) => handler({ data });
+const call = (handler, data) => handler({ data: withExpectedAllocations(mockDb, data) });
 const doc = (db, path) => db.docs.get(path);
 
 describe("club rules", () => {
@@ -187,8 +173,8 @@ describe("club rules", () => {
   });
 
   test("member ids are trimmed and de-duplicated, keeping case and order", () => {
-    expect(normalizeMemberIds([" abcd ", "SN-1", "abcd", "sn-1"], "devices")).toEqual([
-      "abcd",
+    expect(normalizeMemberIds([" abcde ", "SN-1", "abcde", "sn-1"], "devices")).toEqual([
+      "abcde",
       "SN-1",
       "sn-1",
     ]);
@@ -196,7 +182,7 @@ describe("club rules", () => {
   });
 
   test("malformed or oversized member lists are rejected", () => {
-    expect(() => normalizeMemberIds("abcd", "courts")).toThrow("court ids must be a list.");
+    expect(() => normalizeMemberIds("abcde", "courts")).toThrow("court ids must be a list.");
     for (const bad of ["", "  ", 7, null, "a/b"]) {
       const error = (() => {
         try {
@@ -208,7 +194,11 @@ describe("club rules", () => {
       expect(error).toBeInstanceOf(ClubError);
       expect(error.code).toBe("invalid-argument");
     }
-    const tooMany = Array.from({ length: MAX_CLUB_COURTS + 1 }, (_, i) => `c${i}`);
+    const tooMany = Array.from(
+      { length: MAX_CLUB_COURTS + 1 },
+      (_, i) =>
+        `aaa${ID_ALPHABET[Math.floor(i / ID_ALPHABET.length)]}${ID_ALPHABET[i % ID_ALPHABET.length]}`,
+    );
     expect(() => normalizeMemberIds(tooMany, "courts")).toThrow(
       `A club can have at most ${MAX_CLUB_COURTS} courts.`,
     );
@@ -223,21 +213,18 @@ describe("club rules", () => {
     expect(() => normalizeClubState(42)).toThrow(ClubError);
   });
 
-  test("club ids are normalised to lower case and must be usable as a document id", () => {
-    expect(normalizeClubId(" ABCDEF ")).toBe("abcdef");
-    for (const bad of [undefined, "", "a/b", 12]) {
+  test("club ids require exactly four lowercase ID letters without normalization", () => {
+    expect(normalizeClubId("hjkm")).toBe("hjkm");
+    for (const bad of [undefined, "", "a/b", 12, " ABCDEFGHJK ", "fghjkm", "abcdefghj2"]) {
       expect(() => normalizeClubId(bad)).toThrow("A valid clubId is required.");
     }
   });
 
-  test("generated club ids use the court id alphabet", () => {
-    const values = [0, 0.99, 0.5, 0.25, 0.75, 0.1];
-    let i = 0;
-    const id = generateClubId(() => values[i++]);
-    expect(id).toHaveLength(CLUB_ID_LENGTH);
-    expect([...id].every((char) => CLUB_ID_ALPHABET.includes(char))).toBe(true);
-    expect(id[0]).toBe(CLUB_ID_ALPHABET[0]);
-    expect(id[1]).toBe(CLUB_ID_ALPHABET[CLUB_ID_ALPHABET.length - 1]);
+  test("allocated club ids use the common ID alphabet and club length", async () => {
+    const { service } = loadFunctions({});
+    const { clubId } = await service.createClub({ name: "Example Club" });
+    expect(clubId).toHaveLength(ID_LENGTHS.club);
+    expect([...clubId].every((char) => ID_ALPHABET.includes(char))).toBe(true);
   });
 
   test("the plan assigns new members, releases dropped ones and moves claimed ones", () => {
@@ -277,59 +264,78 @@ describe("club rules", () => {
 describe("createClub", () => {
   test("creates the club and links its courts and devices to it", async () => {
     const { service, db } = loadFunctions({
-      "courts/abcd": { name: "Court 1" },
-      "courts/efgh": { name: "Court 2", clubId: null },
-      "devices/HUB-1": { courtId: "abcd" },
+      "courts/abcde": { name: "Court 1" },
+      "courts/efghj": { name: "Court 2", clubId: null },
+      "devices/HUB-1": { courtId: "abcde" },
     });
 
     const values = [0, 0, 0, 0, 0, 0];
     const result = await service.createClub(
-      { name: " Central  Padel ", courtIds: ["abcd", "efgh"], deviceIds: ["HUB-1"] },
-      { random: () => values.shift() ?? 0 },
+      { name: " Central  Padel ", courtIds: ["abcde", "efghj"], deviceIds: ["HUB-1"] },
+      { randomInt: () => values.shift() ?? 0 },
     );
 
     expect(result).toEqual({
-      clubId: "aaaaaa",
+      allocationId: doc(db, "clubs/aaaa").allocationId,
+      clubId: "aaaa",
       name: "Central Padel",
       state: DEFAULT_CLUB_STATE,
-      courtIds: ["abcd", "efgh"],
+      courtIds: ["abcde", "efghj"],
       deviceIds: ["HUB-1"],
       moved: { courts: [], devices: [] },
       closedTournamentIds: [],
     });
-    expect(doc(db, "clubs/aaaaaa")).toEqual({
+    expect(result.allocationId).toMatch(/^[A-Za-z0-9_-]{16}$/);
+    expect(doc(db, "clubs/aaaa")).toEqual({
+      allocationId: expect.any(String),
       name: "Central Padel",
-      courtIds: ["abcd", "efgh"],
+      courtIds: ["abcde", "efghj"],
       deviceIds: ["HUB-1"],
       state: DEFAULT_CLUB_STATE,
       createdAt: { __serverTimestamp: true },
       updatedAt: { __serverTimestamp: true },
     });
-    expect(doc(db, "courts/abcd")).toEqual({ name: "Court 1", clubId: "aaaaaa" });
-    expect(doc(db, "courts/efgh")).toEqual({ name: "Court 2", clubId: "aaaaaa" });
-    expect(doc(db, "devices/HUB-1")).toEqual({ courtId: "abcd", clubId: "aaaaaa" });
+    expect(doc(db, "courts/abcde")).toEqual({
+      allocationId: seededAllocationId("courts/abcde"),
+      name: "Court 1",
+      clubId: "aaaa",
+      clubAllocationId: result.allocationId,
+    });
+    expect(doc(db, "courts/efghj")).toEqual({
+      allocationId: seededAllocationId("courts/efghj"),
+      name: "Court 2",
+      clubId: "aaaa",
+      clubAllocationId: result.allocationId,
+    });
+    expect(doc(db, "devices/HUB-1")).toEqual({
+      courtId: "abcde",
+      courtAllocationId: seededAllocationId("courts/abcde"),
+      clubId: "aaaa",
+      clubAllocationId: result.allocationId,
+    });
   });
 
   test("a generated id that is already taken is replaced by a fresh one", async () => {
-    const { service, db } = loadFunctions({ "clubs/aaaaaa": { name: "Taken" } });
-    const ids = [..."aaaaaa", ..."bbbbbb"].map(
-      (char) => (CLUB_ID_ALPHABET.indexOf(char) + 0.5) / CLUB_ID_ALPHABET.length,
-    );
+    const { service, db } = loadFunctions({ "clubs/aaaa": { name: "Taken" } });
+    const ids = [..."aaaa", ..."bbbb"].map((char) => ID_ALPHABET.indexOf(char));
 
-    const result = await service.createClub({ name: "Second" }, { random: () => ids.shift() });
+    const result = await service.createClub({ name: "Second" }, { randomInt: () => ids.shift() });
 
-    expect(result.clubId).toBe("bbbbbb");
-    expect(doc(db, "clubs/aaaaaa")).toEqual({ name: "Taken" });
-    expect(doc(db, "clubs/bbbbbb").name).toBe("Second");
+    expect(result.clubId).toBe("bbbb");
+    expect(doc(db, "clubs/aaaa")).toEqual({
+      allocationId: seededAllocationId("clubs/aaaa"),
+      name: "Taken",
+    });
+    expect(doc(db, "clubs/bbbb").name).toBe("Second");
   });
 
   test("the callable rejects unknown members and writes nothing", async () => {
-    const { functions, db } = loadFunctions({ "courts/abcd": { name: "Court 1" } });
+    const { functions, db } = loadFunctions({ "courts/abcde": { name: "Court 1" } });
     const before = structuredClone([...db.docs]);
 
     await expect(
-      call(functions.createClub, { name: "Club", courtIds: ["abcd", "zzzz"] }),
-    ).rejects.toMatchObject({ code: "not-found", message: "Unknown court id(s): zzzz." });
+      call(functions.createClub, { name: "Club", courtIds: ["abcde", "zzzzz"] }),
+    ).rejects.toMatchObject({ code: "not-found", message: "Unknown court id(s): zzzzz." });
     expect([...db.docs]).toEqual(before);
   });
 
@@ -346,155 +352,155 @@ describe("createClub", () => {
 
   test("closing a club cascades to its courts, devices, active matches and tournaments", async () => {
     const { functions, db } = loadFunctions({
-      "clubs/club01": {
+      "clubs/aaab": {
         name: "Club One",
         state: CLUB_STATES.OPEN,
-        courtIds: ["abcd"],
+        courtIds: ["abcde"],
         deviceIds: ["HUB-1"],
       },
-      "courts/abcd": {
+      "courts/abcde": {
         name: "A",
-        clubId: "club01",
+        clubId: "aaab",
         status: "open",
-        activeMatchId: "live-match",
+        activeMatchId: "fghjkm",
       },
-      "devices/HUB-1": { clubId: "club01" },
-      "matches/live-match": {
+      "devices/HUB-1": { clubId: "aaab" },
+      "matches/fghjkm": {
         status: "live",
-        currentCourtId: "abcd",
+        currentCourtId: "abcde",
       },
-      "matches/tournament-match": {
+      "matches/jkmnpq": {
         status: "scheduled",
         currentCourtId: null,
-        tournamentId: "club-tournament",
+        tournamentId: "abcdefg",
       },
-      "tournaments/club-tournament": {
-        tournamentId: "club-tournament",
+      "tournaments/abcdefg": {
+        tournamentId: "abcdefg",
         name: "Saturday Tournament",
         status: "published",
-        clubId: "club01",
+        clubId: "aaab",
         revision: 3,
       },
-      "tournaments/club-tournament/fixtures/f1": {
+      "tournaments/abcdefg/fixtures/f1": {
         fixtureId: "f1",
         status: "scheduled",
-        matchId: "tournament-match",
+        matchId: "jkmnpq",
       },
     });
 
     await call(functions.updateClub, {
-      clubId: "club01",
+      clubId: "aaab",
       name: "Club One",
       state: CLUB_STATES.CLOSED,
-      courtIds: ["abcd"],
+      courtIds: ["abcde"],
       deviceIds: [],
     });
 
-    expect(doc(db, "clubs/club01")).toMatchObject({
+    expect(doc(db, "clubs/aaab")).toMatchObject({
       state: CLUB_STATES.CLOSED,
-      courtIds: ["abcd"],
+      courtIds: ["abcde"],
       deviceIds: [],
     });
-    expect(doc(db, "courts/abcd")).toMatchObject({
+    expect(doc(db, "courts/abcde")).toMatchObject({
       status: "closed",
-      clubId: "club01",
+      clubId: "aaab",
       activeMatchId: null,
     });
     expect(doc(db, "devices/HUB-1").clubId).toBeNull();
-    expect(doc(db, "matches/live-match")).toMatchObject({
+    expect(doc(db, "matches/fghjkm")).toMatchObject({
       status: "live",
       currentCourtId: null,
     });
-    expect(doc(db, "matches/tournament-match")).toMatchObject({
+    expect(doc(db, "matches/jkmnpq")).toMatchObject({
       status: "cancelled",
       currentCourtId: null,
     });
-    expect(doc(db, "tournaments/club-tournament").status).toBe("cancelled");
-    expect(doc(db, "tournaments/club-tournament/fixtures/f1").status).toBe("cancelled");
+    expect(doc(db, "tournaments/abcdefg").status).toBe("cancelled");
+    expect(doc(db, "tournaments/abcdefg/fixtures/f1").status).toBe("cancelled");
   });
 
   test("moving an open club to maintenance does not cascade its entities", async () => {
     const { functions, db } = loadFunctions({
-      "clubs/club01": {
+      "clubs/aaab": {
         name: "Club One",
         state: CLUB_STATES.OPEN,
-        courtIds: ["abcd"],
+        courtIds: ["abcde"],
         deviceIds: ["HUB-1"],
       },
-      "courts/abcd": {
+      "courts/abcde": {
         name: "A",
-        clubId: "club01",
+        clubId: "aaab",
         status: "open",
-        activeMatchId: "live-match",
+        activeMatchId: "fghjkm",
       },
-      "devices/HUB-1": { clubId: "club01" },
-      "matches/live-match": { status: "live", currentCourtId: "abcd" },
+      "devices/HUB-1": { clubId: "aaab" },
+      "matches/fghjkm": { status: "live", currentCourtId: "abcde" },
     });
 
     await call(functions.updateClub, {
-      clubId: "club01",
+      clubId: "aaab",
       name: "Club One",
       state: CLUB_STATES.MAINTENANCE,
-      courtIds: ["abcd"],
+      courtIds: ["abcde"],
       deviceIds: ["HUB-1"],
     });
 
-    expect(doc(db, "clubs/club01").state).toBe(CLUB_STATES.MAINTENANCE);
-    expect(doc(db, "courts/abcd")).toMatchObject({ status: "open", activeMatchId: "live-match" });
-    expect(doc(db, "devices/HUB-1").clubId).toBe("club01");
-    expect(doc(db, "matches/live-match").currentCourtId).toBe("abcd");
+    expect(doc(db, "clubs/aaab").state).toBe(CLUB_STATES.MAINTENANCE);
+    expect(doc(db, "courts/abcde")).toMatchObject({ status: "open", activeMatchId: "fghjkm" });
+    expect(doc(db, "devices/HUB-1").clubId).toBe("aaab");
+    expect(doc(db, "matches/fghjkm").currentCourtId).toBe("abcde");
   });
 
   test("members of another club are moved to the new club", async () => {
     const { functions, db } = loadFunctions({
-      "clubs/other1": {
+      "clubs/aaad": {
         name: "Old Club",
         state: DEFAULT_CLUB_STATE,
-        courtIds: ["abcd", "efgh"],
+        courtIds: ["abcde", "efghj"],
         deviceIds: ["HUB-1"],
       },
-      "courts/abcd": { clubId: "other1" },
-      "courts/efgh": { clubId: "other1" },
-      "devices/HUB-1": { clubId: "other1" },
+      "courts/abcde": { clubId: "aaad" },
+      "courts/efghj": { clubId: "aaad" },
+      "devices/HUB-1": { clubId: "aaad" },
     });
 
     const result = await call(functions.createClub, {
       name: "New Club",
-      courtIds: ["abcd"],
+      courtIds: ["abcde"],
       deviceIds: ["HUB-1"],
     });
 
     expect(result.moved).toEqual({
-      courts: [{ id: "abcd", fromClubId: "other1", fromClubName: "Old Club" }],
-      devices: [{ id: "HUB-1", fromClubId: "other1", fromClubName: "Old Club" }],
+      courts: [{ id: "abcde", fromClubId: "aaad", fromClubName: "Old Club" }],
+      devices: [{ id: "HUB-1", fromClubId: "aaad", fromClubName: "Old Club" }],
     });
-    expect(doc(db, "clubs/other1")).toMatchObject({ courtIds: ["efgh"], deviceIds: [] });
-    expect(doc(db, "courts/abcd").clubId).toBe(result.clubId);
-    expect(doc(db, "courts/efgh").clubId).toBe("other1");
+    expect(doc(db, "clubs/aaad")).toMatchObject({ courtIds: ["efghj"], deviceIds: [] });
+    expect(doc(db, "courts/abcde").clubId).toBe(result.clubId);
+    expect(doc(db, "courts/efghj").clubId).toBe("aaad");
     expect(doc(db, "devices/HUB-1").clubId).toBe(result.clubId);
   });
 });
 
 describe("updateClub", () => {
   const seed = () => ({
-    "clubs/club01": {
+    "clubs/aaab": {
       name: "Club One",
       state: CLUB_STATES.OPEN,
-      courtIds: ["abcd", "efgh"],
+      courtIds: ["abcde", "efghj"],
       deviceIds: ["HUB-1"],
     },
-    "clubs/club02": {
+    "clubs/aaac": {
       name: "Club Two",
       state: CLUB_STATES.OPEN,
-      courtIds: ["jkmn"],
+      courtIds: ["jkmnp"],
       deviceIds: ["PULSE-9"],
     },
-    "courts/abcd": { name: "A", clubId: "club01" },
-    "courts/efgh": { name: "E", clubId: "club01" },
-    "courts/jkmn": { name: "J", clubId: "club02" },
-    "courts/pqrs": { name: "P" },
-    "devices/HUB-1": { clubId: "club01" },
-    "devices/PULSE-9": { clubId: "club02" },
+    "courts/abcde": { name: "A", clubId: "aaab" },
+    "courts/efghj": { name: "E", clubId: "aaab" },
+    "courts/jkmnp": { name: "J", clubId: "aaac" },
+    "courts/pqrst": { name: "P" },
+    "devices/HUB-1": { clubId: "aaab" },
+    "devices/PULSE-9": { clubId: "aaac" },
     "devices/BEACON-3": {},
   });
 
@@ -502,114 +508,118 @@ describe("updateClub", () => {
     const { functions, db } = loadFunctions(seed());
 
     const result = await call(functions.updateClub, {
-      clubId: "CLUB01",
+      clubId: "aaab",
       name: "Club One Renamed",
-      courtIds: ["efgh", "pqrs"],
+      courtIds: ["efghj", "pqrst"],
       deviceIds: ["BEACON-3"],
     });
 
     expect(result).toEqual({
-      clubId: "club01",
+      clubId: "aaab",
       name: "Club One Renamed",
       state: CLUB_STATES.OPEN,
-      courtIds: ["efgh", "pqrs"],
+      courtIds: ["efghj", "pqrst"],
       deviceIds: ["BEACON-3"],
       moved: { courts: [], devices: [] },
       closedTournamentIds: [],
     });
-    expect(doc(db, "clubs/club01")).toMatchObject({
+    expect(doc(db, "clubs/aaab")).toMatchObject({
       name: "Club One Renamed",
-      courtIds: ["efgh", "pqrs"],
+      courtIds: ["efghj", "pqrst"],
       deviceIds: ["BEACON-3"],
     });
-    expect(doc(db, "clubs/club01").createdAt).toBeUndefined();
-    expect(doc(db, "courts/abcd").clubId).toBeNull();
-    expect(doc(db, "courts/efgh").clubId).toBe("club01");
-    expect(doc(db, "courts/pqrs").clubId).toBe("club01");
+    expect(doc(db, "clubs/aaab").createdAt).toBeUndefined();
+    expect(doc(db, "courts/abcde").clubId).toBeNull();
+    expect(doc(db, "courts/efghj").clubId).toBe("aaab");
+    expect(doc(db, "courts/pqrst").clubId).toBe("aaab");
     expect(doc(db, "devices/HUB-1").clubId).toBeNull();
-    expect(doc(db, "devices/BEACON-3").clubId).toBe("club01");
-    expect(doc(db, "clubs/club02")).toEqual(seed()["clubs/club02"]);
+    expect(doc(db, "devices/BEACON-3").clubId).toBe("aaab");
+    expect(doc(db, "clubs/aaac")).toEqual(seedAllocationTokens(seed())["clubs/aaac"]);
   });
 
   test("taking a member from another club removes it from that club", async () => {
     const { functions, db } = loadFunctions(seed());
 
     const result = await call(functions.updateClub, {
-      clubId: "club01",
+      clubId: "aaab",
       name: "Club One",
       state: CLUB_STATES.OPEN,
-      courtIds: ["abcd", "efgh", "jkmn"],
+      courtIds: ["abcde", "efghj", "jkmnp"],
       deviceIds: ["HUB-1", "PULSE-9"],
     });
 
     expect(result.moved).toEqual({
-      courts: [{ id: "jkmn", fromClubId: "club02", fromClubName: "Club Two" }],
-      devices: [{ id: "PULSE-9", fromClubId: "club02", fromClubName: "Club Two" }],
+      courts: [{ id: "jkmnp", fromClubId: "aaac", fromClubName: "Club Two" }],
+      devices: [{ id: "PULSE-9", fromClubId: "aaac", fromClubName: "Club Two" }],
     });
-    expect(doc(db, "clubs/club02")).toMatchObject({ courtIds: [], deviceIds: [] });
-    expect(doc(db, "courts/jkmn").clubId).toBe("club01");
-    expect(doc(db, "devices/PULSE-9").clubId).toBe("club01");
+    expect(doc(db, "clubs/aaac")).toMatchObject({ courtIds: [], deviceIds: [] });
+    expect(doc(db, "courts/jkmnp").clubId).toBe("aaab");
+    expect(doc(db, "devices/PULSE-9").clubId).toBe("aaab");
   });
 
   test("a member never sits in two club lists, even when its clubId is stale", async () => {
     const docs = seed();
-    // jkmn is listed by club02 but its own document lost the clubId.
-    delete docs["courts/jkmn"].clubId;
+    // jkmn is listed by the other club but its own document lost the clubId.
+    delete docs["courts/jkmnp"].clubId;
     const { functions, db } = loadFunctions(docs);
 
     await call(functions.updateClub, {
-      clubId: "club01",
+      clubId: "aaab",
       name: "Club One",
-      courtIds: ["jkmn"],
+      courtIds: ["jkmnp"],
       deviceIds: [],
     });
 
-    expect(doc(db, "clubs/club01").courtIds).toEqual(["jkmn"]);
-    expect(doc(db, "clubs/club02").courtIds).toEqual([]);
-    expect(doc(db, "courts/jkmn").clubId).toBe("club01");
+    expect(doc(db, "clubs/aaab").courtIds).toEqual(["jkmnp"]);
+    expect(doc(db, "clubs/aaac").courtIds).toEqual([]);
+    expect(doc(db, "courts/jkmnp").clubId).toBe("aaab");
   });
 
   test("a dropped member already claimed by another club keeps that club", async () => {
     const docs = seed();
-    docs["courts/efgh"].clubId = "club02";
+    docs["courts/efghj"].clubId = "aaac";
     const { functions, db } = loadFunctions(docs);
 
     await call(functions.updateClub, {
-      clubId: "club01",
+      clubId: "aaab",
       name: "Club One",
-      courtIds: ["abcd"],
+      courtIds: ["abcde"],
       deviceIds: ["HUB-1"],
     });
 
-    expect(doc(db, "courts/efgh").clubId).toBe("club02");
+    expect(doc(db, "courts/efghj").clubId).toBe("aaac");
   });
 
   test("ids of deleted members are dropped from the club without error", async () => {
     const docs = seed();
-    delete docs["courts/efgh"];
+    delete docs["courts/efghj"];
     const { functions, db } = loadFunctions(docs);
 
     await call(functions.updateClub, {
-      clubId: "club01",
+      clubId: "aaab",
       name: "Club One",
-      courtIds: ["abcd"],
+      courtIds: ["abcde"],
       deviceIds: ["HUB-1"],
     });
 
-    expect(doc(db, "clubs/club01").courtIds).toEqual(["abcd"]);
-    expect(db.docs.has("courts/efgh")).toBe(false);
+    expect(doc(db, "clubs/aaab").courtIds).toEqual(["abcde"]);
+    expect(db.docs.has("courts/efghj")).toBe(false);
   });
 
   test("large member lists are looked up in batches of 30", async () => {
-    const docs = { "clubs/club01": { name: "Club One", courtIds: [], deviceIds: [] } };
-    const courtIds = Array.from({ length: 35 }, (_, i) => `c${String(i).padStart(2, "0")}`);
+    const docs = { "clubs/aaab": { name: "Club One", courtIds: [], deviceIds: [] } };
+    const courtIds = Array.from(
+      { length: 35 },
+      (_, i) =>
+        `aaa${ID_ALPHABET[Math.floor(i / ID_ALPHABET.length)]}${ID_ALPHABET[i % ID_ALPHABET.length]}`,
+    );
     for (const id of courtIds) docs[`courts/${id}`] = {};
-    docs["clubs/club02"] = { name: "Club Two", courtIds: ["c33"], deviceIds: [] };
-    docs["courts/c33"] = { clubId: "club02" };
+    docs["clubs/aaac"] = { name: "Club Two", courtIds: [courtIds[33]], deviceIds: [] };
+    docs[`courts/${courtIds[33]}`] = { clubId: "aaac" };
     const { functions, db } = loadFunctions(docs);
 
     const result = await call(functions.updateClub, {
-      clubId: "club01",
+      clubId: "aaab",
       name: "Club One",
       courtIds,
       deviceIds: [],
@@ -618,40 +628,45 @@ describe("updateClub", () => {
     const courtQueries = db.queries.filter((query) => query.filters[0].field === "courtIds");
     expect(courtQueries.map((query) => query.filters[0].value.length)).toEqual([30, 5]);
     expect(result.moved.courts).toEqual([
-      { id: "c33", fromClubId: "club02", fromClubName: "Club Two" },
+      { id: courtIds[33], fromClubId: "aaac", fromClubName: "Club Two" },
     ]);
-    expect(doc(db, "clubs/club02").courtIds).toEqual([]);
+    expect(doc(db, "clubs/aaac").courtIds).toEqual([]);
   });
 
   test("an unknown club is reported as not-found", async () => {
     const { functions } = loadFunctions(seed());
     await expect(
-      call(functions.updateClub, { clubId: "nope00", name: "X", courtIds: [], deviceIds: [] }),
-    ).rejects.toMatchObject({ code: "not-found", message: "Club nope00 not found." });
+      call(functions.updateClub, { clubId: "zzzz", name: "X", courtIds: [], deviceIds: [] }),
+    ).rejects.toMatchObject({ code: "not-found", message: "Club zzzz not found." });
   });
 });
 
 describe("deleteClub", () => {
   test("deletes the club and clears clubId on the members it still owns", async () => {
     const { functions, db } = loadFunctions({
-      "clubs/club01": { name: "Club One", courtIds: ["abcd", "efgh"], deviceIds: ["HUB-1"] },
-      "courts/abcd": { name: "A", clubId: "club01" },
-      "courts/efgh": { name: "E", clubId: "club02" },
-      "devices/HUB-1": { clubId: "club01" },
+      "clubs/aaab": { name: "Club One", courtIds: ["abcde", "efghj"], deviceIds: ["HUB-1"] },
+      "courts/abcde": { name: "A", clubId: "aaab" },
+      "courts/efghj": { name: "E", clubId: "aaac" },
+      "devices/HUB-1": { clubId: "aaab" },
     });
 
-    const result = await call(functions.deleteClub, { clubId: "club01" });
+    const result = await call(functions.deleteClub, { clubId: "aaab" });
 
-    expect(result).toEqual({ clubId: "club01", releasedCount: 2 });
-    expect(db.docs.has("clubs/club01")).toBe(false);
-    expect(doc(db, "courts/abcd")).toEqual({ name: "A", clubId: null });
-    expect(doc(db, "courts/efgh").clubId).toBe("club02");
+    expect(result).toEqual({ clubId: "aaab", releasedCount: 2 });
+    expect(db.docs.has("clubs/aaab")).toBe(false);
+    expect(doc(db, "courts/abcde")).toEqual({
+      allocationId: seededAllocationId("courts/abcde"),
+      name: "A",
+      clubId: null,
+      clubAllocationId: null,
+    });
+    expect(doc(db, "courts/efghj").clubId).toBe("aaac");
     expect(doc(db, "devices/HUB-1").clubId).toBeNull();
   });
 
   test("an unknown club is reported as not-found", async () => {
     const { functions } = loadFunctions({});
-    await expect(call(functions.deleteClub, { clubId: "nope00" })).rejects.toMatchObject({
+    await expect(call(functions.deleteClub, { clubId: "zzzz" })).rejects.toMatchObject({
       code: "not-found",
     });
   });
@@ -660,15 +675,52 @@ describe("deleteClub", () => {
 describe("member deletion triggers", () => {
   test("a deleted court or device leaves every club that listed it", async () => {
     const { functions, db } = loadFunctions({
-      "clubs/club01": { name: "One", courtIds: ["abcd", "efgh"], deviceIds: ["HUB-1"] },
-      "clubs/club02": { name: "Two", courtIds: ["abcd"], deviceIds: [] },
+      "clubs/aaab": { name: "One", courtIds: ["abcde", "efghj"], deviceIds: ["HUB-1"] },
+      "clubs/aaac": { name: "Two", courtIds: ["abcde"], deviceIds: [] },
     });
 
-    await functions.onCourtDeleted({ params: { courtId: "abcd" } });
+    await functions.onCourtDeleted({ params: { courtId: "abcde" } });
     await functions.onDeviceDeleted({ params: { deviceId: "HUB-1" } });
 
-    expect(doc(db, "clubs/club01")).toMatchObject({ courtIds: ["efgh"], deviceIds: [] });
-    expect(doc(db, "clubs/club02")).toMatchObject({ courtIds: [] });
+    expect(doc(db, "clubs/aaab")).toMatchObject({ courtIds: ["efghj"], deviceIds: [] });
+    expect(doc(db, "clubs/aaac")).toMatchObject({ courtIds: [] });
+  });
+});
+
+describe("club callable allocation expectations", () => {
+  test.each([
+    ["updateClub", "missing"],
+    ["updateClub", "stale"],
+    ["deleteClub", "missing"],
+    ["deleteClub", "stale"],
+  ])("%s rejects a %s club token without altering members", async (operation, kind) => {
+    const { functions, db } = loadFunctions({
+      "clubs/aaab": { name: "One", courtIds: ["abcde"], deviceIds: [] },
+      "courts/abcde": { name: "Court A", clubId: "aaab" },
+    });
+    const data = withExpectedAllocations(db, {
+      clubId: "aaab",
+      name: "Renamed",
+      courtIds: [],
+      deviceIds: [],
+    });
+    if (kind === "missing") data.expectedAllocations = {};
+    else {
+      db.write(
+        "clubs/aaab",
+        {
+          allocationId: seededAllocationId("clubs/aaab:replacement"),
+        },
+        { merge: true },
+      );
+    }
+    const before = structuredClone([...db.docs]);
+    await expect(call(functions[operation], data)).rejects.toMatchObject(
+      kind === "missing"
+        ? { code: "failed-precondition", message: "An expected allocation token is required." }
+        : { code: "aborted", message: "This record was replaced. Refresh and retry." },
+    );
+    expect([...db.docs]).toEqual(before);
   });
 });
 
@@ -720,31 +772,31 @@ describe("club rules - edge cases", () => {
 describe("club persistence - edge cases", () => {
   test("creating gives up with aborted after five id collisions", async () => {
     const docs = {};
-    for (const id of ["aaaaaa"]) docs[`clubs/${id}`] = { name: "Taken" };
+    for (const id of ["aaaa"]) docs[`clubs/${id}`] = { name: "Taken" };
     const { service, db } = loadFunctions(docs);
 
     await expect(
-      service.createClub({ name: "Unlucky" }, { random: () => 0 }),
+      service.createClub({ name: "Unlucky" }, { randomInt: () => 0 }),
     ).rejects.toMatchObject({
       code: "aborted",
     });
-    expect([...db.docs.keys()]).toEqual(["clubs/aaaaaa"]);
+    expect([...db.docs.keys()]).toEqual(["clubs/aaaa"]);
   });
 
   test("an update naming an unknown member is rejected and writes nothing", async () => {
     const { functions, db } = loadFunctions({
-      "clubs/club01": { name: "One", courtIds: ["abcd"], deviceIds: [] },
-      "clubs/club02": { name: "Two", courtIds: ["efgh"], deviceIds: [] },
-      "courts/abcd": { clubId: "club01" },
-      "courts/efgh": { clubId: "club02" },
+      "clubs/aaab": { name: "One", courtIds: ["abcde"], deviceIds: [] },
+      "clubs/aaac": { name: "Two", courtIds: ["efghj"], deviceIds: [] },
+      "courts/abcde": { clubId: "aaab" },
+      "courts/efghj": { clubId: "aaac" },
     });
     const before = structuredClone([...db.docs]);
 
     await expect(
       call(functions.updateClub, {
-        clubId: "club01",
+        clubId: "aaab",
         name: "One",
-        courtIds: ["efgh"],
+        courtIds: ["efghj"],
         deviceIds: ["NOPE-1"],
       }),
     ).rejects.toMatchObject({ code: "not-found", message: "Unknown device id(s): NOPE-1." });
@@ -754,54 +806,52 @@ describe("club persistence - edge cases", () => {
 
   test("saving unchanged members only rewrites the club document", async () => {
     const { functions, db } = loadFunctions({
-      "clubs/club01": { name: "One", courtIds: ["abcd"], deviceIds: ["HUB-1"] },
-      "courts/abcd": { clubId: "club01" },
-      "devices/HUB-1": { clubId: "club01" },
+      "clubs/aaab": { name: "One", courtIds: ["abcde"], deviceIds: ["HUB-1"] },
+      "courts/abcde": { clubId: "aaab" },
+      "devices/HUB-1": { clubId: "aaab" },
     });
 
     await call(functions.updateClub, {
-      clubId: "club01",
+      clubId: "aaab",
       name: "One Renamed",
-      courtIds: ["abcd"],
+      courtIds: ["abcde"],
       deviceIds: ["HUB-1"],
     });
 
-    expect(db.writes).toEqual([{ type: "set", path: "clubs/club01" }]);
-    expect(doc(db, "clubs/club01").name).toBe("One Renamed");
+    expect(db.writes).toEqual([{ type: "set", path: "clubs/aaab" }]);
+    expect(doc(db, "clubs/aaab").name).toBe("One Renamed");
   });
 
   test("a member pointing at a club that no longer exists is simply taken over", async () => {
     const { functions, db } = loadFunctions({
-      "clubs/club01": { name: "One", courtIds: [], deviceIds: [] },
-      "courts/abcd": { clubId: "vanished" },
+      "clubs/aaab": { name: "One", courtIds: [], deviceIds: [] },
+      "courts/abcde": { clubId: "xxxx" },
     });
 
     const result = await call(functions.updateClub, {
-      clubId: "club01",
+      clubId: "aaab",
       name: "One",
-      courtIds: ["abcd"],
+      courtIds: ["abcde"],
       deviceIds: [],
     });
 
-    expect(result.moved.courts).toEqual([
-      { id: "abcd", fromClubId: "vanished", fromClubName: null },
-    ]);
-    expect(db.docs.has("clubs/vanished")).toBe(false);
-    expect(doc(db, "courts/abcd").clubId).toBe("club01");
+    expect(result.moved.courts).toEqual([{ id: "abcde", fromClubId: "xxxx", fromClubName: null }]);
+    expect(db.docs.has("clubs/xxxx")).toBe(false);
+    expect(doc(db, "courts/abcde").clubId).toBe("aaab");
   });
 
   test("deleting a club tolerates members whose documents were deleted", async () => {
     const { functions, db } = loadFunctions({
-      "clubs/club01": { name: "One", courtIds: ["gone"], deviceIds: ["HUB-1"] },
-      "devices/HUB-1": { clubId: "club01" },
+      "clubs/aaab": { name: "One", courtIds: ["pqrst"], deviceIds: ["HUB-1"] },
+      "devices/HUB-1": { clubId: "aaab" },
     });
 
-    await expect(call(functions.deleteClub, { clubId: "club01" })).resolves.toEqual({
-      clubId: "club01",
+    await expect(call(functions.deleteClub, { clubId: "aaab" })).resolves.toEqual({
+      clubId: "aaab",
       releasedCount: 1,
     });
-    expect(db.docs.has("courts/gone")).toBe(false);
-    expect(db.docs.has("clubs/club01")).toBe(false);
+    expect(db.docs.has("courts/pqrst")).toBe(false);
+    expect(db.docs.has("clubs/aaab")).toBe(false);
   });
 
   test("the callables accept a request without data as invalid input", async () => {
@@ -812,21 +862,21 @@ describe("club persistence - edge cases", () => {
   });
 
   test("unexpected failures are not disguised as club errors", async () => {
-    const { functions, db } = loadFunctions({ "courts/abcd": {} });
+    const { functions, db } = loadFunctions({ "courts/abcde": {} });
     const failure = new Error("Firestore unavailable");
     db.failNextTransaction = failure;
 
-    await expect(call(functions.createClub, { name: "Club", courtIds: ["abcd"] })).rejects.toBe(
+    await expect(call(functions.createClub, { name: "Club", courtIds: ["abcde"] })).rejects.toBe(
       failure,
     );
   });
 
   test("a deleted member that no club lists causes no writes", async () => {
     const { functions, db } = loadFunctions({
-      "clubs/club01": { name: "One", courtIds: ["abcd"], deviceIds: [] },
+      "clubs/aaab": { name: "One", courtIds: ["abcde"], deviceIds: [] },
     });
 
-    await functions.onCourtDeleted({ params: { courtId: "zzzz" } });
+    await functions.onCourtDeleted({ params: { courtId: "zzzzz" } });
     expect(db.writes).toEqual([]);
   });
 });
@@ -838,7 +888,9 @@ describe("Cloud Functions exports", () => {
       [
         "changeoverCourt",
         "createClub",
+        "createCourt",
         "deleteClub",
+        "deleteCourt",
         "getCourtMomentum",
         "getCourtScore",
         "getCourtScoreRevision",

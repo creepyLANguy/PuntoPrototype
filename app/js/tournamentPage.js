@@ -16,15 +16,24 @@ import { h, replaceContent } from "./tournament/elements.js";
 import { renderLanding } from "./tournament/landing.js";
 import { createTournamentController } from "./tournament/tournamentController.js";
 import { renderWizard } from "./tournament/wizard.js";
+import { getTournamentIdFromPathname } from "./routing/routeParsers.js";
 
 function parseRoute(pathname) {
   const match = pathname
     .replace(/\/+$/, "")
     .match(/^\/(?:app\/)?t(?:\/([^/]+))?$/i);
   if (!match || !match[1]) return { page: "landing" };
-  const segment = decodeURIComponent(match[1]).trim();
-  if (segment.toLowerCase() === "new") return { page: "new" };
-  return { page: "tournament", tournamentId: segment.toLowerCase() };
+  let segment;
+  try {
+    segment = decodeURIComponent(match[1]).trim().toLowerCase();
+  } catch {
+    return { page: "notFound" };
+  }
+  if (segment === "new") return { page: "new" };
+  const tournamentId = getTournamentIdFromPathname(pathname);
+  return tournamentId
+    ? { page: "tournament", tournamentId }
+    : { page: "notFound" };
 }
 
 // Keys in the URL are stored on the device and removed from the address bar
@@ -76,6 +85,15 @@ async function startWizard(container) {
 function start() {
   const container = document.getElementById("tournamentApp");
   const route = parseRoute(window.location.pathname);
+
+  if (route.page === "notFound") {
+    document.title = "Tournament not found | Padel Push™";
+    replaceContent(
+      container,
+      h("p", { className: "ev-hint" }, "Tournament not found."),
+    );
+    return;
+  }
 
   if (route.page === "new") {
     document.title = "New tournament | Padel Push™";

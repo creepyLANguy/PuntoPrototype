@@ -29,13 +29,65 @@ The collection relationships are visualized in [PP_Data_Model.mmd](PP_Data_Model
 | devices/{deviceId} | Device identity, SKU, current court binding and club |
 | clubs/{clubId} | Club identity and the courts and devices that belong to it |
 
+## Resource IDs
+
+All resource IDs use only the 21-character alphabet `abcdefghjkmnpqrstuxyz`:
+
+| Type | Length |
+|---|---|
+| clubId | 4 |
+| courtId | 5 |
+| matchId | 6 |
+| tournamentId | 7 |
+
+Backend allocation checks only the target type's collection within the same
+Firestore transaction that creates its document. Allocating transactions use
+`services/ids.runIdTransaction(db, callback, options)` to start a fresh reservation
+context at every callback invocation: the Admin SDK reuses its Transaction object
+across retry attempts. Rolled-back reservations must not survive that retry.
+The canonical allocator tries at most `MAX_ID_ALLOCATION_ATTEMPTS = 5` candidates
+per allocation within each attempt before returning an `aborted` error. Retries
+recheck collisions; create-only writes prevent overwriting an existing resource.
+Multiple allocations in one attempt reserve candidates synchronously before
+awaiting collision reads, and all reads precede the transaction's actual writes.
+`allocateId` rejects calls outside an active `runIdTransaction` callback.
+Tournament planners use `deferIdTransactionWrites(transaction)` to share that
+attempt's reservation context while queuing writes, then flush only after all
+collision and relationship reads finish.
+
+The frontend requests creation through `createWithUniqueId(type, data,
+credentials)`; it never generates a resource ID or separately checks uniqueness.
+Supplied internal IDs must satisfy their type's exact lowercase length and
+alphabet. Legacy formats are not supported; clear and repopulate the database
+before using this contract.
+
+All four lengths are distinct, so collisions are checked only within the
+requested ID type. Repeated characters remain valid.
+
+Resource roots carry an immutable `allocationId` identifying that assignment.
+Mutations must use the previously observed allocation, rather than rereading a
+reassigned ID as the original entity. Device bindings carry
+`courtAllocationId` and `clubAllocationId`; court match pointers carry
+`activeMatchAllocationId` and `lastMatchAllocationId`. Scoring events identify
+both the match allocation and their court allocation.
+Frontend wrappers do not treat tokenless mutation acknowledgements as resource
+snapshots. A fixture-creation response's allocation token identifies its match,
+not the owning tournament.
+
+Deleting a resource root frees its short ID for future allocation. If that ID is
+later assigned again, its new `allocationId` distinguishes the replacement;
+stale operations and references are rejected rather than applied to the new
+resource. Public API cache keys include the allocation generation so a reused
+ID cannot serve a previous assignment's cached response.
+
 ## Court document
 
-The current frontend creates court documents with fields including:
+The backend `createCourt` callable creates court documents with fields including:
 
 - name
 - password
 - createdAt
+- allocationId
 - status
 - scoringMode / scoringOptions defaults for casual matches
 - beaconSidesSwapped

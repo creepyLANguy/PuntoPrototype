@@ -2,6 +2,7 @@
 // bulk participant parsing and club-first court candidate ordering.
 const { TournamentDomainError } = require("./errors");
 const { getFormat } = require("./formats");
+const { validateId } = require("../../services/ids");
 
 const TOURNAMENT_STATUSES = ["draft", "published", "live", "completed", "cancelled"];
 const NAME_MAX = 80;
@@ -109,16 +110,18 @@ function normalizeTournamentInput(input = {}, previous = null) {
   if (!formatInput?.id) fail("INVALID_FORMAT", "Choose a tournament format.");
   const format = input.format ? normalizeFormat(input.format) : previous.format;
 
-  const courtPool = Array.isArray(input.courtPool ?? previous?.courtPool)
-    ? [...new Set((input.courtPool ?? previous.courtPool).filter((id) => typeof id === "string"))]
-    : [];
+  const courtSource = input.courtPool ?? previous?.courtPool ?? [];
+  if (!Array.isArray(courtSource)) fail("INVALID_COURTS", "Court ids must be a list.");
+  const courtPool = [...new Set(courtSource.map((id) => validateId("court", id)))];
   if (courtPool.length > MAX_COURTS) fail("TOO_MANY_COURTS", `At most ${MAX_COURTS} courts.`);
 
   const clubSource = input.clubId !== undefined ? input.clubId : previous?.clubId;
+  const clubId =
+    clubSource === undefined || clubSource === null ? null : validateId("club", clubSource);
   return {
     name,
     description: cleanText(input.description ?? previous?.description ?? "", DESCRIPTION_MAX),
-    clubId: typeof clubSource === "string" && clubSource.trim() ? clubSource.trim() : null,
+    clubId,
     visibility: (input.visibility ?? previous?.visibility) === "private" ? "private" : "public",
     format,
     participantMode: resolveParticipantMode(

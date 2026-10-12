@@ -6,6 +6,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { JSDOM } from "jsdom";
+import { ID_ALPHABET, assertId } from "../../app/js/config/idContract.js";
 
 import {
   firestoreState,
@@ -15,6 +16,7 @@ import {
   flushBackendWork,
   getBackendScore,
   callableHandlers,
+  deleteDocAt,
   resolveMatchIdForCourt,
 } from "./mockFirestoreState.mjs";
 
@@ -216,7 +218,7 @@ export function seedBaseData() {
 const MATCH_FIELDS = ["teamNames", "playerNames", "scoringMode", "scoringOptions", "scoreVersion"];
 
 export function matchIdForCourt(courtId) {
-  return `m-${courtId}`;
+  return `${assertId("court", courtId)}a`;
 }
 
 // Seeds a court and the live casual match on it. Name, scoring and score
@@ -291,13 +293,21 @@ callableHandlers.set("manageMatch", async ({ operation, courtId }) => {
       data: {
         success: true,
         matchId: court.activeMatchId,
+        allocationId: active.allocationId,
         scoreVersion: Number(active.scoreVersion) || 0,
         created: false,
       },
     };
   }
   createdMatchCounter += 1;
-  const matchId = `m-${courtId}-${createdMatchCounter}`;
+  const suffix = Array.from(
+    { length: 6 },
+    (_, index) =>
+      ID_ALPHABET[
+        Math.floor(createdMatchCounter / ID_ALPHABET.length ** index) % ID_ALPHABET.length
+      ],
+  ).join("");
+  const matchId = suffix;
   const scoringOptions = court.scoringOptions || {
     scoringMode: "standard",
     deuceMode: "standard",
@@ -305,6 +315,7 @@ callableHandlers.set("manageMatch", async ({ operation, courtId }) => {
   };
   writeDoc(`matches/${matchId}`, {
     matchId,
+    allocationId: `allocation-matches-${matchId}`,
     name: null,
     kind: "casual",
     visibility: "public",
@@ -319,8 +330,22 @@ callableHandlers.set("manageMatch", async ({ operation, courtId }) => {
     tournamentId: null,
   });
   writeDoc(`courts/${courtId}`, { ...court, activeMatchId: matchId, lastMatchId: matchId });
-  return { data: { success: true, matchId, scoreVersion: 0, created: true } };
+  return {
+    data: {
+      success: true,
+      matchId,
+      allocationId: `allocation-matches-${matchId}`,
+      scoreVersion: 0,
+      created: true,
+    },
+  };
 });
+
+callableHandlers.set("deleteCourt", async ({ courtId }) => {
+  deleteDocAt(`courts/${courtId}`);
+  return { data: { success: true, courtId } };
+});
+
 export function makeScore(overrides = {}) {
   return {
     A: { points: 0, games: 0, sets: 0, totalPoints: 0 },

@@ -8,7 +8,7 @@
 const crypto = require("crypto");
 const { db } = require("../infrastructure/firebase");
 const { paths } = require("./firestorePaths");
-const { secretsMatch } = require("./ids");
+const { secretsMatch, validateId } = require("./ids");
 const { denied } = require("./errors");
 
 function readCredentials(request) {
@@ -47,6 +47,7 @@ async function requireAdmin(credentials) {
 }
 
 async function authorizeTournamentHost(tournamentId, credentials) {
+  validateId("tournament", tournamentId);
   if (await isAdmin(credentials)) return actorFor("admin", credentials);
   if (credentials.hostKey) {
     const secretSnap = await db.doc(paths.tournamentSecret(tournamentId)).get();

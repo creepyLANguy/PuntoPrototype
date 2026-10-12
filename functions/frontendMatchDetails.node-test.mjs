@@ -17,7 +17,7 @@ import {
   callableHandlers,
 } from "./frontendHarness/harness.mjs";
 
-const COURT_ID = "courtdetails";
+const COURT_ID = "detsa";
 
 let document;
 
@@ -169,7 +169,7 @@ test("the details tables render while the momentum payload is still in flight", 
   assert.equal(document.getElementById("detailsLoading").classList.contains("hidden"), true);
 
   assert.equal(momentumRequests.length, 1, "momentum is fetched exactly once per open");
-  assert.match(momentumRequests[0], new RegExp(`/momentum/match/m-${COURT_ID}$`));
+  assert.match(momentumRequests[0], new RegExp(`/momentum/match/${COURT_ID}a$`));
 });
 
 test("stat columns are fitted when the detailed panel is expanded after rendering", async () => {
@@ -399,17 +399,16 @@ test("serve statistics appear only when serving is valid, preserving legitimate 
 
     document.getElementById("detailsBtn").click();
 
-    await waitFor(
-      () => document.querySelector("#dmStatsTeam .dm-stats-table"),
-      { label: `${scenario.name} stats table` },
-    );
+    await waitFor(() => document.querySelector("#dmStatsTeam .dm-stats-table"), {
+      label: `${scenario.name} stats table`,
+    });
 
     const statsTable = document.querySelector("#dmStatsTeam .dm-stats-table");
     assert.ok(statsTable, `${scenario.name}: stats table should render`);
 
-    const serveHeader = Array.from(
-      statsTable.querySelectorAll(".dm-st-section-hdr"),
-    ).find((row) => row.textContent.trim() === "On Serve");
+    const serveHeader = Array.from(statsTable.querySelectorAll(".dm-st-section-hdr")).find(
+      (row) => row.textContent.trim() === "On Serve",
+    );
 
     assert.equal(
       Boolean(serveHeader),
@@ -423,12 +422,21 @@ test("serve statistics appear only when serving is valid, preserving legitimate 
 
       assert.ok(firstServeRow, `${scenario.name}: Player 1 serve row should exist`);
       assert.ok(secondServeRow, `${scenario.name}: Player 2 serve row should exist`);
-      assert.match(firstServeRow.textContent, /0\/0 \(0%\)/,
-        `${scenario.name}: an unserved Player 1 slot should show 0/0 (0%)`);
-      assert.match(secondServeRow.textContent, /0\/0 \(0%\)/,
-        `${scenario.name}: unserved Player 2 slots should show 0/0 (0%)`);
-      assert.match(firstServeRow.textContent, /1\/1 \(100%\)/,
-        `${scenario.name}: the player who has served must show actual serve statistics`);
+      assert.match(
+        firstServeRow.textContent,
+        /0\/0 \(0%\)/,
+        `${scenario.name}: an unserved Player 1 slot should show 0/0 (0%)`,
+      );
+      assert.match(
+        secondServeRow.textContent,
+        /0\/0 \(0%\)/,
+        `${scenario.name}: unserved Player 2 slots should show 0/0 (0%)`,
+      );
+      assert.match(
+        firstServeRow.textContent,
+        /1\/1 \(100%\)/,
+        `${scenario.name}: the player who has served must show actual serve statistics`,
+      );
     } else {
       assert.doesNotMatch(
         statsTable.textContent,

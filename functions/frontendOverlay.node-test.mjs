@@ -18,7 +18,7 @@ const overlayPath = path.join(
   "overlay.html",
 );
 
-const COURT_ID = "bnrm";
+const COURT_ID = "bnrma";
 const STORAGE_KEY = "padelPushOverlaySettings:" + COURT_ID;
 
 const SCORE_PAYLOAD = {
@@ -286,7 +286,7 @@ test("the match name is the overlay's primary identity and the court is secondar
   const page = await bootOverlay({
     scorePayload: {
       ...SCORE_PAYLOAD,
-      matchId: "k3h8fq2a",
+      matchId: "khfqab",
       matchName: "Friday Night Final",
       title: "Friday Night Final",
       courtName: "Court 03",
@@ -294,24 +294,24 @@ test("the match name is the overlay's primary identity and the court is secondar
   });
 
   assert.equal(page.$("matchTitle").textContent, "Friday Night Final");
-  assert.equal(page.$("courtLabel").textContent, "Court 03 - Join: BNRM");
+  assert.equal(page.$("courtLabel").textContent, "Court 03 - Join: BNRMA");
   page.dom.window.close();
 });
 
 test("/overlay/match/{matchId} follows the durable match through the match endpoints", async () => {
   const page = await bootOverlay({
-    pathname: "/overlay/match/k3h8fq2a",
+    pathname: "/overlay/match/khfqab",
     scorePayload: {
       ...SCORE_PAYLOAD,
-      courtId: "zzzz",
-      matchId: "k3h8fq2a",
+      courtId: "zzzza",
+      matchId: "khfqab",
       matchName: "Semi-final 1",
     },
   });
 
-  assert.ok(page.requested.some((url) => url.endsWith("/revision/match/k3h8fq2a")));
-  assert.ok(page.requested.some((url) => url.endsWith("/score/match/k3h8fq2a")));
+  assert.ok(page.requested.some((url) => url.endsWith("/revision/match/khfqab")));
+  assert.ok(page.requested.some((url) => url.endsWith("/score/match/khfqab")));
   assert.equal(page.$("matchTitle").textContent, "Semi-final 1");
-  assert.equal(page.$("courtLabel").textContent, "Join: ZZZZ");
+  assert.equal(page.$("courtLabel").textContent, "Join: ZZZZA");
   page.dom.window.close();
 });

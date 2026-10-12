@@ -9,6 +9,7 @@ const { REGION } = require("../services/constants");
 const { normalizeScoreVersion, SCORING_EVENTS } = require("../domain/events/validation");
 const { buildScoreSummary } = require("../domain/matches/lifecycle");
 const { paths } = require("../services/firestorePaths");
+const { validateId } = require("../services/ids");
 const matchService = require("../services/matchService");
 const { readCredentials, authorizeMatchControl, requireAdmin } = require("../services/authService");
 const { invalid, notFound, precondition } = require("../services/errors");
@@ -20,6 +21,8 @@ async function updateScoringOptions(request) {
     scoringOptions: incomingScoringOptions,
     scoringMode,
   } = request.data || {};
+  if (courtId !== undefined) validateId("court", courtId);
+  if (requestedMatchId !== undefined) validateId("match", requestedMatchId);
   if (!courtId && !requestedMatchId) throw invalid("Missing courtId");
 
   let court = null;

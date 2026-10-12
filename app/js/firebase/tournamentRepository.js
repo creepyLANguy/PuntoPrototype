@@ -12,19 +12,34 @@ import {
   limit,
 } from "./firestore.js";
 import { db } from "./client.js";
+import { assertId } from "../config/idContract.js";
+import {
+  rememberQuerySnapshot,
+  rememberSnapshot,
+} from "./assignmentContext.js";
 
 export function listenToTournamentView(tournamentId, onNext, onError) {
-  return onSnapshot(doc(db, "tournamentViews", tournamentId), onNext, onError);
+  assertId("tournament", tournamentId);
+  return onSnapshot(
+    doc(db, "tournamentViews", tournamentId),
+    (snap) => onNext(rememberSnapshot("tournament", tournamentId, snap)),
+    onError,
+  );
 }
 
 // Every tournament document (admin list). Tournament documents hold no
 // secrets; host keys live in tournamentSecrets, which clients cannot read.
 export function getAllTournaments() {
-  return getDocs(collection(db, "tournaments"));
+  return getDocs(collection(db, "tournaments")).then((snap) =>
+    rememberQuerySnapshot("tournament", snap),
+  );
 }
 
 export function getTournamentDirectoryEntry(tournamentId) {
-  return getDoc(doc(db, "tournamentDirectory", tournamentId));
+  assertId("tournament", tournamentId);
+  return getDoc(doc(db, "tournamentDirectory", tournamentId)).then((snap) =>
+    rememberSnapshot("tournament", tournamentId, snap),
+  );
 }
 
 // Small public directory entries ({ tournamentId, name, status, clubName,
@@ -36,5 +51,5 @@ export function getTournamentDirectory(maxResults = 200) {
       where("visibility", "==", "public"),
       limit(maxResults),
     ),
-  );
+  ).then((snap) => rememberQuerySnapshot("tournament", snap));
 }

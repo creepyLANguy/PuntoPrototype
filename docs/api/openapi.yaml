@@ -190,18 +190,19 @@ components:
       description: Lowercase court document ID.
       schema:
         type: string
-        minLength: 1
-        maxLength: 64
-        pattern: '^[abcdefghjkmnpqrstuxyz]+$'
+        minLength: 5
+        maxLength: 5
+        pattern: '^[abcdefghjkmnpqrstuxyz]{5}$'
     MatchId:
       name: matchId
       in: path
       required: true
-      description: Match document ID.
+      description: Lowercase match document ID.
       schema:
         type: string
-        minLength: 1
-        maxLength: 64
+        minLength: 6
+        maxLength: 6
+        pattern: '^[abcdefghjkmnpqrstuxyz]{6}$'
   responses:
     BadRequest:
       description: Invalid court or match ID/request

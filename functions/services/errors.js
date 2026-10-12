@@ -10,6 +10,7 @@ const CALLABLE_CODES = {
   FAILED_PRECONDITION: "failed-precondition",
   ALREADY_EXISTS: "already-exists",
   ABORTED: "aborted",
+  UNAVAILABLE: "unavailable",
 };
 
 class OperationError extends Error {
@@ -28,7 +29,11 @@ const denied = (message = "You are not allowed to do that.") =>
 const precondition = (message, details) =>
   new OperationError("FAILED_PRECONDITION", message, details);
 const conflict = (message, details) => new OperationError("ABORTED", message, details);
-
+const staleGeneration = (path) =>
+  new OperationError("ABORTED", "This record was replaced. Refresh and retry.", {
+    code: "STALE_GENERATION",
+    path,
+  });
 // Domain errors (MatchRuleError, TournamentDomainError) are rule violations
 // with user-safe messages.
 function toOperationError(error) {
@@ -69,13 +74,30 @@ function wrapCallable(handler) {
   };
 }
 
+// For handlers that keep their own error contract, map retryable operation
+// errors to callable errors.
+function mapRetryableErrors(handler) {
+  return async (...args) => {
+    try {
+      return await handler(...args);
+    } catch (error) {
+      if (error instanceof OperationError && ["UNAVAILABLE", "ABORTED"].includes(error.code)) {
+        throw toCallableError(error);
+      }
+      throw error;
+    }
+  };
+}
+
 module.exports = {
   OperationError,
+  mapRetryableErrors,
   invalid,
   notFound,
   denied,
   precondition,
   conflict,
+  staleGeneration,
   toOperationError,
   toCallableError,
   wrapCallable,

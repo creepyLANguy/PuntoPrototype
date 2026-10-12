@@ -15,7 +15,7 @@ const {
 } = require("../domain/matches/lifecycle");
 const { normalizeScoreVersion } = require("../domain/events/validation");
 const { paths } = require("./firestorePaths");
-const { newMatchId } = require("./ids");
+const { allocateId, validateId, runIdTransaction } = require("./ids");
 const { writeAudit } = require("./auditService");
 const { invalid, notFound, precondition } = require("./errors");
 
@@ -54,7 +54,7 @@ async function readCourt(tx, courtId) {
 // Builds the documents of a new match. Callers write them in their own
 // transaction (tournament round generation creates many matches atomically).
 function prepareMatch({
-  matchId = newMatchId(),
+  matchId,
   name = null,
   teamNames = {},
   playerNames = {},
@@ -66,6 +66,8 @@ function prepareMatch({
   fixtureId = null,
   status = "scheduled",
 }) {
+  validateId("match", matchId);
+  if (tournamentId !== null) validateId("tournament", tournamentId);
   const options = buildScoringOptions(scoringOptions);
   const timestamp = now();
   const match = buildMatchDocument({
@@ -92,8 +94,33 @@ function prepareMatch({
 }
 
 function writePreparedMatch(tx, prepared) {
-  tx.set(matchRef(prepared.matchId), prepared.match);
-  tx.set(db.doc(paths.matchScore(prepared.matchId)), prepared.score);
+  tx.create(matchRef(prepared.matchId), prepared.match);
+  tx.create(db.doc(paths.matchScore(prepared.matchId)), prepared.score);
+}
+
+async function createMatchDocument(input, { actor = null } = {}) {
+  if (input.matchId !== undefined) throw invalid("Match ids are allocated by the server.");
+  if (input.courtId !== undefined && input.courtId !== null) validateId("court", input.courtId);
+  return runIdTransaction(db, async (tx) => {
+    const matchId = await allocateId(tx, "match");
+    const prepared = prepareMatch({ ...input, matchId });
+    const plan = input.courtId
+      ? await planCourtAttachment(tx, { matchId, courtId: input.courtId, displace: input.displace })
+      : null;
+    writePreparedMatch(tx, prepared);
+    if (plan) {
+      writeDisplacement(tx, plan.displaced);
+      writeAttachment(tx, { match: prepared.match, court: plan.court, resetOrientation: true });
+    }
+    writeAudit(tx, {
+      operation: "match.create",
+      matchId,
+      courtId: input.courtId || null,
+      actor,
+      afterSummary: { status: plan ? "live" : "scheduled", kind: prepared.match.kind },
+    });
+    return { matchId };
+  });
 }
 
 // Reads the court and anything occupying it. Must run in the read phase of
@@ -206,7 +233,7 @@ async function planTournamentEffects(tx, match) {
 }
 
 async function ensureCourtMatch({ courtId, actor = null }) {
-  return db.runTransaction(async (tx) => {
+  return runIdTransaction(db, async (tx) => {
     const court = await readCourt(tx, courtId);
 
     if (court.activeMatchId) {
@@ -215,6 +242,7 @@ async function ensureCourtMatch({ courtId, actor = null }) {
       if (active && active.status === "live" && active.currentCourtId === courtId) {
         return {
           matchId: court.activeMatchId,
+          allocationId: active.allocationId,
           scoreVersion: normalizeScoreVersion(active.scoreVersion),
           created: false,
         };
@@ -222,6 +250,7 @@ async function ensureCourtMatch({ courtId, actor = null }) {
     }
 
     const prepared = prepareMatch({
+      matchId: await allocateId(tx, "match"),
       scoringOptions: { ...(court.scoringOptions || {}), scoringMode: court.scoringMode },
       kind: "casual",
       visibility: court.status === "private" ? "private" : "public",
@@ -255,6 +284,7 @@ async function resolveCourtMatchId(courtId, { ensure = false } = {}) {
 }
 
 async function startMatch({ matchId, courtId, displace = false, actor = null, reason = null }) {
+  validateId("court", courtId);
   const result = await db.runTransaction(async (tx) => {
     const match = await readMatch(tx, matchId);
 
@@ -318,6 +348,7 @@ async function startMatch({ matchId, courtId, displace = false, actor = null, re
 }
 
 async function moveMatch({ matchId, courtId, displace = false, actor = null, reason = null }) {
+  validateId("court", courtId);
   const result = await db.runTransaction(async (tx) => {
     const match = await readMatch(tx, matchId);
     if (match.status !== "live") {
@@ -744,6 +775,7 @@ module.exports = {
   courtLabel,
   hasPoints,
   prepareMatch,
+  createMatchDocument,
   writePreparedMatch,
   planCourtAttachment,
   ensureCourtMatch,

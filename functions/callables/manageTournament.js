@@ -4,6 +4,7 @@
 const tournamentService = require("../services/tournamentService");
 const { readCredentials, authorizeTournamentHost } = require("../services/authService");
 const { invalid } = require("../services/errors");
+const { validateId } = require("../services/ids");
 
 const PUBLIC_OPERATIONS = {
   listFormats: () => ({ formats: tournamentService.listFormats() }),
@@ -53,6 +54,9 @@ const HOST_OPERATIONS = {
 
 async function manageTournament(request) {
   const data = request.data || {};
+  if (data.tournamentId !== undefined) validateId("tournament", data.tournamentId);
+  if (data.courtId !== undefined && data.courtId !== null) validateId("court", data.courtId);
+  if (data.clubId !== undefined && data.clubId !== null) validateId("club", data.clubId);
   const credentials = readCredentials(request);
 
   const publicHandler = PUBLIC_OPERATIONS[data.operation];

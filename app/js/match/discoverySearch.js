@@ -2,6 +2,7 @@
 // players, teams and tournaments, ranked exact-match first. Pure functions
 // over plain records loaded once per page visit and filtered locally.
 import { buildMatchupLabel, resolveMatchTitle } from "./matchIdentity.js";
+import { isValidId } from "../config/idContract.js";
 
 export const SEARCH_PLACEHOLDER =
   "Search courts, clubs, matches, players or tournaments";
@@ -169,5 +170,8 @@ export function searchMatchesAndTournaments(
 // A term that looks like a match id can find historical matches that are
 // not in the live list.
 export function looksLikeMatchId(term) {
-  return /^[a-z0-9]{8}$/i.test(String(term || "").trim());
+  return isValidId(
+    "match",
+    typeof term === "string" ? term.trim().toLowerCase() : term,
+  );
 }

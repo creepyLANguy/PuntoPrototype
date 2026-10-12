@@ -5,15 +5,17 @@ import { clubSummary, courtMatchesSearch } from "../clubs/clubIndex.js";
 import { loadClubIndex } from "../clubs/clubLoader.js";
 import { fillAdminClubCell } from "./clubCell.js";
 import {
-  ALLOWED_COURT_ID_CHARS,
   DEFAULT_SCORING_OPTIONS,
   STATUS,
   TOAST_TYPES,
 } from "../config/constants.js";
 import { NAV_PAGES } from "../config/routes.js";
-import { resetCourt, updateScoringOptions } from "../firebase/callables.js";
 import {
-  createCourt,
+  createWithUniqueId,
+  resetCourt,
+  updateScoringOptions,
+} from "../firebase/callables.js";
+import {
   deleteCourt,
   getAllCourts,
   updateCourt,
@@ -533,39 +535,28 @@ export function registerCreateCourt() {
       return;
     }
 
-    const createRandomCourtId = () =>
-      Array.from(
-        { length: 4 },
-        () =>
-          ALLOWED_COURT_ID_CHARS[
-            Math.floor(Math.random() * ALLOWED_COURT_ID_CHARS.length)
-          ],
-      ).join("");
-
-    const existingCourtsSnapshot = await getAllCourts();
-    const existingCourtIdsLower = new Set(
-      existingCourtsSnapshot.docs.map((courtDoc) => courtDoc.id.toLowerCase()),
-    );
-
-    let courtId = createRandomCourtId();
-    while (existingCourtIdsLower.has(courtId.toLowerCase())) {
-      courtId = createRandomCourtId();
+    let courtId;
+    elements.createCourtBtn.disabled = true;
+    try {
+      ({ courtId } = await createWithUniqueId(
+        "court",
+        {
+          name: courtName,
+          password: courtPass,
+          status: elements.courtStatus.value,
+          scoringOptions,
+        },
+        getCourtCredentials(),
+      ));
+    } catch (error) {
+      showToast(
+        error?.message || "Could not create court. Please retry.",
+        TOAST_TYPES.ERROR,
+      );
+      return;
+    } finally {
+      elements.createCourtBtn.disabled = false;
     }
-
-    courtId = courtId.toLowerCase();
-
-    // Create court metadata
-    // A court is a physical location. Matches (and their scores) are created
-    // when play starts; scoringOptions is the default for casual matches.
-    await createCourt(courtId, {
-      name: courtName,
-      password: courtPass,
-      beaconSidesSwapped: false,
-      activeMatchId: null,
-      status: elements.courtStatus.value,
-      scoringMode: scoringOptions.scoringMode,
-      scoringOptions,
-    });
 
     showToast(
       `Court "${courtName}" created successfully. ID: ${courtId.toUpperCase()}`,

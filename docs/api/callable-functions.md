@@ -6,6 +6,35 @@ and are separate from the public read-only HTTP API.
 
 ## Current functions
 
+Resource IDs use `abcdefghjkmnpqrstuxyz` exclusively: court IDs have 5
+characters, tournament IDs 7, match IDs 6, and club IDs 4. Creation uses one
+transactional backend allocator with at most five candidate attempts; exhaustion
+returns `aborted` without partial writes. Existing IDs cannot be overwritten by
+creation. Supplied IDs are validated against the exact type contract; legacy
+formats are not accepted.
+
+Existing-resource mutations supply `expectedAllocations`, a map of resource
+types to IDs and their previously observed `allocationId` tokens. A request
+must not silently replace an old token with the replacement assignment's token.
+Creation responses include the new resource's `allocationId`; clients retain
+it with that resource's context. The token fences stale references if a deleted
+ID is later allocated to a different resource.
+
+Browser creation calls are centralized in `createWithUniqueId(type, data,
+credentials)`, which dispatches to the appropriate callable and validates the
+returned ID. Allocation is never separated from document creation.
+
+### createCourt
+
+Creates a physical court and allocates its five-character ID atomically.
+Requires `credentials.adminKey`.
+
+Request: `{ name, password, status?, scoringOptions?, credentials }`.
+
+Returns `{ courtId, allocationId }`. New courts have no active match; a match is created when
+play starts. Direct client creation of court documents is denied by security
+rules.
+
 ### resetCourt
 
 Resolves the match currently on a court, archives that match's current event

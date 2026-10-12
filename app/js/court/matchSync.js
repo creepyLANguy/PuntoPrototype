@@ -7,6 +7,10 @@ import {
   listenToMatch,
   listenToMatchScore,
 } from "../firebase/matchRepository.js";
+import {
+  assertCurrentAssignment,
+  rememberAssignment,
+} from "../firebase/assignmentContext.js";
 import { resolveMatchTitle } from "../match/matchIdentity.js";
 import { applyActiveScoreSnapshot } from "../scoreSync.mjs";
 import {
@@ -72,6 +76,27 @@ export function applyMatchData(
   data,
   { courtBeaconSidesSwapped = null } = {},
 ) {
+  const sameMatch = session.currentMatchId === matchId;
+  rememberAssignment("match", matchId, data);
+  if (
+    sameMatch &&
+    session.currentMatchAllocationId &&
+    data.allocationId !== session.currentMatchAllocationId
+  ) {
+    session.currentMatchStatus = null;
+    session.currentMatchCourtId = null;
+    resetScoreBaseline();
+    syncScoringControls();
+    return false;
+  }
+  try {
+    assertCurrentAssignment("match", matchId, data.allocationId);
+  } catch {
+    session.currentMatchStatus = null;
+    session.currentMatchCourtId = null;
+    syncScoringControls();
+    return false;
+  }
   const nextScoreVersion = Number(data.scoreVersion) || 0;
   if (
     nextScoreVersion !== session.currentScoreVersion &&
@@ -83,6 +108,7 @@ export function applyMatchData(
   }
   session.currentScoreVersion = nextScoreVersion;
   session.currentMatchId = matchId;
+  session.currentMatchAllocationId = data.allocationId;
   session.currentMatchStatus = data.status || null;
   session.currentMatchCourtId = data.currentCourtId || null;
   session.currentMatchName = data.name || null;
@@ -121,6 +147,7 @@ export function applyMatchData(
   updateServerIndicator();
   syncSettingsTiles();
   refreshScoreboardTitle();
+  return true;
 }
 
 function resetScoreBaseline() {
@@ -152,6 +179,7 @@ export function followMatch(
 
   if (!matchId) {
     session.currentMatchId = null;
+    session.currentMatchAllocationId = null;
     session.currentMatchTitle = null;
     session.currentTournamentId = null;
     refreshScoreboardTitle();
@@ -163,14 +191,29 @@ export function followMatch(
   const isCurrent = () =>
     listenerToken === session.activeCourtListenerToken &&
     matchSubscription.matchId === matchId;
+  let assignmentInvalidated = false;
 
   const unsubscribeScore = listenToMatchScore(
     matchId,
     (snap) => {
-      if (!isCurrent()) return;
+      if (!isCurrent() || assignmentInvalidated) return;
       if (!snap.exists()) return;
 
       const newData = snap.data();
+      if (
+        newData.allocationId !== undefined &&
+        session.currentMatchId === matchId &&
+        session.currentMatchAllocationId &&
+        newData.allocationId !== session.currentMatchAllocationId
+      ) {
+        assignmentInvalidated = true;
+        rememberAssignment("match", matchId, newData);
+        session.currentMatchStatus = null;
+        session.currentMatchCourtId = null;
+        resetScoreBaseline();
+        syncScoringControls();
+        return;
+      }
 
       // Establish baseline on first successful sync of this match
       if (!session.sessionInitialized) {
@@ -211,12 +254,24 @@ export function followMatch(
     matchId,
     (snap) => {
       if (!isCurrent()) return;
-      if (!snap.exists()) return;
-      applyMatchData(matchId, snap.data(), {
-        courtBeaconSidesSwapped: getCourtBeaconSidesSwapped
-          ? getCourtBeaconSidesSwapped()
-          : null,
-      });
+      if (!snap.exists()) {
+        assignmentInvalidated = true;
+        session.currentMatchStatus = null;
+        session.currentMatchCourtId = null;
+        resetScoreBaseline();
+        syncScoringControls();
+        return;
+      }
+      if (
+        !applyMatchData(matchId, snap.data(), {
+          courtBeaconSidesSwapped: getCourtBeaconSidesSwapped
+            ? getCourtBeaconSidesSwapped()
+            : null,
+        })
+      ) {
+        assignmentInvalidated = true;
+        return;
+      }
 
       if (!elements.detailsModal.classList.contains("hidden")) {
         showMatchDetails(
@@ -240,6 +295,22 @@ export function followMatch(
 
 // The match the scoreboard can score: the live match on this court.
 export function isCurrentMatchScorable() {
+  if (session.currentMatchId && session.currentCourtId) {
+    try {
+      assertCurrentAssignment(
+        "match",
+        session.currentMatchId,
+        session.currentMatchAllocationId,
+      );
+      assertCurrentAssignment(
+        "court",
+        session.currentCourtId,
+        session.currentCourtAllocationId,
+      );
+    } catch {
+      return false;
+    }
+  }
   return Boolean(
     session.currentMatchId &&
     session.currentMatchStatus === "live" &&

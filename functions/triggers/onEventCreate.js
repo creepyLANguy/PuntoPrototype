@@ -1,6 +1,7 @@
 const { onDocumentCreated } = require("firebase-functions/v2/firestore");
 const { processScoreEvent } = require("../services/scoreService");
 const { REGION } = require("../services/constants");
+const { withOperationScope } = require("../infrastructure/dataGuard");
 
 exports.onEventCreate = onDocumentCreated(
   {
@@ -8,5 +9,5 @@ exports.onEventCreate = onDocumentCreated(
     region: REGION,
     retry: true,
   },
-  processScoreEvent,
+  withOperationScope(processScoreEvent),
 );

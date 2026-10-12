@@ -19,21 +19,21 @@ let window;
 
 test.before(async () => {
   seedBaseData();
-  seedCourt("directplayer", { name: "Direct Player Court" });
+  seedCourt("drcta", { name: "Direct Player Court" });
 
-  seedCourt("matchroute", {
+  seedCourt("mtcha", {
     name: "Match Route Court",
-    activeMatchId: "active-match",
+    activeMatchId: "qrstux",
     matchName: "Active Match",
   });
-  seedDoc("matches/linked-match", {
-    matchId: "linked-match",
+  seedDoc("matches/abcdef", {
+    matchId: "abcdef",
     name: "Linked Match",
     kind: "tournament",
     visibility: "public",
     status: "live",
-    currentCourtId: "matchroute",
-    lastCourtId: "matchroute",
+    currentCourtId: "mtcha",
+    lastCourtId: "mtcha",
     teamNames: { A: "Linked A", B: "Linked B" },
     playerNames: { A1: "", A2: "", B1: "", B2: "" },
     scoringMode: "straight",
@@ -43,10 +43,10 @@ test.before(async () => {
       tiebreakMode: "sixAllSeven",
     },
     scoreVersion: 0,
-    tournamentId: "tournament-1",
+    tournamentId: "abcdefg",
   });
   pushScoreSnapshot(
-    "linked-match",
+    "abcdef",
     makeScore({
       A: { points: 7, games: 0, sets: 0, totalPoints: 7 },
       B: { points: 2, games: 0, sets: 0, totalPoints: 2 },
@@ -58,7 +58,7 @@ test.before(async () => {
     }),
   );
 
-  const dom = await bootFrontend({ url: "https://padel.test/p/directplayer" });
+  const dom = await bootFrontend({ url: "https://padel.test/p/drcta" });
   document = dom.window.document;
   window = dom.window;
 
@@ -94,13 +94,13 @@ test("/p/<court> player submit primes and plays the join sound", async () => {
 });
 
 test("/p/<matchId> loads that match on its court as a spectator and then authenticates as a player", async () => {
-  window.history.pushState({}, "", "/p/linked-match");
+  window.history.pushState({}, "", "/p/abcdef");
   window.dispatchEvent(new window.PopStateEvent("popstate"));
 
   await waitFor(
     () =>
       document.getElementById("playPage").style.display !== "none" &&
-      document.querySelector('#playCourtList .court-item[data-court-id="matchroute"].active'),
+      document.querySelector('#playCourtList .court-item[data-court-id="mtcha"].active'),
     { label: "match-target join prompt" },
   );
   await waitFor(() => getRenderedScoreForDirectJoin(document).pointsA === "7", {
@@ -110,7 +110,7 @@ test("/p/<matchId> loads that match on its court as a spectator and then authent
   assert.equal(document.getElementById("playCourtSearch").value, "Match Route Court");
   assert.equal(document.getElementById("playPasswordSection").style.display, "block");
   assert.notEqual(document.getElementById("scoreboardPage").style.display, "none");
-  assert.equal(window.location.pathname, "/p/linked-match");
+  assert.equal(window.location.pathname, "/p/abcdef");
   assert.equal(document.body.classList.contains("spectating-mode"), true);
 
   document.getElementById("playCourtPassword").value = "pw";
@@ -132,7 +132,7 @@ test("an explicit match link keeps its score after listener refresh", async () =
   document.dispatchEvent(new window.Event("visibilitychange"));
   await settle(30);
   pushScoreSnapshot(
-    "linked-match",
+    "abcdef",
     makeScore({
       A: { points: 8, games: 0, sets: 0, totalPoints: 8 },
       B: { points: 2, games: 0, sets: 0, totalPoints: 2 },
@@ -149,11 +149,8 @@ test("an explicit match link keeps its score after listener refresh", async () =
 });
 
 test("switching to a court link clears the explicit match selection", async () => {
-  pushScoreSnapshot(
-    "active-match",
-    makeScore({ A: { points: 1, games: 0, sets: 0, totalPoints: 1 } }),
-  );
-  window.history.pushState({}, "", "/p/matchroute");
+  pushScoreSnapshot("qrstux", makeScore({ A: { points: 1, games: 0, sets: 0, totalPoints: 1 } }));
+  window.history.pushState({}, "", "/p/mtcha");
   window.dispatchEvent(new window.PopStateEvent("popstate"));
 
   await waitFor(() => getRenderedScoreForDirectJoin(document).pointsA === "15", {
@@ -169,18 +166,15 @@ test("an ordinary court player join follows subsequent active match changes", as
     label: "court player join",
   });
 
-  seedDoc("matches/next-match", {
-    ...firestoreState.docs.get("matches/active-match"),
-    matchId: "next-match",
+  seedDoc("matches/jkmnpq", {
+    ...firestoreState.docs.get("matches/qrstux"),
+    matchId: "jkmnpq",
   });
-  pushScoreSnapshot(
-    "next-match",
-    makeScore({ A: { points: 2, games: 0, sets: 0, totalPoints: 2 } }),
-  );
-  writeDoc("courts/matchroute", {
-    ...firestoreState.docs.get("courts/matchroute"),
-    activeMatchId: "next-match",
-    lastMatchId: "next-match",
+  pushScoreSnapshot("jkmnpq", makeScore({ A: { points: 2, games: 0, sets: 0, totalPoints: 2 } }));
+  writeDoc("courts/mtcha", {
+    ...firestoreState.docs.get("courts/mtcha"),
+    activeMatchId: "jkmnpq",
+    lastMatchId: "jkmnpq",
   });
   await waitFor(() => getRenderedScoreForDirectJoin(document).pointsA === "30", {
     label: "new active match score after player join",
@@ -188,7 +182,7 @@ test("an ordinary court player join follows subsequent active match changes", as
 });
 
 test("an explicit link pins a match already followed through its court", async () => {
-  window.history.pushState({}, "", "/p/next-match");
+  window.history.pushState({}, "", "/p/jkmnpq");
   window.dispatchEvent(new window.PopStateEvent("popstate"));
   await waitFor(
     () =>
@@ -197,16 +191,13 @@ test("an explicit link pins a match already followed through its court", async (
     { label: "explicit link to the current match" },
   );
 
-  writeDoc("courts/matchroute", {
-    ...firestoreState.docs.get("courts/matchroute"),
-    activeMatchId: "active-match",
-    lastMatchId: "active-match",
+  writeDoc("courts/mtcha", {
+    ...firestoreState.docs.get("courts/mtcha"),
+    activeMatchId: "qrstux",
+    lastMatchId: "qrstux",
   });
   await settle(30);
-  pushScoreSnapshot(
-    "next-match",
-    makeScore({ A: { points: 3, games: 0, sets: 0, totalPoints: 3 } }),
-  );
+  pushScoreSnapshot("jkmnpq", makeScore({ A: { points: 3, games: 0, sets: 0, totalPoints: 3 } }));
   await waitFor(() => getRenderedScoreForDirectJoin(document).pointsA === "40", {
     label: "explicitly pinned current match score",
   });

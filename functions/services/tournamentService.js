@@ -4,9 +4,18 @@
 // normal Padel Push match.
 const { db, FieldValue } = require("../infrastructure/firebase");
 const { paths } = require("./firestorePaths");
-const { newTournamentId, newSecret, hashSecret, randomId, secretsMatch } = require("./ids");
+const {
+  allocateId,
+  runIdTransaction,
+  deferIdTransactionWrites,
+  validateId,
+  newSecret,
+  hashSecret,
+  randomId,
+  secretsMatch,
+} = require("./ids");
 const { writeAudit } = require("./auditService");
-const { invalid, notFound, precondition, conflict, denied } = require("./errors");
+const { invalid, notFound, precondition, conflict, denied, staleGeneration } = require("./errors");
 const matchService = require("./matchService");
 const {
   getFormat,
@@ -269,21 +278,42 @@ function writeRosterInput(tx, tournamentId, { participants = [], text = null, te
 }
 
 async function createTournament(data, { actor }) {
+  if (data.tournamentId !== undefined) throw invalid("Tournament ids are allocated by the server.");
   const input = normalizeTournamentInput(data);
   const requestId = typeof data.requestId === "string" ? data.requestId.slice(0, 64) : null;
-  const tournamentId = newTournamentId();
   const hostKey = newSecret();
   const accessCode = input.visibility === "private" ? randomId(8) : null;
 
-  const outcome = await db.runTransaction(async (tx) => {
+  const outcome = await runIdTransaction(db, async (tx) => {
     if (requestId) {
       const creationSnap = await tx.get(db.doc(paths.tournamentCreation(requestId)));
-      if (creationSnap.exists)
-        return { duplicate: true, tournamentId: creationSnap.data().tournamentId };
+      if (creationSnap.exists) {
+        const creation = creationSnap.data();
+        const root = await tx.get(tournamentRef(creation.tournamentId));
+        if (!root.exists) throw notFound("That tournament could not be found.");
+        const tournament = root.data();
+        if (
+          tournament.tournamentId !== creation.tournamentId ||
+          (creation.tournamentAllocationId &&
+            creation.tournamentAllocationId !== tournament.allocationId)
+        ) {
+          throw staleGeneration(root.ref.path);
+        }
+        if (!tournament.allocationId)
+          throw precondition("This tournament has no allocation token.");
+        return {
+          duplicate: true,
+          tournamentId: creation.tournamentId,
+          allocationId: tournament.allocationId,
+        };
+      }
     }
     await assertClubAndCourts(tx, input);
-    const existing = await tx.get(tournamentRef(tournamentId));
-    if (existing.exists) throw conflict("Please retry creating the tournament.");
+    const tournamentId = await allocateId(tx, "tournament");
+    const [courts, club] = await Promise.all([
+      loadCourts(tx, input.courtPool),
+      loadClub(tx, input.clubId),
+    ]);
 
     const timestamp = now();
     const roster = writeRosterInput(tx, tournamentId, {
@@ -295,7 +325,7 @@ async function createTournament(data, { actor }) {
       throw invalid(`A tournament can have at most ${MAX_PARTICIPANTS} players.`);
     }
 
-    tx.set(tournamentRef(tournamentId), {
+    const tournament = {
       tournamentId,
       ...input,
       status: "draft",
@@ -310,14 +340,18 @@ async function createTournament(data, { actor }) {
       startedAt: null,
       completedAt: null,
       cancelledAt: null,
-    });
-    tx.set(db.doc(paths.tournamentSecret(tournamentId)), {
+    };
+    tx.create(tournamentRef(tournamentId), tournament);
+    tx.create(db.doc(paths.tournamentSecret(tournamentId)), {
       hostKeyHash: hashSecret(hostKey),
       accessCodeHash: accessCode ? hashSecret(accessCode) : null,
       createdAt: timestamp,
     });
     if (requestId) {
-      tx.set(db.doc(paths.tournamentCreation(requestId)), { tournamentId, createdAt: timestamp });
+      tx.create(db.doc(paths.tournamentCreation(requestId)), {
+        tournamentId,
+        createdAt: timestamp,
+      });
     }
     writeAudit(tx, {
       operation: "tournament.create",
@@ -332,12 +366,23 @@ async function createTournament(data, { actor }) {
         teams: roster.teams.length,
       },
     });
+    // A new draft has no fixtures to progress. Persist its complete initial
+    // read models with the root, before this allocation can activate maintenance.
+    const publicClub = club && normalizeClubState(club.state) === CLUB_STATES.OPEN ? club : null;
+    const view = buildTournamentView({
+      tournament,
+      participants: roster.participants,
+      teams: roster.teams,
+      courts,
+      club: publicClub,
+      now: Date.now(),
+    });
+    writeTournamentReadModels(tx, tournament, view, publicClub);
     return { duplicate: false, tournamentId };
   });
 
-  if (outcome.duplicate) return { tournamentId: outcome.tournamentId, duplicate: true };
-  await recalculateTournament({ tournamentId });
-  return { tournamentId, hostKey, accessCode, duplicate: false };
+  if (outcome.duplicate) return outcome;
+  return { ...outcome, hostKey, accessCode };
 }
 
 const UPDATABLE_FIELDS = [
@@ -994,7 +1039,7 @@ function scheduleGeneration(generation, { tournament, courts, nowMs }) {
   return scheduled;
 }
 
-function prepareFixtureMatch({ tournament, fixture, lookups }) {
+async function prepareFixtureMatch(tx, { tournament, fixture, lookups }) {
   const spec = buildFixtureMatchSpec({
     tournament,
     fixture,
@@ -1002,6 +1047,7 @@ function prepareFixtureMatch({ tournament, fixture, lookups }) {
     teamsById: lookups.teamsById,
   });
   return matchService.prepareMatch({
+    matchId: await allocateId(tx, "match"),
     ...spec,
     kind: "tournament",
     tournamentId: tournament.tournamentId,
@@ -1020,7 +1066,7 @@ function stripFixtureForStorage(fixture) {
 
 async function generateRound(data, ctx) {
   const tournamentId = data.tournamentId;
-  const outcome = await db.runTransaction(async (tx) => {
+  const outcome = await runIdTransaction(db, async (tx) => {
     const state = await loadTournamentState(tx, tournamentId);
     const { tournament } = state;
     assertNotFinished(tournament);
@@ -1092,12 +1138,21 @@ async function generateRound(data, ctx) {
       teamsById: indexBy(state.teams, "teamId"),
     };
 
+    const preparedMatches = new Map();
+    for (const fixture of scheduledFixtures) {
+      if (fixture.status === "scheduled" && fixtureSidesComplete(fixture)) {
+        preparedMatches.set(
+          fixture.fixtureId,
+          await prepareFixtureMatch(tx, { tournament, fixture, lookups }),
+        );
+      }
+    }
     const timestamp = now();
     let matchCount = 0;
     scheduledFixtures.forEach((fixture) => {
       const stored = stripFixtureForStorage(fixture);
       if (fixture.status === "scheduled" && fixtureSidesComplete(fixture)) {
-        const prepared = prepareFixtureMatch({ tournament, fixture, lookups });
+        const prepared = preparedMatches.get(fixture.fixtureId);
         matchService.writePreparedMatch(tx, prepared);
         stored.matchId = prepared.matchId;
         matchCount += 1;
@@ -1365,7 +1420,7 @@ async function completeFixture(data, ctx) {
 
 async function createFixtureMatch(data, ctx) {
   const tournamentId = data.tournamentId;
-  const result = await db.runTransaction(async (tx) => {
+  const result = await runIdTransaction(db, async (tx) => {
     const state = await loadTournamentState(tx, tournamentId);
     assertNotFinished(state.tournament);
     const fixture = state.fixtures.find((f) => f.fixtureId === data.fixtureId);
@@ -1374,7 +1429,7 @@ async function createFixtureMatch(data, ctx) {
     if (fixture.status !== "scheduled" || !fixtureSidesComplete(fixture)) {
       throw precondition("Both sides must be known before a match can be created.");
     }
-    const prepared = prepareFixtureMatch({
+    const prepared = await prepareFixtureMatch(tx, {
       tournament: state.tournament,
       fixture,
       lookups: {
@@ -1728,8 +1783,46 @@ function rebuildRemainingSchedule(tx, state, format, matchesById, courts, actor)
   });
 }
 
+function writeTournamentReadModels(tx, tournament, view, publicClub) {
+  const { tournamentId } = tournament;
+  const viewDoc = {
+    ...JSON.parse(JSON.stringify(view)),
+    revision: Number(tournament.revision || 0),
+    updatedAt: now(),
+  };
+  if (tournament.visibility === "private") {
+    tx.set(db.doc(paths.tournamentPrivateView(tournamentId)), viewDoc);
+    tx.set(db.doc(paths.tournamentView(tournamentId)), {
+      tournamentId,
+      visibility: "private",
+      status: tournament.status,
+      updatedAt: now(),
+    });
+    tx.delete(db.doc(paths.tournamentDirectory(tournamentId)));
+  } else {
+    tx.set(db.doc(paths.tournamentView(tournamentId)), viewDoc);
+    tx.delete(db.doc(paths.tournamentPrivateView(tournamentId)));
+    // Small directory entry for search and discovery (spec section 44).
+    tx.set(db.doc(paths.tournamentDirectory(tournamentId)), {
+      tournamentId,
+      name: tournament.name,
+      status: tournament.status,
+      visibility: "public",
+      clubId: publicClub?.clubId || null,
+      clubName: publicClub?.name || null,
+      formatId: tournament.format.id,
+      formatLabel: view.format.label,
+      startAt: tournament.scheduling?.startAt ?? null,
+      updatedAt: now(),
+    });
+  }
+}
+
 async function recalculateTournament({ tournamentId, rebuildSchedule = false }, ctx = {}) {
-  return db.runTransaction(async (tx) => {
+  return runIdTransaction(db, async (transaction) => {
+    // Rebuilding/progression plans writes before discovering new fixture matches.
+    // Defer every write until all collision reads and reservations are complete.
+    const { tx, flushWrites } = deferIdTransactionWrites(transaction);
     const state = await loadTournamentState(tx, tournamentId);
     const { tournament } = state;
     const [matches, courts, club] = await Promise.all([
@@ -1783,15 +1876,22 @@ async function recalculateTournament({ tournamentId, rebuildSchedule = false }, 
     // a scheduled match follows its fixture's sides.
     const createdMatches = [];
     if (!finished) {
-      fixtures = fixtures.map((fixture) => {
-        if (fixture.status !== "scheduled" || !fixtureSidesComplete(fixture)) return fixture;
+      const nextFixtures = [];
+      for (const fixture of fixtures) {
+        if (fixture.status !== "scheduled" || !fixtureSidesComplete(fixture)) {
+          nextFixtures.push(fixture);
+          continue;
+        }
         if (!fixture.matchId) {
-          const prepared = prepareFixtureMatch({ tournament, fixture, lookups });
+          const prepared = await prepareFixtureMatch(tx, { tournament, fixture, lookups });
           matchService.writePreparedMatch(tx, prepared);
           createdMatches.push({ matchId: prepared.matchId, ...prepared.match });
           const next = { ...fixture, matchId: prepared.matchId };
+          // The write guard stamps the new match's token, not the old assignment.
+          delete next.matchAllocationId;
           fixtureWrites.set(fixture.fixtureId, next);
-          return next;
+          nextFixtures.push(next);
+          continue;
         }
         const match = matchesById[fixture.matchId];
         if (match && match.status === "scheduled") {
@@ -1809,8 +1909,9 @@ async function recalculateTournament({ tournamentId, rebuildSchedule = false }, 
             };
           }
         }
-        return fixture;
-      });
+        nextFixtures.push(fixture);
+      }
+      fixtures = nextFixtures;
     }
 
     const fixtureIds = new Set(state.fixtures.map((fixture) => fixture.fixtureId));
@@ -1850,37 +1951,7 @@ async function recalculateTournament({ tournamentId, rebuildSchedule = false }, 
       }
     });
 
-    const viewDoc = {
-      ...JSON.parse(JSON.stringify(view)),
-      revision: Number(tournament.revision || 0),
-      updatedAt: now(),
-    };
-    if (tournament.visibility === "private") {
-      tx.set(db.doc(paths.tournamentPrivateView(tournamentId)), viewDoc);
-      tx.set(db.doc(paths.tournamentView(tournamentId)), {
-        tournamentId,
-        visibility: "private",
-        status: tournament.status,
-        updatedAt: now(),
-      });
-      tx.delete(db.doc(paths.tournamentDirectory(tournamentId)));
-    } else {
-      tx.set(db.doc(paths.tournamentView(tournamentId)), viewDoc);
-      tx.delete(db.doc(paths.tournamentPrivateView(tournamentId)));
-      // Small directory entry for search and discovery (spec section 44).
-      tx.set(db.doc(paths.tournamentDirectory(tournamentId)), {
-        tournamentId,
-        name: tournament.name,
-        status: tournament.status,
-        visibility: "public",
-        clubId: publicClub?.clubId || null,
-        clubName: publicClub?.name || null,
-        formatId: tournament.format.id,
-        formatLabel: format.label,
-        startAt: tournament.scheduling?.startAt ?? null,
-        updatedAt: now(),
-      });
-    }
+    writeTournamentReadModels(tx, tournament, view, publicClub);
     if (view.currentRound && view.currentRound.roundNumber !== tournament.currentRoundNumber) {
       tx.set(
         tournamentRef(tournamentId),
@@ -1888,6 +1959,7 @@ async function recalculateTournament({ tournamentId, rebuildSchedule = false }, 
         { merge: true },
       );
     }
+    flushWrites();
     return {
       tournamentId,
       fixturesUpdated: fixtureWrites.size,
@@ -1951,6 +2023,11 @@ async function getTournamentView(data, credentials) {
 }
 
 async function getCourtOptions(data) {
+  if (data.clubId !== undefined && data.clubId !== null) validateId("club", data.clubId);
+  if (data.selectedCourtIds !== undefined) {
+    if (!Array.isArray(data.selectedCourtIds)) throw invalid("Court ids must be a list.");
+    data.selectedCourtIds.forEach((id) => validateId("court", id));
+  }
   const [courtSnap, clubSnap] = await Promise.all([
     db.collection("courts").get(),
     db.collection("clubs").get(),

@@ -8,15 +8,11 @@ import {
 } from "./firebase/matchRepository.js";
 import { getTournamentDirectoryEntry } from "./firebase/tournamentRepository.js";
 import { renderMatchNotFound, renderMatchPage } from "./match/matchView.js";
+import { isValidId } from "./config/idContract.js";
+import { getMatchIdFromPathname } from "./routing/routeParsers.js";
 
 export function parseMatchId(pathname) {
-  const match = pathname.replace(/\/+$/, "").match(/^\/(?:app\/)?m\/([^/]+)$/i);
-  if (!match) return null;
-  try {
-    return decodeURIComponent(match[1]).trim().toLowerCase() || null;
-  } catch {
-    return null;
-  }
+  return getMatchIdFromPathname(pathname);
 }
 
 function start() {
@@ -47,7 +43,9 @@ function start() {
         return;
       }
       state.match = snap.data();
-      const courtId = state.match.currentCourtId || null;
+      const courtId = isValidId("court", state.match.currentCourtId)
+        ? state.match.currentCourtId
+        : null;
       if (courtId !== state.courtId) {
         state.courtId = courtId;
         state.court = null;
@@ -58,7 +56,10 @@ function start() {
           }
         }
       }
-      if (state.match.tournamentId && !state.tournamentLoaded) {
+      if (
+        isValidId("tournament", state.match.tournamentId) &&
+        !state.tournamentLoaded
+      ) {
         state.tournamentLoaded = true;
         const entry = await getTournamentDirectoryEntry(
           state.match.tournamentId,

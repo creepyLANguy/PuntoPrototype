@@ -48,6 +48,7 @@ export const session = {
   lastKnownFixedResult: null,
   sessionInitialized: false,
   currentCourtId: null,
+  currentCourtAllocationId: null,
   currentCourtPassword: null,
   pendingLocalPasswordUpdate: null,
   currentCourtStatus: null,
@@ -65,6 +66,7 @@ export const session = {
   // The match the scoreboard follows (spec section 46 MatchContext): the
   // court's active match, else its most recent match.
   currentMatchId: null,
+  currentMatchAllocationId: null,
   requestedMatchId: null,
   currentMatchName: null,
   currentMatchTitle: null,
@@ -75,6 +77,7 @@ export const session = {
 
 export function clearMatchContext() {
   session.currentMatchId = null;
+  session.currentMatchAllocationId = null;
   session.requestedMatchId = null;
   session.currentMatchName = null;
   session.currentMatchTitle = null;

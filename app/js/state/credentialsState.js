@@ -95,16 +95,60 @@ export function getAccessCode(tournamentId) {
   }
 }
 
-export function getCourtCredentials() {
+export function getCourtCredentials(
+  courtId = session.currentCourtId,
+  matchId = courtId === session.currentCourtId ? session.currentMatchId : null,
+  allocations = {},
+) {
+  const courtAllocationId =
+    allocations.courtAllocationId !== undefined
+      ? allocations.courtAllocationId
+      : courtId === session.currentCourtId
+        ? session.currentCourtAllocationId
+        : undefined;
+  const matchAllocationId =
+    allocations.matchAllocationId !== undefined
+      ? allocations.matchAllocationId
+      : matchId === session.currentMatchId
+        ? session.currentMatchAllocationId
+        : undefined;
   return {
     courtPassword: session.currentCourtPassword || null,
     adminKey: getAdminKey(),
+    ...(courtId && courtAllocationId !== undefined
+      ? {
+          courtAllocationId,
+        }
+      : {}),
+    ...(matchId && matchAllocationId !== undefined
+      ? {
+          matchAllocationId,
+        }
+      : {}),
+    expectedAllocations: {
+      ...(courtId && courtAllocationId !== undefined
+        ? { court: { [courtId]: courtAllocationId } }
+        : {}),
+      ...(matchId && matchAllocationId !== undefined
+        ? { match: { [matchId]: matchAllocationId } }
+        : {}),
+    },
   };
 }
 
-export function getTournamentCredentials(tournamentId) {
+export function getTournamentCredentials(tournamentId, allocationId) {
   return {
     hostKey: getHostKey(tournamentId),
     adminKey: getAdminKey(),
+    ...(tournamentId && allocationId !== undefined
+      ? {
+          tournamentAllocationId: allocationId,
+          expectedAllocations: {
+            tournament: {
+              [tournamentId]: allocationId,
+            },
+          },
+        }
+      : {}),
   };
 }

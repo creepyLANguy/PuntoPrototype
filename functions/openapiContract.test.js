@@ -33,6 +33,8 @@ const { getCourtScoreRevision } = require("./http/getCourtScoreRevision");
 const { getCourtStats } = require("./http/getCourtStats");
 const { getCourtMomentum } = require("./http/getCourtMomentum");
 
+let nextGeneration = 0;
+
 class FakeFirestore {
   constructor(initialDocs = {}) {
     this.docs = new Map(
@@ -156,10 +158,12 @@ function makeSeed(
   events = [],
   matchOverrides = {},
 ) {
-  const matchId = matchOverrides.matchId || "m1";
+  const matchId = matchOverrides.matchId || "fghjkm";
+  const generation = `seed-${++nextGeneration}`;
   const score = replayEvents(events, scoringOptions);
   const seed = {
     [`courts/${courtId}`]: {
+      allocationId: `${generation}-court`,
       name: matchOverrides.courtName || "Court BN",
       activeMatchId: matchId,
       lastMatchId: matchId,
@@ -167,6 +171,7 @@ function makeSeed(
       scoringOptions,
     },
     [`matches/${matchId}`]: {
+      allocationId: `${generation}-match`,
       matchId,
       name: matchOverrides.name || null,
       status: "live",
@@ -193,7 +198,7 @@ function makeSeed(
 
 function resetEnvironment(seed) {
   mockDb = new FakeFirestore(seed);
-  ["court:bnrm", "match:m1", "match:namedmatch"].forEach((key) => {
+  ["court:bnrmq", "match:m1", "match:namedmatch"].forEach((key) => {
     scoreApiCache.clear(key);
     statsApiCache.clear(key);
     momentumApiCache.clear(key);
@@ -493,45 +498,64 @@ describe("public API OpenAPI contract", () => {
       },
     },
   ])("validates the /score response for $name", async ({ options, events, court }) => {
-    resetEnvironment(makeSeed("bnrm", options, events, court));
-    const response = await invoke(getCourtScore, "/score/bnrm");
+    resetEnvironment(makeSeed("bnrmq", options, events, court));
+    const response = await invoke(getCourtScore, "/score/bnrmq");
 
     await assertSuccessfulResponseMatchesContract(contract, "/score/{courtId}", response);
   });
 
   test("validates the match-addressed score response and title fields", async () => {
     resetEnvironment(
-      makeSeed("bnrm", DEFAULT_SCORING_OPTIONS, [], {
-        matchId: "namedmatch",
+      makeSeed("bnrmq", DEFAULT_SCORING_OPTIONS, [], {
+        matchId: "jkmnpq",
         name: "Friday Final",
       }),
     );
 
-    const response = await invoke(getCourtScore, "/score/match/namedmatch");
+    const response = await invoke(getCourtScore, "/score/match/jkmnpq");
     await assertSuccessfulResponseMatchesContract(contract, "/score/match/{matchId}", response);
 
-    expect(response.payload.matchId).toBe("namedmatch");
+    expect(response.payload.matchId).toBe("jkmnpq");
     expect(response.payload.title).toBe("Friday Final");
     expect(response.payload.match.title).toBe("Friday Final");
+  });
+
+  test("public API cache keys isolate replacement allocation generations", async () => {
+    resetEnvironment(
+      makeSeed("bnrmq", DEFAULT_SCORING_OPTIONS, [], {
+        name: "Previous assignment",
+      }),
+    );
+    const previous = await invoke(getCourtScore, "/score/bnrmq");
+
+    resetEnvironment(
+      makeSeed("bnrmq", DEFAULT_SCORING_OPTIONS, [], {
+        name: "Current assignment",
+      }),
+    );
+    const current = await invoke(getCourtScore, "/score/bnrmq");
+
+    expect(previous.payload.matchName).toBe("Previous assignment");
+    expect(current.payload.matchName).toBe("Current assignment");
   });
 
   test("validates /revision and preserves the advertised score revision", async () => {
     const events = makeEvents(["A", "A", "A"]);
     resetEnvironment(
-      makeSeed("bnrm", DEFAULT_SCORING_OPTIONS, events, {
+      makeSeed("bnrmq", DEFAULT_SCORING_OPTIONS, events, {
         teamNames: { A: "Smashers", B: "Lobbers" },
         playerNames: { A1: "Ann", A2: "Al", B1: "Bo", B2: "Bea" },
       }),
     );
 
-    const revision = await invoke(getCourtScoreRevision, "/revision/bnrm");
+    const revision = await invoke(getCourtScoreRevision, "/revision/bnrmq");
     await assertSuccessfulResponseMatchesContract(contract, "/revision/{courtId}", revision);
-    expect(revision.payload.matchId).toBe("m1");
+    expect(revision.payload.matchId).toBe("fghjkm");
 
-    const score = await invoke(getCourtScore, "/score/bnrm");
+    const score = await invoke(getCourtScore, "/score/bnrmq");
     expect(score.payload.revision).toBe(revision.payload.revision);
 
-    const matchRevision = await invoke(getCourtScoreRevision, "/revision/match/m1");
+    const matchRevision = await invoke(getCourtScoreRevision, "/revision/match/fghjkm");
     await assertSuccessfulResponseMatchesContract(
       contract,
       "/revision/match/{matchId}",
@@ -542,56 +566,56 @@ describe("public API OpenAPI contract", () => {
 
   test("validates /stats for zero-denominator statistics and populated match data", async () => {
     resetEnvironment(
-      makeSeed("bnrm", DEFAULT_SCORING_OPTIONS, [], {
+      makeSeed("bnrmq", DEFAULT_SCORING_OPTIONS, [], {
         playerNames: { A1: "", A2: "", B1: "", B2: "" },
       }),
     );
 
-    const emptyStats = await invoke(getCourtStats, "/stats/bnrm");
+    const emptyStats = await invoke(getCourtStats, "/stats/bnrmq");
     await assertSuccessfulResponseMatchesContract(contract, "/stats/{courtId}", emptyStats);
-    expect(emptyStats.payload.matchId).toBe("m1");
+    expect(emptyStats.payload.matchId).toBe("fghjkm");
 
     const events = makeEvents(["A", "A", "B", "A", "A"]);
     resetEnvironment(
-      makeSeed("bnrm", DEFAULT_SCORING_OPTIONS, events, {
+      makeSeed("bnrmq", DEFAULT_SCORING_OPTIONS, events, {
         playerNames: { A1: "Ann", A2: "Al", B1: "Bo", B2: "Bea" },
       }),
     );
 
-    const populatedStats = await invoke(getCourtStats, "/stats/bnrm");
+    const populatedStats = await invoke(getCourtStats, "/stats/bnrmq");
     await assertSuccessfulResponseMatchesContract(contract, "/stats/{courtId}", populatedStats);
     expect(populatedStats.payload.totalPoints).toBe(5);
 
-    const matchStats = await invoke(getCourtStats, "/stats/match/m1");
+    const matchStats = await invoke(getCourtStats, "/stats/match/fghjkm");
     await assertSuccessfulResponseMatchesContract(contract, "/stats/match/{matchId}", matchStats);
-    expect(matchStats.payload.matchId).toBe("m1");
+    expect(matchStats.payload.matchId).toBe("fghjkm");
   });
 
   test("validates /momentum and preserves one-to-one marker alignment", async () => {
     const events = makeEvents(["A", "A", "B", "A", "A"]);
-    resetEnvironment(makeSeed("bnrm", DEFAULT_SCORING_OPTIONS, events));
+    resetEnvironment(makeSeed("bnrmq", DEFAULT_SCORING_OPTIONS, events));
 
-    const momentum = await invoke(getCourtMomentum, "/momentum/bnrm");
+    const momentum = await invoke(getCourtMomentum, "/momentum/bnrmq");
     await assertSuccessfulResponseMatchesContract(contract, "/momentum/{courtId}", momentum);
-    expect(momentum.payload.matchId).toBe("m1");
+    expect(momentum.payload.matchId).toBe("fghjkm");
 
     expect(momentum.payload.pointHistory).toEqual(["A", "A", "B", "A", "A"]);
     expect(momentum.payload.momentumTimeline).toHaveLength(5);
     expect(momentum.payload.gameMarkers).toEqual([5]);
     expect(momentum.payload.setPointMarkers).toEqual([]);
 
-    const matchMomentum = await invoke(getCourtMomentum, "/momentum/match/m1");
+    const matchMomentum = await invoke(getCourtMomentum, "/momentum/match/fghjkm");
     await assertSuccessfulResponseMatchesContract(
       contract,
       "/momentum/match/{matchId}",
       matchMomentum,
     );
-    expect(matchMomentum.payload.matchId).toBe("m1");
+    expect(matchMomentum.payload.matchId).toBe("fghjkm");
   });
 
   test("rejects an implementation payload with an incompatible enum", async () => {
-    resetEnvironment(makeSeed("bnrm"));
-    const response = await invoke(getCourtScore, "/score/bnrm");
+    resetEnvironment(makeSeed("bnrmq"));
+    const response = await invoke(getCourtScore, "/score/bnrmq");
     const brokenPayload = {
       ...response.payload,
       scoringMode: "unsupported-mode",
