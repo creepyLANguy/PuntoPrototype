@@ -7,6 +7,7 @@ const { JOBS_COLLECTION } = require("../services/retentionConfig");
 const TIMEOUT_SECONDS = 540;
 // Leave headroom before the function timeout so the last step can commit.
 const WORK_BUDGET_MS = 420 * 1000;
+const RETENTION_SCHEDULER_REGION = "us-central1";
 
 function runWithBudget() {
   return runRetentionWorker({ deadlineMs: Date.now() + WORK_BUDGET_MS });
@@ -27,7 +28,7 @@ exports.onRetentionJobCreated = onDocumentCreated(
 exports.idRetentionWorker = onSchedule(
   {
     schedule: "every 1 minutes",
-    region: REGION,
+    region: RETENTION_SCHEDULER_REGION,
     timeoutSeconds: TIMEOUT_SECONDS,
     maxInstances: 1,
   },
