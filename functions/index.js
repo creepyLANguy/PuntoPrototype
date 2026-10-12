@@ -2,8 +2,6 @@ const { onCall, onRequest } = require("firebase-functions/v2/https");
 
 const { onEventCreate } = require("./triggers/onEventCreate");
 const { onCourtDeleted, onDeviceDeleted } = require("./triggers/onClubMemberDeleted");
-const { onClubDeleted, onMatchDeleted, onTournamentDeleted } = require("./triggers/onRootDeleted");
-const { onRetentionJobCreated, idRetentionWorker } = require("./triggers/retentionWorker");
 const { withOperationScope } = require("./infrastructure/dataGuard");
 const { db } = require("./infrastructure/firebase");
 const { readCredentials, requireAdmin } = require("./services/authService");
@@ -18,7 +16,7 @@ const { updateClub } = require("./callables/updateClub");
 const { deleteClub } = require("./callables/deleteClub");
 const { manageMatch } = require("./callables/manageMatch");
 const { manageTournament } = require("./callables/manageTournament");
-const { wrapCallable, mapRetentionErrors } = require("./services/errors");
+const { wrapCallable, mapRetryableErrors } = require("./services/errors");
 
 const { REGION } = require("./services/constants");
 const { postEvent } = require("./http/postEvent");
@@ -36,14 +34,9 @@ const scoped = withOperationScope;
 exports.onEventCreate = onEventCreate;
 exports.onCourtDeleted = onCourtDeleted;
 exports.onDeviceDeleted = onDeviceDeleted;
-exports.onClubDeleted = onClubDeleted;
-exports.onMatchDeleted = onMatchDeleted;
-exports.onTournamentDeleted = onTournamentDeleted;
-exports.onRetentionJobCreated = onRetentionJobCreated;
-exports.idRetentionWorker = idRetentionWorker;
 
 exports.resetCourt = onCall({ region: REGION }, scoped(wrapCallable(resetCourt)));
-exports.changeoverCourt = onCall({ region: REGION }, scoped(mapRetentionErrors(changeoverCourt)));
+exports.changeoverCourt = onCall({ region: REGION }, scoped(mapRetryableErrors(changeoverCourt)));
 exports.updateScoringOptions = onCall(
   { region: REGION },
   scoped(wrapCallable(updateScoringOptions)),

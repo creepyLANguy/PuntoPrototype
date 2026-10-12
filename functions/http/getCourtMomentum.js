@@ -4,7 +4,6 @@ const {
   resolveScoreTarget,
   targetCacheKey,
   momentumApiCache,
-  syncApiCacheGeneration,
 } = require("../services/publicApiService");
 const { buildMomentumData } = require("../services/analyticsService");
 function sendJson(res, status, body) {
@@ -25,18 +24,14 @@ async function getCourtMomentum(req, res) {
       });
     }
 
-    await syncApiCacheGeneration();
-    const cacheKey = targetCacheKey(target);
+    const resolved = await resolveScoreTarget(target);
+    if (resolved.notFound) {
+      return sendJson(res, 404, { success: false, error: resolved.notFound });
+    }
+    const cacheKey = targetCacheKey(target, resolved);
     const cached = momentumApiCache.get(cacheKey);
     if (cached) {
       return sendJson(res, cached.status, cached.body);
-    }
-
-    const resolved = await resolveScoreTarget(target);
-    if (resolved.notFound) {
-      const notFoundBody = { success: false, error: resolved.notFound };
-      momentumApiCache.set(cacheKey, 404, notFoundBody);
-      return sendJson(res, 404, notFoundBody);
     }
 
     const { payload } = await buildMomentumData(resolved.match?.matchId || null);

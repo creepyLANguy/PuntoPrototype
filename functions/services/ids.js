@@ -1,6 +1,5 @@
 const crypto = require("crypto");
-const { invalid, conflict, precondition, maintenance } = require("./errors");
-const { GATE_PATH, retentionPaths, getRetentionPolicy } = require("./retentionConfig");
+const { invalid, conflict, precondition } = require("./errors");
 
 const ID_ALPHABET = "abcdefghjkmnpqrstuxyz";
 const ID_LENGTHS = Object.freeze({ court: 5, tournament: 7, match: 6, club: 4 });
@@ -13,18 +12,15 @@ const COLLECTIONS = Object.freeze({
 });
 const reservations = new WeakMap();
 const facades = new WeakMap();
+const allocatedRoots = new WeakMap();
 
-// Immutable generation token stored on each root and its ledger record. Uses
-// randomBytes so ID candidate sources (randomInt) stay independent.
+// Immutable generation tokens keep reassigned IDs distinct. Uses randomBytes so
+// ID candidate sources (randomInt) stay independent.
 const newAllocationId = () => crypto.randomBytes(12).toString("base64url");
 
-function emptyLedger(type) {
-  return { type, sequence: 0, live: 0, released: 0, cullJobId: null };
-}
-
 // Wraps the transaction handed to runIdTransaction callbacks: creating an
-// allocated root stamps its allocationId and marks the allocation as used, so
-// only roots that are really created get ledger records.
+// allocated root stamps its allocationId, so only roots that are really created
+// receive a generation token.
 function idTransactionFacade(tx) {
   let facade = facades.get(tx);
   if (facade) return facade;
@@ -47,7 +43,12 @@ function idTransactionFacade(tx) {
       const allocation = context?.active ? context.allocations.get(ref.path) : null;
       if (allocation && !allocation.created) {
         allocation.created = true;
-        tx.create(ref, { ...data, allocationId: allocation.allocationId });
+        const allocatedData = { ...data, allocationId: allocation.allocationId };
+        allocatedRoots.set(allocatedData, {
+          path: ref.path,
+          allocationId: allocation.allocationId,
+        });
+        tx.create(ref, allocatedData);
       } else {
         tx.create(ref, data);
       }
@@ -56,81 +57,6 @@ function idTransactionFacade(tx) {
   };
   facades.set(tx, facade);
   return facade;
-}
-
-function finalizeAllocations(tx, context) {
-  const byType = new Map();
-  context.allocations.forEach((allocation) => {
-    if (!allocation.created) return;
-    if (!byType.has(allocation.type)) byType.set(allocation.type, []);
-    byType.get(allocation.type).push(allocation);
-  });
-  if (!byType.size) return;
-  const { refDb: db, gate } = context;
-  const nowMs = Date.now();
-  const cullTypes = {};
-  const ledgerWrites = [];
-  byType.forEach((allocations, type) => {
-    const ledger = context.ledgerData.get(type);
-    const policy = getRetentionPolicy(type);
-    let sequence = ledger.sequence;
-    allocations.forEach((allocation) => {
-      sequence += 1;
-      tx.create(db.doc(retentionPaths.allocation(type, allocation.id)), {
-        type,
-        id: allocation.id,
-        allocationId: allocation.allocationId,
-        sequence,
-        state: "live",
-        allocatedAtMs: nowMs,
-      });
-    });
-    const live = ledger.live + allocations.length;
-    const occupied = live + ledger.released;
-    const next = {
-      type,
-      sequence,
-      live,
-      released: ledger.released,
-      trigger: policy.trigger,
-      target: policy.target,
-      cullJobId: null,
-      updatedAtMs: nowMs,
-    };
-    if (occupied >= policy.trigger) {
-      cullTypes[type] = { cullCount: occupied - policy.target, occupiedAtStart: occupied };
-    }
-    ledgerWrites.push(next);
-  });
-  const jobId = Object.keys(cullTypes).length ? `${nowMs}-${newAllocationId()}` : null;
-  ledgerWrites.forEach((ledger) => {
-    if (cullTypes[ledger.type]) ledger.cullJobId = jobId;
-    tx.set(db.doc(retentionPaths.ledger(ledger.type)), ledger);
-  });
-  if (!jobId) return;
-  // Starting the cull commits atomically with the allocation that crossed the
-  // trigger: the gate blocks further allocations and every live write.
-  tx.create(db.doc(retentionPaths.job(jobId)), {
-    jobId,
-    status: "pending",
-    createdAtMs: nowMs,
-    types: Object.keys(cullTypes),
-    plan: cullTypes,
-    attempt: 0,
-    lease: null,
-    nextVictim: 0,
-    victimCount: 0,
-    selection: {},
-  });
-  tx.set(db.doc(GATE_PATH), {
-    active: true,
-    jobId,
-    types: Object.keys(cullTypes),
-    epoch: (gate.epoch || 0) + 1,
-    activatedAtMs: nowMs,
-    completedAtMs: null,
-    lastJobId: gate.lastJobId || null,
-  });
 }
 
 // The Admin SDK reuses its Transaction across retries: reset reservations at
@@ -142,18 +68,12 @@ function runIdTransaction(db, callback, options) {
       reserved: new Set(),
       active: true,
       db,
-      refDb: null,
-      gate: null,
-      gatePromise: null,
-      ledgerPromises: new Map(),
-      ledgerData: new Map(),
       allocations: new Map(),
     };
     reservations.set(tx, context);
     reservations.set(rawTx, context);
     try {
       const result = await callback(tx);
-      finalizeAllocations(rawTx, context);
       if (result && typeof result === "object") {
         for (const allocation of context.allocations.values()) {
           if (allocation.created && result[`${allocation.type}Id`] === allocation.id) {
@@ -179,6 +99,12 @@ function allocationContext(tx) {
   return context;
 }
 
+function consumeAllocatedRoot(data, path) {
+  const allocation = data && allocatedRoots.get(data);
+  if (allocation) allocatedRoots.delete(data);
+  return allocation?.path === path && allocation.allocationId === data.allocationId;
+}
+
 function deferIdTransactionWrites(transaction) {
   const context = allocationContext(transaction);
   const writes = [];
@@ -198,32 +124,6 @@ function deferIdTransactionWrites(transaction) {
       writes.length = 0;
     },
   };
-}
-
-// Reads the maintenance gate and the type's ledger once per attempt. New IDs
-// are refused while a cull is pending so the ledger reaches its target exactly.
-function loadLedger(tx, context, type) {
-  const db = context.refDb;
-  if (!context.gatePromise) {
-    context.gatePromise = tx.get(db.doc(GATE_PATH)).then((snapshot) => {
-      context.gate = (snapshot.exists && snapshot.data()) || {};
-      return context.gate;
-    });
-  }
-  if (!context.ledgerPromises.has(type)) {
-    context.ledgerPromises.set(
-      type,
-      Promise.all([context.gatePromise, tx.get(db.doc(retentionPaths.ledger(type)))]).then(
-        ([gate, snapshot]) => {
-          const ledger = { ...emptyLedger(type), ...((snapshot.exists && snapshot.data()) || {}) };
-          context.ledgerData.set(type, ledger);
-          if (gate.active === true || ledger.cullJobId) throw maintenance();
-          return ledger;
-        },
-      ),
-    );
-  }
-  return context.ledgerPromises.get(type);
 }
 
 function validateId(type, id) {
@@ -254,16 +154,13 @@ function randomId(length, randomInt = crypto.randomInt) {
 }
 
 // Allocate in runIdTransaction's read phase; callers persist with tx.create,
-// which stamps the root's allocationId. An ID is free only when neither the
-// root nor its ledger record exists (released IDs stay reserved until culled).
+// which stamps the root's allocationId. Existing roots reserve their IDs.
 async function allocateId(tx, type, { db, randomInt = crypto.randomInt } = {}) {
   if (!Object.hasOwn(ID_LENGTHS, type)) throw invalid("Unknown ID type.");
   const context = allocationContext(tx);
   const { reserved } = context;
   if (!db) db = typeof context.db?.doc === "function" ? context.db : null;
   if (!db) db = require("../infrastructure/firebase").db;
-  if (!context.refDb) context.refDb = db;
-  await loadLedger(tx, context, type);
   for (let attempt = 0; attempt < MAX_ID_ALLOCATION_ATTEMPTS; attempt++) {
     const id = randomId(ID_LENGTHS[type], randomInt);
     const path = `${COLLECTIONS[type]}/${id}`;
@@ -271,11 +168,8 @@ async function allocateId(tx, type, { db, randomInt = crypto.randomInt } = {}) {
     // Reserve synchronously: parallel allocations on one tx must not share a candidate.
     reserved.add(path);
     try {
-      const [root, record] = await Promise.all([
-        tx.get(db.doc(path)),
-        tx.get(db.doc(retentionPaths.allocation(type, id))),
-      ]);
-      if (!root.exists && !record.exists) {
+      const root = await tx.get(db.doc(path));
+      if (!root.exists) {
         if (!context.active) throw precondition("ID allocation transaction already ended.");
         context.allocations.set(path, {
           type,
@@ -313,6 +207,7 @@ module.exports = {
   COLLECTIONS,
   MAX_ID_ALLOCATION_ATTEMPTS,
   newAllocationId,
+  consumeAllocatedRoot,
   validateId,
   runIdTransaction,
   deferIdTransactionWrites,

@@ -13,18 +13,12 @@ returns `aborted` without partial writes. Existing IDs cannot be overwritten by
 creation. Supplied IDs are validated against the exact type contract; legacy
 formats are not accepted.
 
-Assignment retention limits are documented in [the data model](../data-model.md#resource-ids).
-Reaching a trigger schedules oldest-first culling down to its target, preserving
-the complete document trees in backend-only `CULLED_*` Firestore collections.
-IDs are not available for reassignment until archival and reference unlinking
-have completed.
-
 Existing-resource mutations supply `expectedAllocations`, a map of resource
 types to IDs and their previously observed `allocationId` tokens. A request
 must not silently replace an old token with the replacement assignment's token.
 Creation responses include the new resource's `allocationId`; clients retain
-it with that resource's context. During culling, mutations are temporarily
-unavailable until the background job completes.
+it with that resource's context. The token fences stale references if a deleted
+ID is later allocated to a different resource.
 
 Browser creation calls are centralized in `createWithUniqueId(type, data,
 credentials)`, which dispatches to the appropriate callable and validates the

@@ -18,11 +18,6 @@ service cloud.firestore {
         && id.matches('^[abcdefghjkmnpqrstuxyz]+$');
     }
 
-    function writesAvailable() {
-      return !exists(/databases/$(database)/documents/_idMaintenance/control)
-        || get(/databases/$(database)/documents/_idMaintenance/control).data.get('active', false) == false;
-    }
-
     function sameAssignment(before, after) {
       return before.get('allocationId', null) is string
         && before.allocationId == after.get('allocationId', null);
@@ -61,7 +56,7 @@ service cloud.firestore {
       allow read: if true;
       allow create: if false;
       allow delete: if false;
-      allow update: if writesAvailable() && validId(courtId, 5)
+      allow update: if validId(courtId, 5)
         && sameAssignment(resource.data, request.resource.data)
         && validMatchReference(request.resource.data.get('activeMatchId', null),
           request.resource.data.get('activeMatchAllocationId', null))
@@ -77,9 +72,8 @@ service cloud.firestore {
 
     match /devices/{deviceId} {
       allow read: if true;
-      allow delete: if writesAvailable();
-      allow create, update: if writesAvailable()
-        && validCourtReference(request.resource.data)
+      allow delete: if true;
+      allow create, update: if validCourtReference(request.resource.data)
         && validClubReference(request.resource.data);
     }
 
@@ -100,7 +94,7 @@ service cloud.firestore {
       allow create, delete: if false;
       // Players may name the players and teams of a casual match; tournament
       // match names come from the tournament roster.
-      allow update: if writesAvailable() && validId(matchId, 6)
+      allow update: if validId(matchId, 6)
         && sameAssignment(resource.data, request.resource.data)
         && resource.data.tournamentId == null
         && request.resource.data.diff(resource.data).affectedKeys()
@@ -108,7 +102,7 @@ service cloud.firestore {
 
       match /events/{eventId} {
         allow read: if true;
-        allow create: if writesAvailable() && validId(matchId, 6)
+        allow create: if validId(matchId, 6)
           && request.resource.data.matchId == matchId
           && sameAssignment(matchDoc(matchId).data, request.resource.data)
           && validId(request.resource.data.courtId, 5)
@@ -162,28 +156,5 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
-    match /_idMaintenance/{document=**} {
-      allow read, write: if false;
-    }
-
-    match /_idLedger/{document=**} {
-      allow read, write: if false;
-    }
-
-    match /CULLED_MATCHES/{document=**} {
-      allow read, write: if false;
-    }
-
-    match /CULLED_COURTS/{document=**} {
-      allow read, write: if false;
-    }
-
-    match /CULLED_TOURNAMENTS/{document=**} {
-      allow read, write: if false;
-    }
-
-    match /CULLED_CLUBS/{document=**} {
-      allow read, write: if false;
-    }
   }
 }

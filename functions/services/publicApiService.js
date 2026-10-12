@@ -16,7 +16,6 @@ const { DEFAULT_TEAM_NAMES, DEFAULT_PLAYER_NAMES } = require("./constants");
 const { paths } = require("./firestorePaths");
 const { validateId } = require("./ids");
 const { resolveMatchTitle } = require("../domain/matches/lifecycle");
-const { GATE_PATH } = require("./retentionConfig");
 
 const SCORE_API_REWRITE_PREFIXES = new Set(["a", "r", "s", "m"]);
 const SCORE_API_POINT_LABELS = ["0", "15", "30", "40"];
@@ -83,8 +82,14 @@ function extractScoreApiCourtId(reqPath) {
   return target?.kind === "court" ? target.id : null;
 }
 
-function targetCacheKey(target) {
-  return `${target.kind}:${target.id}`;
+function targetCacheKey(target, resolved) {
+  if (!resolved) return `${target.kind}:${target.id}`;
+  const root = target.kind === "match" ? resolved.match : resolved.court;
+  const parts = [target.kind, target.id, root?.allocationId || ""];
+  if (target.kind === "court") {
+    parts.push(resolved.match?.matchId || "", resolved.match?.allocationId || "");
+  }
+  return parts.join(":");
 }
 
 // Resolves a court or match target to { court, match } without reading any
@@ -138,42 +143,16 @@ function buildMatchContext(match, court) {
   };
 }
 
-// Instance caches are tied to the ID generation epoch: every cull bumps the
-// maintenance gate epoch (at start and completion), which clears them, and
-// they are bypassed while a cull runs. The gate is re-read at most once per
-// GATE_EPOCH_CHECK_MS per instance.
-const GATE_EPOCH_CHECK_MS = 1000;
-const cacheGeneration = { epoch: null, checkedAtMs: 0 };
-
-async function syncApiCacheGeneration(nowMs = Date.now()) {
-  if (cacheGeneration.epoch !== null && nowMs - cacheGeneration.checkedAtMs < GATE_EPOCH_CHECK_MS) {
-    return;
-  }
-  const gateSnap = await db.doc(GATE_PATH).get();
-  const gate = (gateSnap.exists && gateSnap.data()) || {};
-  const epoch = Number.isInteger(gate.epoch) ? gate.epoch : 0;
-  const caches = [scoreApiCache, statsApiCache, momentumApiCache];
-  if (cacheGeneration.epoch !== null && cacheGeneration.epoch !== epoch) {
-    caches.forEach((cache) => cache.clearAll());
-  }
-  caches.forEach((cache) => cache.setBypass(gate.active === true));
-  cacheGeneration.epoch = epoch;
-  cacheGeneration.checkedAtMs = nowMs;
-}
-
 async function buildScoreResponse(target) {
-  await syncApiCacheGeneration();
-  const cacheKey = targetCacheKey(target);
+  const resolved = await resolveScoreTarget(target);
+  if (resolved.notFound) {
+    return { status: 404, body: { success: false, error: resolved.notFound } };
+  }
+
+  const cacheKey = targetCacheKey(target, resolved);
   const cached = scoreApiCache.get(cacheKey);
   if (cached) {
     return { status: cached.status, body: cached.body };
-  }
-
-  const resolved = await resolveScoreTarget(target);
-  if (resolved.notFound) {
-    const notFoundBody = { success: false, error: resolved.notFound };
-    scoreApiCache.set(cacheKey, 404, notFoundBody);
-    return { status: 404, body: notFoundBody };
   }
 
   const { court, match } = resolved;
@@ -285,7 +264,6 @@ module.exports = {
   extractScoreApiTarget,
   targetCacheKey,
   prepareScoreApiRequest,
-  syncApiCacheGeneration,
   scoreApiCache,
   statsApiCache,
   momentumApiCache,

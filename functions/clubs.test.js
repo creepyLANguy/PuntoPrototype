@@ -25,10 +25,6 @@ jest.mock("firebase-functions/v2/firestore", () => ({
   onDocumentDeleted: (_config, handler) => handler,
 }));
 
-jest.mock("firebase-functions/v2/scheduler", () => ({
-  onSchedule: (_config, handler) => handler,
-}));
-
 jest.mock("firebase-admin", () => ({
   initializeApp: jest.fn(),
   firestore: () => mockDb,
@@ -900,16 +896,11 @@ describe("Cloud Functions exports", () => {
         "getCourtScoreRevision",
         "getCourtStats",
         "getDetailedScore",
-        "idRetentionWorker",
         "manageMatch",
         "manageTournament",
-        "onClubDeleted",
         "onCourtDeleted",
         "onDeviceDeleted",
         "onEventCreate",
-        "onMatchDeleted",
-        "onRetentionJobCreated",
-        "onTournamentDeleted",
         "postEvent",
         "resetCourt",
         "updateClub",

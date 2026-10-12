@@ -1,37 +1,33 @@
-// Central write fence for every backend mutation (ID retention safety).
+// Central write fence for every backend mutation.
 //
 // The Firestore singleton is wrapped so that every write — transaction,
 // batch or single document write — commits inside a transaction that also:
-//   1. reads the global maintenance gate (_idMaintenance/control) and refuses
-//      to write while an ID cull job runs;
-//   2. reads the managed root (clubs|courts|matches|tournaments/{id}) of every
+//   1. reads the managed root (clubs|courts|matches|tournaments/{id}) of every
 //      written path and refuses to recreate a vanished root through set/update
 //      or to write descendants/sidecars of a missing root;
-//   3. compares the root's immutable allocationId with the generation the
+//   2. compares the root's immutable allocationId with the generation the
 //      current operation observed earlier (AsyncLocalStorage scope), so a
-//      delayed trigger or a slow request can never mutate a culled-and-reused
-//      root, nor write a reference to one;
-//   4. only lets a root be created together with its ID ledger record.
+//      delayed trigger or a slow request can never mutate a replaced root, nor
+//      write a reference to one;
+//   3. only lets a root be created through the server ID allocator.
 //
 // Writes inside transactions are deferred until the callback returns, so the
 // guard's reads still precede every write as Firestore requires.
 const { AsyncLocalStorage } = require("node:async_hooks");
-const {
-  GATE_PATH,
-  ROOT_COLLECTIONS,
-  TOURNAMENT_SIDECARS,
-  typeForRootCollection,
-  retentionPaths,
-} = require("../services/retentionConfig");
-const { maintenance, staleGeneration, precondition } = require("../services/errors");
-const { validateId } = require("../services/ids");
+const { staleGeneration, precondition } = require("../services/errors");
+const { COLLECTIONS, consumeAllocatedRoot, validateId } = require("../services/ids");
 
 const RAW = Symbol.for("padelpush.firestore.raw");
 const GUARDED = Symbol.for("padelpush.firestore.guarded");
 const scopes = new AsyncLocalStorage();
 
-const ROOT_COLLECTION_NAMES = new Set(Object.values(ROOT_COLLECTIONS));
-const SIDECAR_NAMES = new Set(TOURNAMENT_SIDECARS);
+const ROOT_COLLECTION_NAMES = new Set(Object.values(COLLECTIONS));
+const SIDECAR_NAMES = new Set([
+  "tournamentViews",
+  "tournamentPrivateViews",
+  "tournamentDirectory",
+  "tournamentSecrets",
+]);
 
 // Top-level reference fields: a write naming a root the operation observed
 // must still see that root's generation.
@@ -66,12 +62,11 @@ function unwrap(value) {
   return (value && value[RAW]) || value;
 }
 
-function newScope(options = {}) {
+function newScope() {
   return {
     observed: new Map(),
     pinned: new Set(),
     assignments: new Map(),
-    maintenance: options.maintenance || null,
   };
 }
 
@@ -90,13 +85,13 @@ function withOperationScope(handler) {
   return (...args) =>
     runInOperationScope(() => {
       const expected = args[0]?.data?.expectedAllocations;
-      currentScope().requested = Object.entries(ROOT_COLLECTIONS)
+      currentScope().requested = Object.entries(COLLECTIONS)
         .filter(([type]) => args[0]?.data?.[`${type}Id`] != null)
         .map(([type, collection]) => `${collection}/${args[0].data[`${type}Id`]}`);
       currentScope().expected = new Set();
       if (expected) {
         for (const [type, entries] of Object.entries(expected)) {
-          if (!Object.hasOwn(ROOT_COLLECTIONS, type) || !entries || typeof entries !== "object") {
+          if (!Object.hasOwn(COLLECTIONS, type) || !entries || typeof entries !== "object") {
             throw precondition("Invalid expected allocations.");
           }
           for (const [id, allocationId] of Object.entries(entries)) {
@@ -104,21 +99,16 @@ function withOperationScope(handler) {
             if (typeof allocationId !== "string" || !allocationId) {
               throw precondition("An allocation token is required.");
             }
-            currentScope().observed.set(`${ROOT_COLLECTIONS[type]}/${id}`, {
+            currentScope().observed.set(`${COLLECTIONS[type]}/${id}`, {
               exists: true,
               allocationId,
             });
-            currentScope().expected.add(`${ROOT_COLLECTIONS[type]}/${id}`);
+            currentScope().expected.add(`${COLLECTIONS[type]}/${id}`);
           }
         }
       }
       return handler(...args);
     });
-}
-
-// Retention worker only: bypasses the gate and root checks it enforces.
-function runInMaintenanceScope(jobId, fn) {
-  return scopes.run(newScope({ maintenance: { jobId } }), fn);
 }
 
 function stateOf(snapshot) {
@@ -292,10 +282,7 @@ function createGuardedFirestore(raw) {
 
   async function preflight(rawTx, attempt, scope) {
     const queue = attempt.queue;
-    if (!queue.length || scope?.maintenance) return;
-
-    const gate = await rawTx.get(raw.doc(GATE_PATH));
-    if (gate.exists && gate.data()?.active === true) throw maintenance();
+    if (!queue.length) return;
     for (const path of scope?.requested || []) {
       if (!scope.expected.has(path))
         throw precondition("An expected allocation token is required.");
@@ -332,14 +319,10 @@ function createGuardedFirestore(raw) {
     });
 
     const createdRoots = new Map();
-    const ledgerCreates = new Set();
     queue.forEach((op) => {
       if (op.type !== "create") return;
       const info = rootOf(op.ref.path);
       if (info?.isRoot) createdRoots.set(op.ref.path, op.data?.allocationId);
-      if (op.ref.path.startsWith("_idLedger/")) {
-        ledgerCreates.add(`${op.ref.path}#${op.data?.allocationId}`);
-      }
     });
 
     const assertGeneration = (path) => {
@@ -359,10 +342,7 @@ function createGuardedFirestore(raw) {
 
       if (info.isRoot) {
         if (op.type === "create") {
-          const segments = rootPath.split("/");
-          const type = typeForRootCollection(segments[0]);
-          const record = `${retentionPaths.allocation(type, segments[1])}#${op.data?.allocationId}`;
-          if (typeof op.data?.allocationId !== "string" || !ledgerCreates.has(record)) {
+          if (!consumeAllocatedRoot(op.data, rootPath)) {
             throw precondition("Records must be created through server ID allocation.");
           }
           return;
@@ -588,7 +568,6 @@ module.exports = {
   unwrap,
   rootOf,
   runInOperationScope,
-  runInMaintenanceScope,
   withOperationScope,
   currentScope,
   pinRootGeneration,

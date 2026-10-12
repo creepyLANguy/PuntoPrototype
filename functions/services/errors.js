@@ -29,20 +29,11 @@ const denied = (message = "You are not allowed to do that.") =>
 const precondition = (message, details) =>
   new OperationError("FAILED_PRECONDITION", message, details);
 const conflict = (message, details) => new OperationError("ABORTED", message, details);
-// Every live write is fenced while an ID retention cull runs; callers retry.
-const maintenance = () =>
-  new OperationError("UNAVAILABLE", "Padel Push is briefly in maintenance. Please retry shortly.", {
-    code: "MAINTENANCE",
-    retryable: true,
-  });
 const staleGeneration = (path) =>
   new OperationError("ABORTED", "This record was replaced. Refresh and retry.", {
     code: "STALE_GENERATION",
     path,
   });
-const isMaintenanceError = (error) =>
-  error?.code === "UNAVAILABLE" && error?.details?.code === "MAINTENANCE";
-
 // Domain errors (MatchRuleError, TournamentDomainError) are rule violations
 // with user-safe messages.
 function toOperationError(error) {
@@ -83,9 +74,9 @@ function wrapCallable(handler) {
   };
 }
 
-// For handlers that keep their own error contract: only retention errors
-// (maintenance gate, stale generation) are mapped to callable errors.
-function mapRetentionErrors(handler) {
+// For handlers that keep their own error contract, map retryable operation
+// errors to callable errors.
+function mapRetryableErrors(handler) {
   return async (...args) => {
     try {
       return await handler(...args);
@@ -100,15 +91,13 @@ function mapRetentionErrors(handler) {
 
 module.exports = {
   OperationError,
-  mapRetentionErrors,
+  mapRetryableErrors,
   invalid,
   notFound,
   denied,
   precondition,
   conflict,
-  maintenance,
   staleGeneration,
-  isMaintenanceError,
   toOperationError,
   toCallableError,
   wrapCallable,

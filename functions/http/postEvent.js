@@ -14,7 +14,7 @@ const {
   SUPPORTED_EVENTS,
   normalizeScoreVersion,
 } = require("../domain/events/validation");
-const { isMaintenanceError, staleGeneration } = require("../services/errors");
+const { staleGeneration } = require("../services/errors");
 const {
   pinRootGeneration,
   pinDeviceAssignment,
@@ -288,10 +288,6 @@ async function postEvent(req, res) {
 
     return sendJson(res, 200, { success: true, eventId, matchId, courtId: actingCourtId });
   } catch (err) {
-    if (isMaintenanceError(err)) {
-      if (typeof res.set === "function") res.set("Retry-After", "30");
-      return sendJson(res, 503, { success: false, maintenance: true, error: err.message });
-    }
     if (err?.details?.code === "STALE_GENERATION") {
       return sendJson(res, 409, { success: false, error: err.message });
     }

@@ -28,7 +28,6 @@ let postEvent;
 beforeEach(() => {
   jest.resetModules();
   mockDb = new FakeFirestore({
-    "_idMaintenance/control": { active: false },
     [`courts/${COURT}`]: {
       allocationId: "source-generation",
       activeMatchId: MATCH,
@@ -89,36 +88,20 @@ async function request(eventType, extra = {}) {
   return res;
 }
 
-// Simulate the entire maintenance window between observations and a write:
-// archive, unlink, delete, reuse and reassign, with the gate already reopened.
-function cullAndReuseCourt(id = COURT) {
+// Replace a deleted court with a new assignment while a request is in flight.
+function replaceCourtGeneration(id = COURT) {
   const path = `courts/${id}`;
   const original = mockDb.get(path);
-  mockDb.write("_idMaintenance/control", { active: true });
-  mockDb.write(`CULLED_COURTS/${id}_${original.allocationId}`, original);
-  for (const [docPath, data] of mockDb.docs.entries()) {
+  for (const docPath of mockDb.docs.keys()) {
     if (docPath === path || docPath.startsWith(`${path}/`)) mockDb.docs.delete(docPath);
-    else if (data.courtId === id) {
-      mockDb.write(docPath, { courtId: null, courtAllocationId: null }, { merge: true });
-    } else if (data.currentCourtId === id) {
-      mockDb.write(
-        docPath,
-        { currentCourtId: null, currentCourtAllocationId: null },
-        { merge: true },
-      );
-    }
   }
+  const allocationId = `${original.allocationId}-reused`;
   mockDb.write(path, {
-    allocationId: `${original.allocationId}-reused`,
+    allocationId,
     status: "available",
     marker: "New assignment",
   });
-  mockDb.write(
-    DEVICE_PATH,
-    { courtId: id, courtAllocationId: `${original.allocationId}-reused` },
-    { merge: true },
-  );
-  mockDb.write("_idMaintenance/control", { active: false });
+  mockDb.write(DEVICE_PATH, { courtId: id, courtAllocationId: allocationId }, { merge: true });
   return state();
 }
 
@@ -158,7 +141,7 @@ describe("stored device assignment fencing", () => {
     async (type) => {
       let reused;
       afterSnapshot(DEVICE_PATH, () => {
-        reused = cullAndReuseCourt();
+        reused = replaceCourtGeneration();
       });
       const res = await request(type, { deviceSKU: "Beacon" });
       expectStale(res);
@@ -172,7 +155,7 @@ describe("stored device assignment fencing", () => {
     async (type) => {
       let reused;
       beforeTransaction(() => {
-        reused = cullAndReuseCourt();
+        reused = replaceCourtGeneration();
       });
       const res = await request(type);
       expectStale(res);
@@ -183,7 +166,7 @@ describe("stored device assignment fencing", () => {
   test.each(EVENTS)("fences device-only SKU writes for %s before the event write", async (type) => {
     let reused;
     beforeTransaction(() => {
-      reused = cullAndReuseCourt();
+      reused = replaceCourtGeneration();
     });
     const res = await request(type, { deviceSKU: "Beacon" });
     expectStale(res);
@@ -395,7 +378,7 @@ describe("stored device assignment fencing", () => {
   test("SPECTATE rejects a target reused after its snapshot, before assignment", async () => {
     let reused;
     afterSnapshot(`courts/${TARGET}`, () => {
-      reused = cullAndReuseCourt(TARGET);
+      reused = replaceCourtGeneration(TARGET);
     });
     const res = await request("SPECTATE");
     expectStale(res);
@@ -405,7 +388,7 @@ describe("stored device assignment fencing", () => {
   test("SPECTATE retains the source fence through its final target audit write", async () => {
     let reused;
     beforeTransaction(() => {
-      reused = cullAndReuseCourt();
+      reused = replaceCourtGeneration();
     }, 2);
     const res = await request("SPECTATE");
     expectStale(res);
@@ -434,15 +417,6 @@ describe("stored device assignment fencing", () => {
       expect(state()).toEqual(reused);
     },
   );
-
-  test("an active maintenance gate still returns the retryable HTTP contract", async () => {
-    mockDb.write("_idMaintenance/control", { active: true });
-    const before = state();
-    const res = await request("REGISTER");
-    expect(res.status).toHaveBeenCalledWith(503);
-    expect(res.set).toHaveBeenCalledWith("Retry-After", "30");
-    expect(state()).toEqual(before);
-  });
 });
 
 describe("guarded reference companion writes", () => {
@@ -565,7 +539,7 @@ describe("guarded reference companion writes", () => {
     await expect(
       guard.runInOperationScope(async () => {
         guard.pinRootGeneration(`courts/${COURT}`, "source-generation");
-        reused = cullAndReuseCourt();
+        reused = replaceCourtGeneration();
         await db.doc(DEVICE_PATH).set({ deviceSKU: "Beacon" }, { merge: true });
       }),
     ).rejects.toMatchObject({ details: { code: "STALE_GENERATION" } });

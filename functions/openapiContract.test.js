@@ -33,6 +33,8 @@ const { getCourtScoreRevision } = require("./http/getCourtScoreRevision");
 const { getCourtStats } = require("./http/getCourtStats");
 const { getCourtMomentum } = require("./http/getCourtMomentum");
 
+let nextGeneration = 0;
+
 class FakeFirestore {
   constructor(initialDocs = {}) {
     this.docs = new Map(
@@ -157,9 +159,11 @@ function makeSeed(
   matchOverrides = {},
 ) {
   const matchId = matchOverrides.matchId || "fghjkm";
+  const generation = `seed-${++nextGeneration}`;
   const score = replayEvents(events, scoringOptions);
   const seed = {
     [`courts/${courtId}`]: {
+      allocationId: `${generation}-court`,
       name: matchOverrides.courtName || "Court BN",
       activeMatchId: matchId,
       lastMatchId: matchId,
@@ -167,6 +171,7 @@ function makeSeed(
       scoringOptions,
     },
     [`matches/${matchId}`]: {
+      allocationId: `${generation}-match`,
       matchId,
       name: matchOverrides.name || null,
       status: "live",
@@ -513,6 +518,25 @@ describe("public API OpenAPI contract", () => {
     expect(response.payload.matchId).toBe("jkmnpq");
     expect(response.payload.title).toBe("Friday Final");
     expect(response.payload.match.title).toBe("Friday Final");
+  });
+
+  test("public API cache keys isolate replacement allocation generations", async () => {
+    resetEnvironment(
+      makeSeed("bnrmq", DEFAULT_SCORING_OPTIONS, [], {
+        name: "Previous assignment",
+      }),
+    );
+    const previous = await invoke(getCourtScore, "/score/bnrmq");
+
+    resetEnvironment(
+      makeSeed("bnrmq", DEFAULT_SCORING_OPTIONS, [], {
+        name: "Current assignment",
+      }),
+    );
+    const current = await invoke(getCourtScore, "/score/bnrmq");
+
+    expect(previous.payload.matchName).toBe("Previous assignment");
+    expect(current.payload.matchName).toBe("Current assignment");
   });
 
   test("validates /revision and preserves the advertised score revision", async () => {

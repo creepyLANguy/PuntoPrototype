@@ -24,7 +24,6 @@ jest.mock("./infrastructure/firebase", () => {
 });
 
 let service;
-let config;
 let ids;
 let call;
 let withExpectedAllocations;
@@ -45,8 +44,6 @@ beforeEach(() => {
       clubId: "hjkm",
     },
   });
-  config = require("./services/retentionConfig");
-  config.setRetentionPolicies({ tournament: { trigger: 2, target: 1 } });
   ids = require("./services/ids");
   service = require("./services/tournamentService");
   const { withOperationScope } = require("./infrastructure/dataGuard");
@@ -57,10 +54,7 @@ beforeEach(() => {
   jest.spyOn(Date, "now").mockReturnValue(1800000000000);
 });
 
-afterEach(() => {
-  config.resetRetentionPolicies();
-  jest.restoreAllMocks();
-});
+afterEach(() => jest.restoreAllMocks());
 
 const input = (extra = {}) => ({
   name: "Friday Social",
@@ -93,9 +87,6 @@ test("fresh creation returns the committed allocation token and credentials", as
     accessCode: null,
   });
   expect(created.allocationId).toBe(stored.allocationId);
-  expect(
-    mockDb.get(config.retentionPaths.allocation("tournament", created.tournamentId)),
-  ).toMatchObject({ allocationId: created.allocationId, state: "live", sequence: 1 });
   expect(mockDb.get("tournamentCreations/fresh")).toMatchObject({
     tournamentId: created.tournamentId,
     tournamentAllocationId: created.allocationId,
@@ -133,10 +124,6 @@ test("duplicate creation returns the verified root token without rotating secret
     allocationId: created.allocationId,
   });
   expect([...mockDb.docs]).toEqual(before);
-  expect(mockDb.get(config.retentionPaths.ledger("tournament"))).toMatchObject({
-    live: 1,
-    sequence: 1,
-  });
 });
 
 test("a stale creation marker cannot return a token for a nonexistent root", async () => {
@@ -149,7 +136,6 @@ test("a stale creation marker cannot return a token for a nonexistent root", asy
     details: { code: "NOT_FOUND" },
   });
   expect(mockDb.list("tournaments")).toEqual([]);
-  expect(mockDb.get(config.retentionPaths.ledger("tournament"))).toBeUndefined();
 });
 
 test.each([
@@ -182,14 +168,14 @@ test("a legacy creation marker resolves its token from the existing root, not th
 });
 
 test.each(["public", "private"])(
-  "threshold-crossing %s creation commits readable models and credentials without bypassing maintenance",
+  "normal %s creation commits readable models and credentials atomically",
   async (visibility) => {
     await request("createTournament", input({ requestId: "first" }));
     const commits = jest.spyOn(mockDb, "commitOperations");
     const created = await request(
       "createTournament",
       input({
-        requestId: "threshold",
+        requestId: "second",
         visibility,
       }),
     );
@@ -207,15 +193,9 @@ test.each(["public", "private"])(
         `tournaments/${created.tournamentId}`,
         `tournamentSecrets/${created.tournamentId}`,
         `tournamentViews/${created.tournamentId}`,
-        "tournamentCreations/threshold",
-        config.retentionPaths.ledger("tournament"),
-        config.GATE_PATH,
+        "tournamentCreations/second",
       ]),
     );
-    expect(mockDb.get(config.GATE_PATH)).toMatchObject({
-      active: true,
-      types: ["tournament"],
-    });
     const secret = mockDb.get(`tournamentSecrets/${created.tournamentId}`);
     expect(secret.hostKeyHash).toBe(ids.hashSecret(created.hostKey));
     expect(secret.accessCodeHash).toBe(
@@ -275,43 +255,12 @@ test.each(["public", "private"])(
       expect(privateView(created.tournamentId)).toBeUndefined();
     }
     expect(
-      await request("createTournament", input({ requestId: "threshold", visibility })),
+      await request("createTournament", input({ requestId: "second", visibility })),
     ).toMatchObject({
       duplicate: true,
       tournamentId: created.tournamentId,
       allocationId: created.allocationId,
     });
-    const beforeBlockedWrites = structuredClone([...mockDb.docs]);
-    await expect(
-      request(
-        "updateTournament",
-        {
-          tournamentId: created.tournamentId,
-          patch: { name: "Blocked update" },
-        },
-        { hostKey: created.hostKey },
-      ),
-    ).rejects.toMatchObject({
-      code: "unavailable",
-      details: { code: "MAINTENANCE", retryable: true },
-    });
-    await expect(request("createTournament", input())).rejects.toMatchObject({
-      code: "unavailable",
-      details: { code: "MAINTENANCE", retryable: true },
-    });
-    await expect(
-      request(
-        "recalculateTournament",
-        {
-          tournamentId: created.tournamentId,
-        },
-        { hostKey: created.hostKey },
-      ),
-    ).rejects.toMatchObject({
-      code: "unavailable",
-      details: { code: "MAINTENANCE", retryable: true },
-    });
-    expect([...mockDb.docs]).toEqual(beforeBlockedWrites);
   },
 );
 
@@ -358,7 +307,7 @@ test.each([
   expect(mockDb.list("matches")).toEqual([]);
 });
 
-test("read-model planning failures reject creation and roll back its credentials and ledger", async () => {
+test("read-model planning failures reject creation and roll back its credentials", async () => {
   const { getFormat } = require("./domain/tournaments/formats");
   jest.spyOn(getFormat("americano"), "getRulesSummary").mockImplementation(() => {
     throw new Error("read model failed");
@@ -406,7 +355,7 @@ test("recalculation stamps a newly ready bracket match instead of retaining its 
   expect(assigned.matchAllocationId).toEqual(expect.any(String));
 });
 
-test("a read-model storage failure rejects the request and rolls back the entire threshold allocation", async () => {
+test("a read-model storage failure rejects the request and rolls back the allocation", async () => {
   await request("createTournament", input({ requestId: "first" }));
   const before = structuredClone([...mockDb.docs]);
   const write = mockDb.write.bind(mockDb);
@@ -420,5 +369,4 @@ test("a read-model storage failure rejects the request and rolls back the entire
   });
   expect(logged).toHaveBeenCalledWith("Unexpected operation failure:", expect.any(Error));
   expect([...mockDb.docs]).toEqual(before);
-  expect(mockDb.get(config.GATE_PATH)).toBeUndefined();
 });

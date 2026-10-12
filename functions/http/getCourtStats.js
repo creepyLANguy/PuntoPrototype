@@ -4,7 +4,6 @@ const {
   resolveScoreTarget,
   targetCacheKey,
   statsApiCache,
-  syncApiCacheGeneration,
 } = require("../services/publicApiService");
 const { buildDetailedScoreData } = require("../services/analyticsService");
 function sendJson(res, status, body) {
@@ -25,18 +24,14 @@ async function getCourtStats(req, res) {
       });
     }
 
-    await syncApiCacheGeneration();
-    const cacheKey = targetCacheKey(target);
+    const resolved = await resolveScoreTarget(target);
+    if (resolved.notFound) {
+      return sendJson(res, 404, { success: false, error: resolved.notFound });
+    }
+    const cacheKey = targetCacheKey(target, resolved);
     const cached = statsApiCache.get(cacheKey);
     if (cached) {
       return sendJson(res, cached.status, cached.body);
-    }
-
-    const resolved = await resolveScoreTarget(target);
-    if (resolved.notFound) {
-      const notFoundBody = { success: false, error: resolved.notFound };
-      statsApiCache.set(cacheKey, 404, notFoundBody);
-      return sendJson(res, 404, notFoundBody);
     }
 
     const { payload } = await buildDetailedScoreData(resolved.match?.matchId || null);

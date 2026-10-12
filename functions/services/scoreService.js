@@ -103,8 +103,8 @@ async function processScoreEvent(event) {
           return;
         }
         const matchData = matchSnap.data() || {};
-        // Events belong to one match generation: a delayed event for a culled
-        // match id must never score the match that reused it.
+        // Events belong to one match generation: a delayed event for a deleted
+        // match id must never score a new match that reuses it.
         if ((newEvent.allocationId ?? null) !== (matchData.allocationId ?? null)) {
           console.debug(`Ignoring event ${eventId}: it targets another generation of ${matchId}.`);
           return;

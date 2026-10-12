@@ -44,5 +44,4 @@ test("an existing active match returns its previously assigned token without all
     scoreVersion: 3,
     created: false,
   });
-  expect(mockDb.get("_idLedger/match")).toBeUndefined();
 });
