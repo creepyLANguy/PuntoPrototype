@@ -238,6 +238,15 @@ jobs:
       - name: Show Firebase CLI version
         run: firebase --version
 
+      - name: Remove legacy scheduled function
+        if: needs.changes.outputs.functions_changed == 'true'
+        env:
+          FIREBASE_PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID_PRODUCTION }}
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN_PRODUCTION }}
+        run: |
+          FIREBASE_TOOLS_ROOT="$(npm root -g)/firebase-tools" \
+            node scripts/delete-legacy-retention-worker.cjs
+
       - name: Deploy production
         env:
           FIREBASE_PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID_PRODUCTION }}
@@ -331,6 +340,15 @@ jobs:
 
       - name: Show Firebase CLI version
         run: firebase --version
+
+      - name: Remove legacy scheduled function
+        if: needs.changes.outputs.functions_changed == 'true'
+        env:
+          FIREBASE_PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID_STAGING }}
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN_STAGING }}
+        run: |
+          FIREBASE_TOOLS_ROOT="$(npm root -g)/firebase-tools" \
+            node scripts/delete-legacy-retention-worker.cjs
 
       - name: Deploy staging
         env:
