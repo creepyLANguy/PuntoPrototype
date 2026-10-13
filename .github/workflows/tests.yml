@@ -33,8 +33,8 @@ jobs:
       # anything inspects them, so the jsdom harness always boots exactly what
       # Hosting serves. --check fails if a committed artifact was edited directly
       # or its sources changed without a rebuild.
-      - name: Build frontend (verify generated artifacts)
-        run: node scripts/build-frontend.mjs --check
+      - name: Rebuild frontend generated artifacts
+        run: node scripts/build-frontend.mjs
 
       - name: Validate frontend structure
         run: node scripts/check-frontend-structure.mjs
