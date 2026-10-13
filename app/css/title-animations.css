@@ -60,13 +60,29 @@
   }
 
   to {
-    transform: translateY(-12px);
+    transform: translateY(-24px);
+  }
+}
+
+/* Animate glow opacity only; the mask and blur remain static. */
+@keyframes logoGlow {
+  from {
+    opacity: 0.2;
+  }
+
+  to {
+    opacity: 0.8;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .logo {
+  .logo-wrap,
+  .logo-wrap::before {
     animation: none;
+  }
+
+  .logo-wrap::before {
+    opacity: 0.55;
   }
 }
 
