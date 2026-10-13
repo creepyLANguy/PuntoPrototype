@@ -112,7 +112,7 @@ test("menu logo separates continuous bobbing from its glow in both themes", () =
   assert.ok(bob, "bobbing keyframes should exist");
   assert.ok(glow, "glow keyframes should exist");
   assert.match(bob, /0%,\s*100%\s*\{\s*transform: translate3d\(0, 0, 0\);/);
-  assert.match(bob, /50%\s*\{\s*transform: translate3d\(0, -12px, 0\);/);
+  assert.match(bob, /50%\s*\{\s*transform: translate3d\(0, -24px, 0\);/);
   assert.doesNotMatch(bob, /filter\s*:/);
   assert.match(glow, /filter:\s*drop-shadow/);
   assert.doesNotMatch(glow, /transform\s*:/);
