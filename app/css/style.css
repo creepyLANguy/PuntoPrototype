@@ -179,19 +179,48 @@ svg {
   }
 }
 
-.logo {
+.logo-wrap {
+  position: relative;
+  isolation: isolate;
   width: clamp(160px, 30vw, 300px);
-  height: auto;
-
-  animation: logoanimation 6s ease-in-out infinite;
-
-  transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-
+  aspect-ratio: 1 / 1;
   margin-top: 2%;
+  animation: logoBob 6s ease-in-out infinite;
+  will-change: transform;
 }
 
-body.light-mode .logo {
-  animation: logoanimation 6s ease-in-out infinite;
+/* The shadow layers stay behind the opaque logo. Their filters are static,
+   so only opacity needs to be composited as the logo bobs. */
+.logo-shadow {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.logo-shadow-dark {
+  z-index: 0;
+  filter: drop-shadow(0 0 15px var(--logoShadow));
+  animation: logoShadowFade 6s ease-in-out infinite;
+  will-change: opacity;
+}
+
+.logo-shadow-highlight {
+  z-index: 1;
+  filter: drop-shadow(0 0 30px var(--logoHighlight));
+  opacity: 0;
+  animation: logoHighlightFade 6s ease-in-out infinite;
+  will-change: opacity;
+}
+
+.logo {
+  position: relative;
+  z-index: 2;
+  display: block;
+  width: 100%;
+  height: auto;
 }
 
 body.light-mode .menu-page {
@@ -5368,7 +5397,7 @@ body.light-mode .app-title {
     justify-content: flex-start;
   }
 
-  .logo {
+  .logo-wrap {
     width: clamp(120px, 18vw, 220px);
     margin-bottom: 0px;
   }
@@ -6069,37 +6098,33 @@ body.light-mode .club-member-select input {
   }
 }
 
-@keyframes logoanimation {
-  0% {
-    filter: drop-shadow(0 0px 15px var(--logoShadow));
-    transform: translateY(0px);
+@keyframes logoBob {
+  0%, 100% {
+    transform: translate3d(0, 0, 0);
   }
 
   50% {
-    filter: drop-shadow(0 0 30px var(--logoHighlight));
-    transform: translateY(-12px);
-  }
-
-  100% {
-    filter: drop-shadow(0 0px 15px var(--logoShadow));
-    transform: translateY(0px);
+    transform: translate3d(0, -12px, 0);
   }
 }
 
-@keyframes logoanimation {
-  0% {
-    filter: drop-shadow(0 0px 15px var(--logoShadow));
-    transform: translateY(0px);
+@keyframes logoShadowFade {
+  0%, 100% {
+    opacity: 1;
   }
 
   50% {
-    filter: drop-shadow(0 0 30px var(--logoHighlight));
-    transform: translateY(-12px);
+    opacity: 0;
+  }
+}
+
+@keyframes logoHighlightFade {
+  0%, 100% {
+    opacity: 0;
   }
 
-  100% {
-    filter: drop-shadow(0 0px 15px var(--logoShadow));
-    transform: translateY(0px);
+  50% {
+    opacity: 1;
   }
 }
 
