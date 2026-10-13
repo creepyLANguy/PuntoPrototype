@@ -55,15 +55,11 @@
   width: clamp(160px, 30vw, 300px);
   height: auto;
 
-  animation: logoanimation 6s ease-in-out infinite;
-
-  transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  /* Keep the glow static so only the compositor-friendly transform animates. */
+  filter: drop-shadow(0 0 15px var(--logoShadow));
+  animation: logoBob 3s ease-in-out infinite alternate;
 
   margin-top: 2%;
-}
-
-body.light-mode .logo {
-  animation: logoanimation 6s ease-in-out infinite;
 }
 
 body.light-mode .menu-page {
