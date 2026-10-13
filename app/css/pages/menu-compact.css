@@ -27,7 +27,7 @@ body.light-mode .app-title {
     justify-content: flex-start;
   }
 
-  .logo {
+  .logo-wrap {
     width: clamp(120px, 18vw, 220px);
     margin-bottom: 0px;
   }
