@@ -94,6 +94,30 @@ async function closeDetails() {
   await settle();
 }
 
+test("menu logo separates continuous bobbing from its glow in both themes", () => {
+  assert.doesNotMatch(styles, /logoanimation/);
+
+  for (const selector of [/^\.logo\s*\{([^}]+)\}/m, /^body\.light-mode \.logo\s*\{([^}]+)\}/m]) {
+    const rule = styles.match(selector)?.[1];
+    assert.ok(rule, "logo rule should exist");
+    assert.match(
+      rule,
+      /animation:\s*logobob 6s cubic-bezier\(0\.37, 0, 0\.63, 1\) infinite,\s*logoglow 6s ease-in-out infinite;/,
+    );
+    assert.doesNotMatch(rule, /transition\s*:/);
+  }
+
+  const bob = styles.match(/^@keyframes logobob\s*\{([\s\S]*?)^\}/m)?.[1];
+  const glow = styles.match(/^@keyframes logoglow\s*\{([\s\S]*?)^\}/m)?.[1];
+  assert.ok(bob, "bobbing keyframes should exist");
+  assert.ok(glow, "glow keyframes should exist");
+  assert.match(bob, /0%,\s*100%\s*\{\s*transform: translate3d\(0, 0, 0\);/);
+  assert.match(bob, /50%\s*\{\s*transform: translate3d\(0, -12px, 0\);/);
+  assert.doesNotMatch(bob, /filter\s*:/);
+  assert.match(glow, /filter:\s*drop-shadow/);
+  assert.doesNotMatch(glow, /transform\s*:/);
+});
+
 test("share button uses the continuous engagement animation", () => {
   assert.match(
     styles,
