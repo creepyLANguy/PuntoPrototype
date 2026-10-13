@@ -152,6 +152,7 @@ export function initElements() {
   elements.courtNameError = $("courtNameError");
   elements.courtPasswordError = $("courtPasswordError");
   elements.courtStatus = $("courtStatus");
+  elements.courtClub = $("courtClub");
   elements.courtScoringMode = $("courtScoringMode");
   elements.courtDeuceMode = $("courtDeuceMode");
   elements.courtTiebreakMode = $("courtTiebreakMode");
@@ -191,6 +192,7 @@ export function initElements() {
   elements.editPlayerB2Name = $("editPlayerB2Name");
   elements.editCourtPassword = $("editCourtPassword");
   elements.editCourtStatus = $("editCourtStatus");
+  elements.editCourtClub = $("editCourtClub");
   elements.editCourtScoringMode = $("editCourtScoringMode");
   elements.editCourtDeuceMode = $("editCourtDeuceMode");
   elements.editCourtTiebreakMode = $("editCourtTiebreakMode");

@@ -4,6 +4,7 @@
 import { clubSummary, courtMatchesSearch } from "../clubs/clubIndex.js";
 import { loadClubIndex } from "../clubs/clubLoader.js";
 import { fillAdminClubCell } from "./clubCell.js";
+import { assignCourtToClub, fillCourtClubSelect } from "./courtClub.js";
 import {
   DEFAULT_SCORING_OPTIONS,
   STATUS,
@@ -52,6 +53,8 @@ import { showConfirm } from "../ui/modals.js";
 import { showToast } from "../ui/toast.js";
 
 let allAdminCourts = [];
+// The club the court being edited belonged to when its form opened.
+let editedCourtClubId = "";
 
 function readFixedCourtScoringControls(prefix) {
   const byId = (suffix) => elements[prefix + suffix];
@@ -286,6 +289,10 @@ export function openEditModal(court, syncHistory = true) {
   elements.editCourtName.value = court.name || "";
   elements.editCourtPassword.value = court.password || "";
   elements.editCourtStatus.value = court.status || STATUS.CLOSED;
+  editedCourtClubId = "";
+  void fillCourtClubSelect(elements.editCourtClub, court.id).then((clubId) => {
+    if (appState.courtToEdit === court) editedCourtClubId = clubId;
+  });
   elements.editCourtScoringMode.value = scoringOptions.scoringMode;
   if (elements.editCourtDeuceMode) {
     elements.editCourtDeuceMode.value = scoringOptions.deuceMode;
@@ -388,6 +395,19 @@ export function registerAdminCourtEditor() {
         scoringOptions,
       });
 
+      try {
+        await assignCourtToClub(
+          courtId,
+          elements.editCourtClub?.value,
+          editedCourtClubId,
+        );
+      } catch (err) {
+        throw new Error(
+          `court saved, but its club was not changed: ${err.message}`,
+        );
+      }
+      editedCourtClubId = elements.editCourtClub?.value || "";
+
       const editableMatch = appState.courtToEditMatch;
       if (editableMatch && !editableMatch.tournamentId) {
         await updateMatch(editableMatch.matchId, {
@@ -485,6 +505,7 @@ export function registerCreateCourt() {
     elements.courtPassword.value = "";
     elements.courtNameError.textContent = "";
     elements.courtPasswordError.textContent = "";
+    void fillCourtClubSelect(elements.courtClub);
     syncCurrentViewState();
   });
 
@@ -536,6 +557,7 @@ export function registerCreateCourt() {
     }
 
     let courtId;
+    const selectedClubId = elements.courtClub?.value || "";
     elements.createCourtBtn.disabled = true;
     try {
       ({ courtId } = await createWithUniqueId(
@@ -562,6 +584,17 @@ export function registerCreateCourt() {
       `Court "${courtName}" created successfully. ID: ${courtId.toUpperCase()}`,
       TOAST_TYPES.SUCCESS,
     );
+
+    if (selectedClubId) {
+      try {
+        await assignCourtToClub(courtId, selectedClubId);
+      } catch (error) {
+        showToast(
+          `Court created, but it could not be added to the club: ${error?.message}`,
+          TOAST_TYPES.ERROR,
+        );
+      }
+    }
 
     elements.createPage.style.display = "none";
     if (appState.isAdmin) {
