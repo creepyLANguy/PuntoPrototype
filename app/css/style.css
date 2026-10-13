@@ -179,15 +179,36 @@ svg {
   }
 }
 
-.logo {
+.logo-wrap {
+  position: relative;
+  isolation: isolate;
   width: clamp(160px, 30vw, 300px);
-  height: auto;
-
-  /* Keep the glow static so only the compositor-friendly transform animates. */
-  filter: drop-shadow(0 0 15px var(--logoShadow));
-  animation: logoBob 3s ease-in-out infinite alternate;
-
   margin-top: 2%;
+
+  /* Move the logo and its glow together using transform only. */
+  animation: logoBob 3s ease-in-out infinite alternate;
+}
+
+.logo-wrap::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: var(--logoHighlight);
+  -webkit-mask: url("/media/logo.svg") center / contain no-repeat;
+  mask: url("/media/logo.svg") center / contain no-repeat;
+  filter: blur(12px);
+  opacity: 0.2;
+  animation: logoGlow 3s ease-in-out infinite alternate;
+}
+
+.logo {
+  display: block;
+  width: 100%;
+  height: auto;
+  /* Static shadow preserves depth without animating the filter. */
+  filter: drop-shadow(0 0 15px var(--logoShadow));
 }
 
 body.light-mode .menu-page {
@@ -5364,7 +5385,7 @@ body.light-mode .app-title {
     justify-content: flex-start;
   }
 
-  .logo {
+  .logo-wrap {
     width: clamp(120px, 18vw, 220px);
     margin-bottom: 0px;
   }
@@ -6071,13 +6092,29 @@ body.light-mode .club-member-select input {
   }
 
   to {
-    transform: translateY(-12px);
+    transform: translateY(-24px);
+  }
+}
+
+/* Animate glow opacity only; the mask and blur remain static. */
+@keyframes logoGlow {
+  from {
+    opacity: 0.2;
+  }
+
+  to {
+    opacity: 0.8;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .logo {
+  .logo-wrap,
+  .logo-wrap::before {
     animation: none;
+  }
+
+  .logo-wrap::before {
+    opacity: 0.55;
   }
 }
 
