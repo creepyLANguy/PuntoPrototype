@@ -54,37 +54,34 @@
   }
 }
 
-@keyframes logoanimation {
-  0% {
-    filter: drop-shadow(0 0px 15px var(--logoShadow));
-    transform: translateY(0px);
+@keyframes logoBob {
+  0%, 100% {
+    transform: translate3d(0, 0, 0);
   }
 
   50% {
-    filter: drop-shadow(0 0 30px var(--logoHighlight));
-    transform: translateY(-12px);
-  }
-
-  100% {
-    filter: drop-shadow(0 0px 15px var(--logoShadow));
-    transform: translateY(0px);
+    transform: translate3d(0, -12px, 0);
   }
 }
 
-@keyframes logoanimation {
-  0% {
-    filter: drop-shadow(0 0px 15px var(--logoShadow));
-    transform: translateY(0px);
+@keyframes logoShadowFade {
+  0%, 100% {
+    opacity: 1;
   }
 
   50% {
-    filter: drop-shadow(0 0 30px var(--logoHighlight));
-    transform: translateY(-12px);
-  }
-
-  100% {
-    filter: drop-shadow(0 0px 15px var(--logoShadow));
-    transform: translateY(0px);
+    opacity: 0;
   }
 }
+
+@keyframes logoHighlightFade {
+  0%, 100% {
+    opacity: 0;
+  }
+
+  50% {
+    opacity: 1;
+  }
+}
+
 
