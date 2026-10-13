@@ -57,7 +57,7 @@
   width: clamp(160px, 30vw, 300px);
   aspect-ratio: 1 / 1;
   margin-top: 2%;
-  animation: logoBob 6s ease-in-out infinite;
+  animation: logoBob 6s linear infinite;
   will-change: transform;
 }
 
