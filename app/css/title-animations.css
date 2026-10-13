@@ -54,37 +54,28 @@
   }
 }
 
-@keyframes logoanimation {
-  0% {
+/* The bob (transform) and the glow (filter) are separate animations so the
+   movement can run on its own compositor layer. When both lived in one
+   keyframe set, the per-frame filter repaint made the browser snap the
+   translateY to whole pixels, which read as stepped movement. */
+@keyframes logobob {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+
+  50% {
+    transform: translate3d(0, -12px, 0);
+  }
+}
+
+@keyframes logoglow {
+  0%,
+  100% {
     filter: drop-shadow(0 0px 15px var(--logoShadow));
-    transform: translateY(0px);
   }
 
   50% {
     filter: drop-shadow(0 0 30px var(--logoHighlight));
-    transform: translateY(-12px);
-  }
-
-  100% {
-    filter: drop-shadow(0 0px 15px var(--logoShadow));
-    transform: translateY(0px);
   }
 }
-
-@keyframes logoanimation {
-  0% {
-    filter: drop-shadow(0 0px 15px var(--logoShadow));
-    transform: translateY(0px);
-  }
-
-  50% {
-    filter: drop-shadow(0 0 30px var(--logoHighlight));
-    transform: translateY(-12px);
-  }
-
-  100% {
-    filter: drop-shadow(0 0px 15px var(--logoShadow));
-    transform: translateY(0px);
-  }
-}
-
