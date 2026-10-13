@@ -102,7 +102,7 @@ test("menu logo separates continuous bobbing from its glow in both themes", () =
     assert.ok(rule, "logo rule should exist");
     assert.match(
       rule,
-      /animation:\s*logobob 6s cubic-bezier\(0\.37, 0, 0\.63, 1\) infinite,\s*logoglow 6s ease-in-out infinite;/,
+      /animation:\s*logobob 4s cubic-bezier\(0\.37, 0, 0\.63, 1\) infinite,\s*logoglow 4s ease-in-out infinite;/,
     );
     assert.doesNotMatch(rule, /transition\s*:/);
   }

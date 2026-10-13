@@ -58,8 +58,8 @@
   /* Sine-like easing gives a continuous bob; the transform runs on its own
      compositor layer (will-change) so it is not pixel-snapped. */
   animation:
-    logobob 6s cubic-bezier(0.37, 0, 0.63, 1) infinite,
-    logoglow 6s ease-in-out infinite;
+    logobob 4s cubic-bezier(0.37, 0, 0.63, 1) infinite,
+    logoglow 4s ease-in-out infinite;
   will-change: transform;
   backface-visibility: hidden;
 
@@ -68,8 +68,8 @@
 
 body.light-mode .logo {
   animation:
-    logobob 6s cubic-bezier(0.37, 0, 0.63, 1) infinite,
-    logoglow 6s ease-in-out infinite;
+    logobob 4s cubic-bezier(0.37, 0, 0.63, 1) infinite,
+    logoglow 4s ease-in-out infinite;
 }
 
 body.light-mode .menu-page {
