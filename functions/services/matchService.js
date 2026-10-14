@@ -273,6 +273,98 @@ async function ensureCourtMatch({ courtId, actor = null }) {
   });
 }
 
+// Archives the match on the court (completed, or cancelled when nothing was
+// scored) and attaches a fresh casual match carrying the court's settings, in
+// one transaction. Tournament matches are never replaced this way.
+async function startNewCourtMatch({ courtId, actor = null }) {
+  validateId("court", courtId);
+  return runIdTransaction(db, async (tx) => {
+    const court = await readCourt(tx, courtId);
+    if (court.status === "closed") {
+      throw precondition(`${courtLabel(court, courtId)} is closed.`);
+    }
+
+    let active = null;
+    if (court.activeMatchId) {
+      const activeSnap = await tx.get(matchRef(court.activeMatchId));
+      if (activeSnap.exists) active = { matchId: court.activeMatchId, ...activeSnap.data() };
+    }
+    if (active?.tournamentId) {
+      throw precondition("A tournament match cannot be replaced with a new match.");
+    }
+    const archivable = active && active.status === "live" && active.currentCourtId === courtId;
+    let activeScore = null;
+    if (archivable) {
+      const scoreSnap = await tx.get(db.doc(paths.matchScore(active.matchId)));
+      activeScore = scoreSnap.exists ? scoreSnap.data() : defaultScore(active.scoringOptions);
+    }
+
+    const prepared = prepareMatch({
+      matchId: await allocateId(tx, "match"),
+      scoringOptions: { ...(court.scoringOptions || {}), scoringMode: court.scoringMode },
+      kind: "casual",
+      visibility: court.status === "private" ? "private" : "public",
+      status: "live",
+    });
+
+    let archivedStatus = null;
+    if (archivable) {
+      const timestamp = now();
+      const scoringOptions = active.scoringOptions;
+      const summary = buildScoreSummary({ ...activeScore, scoringOptions });
+      const scored = hasPoints(summary) || hasPoints(active.scoreSummary);
+      archivedStatus = scored ? "completed" : "cancelled";
+      tx.set(
+        matchRef(active.matchId),
+        {
+          status: archivedStatus,
+          currentCourtId: null,
+          scoreSummary: scored ? summary : active.scoreSummary || summary,
+          updatedAt: timestamp,
+          ...(scored
+            ? {
+                result: {
+                  ...getMatchResult({ ...activeScore, scoringOptions }),
+                  completedAt: timestamp,
+                },
+                completedAt: timestamp,
+              }
+            : { cancelledAt: timestamp }),
+        },
+        { merge: true },
+      );
+    }
+
+    writePreparedMatch(tx, prepared);
+    writeAttachment(tx, { match: prepared.match, court, resetOrientation: true });
+    if (archivable) {
+      writeAudit(tx, {
+        operation: archivedStatus === "completed" ? "match.complete" : "match.cancel",
+        matchId: active.matchId,
+        courtId,
+        actor,
+        reason: "new match",
+        beforeSummary: { status: active.status },
+        afterSummary: { status: archivedStatus },
+      });
+    }
+    writeAudit(tx, {
+      operation: "match.create",
+      matchId: prepared.matchId,
+      courtId,
+      actor,
+      afterSummary: { status: "live", kind: "casual" },
+    });
+    return {
+      matchId: prepared.matchId,
+      scoreVersion: normalizeScoreVersion(prepared.match.scoreVersion),
+      archivedMatchId: archivable ? active.matchId : null,
+      archivedStatus,
+      created: true,
+    };
+  });
+}
+
 async function resolveCourtMatchId(courtId, { ensure = false } = {}) {
   const snap = await courtRef(courtId).get();
   if (!snap.exists) throw notFound(`Court ${courtId} could not be found.`);
@@ -779,6 +871,7 @@ module.exports = {
   writePreparedMatch,
   planCourtAttachment,
   ensureCourtMatch,
+  startNewCourtMatch,
   resolveCourtMatchId,
   startMatch,
   moveMatch,

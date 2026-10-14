@@ -80,8 +80,9 @@ export async function createWithUniqueId(type, data = {}, credentials = {}) {
       payload = {
         ...fenced,
         operation:
-          data.operation === "ensureCourtMatch"
-            ? "ensureCourtMatch"
+          data.operation === "ensureCourtMatch" ||
+          data.operation === "newCourtMatch"
+            ? data.operation
             : "createMatch",
         credentials,
       };
@@ -126,7 +127,11 @@ export async function resetCourt(
 // Match lifecycle operations (start, move, detach, complete, cancel, reset,
 // ensureCourtMatch ...). Returns the callable result data.
 export async function manageMatch(operation, data = {}, credentials = {}) {
-  if (operation === "createMatch" || operation === "ensureCourtMatch") {
+  if (
+    operation === "createMatch" ||
+    operation === "ensureCourtMatch" ||
+    operation === "newCourtMatch"
+  ) {
     return createWithUniqueId("match", { ...data, operation }, credentials);
   }
   const payload = fencedPayload(

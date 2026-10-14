@@ -4,7 +4,7 @@
 import { playSound } from "../audio/audio.js";
 import { SOUND_IDS, TOAST_TYPES } from "../config/constants.js";
 import { NAV_PAGES } from "../config/routes.js";
-import { resetCourt } from "../firebase/callables.js";
+import { manageMatch, resetCourt } from "../firebase/callables.js";
 import { stepBackInApp, syncCurrentViewState } from "../routing/history.js";
 import { createViewState } from "../routing/viewState.js";
 import { getCourtCredentials } from "../state/credentialsState.js";
@@ -12,6 +12,7 @@ import { session } from "../state/sessionState.js";
 import { elements } from "../ui/dom.js";
 import { hideSpinner, showSpinner } from "../ui/loading.js";
 import { syncSettingsTiles } from "../ui/settingsTiles.js";
+import { showConfirm } from "../ui/modals.js";
 import { showToast } from "../ui/toast.js";
 
 // The reset password field is optional: a blank field keeps the current court
@@ -185,4 +186,49 @@ export function openResetModal() {
   elements.resetModal.classList.remove("hidden");
   elements.resetCourtPassword.focus();
   syncCurrentViewState();
+}
+
+// Archives the match on the court and starts a fresh one. Not available to
+// spectators or for tournament matches (the server enforces both).
+export async function startNewMatch() {
+  if (!session.currentCourtId || session.isSpectating) return false;
+  if (session.currentTournamentId) {
+    showToast(
+      "A tournament match cannot be replaced with a new match.",
+      TOAST_TYPES.ERROR,
+    );
+    return false;
+  }
+  if (
+    !(await showConfirm(
+      "Archive this match and start a new one on this court?",
+    ))
+  ) {
+    return false;
+  }
+  try {
+    showSpinner(elements.settingsModal);
+    const result = await manageMatch(
+      "newCourtMatch",
+      { courtId: session.currentCourtId },
+      getCourtCredentials(),
+    );
+    session.beaconSidesSwapped = false;
+    syncSettingsTiles();
+    playSound(SOUND_IDS.START);
+    showToast(
+      "New match started. The previous match was archived.",
+      TOAST_TYPES.SUCCESS,
+    );
+    return result;
+  } catch (err) {
+    console.error("New match failed:", err);
+    showToast(
+      "New Match Failed: " + (err.message || "Unknown error"),
+      TOAST_TYPES.ERROR,
+    );
+    return false;
+  } finally {
+    hideSpinner(elements.settingsModal);
+  }
 }

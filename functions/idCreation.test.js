@@ -557,6 +557,74 @@ async function createTournament(extra = {}) {
   });
 }
 
+describe("newCourtMatch", () => {
+  const newCourtMatch = (data = {}, credentials = { adminKey: "test-admin" }) =>
+    api.manageMatch({
+      data: withExpectedAllocations(mockDb, {
+        operation: "newCourtMatch",
+        courtId: "abcde",
+        ...data,
+        credentials,
+      }),
+    });
+  const score = (points) => ({ A: { totalPoints: points }, B: { totalPoints: 0 } });
+
+  test("archives a scored match and attaches a fresh one", async () => {
+    const { matchId } = await ensureCourtMatch();
+    mockDb.write(`matches/${matchId}`, { scoreSummary: score(3) }, { merge: true });
+    const result = await newCourtMatch();
+    expect(result).toMatchObject({ archivedMatchId: matchId, archivedStatus: "completed" });
+    expect(result.matchId).not.toBe(matchId);
+    const archived = mockDb.get(`matches/${matchId}`);
+    expect(archived.status).toBe("completed");
+    expect(archived.currentCourtId).toBeNull();
+    expect(archived.result).toBeDefined();
+    expect(mockDb.get("courts/abcde").activeMatchId).toBe(result.matchId);
+    expect(mockDb.get(`matches/${result.matchId}`)).toMatchObject({
+      status: "live",
+      currentCourtId: "abcde",
+      kind: "casual",
+    });
+  });
+
+  test("cancels an unscored match", async () => {
+    const { matchId } = await ensureCourtMatch();
+    const result = await newCourtMatch();
+    expect(result.archivedStatus).toBe("cancelled");
+    expect(mockDb.get(`matches/${matchId}`).status).toBe("cancelled");
+  });
+
+  test("creates a match on an empty court", async () => {
+    const result = await newCourtMatch();
+    expect(result).toMatchObject({ archivedMatchId: null, created: true });
+    expect(mockDb.get("courts/abcde").activeMatchId).toBe(result.matchId);
+  });
+
+  test("is refused for tournament matches and leaves data untouched", async () => {
+    const { matchId } = await ensureCourtMatch();
+    mockDb.write(`matches/${matchId}`, { tournamentId: "tttttt" }, { merge: true });
+    const before = [...mockDb.docs.entries()];
+    await expect(newCourtMatch()).rejects.toMatchObject({ code: "FAILED_PRECONDITION" });
+    expect([...mockDb.docs.entries()]).toEqual(before);
+  });
+
+  test("requires court control and rejects supplied ids", async () => {
+    await ensureCourtMatch();
+    const before = [...mockDb.docs.entries()];
+    await expect(newCourtMatch({}, { courtPassword: "wrong" })).rejects.toBeDefined();
+    await expect(newCourtMatch({ matchId: "fghjkm" })).rejects.toMatchObject({
+      code: "INVALID_ARGUMENT",
+    });
+    expect([...mockDb.docs.entries()]).toEqual(before);
+  });
+
+  test("allows the court password", async () => {
+    await ensureCourtMatch();
+    const result = await newCourtMatch({}, { courtPassword: "court-pass" });
+    expect(result.created).toBe(true);
+  });
+});
+
 describe("tournament allocation and batch match creation", () => {
   test("tournament collision retries within the idempotent creation transaction", async () => {
     mockDb.write("tournaments/aaaaaaa", historicalRoot("tournaments/aaaaaaa"));

@@ -10,7 +10,7 @@ import { showMatchDetails } from "../details/matchDetails.js";
 import { stepBackInApp } from "../routing/history.js";
 import { createViewState } from "../routing/viewState.js";
 import { addPoint, undoLastPoint } from "../scoring/actions.js";
-import { openResetModal } from "../scoring/reset.js";
+import { openResetModal, startNewMatch } from "../scoring/reset.js";
 import { updateServerIndicator } from "../scoring/serverIndicator.js";
 import { appState } from "../state/appState.js";
 import { session } from "../state/sessionState.js";
@@ -58,6 +58,14 @@ export function registerScoreboardControls() {
       // Close settings first, then open reset modal
       elements.settingsModal.classList.add("hidden");
       openResetModal();
+    });
+  }
+
+  // New Match tile in settings modal (player-only, never for tournaments)
+  if (elements.newMatchSettingsBtn) {
+    elements.newMatchSettingsBtn.addEventListener("click", async () => {
+      elements.settingsModal.classList.add("hidden");
+      await startNewMatch();
     });
   }
 
