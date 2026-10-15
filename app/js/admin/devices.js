@@ -53,7 +53,7 @@ async function populateCourtDropdown(selectEl) {
       selectEl.appendChild(opt);
     });
   } catch (err) {
-    console.error("Failed to load courts for dropdown:", err);
+    showToast("Failed to load courts for dropdown:\n" + err.message, TOAST_TYPES.ERROR);
   }
 }
 
@@ -94,7 +94,7 @@ function switchComboToDropdown(
  */
 function getCourtIdFromCombo(selectEl, manualInputEl) {
   const isManual = manualInputEl.style.display !== "none";
-  return isManual ? manualInputEl.value.trim() : selectEl.value.trim();
+  return isManual ? manualInputEl.z.trim() : selectEl.value.trim();
 }
 
 export function registerDeviceAdmin() {
@@ -212,7 +212,7 @@ export function registerDeviceAdmin() {
       elements.adminDashboardPage.style.display = "flex";
       syncCurrentViewState("replace");
     } catch (error) {
-      showToast("Failed to add device", TOAST_TYPES.ERROR);
+      showToast("Failed to add device:\n" + error.message, TOAST_TYPES.ERROR);
     }
   });
 
@@ -296,7 +296,7 @@ export async function loadDevices() {
     }));
     renderDeviceList(filterDevices(elements.adminDeviceSearch.value));
   } catch (error) {
-    showToast("Error loading devices", TOAST_TYPES.ERROR);
+    showToast("Error loading devices:\n" + error.message, TOAST_TYPES.ERROR);
   }
 }
 
@@ -433,7 +433,7 @@ export async function openEditDeviceModal(device, syncHistory = true) {
       showToast("Mapping updated", TOAST_TYPES.SUCCESS);
       returnFromDeviceEditor();
     } catch (e) {
-      showToast("Update failed", TOAST_TYPES.ERROR);
+      showToast("Update failed:\n" + e.message, TOAST_TYPES.ERROR);
     }
   };
 
@@ -444,7 +444,7 @@ export async function openEditDeviceModal(device, syncHistory = true) {
       showToast("Device deleted", TOAST_TYPES.SUCCESS);
       returnFromDeviceEditor();
     } catch (e) {
-      showToast("Delete failed", TOAST_TYPES.ERROR);
+      showToast("Delete failed:\n" + e.message, TOAST_TYPES.ERROR);
     }
   };
 
