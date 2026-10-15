@@ -6,16 +6,28 @@ import { themeState } from "../state/themeState.js";
 import { elements } from "./dom.js";
 import { getFullscreenElement } from "./fullscreen.js";
 
-// "New Match" is only for players, and never for a tournament fixture.
-export function syncNewMatchTile() {
-  const tile = elements.newMatchSettingsTile;
-  if (!tile) return;
-  const available = !session.isSpectating && !session.currentTournamentId;
-  tile.style.display = available ? "" : "none";
+export function canStartNewMatch() {
+  return Boolean(
+    session.currentCourtId &&
+    session.currentCourtAllocationId &&
+    session.currentMatchId &&
+    session.currentMatchAllocationId &&
+    session.currentCourtStatus !== "closed" &&
+    !session.isSpectating &&
+    !session.currentTournamentId &&
+    ((session.currentMatchStatus === "live" &&
+      session.currentMatchCourtId === session.currentCourtId) ||
+      ["completed", "cancelled"].includes(session.currentMatchStatus)),
+  );
 }
 
 export function syncSettingsTiles() {
-  syncNewMatchTile();
+  if (elements.newMatchTile && elements.newMatchBtn) {
+    const available = canStartNewMatch();
+    elements.newMatchTile.style.display = available ? "" : "none";
+    elements.newMatchBtn.disabled =
+      !available || elements.newMatchBtn.getAttribute("aria-busy") === "true";
+  }
 
   const updateItem = (button, active, activeLabel, inactiveLabel) => {
     if (!button) return;

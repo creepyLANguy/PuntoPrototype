@@ -87,6 +87,7 @@ One callable exposes server-authoritative match operations. The request carries
 Implemented operations:
 
 - ensureCourtMatch
+- newCourtMatch
 - createMatch
 - startMatch
 - moveMatch
@@ -102,6 +103,25 @@ Implemented operations:
 
 Tournament matches are authorised with the tournament host key or admin key.
 Casual matches are authorised with the court password or admin key.
+
+`newCourtMatch` starts a fresh casual match rather than resetting the existing
+one. Supply `{ operation: "newCourtMatch", courtId, matchId, credentials,
+expectedAllocations }`, where `matchId` is the expected active match (or last
+match when the court has no active match), and allocation tokens cover both
+the court and that match. Court control (court password or admin credentials)
+is required. Closed courts and tournament matches, including completed/last
+tournament matches, cannot use this operation.
+
+In one transaction, the backend archives a live match from its authoritative
+score (completed with its persisted result if any points were scored,
+cancelled if it is unscored), preserves its score, events, checkpoints, names and score version, and
+attaches a newly allocated match with empty scores/names, court-default scoring
+rules and privacy, and default Beacon orientation. Already completed/cancelled
+matches are left unchanged. The response includes `{ success, matchId,
+allocationId, courtId, scoreVersion: 0, created: true }` for the new match.
+Stale match context fails without changes. If accepted scoring events have not
+settled in the score document, the operation fails with `failed-precondition`
+and details code `SCORE_PENDING`; wait for score sync before retrying.
 
 ### manageTournament
 

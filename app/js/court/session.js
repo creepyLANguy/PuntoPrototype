@@ -343,6 +343,7 @@ export function enableSpectateMode() {
   if (elements.joinCourtTile) elements.joinCourtTile.style.display = "";
 
   syncScoringControls();
+  syncSettingsTiles();
   showSpectatorBadges();
 }
 
@@ -371,6 +372,7 @@ function disableSpectateMode() {
   if (elements.joinCourtTile) elements.joinCourtTile.style.display = "none";
 
   syncScoringControls();
+  syncSettingsTiles();
   removeSpectatorBadges();
 }
 

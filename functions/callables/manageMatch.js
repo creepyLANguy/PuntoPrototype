@@ -11,7 +11,7 @@ const {
   authorizeCourtControl,
   authorizeMatchControl,
 } = require("../services/authService");
-const { invalid, notFound, precondition: preconditionError } = require("../services/errors");
+const { invalid, notFound } = require("../services/errors");
 const { onTournamentMatchChanged } = require("../services/tournamentHooks");
 
 async function loadMatch(matchId) {
@@ -42,25 +42,18 @@ async function authorizeFor(matchId, credentials, targetCourtId = null) {
 }
 
 const OPERATIONS = {
+  async newCourtMatch(data, credentials) {
+    return matchService.newCourtMatch({
+      courtId: data.courtId,
+      matchId: data.matchId,
+      credentials,
+      reason: data.reason,
+    });
+  },
+
   async ensureCourtMatch(data) {
     if (data.matchId !== undefined) throw invalid("Match ids are allocated by the server.");
     return matchService.ensureCourtMatch({ courtId: data.courtId, actor: { type: "court" } });
-  },
-
-  async newCourtMatch(data, credentials) {
-    if (data.matchId !== undefined) throw invalid("Match ids are allocated by the server.");
-    const court = await loadCourt(data.courtId);
-    if (!court) throw invalid("A court id is required.");
-    const activeId = court.activeMatchId;
-    const activeSnap = activeId ? await db.doc(paths.match(activeId)).get() : null;
-    const active = activeSnap?.exists ? { matchId: activeId, ...activeSnap.data() } : null;
-    if (active?.tournamentId) {
-      throw preconditionError("A tournament match cannot be replaced with a new match.");
-    }
-    const actor = active
-      ? await authorizeMatchControl({ match: active, court }, credentials)
-      : await authorizeCourtControl(court, credentials);
-    return matchService.startNewCourtMatch({ courtId: data.courtId, actor });
   },
 
   async createMatch(data, credentials) {

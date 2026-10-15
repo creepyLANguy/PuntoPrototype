@@ -7,12 +7,14 @@ import { NAV_PAGES } from "../config/routes.js";
 import { openPlayerJoinPrompt } from "../court/playJoin.js";
 import { enterCourt } from "../court/session.js";
 import { showMatchDetails } from "../details/matchDetails.js";
-import { stepBackInApp } from "../routing/history.js";
+import { manageMatch } from "../firebase/callables.js";
+import { stepBackInApp, syncCurrentViewState } from "../routing/history.js";
 import { createViewState } from "../routing/viewState.js";
 import { addPoint, undoLastPoint } from "../scoring/actions.js";
-import { openResetModal, startNewMatch } from "../scoring/reset.js";
+import { openResetModal } from "../scoring/reset.js";
 import { updateServerIndicator } from "../scoring/serverIndicator.js";
 import { appState } from "../state/appState.js";
+import { getCourtCredentials } from "../state/credentialsState.js";
 import { session } from "../state/sessionState.js";
 import { themeState } from "../state/themeState.js";
 import { openPlayerNamesModal } from "../teams/playerNamesModal.js";
@@ -20,10 +22,81 @@ import { $, elements } from "../ui/dom.js";
 import { swapScoreboardViews } from "../ui/animations.js";
 import { toggleFullscreen } from "../ui/fullscreen.js";
 import { showConfirm } from "../ui/modals.js";
-import { syncSettingsTiles } from "../ui/settingsTiles.js";
+import { canStartNewMatch, syncSettingsTiles } from "../ui/settingsTiles.js";
 import { showToast } from "../ui/toast.js";
 
 export function registerScoreboardControls() {
+  if (elements.newMatchBtn) {
+    elements.newMatchBtn.addEventListener("click", async () => {
+      const button = elements.newMatchBtn;
+      if (!canStartNewMatch() || button.getAttribute("aria-busy") === "true")
+        return;
+
+      const courtId = session.currentCourtId;
+      const courtAllocationId = session.currentCourtAllocationId;
+      const matchId = session.currentMatchId;
+      const matchAllocationId = session.currentMatchAllocationId;
+      const listenerToken = session.activeCourtListenerToken;
+      const isSameCourtSession = () =>
+        session.currentCourtId === courtId &&
+        session.currentCourtAllocationId === courtAllocationId &&
+        session.activeCourtListenerToken === listenerToken &&
+        !session.isSpectating;
+
+      button.setAttribute("aria-busy", "true");
+      syncSettingsTiles();
+      try {
+        if (
+          !(await showConfirm(
+            "Start a new match?\nThe current match and its score history will be saved.",
+          ))
+        )
+          return;
+        if (
+          !isSameCourtSession() ||
+          !canStartNewMatch() ||
+          session.currentMatchId !== matchId ||
+          session.currentMatchAllocationId !== matchAllocationId
+        )
+          return;
+
+        const result = await manageMatch(
+          "newCourtMatch",
+          { courtId, matchId },
+          getCourtCredentials(),
+        );
+        if (!isSameCourtSession()) return;
+
+        await enterCourt(courtId, false, {
+          historyMode: "replace",
+          adminEntry: session.enteredCourtAsAdmin,
+          matchId: result.matchId,
+          followRequestedMatch: Boolean(session.requestedMatchId),
+          courtAllocationId,
+          matchAllocationId: result.allocationId,
+        });
+        elements.settingsModal.classList.add("hidden");
+        syncCurrentViewState("replace");
+        playSound(SOUND_IDS.START);
+        showToast(
+          "Previous match saved. New match started.",
+          TOAST_TYPES.SUCCESS,
+        );
+      } catch (error) {
+        console.error("New match failed:", error);
+        if (isSameCourtSession()) {
+          showToast(
+            "New Match Failed: " + (error.message || "Unknown error"),
+            TOAST_TYPES.ERROR,
+          );
+        }
+      } finally {
+        button.removeAttribute("aria-busy");
+        syncSettingsTiles();
+      }
+    });
+  }
+
   elements.swapBtn.addEventListener("click", () => {
     playSound(SOUND_IDS.SWOOSH);
 
@@ -58,14 +131,6 @@ export function registerScoreboardControls() {
       // Close settings first, then open reset modal
       elements.settingsModal.classList.add("hidden");
       openResetModal();
-    });
-  }
-
-  // New Match tile in settings modal (player-only, never for tournaments)
-  if (elements.newMatchSettingsBtn) {
-    elements.newMatchSettingsBtn.addEventListener("click", async () => {
-      elements.settingsModal.classList.add("hidden");
-      await startNewMatch();
     });
   }
 
