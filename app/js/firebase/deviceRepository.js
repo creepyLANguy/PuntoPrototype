@@ -10,14 +10,27 @@ import {
 } from "./firestore.js";
 import { db } from "./client.js";
 import { assertId } from "../config/idContract.js";
-import { assertCurrentAssignment } from "./assignmentContext.js";
+import {
+  assertCurrentAssignment,
+  getAllocationId,
+} from "./assignmentContext.js";
 
 function assertResourceIds(data) {
   const payload = { ...data };
   for (const type of ["court", "club"]) {
     const id = data[`${type}Id`];
     if (id === undefined) continue;
-    if (id !== null) assertId(type, id);
+    if (id !== null) {
+      assertId(type, id);
+      if (!getAllocationId(type, id)) {
+        throw Object.assign(
+          new Error(
+            `The ${type} "${id}" was not found in the loaded ${type}s. Select an existing ${type}, or refresh the list and try again.`,
+          ),
+          { code: "assignment-not-found" },
+        );
+      }
+    }
     payload[`${type}AllocationId`] =
       id === null
         ? null

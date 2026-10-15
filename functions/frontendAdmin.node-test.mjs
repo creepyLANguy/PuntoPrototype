@@ -431,6 +431,15 @@ test("Add Device also accepts a court id typed by hand", async () => {
     label: "invalid court id error",
   });
   assert.equal(stored("devices/BEACON-8"), undefined, "invalid court references are not stored");
+  $("newDeviceCourtIdManual").value = "zzzzz";
+  $("saveNewDeviceBtn").click();
+  await waitFor(
+    () =>
+      lastToast() ===
+      'Failed to add device:\nThe court "zzzzz" was not found in the loaded courts. Select an existing court, or refresh the list and try again.',
+    { label: "missing court error" },
+  );
+  assert.equal(stored("devices/BEACON-8"), undefined);
   $("newDeviceCourtIdManual").value = "  pqrsa  ";
   $("saveNewDeviceBtn").click();
   await waitFor(() => stored("devices/BEACON-8"), { label: "manually mapped device" });
@@ -483,6 +492,16 @@ test("editing a device changes its court and returns to the device list", async 
   assert.equal($("editDeviceCourtIdSelect").value, "pqrsa");
   $("editDeviceManualToggle").click();
   assert.equal($("editDeviceCourtIdManual").style.display, "");
+  $("editDeviceCourtIdManual").value = "zzzzz";
+  $("saveEditDeviceBtn").click();
+  await waitFor(
+    () =>
+      lastToast() ===
+      'Update failed:\nThe court "zzzzz" was not found in the loaded courts. Select an existing court, or refresh the list and try again.',
+    { label: "missing court update error" },
+  );
+  assert.equal(stored("devices/BEACON-8").courtId, "pqrsa");
+  assert.equal(isShown("editDevicePage"), true);
   $("editDeviceCourtIdManual").value = "  abcda  ";
   $("saveEditDeviceBtn").click();
   await waitFor(() => stored("devices/BEACON-8").courtId === "abcda", {
