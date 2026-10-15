@@ -53,7 +53,10 @@ async function populateCourtDropdown(selectEl) {
       selectEl.appendChild(opt);
     });
   } catch (err) {
-    showToast("Failed to load courts for dropdown:\n" + err.message, TOAST_TYPES.ERROR);
+    showToast(
+      "Failed to load courts for dropdown:\n" + err.message,
+      TOAST_TYPES.ERROR,
+    );
   }
 }
 
@@ -94,7 +97,7 @@ function switchComboToDropdown(
  */
 function getCourtIdFromCombo(selectEl, manualInputEl) {
   const isManual = manualInputEl.style.display !== "none";
-  return isManual ? manualInputEl.z.trim() : selectEl.value.trim();
+  return isManual ? manualInputEl.value.trim() : selectEl.value.trim();
 }
 
 export function registerDeviceAdmin() {

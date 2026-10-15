@@ -427,7 +427,9 @@ test("Add Device also accepts a court id typed by hand", async () => {
   $("newDeviceId").value = "BEACON-8";
   $("newDeviceCourtIdManual").value = "legacy-court";
   $("saveNewDeviceBtn").click();
-  await waitFor(() => lastToast() === "Failed to add device", { label: "invalid court id error" });
+  await waitFor(() => lastToast().startsWith("Failed to add device:\n"), {
+    label: "invalid court id error",
+  });
   assert.equal(stored("devices/BEACON-8"), undefined, "invalid court references are not stored");
   $("newDeviceCourtIdManual").value = "  pqrsa  ";
   $("saveNewDeviceBtn").click();
@@ -476,13 +478,17 @@ test("editing a device changes its court and returns to the device list", async 
     courtAllocationId: stored("courts/efgha").allocationId,
   });
 
-  // A court id that is not in the list opens in manual mode.
+  // Manual court ids are trimmed when saving an existing device.
   await openDeviceEditor("BEACON-8");
   assert.equal($("editDeviceCourtIdSelect").value, "pqrsa");
   $("editDeviceManualToggle").click();
   assert.equal($("editDeviceCourtIdManual").style.display, "");
-  $("editDeviceCourtIdManual").value = "pqrsa";
-  $("closeEditDeviceBtn").click();
+  $("editDeviceCourtIdManual").value = "  abcda  ";
+  $("saveEditDeviceBtn").click();
+  await waitFor(() => stored("devices/BEACON-8").courtId === "abcda", {
+    label: "manually remapped device",
+  });
+  assert.equal(stored("devices/BEACON-8").courtAllocationId, stored("courts/abcda").allocationId);
   await waitForDeviceList(4);
   assert.equal(activeTab(), "devices", "returning keeps the Devices tab and reloads it");
 });
