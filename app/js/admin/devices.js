@@ -321,9 +321,9 @@ function renderDeviceList(devices) {
         </div>
       </div>
       <div class="aci-field teams-cell">
-        <div class="aci-label">Mapped to:</div>
+        <div class="aci-label">Court:</div>
         <div class="aci-value">
-          ${device.courtId || "???"}
+          ${device.courtId || "Unlinked"}
         </div>
       </div>
       <div class="aci-field club-cell">

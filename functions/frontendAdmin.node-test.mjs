@@ -399,7 +399,7 @@ test("Add Device registers a device on the chosen court", async () => {
     label: "add device page",
   });
   const options = [...$("newDeviceCourtIdSelect").options].map((option) => option.textContent);
-  assert.equal(options[0], "— Select a court —");
+  assert.equal(options[0], "— No court (unlinked) —");
   assert.deepEqual(options.slice(1, 3), ["Alpha Court (abcda)", "Beta Court Renamed (efgha)"]);
   assert.match(options[3], /^Delta Court \([a-z]{5}\)$/, "courts are listed by name");
 
