@@ -347,7 +347,11 @@ test("implicit-court mutations include the match pin from captured session crede
 });
 
 test("device reference writes require observed targets, fence drafts and support null clears", async () => {
-  assert.throws(() => devices.setDevice("physical-device", { courtId: ids.court }));
+  assert.throws(() => devices.setDevice("physical-device", { courtId: ids.court }), {
+    code: "assignment-not-found",
+    message:
+      'The court "abcda" was not found in the loaded courts. Select an existing court, or refresh the list and try again.',
+  });
   await courts.getCourt(ids.court);
   await clubs.getClub(ids.club);
   await devices.setDevice("physical-device", { courtId: ids.court, clubId: ids.club });
@@ -358,12 +362,18 @@ test("device reference writes require observed targets, fence drafts and support
     clubAllocationId: "club-old",
   });
 
-  assert.throws(() =>
-    devices.updateDevice("physical-device", {
-      courtId: ids.court,
-      courtAllocationId: "court-new",
-    }),
+  assert.throws(
+    () =>
+      devices.updateDevice("physical-device", {
+        courtId: ids.court,
+        courtAllocationId: "court-new",
+      }),
+    { code: "assignment-changed" },
   );
+  context.rememberAssignment("court", ids.court, { allocationId: "court-new" });
+  assert.throws(() => devices.updateDevice("physical-device", { courtId: ids.court }), {
+    code: "assignment-changed",
+  });
   await devices.updateDevice("physical-device", { courtId: null, clubId: null });
   assert.deepEqual(firestoreState.docs.get("devices/physical-device"), {
     courtId: null,
