@@ -17,9 +17,11 @@ import {
   callableHandlers,
   writeDoc,
 } from "./frontendHarness/harness.mjs";
+import { session } from "../app/js/state/sessionState.js";
 
 let document;
 let window;
+let enterCourt;
 let changeoverEventCounter = 0;
 const swapAnimations = [];
 
@@ -76,6 +78,7 @@ test.before(async () => {
   const dom = await bootFrontend();
   window = dom.window;
   document = window.document;
+  ({ enterCourt } = await import("../app/js/court/session.js"));
   window.HTMLElement.prototype.animate = function (keyframes, options) {
     const animation = { id: "", cancel() {} };
     swapAnimations.push({ keyframes, options, animation });
@@ -545,4 +548,286 @@ test("spectator sees live score updates pushed by other devices", async () => {
   assert.equal(document.getElementById("changeoverBtn").style.display, "none");
   assert.equal(document.getElementById("changeoverFloatingBtn"), null);
   assert.equal(document.getElementById("changeoverTile").style.display, "none");
+});
+
+test("New Match is unavailable to spectators, including programmatic clicks", async () => {
+  document.getElementById("settingsBtn").click();
+  assert.equal(document.getElementById("newMatchTile").style.display, "none");
+  assert.equal(document.getElementById("newMatchBtn").disabled, true);
+  document.getElementById("newMatchBtn").dispatchEvent(new window.Event("click"));
+  await settle(0);
+  assert.equal(document.getElementById("confirmModal").classList.contains("hidden"), true);
+});
+
+test("New Match requires confirmation and recovers safely from a backend failure", async () => {
+  seedCourt("nxmca");
+  await enterCourt("nxmca", false);
+  document.getElementById("settingsBtn").click();
+  const button = document.getElementById("newMatchBtn");
+  assert.notEqual(document.getElementById("newMatchTile").style.display, "none");
+  assert.equal(document.getElementById("resetSettingsTile").nextElementSibling.id, "newMatchTile");
+
+  const originalHandler = callableHandlers.get("manageMatch");
+  let calls = 0;
+  callableHandlers.set("manageMatch", async (payload) => {
+    if (payload.operation !== "newCourtMatch") return originalHandler(payload);
+    calls += 1;
+    throw new Error("Simulated new match failure");
+  });
+  try {
+    button.click();
+    assert.equal(button.disabled, true);
+    document.getElementById("confirmCancelBtn").click();
+    await waitFor(() => !button.disabled, { label: "cancelled new match" });
+    assert.equal(calls, 0);
+    assert.equal(firestoreState.docs.get("courts/nxmca").activeMatchId, "nxmcaa");
+
+    button.click();
+    document.getElementById("confirmOkBtn").click();
+    await waitFor(() => !button.disabled, { label: "failed new match recovers" });
+    assert.equal(calls, 1);
+    assert.equal(button.hasAttribute("aria-busy"), false);
+    assert.equal(session.currentMatchId, "nxmcaa");
+    assert.equal(firestoreState.docs.get("courts/nxmca").activeMatchId, "nxmcaa");
+    assert.equal(document.getElementById("settingsModal").classList.contains("hidden"), false);
+    assert.match(document.body.textContent, /Simulated new match failure/);
+  } finally {
+    callableHandlers.set("manageMatch", originalHandler);
+  }
+});
+
+test("New Match hides the settings modal while its confirmation is visible, and restores it on cancel", async () => {
+  // Both modals share `.reset-modal` (position: fixed; z-index: 9999) and the
+  // settings modal comes later in the DOM, so if it stayed open it would paint
+  // over the confirmation and the button would appear to do nothing.
+  const settingsModal = document.getElementById("settingsModal");
+  const confirmModal = document.getElementById("confirmModal");
+  const button = document.getElementById("newMatchBtn");
+
+  if (settingsModal.classList.contains("hidden")) {
+    document.getElementById("settingsBtn").click();
+    await settle(10);
+  }
+  assert.equal(settingsModal.classList.contains("hidden"), false, "settings starts open");
+  assert.equal(confirmModal.classList.contains("hidden"), true, "confirm starts closed");
+
+  const originalHandler = callableHandlers.get("manageMatch");
+  let calls = 0;
+  callableHandlers.set("manageMatch", async (payload) => {
+    if (payload.operation !== "newCourtMatch") return originalHandler(payload);
+    calls += 1;
+    throw new Error("Cancelled confirmation must not call the backend");
+  });
+  try {
+    button.click();
+    await waitFor(() => !confirmModal.classList.contains("hidden"), {
+      label: "new match confirmation shown",
+    });
+    assert.equal(
+      settingsModal.classList.contains("hidden"),
+      true,
+      "settings modal must be hidden while the confirmation is visible",
+    );
+    assert.match(document.getElementById("confirmMessage").textContent, /Start a new match\?/);
+
+    document.getElementById("confirmCancelBtn").click();
+    await waitFor(() => !button.disabled, { label: "cancelled new match settles" });
+    assert.equal(confirmModal.classList.contains("hidden"), true, "confirmation closed on cancel");
+    assert.equal(
+      settingsModal.classList.contains("hidden"),
+      false,
+      "settings modal is restored after cancelling",
+    );
+    assert.equal(calls, 0);
+
+    // Dismissing by clicking the overlay behaves the same as Cancel.
+    button.click();
+    await waitFor(() => !confirmModal.classList.contains("hidden"), {
+      label: "new match confirmation shown again",
+    });
+    assert.equal(settingsModal.classList.contains("hidden"), true);
+    confirmModal.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await waitFor(() => !button.disabled, { label: "overlay dismiss settles" });
+    assert.equal(confirmModal.classList.contains("hidden"), true);
+    assert.equal(settingsModal.classList.contains("hidden"), false);
+    assert.equal(calls, 0);
+  } finally {
+    callableHandlers.set("manageMatch", originalHandler);
+  }
+});
+
+test("New Match saves the old match, follows the new match from an explicit match link, and prevents duplicate requests", async () => {
+  await enterCourt("nxmca", false, { matchId: "nxmcaa", followRequestedMatch: true });
+  document.getElementById("addPointA").click();
+  await waitFor(() => getRenderedScore(document).pointsA === "15", { label: "old match score" });
+  const oldScore = structuredClone(firestoreState.docs.get("matches/nxmcaa/score/current"));
+  const oldEvents = [...firestoreState.docs.entries()].filter(([path]) =>
+    path.startsWith("matches/nxmcaa/events/"),
+  );
+  const originalHandler = callableHandlers.get("manageMatch");
+  let calls = 0;
+  let release;
+  const heldResponse = new Promise((resolve) => {
+    release = resolve;
+  });
+  callableHandlers.set("manageMatch", async (payload) => {
+    if (payload.operation !== "newCourtMatch") return originalHandler(payload);
+    calls += 1;
+    assert.equal(payload.courtId, "nxmca");
+    assert.equal(payload.matchId, "nxmcaa");
+    assert.equal(payload.credentials.courtPassword, "pw");
+    assert.equal(payload.expectedAllocations.match.nxmcaa, session.currentMatchAllocationId);
+    await heldResponse;
+    const oldMatch = firestoreState.docs.get("matches/nxmcaa");
+    writeDoc("matches/nxmcaa", { ...oldMatch, status: "completed", currentCourtId: null });
+    writeDoc("matches/nxmcba", {
+      ...oldMatch,
+      matchId: "nxmcba",
+      allocationId: "allocation-matches-nxmcba",
+      scoreVersion: 0,
+      teamNames: { A: "Team A", B: "Team B" },
+    });
+    writeDoc("matches/nxmcba/score/current", makeScore());
+    const court = firestoreState.docs.get("courts/nxmca");
+    writeDoc("courts/nxmca", {
+      ...court,
+      activeMatchId: "nxmcba",
+      lastMatchId: "nxmcba",
+      beaconSidesSwapped: false,
+    });
+    return {
+      data: { success: true, matchId: "nxmcba", allocationId: "allocation-matches-nxmcba" },
+    };
+  });
+
+  const animationsBefore = swapAnimations.length;
+  const soundsBefore = window.__audioTestState.starts;
+  try {
+    document.getElementById("settingsBtn").click();
+    const button = document.getElementById("newMatchBtn");
+    button.click();
+    button.dispatchEvent(new window.Event("click"));
+    document.getElementById("confirmOkBtn").click();
+    await waitFor(() => calls === 1, { label: "new match callable" });
+    button.dispatchEvent(new window.Event("click"));
+    await settle(0);
+    assert.equal(calls, 1);
+    assert.equal(button.disabled, true);
+    release();
+    await waitFor(() => session.currentMatchId === "nxmcba" && !button.disabled, {
+      label: "new match followed",
+    });
+    assert.equal(session.requestedMatchId, "nxmcba");
+    // Warning cue on click, then the join cue exactly once (not twice).
+    assert.equal(window.__audioTestState.starts - soundsBefore, 2);
+    // The old match animates out and the new one animates in.
+    const fades = swapAnimations
+      .slice(animationsBefore)
+      .filter(({ options }) => options.duration === 280);
+    assert.equal(fades.length, 2);
+    assert.equal(fades[0].keyframes.at(-1).opacity, 0);
+    assert.equal(fades[1].keyframes.at(-1).opacity, 1);
+    assert.equal(window.location.pathname, "/c/nxmca");
+    assert.equal(document.getElementById("settingsModal").classList.contains("hidden"), true);
+    assert.equal(getRenderedScore(document).pointsA, "0");
+    assert.deepEqual(firestoreState.docs.get("matches/nxmcaa/score/current"), oldScore);
+    for (const [path, data] of oldEvents) assert.deepEqual(firestoreState.docs.get(path), data);
+
+    document.getElementById("addPointB").click();
+    await waitFor(() => getRenderedScore(document).pointsB === "15", {
+      label: "new match accepts points",
+    });
+    assert.deepEqual(firestoreState.docs.get("matches/nxmcaa/score/current"), oldScore);
+  } finally {
+    release();
+    callableHandlers.set("manageMatch", originalHandler);
+  }
+});
+
+test("New Match disappears when the current match becomes a tournament match", async () => {
+  const match = firestoreState.docs.get("matches/nxmcba");
+  writeDoc("matches/nxmcba", { ...match, tournamentId: "abcdefg", kind: "tournament" });
+  await waitFor(() => session.currentTournamentId === "abcdefg", {
+    label: "tournament match metadata",
+  });
+  document.getElementById("settingsBtn").click();
+  assert.equal(document.getElementById("newMatchTile").style.display, "none");
+  assert.equal(document.getElementById("newMatchBtn").disabled, true);
+  document.getElementById("newMatchBtn").dispatchEvent(new window.Event("click"));
+  await settle(0);
+  assert.equal(document.getElementById("confirmModal").classList.contains("hidden"), true);
+  writeDoc("matches/nxmcba", match);
+  await waitFor(() => !document.getElementById("newMatchBtn").disabled, {
+    label: "casual match option restored",
+  });
+});
+
+test("New Match rechecks the match and spectator mode after confirmation", async () => {
+  const originalHandler = callableHandlers.get("manageMatch");
+  let calls = 0;
+  callableHandlers.set("manageMatch", async (payload) => {
+    if (payload.operation !== "newCourtMatch") return originalHandler(payload);
+    calls += 1;
+    throw new Error("A stale confirmation must not call the backend");
+  });
+  try {
+    document.getElementById("newMatchBtn").click();
+    const match = firestoreState.docs.get("matches/nxmcba");
+    writeDoc("matches/nxmcba", { ...match, tournamentId: "abcdefg" });
+    await waitFor(() => session.currentTournamentId === "abcdefg", {
+      label: "tournament assigned during confirmation",
+    });
+    document.getElementById("confirmOkBtn").click();
+    await settle(0);
+    assert.equal(calls, 0);
+    writeDoc("matches/nxmcba", match);
+    await waitFor(() => !document.getElementById("newMatchBtn").disabled, {
+      label: "option restored",
+    });
+
+    document.getElementById("newMatchBtn").click();
+    const { enableSpectateMode } = await import("../app/js/court/session.js");
+    enableSpectateMode();
+    document.getElementById("confirmOkBtn").click();
+    await settle(0);
+    assert.equal(calls, 0);
+    assert.equal(document.getElementById("newMatchTile").style.display, "none");
+  } finally {
+    callableHandlers.set("manageMatch", originalHandler);
+  }
+});
+
+test("a delayed New Match response does not return a viewer to a court they left", async () => {
+  await enterCourt("nxmca", false, { matchId: "nxmcba" });
+  document.getElementById("settingsBtn").click();
+  const originalHandler = callableHandlers.get("manageMatch");
+  let release;
+  let called = false;
+  const heldResponse = new Promise((resolve) => {
+    release = resolve;
+  });
+  callableHandlers.set("manageMatch", async (payload) => {
+    if (payload.operation !== "newCourtMatch") return originalHandler(payload);
+    called = true;
+    await heldResponse;
+    return {
+      data: { success: true, matchId: "nxmcca", allocationId: "allocation-matches-nxmcca" },
+    };
+  });
+  try {
+    document.getElementById("newMatchBtn").click();
+    document.getElementById("confirmOkBtn").click();
+    await waitFor(() => called, { label: "new match request in flight" });
+    await enterCourt("xyzza", true);
+    release();
+    await waitFor(() => !document.getElementById("newMatchBtn").hasAttribute("aria-busy"), {
+      label: "request completes after navigating away",
+    });
+    assert.equal(session.currentCourtId, "xyzza");
+    assert.equal(session.isSpectating, true);
+    assert.equal(document.getElementById("newMatchTile").style.display, "none");
+  } finally {
+    release();
+    callableHandlers.set("manageMatch", originalHandler);
+  }
 });

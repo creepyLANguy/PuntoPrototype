@@ -170,3 +170,37 @@ export function swapScoreboardViews({ changeover = false } = {}) {
 
   return swapped;
 }
+
+const MATCH_TRANSITION_MS = 280;
+
+function fadeScoreboard(scoreboard, from, to) {
+  if (typeof scoreboard?.animate !== "function") return Promise.resolve();
+  const reduced = prefersReducedMotion();
+  const animation = scoreboard.animate(
+    reduced
+      ? [{ opacity: from }, { opacity: to }]
+      : [
+          { opacity: from, transform: `scale(${from === 1 ? 1 : 0.96})` },
+          { opacity: to, transform: `scale(${to === 1 ? 1 : 0.96})` },
+        ],
+    { duration: MATCH_TRANSITION_MS, easing: "ease-in-out", fill: "forwards" },
+  );
+  return (animation.finished || Promise.resolve())
+    .catch(() => {})
+    .then(() => animation);
+}
+
+// Animates the current match out, runs `swap` (which loads the new match) while
+// the scoreboard is hidden, then animates the new match in. The scoreboard is
+// always restored, even when `swap` fails.
+export async function transitionScoreboardMatch(swap) {
+  const scoreboard = document.querySelector(".scoreboard");
+  const outAnimation = await fadeScoreboard(scoreboard, 1, 0);
+  try {
+    return await swap();
+  } finally {
+    outAnimation?.cancel?.();
+    const inAnimation = await fadeScoreboard(scoreboard, 0, 1);
+    inAnimation?.cancel?.();
+  }
+}

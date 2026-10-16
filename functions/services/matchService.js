@@ -2,8 +2,15 @@
 // multi-document transition runs in one Firestore transaction so a court has
 // at most one active match and a live match at most one court.
 const { db, FieldValue } = require("../infrastructure/firebase");
+const { runInOperationScope, pinRootGeneration } = require("../infrastructure/dataGuard");
 const { buildScoringOptions } = require("../domain/scoring/modes");
-const { defaultScore, toLiveScorePayload, getMatchResult } = require("../domain/scoring/engine");
+const {
+  defaultScore,
+  toLiveScorePayload,
+  getMatchResult,
+  replayEvents,
+  scoreEquivalent,
+} = require("../domain/scoring/engine");
 const {
   assertTransition,
   buildMatchDocument,
@@ -17,6 +24,8 @@ const { normalizeScoreVersion } = require("../domain/events/validation");
 const { paths } = require("./firestorePaths");
 const { allocateId, validateId, runIdTransaction } = require("./ids");
 const { writeAudit } = require("./auditService");
+const { authorizeCourtControl } = require("./authService");
+const { collectApplicableScoringEvents } = require("./replayService");
 const { invalid, notFound, precondition } = require("./errors");
 
 const now = () => FieldValue.serverTimestamp();
@@ -271,6 +280,107 @@ async function ensureCourtMatch({ courtId, actor = null }) {
       created: true,
     };
   });
+}
+
+async function newCourtMatch({ courtId, matchId, credentials, reason = null }) {
+  validateId("court", courtId);
+  validateId("match", matchId);
+  return runInOperationScope(() =>
+    runIdTransaction(db, async (tx) => {
+      const court = await readCourt(tx, courtId);
+      // Recheck the password on each attempt, not on a pre-transaction snapshot.
+      const actor = await authorizeCourtControl(court, credentials);
+      if (court.status === "closed") {
+        throw precondition(`${courtLabel(court, courtId)} is closed.`);
+      }
+      if ((court.activeMatchId || court.lastMatchId) !== matchId) {
+        throw precondition("The court's match has changed. Refresh before starting a new match.", {
+          code: "STALE_MATCH",
+        });
+      }
+      const previous = await readMatch(tx, matchId);
+      // Finished matches are not written, so explicitly fence their generation too.
+      pinRootGeneration(paths.match(matchId), previous.allocationId);
+      if (previous.tournamentId || previous.kind === "tournament") {
+        throw precondition("Tournament matches cannot be replaced with a casual match.");
+      }
+      if (!["live", "completed", "cancelled"].includes(previous.status)) {
+        throw precondition("Only a live or finished court match can be replaced.");
+      }
+
+      let score = null;
+      if (previous.status === "live") {
+        if (court.activeMatchId !== matchId || previous.currentCourtId !== courtId) {
+          throw precondition("This match is no longer live on this court.");
+        }
+        const scoreSnap = await tx.get(db.doc(paths.matchScore(matchId)));
+        if (!scoreSnap.exists) throw precondition("The current match score is unavailable.");
+        score = { ...scoreSnap.data(), scoringOptions: previous.scoringOptions };
+        // Keep the score/history untouched. An accepted point awaiting its trigger
+        // must settle before completion; the query also fences concurrent inserts.
+        const eventsSnap = await tx.get(db.collection(paths.matchEvents(matchId)));
+        const events = collectApplicableScoringEvents(
+          eventsSnap,
+          normalizeScoreVersion(previous.scoreVersion),
+        ).filter((event) => (event.allocationId ?? null) === (previous.allocationId ?? null));
+        if (
+          events.length &&
+          !scoreEquivalent(score, replayEvents(events, previous.scoringOptions))
+        ) {
+          throw precondition("Scoring is still updating. Retry once the score has synced.", {
+            code: "SCORE_PENDING",
+          });
+        }
+      }
+
+      const prepared = prepareMatch({
+        matchId: await allocateId(tx, "match"),
+        scoringOptions: {
+          ...(court.scoringOptions || {}),
+          scoringMode: court.scoringMode || court.scoringOptions?.scoringMode,
+        },
+        visibility: court.status === "private" ? "private" : "public",
+        status: "live",
+      });
+      if (score) {
+        const timestamp = now();
+        const scoreSummary = buildScoreSummary(score);
+        // An unscored match is cancelled; a scored one keeps its final result.
+        tx.set(
+          matchRef(matchId),
+          hasPoints(scoreSummary)
+            ? {
+                status: "completed",
+                currentCourtId: null,
+                result: { ...getMatchResult(score), completedAt: timestamp },
+                scoreSummary,
+                completedAt: timestamp,
+                updatedAt: timestamp,
+              }
+            : {
+                status: "cancelled",
+                currentCourtId: null,
+                scoreSummary,
+                cancelledAt: timestamp,
+                updatedAt: timestamp,
+              },
+          { merge: true },
+        );
+      }
+      writePreparedMatch(tx, prepared);
+      writeAttachment(tx, { match: prepared.match, court, resetOrientation: true });
+      writeAudit(tx, {
+        operation: "match.newCourtMatch",
+        matchId: prepared.matchId,
+        courtId,
+        actor,
+        reason,
+        beforeSummary: { matchId, status: previous.status },
+        afterSummary: { matchId: prepared.matchId, status: "live" },
+      });
+      return { matchId: prepared.matchId, courtId, scoreVersion: 0, created: true };
+    }),
+  );
 }
 
 async function resolveCourtMatchId(courtId, { ensure = false } = {}) {
@@ -779,6 +889,7 @@ module.exports = {
   writePreparedMatch,
   planCourtAttachment,
   ensureCourtMatch,
+  newCourtMatch,
   resolveCourtMatchId,
   startMatch,
   moveMatch,

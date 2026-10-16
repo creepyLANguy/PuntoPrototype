@@ -42,6 +42,15 @@ async function authorizeFor(matchId, credentials, targetCourtId = null) {
 }
 
 const OPERATIONS = {
+  async newCourtMatch(data, credentials) {
+    return matchService.newCourtMatch({
+      courtId: data.courtId,
+      matchId: data.matchId,
+      credentials,
+      reason: data.reason,
+    });
+  },
+
   async ensureCourtMatch(data) {
     if (data.matchId !== undefined) throw invalid("Match ids are allocated by the server.");
     return matchService.ensureCourtMatch({ courtId: data.courtId, actor: { type: "court" } });

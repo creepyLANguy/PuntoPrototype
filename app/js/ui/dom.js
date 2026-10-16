@@ -94,6 +94,8 @@ export function initElements() {
     editPlayersTile: $("editPlayersTile"),
     resetSettingsBtn: $("resetSettingsBtn"),
     resetSettingsTile: $("resetSettingsTile"),
+    newMatchBtn: $("newMatchBtn"),
+    newMatchTile: $("newMatchTile"),
     obsOverlayBtn: $("obsOverlayBtn"),
     joinCourtBtn: $("joinCourtBtn"),
     joinCourtTile: $("joinCourtTile"),
