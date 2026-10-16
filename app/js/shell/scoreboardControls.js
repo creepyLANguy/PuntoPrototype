@@ -43,8 +43,19 @@ export function registerScoreboardControls() {
         session.activeCourtListenerToken === listenerToken &&
         !session.isSpectating;
 
+      // Same warning sound the Reset tile plays when it opens its modal.
+      playSound(SOUND_IDS.WARNING);
+
       button.setAttribute("aria-busy", "true");
       syncSettingsTiles();
+
+      // The settings modal and the confirm modal share the same overlay layer and
+      // the settings modal is later in the DOM, so it would cover the
+      // confirmation. Close settings first (as the Reset tile does) and bring it
+      // back if the user cancels or the request fails.
+      const settingsWasOpen = !elements.settingsModal.classList.contains("hidden");
+      elements.settingsModal.classList.add("hidden");
+      let started = false;
       try {
         if (
           !(await showConfirm(
@@ -75,6 +86,7 @@ export function registerScoreboardControls() {
           courtAllocationId,
           matchAllocationId: result.allocationId,
         });
+        started = true;
         elements.settingsModal.classList.add("hidden");
         syncCurrentViewState("replace");
         playSound(SOUND_IDS.START);
@@ -91,6 +103,9 @@ export function registerScoreboardControls() {
           );
         }
       } finally {
+        if (!started && settingsWasOpen && isSameCourtSession()) {
+          elements.settingsModal.classList.remove("hidden");
+        }
         button.removeAttribute("aria-busy");
         syncSettingsTiles();
       }
