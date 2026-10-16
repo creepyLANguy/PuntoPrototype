@@ -701,6 +701,7 @@ test("New Match saves the old match, follows the new match from an explicit matc
   });
 
   const animationsBefore = swapAnimations.length;
+  const soundsBefore = window.__audioTestState.starts;
   try {
     document.getElementById("settingsBtn").click();
     const button = document.getElementById("newMatchBtn");
@@ -717,6 +718,8 @@ test("New Match saves the old match, follows the new match from an explicit matc
       label: "new match followed",
     });
     assert.equal(session.requestedMatchId, "nxmcba");
+    // Warning cue on click, then the join cue exactly once (not twice).
+    assert.equal(window.__audioTestState.starts - soundsBefore, 2);
     // The old match animates out and the new one animates in.
     const fades = swapAnimations
       .slice(animationsBefore)

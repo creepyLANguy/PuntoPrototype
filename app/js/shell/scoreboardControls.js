@@ -95,7 +95,6 @@ export function registerScoreboardControls() {
         started = true;
         elements.settingsModal.classList.add("hidden");
         syncCurrentViewState("replace");
-        playSound(SOUND_IDS.START);
         showToast(
           "Previous match saved. New match started.",
           TOAST_TYPES.SUCCESS,
