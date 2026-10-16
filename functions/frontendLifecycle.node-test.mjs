@@ -596,6 +596,66 @@ test("New Match requires confirmation and recovers safely from a backend failure
   }
 });
 
+test("New Match hides the settings modal while its confirmation is visible, and restores it on cancel", async () => {
+  // Both modals share `.reset-modal` (position: fixed; z-index: 9999) and the
+  // settings modal comes later in the DOM, so if it stayed open it would paint
+  // over the confirmation and the button would appear to do nothing.
+  const settingsModal = document.getElementById("settingsModal");
+  const confirmModal = document.getElementById("confirmModal");
+  const button = document.getElementById("newMatchBtn");
+
+  if (settingsModal.classList.contains("hidden")) {
+    document.getElementById("settingsBtn").click();
+    await settle(10);
+  }
+  assert.equal(settingsModal.classList.contains("hidden"), false, "settings starts open");
+  assert.equal(confirmModal.classList.contains("hidden"), true, "confirm starts closed");
+
+  const originalHandler = callableHandlers.get("manageMatch");
+  let calls = 0;
+  callableHandlers.set("manageMatch", async (payload) => {
+    if (payload.operation !== "newCourtMatch") return originalHandler(payload);
+    calls += 1;
+    throw new Error("Cancelled confirmation must not call the backend");
+  });
+  try {
+    button.click();
+    await waitFor(() => !confirmModal.classList.contains("hidden"), {
+      label: "new match confirmation shown",
+    });
+    assert.equal(
+      settingsModal.classList.contains("hidden"),
+      true,
+      "settings modal must be hidden while the confirmation is visible",
+    );
+    assert.match(document.getElementById("confirmMessage").textContent, /Start a new match\?/);
+
+    document.getElementById("confirmCancelBtn").click();
+    await waitFor(() => !button.disabled, { label: "cancelled new match settles" });
+    assert.equal(confirmModal.classList.contains("hidden"), true, "confirmation closed on cancel");
+    assert.equal(
+      settingsModal.classList.contains("hidden"),
+      false,
+      "settings modal is restored after cancelling",
+    );
+    assert.equal(calls, 0);
+
+    // Dismissing by clicking the overlay behaves the same as Cancel.
+    button.click();
+    await waitFor(() => !confirmModal.classList.contains("hidden"), {
+      label: "new match confirmation shown again",
+    });
+    assert.equal(settingsModal.classList.contains("hidden"), true);
+    confirmModal.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await waitFor(() => !button.disabled, { label: "overlay dismiss settles" });
+    assert.equal(confirmModal.classList.contains("hidden"), true);
+    assert.equal(settingsModal.classList.contains("hidden"), false);
+    assert.equal(calls, 0);
+  } finally {
+    callableHandlers.set("manageMatch", originalHandler);
+  }
+});
+
 test("New Match saves the old match, follows the new match from an explicit match link, and prevents duplicate requests", async () => {
   await enterCourt("nxmca", false, { matchId: "nxmcaa", followRequestedMatch: true });
   document.getElementById("addPointA").click();
