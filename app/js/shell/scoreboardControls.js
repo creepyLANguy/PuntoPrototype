@@ -19,7 +19,10 @@ import { session } from "../state/sessionState.js";
 import { themeState } from "../state/themeState.js";
 import { openPlayerNamesModal } from "../teams/playerNamesModal.js";
 import { $, elements } from "../ui/dom.js";
-import { swapScoreboardViews } from "../ui/animations.js";
+import {
+  swapScoreboardViews,
+  transitionScoreboardMatch,
+} from "../ui/animations.js";
 import { toggleFullscreen } from "../ui/fullscreen.js";
 import { showConfirm } from "../ui/modals.js";
 import { canStartNewMatch, syncSettingsTiles } from "../ui/settingsTiles.js";
@@ -53,7 +56,8 @@ export function registerScoreboardControls() {
       // the settings modal is later in the DOM, so it would cover the
       // confirmation. Close settings first (as the Reset tile does) and bring it
       // back if the user cancels or the request fails.
-      const settingsWasOpen = !elements.settingsModal.classList.contains("hidden");
+      const settingsWasOpen =
+        !elements.settingsModal.classList.contains("hidden");
       elements.settingsModal.classList.add("hidden");
       let started = false;
       try {
@@ -78,14 +82,16 @@ export function registerScoreboardControls() {
         );
         if (!isSameCourtSession()) return;
 
-        await enterCourt(courtId, false, {
-          historyMode: "replace",
-          adminEntry: session.enteredCourtAsAdmin,
-          matchId: result.matchId,
-          followRequestedMatch: Boolean(session.requestedMatchId),
-          courtAllocationId,
-          matchAllocationId: result.allocationId,
-        });
+        await transitionScoreboardMatch(() =>
+          enterCourt(courtId, false, {
+            historyMode: "replace",
+            adminEntry: session.enteredCourtAsAdmin,
+            matchId: result.matchId,
+            followRequestedMatch: Boolean(session.requestedMatchId),
+            courtAllocationId,
+            matchAllocationId: result.allocationId,
+          }),
+        );
         started = true;
         elements.settingsModal.classList.add("hidden");
         syncCurrentViewState("replace");

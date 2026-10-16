@@ -700,6 +700,7 @@ test("New Match saves the old match, follows the new match from an explicit matc
     };
   });
 
+  const animationsBefore = swapAnimations.length;
   try {
     document.getElementById("settingsBtn").click();
     const button = document.getElementById("newMatchBtn");
@@ -716,6 +717,13 @@ test("New Match saves the old match, follows the new match from an explicit matc
       label: "new match followed",
     });
     assert.equal(session.requestedMatchId, "nxmcba");
+    // The old match animates out and the new one animates in.
+    const fades = swapAnimations
+      .slice(animationsBefore)
+      .filter(({ options }) => options.duration === 280);
+    assert.equal(fades.length, 2);
+    assert.equal(fades[0].keyframes.at(-1).opacity, 0);
+    assert.equal(fades[1].keyframes.at(-1).opacity, 1);
     assert.equal(window.location.pathname, "/c/nxmca");
     assert.equal(document.getElementById("settingsModal").classList.contains("hidden"), true);
     assert.equal(getRenderedScore(document).pointsA, "0");
