@@ -177,6 +177,21 @@ test("the admin password is checked before the dashboard opens", async () => {
   assert.ok(document.querySelector("#allTab .admin-tool-tile[data-admin-tool='harness']"));
   assert.ok(document.querySelector("#allTab .admin-tool-tile[data-admin-tool='theme']"));
 
+  const originalOpen = window.open;
+  const openedUrls = [];
+  window.open = (...args) => openedUrls.push(args);
+  document.querySelector("#allTab .admin-tool-tile[data-admin-tool='nfc']").click();
+  document.querySelector("#allTab .admin-tool-tile[data-admin-tool='harness']").click();
+  assert.deepEqual(openedUrls, [
+    ["/nfc/index.html", "_blank"],
+    ["/harness", "_blank"],
+  ]);
+  window.open = originalOpen;
+
+  document.querySelector("#allTab .admin-tool-tile[data-admin-tool='theme']").click();
+  assert.equal($("appearanceMenu").classList.contains("hidden"), false);
+  $("appearanceMenuBtn").click();
+
   const tabControls = {
     tournaments: ["adminTournamentSearch", "showCreateTournamentBtn"],
     clubs: ["adminClubSearch", "showCreateClubBtn"],
