@@ -100,7 +100,7 @@
         </label>
         <button type="button" class="reset-theme-colours-btn">Reset colours</button>
       </div>
-      <button id="adminLoginBtn" class="theme-toggle-btn" title="Admin Panel">🔒</button>
+      <button id="adminLoginBtn" class="theme-toggle-btn" title="Admin Portal">🔒</button>
     </div>
 
     <!-- ================= NFC ACTIVATE BUTTON ================= -->
@@ -322,6 +322,26 @@
       </div>
     </div>
 
+    <!-- ================= JOIN COURT MODAL ================= -->
+    <div id="joinCourtModal" class="reset-modal hidden" role="dialog" aria-modal="true"
+      aria-labelledby="joinCourtModalTitle">
+      <form id="joinCourtModalForm" class="create-card join-court-modal-card">
+        <button type="button" id="closeJoinCourtModalBtn" class="close-btn" aria-label="Close join court">✕</button>
+        <h2 id="joinCourtModalTitle">Join as a player</h2>
+        <p id="joinCourtModalCourtName"></p>
+        <div class="form-group">
+          <label for="joinCourtModalPassword">Court Password</label>
+          <input id="joinCourtModalPassword" type="password" autocomplete="current-password" />
+          <div class="error" id="joinCourtModalPasswordError" role="alert"></div>
+        </div>
+        <div class="error" id="joinCourtModalError" role="alert"></div>
+        <div class="reset-actions join-court-modal-actions">
+          <button id="cancelJoinCourtModalBtn" type="button" class="secondary-btn">Cancel</button>
+          <button id="submitJoinCourtModalBtn" type="submit" class="primary-btn">Join Court</button>
+        </div>
+      </form>
+    </div>
+
     <!-- ================= PLAYER NAMES MODAL ================= -->
     <div id="playerNamesModal" class="reset-modal hidden">
       <div class="player-names-box">
@@ -494,12 +514,12 @@
       </div>
     </div>
 
-    <!-- ================= ADMIN DASHBOARD PAGE ================= -->
+    <!-- ================= ADMIN PORTAL PAGE ================= -->
     <div id="adminDashboardPage" style="display:none;" class="create-page">
       <div class="admin-dashboard-container">
         <div class="admin-dashboard-header">
           <button id="closeAdminDashboardBtn" class="close-btn">✕</button>
-          <h2>Admin Dashboard</h2>
+          <h2>Admin Portal</h2>
           <div class="header-actions">
             <button id="nfcToolBtn" class="primary-btn">NFC Tool</button>
             <button id="deviceHarnessBtn" class="primary-btn">Device Lab</button>
@@ -507,11 +527,27 @@
         </div>
 
         <div class="admin-tabs">
+          <button type="button" class="tab-btn admin-all-tab-btn active" data-tab="all" aria-label="All admin tools" title="All admin tools">
+            <img src="/media/logo.svg" alt="Padel Push" class="admin-all-tab-logo" />
+          </button>
           <button class="tab-btn" data-tab="tournaments">Tournaments</button>
           <button class="tab-btn" data-tab="clubs">Clubs</button>
-          <button class="tab-btn active" data-tab="courts">Courts</button>
+          <button class="tab-btn" data-tab="courts">Courts</button>
           <button class="tab-btn" data-tab="matches">Matches</button>
           <button class="tab-btn" data-tab="devices">Devices</button>
+        </div>
+
+        <div id="allTab" class="tab-content active">
+          <div class="admin-tool-grid" aria-label="Admin portal tools">
+            <button type="button" class="admin-tool-tile" data-tab="tournaments">Tournaments</button>
+            <button type="button" class="admin-tool-tile" data-tab="clubs">Clubs</button>
+            <button type="button" class="admin-tool-tile" data-tab="courts">Courts</button>
+            <button type="button" class="admin-tool-tile" data-tab="matches">Matches</button>
+            <button type="button" class="admin-tool-tile" data-tab="devices">Devices</button>
+            <button type="button" class="admin-tool-tile" data-admin-tool="nfc">NFC Tool</button>
+            <button type="button" class="admin-tool-tile" data-admin-tool="harness">Device Harness</button>
+            <button type="button" class="admin-tool-tile" data-admin-tool="theme">Theme selector</button>
+          </div>
         </div>
 
         <div id="tournamentsTab" class="tab-content">
