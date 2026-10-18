@@ -46,6 +46,11 @@ test("Join as a player opens a direct password modal without displaying Play", a
   $("joinCourtBtn").click();
 
   assert.equal($("joinCourtModal").classList.contains("hidden"), false);
+  const panelBackground = window.getComputedStyle(
+    $("joinCourtModal").querySelector(".join-court-modal-card"),
+  ).backgroundColor;
+  assert.notEqual(panelBackground, "rgba(0, 0, 0, 0)");
+  assert.notEqual(panelBackground, "transparent");
   assert.equal($("joinCourtModalCourtName").textContent, "Join Modal Court");
   assert.equal($("playPage").style.display, "none");
   assert.equal($("joinCourtModalPassword").value, "");
