@@ -191,6 +191,7 @@ export function registerScoreboardControls() {
       }
 
       elements.settingsModal.classList.add("hidden");
+      syncCurrentViewState("replace");
       openPlayerJoinPrompt(session.currentCourtId, session.currentMatchId);
     });
   }
