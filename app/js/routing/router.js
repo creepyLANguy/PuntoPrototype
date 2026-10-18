@@ -34,6 +34,17 @@ export function registerEscapeKeyNavigation() {
 
     const isVisible = (el) => window.getComputedStyle(el).display !== "none";
 
+    if (isVisible(elements.joinCourtModal)) {
+      void stepBackInApp(
+        createViewState({
+          page: NAV_PAGES.SCOREBOARD,
+          courtId: session.currentCourtId,
+          spectate: session.isSpectating,
+        }),
+      );
+      return;
+    }
+
     if (appState.playPageReturnToScoreboard) {
       void closePlayPage();
       return;
