@@ -59,6 +59,16 @@ export function initElements() {
 
     settingsBtn: $("settingsBtn"),
     settingsModal: $("settingsModal"),
+    joinCourtModal: $("joinCourtModal"),
+    joinCourtModalForm: $("joinCourtModalForm"),
+    joinCourtModalTitle: $("joinCourtModalTitle"),
+    joinCourtModalCourtName: $("joinCourtModalCourtName"),
+    joinCourtModalPassword: $("joinCourtModalPassword"),
+    joinCourtModalPasswordError: $("joinCourtModalPasswordError"),
+    joinCourtModalError: $("joinCourtModalError"),
+    closeJoinCourtModalBtn: $("closeJoinCourtModalBtn"),
+    cancelJoinCourtModalBtn: $("cancelJoinCourtModalBtn"),
+    submitJoinCourtModalBtn: $("submitJoinCourtModalBtn"),
     closeSettingsBtn: $("closeSettingsBtn"),
     playerNamesModal: $("playerNamesModal"),
     closePlayerNamesBtn: $("closePlayerNamesBtn"),
@@ -242,6 +252,7 @@ export function initElements() {
 
   //Admin portal things
   elements.adminTabs = document.querySelectorAll(".tab-btn");
+  elements.allTab = $("allTab");
   elements.clubsTab = $("clubsTab");
   elements.courtsTab = $("courtsTab");
   elements.devicesTab = $("devicesTab");
