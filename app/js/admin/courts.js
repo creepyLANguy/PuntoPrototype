@@ -97,7 +97,7 @@ function populateFixedCourtScoringControls(prefix, options = {}) {
 }
 
 export function registerAdminCourtFilters() {
-  // ADMIN DASHBOARD SEARCH & FILTER
+  // ADMIN PORTAL SEARCH & FILTER
   elements.adminCourtSearch.addEventListener(
     "input",
     filterAndDisplayAdminCourts,
