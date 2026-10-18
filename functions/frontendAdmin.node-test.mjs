@@ -176,6 +176,8 @@ test("the admin password is checked before the dashboard opens", async () => {
   assert.ok(document.querySelector("#allTab .admin-tool-tile[data-admin-tool='nfc']"));
   assert.ok(document.querySelector("#allTab .admin-tool-tile[data-admin-tool='harness']"));
   assert.ok(document.querySelector("#allTab .admin-tool-tile[data-admin-tool='theme']"));
+  assert.equal(document.querySelectorAll("#allTab .admin-tool-tile svg.admin-tool-icon").length, 8);
+  assert.equal($("appearanceMenuBtn"), null, "the floating appearance button is removed");
 
   const originalOpen = window.open;
   const openedUrls = [];
@@ -190,7 +192,8 @@ test("the admin password is checked before the dashboard opens", async () => {
 
   document.querySelector("#allTab .admin-tool-tile[data-admin-tool='theme']").click();
   assert.equal($("appearanceMenu").classList.contains("hidden"), false);
-  $("appearanceMenuBtn").click();
+  document.body.click();
+  assert.equal($("appearanceMenu").classList.contains("hidden"), true);
 
   const tabControls = {
     tournaments: ["adminTournamentSearch", "showCreateTournamentBtn"],
