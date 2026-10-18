@@ -6,7 +6,7 @@ import { refreshActiveAdminTab } from "../admin/dashboardTabs.js";
 import { openEditDeviceModal } from "../admin/devices.js";
 import { NAV_MODALS, NAV_PAGES } from "../config/routes.js";
 import { displayPlayCourtList, displaySpectateCourtList, loadCourtsWithInlineLoader } from "../court/courtLists.js";
-import { setPlayPageVisible } from "../court/playJoin.js";
+import { openPlayerJoinPrompt, setPlayPageVisible } from "../court/playJoin.js";
 import { enterCourt, leaveCourt } from "../court/session.js";
 import { showMatchDetails } from "../details/matchDetails.js";
 import { getCourt } from "../firebase/courtRepository.js";
@@ -43,7 +43,8 @@ export function getCurrentViewState()
       [elements.detailsModal, NAV_MODALS.DETAILS],
       [elements.settingsModal, NAV_MODALS.SETTINGS],
       [elements.confirmModal, NAV_MODALS.CONFIRM],
-      [elements.playerNamesModal, NAV_MODALS.PLAYER_NAMES]
+      [elements.playerNamesModal, NAV_MODALS.PLAYER_NAMES],
+      [elements.joinCourtModal, NAV_MODALS.JOIN_COURT]
     ];
 
     for (const [element, modal] of modalMap)
@@ -281,6 +282,10 @@ export async function restoreViewState(viewState)
       else if (state.modal === NAV_MODALS.DETAILS)
       {
         await showMatchDetails(false);
+      }
+      else if (state.modal === NAV_MODALS.JOIN_COURT)
+      {
+        openPlayerJoinPrompt(state.courtId, session.currentMatchId);
       }      
 
       return;
