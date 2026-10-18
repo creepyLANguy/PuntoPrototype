@@ -1,4 +1,4 @@
-// Admin portal shell: admin authentication, the dashboard open/close flow, cross-tab
+// Admin portal shell: admin authentication, the portal open/close flow, cross-tab
 // logout, the dashboard tabs and the admin tool buttons. Owns #adminAuthPage and
 // the dashboard chrome; the club, court and device lists live in clubs.js /
 // courts.js / devices.js.
@@ -122,10 +122,34 @@ export function registerAdminPortal() {
 }
 
 export function registerAdminTabs() {
-  // Tab Switching Logic
   elements.adminTabs.forEach((btn) => {
     btn.addEventListener("click", () => {
       showAdminTab(btn.dataset.tab);
+    });
+  });
+
+  document.querySelectorAll(".admin-tool-tile").forEach((tile) => {
+    tile.addEventListener("click", (event) => {
+      if (tile.dataset.tab) {
+        showAdminTab(tile.dataset.tab);
+        return;
+      }
+
+      switch (tile.dataset.adminTool) {
+        case "nfc":
+          elements.nfcToolBtn?.click();
+          break;
+        case "harness":
+          $("deviceHarnessBtn")?.click();
+          break;
+        case "theme":
+          // Stop the outside-click handler from immediately dismissing the menu.
+          event.stopPropagation();
+          elements.appearanceMenuBtn?.click();
+          break;
+        default:
+          break;
+      }
     });
   });
 }
