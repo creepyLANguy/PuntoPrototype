@@ -80,6 +80,37 @@ body.light-mode .reset-actions button {
   color: white;
 }
 
+.join-court-modal-card {
+  gap: 12px;
+}
+
+.join-court-modal-card h2 {
+  margin: 0;
+  padding-right: 24px;
+}
+
+.join-court-modal-card p {
+  margin: 0;
+  opacity: 0.8;
+  overflow-wrap: anywhere;
+}
+
+.join-court-modal-card .form-group input {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.join-court-modal-actions {
+  margin-top: 4px;
+}
+
+.join-court-modal-actions button {
+  flex: 1;
+  min-width: 100px;
+  width: auto;
+  margin: 0;
+}
+
 .share-image-modal {
   position: fixed;
   inset: 0;
