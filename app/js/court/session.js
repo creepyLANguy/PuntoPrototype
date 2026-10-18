@@ -187,9 +187,9 @@ export async function enterCourt(
   setPlayPageVisible(false);
   elements.spectatePage.style.display = "none";
 
-  // Hide top-right buttons in court view
+  // Close appearance controls when switching into a court view.
+  closeAppearanceMenu();
   if (elements.appearanceMenuBtn) {
-    closeAppearanceMenu();
     elements.appearanceMenuBtn.style.display = "none";
   }
   if (elements.adminLoginBtn) {
