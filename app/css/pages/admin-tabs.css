@@ -248,7 +248,8 @@ body.light-mode .admin-tool-tile:focus-visible {
   object-fit: contain;
   padding: 2px 5px;
   border-radius: 4px;
-  background: #fff;
+  background: #182824;
+  border: 1px solid #647d73;
 }
 
 @media (max-width: 600px) {
