@@ -61,7 +61,7 @@ async function logIn() {
   await waitFor(() => isShown("adminAuthPage"), { label: "admin auth page" });
   $("adminAuthPassword").value = ADMIN_SKELETON_KEY;
   $("submitAdminAuthBtn").click();
-  await waitFor(() => isShown("adminDashboardPage"), { label: "admin dashboard" });
+  await waitFor(() => isShown("adminDashboardPage"), { label: "admin portal" });
 }
 
 async function waitForCourtList(count) {
@@ -165,7 +165,7 @@ test("the admin password is checked before the dashboard opens", async () => {
 
   $("adminAuthPassword").value = ADMIN_SKELETON_KEY;
   $("submitAdminAuthBtn").click();
-  await waitFor(() => isShown("adminDashboardPage"), { label: "admin dashboard" });
+  await waitFor(() => isShown("adminDashboardPage"), { label: "admin portal" });
   assert.equal(activeTab(), "all", "the All tab is open when no preference exists");
   assert.deepEqual(
     [...document.querySelectorAll(".admin-tabs .tab-btn")].map((button) => button.dataset.tab),
