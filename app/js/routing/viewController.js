@@ -181,9 +181,9 @@ function showCurrentScoreboardView()
   elements.editDevicePage.style.display = "none";
   elements.editClubPage.style.display = "none";
 
+  closeAppearanceMenu();
   if (elements.appearanceMenuBtn)
   {
-    closeAppearanceMenu();
     elements.appearanceMenuBtn.style.display = "none";
   }
 
