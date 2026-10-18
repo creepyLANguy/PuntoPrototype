@@ -348,7 +348,7 @@ function renderDeviceList(devices) {
 }
 
 // After a save or delete: back to the club editor the device was opened from,
-// otherwise to the dashboard's device list.
+// otherwise to the portal's device list.
 function returnFromDeviceEditor() {
   const returnView = appState.adminEditReturnView;
   appState.adminEditReturnView = null;
