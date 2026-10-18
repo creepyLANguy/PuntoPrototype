@@ -233,6 +233,7 @@ export function openPlayerJoinPrompt(courtId, matchId = null)
   elements.joinCourtModalPasswordError.textContent = "";
   elements.joinCourtModalError.textContent = "";
   elements.joinCourtModal.classList.remove("hidden");
+  elements.joinCourtModalPassword.focus();
 
   syncCurrentViewState();
 }
