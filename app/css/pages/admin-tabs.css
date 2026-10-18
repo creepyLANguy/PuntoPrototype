@@ -184,3 +184,85 @@ body.light-mode #adminCourtSearch {
   display: flex;
 }
 
+
+/* All-tab overview: reusable, touch-friendly shortcuts to portal sections/tools. */
+.admin-tool-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 145px), 1fr));
+  gap: 12px;
+}
+
+.admin-tool-tile {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 88px;
+  padding: 18px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.06);
+  color: inherit;
+  font: inherit;
+  font-weight: 650;
+  text-align: center;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+}
+
+.admin-tool-tile:hover,
+.admin-tool-tile:focus-visible {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: currentColor;
+}
+
+.admin-tool-tile:active {
+  transform: scale(0.98);
+}
+
+body.light-mode .admin-tool-tile {
+  background: #fff;
+  border-color: #d5d5d5;
+  color: #222;
+}
+
+body.light-mode .admin-tool-tile:hover,
+body.light-mode .admin-tool-tile:focus-visible {
+  background: #f3f3f3;
+  border-color: #777;
+}
+
+/* Give the logo its own high-contrast surface in both app themes. */
+.admin-all-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 94px;
+  padding: 6px 10px;
+}
+
+.admin-all-tab-logo {
+  display: block;
+  width: 48px;
+  height: 26px;
+  object-fit: contain;
+  padding: 2px 5px;
+  border-radius: 4px;
+  background: #fff;
+}
+
+@media (max-width: 600px) {
+  .admin-tool-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .admin-tool-tile {
+    min-height: 76px;
+    padding: 14px 10px;
+  }
+
+  .admin-all-tab-btn {
+    min-width: 0;
+  }
+}
