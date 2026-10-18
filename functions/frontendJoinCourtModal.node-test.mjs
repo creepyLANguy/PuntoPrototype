@@ -70,6 +70,28 @@ test("the join modal surfaces required and incorrect password errors inline", as
   assert.equal($("joinCourtModal").classList.contains("hidden"), false);
 });
 
+test("Escape dismisses the join modal without leaving the court", async () => {
+  document.body.dispatchEvent(
+    new window.KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
+  );
+
+  await waitFor(
+    () =>
+      $("joinCourtModal").classList.contains("hidden") &&
+      $("scoreboardPage").style.display !== "none",
+    { label: "join modal dismissed to the scoreboard" },
+  );
+  assert.equal(window.location.pathname, "/c/jmada");
+
+  $("settingsBtn").click();
+  await waitFor(
+    () => !$("settingsModal").classList.contains("hidden"),
+    { label: "settings modal reopened" },
+  );
+  $("joinCourtBtn").click();
+  assert.equal($("joinCourtModal").classList.contains("hidden"), false);
+});
+
 test("a correct password joins the selected court and dismisses the modal", async () => {
   $("joinCourtModalPassword").value = "pw";
   submitJoinForm();
