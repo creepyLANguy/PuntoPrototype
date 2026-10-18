@@ -1,6 +1,6 @@
 // Admin portal shell: admin authentication, the portal open/close flow, cross-tab
-// logout, the dashboard tabs and the admin tool buttons. Owns #adminAuthPage and
-// the dashboard chrome; the club, court and device lists live in clubs.js /
+// logout, the portal tabs and the admin tool buttons. Owns #adminAuthPage and
+// the portal chrome; the club, court and device lists live in clubs.js /
 // courts.js / devices.js.
 import { refreshActiveAdminTab, showAdminTab } from "./dashboardTabs.js";
 import {
