@@ -88,13 +88,31 @@ async function attemptCourtJoin({
       followRequestedMatch: Boolean(session.requestedMatchId),
     });
 
+    // enterCourt can report a vanished court inline and return without throwing.
+    // The full Play page owns that error element; copy it into the direct modal
+    // rather than silently treating the attempted join as successful.
+    if (session.currentCourtId !== courtId || session.isSpectating) {
+      if (isModal) {
+        throw new Error(
+          elements.playCourtNameError?.textContent?.trim() ||
+            "Unable to join court. Please try again.",
+        );
+      }
+      return;
+    }
+
     appState.playPageReturnToScoreboard = false;
     appState.selectedPlayMatchId = null;
     appState.playPageTargetId = null;
     appState.playPageTargetType = null;
     passwordInput.value = "";
   } catch (error) {
-    const message = error?.message || "Unable to join court. Please try again.";
+    const message =
+      typeof error?.message === "string" && error.message.trim()
+        ? error.message
+        : typeof error === "string" && error.trim()
+          ? error
+          : "Unable to join court. Please try again.";
     showGeneralError(message);
     if (isModal && modalWasHiddenForJoin) {
       elements.joinCourtModal.classList.remove("hidden");
