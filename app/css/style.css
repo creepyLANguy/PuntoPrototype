@@ -6133,6 +6133,30 @@ body.light-mode .club-member-select input {
     font-size: 0.75rem;
   }
 }
+
+/* Keep all six portal tabs usable on narrow screens as well as desktop. */
+.admin-tabs {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 100px), 1fr));
+  grid-auto-flow: row;
+  gap: 8px;
+}
+
+.admin-tabs .tab-btn {
+  min-width: 0;
+  padding: 8px 10px;
+  white-space: nowrap;
+}
+
+.admin-tabs .admin-all-tab-btn {
+  min-width: 0;
+}
+
+@media (max-width: 600px) {
+  .admin-tabs {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
 @keyframes apptitleanimation {
   0% {
     filter: drop-shadow(0 0 10px rgba(0, 0, 0, 0.4));
