@@ -80,6 +80,23 @@ body.light-mode .reset-actions button {
   color: white;
 }
 
+/* Keep the direct player-join panel fully opaque regardless of the court
+   backdrop, with explicit colours that do not depend on theme transparency. */
+#joinCourtModal .join-court-modal-card {
+  background-color: #17211f;
+  color: #f7faf8;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.48);
+  backdrop-filter: none;
+  opacity: 1;
+}
+
+body.light-mode #joinCourtModal .join-court-modal-card {
+  background-color: #ffffff;
+  color: #1b2924;
+  border-color: #d6dfda;
+}
+
 .join-court-modal-card {
   gap: 12px;
 }
