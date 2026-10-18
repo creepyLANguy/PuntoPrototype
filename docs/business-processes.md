@@ -101,7 +101,7 @@ Steps:
 3. Set team/player names and scoring mode/options.
 4. Confirm initial scoreVersion and default Beacon mapping.
 5. Confirm the court is in the correct status: open, private or closed.
-6. If the court belongs to a club, add it to that club (Admin Dashboard > Clubs; a court belongs to at most one club).
+6. If the court belongs to a club, add it to that club (Admin Portal > Clubs; a court belongs to at most one club).
 7. Perform a basic score/display check before the court is handed to the venue.
 
 Outputs: usable court record, live score state and known access configuration.
@@ -137,7 +137,7 @@ Steps:
 2. Assign or confirm deviceId and device family.
 3. Bind the device to a court using current device tooling or the Hub REGISTER flow.
 4. Verify the binding in the admin device list.
-5. If the device belongs to a club, add it to that club (Admin Dashboard > Clubs; a device belongs to at most one club).
+5. If the device belongs to a club, add it to that club (Admin Portal > Clubs; a device belongs to at most one club).
 6. Run a controlled scoring/operational test.
 7. Record the deployment/assignment in the operational device register outside the repository where appropriate.
 
