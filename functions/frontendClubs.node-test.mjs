@@ -179,7 +179,7 @@ test("the admin court and device lists show each item's club and search by it", 
 });
 
 test("the Clubs tab lists every club with its court and device counts", async () => {
-  assert.deepEqual(texts(".admin-tabs .tab-btn"), [
+  assert.deepEqual(texts('.admin-tabs .tab-btn:not([data-tab="all"])'), [
     "Tournaments",
     "Clubs",
     "Courts",
