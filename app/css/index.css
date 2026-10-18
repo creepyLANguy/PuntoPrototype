@@ -59,11 +59,11 @@
 @import "components/nfc-button.css";
 /* Toast notifications. */
 @import "components/toast.css";
-/* Admin dashboard, court-id combo widget and court cards. */
+/* Admin portal, court-id combo widget and court cards. */
 @import "pages/admin.css";
 /* Menu page: light-mode readability and the landscape compact layout. */
 @import "pages/menu-compact.css";
-/* Admin dashboard tabs and scrollable lists. */
+/* Admin portal tabs and scrollable lists. */
 @import "pages/admin-tabs.css";
 /* Admin clubs: the Club column of the admin lists, the clubs list and the club editor. */
 @import "pages/admin-clubs.css";
