@@ -99,7 +99,7 @@ function positionJoinModalsForVisualViewport()
     const safeTop = viewportTop + JOIN_MODAL_VIEWPORT_GUTTER_PX;
     const safeBottom = viewportBottom - JOIN_MODAL_VIEWPORT_GUTTER_PX;
 
-    ["playPage", "spectatePage"].forEach((pageId) =>
+    ["playPage", "spectatePage", "joinCourtModal"].forEach((pageId) =>
     {
       const page = document.getElementById(pageId);
       const card = page?.querySelector(".create-card");
@@ -132,7 +132,7 @@ function positionJoinModalsForVisualViewport()
 
 function isJoinCourtInput(el)
 {
-  return Boolean(el?.closest?.("#playPage, #spectatePage"));
+  return Boolean(el?.closest?.("#playPage, #spectatePage, #joinCourtModal"));
 }
 
 function isInputObscured(el)
