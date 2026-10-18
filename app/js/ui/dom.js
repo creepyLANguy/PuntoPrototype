@@ -183,7 +183,7 @@ export function initElements() {
   elements.adminAuthError = $("adminAuthError");
   elements.closeAdminAuthBtn = $("closeAdminAuthBtn");
 
-  // ADMIN DASHBOARD ELEMENTS
+  // ADMIN PORTAL ELEMENTS
   elements.adminDashboardPage = $("adminDashboardPage");
   elements.adminCourtList = $("adminCourtList");
   elements.closeAdminDashboardBtn = $("closeAdminDashboardBtn");
