@@ -1,11 +1,10 @@
-// Admin dashboard tabs: switching tab and (re)loading the list the active tab
-// shows (clubs, courts, matches, tournaments or devices).
+// Admin portal tabs: switch the visible tab and reload its data when applicable.
 import { loadClubList } from "./clubs.js";
 import { displayAdminCourtList } from "./courts.js";
 import { loadDevices } from "./devices.js";
 import { loadAdminMatches } from "./matches.js";
 import { loadAdminTournaments } from "./tournaments.js";
-import { activateAdminTab, ADMIN_TABS, getActiveAdminTab } from "./tabState.js";
+import { activateAdminTab, ADMIN_TABS, getPreferredAdminTab } from "./tabState.js";
 
 const TAB_LOADERS = {
   [ADMIN_TABS.CLUBS]: loadClubList,
@@ -16,13 +15,16 @@ const TAB_LOADERS = {
 };
 
 export function showAdminTab(tab) {
-  const loader = TAB_LOADERS[tab] ? tab : ADMIN_TABS.COURTS;
-  activateAdminTab(loader);
-  return TAB_LOADERS[loader]();
+  const selectedTab = Object.values(ADMIN_TABS).includes(tab)
+    ? tab
+    : ADMIN_TABS.ALL;
+
+  activateAdminTab(selectedTab);
+  const loader = TAB_LOADERS[selectedTab];
+  return loader ? loader() : Promise.resolve();
 }
 
-// Reloads the list of the tab that is currently active, e.g. when returning
-// to the dashboard from an edit page.
+// Re-open the last-used tab, or the All overview when no valid preference exists.
 export function refreshActiveAdminTab() {
-  return showAdminTab(getActiveAdminTab());
+  return showAdminTab(getPreferredAdminTab());
 }
