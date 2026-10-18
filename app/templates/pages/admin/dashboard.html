@@ -1,9 +1,9 @@
-    <!-- ================= ADMIN DASHBOARD PAGE ================= -->
+    <!-- ================= ADMIN PORTAL PAGE ================= -->
     <div id="adminDashboardPage" style="display:none;" class="create-page">
       <div class="admin-dashboard-container">
         <div class="admin-dashboard-header">
           <button id="closeAdminDashboardBtn" class="close-btn">✕</button>
-          <h2>Admin Dashboard</h2>
+          <h2>Admin Portal</h2>
           <div class="header-actions">
             <button id="nfcToolBtn" class="primary-btn">NFC Tool</button>
             <button id="deviceHarnessBtn" class="primary-btn">Device Lab</button>
@@ -11,11 +11,27 @@
         </div>
 
         <div class="admin-tabs">
+          <button type="button" class="tab-btn admin-all-tab-btn active" data-tab="all" aria-label="All admin tools" title="All admin tools">
+            <img src="/media/logo.svg" alt="Padel Push" class="admin-all-tab-logo" />
+          </button>
           <button class="tab-btn" data-tab="tournaments">Tournaments</button>
           <button class="tab-btn" data-tab="clubs">Clubs</button>
-          <button class="tab-btn active" data-tab="courts">Courts</button>
+          <button class="tab-btn" data-tab="courts">Courts</button>
           <button class="tab-btn" data-tab="matches">Matches</button>
           <button class="tab-btn" data-tab="devices">Devices</button>
+        </div>
+
+        <div id="allTab" class="tab-content active">
+          <div class="admin-tool-grid" aria-label="Admin portal tools">
+            <button type="button" class="admin-tool-tile" data-tab="tournaments">Tournaments</button>
+            <button type="button" class="admin-tool-tile" data-tab="clubs">Clubs</button>
+            <button type="button" class="admin-tool-tile" data-tab="courts">Courts</button>
+            <button type="button" class="admin-tool-tile" data-tab="matches">Matches</button>
+            <button type="button" class="admin-tool-tile" data-tab="devices">Devices</button>
+            <button type="button" class="admin-tool-tile" data-admin-tool="nfc">NFC Tool</button>
+            <button type="button" class="admin-tool-tile" data-admin-tool="harness">Device Harness</button>
+            <button type="button" class="admin-tool-tile" data-admin-tool="theme">Theme selector</button>
+          </div>
         </div>
 
         <div id="tournamentsTab" class="tab-content">
