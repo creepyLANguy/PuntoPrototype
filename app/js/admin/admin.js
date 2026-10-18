@@ -18,6 +18,7 @@ import {
 } from "../state/adminSessionState.js";
 import { appState } from "../state/appState.js";
 import { setAdminKey } from "../state/credentialsState.js";
+import { openAppearanceMenu } from "../ui/appearance.js";
 import { $, elements } from "../ui/dom.js";
 import { hideSpinner, showSpinner } from "../ui/loading.js";
 
@@ -145,7 +146,7 @@ export function registerAdminTabs() {
         case "theme":
           // Stop the outside-click handler from immediately dismissing the menu.
           event.stopPropagation();
-          elements.appearanceMenuBtn?.click();
+          openAppearanceMenu();
           break;
         default:
           break;
