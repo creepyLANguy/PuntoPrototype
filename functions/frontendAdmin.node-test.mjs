@@ -149,8 +149,20 @@ test.before(async () => {
 });
 
 test("the admin password is checked before the dashboard opens", async () => {
+  assert.equal(isShown("menuPage"), true, "main menu is initially visible");
+  assert.notEqual(
+    window.getComputedStyle($("appearanceMenuBtn")).display,
+    "none",
+    "floating appearance button is shown alongside the admin button on the main menu",
+  );
+
   $("adminLoginBtn").click();
   await waitFor(() => isShown("adminAuthPage"), { label: "admin auth page" });
+  assert.equal(
+    window.getComputedStyle($("appearanceMenuBtn")).display,
+    "none",
+    "floating appearance button is hidden on the admin login page",
+  );
 
   $("submitAdminAuthBtn").click();
   await settle();
