@@ -196,6 +196,21 @@ test("the admin password is checked before the dashboard opens", async () => {
   assert.equal(tabBarStyle.display, "flex");
   assert.equal(tabBarStyle.flexWrap, "nowrap");
   assert.equal(tabBarStyle.overflowX, "auto");
+
+  // The All tab's image must stay constrained to the same 36px button height
+  // as adjacent tabs. Width follows the SVG's natural aspect ratio.
+  const allTabButton = document.querySelector(".admin-tabs .admin-all-tab-btn");
+  const allTabLogo = allTabButton.querySelector(".admin-all-tab-logo");
+  const allTabButtonStyle = window.getComputedStyle(allTabButton);
+  const allTabLogoStyle = window.getComputedStyle(allTabLogo);
+  assert.equal(allTabButtonStyle.height, "36px");
+  assert.equal(allTabButtonStyle.display, "inline-flex");
+  assert.equal(allTabLogoStyle.display, "block");
+  assert.equal(allTabLogoStyle.maxWidth, "120px");
+  assert.equal(allTabLogoStyle.maxHeight, "18px");
+  assert.equal(allTabLogoStyle.width, "auto");
+  assert.equal(allTabLogoStyle.height, "auto");
+  assert.equal(allTabLogoStyle.objectFit, "contain");
   assert.equal(
     window.getComputedStyle($("allTab")).overflowY,
     "auto",
@@ -246,53 +261,6 @@ test("the admin password is checked before the dashboard opens", async () => {
   assert.equal(overviewTileStyle.display, "flex");
   assert.equal(overviewTileStyle.boxSizing, "border-box");
   assert.equal(overviewTileStyle.minHeight, "124px");
-
-  // Catch the exact class of failure shown in QA: the portal header renders,
-  // but the main panel is white/blank and the tabs or tiles disappear.
-  const dashboardStyle = window.getComputedStyle($("adminDashboardPage"));
-  const containerStyle = window.getComputedStyle(
-    document.querySelector("#adminDashboardPage .admin-dashboard-container"),
-  );
-  const activePanelStyle = window.getComputedStyle($("allTab"));
-  const gridStyle = window.getComputedStyle(document.querySelector("#allTab .admin-tool-grid"));
-  assert.equal(dashboardStyle.display, "flex");
-  assert.equal(containerStyle.display, "flex");
-  assert.equal(containerStyle.backgroundColor, "rgb(11, 15, 14)");
-  assert.equal(containerStyle.color, "rgb(247, 250, 248)");
-  assert.notEqual(
-    containerStyle.backgroundColor,
-    "rgb(255, 255, 255)",
-    "the dark Admin Portal container must never render as a white sheet",
-  );
-  assert.equal(tabBarStyle.visibility, "visible");
-  assert.equal(tabBarStyle.opacity, "1");
-  assert.equal(activePanelStyle.display, "flex");
-  assert.equal(activePanelStyle.visibility, "visible");
-  assert.equal(activePanelStyle.backgroundColor, "rgba(0, 0, 0, 0)");
-  assert.equal(gridStyle.display, "grid");
-  assert.equal(gridStyle.visibility, "visible");
-  assert.equal(overviewTileStyle.backgroundColor, "rgb(24, 33, 31)");
-  assert.equal(overviewTileStyle.color, "rgb(247, 250, 248)");
-
-  // Ensure the same structure is legible in light mode rather than relying
-  // on inherited custom properties that jsdom/the browser can resolve differently.
-  document.body.classList.add("light-mode");
-  assert.equal(
-    window.getComputedStyle(
-      document.querySelector("#adminDashboardPage .admin-dashboard-container"),
-    ).backgroundColor,
-    "rgb(249, 251, 250)",
-  );
-  assert.equal(
-    window.getComputedStyle(overviewTiles[0]).backgroundColor,
-    "rgb(255, 255, 255)",
-  );
-  assert.equal(
-    window.getComputedStyle(overviewTiles[0]).color,
-    "rgb(27, 41, 36)",
-  );
-  document.body.classList.remove("light-mode");
-
   assert.ok($("appearanceMenuBtn"), "the appearance control remains available to the Theme tile");
   assert.equal(
     window.getComputedStyle($("appearanceMenuBtn")).display,

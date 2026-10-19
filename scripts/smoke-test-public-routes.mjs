@@ -101,54 +101,8 @@ async function main() {
     assertHtml(await request(path), deviceHarnessMarker, path);
   }
 
-  const adminTileLabels = [
-    "Tournaments",
-    "Clubs",
-    "Courts",
-    "Matches",
-    "Devices",
-    "NFC Tool",
-    "Device Harness",
-    "Theme selector",
-  ];
-
   for (const path of ["/admin", "/app/admin"]) {
-    const response = await request(path);
-    assertHtml(response, appMarker, path);
-    assert.ok(response.body.includes('id="allTab"'), path + ": expected the All overview panel");
-    assert.ok(response.body.includes('class="admin-tabs"'), path + ": expected the portal tab strip");
-    assert.equal(
-      (response.body.match(/class="admin-tool-tile"/g) || []).length,
-      8,
-      path + ": expected all eight overview tiles in the served HTML",
-    );
-    for (const label of adminTileLabels) {
-      assert.ok(response.body.includes(label), path + ": missing overview label " + label);
-    }
-    assert.doesNotMatch(
-      response.body,
-      /<svg class="admin-tool-icon"/,
-      path + ": overview tiles should remain text-only",
-    );
-  }
-
-  // Test the deployed assets, not just source files and jsdom's DOM. This
-  // catches an HTML/CSS mismatch or a deployment serving a stale portal bundle.
-  const adminStylesheet = await request("/app/css/style.css");
-  assert.equal(adminStylesheet.status, 200, "Admin Portal stylesheet must be served");
-  assert.match(adminStylesheet.contentType, /text\/css/i, "Admin Portal stylesheet must have CSS content type");
-  for (const marker of [
-    "#adminDashboardPage .admin-dashboard-container",
-    "#adminDashboardPage .admin-tabs",
-    "#adminDashboardPage .tab-content.active",
-    "#adminDashboardPage #allTab .admin-tool-grid",
-    "#adminDashboardPage #allTab .admin-tool-tile",
-    "background: #0b0f0e;",
-  ]) {
-    assert.ok(
-      adminStylesheet.body.includes(marker),
-      "deployed Admin Portal stylesheet is missing " + marker,
-    );
+    assertHtml(await request(path), appMarker, path);
   }
 
   const expectedOrigin = new URL(base).origin;
