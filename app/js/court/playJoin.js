@@ -255,6 +255,16 @@ export function openPlayerJoinPrompt(courtId, matchId = null)
   elements.joinCourtModalPasswordError.textContent = "";
   elements.joinCourtModalError.textContent = "";
   elements.settingsModal?.classList.add("hidden");
+
+  // Mirror the actual Options surface so the join prompt stays fully opaque
+  // and theme-matched even if a later generic .create-card rule is loaded.
+  const joinPanel = elements.joinCourtModal.querySelector(".join-court-modal-card");
+  const optionsPanel = elements.settingsModal?.querySelector(".settings-box");
+  if (joinPanel && optionsPanel) {
+    const optionsBackground = window.getComputedStyle(optionsPanel).backgroundColor;
+    joinPanel.style.setProperty("background-color", optionsBackground, "important");
+  }
+
   elements.joinCourtModal.classList.remove("hidden");
   elements.joinCourtModalPassword.focus();
 
