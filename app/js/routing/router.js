@@ -4,7 +4,7 @@
 import { closeClubEditor } from "../admin/clubEditor.js";
 import { TOAST_TYPES } from "../config/constants.js";
 import { isValidId } from "../config/idContract.js";
-import { NAV_HISTORY_STATE_KEY, NAV_PAGES } from "../config/routes.js";
+import { NAV_HISTORY_STATE_KEY, NAV_MODALS, NAV_PAGES } from "../config/routes.js";
 import { closePlayPage } from "../court/playJoin.js";
 import { enterCourt } from "../court/session.js";
 import { getCourt } from "../firebase/courtRepository.js";
@@ -40,6 +40,7 @@ export function registerEscapeKeyNavigation() {
           page: NAV_PAGES.SCOREBOARD,
           courtId: session.currentCourtId,
           spectate: session.isSpectating,
+          modal: NAV_MODALS.SETTINGS,
         }),
       );
       return;
