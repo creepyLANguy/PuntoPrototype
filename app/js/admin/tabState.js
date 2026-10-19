@@ -49,7 +49,7 @@ function getRelativeLuminance(rgb) {
 
 export function syncAdminAllTabLogoContrast() {
   const button = document.querySelector(".admin-all-tab-btn");
-  const logo = button?.querySelector(".admin-all-tab-logo");
+  const logo = document.querySelector(ADMIN_ALL_TAB_LOGO_SELECTOR);
   if (!button || !logo || !document.body) return;
 
   const bodyColor = parseCssColor(window.getComputedStyle(document.body).backgroundColor);
