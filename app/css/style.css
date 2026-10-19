@@ -5779,10 +5779,10 @@ body.light-mode #adminCourtSearch {
   overscroll-behavior: contain;
 }
 
-/* Hide the floating launcher only when the Admin Portal dashboard is shown.
-   :has() covers the immediate open state; the body class covers route restore. */
-body.admin-portal-open #appearanceMenuBtn,
-body:has(#adminDashboardPage[style*="display: flex"]) #appearanceMenuBtn {
+/* The floating appearance launcher belongs only on the main menu.
+   The Admin Portal's All-tab Theme tile still opens the appearance menu.
+   Every routed view hides menuPage with inline display:none. */
+body:has(#menuPage[style*="display: none"]) #appearanceMenuBtn {
   display: none !important;
 }
 
