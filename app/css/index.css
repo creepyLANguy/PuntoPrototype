@@ -91,3 +91,5 @@
 @import "components/engagement.css";
 /* Match identity context: court location, discovery search, admin match / tournament rows. */
 @import "components/match-context.css";
+/* Admin Portal last-cascade visibility and contrast safeguards. */
+@import "pages/admin-portal-safety.css";
