@@ -233,7 +233,7 @@ test("the admin password is checked before the dashboard opens", async () => {
     /@media\s*\(max-width:\s*820px\)[\s\S]*?\.admin-tool-grid\s*\{[^}]*grid-template-columns:\s*repeat\(2,/s,
     "tablet and mobile layouts reduce the tile grid to two columns",
   );
-  const overviewTiles = [...document.querySelectorAll("#allTab .admin-tool-tile")];
+  const overviewTiles = [...document.querySelectorAll("#allTab .admin-tool-grid > button")];
   assert.equal(overviewTiles.length, 8);
   assert.deepEqual(
     overviewTiles.map((tile) => tile.querySelector(".admin-tool-label")?.textContent.trim()),
@@ -245,18 +245,18 @@ test("the admin password is checked before the dashboard opens", async () => {
       "Devices",
       "NFC Tool",
       "Device Harness",
-      "Theme selector",
+      "Theme Picker",
     ],
     "all eight overview tiles have readable text labels",
   );
   assert.equal(
-    document.querySelectorAll("#allTab .admin-tool-tile svg").length,
+    document.querySelectorAll("#allTab .admin-tool-grid button svg").length,
     0,
     "overview tiles use text only, with no inline SVG icons",
   );
-  assert.ok(document.querySelector("#allTab .admin-tool-tile[data-admin-tool='nfc']"));
-  assert.ok(document.querySelector("#allTab .admin-tool-tile[data-admin-tool='harness']"));
-  assert.ok(document.querySelector("#allTab .admin-tool-tile[data-admin-tool='theme']"));
+  assert.ok(document.querySelector("#allTab [data-admin-tool='nfc']"));
+  assert.ok(document.querySelector("#allTab [data-admin-tool='harness']"));
+  assert.ok(document.querySelector("#allTab [data-admin-tool='theme']"));
   const overviewTileStyle = window.getComputedStyle(overviewTiles[0]);
   assert.equal(overviewTileStyle.display, "flex");
   assert.equal(overviewTileStyle.boxSizing, "border-box");
@@ -276,15 +276,15 @@ test("the admin password is checked before the dashboard opens", async () => {
   const originalOpen = window.open;
   const openedUrls = [];
   window.open = (...args) => openedUrls.push(args);
-  document.querySelector("#allTab .admin-tool-tile[data-admin-tool='nfc']").click();
-  document.querySelector("#allTab .admin-tool-tile[data-admin-tool='harness']").click();
+  document.querySelector("#allTab [data-admin-tool='nfc']").click();
+  document.querySelector("#allTab [data-admin-tool='harness']").click();
   assert.deepEqual(openedUrls, [
     ["/nfc/index.html", "_blank"],
     ["/harness", "_blank"],
   ]);
   window.open = originalOpen;
 
-  document.querySelector("#allTab .admin-tool-tile[data-admin-tool='theme']").click();
+  document.querySelector("#allTab [data-admin-tool='theme']").click();
   assert.equal($("appearanceMenu").classList.contains("hidden"), false);
   document.body.click();
   assert.equal($("appearanceMenu").classList.contains("hidden"), true);
