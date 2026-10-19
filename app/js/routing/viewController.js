@@ -200,6 +200,13 @@ function showCurrentScoreboardView()
 export async function restoreViewState(viewState)
 {
   const state = normalizeViewState(viewState);
+  // Close the main-menu appearance popover when navigating to another view.
+  // The Admin Portal's Theme tile can reopen it intentionally from that view.
+  if (state.page !== NAV_PAGES.MENU)
+  {
+    closeAppearanceMenu();
+  }
+
   const wasOnAdminProtectedView = isAdminProtectedViewVisible();
   const navigatingToAdminProtectedView = isAdminProtectedPage(state.page);
 
