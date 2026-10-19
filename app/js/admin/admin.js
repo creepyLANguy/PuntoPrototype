@@ -129,7 +129,7 @@ export function registerAdminTabs() {
     });
   });
 
-  document.querySelectorAll(".admin-tool-tile").forEach((tile) => {
+  document.querySelectorAll("#allTab .admin-tool-grid > button").forEach((tile) => {
     tile.addEventListener("click", (event) => {
       if (tile.dataset.tab) {
         showAdminTab(tile.dataset.tab);
