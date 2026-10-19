@@ -187,11 +187,9 @@ export async function enterCourt(
   setPlayPageVisible(false);
   elements.spectatePage.style.display = "none";
 
-  // Close appearance controls when switching into a court view.
+  // Close appearance controls when switching into a court view. Keep the
+  // floating launcher available outside the Admin Portal.
   closeAppearanceMenu();
-  if (elements.appearanceMenuBtn) {
-    elements.appearanceMenuBtn.style.display = "none";
-  }
   if (elements.adminLoginBtn) {
     elements.adminLoginBtn.style.display = "none";
   }

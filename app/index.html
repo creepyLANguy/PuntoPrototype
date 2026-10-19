@@ -74,6 +74,8 @@
 
     <!-- ================= GLOBAL BUTTON STACK ================= -->
     <div class="global-controls">
+      <button id="appearanceMenuBtn" class="theme-toggle-btn" title="Appearance" aria-label="Appearance settings"
+        aria-expanded="false">🎨</button>
       <div id="appearanceMenu" class="appearance-menu hidden" role="dialog" aria-label="Appearance settings">
         <div class="appearance-menu-title">Appearance</div>
         <div class="theme-choice-group" aria-label="Theme">
@@ -568,7 +570,7 @@
           <div id="adminClubList" class="admin-court-list"></div>
         </div>
 
-        <div id="courtsTab" class="tab-content active">
+        <div id="courtsTab" class="tab-content">
           <div class="admin-dashboard-controls">
             <div class="search-wrapper">
               <input type="text" id="adminCourtSearch" placeholder="Search courts or clubs..." />

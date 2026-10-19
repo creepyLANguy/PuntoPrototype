@@ -3,6 +3,7 @@
 // court and device lists, create / edit / delete) so that changes to the
 // shared admin code cannot silently break it.
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import {
@@ -172,12 +173,41 @@ test("the admin password is checked before the dashboard opens", async () => {
     ["all", "tournaments", "clubs", "courts", "matches", "devices"],
   );
   assert.ok($("allTab").classList.contains("active"));
+  assert.equal($("courtsTab").classList.contains("active"), false);
+  assert.equal(
+    document.querySelectorAll(".tab-content.active").length,
+    1,
+    "only one admin panel is active at a time",
+  );
+  assert.equal(window.getComputedStyle(document.querySelector(".admin-tabs")).display, "flex");
+  assert.equal(window.getComputedStyle(document.querySelector(".admin-tool-grid")).display, "grid");
+  const adminStyles = readFileSync(new URL("../app/css/style.css", import.meta.url), "utf8");
+  assert.match(
+    adminStyles,
+    /\.admin-tool-grid\s*\{[^}]*grid-template-columns:\s*repeat\(4,\s*minmax\(0,\s*1fr\)\)/s,
+    "desktop overview uses a four-column tile grid",
+  );
+  assert.match(
+    adminStyles,
+    /@media\s*\(max-width:\s*1100px\)[\s\S]*?\.admin-tool-grid\s*\{[^}]*grid-template-columns:\s*repeat\(3,/s,
+    "medium layouts reduce the tile grid to three columns",
+  );
+  assert.match(
+    adminStyles,
+    /@media\s*\(max-width:\s*820px\)[\s\S]*?\.admin-tool-grid\s*\{[^}]*grid-template-columns:\s*repeat\(2,/s,
+    "tablet and mobile layouts reduce the tile grid to two columns",
+  );
   assert.equal(document.querySelectorAll("#allTab .admin-tool-tile").length, 8);
   assert.ok(document.querySelector("#allTab .admin-tool-tile[data-admin-tool='nfc']"));
   assert.ok(document.querySelector("#allTab .admin-tool-tile[data-admin-tool='harness']"));
   assert.ok(document.querySelector("#allTab .admin-tool-tile[data-admin-tool='theme']"));
   assert.equal(document.querySelectorAll("#allTab .admin-tool-tile svg.admin-tool-icon").length, 8);
-  assert.equal($("appearanceMenuBtn"), null, "the floating appearance button is removed");
+  assert.ok($("appearanceMenuBtn"), "the floating appearance button is restored");
+  assert.equal(
+    window.getComputedStyle($("appearanceMenuBtn")).display,
+    "none",
+    "the floating appearance button is hidden inside the Admin Portal",
+  );
 
   const originalOpen = window.open;
   const openedUrls = [];

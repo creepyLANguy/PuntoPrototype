@@ -182,10 +182,6 @@ function showCurrentScoreboardView()
   elements.editClubPage.style.display = "none";
 
   closeAppearanceMenu();
-  if (elements.appearanceMenuBtn)
-  {
-    elements.appearanceMenuBtn.style.display = "none";
-  }
 
   if (elements.adminLoginBtn)
   {
@@ -217,6 +213,11 @@ export async function restoreViewState(viewState)
     state.page = NAV_PAGES.ADMIN_AUTH;
     state.entityId = null;
   }
+
+  document.body.classList.toggle(
+    "admin-portal-open",
+    state.page === NAV_PAGES.ADMIN_DASHBOARD,
+  );
 
   navigationState.isRestoringNavigation = true;
 

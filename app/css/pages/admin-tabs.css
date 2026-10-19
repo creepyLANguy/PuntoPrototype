@@ -206,7 +206,8 @@ body.light-mode #adminCourtSearch {
 
 /* The appearance menu remains available through the overview tile in the
    Admin Portal; keep its floating launcher everywhere else. */
-body.admin-portal-open #appearanceMenuBtn {
+body.admin-portal-open #appearanceMenuBtn,
+body:has(#adminDashboardPage[style*="display: flex"]) #appearanceMenuBtn {
   display: none !important;
 }
 

@@ -1593,11 +1593,11 @@ body.light-mode .reset-actions button {
   color: white;
 }
 
-/* Keep the direct player-join panel fully opaque regardless of the court
-   backdrop, with explicit colours that do not depend on theme transparency. */
+/* Match the Options panel's solid surface colours and tighten the
+   join form without reserving empty space for its two inline error regions. */
 #joinCourtModal .join-court-modal-card {
-  background-color: #17211f;
-  color: #f7faf8;
+  background-color: #111;
+  color: #fff;
   border: 1px solid rgba(255, 255, 255, 0.2);
   box-shadow: 0 24px 80px rgba(0, 0, 0, 0.48);
   backdrop-filter: none;
@@ -1605,13 +1605,13 @@ body.light-mode .reset-actions button {
 }
 
 body.light-mode #joinCourtModal .join-court-modal-card {
-  background-color: #ffffff;
-  color: #1b2924;
+  background-color: #fdfdfd;
+  color: #000;
   border-color: #d6dfda;
 }
 
 .join-court-modal-card {
-  gap: 12px;
+  gap: 8px;
 }
 
 .join-court-modal-card h2 {
@@ -1630,8 +1630,22 @@ body.light-mode #joinCourtModal .join-court-modal-card {
   box-sizing: border-box;
 }
 
-.join-court-modal-actions {
+.join-court-modal-card .error {
+  min-height: 0;
+  margin: 0;
+  line-height: 1.35;
+}
+
+.join-court-modal-card .error:empty {
+  display: none;
+}
+
+.join-court-modal-card .form-group .error:not(:empty) {
   margin-top: 4px;
+}
+
+.join-court-modal-actions {
+  margin-top: 0;
 }
 
 .join-court-modal-actions button {
@@ -5642,14 +5656,27 @@ body.light-mode .tab-btn.active {
   }
 }
 
+/* Keep the portal navigation horizontal. On narrow screens it scrolls
+   horizontally instead of growing the modal vertically. */
 .admin-tabs {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 8px;
   width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
 }
 
-.tab-btn {
+.admin-tabs .tab-btn {
+  flex: 0 0 auto;
   text-align: center;
+  white-space: nowrap;
 }
 
 /* Ensure the dashboard container takes up available space but doesn't exceed screen */
@@ -5743,6 +5770,20 @@ body.light-mode #adminCourtSearch {
 
 .tab-content.active {
   display: flex;
+}
+
+/* Keep the All overview inside the portal's available height so short
+   desktop windows scroll the tiles rather than clipping the lower row. */
+#allTab.tab-content.active {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* Hide the floating launcher only when the Admin Portal dashboard is shown.
+   :has() covers the immediate open state; the body class covers route restore. */
+body.admin-portal-open #appearanceMenuBtn,
+body:has(#adminDashboardPage[style*="display: flex"]) #appearanceMenuBtn {
+  display: none !important;
 }
 
 
