@@ -223,7 +223,7 @@ test("the admin password is checked before the dashboard opens", async () => {
   assert.ok(document.querySelector("#allTab .admin-tool-tile[data-admin-tool='harness']"));
   assert.ok(document.querySelector("#allTab .admin-tool-tile[data-admin-tool='theme']"));
   assert.equal(document.querySelectorAll("#allTab .admin-tool-tile svg.admin-tool-icon").length, 8);
-  assert.ok($("appearanceMenuBtn"), "the floating appearance button is restored");
+  assert.ok($("appearanceMenuBtn"), "the appearance control remains available to the Theme tile");
   assert.equal(
     window.getComputedStyle($("appearanceMenuBtn")).display,
     "none",
