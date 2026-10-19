@@ -225,7 +225,9 @@ body:has(#menuPage[style*="display: none"]) #appearanceMenuBtn {
   box-sizing: border-box;
 }
 
-.admin-tool-tile {
+.admin-tool-tile,
+.admin-tool-tile-ext, 
+.admin-tool-tile-theme {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -251,20 +253,47 @@ body:has(#menuPage[style*="display: none"]) #appearanceMenuBtn {
     background-color 180ms ease;
 }
 
-.admin-tool-tile:hover {
+.admin-tool-tile:hover,
+.admin-tool-tile-ext:hover,
+.admin-tool-tile-theme:hover {
   transform: translateY(-2px);
   border-color: color-mix(in srgb, var(--teamAcolour, #5ed7b0) 64%, transparent);
   box-shadow: 0 12px 24px rgba(0, 0, 0, 0.18);
 }
 
-.admin-tool-tile:focus-visible {
+.admin-tool-tile:focus-visible,
+.admin-tool-tile-ext:focus-visible,
+.admin-tool-tile-theme:focus-visible {
   outline: 2px solid var(--teamAcolour, #5ed7b0);
   outline-offset: 3px;
 }
 
-.admin-tool-tile:active {
+.admin-tool-tile:active,
+.admin-tool-tile-ext:active,
+.admin-tool-tile-theme:active {
   transform: translateY(0) scale(0.99);
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.16);
+}
+
+.admin-tool-tile-ext {
+  border: 2px dotted var(--input-border, rgba(255, 255, 255, 0.14));
+}
+
+.admin-tool-tile-ext:hover {
+  border-color: var(--teamBcolour, rgba(255, 255, 255, 0.14));
+}
+
+.admin-tool-tile-ext:focus-visible {
+  outline: 2px solid var(--teamBcolour, rgba(255, 255, 255, 0.14));
+  outline-offset: 3px;
+}
+
+.admin-tool-tile-theme:hover {
+  border-color: color-mix(in srgb, var(--teamAcolour, #5ed7b0) 50%, var(--teamBcolour, #d7d55e) 50%);
+}
+
+.admin-tool-tile-theme:focus-visible {
+  outline: 2px solid var(--input-border, rgba(255, 255, 255, 0.14));
 }
 
 .admin-tool-copy {
