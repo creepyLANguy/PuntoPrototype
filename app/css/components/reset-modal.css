@@ -80,11 +80,11 @@ body.light-mode .reset-actions button {
   color: white;
 }
 
-/* Keep the direct player-join panel fully opaque regardless of the court
-   backdrop, with explicit colours that do not depend on theme transparency. */
+/* Match the Options panel's solid surface colours and tighten the
+   join form without reserving empty space for its two inline error regions. */
 #joinCourtModal .join-court-modal-card {
-  background-color: #17211f;
-  color: #f7faf8;
+  background-color: #111;
+  color: #fff;
   border: 1px solid rgba(255, 255, 255, 0.2);
   box-shadow: 0 24px 80px rgba(0, 0, 0, 0.48);
   backdrop-filter: none;
@@ -92,13 +92,13 @@ body.light-mode .reset-actions button {
 }
 
 body.light-mode #joinCourtModal .join-court-modal-card {
-  background-color: #ffffff;
-  color: #1b2924;
+  background-color: #fdfdfd;
+  color: #000;
   border-color: #d6dfda;
 }
 
 .join-court-modal-card {
-  gap: 12px;
+  gap: 8px;
 }
 
 .join-court-modal-card h2 {
@@ -117,8 +117,22 @@ body.light-mode #joinCourtModal .join-court-modal-card {
   box-sizing: border-box;
 }
 
-.join-court-modal-actions {
+.join-court-modal-card .error {
+  min-height: 0;
+  margin: 0;
+  line-height: 1.35;
+}
+
+.join-court-modal-card .error:empty {
+  display: none;
+}
+
+.join-court-modal-card .form-group .error:not(:empty) {
   margin-top: 4px;
+}
+
+.join-court-modal-actions {
+  margin-top: 0;
 }
 
 .join-court-modal-actions button {
