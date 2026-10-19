@@ -81,14 +81,27 @@ body.light-mode .tab-btn.active {
   }
 }
 
+/* Keep the portal navigation horizontal. On narrow screens it scrolls
+   horizontally instead of growing the modal vertically. */
 .admin-tabs {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 8px;
   width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
 }
 
-.tab-btn {
+.admin-tabs .tab-btn {
+  flex: 0 0 auto;
   text-align: center;
+  white-space: nowrap;
 }
 
 /* Ensure the dashboard container takes up available space but doesn't exceed screen */
@@ -182,6 +195,19 @@ body.light-mode #adminCourtSearch {
 
 .tab-content.active {
   display: flex;
+}
+
+/* Keep the All overview inside the portal's available height so short
+   desktop windows scroll the tiles rather than clipping the lower row. */
+#allTab.tab-content.active {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* The appearance menu remains available through the overview tile in the
+   Admin Portal; keep its floating launcher everywhere else. */
+body.admin-portal-open #appearanceMenuBtn {
+  display: none !important;
 }
 
 
