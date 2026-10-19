@@ -71,10 +71,10 @@ test("Join as a player opens a direct password modal without displaying Play", a
   document.body.classList.remove("light-mode");
   $("settingsModal").classList.remove("hidden");
   $("joinCourtBtn").click();
-  assert.notEqual(
+  assert.equal(
     window.getComputedStyle($("appearanceMenuBtn")).display,
     "none",
-    "floating appearance button remains visible outside the Admin Portal",
+    "floating appearance button is hidden while the court view is active",
   );
   assert.equal($("joinCourtModalCourtName").textContent, "Join Modal Court");
   assert.equal($("playPage").style.display, "none");
