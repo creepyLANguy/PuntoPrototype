@@ -52,6 +52,23 @@ export function syncAdminAllTabLogoContrast() {
   const logo = document.querySelector(ADMIN_ALL_TAB_LOGO_SELECTOR);
   if (!button || !logo || !document.body) return;
 
+  const buttonBackground = parseCssColor(
+    window.getComputedStyle(button).backgroundColor,
+  );
+
+  // Some environments (including jsdom) cannot resolve CSS custom properties
+  // into computed background colours. The supported tab themes have known
+  // active/inactive surfaces, so use that state as a deterministic fallback
+  // only when the active surface is unresolved or transparent.
+  if (!buttonBackground || (button.classList.contains("active") && buttonBackground[3] < 0.999)) {
+    const isLightTheme = document.body.classList.contains("light-mode");
+    const shouldInvert = isLightTheme
+      ? !button.classList.contains("active")
+      : button.classList.contains("active");
+    logo.classList.toggle("contrast-invert", shouldInvert);
+    return;
+  }
+
   const bodyColor = parseCssColor(window.getComputedStyle(document.body).backgroundColor);
   let effectiveBackground = bodyColor
     ? bodyColor.slice(0, 3)
