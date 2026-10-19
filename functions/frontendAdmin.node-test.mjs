@@ -683,14 +683,19 @@ test("deleting a device asks first and removes it", async () => {
 async function expectLoggedOut() {
   await waitFor(() => !isShown("adminDashboardPage"), { label: "dashboard closed" });
   if (!isShown("adminAuthPage")) {
+    assert.notEqual(
+      window.getComputedStyle($("appearanceMenuBtn")).display,
+      "none",
+      "floating appearance button is visible again on the main menu",
+    );
     $("adminLoginBtn").click();
   }
   await waitFor(() => isShown("adminAuthPage"), { label: "login required" });
   assert.equal(isShown("adminDashboardPage"), false);
-  assert.notEqual(
+  assert.equal(
     window.getComputedStyle($("appearanceMenuBtn")).display,
     "none",
-    "floating appearance button is restored as soon as the portal closes",
+    "floating appearance button stays hidden away from the main menu",
   );
 }
 
