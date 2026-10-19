@@ -58,8 +58,19 @@ test("Join as a player opens a direct password modal without displaying Play", a
   assert.notEqual(panelBackground, "transparent");
   // The active surface is synchronized when the modal opens, so switching
   // themes while it is open is not the same scenario as opening in light mode.
+  $("joinCourtModal").classList.add("hidden");
   document.body.classList.add("light-mode");
+  $("settingsModal").classList.remove("hidden");
+  $("joinCourtBtn").click();
+  assert.equal(
+    window.getComputedStyle(joinPanel).backgroundColor,
+    window.getComputedStyle(optionsPanel).backgroundColor,
+    "opening the join modal in light mode matches the Options surface",
+  );
+  $("joinCourtModal").classList.add("hidden");
   document.body.classList.remove("light-mode");
+  $("settingsModal").classList.remove("hidden");
+  $("joinCourtBtn").click();
   assert.notEqual(
     window.getComputedStyle($("appearanceMenuBtn")).display,
     "none",

@@ -179,7 +179,16 @@ test("the admin password is checked before the dashboard opens", async () => {
     1,
     "only one admin panel is active at a time",
   );
-  assert.equal(window.getComputedStyle(document.querySelector(".admin-tabs")).display, "flex");
+  const tabBar = document.querySelector(".admin-tabs");
+  const tabBarStyle = window.getComputedStyle(tabBar);
+  assert.equal(tabBarStyle.display, "flex");
+  assert.equal(tabBarStyle.flexWrap, "nowrap");
+  assert.equal(tabBarStyle.overflowX, "auto");
+  assert.equal(
+    window.getComputedStyle($("allTab")).overflowY,
+    "auto",
+    "All overview stays within the portal and scrolls instead of overflowing",
+  );
   assert.equal(window.getComputedStyle(document.querySelector(".admin-tool-grid")).display, "grid");
   const adminStyles = readFileSync(new URL("../app/css/style.css", import.meta.url), "utf8");
   assert.match(
@@ -207,6 +216,11 @@ test("the admin password is checked before the dashboard opens", async () => {
     window.getComputedStyle($("appearanceMenuBtn")).display,
     "none",
     "the floating appearance button is hidden inside the Admin Portal",
+  );
+  assert.equal(
+    document.querySelectorAll(".tab-content.active").length,
+    1,
+    "the All panel is the only active panel when the portal opens",
   );
 
   const originalOpen = window.open;
@@ -241,6 +255,7 @@ test("the admin password is checked before the dashboard opens", async () => {
   await waitForCourtList(3);
   assert.equal(activeTab(), "courts");
   assert.equal($("courtsTab").classList.contains("active"), true);
+  assert.equal(document.querySelectorAll(".tab-content.active").length, 1);
   assert.equal(window.localStorage.getItem("padelPushAdminLastTab"), "courts");
 
   // Opening the portal again in the same browser restores the user's last tab.
@@ -660,6 +675,11 @@ async function expectLoggedOut() {
   }
   await waitFor(() => isShown("adminAuthPage"), { label: "login required" });
   assert.equal(isShown("adminDashboardPage"), false);
+  assert.notEqual(
+    window.getComputedStyle($("appearanceMenuBtn")).display,
+    "none",
+    "floating appearance button is restored as soon as the portal closes",
+  );
 }
 
 test("Escape on the dashboard ends the admin session", async () => {
