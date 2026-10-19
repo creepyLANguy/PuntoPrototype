@@ -20,7 +20,7 @@ const ADMIN_ALL_TAB_LOGO_SELECTOR = ".admin-all-tab-btn .admin-all-tab-logo";
 // backgrounds over the page background, then use its luminance to keep the
 // white mark at a minimum 3:1 contrast ratio against the rendered surface.
 function parseCssColor(color) {
-  const channels = color.match(/[\\d.]+/g)?.map(Number);
+  const channels = color.match(/[\d.]+/g)?.map(Number);
   if (!channels || channels.length < 3) return null;
   return [
     channels[0],
@@ -60,7 +60,10 @@ export function syncAdminAllTabLogoContrast() {
   // into computed background colours. The supported tab themes have known
   // active/inactive surfaces, so use that state as a deterministic fallback
   // only when the active surface is unresolved or transparent.
-  if (!buttonBackground || (button.classList.contains("active") && buttonBackground[3] < 0.999)) {
+  if (
+    !buttonBackground ||
+    (button.classList.contains("active") && buttonBackground[3] < 0.999)
+  ) {
     const isLightTheme = document.body.classList.contains("light-mode");
     const shouldInvert = isLightTheme
       ? !button.classList.contains("active")
