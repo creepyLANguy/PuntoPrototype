@@ -212,6 +212,11 @@ test("the admin password is checked before the dashboard opens", async () => {
   assert.equal(allTabLogoStyle.height, "auto");
   assert.equal(allTabLogoStyle.objectFit, "contain");
   assert.equal(
+    allTabLogo.classList.contains("contrast-invert"),
+    !document.body.classList.contains("light-mode"),
+    "the initial All-tab logo is inverted only against the light active surface",
+  );
+  assert.equal(
     window.getComputedStyle($("allTab")).overflowY,
     "auto",
     "All overview stays within the portal and scrolls instead of overflowing",
@@ -249,10 +254,11 @@ test("the admin password is checked before the dashboard opens", async () => {
     ],
     "all eight overview tiles have readable text labels",
   );
-  assert.equal(
-    document.querySelectorAll("#allTab .admin-tool-grid button svg").length,
-    0,
-    "overview tiles use text only, with no inline SVG icons",
+  const tileIcons = [...document.querySelectorAll("#allTab .admin-tool-grid button .admin-tool-icon")];
+  assert.equal(tileIcons.length, 8, "every overview tile has its own visual indicator");
+  assert.ok(
+    tileIcons.every((icon) => icon.getAttribute("viewBox") === "0 0 24 24" && icon.getAttribute("aria-hidden") === "true"),
+    "tile SVGs use consistent viewports and remain decorative to assistive technology",
   );
   assert.ok(document.querySelector("#allTab [data-admin-tool='nfc']"));
   assert.ok(document.querySelector("#allTab [data-admin-tool='harness']"));
@@ -304,6 +310,32 @@ test("the admin password is checked before the dashboard opens", async () => {
   document.querySelector('.admin-tool-tile[data-tab="courts"]').click();
   await waitForCourtList(3);
   assert.equal(activeTab(), "courts");
+  const logoContrastClass = () => $("adminDashboardPage").querySelector(".admin-all-tab-logo").classList.contains("contrast-invert");
+  assert.equal(
+    logoContrastClass(),
+    document.body.classList.contains("light-mode"),
+    "the inactive logo follows the current theme's tab background",
+  );
+
+  const originallyLight = document.body.classList.contains("light-mode");
+  document.body.classList.remove("light-mode");
+  await waitFor(() => !logoContrastClass(), { label: "white logo on dark inactive tab" });
+  document.body.classList.add("light-mode");
+  await waitFor(() => logoContrastClass(), { label: "inverted logo on light inactive tab" });
+
+  document.querySelector('.admin-tabs .tab-btn[data-tab="all"]').click();
+  await waitFor(() => activeTab() === "all", { label: "All tab in light mode" });
+  assert.equal(logoContrastClass(), false, "dark logo is not inverted on the active black tab");
+
+  document.querySelector('.admin-tabs .tab-btn[data-tab="courts"]').click();
+  await waitForCourtList(3);
+  assert.equal(logoContrastClass(), true, "logo inverts again when the light-mode tab becomes inactive");
+
+  document.body.classList.toggle("light-mode", originallyLight);
+  await waitFor(
+    () => logoContrastClass() === originallyLight,
+    { label: "logo contrast restored after the theme check" },
+  );
   assert.equal($("courtsTab").classList.contains("active"), true);
   assert.equal(document.querySelectorAll(".tab-content.active").length, 1);
   assert.equal(window.localStorage.getItem("padelPushAdminLastTab"), "courts");
