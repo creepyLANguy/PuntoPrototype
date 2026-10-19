@@ -204,10 +204,10 @@ body.light-mode #adminCourtSearch {
   overscroll-behavior: contain;
 }
 
-/* The appearance menu remains available through the overview tile in the
-   Admin Portal; keep its floating launcher everywhere else. */
-body.admin-portal-open #appearanceMenuBtn,
-body:has(#adminDashboardPage[style*="display: flex"]) #appearanceMenuBtn {
+/* The floating appearance launcher belongs only on the main menu.
+   The Admin Portal's All-tab Theme tile still opens the appearance menu.
+   Every routed view hides menuPage with inline display:none. */
+body:has(#menuPage[style*="display: none"]) #appearanceMenuBtn {
   display: none !important;
 }
 
