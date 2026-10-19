@@ -218,11 +218,34 @@ test("the admin password is checked before the dashboard opens", async () => {
     /@media\s*\(max-width:\s*820px\)[\s\S]*?\.admin-tool-grid\s*\{[^}]*grid-template-columns:\s*repeat\(2,/s,
     "tablet and mobile layouts reduce the tile grid to two columns",
   );
-  assert.equal(document.querySelectorAll("#allTab .admin-tool-tile").length, 8);
+  const overviewTiles = [...document.querySelectorAll("#allTab .admin-tool-tile")];
+  assert.equal(overviewTiles.length, 8);
+  assert.deepEqual(
+    overviewTiles.map((tile) => tile.querySelector(".admin-tool-label")?.textContent.trim()),
+    [
+      "Tournaments",
+      "Clubs",
+      "Courts",
+      "Matches",
+      "Devices",
+      "NFC Tool",
+      "Device Harness",
+      "Theme selector",
+    ],
+    "all eight overview tiles have readable text labels",
+  );
+  assert.equal(
+    document.querySelectorAll("#allTab .admin-tool-tile svg").length,
+    0,
+    "overview tiles use text only, with no inline SVG icons",
+  );
   assert.ok(document.querySelector("#allTab .admin-tool-tile[data-admin-tool='nfc']"));
   assert.ok(document.querySelector("#allTab .admin-tool-tile[data-admin-tool='harness']"));
   assert.ok(document.querySelector("#allTab .admin-tool-tile[data-admin-tool='theme']"));
-  assert.equal(document.querySelectorAll("#allTab .admin-tool-tile svg.admin-tool-icon").length, 8);
+  const overviewTileStyle = window.getComputedStyle(overviewTiles[0]);
+  assert.equal(overviewTileStyle.display, "flex");
+  assert.equal(overviewTileStyle.boxSizing, "border-box");
+  assert.equal(overviewTileStyle.minHeight, "124px");
   assert.ok($("appearanceMenuBtn"), "the appearance control remains available to the Theme tile");
   assert.equal(
     window.getComputedStyle($("appearanceMenuBtn")).display,
