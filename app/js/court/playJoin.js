@@ -3,7 +3,8 @@
 // #playPage and #spectatePage.
 import { getSkeleton } from "../firebase/adminRepository.js";
 import { primeAudioForUserGesture } from "../audio/audio.js";
-import { NAV_PAGES } from "../config/routes.js";
+import { NAV_MODALS, NAV_PAGES } from "../config/routes.js";
+import { transitionScoreboardMatch } from "../ui/animations.js";
 import { displayPlayCourtList, displaySpectateCourtList, loadCourtsWithInlineLoader } from "./courtLists.js";
 import { enterCourt } from "./session.js";
 import { getCourt } from "../firebase/courtRepository.js";
@@ -81,12 +82,14 @@ async function attemptCourtJoin({
     }
 
     if (!adminEntry) session.currentCourtPassword = password;
-    await enterCourt(courtId, false, {
+    const enterAsPlayer = () => enterCourt(courtId, false, {
       historyMode: "replace",
       ...(adminEntry ? { adminEntry: true } : {}),
       matchId: appState.selectedPlayMatchId,
       followRequestedMatch: Boolean(session.requestedMatchId),
     });
+    if (isModal) await transitionScoreboardMatch(enterAsPlayer);
+    else await enterAsPlayer();
 
     // enterCourt can report a vanished court inline and return without throwing.
     // The full Play page owns that error element; copy it into the direct modal
@@ -219,6 +222,7 @@ export function registerPlayAndSpectatePages()
       page: NAV_PAGES.SCOREBOARD,
       courtId: session.currentCourtId,
       spectate: session.isSpectating,
+      modal: NAV_MODALS.SETTINGS,
     }));
   };
 
@@ -250,6 +254,7 @@ export function openPlayerJoinPrompt(courtId, matchId = null)
   elements.joinCourtModalPassword.value = "";
   elements.joinCourtModalPasswordError.textContent = "";
   elements.joinCourtModalError.textContent = "";
+  elements.settingsModal?.classList.add("hidden");
   elements.joinCourtModal.classList.remove("hidden");
   elements.joinCourtModalPassword.focus();
 
