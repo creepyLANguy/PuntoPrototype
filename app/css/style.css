@@ -5957,6 +5957,66 @@ body.light-mode .admin-tool-description {
   object-fit: contain;
 }
 
+/* The source logo SVG is white; invert it only when the active button surface
+   is too light for a 3:1 contrast ratio. JavaScript recalculates this class
+   from the button's effective background whenever tab/theme state changes. */
+.admin-tabs .admin-all-tab-logo.contrast-invert {
+  filter: invert(1);
+}
+
+.admin-tabs .admin-all-tab-logo {
+  transition: filter 120ms ease;
+}
+
+/* Consistent icon sizing and emphasis across all three tile variants. */
+.admin-tool-tile .admin-tool-icon,
+.admin-tool-tile-ext .admin-tool-icon,
+.admin-tool-tile-theme .admin-tool-icon {
+  display: block;
+  flex: 0 0 auto;
+  width: 30px;
+  height: 30px;
+  margin-bottom: 12px;
+  color: var(--teamAcolour, currentColor);
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+@media (max-width: 1100px) {
+  .admin-tool-tile-ext,
+  .admin-tool-tile-theme {
+    min-height: 116px;
+    padding: 18px;
+  }
+}
+
+@media (max-width: 820px) {
+  .admin-tool-tile-ext,
+  .admin-tool-tile-theme {
+    min-height: 108px;
+    padding: 16px;
+  }
+}
+
+@media (max-width: 420px) {
+  .admin-tool-tile-ext,
+  .admin-tool-tile-theme {
+    min-height: 100px;
+    padding: 13px;
+    border-radius: 12px;
+  }
+
+  .admin-tool-tile .admin-tool-icon,
+  .admin-tool-tile-ext .admin-tool-icon,
+  .admin-tool-tile-theme .admin-tool-icon {
+    width: 26px;
+    height: 26px;
+    margin-bottom: 8px;
+  }
+}
+
 /* =======================================================
    ADMIN CLUBS
    The Club column of the admin court and device lists, the clubs list and
