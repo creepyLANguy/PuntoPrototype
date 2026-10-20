@@ -163,7 +163,8 @@
   }
 
   #tournamentsTab .admin-dashboard-controls > .primary-btn,
-  #clubsTab .admin-dashboard-controls > .primary-btn {
+  #clubsTab .admin-dashboard-controls > .primary-btn,
+  #devicesTab .admin-dashboard-controls > .primary-btn {
     grid-column: 1 / -1;
   }
 
