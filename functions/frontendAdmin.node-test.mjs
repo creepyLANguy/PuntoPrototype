@@ -254,7 +254,13 @@ test("the admin password is checked before the dashboard opens", async () => {
     ],
     "all eight overview tiles have readable text labels",
   );
-  const tileIcons = [...document.querySelectorAll("#allTab .admin-tool-grid button .admin-tool-icon")];
+  const tileIcons = [
+    ...document.querySelectorAll(
+      "#allTab .admin-tool-grid button .admin-tool-icon, " +
+        "#allTab .admin-tool-grid button .admin-tool-icon-ext, " +
+        "#allTab .admin-tool-grid button .admin-tool-icon-theme",
+    ),
+  ];
   assert.equal(tileIcons.length, 8, "every overview tile has its own visual indicator");
   assert.ok(
     tileIcons.every((icon) => icon.getAttribute("viewBox") === "0 0 24 24" && icon.getAttribute("fill") === "none" && icon.getAttribute("aria-hidden") === "true"),
