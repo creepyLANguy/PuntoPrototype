@@ -248,6 +248,12 @@ test("the admin password is checked before the dashboard opens", async () => {
     "the mobile portal fills the dynamic viewport",
   );
   assert.ok(
+    mobileAdminStyles.includes(".admin-dashboard-container .edit-btn,") &&
+      mobileAdminStyles.includes(".club-member-open {") &&
+      mobileAdminStyles.includes("min-height: 44px;"),
+    "admin list and club-member actions have mobile-sized touch targets",
+  );
+  assert.ok(
     mobileAdminStyles.includes("#closeAdminDashboardBtn {") &&
       mobileAdminStyles.includes("top: 4px;") &&
       mobileAdminStyles.includes("left: 0;"),
