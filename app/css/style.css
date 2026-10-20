@@ -7867,9 +7867,9 @@ body.light-mode .dm-meta-value {
     flex: 0 0 auto;
     flex-direction: column;
     align-items: stretch;
-    gap: 10px;
-    margin-bottom: 8px;
-    padding: 4px 0 10px;
+    gap: 7px;
+    margin-bottom: 6px;
+    padding: 2px 0 7px;
   }
 
   .admin-dashboard-header h2 {
@@ -7878,22 +7878,22 @@ body.light-mode .dm-meta-value {
     align-items: center;
     justify-content: center;
     width: 100%;
-    min-height: 44px;
-    padding: 0 48px;
-    font-size: clamp(1.1rem, 5vw, 1.45rem);
+    min-height: 40px;
+    padding: 0 44px;
+    font-size: clamp(1rem, 4.7vw, 1.3rem);
     line-height: 1.2;
     overflow-wrap: anywhere;
   }
 
   #closeAdminDashboardBtn {
     position: absolute;
-    top: 4px;
+    top: 2px;
     left: 0;
     right: auto;
     bottom: auto;
     z-index: 2;
-    width: 40px;
-    height: 40px;
+    width: 38px;
+    height: 38px;
     scale: 1;
   }
 
@@ -7901,8 +7901,8 @@ body.light-mode .dm-meta-value {
     display: grid;
     width: 100%;
     min-width: 0;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 8px;
+    grid-template-columns: 40px minmax(0, 1fr) minmax(0, 1fr);
+    gap: 6px;
   }
 
   .header-actions .tab-btn,
@@ -7911,12 +7911,17 @@ body.light-mode .dm-meta-value {
     align-items: center;
     justify-content: center;
     min-width: 0;
-    min-height: 44px;
-    padding: 8px 4px;
-    font-size: clamp(0.68rem, 3.2vw, 0.84rem);
-    line-height: 1.15;
-    white-space: normal;
-    overflow-wrap: anywhere;
+    min-height: 40px;
+    padding: 6px 4px;
+    font-size: clamp(0.64rem, 2.9vw, 0.78rem);
+    line-height: 1.1;
+    white-space: nowrap;
+  }
+
+  .header-actions .tab-btn-theme {
+    width: 40px;
+    padding: 4px;
+    font-size: 1rem;
   }
 
   .admin-tabs {
@@ -8120,13 +8125,20 @@ body.light-mode .dm-meta-value {
   }
 
   .header-actions {
-    gap: 5px;
+    grid-template-columns: 36px minmax(0, 1fr) minmax(0, 1fr);
+    gap: 4px;
   }
 
   .header-actions .tab-btn,
   .header-actions .tab-btn-theme {
+    min-height: 40px;
     padding-inline: 2px;
-    font-size: 0.68rem;
+    font-size: 0.65rem;
+  }
+
+  .header-actions .tab-btn-theme {
+    width: 36px;
+    font-size: 0.95rem;
   }
 
   .admin-tool-grid {
