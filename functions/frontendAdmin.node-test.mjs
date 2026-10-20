@@ -295,6 +295,21 @@ test("the admin password is checked before the dashboard opens", async () => {
   document.body.click();
   assert.equal($("appearanceMenu").classList.contains("hidden"), true);
 
+  // The header launcher must behave like the All-tab tile: its opening click
+  // must not be treated as an outside click by the document dismissal handler.
+  $("themeBtn").click();
+  assert.equal(
+    $("appearanceMenu").classList.contains("hidden"),
+    false,
+    "the admin header theme button leaves the appearance menu open",
+  );
+  document.body.click();
+  assert.equal(
+    $("appearanceMenu").classList.contains("hidden"),
+    true,
+    "an actual outside click still dismisses the appearance menu",
+  );
+
   const tabControls = {
     tournaments: ["adminTournamentSearch", "showCreateTournamentBtn"],
     clubs: ["adminClubSearch", "showCreateClubBtn"],
