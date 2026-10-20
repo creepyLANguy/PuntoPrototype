@@ -328,9 +328,23 @@ test("the admin password is checked before the dashboard opens", async () => {
     assert.ok($(addId), tab + " tab has an add button");
   }
 
+  const tabScrollCalls = [];
+  document.querySelectorAll(".admin-tabs .tab-btn").forEach((button) => {
+    button.scrollIntoView = (options) => {
+      tabScrollCalls.push({ tab: button.dataset.tab, options });
+    };
+  });
+
   document.querySelector('.admin-tool-tile[data-tab="courts"]').click();
   await waitForCourtList(3);
   assert.equal(activeTab(), "courts");
+  assert.ok(
+    tabScrollCalls.some(
+      ({ tab, options }) =>
+        tab === "courts" && options.inline === "nearest" && options.block === "nearest",
+    ),
+    "switching from an overview tile scrolls the selected tab into view",
+  );
   const logoContrastClass = () => $("adminDashboardPage").querySelector(".admin-all-tab-logo").classList.contains("contrast-invert");
   assert.equal(
     logoContrastClass(),
