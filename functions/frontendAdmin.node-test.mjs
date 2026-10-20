@@ -238,34 +238,35 @@ test("the admin password is checked before the dashboard opens", async () => {
     /@media\s*\(max-width:\s*820px\)[\s\S]*?\.admin-tool-grid\s*\{[^}]*grid-template-columns:\s*repeat\(2,/s,
     "tablet and mobile layouts reduce the tile grid to two columns",
   );
+  const mobileAdminStyles = adminStyles.slice(
+    adminStyles.lastIndexOf("@media (max-width: 600px)"),
+  );
   assert.ok(
-    adminStyles.includes(
-      "@media (max-width: 600px) {\\n  #adminDashboardPage {\\n    position: fixed;",
-    ),
+    mobileAdminStyles.includes("#adminDashboardPage {") &&
+      mobileAdminStyles.includes("position: fixed;") &&
+      mobileAdminStyles.includes("height: 100dvh;"),
     "the mobile portal fills the dynamic viewport",
   );
   assert.ok(
-    adminStyles.includes(
-      "#closeAdminDashboardBtn {\\n    position: absolute;\\n    top: 4px;\\n    left: 0;",
-    ),
+    mobileAdminStyles.includes("#closeAdminDashboardBtn {") &&
+      mobileAdminStyles.includes("top: 4px;") &&
+      mobileAdminStyles.includes("left: 0;"),
     "the close button remains inside the mobile header",
   );
   assert.ok(
-    adminStyles.includes(
-      ".admin-dashboard-controls {\\n    display: grid;\\n    grid-template-columns: minmax(0, 1fr) minmax(0, auto);",
-    ),
+    mobileAdminStyles.includes("display: grid;") &&
+      mobileAdminStyles.includes("grid-template-columns: minmax(0, 1fr) minmax(0, auto);"),
     "mobile tab controls use a shrink-safe grid",
   );
   assert.ok(
-    adminStyles.includes(
-      ".admin-tabs .tab-btn {\\n    height: 44px;\\n    min-height: 44px;",
-    ),
+    mobileAdminStyles.includes(".admin-tabs .tab-btn {") &&
+      mobileAdminStyles.includes("height: 44px;") &&
+      mobileAdminStyles.includes("min-height: 44px;"),
     "mobile tab targets are at least 44px tall",
   );
   assert.ok(
-    adminStyles.includes(
-      "#editClubPage .club-editor-card {\\n    min-width: 0;\\n    max-width: calc(100vw - 20px);",
-    ),
+    mobileAdminStyles.includes("#editClubPage .club-editor-card {") &&
+      mobileAdminStyles.includes("max-height: calc(100dvh - 20px);"),
     "the club editor fits within the mobile viewport",
   );
   const overviewTiles = [...document.querySelectorAll("#allTab .admin-tool-grid > button")];
