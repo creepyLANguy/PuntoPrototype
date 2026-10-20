@@ -25,6 +25,21 @@
     display: none !important;
   }
 
+  body:has(#adminDashboardPage[style*="display: flex"]) .appearance-menu {
+    position: fixed;
+    top: calc(64px + env(safe-area-inset-top));
+    left: 50%;
+    right: auto;
+    width: min(420px, calc(100vw - 24px));
+    max-width: calc(100vw - 24px);
+    max-height: calc(100dvh - 88px - env(safe-area-inset-bottom));
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    transform: translateX(-50%);
+  }
+
   .admin-dashboard-container {
     width: 100%;
     max-width: none;
