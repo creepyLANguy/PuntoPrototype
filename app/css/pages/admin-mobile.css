@@ -206,6 +206,18 @@
     padding: 12px;
   }
 
+  /* Edit and assignment controls remain comfortable touch targets. */
+  .admin-dashboard-container .edit-btn,
+  .admin-dashboard-container .delete-btn,
+  .admin-match-item .aci-actions .admin-match-court-select,
+  .club-member-open {
+    min-height: 44px;
+  }
+
+  .club-member-item {
+    min-height: 44px;
+  }
+
   .admin-court-item {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
     min-width: 0;
