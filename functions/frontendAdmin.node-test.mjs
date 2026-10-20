@@ -254,6 +254,14 @@ test("the admin password is checked before the dashboard opens", async () => {
     "the close button remains inside the mobile header",
   );
   assert.ok(
+    mobileAdminStyles.includes(
+      'body:has(#adminDashboardPage[style*="display: flex"]) .appearance-menu {',
+    ) &&
+      mobileAdminStyles.includes("position: fixed;") &&
+      mobileAdminStyles.includes("overflow-y: auto;"),
+    "the Appearance menu stays scrollable and above the mobile portal",
+  );
+  assert.ok(
     mobileAdminStyles.includes("display: grid;") &&
       mobileAdminStyles.includes("grid-template-columns: minmax(0, 1fr) minmax(0, auto);"),
     "mobile tab controls use a shrink-safe grid",
