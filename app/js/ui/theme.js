@@ -11,10 +11,7 @@ import {
   syncAppearanceControls,
 } from "./appearance.js";
 import { showToast } from "./toast.js";
-import {
-  getReadableTextColourForBackground,
-  normalizeHexColour,
-} from "../utils/colour.js";
+import { normalizeHexColour } from "../utils/colour.js";
 
 export function initializeTheme() {
   if (themeState.isLightMode) {
@@ -60,7 +57,6 @@ function applyTeamColours() {
     return;
   }
 
-  const defaultColours = DEFAULT_TEAM_COLOURS[activeTheme];
   document.body.style.removeProperty("--teamAcolour");
   document.body.style.removeProperty("--teamBcolour");
 }
