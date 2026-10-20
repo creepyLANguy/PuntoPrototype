@@ -7810,7 +7810,9 @@ body.light-mode .dm-meta-value {
   #adminDashboardPage {
     position: fixed;
     inset: 0;
-    z-index: 10000;
+    /* Keep the shared global-controls stacking context above the portal so
+       the Appearance panel can open from the header button. */
+    z-index: 900;
     width: 100%;
     height: 100svh;
     height: 100dvh;
@@ -7818,6 +7820,14 @@ body.light-mode .dm-meta-value {
     overflow: hidden;
     align-items: stretch;
     justify-content: stretch;
+  }
+
+  /* The shared Appearance panel lives in global-controls (z-index: 1000).
+     Hide its unrelated launchers while the portal is open, but let the panel
+     itself paint above the portal when the header Theme button opens it. */
+  body:has(#adminDashboardPage[style*="display: flex"]) #homeLinkBtn,
+  body:has(#adminDashboardPage[style*="display: flex"]) #adminLoginBtn {
+    display: none !important;
   }
 
   .admin-dashboard-container {
