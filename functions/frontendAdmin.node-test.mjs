@@ -279,6 +279,15 @@ test("the admin password is checked before the dashboard opens", async () => {
     "mobile tab targets are at least 44px tall",
   );
   assert.ok(
+    mobileAdminStyles.includes(
+      "grid-template-columns: 40px minmax(0, 1fr) minmax(0, 1fr);",
+    ) &&
+      mobileAdminStyles.includes("min-height: 40px;") &&
+      mobileAdminStyles.includes("font-size: clamp(0.64rem, 2.9vw, 0.78rem);") &&
+      mobileAdminStyles.includes(".header-actions .tab-btn-theme {"),
+    "mobile header actions use a compact icon column and scaled-down labels",
+  );
+  assert.ok(
     mobileAdminStyles.includes("#editClubPage .club-editor-card {") &&
       mobileAdminStyles.includes("max-height: calc(100dvh - 20px);"),
     "the club editor fits within the mobile viewport",
