@@ -115,6 +115,13 @@ export function registerAdminPortal() {
     });
   }
 
+  const themeBtn = $("themeBtn");
+  if (themeBtn) {
+    themeBtn.addEventListener("click", () => {
+      openAppearanceMenu();
+    });
+  }
+
   elements.adminAuthPage.addEventListener("click", (e) => {
     if (e.target === elements.adminAuthPage) {
       void stepBackInApp(createViewState({ page: NAV_PAGES.MENU }));
@@ -129,28 +136,30 @@ export function registerAdminTabs() {
     });
   });
 
-  document.querySelectorAll("#allTab .admin-tool-grid > button").forEach((tile) => {
-    tile.addEventListener("click", (event) => {
-      if (tile.dataset.tab) {
-        showAdminTab(tile.dataset.tab);
-        return;
-      }
+  document
+    .querySelectorAll("#allTab .admin-tool-grid > button")
+    .forEach((tile) => {
+      tile.addEventListener("click", (event) => {
+        if (tile.dataset.tab) {
+          showAdminTab(tile.dataset.tab);
+          return;
+        }
 
-      switch (tile.dataset.adminTool) {
-        case "nfc":
-          elements.nfcToolBtn?.click();
-          break;
-        case "harness":
-          $("deviceHarnessBtn")?.click();
-          break;
-        case "theme":
-          // Stop the outside-click handler from immediately dismissing the menu.
-          event.stopPropagation();
-          openAppearanceMenu();
-          break;
-        default:
-          break;
-      }
+        switch (tile.dataset.adminTool) {
+          case "nfc":
+            elements.nfcToolBtn?.click();
+            break;
+          case "harness":
+            $("deviceHarnessBtn")?.click();
+            break;
+          case "theme":
+            // Stop the outside-click handler from immediately dismissing the menu.
+            event.stopPropagation();
+            openAppearanceMenu();
+            break;
+          default:
+            break;
+        }
+      });
     });
-  });
 }

@@ -191,6 +191,8 @@ export function initElements() {
   elements.adminCourtSearch = $("adminCourtSearch");
   elements.adminStatusFilter = $("adminStatusFilter");
   elements.nfcToolBtn = $("nfcToolBtn");
+  elements.deviceHarnessBtn = $("deviceHarnessBtn");
+  elements.themeBtn = $("themeBtn");
 
   // EDIT COURT ELEMENTS
   elements.editCourtPage = $("editCourtPage");

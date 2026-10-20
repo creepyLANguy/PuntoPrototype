@@ -7,7 +7,8 @@
   padding-bottom: 10px;
 }
 
-.tab-btn {
+.tab-btn,
+.tab-btn-theme {
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.1);
   color: white;
@@ -24,9 +25,29 @@
   font-weight: bold;
 }
 
+.tab-btn:hover,
+.tab-btn-theme:hover {
+  border-color: white;
+}
+
+body.light-mode .tab-btn:hover,
+body.light-mode .tab-btn-theme:hover {
+  border-color: black;
+}
+
+.tab-btn-theme {
+  aspect-ratio: 1 / 1;
+  border-radius: 100%;
+  padding: 1svh;
+}
+
 body.light-mode .tab-btn.active {
   background: #000;
   color: #fff;
+}
+
+body.light-mode .tab-btn-theme {
+  color: #000;
 }
 
 .header-actions {
@@ -68,7 +89,7 @@ body.light-mode .tab-btn.active {
   .header-actions {
     width: 100%;
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
     /* Puts buttons side-by-side, equal width */
     gap: 10px;
   }
@@ -142,7 +163,8 @@ body.light-mode .admin-court-list::-webkit-scrollbar-thumb {
 }
 
 /* Tabs Light Mode */
-body.light-mode .tab-btn {
+body.light-mode .tab-btn,
+body.light-mode .tab-btn-theme {
   background: rgba(0, 0, 0, 0.05);
   border-color: rgba(0, 0, 0, 0.1);
   color: #333;
@@ -257,7 +279,7 @@ body:has(#menuPage[style*="display: none"]) #appearanceMenuBtn {
 .admin-tool-tile-ext:hover,
 .admin-tool-tile-theme:hover {
   transform: translateY(-2px);
-  border-color: color-mix(in srgb, var(--teamAcolour, #5ed7b0) 64%, transparent);
+  border-color: var(--teamAcolour, #5ed7b0);
   box-shadow: 0 12px 24px rgba(0, 0, 0, 0.18);
 }
 
@@ -275,10 +297,6 @@ body:has(#menuPage[style*="display: none"]) #appearanceMenuBtn {
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.16);
 }
 
-.admin-tool-tile-ext {
-  border: 2px dotted var(--input-border, rgba(255, 255, 255, 0.14));
-}
-
 .admin-tool-tile-ext:hover {
   border-color: var(--teamBcolour, rgba(255, 255, 255, 0.14));
 }
@@ -289,11 +307,11 @@ body:has(#menuPage[style*="display: none"]) #appearanceMenuBtn {
 }
 
 .admin-tool-tile-theme:hover {
-  border-color: color-mix(in srgb, var(--teamAcolour, #5ed7b0) 50%, var(--teamBcolour, #d7d55e) 50%);
+  border-color: white;
 }
 
 .admin-tool-tile-theme:focus-visible {
-  outline: 2px solid var(--input-border, rgba(255, 255, 255, 0.14));
+  outline: 2px solid white;
 }
 
 .admin-tool-copy {
@@ -425,8 +443,8 @@ body.light-mode .admin-tool-description {
 
 /* Consistent icon sizing and emphasis across all three tile variants. */
 .admin-tool-tile .admin-tool-icon,
-.admin-tool-tile-ext .admin-tool-icon,
-.admin-tool-tile-theme .admin-tool-icon {
+.admin-tool-tile-ext .admin-tool-icon-ext,
+.admin-tool-tile-theme .admin-tool-icon-theme {
   display: block;
   flex: 0 0 auto;
   width: 30px;
@@ -437,6 +455,14 @@ body.light-mode .admin-tool-description {
   stroke-width: 1.8;
   stroke-linecap: round;
   stroke-linejoin: round;
+}
+
+.admin-tool-tile-ext .admin-tool-icon-ext {
+  color: var(--teamBcolour, currentColor);
+}
+
+.admin-tool-tile-theme .admin-tool-icon-theme {
+  color: currentColor;
 }
 
 @media (max-width: 1100px) {
