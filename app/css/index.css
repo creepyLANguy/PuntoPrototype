@@ -91,3 +91,5 @@
 @import "components/engagement.css";
 /* Match identity context: court location, discovery search, admin match / tournament rows. */
 @import "components/match-context.css";
+/* Final mobile layout fixes for the Admin Portal and its editors. */
+@import "pages/admin-mobile.css";
