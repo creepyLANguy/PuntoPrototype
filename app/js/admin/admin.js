@@ -117,7 +117,10 @@ export function registerAdminPortal() {
 
   const themeBtn = $("themeBtn");
   if (themeBtn) {
-    themeBtn.addEventListener("click", () => {
+    themeBtn.addEventListener("click", (event) => {
+      // Prevent the document-level outside-click handler from closing the
+      // appearance menu during the same click that opens it.
+      event.stopPropagation();
       openAppearanceMenu();
     });
   }
