@@ -154,6 +154,20 @@ export function activateAdminTab(tab) {
     button.classList.toggle("active", button.dataset.tab === selectedTab),
   );
 
+  // Tile shortcuts can switch to a tab that is off-screen in the mobile
+  // horizontal tab strip. Bring the active tab into view without scrolling
+  // the page vertically; jsdom and older browsers may not implement this API.
+  const activeButton = [...elements.adminTabs].find(
+    (button) => button.dataset.tab === selectedTab,
+  );
+  if (typeof activeButton?.scrollIntoView === "function") {
+    activeButton.scrollIntoView({
+      block: "nearest",
+      inline: "nearest",
+      behavior: "auto",
+    });
+  }
+
   syncAdminAllTabLogoContrast();
 
   for (const [name, content] of Object.entries(tabContent())) {
