@@ -462,6 +462,29 @@ test("court Options QR tile toggles visibility and tracks unsupported viewport s
     assert.equal(tile.classList.contains("qr-unavailable"), false);
     assert.equal(tileLabel(), "Hide QR", "the menu updates to the restored visible state");
 
+    // A wide viewport can still have an insufficiently sized scoreboard
+    // container. Its own dimensions (not viewport dimensions alone) drive the
+    // same disabled/enabled transition while the modal remains open.
+    const scoreboard = document.getElementById("scoreboardPage");
+    const originalScoreboardRect = scoreboard.getBoundingClientRect;
+    try {
+      scoreboard.getBoundingClientRect = () => rect(0, 0, 140, 768);
+      window.dispatchEvent(new window.Event("resize"));
+      assert.equal(toggle.disabled, true, "insufficient court width disables the action");
+
+      scoreboard.getBoundingClientRect = () => rect(0, 0, 1366, 160);
+      window.dispatchEvent(new window.Event("resize"));
+      assert.equal(toggle.disabled, true, "insufficient court height disables the action");
+
+      scoreboard.getBoundingClientRect = originalScoreboardRect;
+      window.dispatchEvent(new window.Event("resize"));
+      assert.equal(toggle.disabled, false, "the action re-enables when the court bounds fit again");
+      assert.equal(tileLabel(), "Hide QR", "restored court bounds reflect the still-visible panel");
+    } finally {
+      scoreboard.getBoundingClientRect = originalScoreboardRect;
+      window.dispatchEvent(new window.Event("resize"));
+    }
+
     assert.match(styles, /\.setting-item\.qr-unavailable\s*\{[\s\S]*?cursor:\s*not-allowed;/);
     assert.match(styles, /body\.light-mode \.setting-item\.qr-unavailable:hover/);
   } finally {
