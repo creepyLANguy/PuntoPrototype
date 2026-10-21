@@ -21,6 +21,28 @@ export function canStartNewMatch() {
   );
 }
 
+function syncSettingsGroups() {
+  const groups = [...document.querySelectorAll(".settings-group")];
+  const visibleGroups = groups.map((group) =>
+    [...group.querySelectorAll(":scope > .setting-item")].some((tile) =>
+      !tile.hidden &&
+      tile.style.display !== "none" &&
+      !tile.classList.contains("hidden"),
+    ),
+  );
+
+  groups.forEach((group, index) => {
+    group.hidden = !visibleGroups[index];
+  });
+
+  document.querySelectorAll(".settings-group-divider").forEach((divider, index) => {
+    divider.hidden = !(
+      visibleGroups[index] &&
+      visibleGroups.slice(index + 1).some(Boolean)
+    );
+  });
+}
+
 export function syncSettingsTiles() {
   if (elements.newMatchTile && elements.newMatchBtn) {
     const available = canStartNewMatch();
@@ -107,4 +129,5 @@ export function syncSettingsTiles() {
     "Server off",
   );
 
+  syncSettingsGroups();
 }
