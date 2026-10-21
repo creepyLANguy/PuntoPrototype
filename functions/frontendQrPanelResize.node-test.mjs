@@ -540,6 +540,7 @@ test("court Options sections and dividers adapt between player and spectator vie
     await settle(10);
     assert.equal(document.getElementById("joinCourtTile").style.display, "");
     assert.equal(document.getElementById("switchToSpectateTile").style.display, "none");
+    assert.equal(document.getElementById("serverToggleTile").style.display, "none");
 
     document.getElementById("settingsBtn").click();
     await settle(10);
@@ -562,6 +563,7 @@ test("court Options sections and dividers adapt between player and spectator vie
 
   assert.equal(document.getElementById("joinCourtTile").style.display, "none");
   assert.notEqual(document.getElementById("switchToSpectateTile").style.display, "none");
+  assert.notEqual(document.getElementById("serverToggleTile").style.display, "none");
   assert.equal(groups.court.hidden, false, "the court controls group returns for players");
   assert.deepEqual(dividers.map((divider) => divider.hidden), [false, false]);
 });
