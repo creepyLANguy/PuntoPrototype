@@ -502,6 +502,71 @@ test("court Options QR tile toggles visibility and tracks unsupported viewport s
 });
 
 
+test("court Options sections and dividers adapt between player and spectator views", async () => {
+  const settingsModal = document.getElementById("settingsModal");
+  const groups = {
+    display: document.getElementById("settingsDisplayGroup"),
+    court: document.getElementById("settingsCourtGroup"),
+    sharing: document.getElementById("settingsSharingGroup"),
+  };
+  const dividers = [...document.querySelectorAll(".settings-group-divider")];
+  const { enableSpectateMode, disableSpectateMode } = await import("../app/js/court/session.js");
+
+  assert.deepEqual(Object.keys(groups), ["display", "court", "sharing"]);
+  assert.equal(dividers.length, 2, "one divider sits between each logical group");
+  assert.deepEqual(
+    [...document.querySelectorAll(".settings-group")].map((group) => group.getAttribute("aria-label")),
+    ["Display and appearance", "Court controls", "Sharing and access"],
+  );
+
+  // The grid adapts its column count naturally to the modal width, and its
+  // divider is readable against both theme surfaces without relying on color alone.
+  assert.match(styles, /\.settings-group\s*\{[\s\S]*?grid-template-columns:\s*repeat\(auto-fit, minmax\(min\(100%, 115px\), 1fr\)\)/);
+  assert.match(styles, /\.settings-group-divider\s*\{[\s\S]*?height:\s*1px;/);
+  assert.match(styles, /body\.light-mode \.settings-group-divider\s*\{[\s\S]*?background:/);
+
+  document.getElementById("settingsBtn").click();
+  await settle(10);
+  assert.equal(groups.display.hidden, false, "display options are visible to players");
+  assert.equal(groups.court.hidden, false, "court controls are visible to players");
+  assert.equal(groups.sharing.hidden, false, "sharing actions are visible to players");
+  assert.deepEqual(dividers.map((divider) => divider.hidden), [false, false]);
+
+  document.getElementById("closeSettingsBtn").click();
+  await settle(20);
+
+  try {
+    enableSpectateMode();
+    await settle(10);
+    assert.equal(document.getElementById("joinCourtTile").style.display, "");
+    assert.equal(document.getElementById("switchToSpectateTile").style.display, "none");
+
+    document.getElementById("settingsBtn").click();
+    await settle(10);
+    assert.equal(groups.display.hidden, false, "display options remain visible to spectators");
+    assert.equal(groups.court.hidden, true, "player-only court controls collapse as a group for spectators");
+    assert.equal(groups.sharing.hidden, false, "sharing/access options remain available to spectators");
+    assert.deepEqual(
+      dividers.map((divider) => divider.hidden),
+      [false, true],
+      "only one divider separates the two remaining visible groups",
+    );
+  } finally {
+    disableSpectateMode();
+    await settle(10);
+    if (!settingsModal.classList.contains("hidden")) {
+      document.getElementById("closeSettingsBtn").click();
+      await settle(20);
+    }
+  }
+
+  assert.equal(document.getElementById("joinCourtTile").style.display, "none");
+  assert.notEqual(document.getElementById("switchToSpectateTile").style.display, "none");
+  assert.equal(groups.court.hidden, false, "the court controls group returns for players");
+  assert.deepEqual(dividers.map((divider) => divider.hidden), [false, false]);
+});
+
+
 test("a panel hidden by the stylesheet is not resized while hidden", () => {
   const saved = { left: panel.style.left, top: panel.style.top, width: panel.style.width };
   panel.style.left = "300px";
