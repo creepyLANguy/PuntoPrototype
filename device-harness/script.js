@@ -547,7 +547,7 @@ function renderDeviceList() {
       '</span><span class="device-dot"></span></div>' +
       '<div class="device-item-meta">' + escapeHtml(courtLabel) + "</div>" +
       '<span class="device-type-badge ' + (virtualDevice ? "virtual" : "physical") + '">' +
-      escapeHtml(String(sku).toUpperCase()) + "</span></button>"
+      escapeHtml(sku === "Hub" ? "HUB" : sku) + "</span></button>"
     );
   };
 
