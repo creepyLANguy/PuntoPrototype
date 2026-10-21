@@ -145,21 +145,16 @@
           </section>
 
           <section class="panel trace-panel">
-            <div class="panel-header compact">
-              <div>
-                <div class="eyebrow">OBSERVABILITY</div>
-                <h2>Network trace</h2>
+            <div class="panel-header compact trace-panel-header">
+              <div class="trace-heading">
+                <div>
+                  <div class="eyebrow">OBSERVABILITY</div>
+                  <h2>Network trace</h2>
+                </div>
               </div>
-              <div class="trace-actions">
-                <button id="failNextBtn" class="btn warning">Arm next failure</button>
-                <button id="networkResetBtn" class="btn secondary">Reset injection</button>
-              </div>
-            </div>
-
-            <div class="failure-panel">
-              <div class="failure-main">
-                <label>
-                  Failure mode
+              <div class="trace-control-row" role="group" aria-label="Network failure controls">
+                <label for="failureMode" class="failure-mode-control">
+                  <span>Failure mode</span>
                   <select id="failureMode" class="select">
                     <option value="none">Healthy</option>
                     <option value="latency">Artificial latency</option>
@@ -172,22 +167,25 @@
                     <option value="duplicate">Duplicate next request</option>
                   </select>
                 </label>
-                <label id="latencyControl" class="hidden">
-                  Latency
-                  <input id="latencyMs" class="number-input" type="number" min="0" max="15000" step="100" value="1500" />
-                  <span class="inline-unit">ms</span>
+                <label id="latencyControl" class="failure-time-control is-disabled" aria-disabled="true">
+                  <span>Latency (ms)</span>
+                  <input id="latencyMs" class="number-input" type="number" min="0" max="15000" step="100" value="1500" disabled />
                 </label>
-                <label id="timeoutControl" class="hidden">
-                  Timeout
-                  <input id="timeoutMs" class="number-input" type="number" min="100" max="15000" step="100" value="3000" />
-                  <span class="inline-unit">ms</span>
+                <label id="timeoutControl" class="failure-time-control is-disabled" aria-disabled="true">
+                  <span>Timeout (ms)</span>
+                  <input id="timeoutMs" class="number-input" type="number" min="100" max="15000" step="100" value="3000" disabled />
                 </label>
+                <button id="failNextBtn" class="btn warning" type="button">Arm next failure</button>
+                <button id="networkResetBtn" class="btn secondary" type="button">Reset injection</button>
               </div>
               <div class="failure-description" id="failureDescription">
                 Normal requests are sent to the real backend.
               </div>
             </div>
 
+            <div id="deviceActivity" class="device-activity-grid" aria-live="polite">
+              <div class="panel-empty-state device-activity-empty">Select a device to view its latest event and error.</div>
+            </div>
             <div id="traceList" class="trace-list"></div>
           </section>
         </div>
