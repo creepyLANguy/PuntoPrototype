@@ -671,12 +671,12 @@ function renderDeviceList() {
     ? loadingMarkup("Loading physical devices…")
     : physical.length
       ? physical.map(renderCard).join("")
-      : emptyMessage("physical", allPhysical);
+      : emptyMessage("physical");
   $("virtualDeviceList").innerHTML = state.devicesLoading
     ? loadingMarkup("Loading virtual devices…")
     : virtual.length
       ? virtual.map(renderCard).join("")
-      : emptyMessage("virtual", allVirtual);
+      : emptyMessage("virtual");
 
   document.querySelectorAll("[data-device-id]").forEach((button) => {
     button.addEventListener("click", () => selectDevice(button.dataset.deviceId));
