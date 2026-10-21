@@ -446,7 +446,11 @@ test("court Options QR tile toggles visibility and tracks unsupported viewport s
     assert.equal(toggle.getAttribute("aria-disabled"), "true");
     assert.equal(tile.classList.contains("qr-unavailable"), true);
     assert.equal(tileLabel(), "Show QR", "an unrenderable panel is reflected as hidden");
-    assert.equal(panel.classList.contains("hidden"), false, "responsive suppression does not overwrite the user's visibility choice");
+    assert.equal(
+      panel.classList.contains("hidden"),
+      false,
+      "responsive suppression does not overwrite the user's visibility choice",
+    );
 
     setViewport(780, 360);
     assert.equal(toggle.disabled, true, "short landscape disables the action");
