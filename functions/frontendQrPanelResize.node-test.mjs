@@ -510,7 +510,7 @@ test("court Options sections and dividers adapt between player and spectator vie
     sharing: document.getElementById("settingsSharingGroup"),
   };
   const dividers = [...document.querySelectorAll(".settings-group-divider")];
-  const { enableSpectateMode, disableSpectateMode } = await import("../app/js/court/session.js");
+  const { enterCourt } = await import("../app/js/court/session.js");
 
   assert.deepEqual(Object.keys(groups), ["display", "court", "sharing"]);
   assert.equal(dividers.length, 2, "one divider sits between each logical group");
@@ -536,7 +536,7 @@ test("court Options sections and dividers adapt between player and spectator vie
   await settle(20);
 
   try {
-    enableSpectateMode();
+    await enterCourt(COURT_ID, true, { historyMode: "skip" });
     await settle(10);
     assert.equal(document.getElementById("joinCourtTile").style.display, "");
     assert.equal(document.getElementById("switchToSpectateTile").style.display, "none");
@@ -552,7 +552,7 @@ test("court Options sections and dividers adapt between player and spectator vie
       "only one divider separates the two remaining visible groups",
     );
   } finally {
-    disableSpectateMode();
+    await enterCourt(COURT_ID, false, { historyMode: "skip" });
     await settle(10);
     if (!settingsModal.classList.contains("hidden")) {
       document.getElementById("closeSettingsBtn").click();
