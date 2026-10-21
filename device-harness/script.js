@@ -224,6 +224,58 @@ function formatTime(value) {
   return Number.isNaN(date.getTime()) ? "—" : date.toLocaleTimeString();
 }
 
+function formatTimestamp(value) {
+  if (!value) return "—";
+  const date = typeof value?.toDate === "function"
+    ? value.toDate()
+    : value instanceof Date
+      ? value
+      : new Date(value);
+  return Number.isNaN(date.getTime()) ? "—" : date.toLocaleString();
+}
+
+function deviceActivityFor(deviceId) {
+  const entries = state.trace.filter(
+    (entry) => entry.request?.body?.deviceId === deviceId,
+  );
+
+  const lastEvent = entries.find(
+    (entry) =>
+      entry.direction === "OUT →" &&
+      typeof entry.request?.body?.eventType === "string" &&
+      entry.request.body.eventType.length > 0,
+  ) || null;
+
+  const lastError = entries.find((entry) => {
+    if (entry.direction !== "IN ←") return false;
+    if (entry.code === "ERROR" || entry.code === "TIMEOUT") return true;
+
+    const status = Number(entry.response?.status ?? entry.code);
+    const responseBody = entry.response?.body;
+    return (
+      status >= 400 ||
+      entry.simulator?.failureMode === "malformed" ||
+      Boolean(entry.response?.error) ||
+      (responseBody !== null &&
+        typeof responseBody === "object" &&
+        (responseBody.success === false || Boolean(responseBody.error)))
+    );
+  }) || null;
+
+  return { lastEvent, lastError };
+}
+
+function lastErrorDescription(entry) {
+  if (!entry) return "No errors recorded this session";
+  const body = entry.response?.body;
+  const detail =
+    entry.response?.error ||
+    (body && typeof body === "object" ? body.error : null) ||
+    entry.detail ||
+    entry.summary;
+  return String(detail || entry.summary);
+}
+
 function formatJson(value) {
   return JSON.stringify(value, null, 2);
 }
@@ -767,8 +819,24 @@ function renderSelectedDevice() {
     ["Device kind", device.isVirtual === true ? "Virtual" : "Physical"],
     ["Simulator profile", device.simulatorProfile || profile.label],
     ["Firmware version", device.firmwareVersion || "Not recorded"],
-    ["Created", formatTime(device.createdAt)],
+    ["Created", formatTimestamp(device.createdAt)],
   ];
+
+  const { lastEvent, lastError } = deviceActivityFor(device.id);
+  fields.push(
+    [
+      "Last event",
+      lastEvent
+        ? String(lastEvent.request.body.eventType) + " · " + formatTimestamp(lastEvent.startedAt)
+        : "No events recorded this session",
+    ],
+    [
+      "Last error",
+      lastError
+        ? lastErrorDescription(lastError) + " · " + formatTimestamp(lastError.startedAt)
+        : "No errors recorded this session",
+    ],
+  );
   $("deviceIdentity").innerHTML = fields.map(
     ([label, value]) =>
       '<div class="identity-cell"><div class="identity-label">' + escapeHtml(label) +
@@ -861,25 +929,31 @@ function renderCourtEvents(events) {
     return;
   }
   if (!state.selectedCourtId) {
-    $("courtEvents").innerHTML = '<div class="panel-empty-state">Select a court to load recent events.</div>';
+    $("courtEvents").innerHTML =
+      '<div class="panel-empty-state">Select a court to load recent events.</div>';
     return;
   }
   if (!state.selectedMatchId) {
-    $("courtEvents").innerHTML = '<div class="panel-empty-state">No active match on this court.</div>';
+    $("courtEvents").innerHTML =
+      '<div class="panel-empty-state">No active match on this court.</div>';
     return;
   }
+
   $("courtEvents").innerHTML = events.length
-    ? events.map((event) =>
-        '<div class="event-row"><div class="event-main"><div class="event-type">' +
-        escapeHtml(event.eventType || "UNKNOWN") + "</div><div class="event-meta">" +
-        escapeHtml(formatTime(event.createdAt)) + " · " +
-        escapeHtml(event.actorDeviceId || event.createdBy || "unknown") +
-        "</div></div><div class="event-badge">" + escapeHtml(event.id.slice(0, 10)) +
-        "</div></div>",
-      ).join("")
+    ? events.map((event) => `
+        <div class="event-row">
+          <div class="event-main">
+            <div class="event-type">${escapeHtml(event.eventType || "UNKNOWN")}</div>
+            <div class="event-meta">
+              ${escapeHtml(formatTime(event.createdAt))} ·
+              ${escapeHtml(event.actorDeviceId || event.createdBy || "unknown")}
+            </div>
+          </div>
+          <div class="event-badge">${escapeHtml(String(event.id || "").slice(0, 10))}</div>
+        </div>
+      `).join("")
     : '<div class="hint">No events yet.</div>';
 }
-
 
 function updateEnvironmentUi() {
   const mismatch = !firebaseEnvironmentMatchesHost();
