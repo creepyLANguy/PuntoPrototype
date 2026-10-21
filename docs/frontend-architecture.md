@@ -5,8 +5,8 @@ scoring app (`/app`, `/c`, `/p`, `/admin`), the durable match page (`/m`), the
 tournament suite (`/t`), its build, and the OBS overlay (`/overlay`,
 `/broadcast`). The landing page (`index.html`), the NFC utility (`nfc/`) and
 the Device Lab (`device-harness/`) are separate pages and are not covered here.
-The canonical Device Lab URLs are `/devicelab` and `/lab`; the older `/harness`
-entry routes remain available as compatibility aliases.
+The canonical Device Lab URLs are `/devicelab` and `/lab`; the older `/harness`,
+`/app/harness`, and `/device-harness` routes remain available as compatibility aliases.
 
 How the current structure was reached from the former monolithic `script.js`,
 and how behavioural equivalence was verified, is recorded in
