@@ -768,7 +768,6 @@ function renderSelectedDevice() {
     ["Simulator profile", device.simulatorProfile || profile.label],
     ["Firmware version", device.firmwareVersion || "Not recorded"],
     ["Created", formatTime(device.createdAt)],
-    ["Raw fields", Object.keys(device).length + " fields"],
   ];
   $("deviceIdentity").innerHTML = fields.map(
     ([label, value]) =>
