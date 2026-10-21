@@ -221,21 +221,21 @@ test("the admin password is checked before the dashboard opens", async () => {
     "auto",
     "All overview stays within the portal and scrolls instead of overflowing",
   );
-  assert.equal(window.getComputedStyle(document.querySelector(".admin-tool-grid")).display, "grid");
+  assert.equal(window.getComputedStyle(document.querySelector(".admin-tool-grid")).display, "flex");
   const adminStyles = readFileSync(new URL("../app/css/style.css", import.meta.url), "utf8");
   assert.match(
     adminStyles,
-    /\.admin-tool-grid\s*\{[^}]*grid-template-columns:\s*repeat\(4,\s*minmax\(0,\s*1fr\)\)/s,
+    /\.admin-tool-group\s*\{[^}]*grid-template-columns:\s*repeat\(4,\s*minmax\(0,\s*1fr\)\)/s,
     "desktop overview uses a four-column tile grid",
   );
   assert.match(
     adminStyles,
-    /@media\s*\(max-width:\s*1100px\)[\s\S]*?\.admin-tool-grid\s*\{[^}]*grid-template-columns:\s*repeat\(3,/s,
+    /@media\s*\(max-width:\s*1100px\)[\s\S]*?\.admin-tool-group\s*\{[^}]*grid-template-columns:\s*repeat\(3,/s,
     "medium layouts reduce the tile grid to three columns",
   );
   assert.match(
     adminStyles,
-    /@media\s*\(max-width:\s*820px\)[\s\S]*?\.admin-tool-grid\s*\{[^}]*grid-template-columns:\s*repeat\(2,/s,
+    /@media\s*\(max-width:\s*820px\)[\s\S]*?\.admin-tool-group\s*\{[^}]*grid-template-columns:\s*repeat\(2,/s,
     "tablet and mobile layouts reduce the tile grid to two columns",
   );
   const mobileAdminStyles = adminStyles.slice(
@@ -292,7 +292,7 @@ test("the admin password is checked before the dashboard opens", async () => {
       mobileAdminStyles.includes("max-height: calc(100dvh - 20px);"),
     "the club editor fits within the mobile viewport",
   );
-  const overviewTiles = [...document.querySelectorAll("#allTab .admin-tool-grid > button")];
+  const overviewTiles = [...document.querySelectorAll("#allTab .admin-tool-grid button")];
   assert.equal(overviewTiles.length, 8);
   assert.deepEqual(
     overviewTiles.map((tile) => tile.querySelector(".admin-tool-label")?.textContent.trim()),
@@ -303,10 +303,29 @@ test("the admin password is checked before the dashboard opens", async () => {
       "Matches",
       "Devices",
       "NFC Tool",
-      "Device Harness",
+      "Device Lab",
       "Theme Picker",
     ],
     "all eight overview tiles have readable text labels",
+  );
+  const overviewGroups = [
+    ...document.querySelectorAll("#allTab .admin-tool-grid > .admin-tool-group"),
+  ];
+  assert.equal(overviewGroups.length, 3, "overview separates main, device and appearance tools");
+  assert.deepEqual(
+    overviewGroups.map((group) => group.querySelectorAll("button").length),
+    [5, 2, 1],
+    "core admin tools, NFC/device tools and Theme Picker stay in separate groups",
+  );
+  assert.deepEqual(
+    overviewGroups.map((group) => group.getAttribute("aria-label")),
+    ["Main admin tools", "NFC and device tools", "Appearance tools"],
+    "each overview tool group has an accessible label",
+  );
+  assert.equal(
+    document.querySelectorAll("#allTab .admin-tool-grid > .admin-tool-divider").length,
+    2,
+    "horizontal rules visually separate the three tool groups",
   );
   const tileIcons = [
     ...document.querySelectorAll(
