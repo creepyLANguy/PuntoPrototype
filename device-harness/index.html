@@ -230,13 +230,13 @@
   </div>
 
   <dialog id="deviceDialog" class="dialog" aria-labelledby="deviceDialogTitle">
-    <form method="dialog" id="deviceForm" novalidate>
+    <form id="deviceForm" novalidate>
       <div class="panel-header compact">
         <div>
           <div class="eyebrow">VIRTUAL HARDWARE</div>
           <h2 id="deviceDialogTitle">Add virtual device</h2>
         </div>
-        <button value="cancel" class="icon-btn" aria-label="Close">×</button>
+        <button id="closeDeviceDialogBtn" type="button" class="icon-btn" aria-label="Close">×</button>
       </div>
       <label>Device ID
         <input id="virtualDeviceId" class="text-input" required placeholder="SIM-HUB-001" />
@@ -260,8 +260,8 @@
         </select>
       </div>
       <div class="dialog-actions">
-        <button value="cancel" class="btn secondary">Cancel</button>
-        <button id="createVirtualDeviceBtn" value="default" class="btn brand-btn">Create device</button>
+        <button id="cancelDeviceDialogBtn" type="button" class="btn secondary">Cancel</button>
+        <button id="createVirtualDeviceBtn" type="button" class="btn brand-btn">Create device</button>
       </div>
     </form>
   </dialog>
