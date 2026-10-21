@@ -256,6 +256,7 @@ body.dark .spinner { border-color: #43516a; border-top-color: #8be7f4; }
 .event-badge { font-size: 9px; font-weight: 900; color: var(--navy); }
 .trace-actions { display: flex; gap: 6px; }
 .btn { min-height: 36px; border-radius: 9px; border: 1px solid var(--line); padding: 0 12px; background: #fff; color: var(--ink); font-size: 11px; font-weight: 800; }
+.btn:disabled { cursor: not-allowed; opacity: .45; filter: grayscale(.35); }
 .btn.secondary:hover { background: #f8fafc; }
 .btn.warning { color: var(--amber); border-color: #fed7aa; background: #fff7ed; }
 .btn.danger { color: #fff; border-color: var(--red); background: var(--red); }
