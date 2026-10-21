@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Padel Push™ — Score Overlay</title>
   <link rel="icon" href="/media/favicon.svg" />
+  <link rel="stylesheet" href="/app/css/components/icons.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Encode+Sans+Semi+Expanded:wght@600;700&display=swap"
@@ -126,16 +127,24 @@
   </div>
 
   <div class="quick-bar" id="quickBar">
-    <button id="statBtn" type="button" title="Toggle stat card" aria-label="Toggle stat card">📊</button>
-    <button id="momentumBtn" type="button" title="Toggle momentum graph" aria-label="Toggle momentum graph">📈</button>
-    <button id="slateBtn" type="button" title="Show sponsor slate" aria-label="Show sponsor slate">🎬</button>
-    <button class="gear-btn" id="gearBtn" title="Customise overlay" aria-label="Customise overlay">⚙</button>
+    <button id="statBtn" type="button" title="Toggle stat card" aria-label="Toggle stat card">
+      <span class="icon icon--chart" aria-hidden="true"></span>
+    </button>
+    <button id="momentumBtn" type="button" title="Toggle momentum graph" aria-label="Toggle momentum graph">
+      <span class="icon icon--trend" aria-hidden="true"></span>
+    </button>
+    <button id="slateBtn" type="button" title="Show sponsor slate" aria-label="Show sponsor slate">
+      <span class="icon icon--clapperboard" aria-hidden="true"></span>
+    </button>
+    <button class="gear-btn" id="gearBtn" title="Customise overlay" aria-label="Customise overlay">
+      <span class="icon icon--settings" aria-hidden="true"></span>
+    </button>
   </div>
 
   <div class="settings-panel" id="settingsPanel">
     <div class="settings-head">
       <button id="closeSettingsX" class="close-x" type="button" title="Close"
-        aria-label="Close settings">&times;</button>
+        aria-label="Close settings"><span class="icon icon--close" aria-hidden="true"></span></button>
       <h2>Customise Overlay</h2>
     </div>
     <p class="transparent-note">The page background is transparent by default — ideal for an OBS browser source.</p>
@@ -194,7 +203,9 @@
 
     <div class="section">Sponsor rotation (overrides the strip above)</div>
     <div id="sponsorList"></div>
-    <button id="addSponsorBtn" class="secondary add-sponsor" type="button">+ Add sponsor</button>
+    <button id="addSponsorBtn" class="secondary add-sponsor" type="button">
+      <span class="icon icon--plus" aria-hidden="true"></span><span>Add sponsor</span>
+    </button>
 
     <div class="section">QR code</div>
     <label><span>Link URL</span><input type="url" id="setQrUrl" placeholder="Defaults to this court's page" /></label>

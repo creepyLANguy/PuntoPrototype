@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>App button iconography report</title>
+  <style>
+    :root {
+      color-scheme: light;
+      font: 14px/1.45 system-ui, sans-serif;
+      color: #172033;
+      background: #f2f4f7;
+    }
+
+    body {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 28px 18px;
+    }
+
+    h1 { margin-bottom: 8px; }
+    h2 { margin-top: 32px; }
+    p { max-width: 850px; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+      background: white;
+    }
+
+    th, td {
+      border: 1px solid #d8dde5;
+      padding: 10px;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th { background: #e8ecf2; }
+    td:first-child { width: 230px; }
+    td:nth-child(2) { width: 170px; }
+    td:nth-child(3) { width: 240px; }
+
+    .theme-pair {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(82px, 1fr));
+      gap: 6px;
+    }
+
+    .theme-tile {
+      min-height: 88px;
+      display: grid;
+      place-items: center;
+      align-content: center;
+      gap: 5px;
+      border: 1px solid #cbd1db;
+      border-radius: 7px;
+      color: #182235;
+      background: #fff;
+      text-align: center;
+    }
+
+    .theme-tile.dark {
+      border-color: #303746;
+      color: #f5f7fa;
+      background: #171c26;
+    }
+
+    .theme-label {
+      color: inherit;
+      font-size: 11px;
+      opacity: 0.7;
+    }
+
+    .icon-samples {
+      min-height: 38px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      font-size: 30px;
+      line-height: 1;
+    }
+
+    .icon-sample {
+      width: 34px;
+      height: 34px;
+      display: inline-block;
+      flex: 0 0 auto;
+      background-color: currentColor;
+      mask: var(--icon-url) center / contain no-repeat;
+      -webkit-mask: var(--icon-url) center / contain no-repeat;
+    }
+
+    .before-svg {
+      width: 34px;
+      height: 34px;
+      object-fit: contain;
+      filter: brightness(0);
+    }
+
+    .dark .before-svg { filter: brightness(0) invert(1); }
+    .preview-caption { font-size: 11px; opacity: 0.8; }
+    code { overflow-wrap: anywhere; }
+
+    @media (max-width: 760px) {
+      body { padding: 18px 8px; }
+      table { font-size: 12px; }
+      th, td { padding: 6px; }
+      td:first-child, td:nth-child(2), td:nth-child(3) { width: auto; }
+      .theme-pair { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <h1>App button iconography: before and after</h1>
+  <p>Every changed button icon is listed below. Each before and after column shows the icon against light and dark backgrounds. Original inline SVGs are stored in <code>before/</code>; revised assets live in <code>../../app/media/icons/</code>.</p>
+  <table>
+    <thead>
+      <tr>
+        <th>View / button purpose</th>
+        <th>Source location</th>
+        <th>Before</th>
+        <th>After</th>
+      </tr>
+    </thead>
+    <tbody id="iconRows"></tbody>
+  </table>
+  <h2>Intentionally unchanged</h2>
+  <ul>
+    <li>Admin pages, device harness, NFC tool, and root marketing site are out of scope.</li>
+    <li>Decorative background waves remain inline SVG; adjacent color-edit marks and status / animation symbols are not button icons.</li>
+    <li>Match and tournament actions that already have text labels and no icons remain unchanged.</li>
+  </ul>
+  <script>
+    const rows = [
+      { screen: "App global controls — Back to landing page", source: "app/templates/global/controls.html:2", before: ["🏠︎"], after: ["home"] },
+      { screen: "App global controls — Appearance settings", source: "app/templates/global/controls.html:7", before: ["🎨"], after: ["palette"] },
+      { screen: "App global controls — Admin Portal shortcut", source: "app/templates/global/controls.html:10", before: ["🔒"], after: ["lock"] },
+      { screen: "Settings — Close settings", source: "app/templates/global/settings-modal.html:5", before: ["✕"], after: ["close"] },
+      { screen: "Settings — Mute / unmute audio", source: "app/templates/global/settings-modal.html:11; app/js/shell/scoreboardControls.js:254", before: ["♫", "♫⃠"], after: ["music", "music-muted"] },
+      { screen: "Settings — Toggle scoreboard waves", source: "app/templates/global/settings-modal.html:17; app/js/ui/appearance.js:269", before: ["♒︎", "═"], after: ["waves", "waves-off"] },
+      { screen: "Settings — Show QR panel", source: "app/templates/global/settings-modal.html:23", before: ["▦"], after: ["qr"] },
+      { screen: "Settings — Enter / exit fullscreen", source: "app/templates/global/settings-modal.html:29; app/js/ui/fullscreen.js:34", before: ["⛶", "⬚"], after: ["fullscreen", "fullscreen-exit"] },
+      { screen: "Settings — Swap views", source: "app/templates/global/settings-modal.html:34; app/js/shell/scoreboardControls.js:126", before: ["⇆", "⇄"], after: ["swap", "swap-alt"] },
+      { screen: "Settings — Changeover", source: "app/templates/global/settings-modal.html:43; app/js/ui/settingsTiles.js:97", before: ["↔"], after: ["changeover"] },
+      { screen: "Settings — Toggle server indicator", source: "app/templates/global/settings-modal.html:48; app/js/shell/scoreboardControls.js:235", before: ["⚾︎", "⭘"], after: ["server", "server-off"] },
+      { screen: "Settings — Edit player names", source: "app/templates/global/settings-modal.html:53", before: ["👥"], after: ["users"] },
+      { screen: "Settings — Reset match", source: "app/templates/global/settings-modal.html:58", before: ["!"], after: ["reset"] },
+      { screen: "Settings — New match", source: "app/templates/global/settings-modal.html:63", before: ["＋"], after: ["plus"] },
+      { screen: "Settings — Open OBS score overlay", source: "app/templates/global/settings-modal.html:72", before: ["📺"], after: ["monitor"] },
+      { screen: "Settings — Join as a player", source: "app/templates/global/settings-modal.html:78", beforeSvg: "before/join-player.svg", after: ["player"] },
+      { screen: "Settings — Switch to spectate mode", source: "app/templates/global/settings-modal.html:84", before: ["⛱"], after: ["eye"] },
+      { screen: "Join court modal — Close join court", source: "app/templates/global/settings-modal.html:195", before: ["✕"], after: ["close"] },
+      { screen: "Player names modal — Close", source: "app/templates/global/player-names-modal.html:5", before: ["✕"], after: ["close"] },
+      { screen: "Play view — Close", source: "app/templates/pages/play.html:7", before: ["✕"], after: ["close"] },
+      { screen: "Spectate view — Close", source: "app/templates/pages/spectate.html:7", before: ["✕"], after: ["close"] },
+      { screen: "Match details — Close", source: "app/templates/global/details-modal.html:5", before: ["✕"], after: ["close"] },
+      { screen: "Match details — Share", source: "app/templates/global/details-modal.html:7", beforeSvg: "before/share-details.svg", after: ["share"] },
+      { screen: "Match details — Expand detailed stats", source: "app/templates/global/details-modal.html:55", before: ["▼"], after: ["chevron-down"] },
+      { screen: "Share-image preview (commented out) — Close", source: "app/templates/global/modals.html:42", before: ["✕"], after: ["close"] },
+      { screen: "Scoreboard — Back / exit", source: "app/templates/pages/scoreboard.html:129", before: ["✕"], after: ["close"] },
+      { screen: "Scoreboard — Undo last point", source: "app/templates/pages/scoreboard.html:135", before: ["↩"], after: ["undo"] },
+      { screen: "Scoreboard — Open options", source: "app/templates/pages/scoreboard.html:138", before: ["⛭"], after: ["settings"] },
+      { screen: "Scoreboard — Open match details", source: "app/templates/pages/scoreboard.html:145", beforeSvg: "before/details.svg", after: ["chart"] },
+      { screen: "Scoreboard — Share court", source: "app/templates/pages/scoreboard.html:152", beforeSvg: "before/share-court.svg", after: ["share"] },
+      { screen: "Broadcast overlay — Toggle stat card", source: "app/overlay/template.html:131", before: ["📊"], after: ["chart"] },
+      { screen: "Broadcast overlay — Toggle momentum graph", source: "app/overlay/template.html:134", before: ["📈"], after: ["trend"] },
+      { screen: "Broadcast overlay — Show sponsor slate", source: "app/overlay/template.html:137", before: ["🎬"], after: ["clapperboard"] },
+      { screen: "Broadcast overlay — Customize overlay", source: "app/overlay/template.html:140", before: ["⚙"], after: ["settings"] },
+      { screen: "Broadcast overlay — Close settings", source: "app/overlay/template.html:147", before: ["×"], after: ["close"] },
+      { screen: "Broadcast overlay — Add sponsor", source: "app/overlay/template.html:207", before: ["+ Add sponsor"], after: ["plus"], afterText: "Add sponsor" },
+      { screen: "Sponsor editor — Remove sponsor", source: "app/overlay/js/settingsPanel.js:102", before: ["×"], after: ["close"] },
+      { screen: "Overlay settings — Successful copy feedback", source: "app/overlay/js/settingsPanel.js:278", before: ["Copied ✓"], after: ["check"], afterText: "Copied" },
+    ];
+
+    const rowsElement = document.getElementById("iconRows");
+    const iconRoot = "../../app/media/icons/";
+
+    function samples(values, isAfter, isDark) {
+      const wrapper = document.createElement("div");
+      wrapper.className = "icon-samples";
+      values.forEach((value) => {
+        if (isAfter) {
+          const icon = document.createElement("span");
+          icon.className = "icon-sample";
+          icon.title = value + ".svg";
+          icon.style.setProperty("--icon-url", `url("${iconRoot}${value}.svg")`);
+          wrapper.appendChild(icon);
+        } else if (typeof value === "string" && value.startsWith("before/")) {
+          const image = document.createElement("img");
+          image.className = "before-svg";
+          image.src = value;
+          image.alt = "Original inline SVG";
+          wrapper.appendChild(image);
+        } else {
+          const glyph = document.createElement("span");
+          glyph.textContent = value;
+          wrapper.appendChild(glyph);
+        }
+      });
+      return wrapper;
+    }
+
+    function previewCell(values, isAfter, text) {
+      const cell = document.createElement("td");
+      const pair = document.createElement("div");
+      pair.className = "theme-pair";
+      ["light", "dark"].forEach((theme) => {
+        const tile = document.createElement("div");
+        tile.className = `theme-tile ${theme}`;
+        const label = document.createElement("span");
+        label.className = "theme-label";
+        label.textContent = theme === "light" ? "Light" : "Dark";
+        tile.append(label, samples(values, isAfter, theme === "dark"));
+        if (text) {
+          const caption = document.createElement("span");
+          caption.className = "preview-caption";
+          caption.textContent = text;
+          tile.appendChild(caption);
+        }
+        pair.appendChild(tile);
+      });
+      cell.appendChild(pair);
+      return cell;
+    }
+
+    rows.forEach((item) => {
+      const row = document.createElement("tr");
+      const purpose = document.createElement("td");
+      purpose.textContent = item.screen;
+      const source = document.createElement("td");
+      const sourceCode = document.createElement("code");
+      sourceCode.textContent = item.source;
+      source.appendChild(sourceCode);
+      row.append(purpose, source);
+      row.appendChild(previewCell(item.before || [item.beforeSvg], false, ""));
+      const afterCell = previewCell(item.after, true, item.afterText || "");
+      const paths = document.createElement("div");
+      item.after.forEach((iconName) => {
+        const path = document.createElement("code");
+        path.textContent = `app/media/icons/${iconName}.svg`;
+        paths.appendChild(path);
+        paths.appendChild(document.createElement("br"));
+      });
+      afterCell.appendChild(paths);
+      row.appendChild(afterCell);
+      rowsElement.appendChild(row);
+    });
+  </script>
+</body>
+</html>

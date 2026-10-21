@@ -15,14 +15,14 @@ test("join-as-player icon sizing is constrained by the circular button", async (
     assert.match(style.textContent, /\.join-as-player-btn\s*\{[^}]*padding:\s*0\s*!important/s);
     assert.match(
       style.textContent,
-      /\.join-as-player-btn\s+svg\s*\{[^}]*width:\s*68%\s*!important/s,
+      /\.join-as-player-btn\s+\.icon\s*\{[^}]*width:\s*68%\s*!important/s,
     );
     assert.match(
       style.textContent,
-      /\.join-as-player-btn\s+svg\s*\{[^}]*height:\s*68%\s*!important/s,
+      /\.join-as-player-btn\s+\.icon\s*\{[^}]*height:\s*68%\s*!important/s,
     );
-    assert.match(style.textContent, /\.join-as-player-btn\s+svg\s*\{[^}]*max-width:\s*100%/s);
-    assert.match(style.textContent, /\.join-as-player-btn\s+svg\s*\{[^}]*max-height:\s*100%/s);
+    assert.match(style.textContent, /\.join-as-player-btn\s+\.icon\s*\{[^}]*max-width:\s*100%/s);
+    assert.match(style.textContent, /\.join-as-player-btn\s+\.icon\s*\{[^}]*max-height:\s*100%/s);
   } finally {
     globalThis.document = previousDocument;
     dom.window.close();

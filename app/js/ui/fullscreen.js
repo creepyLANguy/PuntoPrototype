@@ -1,70 +1,72 @@
 // Fullscreen toggle and its control state.
 import { TOAST_TYPES } from "../config/constants.js";
 import { elements } from "./dom.js";
+import { setButtonIcon } from "./icons.js";
 import { syncSettingsTiles } from "./settingsTiles.js";
 import { showToast } from "./toast.js";
 
-export function getFullscreenElement()
-{
-  return document.fullscreenElement ||
+export function getFullscreenElement() {
+  return (
+    document.fullscreenElement ||
     document.webkitFullscreenElement ||
     document.msFullscreenElement ||
-    null;
+    null
+  );
 }
 
-function isFullscreenSupported()
-{
+function isFullscreenSupported() {
   const target = document.documentElement;
-  return Boolean(document.fullscreenEnabled ||
+  return Boolean(
+    document.fullscreenEnabled ||
     document.webkitFullscreenEnabled ||
     document.msFullscreenEnabled ||
     target.requestFullscreen ||
     target.webkitRequestFullscreen ||
-    target.msRequestFullscreen);
+    target.msRequestFullscreen,
+  );
 }
 
-export function updateFullscreenButton()
-{
+export function updateFullscreenButton() {
   if (!elements.fullscreenBtn) return;
 
   const isActive = Boolean(getFullscreenElement());
   const label = isActive ? "Exit fullscreen" : "Enter fullscreen";
 
-  elements.fullscreenBtn.textContent = isActive ? "⬚" : "⛶";
+  setButtonIcon(
+    elements.fullscreenBtn,
+    isActive ? "fullscreen-exit" : "fullscreen",
+  );
   elements.fullscreenBtn.title = label;
   elements.fullscreenBtn.setAttribute("aria-label", label);
 
-  if (elements.fullscreenLabel)
-  {
-    elements.fullscreenLabel.textContent = isActive ? "Exit full" : "Fullscreen";
+  if (elements.fullscreenLabel) {
+    elements.fullscreenLabel.textContent = isActive
+      ? "Exit full"
+      : "Fullscreen";
   }
 
   syncSettingsTiles();
 }
 
-export async function toggleFullscreen()
-{
-  if (!isFullscreenSupported())
-  {
+export async function toggleFullscreen() {
+  if (!isFullscreenSupported()) {
     showToast("Fullscreen is not supported on this device.", TOAST_TYPES.ERROR);
     return;
   }
 
-  try
-  {
-    if (getFullscreenElement())
-    {
-      const exit = document.exitFullscreen ||
+  try {
+    if (getFullscreenElement()) {
+      const exit =
+        document.exitFullscreen ||
         document.webkitExitFullscreen ||
         document.msExitFullscreen;
 
       if (exit) await Promise.resolve(exit.call(document));
       showToast("Fullscreen off", TOAST_TYPES.INFO);
-    }
-    else
-    {
+    } else {
       const target = document.documentElement;
-      const request = target.requestFullscreen ||
+      const request =
+        target.requestFullscreen ||
         target.webkitRequestFullscreen ||
         target.msRequestFullscreen;
 
@@ -74,22 +76,19 @@ export async function toggleFullscreen()
 
     updateFullscreenButton();
     syncSettingsTiles();
-  }
-  catch (error)
-  {
+  } catch (error) {
     console.warn("Fullscreen toggle failed:", error);
     showToast("Fullscreen could not be changed.", TOAST_TYPES.ERROR);
   }
 }
 
-export function registerFullscreenChangeListeners()
-{
-  ["fullscreenchange", "webkitfullscreenchange", "MSFullscreenChange"].forEach(eventName =>
-  {
-    document.addEventListener(eventName, () =>
-    {
-      updateFullscreenButton();
-      syncSettingsTiles();
-    });
-  });
+export function registerFullscreenChangeListeners() {
+  ["fullscreenchange", "webkitfullscreenchange", "MSFullscreenChange"].forEach(
+    (eventName) => {
+      document.addEventListener(eventName, () => {
+        updateFullscreenButton();
+        syncSettingsTiles();
+      });
+    },
+  );
 }

@@ -37,6 +37,7 @@ import {
   updateUI,
 } from "../scoring/scoreboard.js";
 import { syncScoringControls } from "../scoring/settings.js";
+import { setButtonIcon } from "../ui/icons.js";
 import { appState } from "../state/appState.js";
 import { bumpCourtHistorySessionId } from "../state/navigationState.js";
 import {
@@ -175,11 +176,13 @@ export async function enterCourt(
   syncScoringControls();
   syncSettingsTiles();
   if (appState.muted) {
-    elements.muteBtn.textContent = "♫⃠";
+    setButtonIcon(elements.muteBtn, "music-muted");
+    elements.muteBtn.title = "Unmute";
+    elements.muteBtn.setAttribute("aria-label", "Unmute audio");
   }
 
   if (themeState.isWavesEnabled == false) {
-    elements.waveToggleScoreboardBtn.textContent = "═";
+    setButtonIcon(elements.waveToggleScoreboardBtn, "waves-off");
   }
 
   elements.menuPage.style.display = "none";
@@ -335,7 +338,8 @@ export function enableSpectateMode() {
   if (elements.resetSettingsTile)
     elements.resetSettingsTile.style.display = "none";
   if (elements.changeoverTile) elements.changeoverTile.style.display = "none";
-  if (elements.serverToggleTile) elements.serverToggleTile.style.display = "none";
+  if (elements.serverToggleTile)
+    elements.serverToggleTile.style.display = "none";
   if (elements.switchToSpectateTile)
     elements.switchToSpectateTile.style.display = "none";
 

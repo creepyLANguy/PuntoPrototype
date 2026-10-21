@@ -24,6 +24,7 @@ import {
   transitionScoreboardMatch,
 } from "../ui/animations.js";
 import { toggleFullscreen } from "../ui/fullscreen.js";
+import { setButtonIcon } from "../ui/icons.js";
 import { showConfirm } from "../ui/modals.js";
 import { canStartNewMatch, syncSettingsTiles } from "../ui/settingsTiles.js";
 import { showToast } from "../ui/toast.js";
@@ -122,7 +123,7 @@ export function registerScoreboardControls() {
 
     const swapped = swapScoreboardViews();
 
-    elements.swapBtn.textContent = swapped ? "⇄" : "⇆";
+    setButtonIcon(elements.swapBtn, swapped ? "swap-alt" : "swap");
     elements.swapBtn.setAttribute("aria-pressed", String(swapped));
 
     // Keep the details modal synchronized with the currently visible side orientation.
@@ -222,7 +223,10 @@ export function registerScoreboardControls() {
       } catch (error) {
         console.error("Switching to spectator mode failed:", error);
         elements.settingsModal.classList.remove("hidden");
-        showToast("Could not switch to spectator mode. Please try again.", TOAST_TYPES.ERROR);
+        showToast(
+          "Could not switch to spectator mode. Please try again.",
+          TOAST_TYPES.ERROR,
+        );
       }
     });
   }
@@ -231,9 +235,10 @@ export function registerScoreboardControls() {
   if (elements.serverToggleBtn) {
     elements.serverToggleBtn.addEventListener("click", () => {
       themeState.isServerBadgeVisible = !themeState.isServerBadgeVisible;
-      elements.serverToggleBtn.textContent = themeState.isServerBadgeVisible
-        ? "⚾︎"
-        : "⭘";
+      setButtonIcon(
+        elements.serverToggleBtn,
+        themeState.isServerBadgeVisible ? "server" : "server-off",
+      );
       localStorage.setItem("serverBadge", themeState.isServerBadgeVisible);
       updateServerIndicator();
       syncSettingsTiles();
@@ -249,7 +254,12 @@ export function registerScoreboardControls() {
 
   elements.muteBtn.addEventListener("click", () => {
     appState.muted = !appState.muted;
-    elements.muteBtn.textContent = appState.muted ? "♫⃠" : "♫";
+    setButtonIcon(elements.muteBtn, appState.muted ? "music-muted" : "music");
+    elements.muteBtn.title = appState.muted ? "Unmute" : "Mute";
+    elements.muteBtn.setAttribute(
+      "aria-label",
+      appState.muted ? "Unmute audio" : "Mute audio",
+    );
     syncSettingsTiles();
     if (!appState.muted) {
       playSound(SOUND_IDS.SNAP);
@@ -257,7 +267,6 @@ export function registerScoreboardControls() {
   });
 
   elements.fullscreenBtn.addEventListener("click", toggleFullscreen);
-
 
   $("addPointA").addEventListener("click", () =>
     addPoint(EVENT_TYPES.POINT_TEAM_A),

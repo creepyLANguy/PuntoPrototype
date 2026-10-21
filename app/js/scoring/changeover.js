@@ -23,6 +23,7 @@ import {
   waitForPointAnimations,
 } from "../ui/animations.js";
 import { syncSettingsTiles } from "../ui/settingsTiles.js";
+import { setButtonIcon } from "../ui/icons.js";
 import { appendToast } from "../ui/toast.js";
 
 const CHANGEOVER_TOAST = "Changeover complete";
@@ -45,7 +46,7 @@ function syncSwapViewsButton() {
   if (!scoreboard || !swapButton) return;
 
   const swapped = scoreboard.classList.contains("swapped");
-  swapButton.textContent = swapped ? "⇄" : "⇆";
+  setButtonIcon(swapButton, swapped ? "swap-alt" : "swap");
   swapButton.setAttribute("aria-pressed", String(swapped));
 
   const tile = swapButton.closest(".setting-item");

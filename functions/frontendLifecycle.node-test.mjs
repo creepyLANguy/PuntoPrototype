@@ -120,11 +120,11 @@ test("Changeover toggles its own state and independently toggles the local view"
 
   const changeoverTile = document.getElementById("changeoverTile");
   assert.notEqual(changeoverTile.style.display, "none");
-  assert.equal(changeoverTile.querySelector("span").textContent, "Changeover");
+  assert.equal(changeoverTile.querySelector(":scope > span:not(.icon)").textContent, "Changeover");
 
   const swapViewsButton = document.getElementById("swapBtn");
   const swapViewsLabel = () =>
-    swapViewsButton.closest(".setting-item").querySelector("span").textContent;
+    swapViewsButton.closest(".setting-item").querySelector(":scope > span:not(.icon)").textContent;
   assert.equal(swapViewsLabel(), "Swap views");
 
   // Establish a local view preference that is intentionally different from
@@ -159,8 +159,8 @@ test("Changeover toggles its own state and independently toggles the local view"
   assert.equal(swapAnimations.at(-1).options.duration, 900);
   await waitFor(
     () =>
-      document.getElementById("changeoverTile").querySelector("span").textContent ===
-      "Changeover *",
+      document.getElementById("changeoverTile").querySelector(":scope > span:not(.icon)")
+        .textContent === "Changeover *",
     {
       label: "local changeover toggles its own button state",
     },
@@ -179,7 +179,7 @@ test("Changeover toggles its own state and independently toggles the local view"
   assert.equal(swapViewsLabel(), "Unswap views");
   assert.equal(firestoreState.docs.get("courts/abcda").beaconSidesSwapped, true);
   assert.equal(
-    document.getElementById("changeoverTile").querySelector("span").textContent,
+    document.getElementById("changeoverTile").querySelector(":scope > span:not(.icon)").textContent,
     "Changeover *",
   );
 
@@ -204,7 +204,8 @@ test("Changeover toggles its own state and independently toggles the local view"
   );
   await waitFor(
     () =>
-      document.getElementById("changeoverTile").querySelector("span").textContent === "Changeover",
+      document.getElementById("changeoverTile").querySelector(":scope > span:not(.icon)")
+        .textContent === "Changeover",
     {
       label: "second local changeover clears its button state",
     },
@@ -228,8 +229,8 @@ test("Changeover toggles its own state and independently toggles the local view"
   );
   await waitFor(
     () =>
-      document.getElementById("changeoverTile").querySelector("span").textContent ===
-      "Changeover *",
+      document.getElementById("changeoverTile").querySelector(":scope > span:not(.icon)")
+        .textContent === "Changeover *",
     {
       label: "remote changeover toggles changeover button state",
     },
@@ -244,7 +245,7 @@ test("Changeover toggles its own state and independently toggles the local view"
   swapViewsButton.click();
   assert.equal(document.querySelector(".scoreboard").classList.contains("swapped"), true);
   assert.equal(
-    document.getElementById("changeoverTile").querySelector("span").textContent,
+    document.getElementById("changeoverTile").querySelector(":scope > span:not(.icon)").textContent,
     "Changeover *",
   );
 
@@ -275,7 +276,7 @@ test("changeover shows backend processing feedback and recovers from failure", a
   await settle(10);
 
   const button = document.getElementById("changeoverBtn");
-  const label = document.getElementById("changeoverTile").querySelector("span");
+  const label = document.getElementById("changeoverTile").querySelector(":scope > span:not(.icon)");
   const originalHandler = callableHandlers.get("changeoverCourt");
   const initialBeaconSidesSwapped =
     firestoreState.docs.get("courts/abcda").beaconSidesSwapped === true;
@@ -327,7 +328,7 @@ test("changeover shows backend processing feedback and recovers from failure", a
     );
     assert.equal(button.getAttribute("aria-label"), "Changeover");
     assert.equal(button.title, "Changeover");
-    assert.equal(button.textContent, "↔");
+    assert.equal(button.querySelector(".icon--changeover")?.getAttribute("aria-hidden"), "true");
 
     const expectedLabelAfterFailedChangeover = initialBeaconSidesSwapped
       ? "Changeover"
@@ -355,7 +356,7 @@ test("changeover shows backend processing feedback and recovers from failure", a
     );
 
     assert.equal(button.getAttribute("aria-label"), "Changeover");
-    assert.equal(button.textContent, "↔");
+    assert.equal(button.querySelector(".icon--changeover")?.getAttribute("aria-hidden"), "true");
   } finally {
     callableHandlers.set("changeoverCourt", originalHandler);
   }
@@ -404,11 +405,14 @@ test("active changeover state is applied on join without changing the local view
   await settle(10);
 
   assert.equal(
-    document.getElementById("changeoverTile").querySelector("span").textContent,
+    document.getElementById("changeoverTile").querySelector(":scope > span:not(.icon)").textContent,
     "Changeover *",
   );
   assert.equal(
-    document.getElementById("swapBtn").closest(".setting-item").querySelector("span").textContent,
+    document
+      .getElementById("swapBtn")
+      .closest(".setting-item")
+      .querySelector(":scope > span:not(.icon)").textContent,
     "Swap views",
   );
   assert.equal(document.getElementById("swapBtn").getAttribute("aria-pressed"), "false");
@@ -424,7 +428,8 @@ test("active changeover state is applied on join without changing the local view
   );
   await waitFor(
     () =>
-      document.getElementById("changeoverTile").querySelector("span").textContent === "Changeover",
+      document.getElementById("changeoverTile").querySelector(":scope > span:not(.icon)")
+        .textContent === "Changeover",
     { label: "changeover tile returns to inactive state" },
   );
 
