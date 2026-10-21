@@ -64,6 +64,10 @@
           Hide list
         </button>
       </div>
+      <label class="device-search-wrap" for="deviceSearch">
+        <span class="visually-hidden">Search devices</span>
+        <input id="deviceSearch" class="text-input device-search" type="search" placeholder="Search devices…" autocomplete="off" aria-label="Search devices" />
+      </label>
       <div id="deviceList" class="device-list">
         <details class="device-group" id="physicalDeviceGroup" open>
           <summary class="device-group-heading">Physical devices <span id="physicalDeviceCount" class="device-group-count">—</span></summary>
@@ -99,6 +103,7 @@
               <select id="courtSelect" class="select court-select" aria-label="Select court" disabled><option value="">Loading courts…</option></select>
               <span id="courtLoadingSpinner" class="spinner inline-select-spinner" role="status" aria-label="Loading courts"></span>
             </div>
+            <span id="courtCount" class="court-count" aria-live="polite">— courts</span>
           </div>
           <button id="clearTraceBtn" class="btn secondary">Clear trace</button>
         </div>
@@ -225,7 +230,7 @@
   </div>
 
   <dialog id="deviceDialog" class="dialog" aria-labelledby="deviceDialogTitle">
-    <form method="dialog" id="deviceForm">
+    <form method="dialog" id="deviceForm" novalidate>
       <div class="panel-header compact">
         <div>
           <div class="eyebrow">VIRTUAL HARDWARE</div>
@@ -243,9 +248,17 @@
           <option>Pulse</option>
         </select>
       </label>
-      <label>Mapped court
-        <select id="virtualDeviceCourt" class="select" required></select>
-      </label>
+      <div class="modal-court-picker">
+        <label for="virtualDeviceCourtSearch">Search courts</label>
+        <input id="virtualDeviceCourtSearch" class="text-input modal-court-search" type="search" placeholder="Search by court name or ID…" autocomplete="off" aria-label="Search courts for virtual device" />
+        <div class="modal-court-select-meta">
+          <label for="virtualDeviceCourt">Mapped court</label>
+          <span id="virtualDeviceCourtCount" class="court-count" aria-live="polite">— courts</span>
+        </div>
+        <select id="virtualDeviceCourt" class="select" aria-label="Mapped court" required>
+          <option value="">Select a court…</option>
+        </select>
+      </div>
       <div class="dialog-actions">
         <button value="cancel" class="btn secondary">Cancel</button>
         <button id="createVirtualDeviceBtn" value="default" class="btn brand-btn">Create device</button>
