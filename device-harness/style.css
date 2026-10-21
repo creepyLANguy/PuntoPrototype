@@ -266,7 +266,8 @@ body.dark .spinner { border-color: #43516a; border-top-color: #8be7f4; }
 .network-failure-banner { margin: 0 20px 12px; padding: 9px 10px; background: #fff7ed; color: #9a3412; border: 1px solid #fed7aa; border-radius: 9px; font-size: 10px; font-weight: 700; }
 .select, .text-input, .number-input { min-height: 36px; border: 1px solid var(--line); border-radius: 8px; padding: 0 10px; background: #fff; color: var(--ink); font-size: 11px; }
 .number-input { width: 100px; }
-.trace-panel-header { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.trace-panel-header { position: relative; display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.trace-clear-btn { position: absolute; top: 12px; right: 20px; z-index: 2; }
 .trace-heading { min-width: 0; }
 .trace-control-row { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 8px; min-width: 0; }
 .trace-control-row label { display: grid; gap: 5px; color: var(--muted); font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; min-width: 0; }
