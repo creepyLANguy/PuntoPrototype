@@ -267,10 +267,14 @@ function deviceActivityFor(deviceId) {
 
 function lastErrorDescription(entry) {
   if (!entry) return "No errors recorded this session";
+  if (entry.simulator?.failureMode === "malformed") {
+    return "Malformed JSON response";
+  }
   const body = entry.response?.body;
   const detail =
     entry.response?.error ||
     (body && typeof body === "object" ? body.error : null) ||
+    (entry.code === "TIMEOUT" ? "Request timed out" : null) ||
     entry.detail ||
     entry.summary;
   return String(detail || entry.summary);
