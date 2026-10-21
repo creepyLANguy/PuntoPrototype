@@ -5,6 +5,7 @@ import { playSound } from "../audio/audio.js";
 import { EVENT_TYPES, SOUND_IDS, TOAST_TYPES } from "../config/constants.js";
 import { NAV_PAGES } from "../config/routes.js";
 import { openPlayerJoinPrompt } from "../court/playJoin.js";
+import { toggleCourtQrPanel } from "../qr/courtQr.js";
 import { enterCourt } from "../court/session.js";
 import { showMatchDetails } from "../details/matchDetails.js";
 import { manageMatch } from "../firebase/callables.js";
@@ -257,6 +258,13 @@ export function registerScoreboardControls() {
   });
 
   elements.fullscreenBtn.addEventListener("click", toggleFullscreen);
+
+  if (elements.courtQrToggleBtn) {
+    elements.courtQrToggleBtn.addEventListener("click", () => {
+      toggleCourtQrPanel();
+      syncSettingsTiles();
+    });
+  }
 
   $("addPointA").addEventListener("click", () =>
     addPoint(EVENT_TYPES.POINT_TEAM_A),
