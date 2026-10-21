@@ -1,3 +1,31 @@
+/* Compact loading feedback for Admin Portal tab lists. */
+.admin-list-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 96px;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.admin-list-loading-spinner {
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
+  border: 3px solid var(--input-border, rgba(255, 255, 255, 0.16));
+  border-top-color: var(--teamAcolour);
+  border-right-color: var(--teamBcolour);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .admin-list-loading-spinner {
+    animation: none;
+  }
+}
+
 /* =======================================================*/
 
 .loader {

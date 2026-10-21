@@ -14,6 +14,7 @@ import {
 } from "../match/matchIdentity.js";
 import { getCourtCredentials } from "../state/credentialsState.js";
 import { elements } from "../ui/dom.js";
+import { showAdminListSpinner } from "../ui/loading.js";
 import { showConfirm } from "../ui/modals.js";
 import { showToast } from "../ui/toast.js";
 
@@ -37,8 +38,7 @@ function bindFilters() {
 export async function loadAdminMatches() {
   bindFilters();
   if (!elements.adminMatchList) return;
-  elements.adminMatchList.innerHTML =
-    '<div class="loading">Loading matches...</div>';
+  showAdminListSpinner(elements.adminMatchList, "Loading matches");
   try {
     const status = elements.adminMatchStatusFilter?.value || "live";
     const [matchesSnap, courtsSnap] = await Promise.all([

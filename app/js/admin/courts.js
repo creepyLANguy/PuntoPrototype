@@ -48,7 +48,7 @@ import {
   resolvePersistedTeamNames,
 } from "../teams/teamNames.js";
 import { elements } from "../ui/dom.js";
-import { hideSpinner, showSpinner } from "../ui/loading.js";
+import { hideSpinner, showSpinner, showAdminListSpinner } from "../ui/loading.js";
 import { showConfirm } from "../ui/modals.js";
 import { showToast } from "../ui/toast.js";
 
@@ -109,8 +109,7 @@ export function registerAdminCourtFilters() {
 }
 
 export async function displayAdminCourtList() {
-  elements.adminCourtList.innerHTML =
-    '<div class="loading">Loading all courts...</div>';
+  showAdminListSpinner(elements.adminCourtList, "Loading courts");
 
   try {
     const [snapshot, clubIndex, liveMatches] = await Promise.all([

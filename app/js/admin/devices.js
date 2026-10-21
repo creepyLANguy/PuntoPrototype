@@ -22,6 +22,7 @@ import { stepBackInApp, syncCurrentViewState } from "../routing/history.js";
 import { createViewState } from "../routing/viewState.js";
 import { appState } from "../state/appState.js";
 import { elements } from "../ui/dom.js";
+import { showAdminListSpinner } from "../ui/loading.js";
 import { showConfirm } from "../ui/modals.js";
 import { showToast } from "../ui/toast.js";
 
@@ -285,8 +286,7 @@ function filterDevices(searchTerm) {
 
 // Device Management Functions
 export async function loadDevices() {
-  elements.adminDeviceList.innerHTML =
-    '<div class="loading">Loading devices...</div>';
+  showAdminListSpinner(elements.adminDeviceList, "Loading devices");
   try {
     const [snapshot, clubIndex] = await Promise.all([
       getAllDevices(),
@@ -299,6 +299,7 @@ export async function loadDevices() {
     }));
     renderDeviceList(filterDevices(elements.adminDeviceSearch.value));
   } catch (error) {
+    elements.adminDeviceList.innerHTML = '<div class="error">Error loading devices.</div>';
     showToast("Error loading devices:\n" + error.message, TOAST_TYPES.ERROR);
   }
 }

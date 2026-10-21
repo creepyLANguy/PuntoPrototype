@@ -5,6 +5,7 @@ import { getAllTournaments } from "../firebase/tournamentRepository.js";
 import { getTournamentPath } from "../match/matchIdentity.js";
 import { anyValueMatches, normalizeSearchTerm } from "../clubs/clubIndex.js";
 import { elements } from "../ui/dom.js";
+import { showAdminListSpinner } from "../ui/loading.js";
 
 const STATUS_ORDER = {
   live: 0,
@@ -27,7 +28,7 @@ export async function loadAdminTournaments() {
   bindFilters();
   const list = elements.adminTournamentList;
   if (!list) return;
-  list.innerHTML = '<div class="loading">Loading tournaments...</div>';
+  showAdminListSpinner(list, "Loading tournaments");
   try {
     const snapshot = await getAllTournaments();
     const tournaments = snapshot.docs
