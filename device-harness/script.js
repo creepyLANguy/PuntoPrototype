@@ -23,9 +23,12 @@ const state = {
   environmentMismatch: false,
   devices: [],
   devicesLoading: true,
+  deviceSearch: "",
   courts: [],
   courtsLoading: true,
   courtSearch: "",
+  virtualDeviceCourtSearch: "",
+  virtualDeviceCourtId: null,
   courtDetailsLoading: false,
   scoreLoading: false,
   eventsLoading: false,
@@ -546,6 +549,26 @@ function renderCourtSelectors() {
   if (current && !allCourts.some((court) => court.id === current) && !state.courtsLoading) {
     allCourts.push({ id: current, name: current });
   }
+
+  const filterCourts = (courts, search) => {
+    const normalizedSearch = String(search || "").trim().toLocaleLowerCase();
+    let visible = normalizedSearch
+      ? courts.filter((court) =>
+          (String(court.name || "") + " " + String(court.id || ""))
+            .toLocaleLowerCase()
+            .includes(normalizedSearch),
+        )
+      : courts.slice();
+
+    // Preserve the selected court in the list even while the search is being edited.
+    const selectedId = arguments.length > 2 ? arguments[2] : "";
+    if (selectedId && !visible.some((court) => court.id === selectedId)) {
+      const selected = courts.find((court) => court.id === selectedId);
+      if (selected) visible.unshift(selected);
+    }
+    return visible;
+  };
+
   const search = String(state.courtSearch || "").trim().toLocaleLowerCase();
   let visibleCourts = search
     ? allCourts.filter((court) =>
@@ -557,33 +580,85 @@ function renderCourtSelectors() {
     if (selected) visibleCourts.unshift(selected);
   }
 
+  const modalCurrent = state.virtualDeviceCourtId ?? state.selectedCourtId ?? "";
+  const modalCourts = state.courts.slice();
+  if (modalCurrent && !modalCourts.some((court) => court.id === modalCurrent) && !state.courtsLoading) {
+    modalCourts.push({ id: modalCurrent, name: modalCurrent });
+  }
+  const modalSearch = String(state.virtualDeviceCourtSearch || "").trim().toLocaleLowerCase();
+  let visibleModalCourts = modalSearch
+    ? modalCourts.filter((court) =>
+        (String(court.name || "") + " " + String(court.id || "")).toLocaleLowerCase().includes(modalSearch),
+      )
+    : modalCourts.slice();
+  if (modalCurrent && !visibleModalCourts.some((court) => court.id === modalCurrent)) {
+    const selected = modalCourts.find((court) => court.id === modalCurrent);
+    if (selected) visibleModalCourts.unshift(selected);
+  }
+
   const courtOption = (court) =>
     '<option value="' + escapeHtml(court.id) + '">' +
     escapeHtml(court.name || court.id) + " · " + escapeHtml(court.id) + "</option>";
-  const placeholder = state.courtsLoading
+
+  const mainPlaceholder = state.courtsLoading
     ? "Loading courts…"
     : !state.courts.length
       ? "No courts available"
-      : search && !visibleCourts.length
+      : search && visibleCourts.length === 0
         ? "No matching courts"
         : "Select a court…";
   $("courtSelect").innerHTML =
-    '<option value="">' + placeholder + "</option>" + visibleCourts.map(courtOption).join("");
-  $("virtualDeviceCourt").innerHTML =
-    '<option value="">Select a court…</option>' + state.courts.map(courtOption).join("");
+    '<option value="">' + mainPlaceholder + "</option>" + visibleCourts.map(courtOption).join("");
   $("courtSelect").value = current || "";
-  $("virtualDeviceCourt").value = current || "";
   $("courtSelect").disabled = state.courtsLoading || visibleCourts.length === 0;
   $("courtSearch").disabled = state.courtsLoading || state.courts.length === 0;
   $("courtLoadingSpinner").classList.toggle("hidden", !state.courtsLoading);
+  $("courtCount").textContent = search
+    ? visibleCourts.length + (visibleCourts.length === 1 ? " matching court" : " matching courts")
+    : visibleCourts.length + (visibleCourts.length === 1 ? " court" : " courts");
+
+  const modalPlaceholder = state.courtsLoading
+    ? "Loading courts…"
+    : !state.courts.length
+      ? "No courts available"
+      : modalSearch && visibleModalCourts.length === 0
+        ? "No matching courts"
+        : "Select a court…";
+  $("virtualDeviceCourt").innerHTML =
+    '<option value="">' + modalPlaceholder + "</option>" +
+    visibleModalCourts.map(courtOption).join("");
+  $("virtualDeviceCourt").value = modalCurrent || "";
+  $("virtualDeviceCourt").disabled = state.courtsLoading || visibleModalCourts.length === 0;
+  $("virtualDeviceCourtSearch").disabled = state.courtsLoading || state.courts.length === 0;
+  $("virtualDeviceCourtCount").textContent = modalSearch
+    ? visibleModalCourts.length + (visibleModalCourts.length === 1 ? " matching court" : " matching courts")
+    : visibleModalCourts.length + (visibleModalCourts.length === 1 ? " court" : " courts");
 }
 
 function renderDeviceList() {
-  const physical = state.devices.filter((device) => device.isVirtual !== true);
-  const virtual = state.devices.filter((device) => device.isVirtual === true);
+  const search = String(state.deviceSearch || "").trim().toLocaleLowerCase();
+  const matchesSearch = (device) => {
+    if (!search) return true;
+    const court = state.courts.find((item) => item.id === device.courtId);
+    const searchText = [
+      device.id,
+      device.deviceSKU,
+      normaliseSku(device.deviceSKU),
+      device.courtId,
+      court?.name,
+      device.simulatorProfile,
+      device.isVirtual === true ? "virtual" : "physical",
+    ].filter(Boolean).join(" ").toLocaleLowerCase();
+    return searchText.includes(search);
+  };
+
+  const allPhysical = state.devices.filter((device) => device.isVirtual !== true);
+  const allVirtual = state.devices.filter((device) => device.isVirtual === true);
+  const physical = allPhysical.filter(matchesSearch);
+  const virtual = allVirtual.filter(matchesSearch);
   $("deviceCount").textContent = state.devicesLoading ? "…" : String(state.devices.length);
-  $("physicalDeviceCount").textContent = state.devicesLoading ? "…" : String(physical.length);
-  $("virtualDeviceCount").textContent = state.devicesLoading ? "…" : String(virtual.length);
+  $("physicalDeviceCount").textContent = state.devicesLoading ? "…" : String(allPhysical.length);
+  $("virtualDeviceCount").textContent = state.devicesLoading ? "…" : String(allVirtual.length);
 
   const loadingMarkup = (label) =>
     '<div class="loading-state" role="status" aria-live="polite"><span class="spinner" aria-hidden="true"></span><span>' +
@@ -607,16 +682,20 @@ function renderDeviceList() {
     );
   };
 
+  const emptyMessage = (type, allDevices) => search
+    ? '<div class="hint device-group-empty">No ' + type + ' devices match “' + escapeHtml(state.deviceSearch) + '”.</div>'
+    : '<div class="hint device-group-empty">No ' + type + ' devices registered.</div>';
+
   $("physicalDeviceList").innerHTML = state.devicesLoading
     ? loadingMarkup("Loading physical devices…")
     : physical.length
       ? physical.map(renderCard).join("")
-      : '<div class="hint device-group-empty">No physical devices registered.</div>';
+      : emptyMessage("physical", allPhysical);
   $("virtualDeviceList").innerHTML = state.devicesLoading
     ? loadingMarkup("Loading virtual devices…")
     : virtual.length
       ? virtual.map(renderCard).join("")
-      : '<div class="hint device-group-empty">No virtual devices registered.</div>';
+      : emptyMessage("virtual", allVirtual);
 
   document.querySelectorAll("[data-device-id]").forEach((button) => {
     button.addEventListener("click", () => selectDevice(button.dataset.deviceId));
@@ -1557,8 +1636,19 @@ async function createVirtualDevice() {
   const deviceId = $("virtualDeviceId").value.trim();
   const deviceSKU = $("virtualDeviceSku").value;
   const courtId = $("virtualDeviceCourt").value;
-  if (!deviceId || !courtId) {
-    showToast("Device ID and court are required.", "error");
+  if (!deviceId) {
+    showToast("Enter a device ID before creating the virtual device.", "error");
+    $("virtualDeviceId").focus();
+    return;
+  }
+  if (!deviceSKU) {
+    showToast("Select a device type.", "error");
+    $("virtualDeviceSku").focus();
+    return;
+  }
+  if (!courtId || !state.courts.some((court) => court.id === courtId)) {
+    showToast("Select a valid court before creating the virtual device.", "error");
+    $("virtualDeviceCourt").focus();
     return;
   }
   const ref = doc(db, "devices", deviceId);
@@ -1636,6 +1726,18 @@ function initHarness() {
     state.courtSearch = event.target.value || "";
     renderCourtSelectors();
   });
+  $("deviceSearch").addEventListener("input", (event) => {
+    state.deviceSearch = event.target.value || "";
+    renderDeviceList();
+  });
+  $("virtualDeviceCourtSearch").addEventListener("input", (event) => {
+    state.virtualDeviceCourtSearch = event.target.value || "";
+    renderCourtSelectors();
+  });
+  $("virtualDeviceCourt").addEventListener("change", (event) => {
+    state.virtualDeviceCourtId = event.target.value || "";
+    renderCourtSelectors();
+  });
   $("viewCourtInfoBtn").addEventListener("click", () => {
     const device = currentDevice();
     if (device?.courtId) selectCourt(device.courtId);
@@ -1687,9 +1789,14 @@ function initHarness() {
     if (!requireMutationAccess()) return;
     $("virtualDeviceId").value =
       "SIM-" + Math.random().toString(36).slice(2, 8).toUpperCase();
+    state.virtualDeviceCourtSearch = "";
+    state.virtualDeviceCourtId = state.selectedCourtId || "";
+    $("virtualDeviceCourtSearch").value = "";
     renderCourtSelectors();
     openHarnessDialog($("deviceDialog"), "#virtualDeviceId");
   });
+  $("closeDeviceDialogBtn").addEventListener("click", () => $("deviceDialog").close());
+  $("cancelDeviceDialogBtn").addEventListener("click", () => $("deviceDialog").close());
   $("createVirtualDeviceBtn").addEventListener("click", (event) => {
     event.preventDefault();
     void createVirtualDevice();
