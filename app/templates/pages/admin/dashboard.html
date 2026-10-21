@@ -24,86 +24,94 @@
 
         <div id="allTab" class="tab-content active">
           <div class="admin-tool-grid" aria-label="Admin portal tools">
-            <button type="button" class="admin-tool-tile" data-tab="tournaments">
-              <svg class="admin-tool-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
-                <path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4Z" />
-                <path d="M7 6H4v2a4 4 0 0 0 4 4M17 6h3v2a4 4 0 0 1-4 4" />
-              </svg>
-              <span class="admin-tool-copy">
-                <span class="admin-tool-label">Tournaments</span>
-              </span>
-            </button>
-            <button type="button" class="admin-tool-tile" data-tab="clubs">
-              <svg class="admin-tool-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
-                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-                <circle cx="9" cy="7" r="4" />
-                <path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
-              </svg>
-              <span class="admin-tool-copy">
-                <span class="admin-tool-label">Clubs</span>
-              </span>
-            </button>
-            <button type="button" class="admin-tool-tile" data-tab="courts">
-              <svg class="admin-tool-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
-                <rect x="3" y="3" width="18" height="18" rx="1.5" />
-                <path d="M12 3v18M3 8h4v8H3M21 8h-4v8h4" />
-                <circle cx="12" cy="12" r="2" />
-              </svg>
-              <span class="admin-tool-copy">
-                <span class="admin-tool-label">Courts</span>
-              </span>
-            </button>
-            <button type="button" class="admin-tool-tile" data-tab="matches">
-              <svg class="admin-tool-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
-                <rect x="3" y="4" width="18" height="16" rx="2" />
-                <path d="M8 9h2m4 0h2M8 15h2m4 0h2M12 7v10" />
-              </svg>
-              <span class="admin-tool-copy">
-                <span class="admin-tool-label">Matches</span>
-              </span>
-            </button>
-            <button type="button" class="admin-tool-tile" data-tab="devices">
-              <svg class="admin-tool-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
-                <rect x="2.5" y="3.5" width="13" height="13" rx="2" />
-                <path d="M6.5 20.5h5M9 16.5v4" />
-                <rect x="17.5" y="7.5" width="4" height="13" rx="1" />
-                <path d="M19 17.5h1" />
-              </svg>
-              <span class="admin-tool-copy">
-                <span class="admin-tool-label">Devices</span>
-              </span>
-            </button>
-            <button type="button" class="admin-tool-tile-ext" data-admin-tool="nfc">
-              <svg class="admin-tool-icon-ext" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
-                <rect x="3" y="5" width="10" height="14" rx="1.5" />
-                <path d="M6 9h4M6 12h2" />
-                <path d="M15 8a5 5 0 0 1 0 8M17.5 5.5a8.5 8.5 0 0 1 0 13M12.5 10.5a2.5 2.5 0 0 1 0 3" />
-              </svg>
-              <span class="admin-tool-copy">
-                <span class="admin-tool-label">NFC Tool</span>
-              </span>
-            </button>
-            <button type="button" class="admin-tool-tile-ext" data-admin-tool="harness">
-              <svg class="admin-tool-icon-ext" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
-                <rect x="4" y="4" width="16" height="16" rx="2" />
-                <rect x="8" y="8" width="8" height="8" rx="1" />
-                <path d="M9 1.5v2.5M15 1.5v2.5M9 20v2.5M15 20v2.5M1.5 9H4M1.5 15H4M20 9h2.5M20 15h2.5" />
-              </svg>
-              <span class="admin-tool-copy">
-                <span class="admin-tool-label">Device Harness</span>
-              </span>
-            </button>
-            <button type="button" class="admin-tool-tile-theme" data-admin-tool="theme">
-              <svg class="admin-tool-icon-theme" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
-                <path d="M12 3a9 9 0 1 0 0 18h1.1a2 2 0 0 0 1.55-3.27 1.7 1.7 0 0 1 1.3-2.78H18a3 3 0 0 0 3-3A9 9 0 0 0 12 3Z" />
-                <circle cx="7.5" cy="10" r="1" />
-                <circle cx="10" cy="6.5" r="1" />
-                <circle cx="15" cy="7.5" r="1" />
-              </svg>
-              <span class="admin-tool-copy">
-                <span class="admin-tool-label">Theme Picker</span>
-              </span>
-            </button>
+            <div class="admin-tool-group admin-tool-group-primary" role="group" aria-label="Main admin tools">
+              <button type="button" class="admin-tool-tile" data-tab="tournaments">
+                <svg class="admin-tool-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
+                  <path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4Z" />
+                  <path d="M7 6H4v2a4 4 0 0 0 4 4M17 6h3v2a4 4 0 0 1-4 4" />
+                </svg>
+                <span class="admin-tool-copy">
+                  <span class="admin-tool-label">Tournaments</span>
+                </span>
+              </button>
+              <button type="button" class="admin-tool-tile" data-tab="clubs">
+                <svg class="admin-tool-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
+                  <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                  <circle cx="9" cy="7" r="4" />
+                  <path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
+                </svg>
+                <span class="admin-tool-copy">
+                  <span class="admin-tool-label">Clubs</span>
+                </span>
+              </button>
+              <button type="button" class="admin-tool-tile" data-tab="courts">
+                <svg class="admin-tool-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
+                  <rect x="3" y="3" width="18" height="18" rx="1.5" />
+                  <path d="M12 3v18M3 8h4v8H3M21 8h-4v8h4" />
+                  <circle cx="12" cy="12" r="2" />
+                </svg>
+                <span class="admin-tool-copy">
+                  <span class="admin-tool-label">Courts</span>
+                </span>
+              </button>
+              <button type="button" class="admin-tool-tile" data-tab="matches">
+                <svg class="admin-tool-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
+                  <rect x="3" y="4" width="18" height="16" rx="2" />
+                  <path d="M8 9h2m4 0h2M8 15h2m4 0h2M12 7v10" />
+                </svg>
+                <span class="admin-tool-copy">
+                  <span class="admin-tool-label">Matches</span>
+                </span>
+              </button>
+              <button type="button" class="admin-tool-tile" data-tab="devices">
+                <svg class="admin-tool-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
+                  <rect x="2.5" y="3.5" width="13" height="13" rx="2" />
+                  <path d="M6.5 20.5h5M9 16.5v4" />
+                  <rect x="17.5" y="7.5" width="4" height="13" rx="1" />
+                  <path d="M19 17.5h1" />
+                </svg>
+                <span class="admin-tool-copy">
+                  <span class="admin-tool-label">Devices</span>
+                </span>
+              </button>
+            </div>
+            <hr class="admin-tool-divider" />
+            <div class="admin-tool-group admin-tool-group-device" role="group" aria-label="NFC and device tools">
+              <button type="button" class="admin-tool-tile-ext" data-admin-tool="nfc">
+                <svg class="admin-tool-icon-ext" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
+                  <rect x="3" y="5" width="10" height="14" rx="1.5" />
+                  <path d="M6 9h4M6 12h2" />
+                  <path d="M15 8a5 5 0 0 1 0 8M17.5 5.5a8.5 8.5 0 0 1 0 13M12.5 10.5a2.5 2.5 0 0 1 0 3" />
+                </svg>
+                <span class="admin-tool-copy">
+                  <span class="admin-tool-label">NFC Tool</span>
+                </span>
+              </button>
+              <button type="button" class="admin-tool-tile-ext" data-admin-tool="harness">
+                <svg class="admin-tool-icon-ext" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
+                  <rect x="4" y="4" width="16" height="16" rx="2" />
+                  <rect x="8" y="8" width="8" height="8" rx="1" />
+                  <path d="M9 1.5v2.5M15 1.5v2.5M9 20v2.5M15 20v2.5M1.5 9H4M1.5 15H4M20 9h2.5M20 15h2.5" />
+                </svg>
+                <span class="admin-tool-copy">
+                  <span class="admin-tool-label">Device Lab</span>
+                </span>
+              </button>
+            </div>
+            <hr class="admin-tool-divider" />
+            <div class="admin-tool-group admin-tool-group-appearance" role="group" aria-label="Appearance tools">
+              <button type="button" class="admin-tool-tile-theme" data-admin-tool="theme">
+                <svg class="admin-tool-icon-theme" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
+                  <path d="M12 3a9 9 0 1 0 0 18h1.1a2 2 0 0 0 1.55-3.27 1.7 1.7 0 0 1 1.3-2.78H18a3 3 0 0 0 3-3A9 9 0 0 0 12 3Z" />
+                  <circle cx="7.5" cy="10" r="1" />
+                  <circle cx="10" cy="6.5" r="1" />
+                  <circle cx="15" cy="7.5" r="1" />
+                </svg>
+                <span class="admin-tool-copy">
+                  <span class="admin-tool-label">Theme Picker</span>
+                </span>
+              </button>
+            </div>
           </div>
         </div>
 
