@@ -103,9 +103,7 @@
               <select id="courtSelect" class="select court-select" aria-label="Select court" disabled><option value="">Loading courts…</option></select>
               <span id="courtLoadingSpinner" class="spinner inline-select-spinner" role="status" aria-label="Loading courts"></span>
             </div>
-            <span id="courtCount" class="court-count" aria-live="polite">— courts</span>
           </div>
-          <button id="clearTraceBtn" class="btn secondary">Clear trace</button>
         </div>
       </header>
 
@@ -157,6 +155,7 @@
                   <h2>Network trace</h2>
                 </div>
               </div>
+              <button id="clearTraceBtn" class="btn secondary trace-clear-btn" type="button">Clear Trace</button>
               <div class="trace-control-row" role="group" aria-label="Network failure controls">
                 <label for="failureMode" class="failure-mode-control">
                   <span>Failure mode</span>
