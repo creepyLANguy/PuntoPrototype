@@ -629,7 +629,9 @@ function renderDeviceList() {
   const allVirtual = state.devices.filter((device) => device.isVirtual === true);
   const physical = allPhysical.filter(matchesSearch);
   const virtual = allVirtual.filter(matchesSearch);
-  $("deviceCount").textContent = state.devicesLoading ? "…" : String(state.devices.length);
+  $("deviceCount").textContent = state.devicesLoading
+    ? "…"
+    : physical.length + virtual.length + " / " + state.devices.length;
   $("physicalDeviceCount").textContent = state.devicesLoading
     ? "…"
     : physical.length + " / " + allPhysical.length;
