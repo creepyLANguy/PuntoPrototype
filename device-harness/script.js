@@ -790,9 +790,50 @@ function updateViewCourtInfoButton(device = currentDevice()) {
   button.title = enabled ? "Load the court assigned to this device" : "Select a device with an assigned court";
 }
 
+function renderDeviceActivity() {
+  const container = $("deviceActivity");
+  if (!container) return;
+
+  const device = currentDevice();
+  if (!device) {
+    container.innerHTML =
+      '<div class="panel-empty-state device-activity-empty">Select a device to view its latest event and error.</div>';
+    return;
+  }
+
+  const { lastEvent, lastError } = deviceActivityFor(device.id);
+  const cards = [
+    {
+      label: "Last event",
+      value: lastEvent
+        ? String(lastEvent.request?.body?.eventType || lastEvent.summary || "Unknown event")
+        : "No events recorded this session",
+      timestamp: lastEvent ? formatTimestamp(lastEvent.startedAt) : "",
+    },
+    {
+      label: "Last error",
+      value: lastError
+        ? lastErrorDescription(lastError)
+        : "No errors recorded this session",
+      timestamp: lastError ? formatTimestamp(lastError.startedAt) : "",
+    },
+  ];
+
+  container.innerHTML = cards.map((card) =>
+    '<div class="device-activity-card">' +
+      '<div class="device-activity-label">' + escapeHtml(card.label) + '</div>' +
+      '<div class="device-activity-value">' + escapeHtml(card.value) + '</div>' +
+      (card.timestamp
+        ? '<div class="device-activity-time">' + escapeHtml(card.timestamp) + '</div>'
+        : '') +
+    '</div>',
+  ).join("");
+}
+
 function renderSelectedDevice() {
   const device = currentDevice();
   updateViewCourtInfoButton(device);
+  renderDeviceActivity();
   if (!device) {
     $("selectedDeviceValue").textContent = "—";
     $("deviceTitle").textContent = "No device selected";
@@ -826,21 +867,6 @@ function renderSelectedDevice() {
     ["Created", formatTimestamp(device.createdAt)],
   ];
 
-  const { lastEvent, lastError } = deviceActivityFor(device.id);
-  fields.push(
-    [
-      "Last event",
-      lastEvent
-        ? String(lastEvent.request.body.eventType) + " · " + formatTimestamp(lastEvent.startedAt)
-        : "No events recorded this session",
-    ],
-    [
-      "Last error",
-      lastError
-        ? lastErrorDescription(lastError) + " · " + formatTimestamp(lastError.startedAt)
-        : "No errors recorded this session",
-    ],
-  );
   $("deviceIdentity").innerHTML = fields.map(
     ([label, value]) =>
       '<div class="identity-cell"><div class="identity-label">' + escapeHtml(label) +
@@ -989,6 +1015,7 @@ function addTrace(entry) {
   state.trace.unshift(entry);
   state.trace = state.trace.slice(0, 250);
   state.selectedTraceId = entry.id;
+  renderDeviceActivity();
   renderTrace();
   renderExchange(entry);
 }
@@ -1556,8 +1583,19 @@ async function createVirtualDevice() {
 function updateFailureUi() {
   const mode = $("failureMode").value;
   state.failure.mode = mode;
-  $("latencyControl").classList.toggle("hidden", mode !== "latency");
-  $("timeoutControl").classList.toggle("hidden", mode !== "timeout");
+
+  const latencyEnabled = mode === "latency";
+  const latencyControl = $("latencyControl");
+  latencyControl.classList.toggle("is-disabled", !latencyEnabled);
+  latencyControl.setAttribute("aria-disabled", String(!latencyEnabled));
+  $("latencyMs").disabled = !latencyEnabled;
+
+  const timeoutEnabled = mode === "timeout";
+  const timeoutControl = $("timeoutControl");
+  timeoutControl.classList.toggle("is-disabled", !timeoutEnabled);
+  timeoutControl.setAttribute("aria-disabled", String(!timeoutEnabled));
+  $("timeoutMs").disabled = !timeoutEnabled;
+
   const descriptions = {
     none: "Normal requests are sent to the real backend.",
     latency:
