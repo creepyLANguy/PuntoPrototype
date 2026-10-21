@@ -27,6 +27,7 @@ const state = {
   courts: [],
   courtsLoading: true,
   courtSearch: "",
+  courtSearchEdited: false,
   virtualDeviceCourtSearch: "",
   virtualDeviceCourtId: null,
   courtDetailsLoading: false,
@@ -545,21 +546,14 @@ async function loadDevices() {
 
 function renderCourtSelectors() {
   const current = state.selectedCourtId;
-  const allCourts = state.courts.slice();
-  if (current && !allCourts.some((court) => court.id === current) && !state.courtsLoading) {
-    allCourts.push({ id: current, name: current });
-  }
-
   const search = String(state.courtSearch || "").trim().toLocaleLowerCase();
-  let visibleCourts = search
-    ? allCourts.filter((court) =>
-        (String(court.name || "") + " " + String(court.id || "")).toLocaleLowerCase().includes(search),
+  const visibleCourts = search
+    ? state.courts.filter((court) =>
+        (String(court.name || "") + " " + String(court.id || ""))
+          .toLocaleLowerCase()
+          .includes(search),
       )
-    : allCourts.slice();
-  if (current && !visibleCourts.some((court) => court.id === current)) {
-    const selected = allCourts.find((court) => court.id === current);
-    if (selected) visibleCourts.unshift(selected);
-  }
+    : state.courts.slice();
 
   const modalCurrent = state.virtualDeviceCourtId ?? state.selectedCourtId ?? "";
   const modalCourts = state.courts.slice();
@@ -569,7 +563,9 @@ function renderCourtSelectors() {
   const modalSearch = String(state.virtualDeviceCourtSearch || "").trim().toLocaleLowerCase();
   let visibleModalCourts = modalSearch
     ? modalCourts.filter((court) =>
-        (String(court.name || "") + " " + String(court.id || "")).toLocaleLowerCase().includes(modalSearch),
+        (String(court.name || "") + " " + String(court.id || ""))
+          .toLocaleLowerCase()
+          .includes(modalSearch),
       )
     : modalCourts.slice();
   if (modalCurrent && !visibleModalCourts.some((court) => court.id === modalCurrent)) {
@@ -583,20 +579,16 @@ function renderCourtSelectors() {
 
   const mainPlaceholder = state.courtsLoading
     ? "Loading courts…"
-    : !state.courts.length
-      ? "No courts available"
-      : search && visibleCourts.length === 0
-        ? "No matching courts"
-        : "Select a court…";
+    : visibleCourts.length + " / " + state.courts.length + " matching courts";
   $("courtSelect").innerHTML =
-    '<option value="">' + mainPlaceholder + "</option>" + visibleCourts.map(courtOption).join("");
-  $("courtSelect").value = current || "";
+    '<option value="">' + mainPlaceholder + "</option>" +
+    visibleCourts.map(courtOption).join("");
+  // Editing search returns the visible select to its default/count option without
+  // changing the court currently loaded in the live-state panel.
+  $("courtSelect").value = state.courtSearchEdited ? "" : current || "";
   $("courtSelect").disabled = state.courtsLoading || visibleCourts.length === 0;
   $("courtSearch").disabled = state.courtsLoading || state.courts.length === 0;
   $("courtLoadingSpinner").classList.toggle("hidden", !state.courtsLoading);
-  $("courtCount").textContent = search
-    ? visibleCourts.length + (visibleCourts.length === 1 ? " matching court" : " matching courts")
-    : visibleCourts.length + (visibleCourts.length === 1 ? " court" : " courts");
 
   const modalPlaceholder = state.courtsLoading
     ? "Loading courts…"
@@ -638,8 +630,12 @@ function renderDeviceList() {
   const physical = allPhysical.filter(matchesSearch);
   const virtual = allVirtual.filter(matchesSearch);
   $("deviceCount").textContent = state.devicesLoading ? "…" : String(state.devices.length);
-  $("physicalDeviceCount").textContent = state.devicesLoading ? "…" : String(allPhysical.length);
-  $("virtualDeviceCount").textContent = state.devicesLoading ? "…" : String(allVirtual.length);
+  $("physicalDeviceCount").textContent = state.devicesLoading
+    ? "…"
+    : physical.length + " / " + allPhysical.length;
+  $("virtualDeviceCount").textContent = state.devicesLoading
+    ? "…"
+    : virtual.length + " / " + allVirtual.length;
 
   const loadingMarkup = (label) =>
     '<div class="loading-state" role="status" aria-live="polite"><span class="spinner" aria-hidden="true"></span><span>' +
@@ -726,6 +722,7 @@ function selectCourt(courtId) {
 
   state.selectedCourtId = courtId || null;
   state.courtSearch = "";
+  state.courtSearchEdited = false;
   $("courtSearch").value = "";
   state.courtDetailsLoading = Boolean(courtId);
   state.scoreLoading = Boolean(courtId);
@@ -1705,6 +1702,7 @@ function initHarness() {
   $("courtSelect").addEventListener("change", (event) => selectCourt(event.target.value));
   $("courtSearch").addEventListener("input", (event) => {
     state.courtSearch = event.target.value || "";
+    state.courtSearchEdited = true;
     renderCourtSelectors();
   });
   $("deviceSearch").addEventListener("input", (event) => {
