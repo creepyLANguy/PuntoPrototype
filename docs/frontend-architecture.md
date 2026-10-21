@@ -5,6 +5,8 @@ scoring app (`/app`, `/c`, `/p`, `/admin`), the durable match page (`/m`), the
 tournament suite (`/t`), its build, and the OBS overlay (`/overlay`,
 `/broadcast`). The landing page (`index.html`), the NFC utility (`nfc/`) and
 the Device Lab (`device-harness/`) are separate pages and are not covered here.
+The canonical Device Lab URLs are `/devicelab` and `/lab`; the older `/harness`,
+`/app/harness`, and `/device-harness` routes remain available as compatibility aliases.
 
 How the current structure was reached from the former monolithic `script.js`,
 and how behavioural equivalence was verified, is recorded in
@@ -49,7 +51,7 @@ app/
     ├── main.js             scoring app composition root
     ├── matchPage.js        /m/{matchId} composition root
     ├── tournamentPage.js   /t, /t/new and /t/{id} composition root
-    ├── firebase.js         Firebase re-export for non-app pages (device-harness)
+    ├── firebase.js         Firebase re-export for non-app pages (Device Lab under device-harness/)
     ├── brand.mjs           canonical brand registry (brand.js re-exports it)
     ├── scoreSync.mjs       stale-snapshot guard for the live score listener
     ├── jscolor.min.js      third-party (vendor) - never edit or reformat
@@ -410,7 +412,7 @@ reported for review, over 900 lines fails unless the file is listed in
 ## Compatibility notes
 
 - `app/js/firebase.js` re-exports the Firebase app, Firestore instance and SDK
-  functions for `device-harness/script.js`.
+  functions for the Device Lab page (`device-harness/script.js`).
 - Hosting sends `Cache-Control: no-cache, no-store, must-revalidate` for
   `/app/js/**`, `/app/css/**`, every `.html` file and every page URL (any path
   without a file extension, such as `/c/{courtId}`, `/admin` or `/overlay`), so

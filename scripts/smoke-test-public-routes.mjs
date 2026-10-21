@@ -81,7 +81,7 @@ function assertNotJson(response, label) {
 async function main() {
   const appMarker = "Padel Push™ - Live Scoreboard";
   const overlayMarker = "Padel Push™ — Score Overlay";
-  const deviceHarnessMarker = "Device Test Harness";
+  const deviceLabMarker = "Device Lab";
 
   for (const path of [
     "/score/zzzz",
@@ -93,12 +93,14 @@ async function main() {
   }
 
   for (const path of [
+    "/devicelab",
+    "/lab",
     "/harness",
     "/app/harness",
     "/device-harness",
     "/device-harness/index.html",
   ]) {
-    assertHtml(await request(path), deviceHarnessMarker, path);
+    assertHtml(await request(path), deviceLabMarker, path);
   }
 
   for (const path of ["/admin", "/app/admin"]) {

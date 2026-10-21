@@ -81,15 +81,15 @@ fails a push whose generated files are out of date with their sources. See
 
 ## Device Lab environment safety
 
-The Device Lab/harness is admin-gated.
+The Device Lab is admin-gated.
 
 Its environment selection is host-aware:
 
 - production hosts use the production backend;
 - qa.padelpush.co.za uses staging;
-- locally hosted harness instances intentionally use staging.
+- local Device Lab sessions intentionally use staging.
 
-The harness presents an explicit production warning and requires an acknowledgement before production mutations are enabled. This is an operational safety control for the test tool, not a substitute for server-side authorization.
+The Device Lab presents an explicit production warning and requires an acknowledgement before production mutations are enabled. This is an operational safety control for the test tool, not a substitute for server-side authorization.
 
 Production device testing must use a designated test court and be recorded as an operational test activity rather than being performed against an arbitrary customer court.
 

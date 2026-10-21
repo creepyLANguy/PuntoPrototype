@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <base href="/device-harness/" />
-  <title>Device Test Harness | Padel Push™</title>
+  <title>Device Lab | Padel Push™</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -15,7 +15,7 @@
         <button id="themeToggleGateBtn" class="icon-btn theme-icon-btn" type="button" aria-label="Toggle theme" title="Toggle theme">🌓</button>
       </div>
       <div class="eyebrow">ADMIN ACCESS</div>
-      <h1>Device Test Harness</h1>
+      <h1>Device Lab</h1>
       <p>Enter the Padel Push admin password to access this tool.</p>
       <label for="adminPassword">Admin password</label>
       <input
@@ -26,7 +26,7 @@
         aria-describedby="adminPasswordError"
       />
       <div id="adminPasswordError" class="gate-error" role="alert"></div>
-      <button id="adminUnlockBtn" class="btn brand-btn" type="button">Unlock harness</button>
+      <button id="adminUnlockBtn" class="btn brand-btn" type="button">Unlock Device Lab</button>
     </div>
   </div>
 
@@ -38,7 +38,7 @@
       </div>
       <div class="eyebrow" id="productionGateEyebrow">LIVE PRODUCTION</div>
       <h1 id="productionGateTitle">Production device simulation</h1>
-      <p id="productionGateDescription">This harness will send real device events into the production Padel Push backend and can change live court state.</p>
+      <p id="productionGateDescription">The Device Lab will send real device events into the production Padel Push backend and can change live court state.</p>
       <div id="productionGateWarning" class="gate-warning" role="alert"></div>
       <label class="check-row" for="productionAck">
         <input id="productionAck" type="checkbox" />
@@ -54,17 +54,30 @@
         <div class="brand-mark">PP</div>
         <div>
           <div class="brand-title">Padel Push™</div>
-          <div class="brand-subtitle">Device Test Harness</div>
+          <div class="brand-subtitle">Device Lab</div>
         </div>
       </div>
 
       <div class="sidebar-heading-wrap">
-        <div class="sidebar-heading">Devices <span id="deviceCount">0</span></div>
+        <div class="sidebar-heading">Total devices: <span id="deviceCount">—</span></div>
         <button id="deviceListToggle" class="device-list-toggle" type="button" aria-expanded="true" aria-controls="deviceList">
           Hide list
         </button>
       </div>
-      <div id="deviceList" class="device-list"><div class="hint">Loading devices…</div></div>
+      <label class="device-search-wrap" for="deviceSearch">
+        <span class="visually-hidden">Search devices</span>
+        <input id="deviceSearch" class="text-input device-search" type="search" placeholder="Search devices…" autocomplete="off" aria-label="Search devices" />
+      </label>
+      <div id="deviceList" class="device-list">
+        <details class="device-group" id="physicalDeviceGroup" open>
+          <summary class="device-group-heading">Physical devices <span id="physicalDeviceCount" class="device-group-count">—</span></summary>
+          <div id="physicalDeviceList" class="device-group-list"><div class="loading-state" role="status" aria-live="polite"><span class="spinner" aria-hidden="true"></span><span>Loading physical devices…</span></div></div>
+        </details>
+        <details class="device-group" id="virtualDeviceGroup" open>
+          <summary class="device-group-heading">Virtual devices <span id="virtualDeviceCount" class="device-group-count">—</span></summary>
+          <div id="virtualDeviceList" class="device-group-list"><div class="loading-state" role="status" aria-live="polite"><span class="spinner" aria-hidden="true"></span><span>Loading virtual devices…</span></div></div>
+        </details>
+      </div>
 
       <button id="addVirtualDeviceBtn" class="btn brand-btn">+ Add virtual device</button>
 
@@ -77,15 +90,20 @@
 
     <main class="main">
       <header class="topbar">
-        <div>
-          <div class="eyebrow">REAL BACKEND</div>
-          <h1>Device Test Harness</h1>
-          <p>Simulate Hub, Beacon and Pulse without physical hardware.</p>
+        <div class="topbar-intro">
+          <h1>Device Lab</h1>
+        </div>
+        <div class="environment-center">
+          <div id="environmentBadge" class="env-badge">Detecting environment…</div>
         </div>
         <div class="top-actions">
-          <div id="environmentBadge" class="env-badge">Detecting environment…</div>
-          <select id="courtSelect" class="select"></select>
-          <button id="clearTraceBtn" class="btn secondary">Clear trace</button>
+          <div class="court-picker">
+            <input id="courtSearch" class="text-input court-search" type="search" placeholder="Search courts…" autocomplete="off" aria-label="Search courts" />
+            <div class="court-select-row">
+              <select id="courtSelect" class="select court-select" aria-label="Select court" disabled><option value="">Loading courts…</option></select>
+              <span id="courtLoadingSpinner" class="spinner inline-select-spinner" role="status" aria-label="Loading courts"></span>
+            </div>
+          </div>
         </div>
       </header>
 
@@ -106,7 +124,10 @@
                 <div class="eyebrow">DEVICE</div>
                 <h2 id="deviceTitle">No device selected</h2>
               </div>
-              <div id="deviceStatus" class="status-pill">—</div>
+              <div class="device-panel-actions">
+                <button id="viewCourtInfoBtn" class="btn secondary" type="button" disabled aria-disabled="true" title="Select a device with an assigned court">View Court Info</button>
+                <div id="deviceStatus" class="status-pill">—</div>
+              </div>
             </div>
             <div id="deviceIdentity" class="identity-grid"></div>
 
@@ -127,21 +148,17 @@
           </section>
 
           <section class="panel trace-panel">
-            <div class="panel-header compact">
-              <div>
-                <div class="eyebrow">OBSERVABILITY</div>
-                <h2>Network trace</h2>
+            <div class="panel-header compact trace-panel-header">
+              <div class="trace-heading">
+                <div>
+                  <div class="eyebrow">OBSERVABILITY</div>
+                  <h2>Network trace</h2>
+                </div>
               </div>
-              <div class="trace-actions">
-                <button id="failNextBtn" class="btn warning">Arm next failure</button>
-                <button id="networkResetBtn" class="btn secondary">Reset injection</button>
-              </div>
-            </div>
-
-            <div class="failure-panel">
-              <div class="failure-main">
-                <label>
-                  Failure mode
+              <button id="clearTraceBtn" class="btn secondary trace-clear-btn" type="button">Clear Trace</button>
+              <div class="trace-control-row" role="group" aria-label="Network failure controls">
+                <label for="failureMode" class="failure-mode-control">
+                  <span>Failure mode</span>
                   <select id="failureMode" class="select">
                     <option value="none">Healthy</option>
                     <option value="latency">Artificial latency</option>
@@ -154,22 +171,25 @@
                     <option value="duplicate">Duplicate next request</option>
                   </select>
                 </label>
-                <label id="latencyControl" class="hidden">
-                  Latency
-                  <input id="latencyMs" class="number-input" type="number" min="0" max="15000" step="100" value="1500" />
-                  <span class="inline-unit">ms</span>
+                <label id="latencyControl" class="failure-time-control is-disabled" aria-disabled="true">
+                  <span>Latency (ms)</span>
+                  <input id="latencyMs" class="number-input" type="number" min="0" max="15000" step="100" value="1500" disabled />
                 </label>
-                <label id="timeoutControl" class="hidden">
-                  Timeout
-                  <input id="timeoutMs" class="number-input" type="number" min="100" max="15000" step="100" value="3000" />
-                  <span class="inline-unit">ms</span>
+                <label id="timeoutControl" class="failure-time-control is-disabled" aria-disabled="true">
+                  <span>Timeout (ms)</span>
+                  <input id="timeoutMs" class="number-input" type="number" min="100" max="15000" step="100" value="3000" disabled />
                 </label>
+                <button id="failNextBtn" class="btn warning" type="button">Arm next failure</button>
+                <button id="networkResetBtn" class="btn secondary" type="button">Reset injection</button>
               </div>
               <div class="failure-description" id="failureDescription">
                 Normal requests are sent to the real backend.
               </div>
             </div>
 
+            <div id="deviceActivity" class="device-activity-grid" aria-live="polite">
+              <div class="panel-empty-state device-activity-empty">Select a device to view its latest event and error.</div>
+            </div>
             <div id="traceList" class="trace-list"></div>
           </section>
         </div>
@@ -209,13 +229,13 @@
   </div>
 
   <dialog id="deviceDialog" class="dialog" aria-labelledby="deviceDialogTitle">
-    <form method="dialog" id="deviceForm">
+    <form id="deviceForm" novalidate>
       <div class="panel-header compact">
         <div>
           <div class="eyebrow">VIRTUAL HARDWARE</div>
           <h2 id="deviceDialogTitle">Add virtual device</h2>
         </div>
-        <button value="cancel" class="icon-btn" aria-label="Close">×</button>
+        <button id="closeDeviceDialogBtn" type="button" class="icon-btn" aria-label="Close">×</button>
       </div>
       <label>Device ID
         <input id="virtualDeviceId" class="text-input" required placeholder="SIM-HUB-001" />
@@ -227,12 +247,20 @@
           <option>Pulse</option>
         </select>
       </label>
-      <label>Mapped court
-        <select id="virtualDeviceCourt" class="select" required></select>
-      </label>
+      <div class="modal-court-picker">
+        <label for="virtualDeviceCourtSearch">Search courts</label>
+        <input id="virtualDeviceCourtSearch" class="text-input modal-court-search" type="search" placeholder="Search by court name or ID…" autocomplete="off" aria-label="Search courts for virtual device" />
+        <div class="modal-court-select-meta">
+          <label for="virtualDeviceCourt">Mapped court</label>
+          <span id="virtualDeviceCourtCount" class="court-count" aria-live="polite">— courts</span>
+        </div>
+        <select id="virtualDeviceCourt" class="select" aria-label="Mapped court" required>
+          <option value="">Select a court…</option>
+        </select>
+      </div>
       <div class="dialog-actions">
-        <button value="cancel" class="btn secondary">Cancel</button>
-        <button id="createVirtualDeviceBtn" value="default" class="btn brand-btn">Create device</button>
+        <button id="cancelDeviceDialogBtn" type="button" class="btn secondary">Cancel</button>
+        <button id="createVirtualDeviceBtn" type="button" class="btn brand-btn">Create device</button>
       </div>
     </form>
   </dialog>

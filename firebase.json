@@ -186,6 +186,22 @@
         "destination": "/app/index.html"
       },
       {
+        "source": "/devicelab",
+        "destination": "/device-harness/index.html"
+      },
+      {
+        "source": "/devicelab/**",
+        "destination": "/device-harness/index.html"
+      },
+      {
+        "source": "/lab",
+        "destination": "/device-harness/index.html"
+      },
+      {
+        "source": "/lab/**",
+        "destination": "/device-harness/index.html"
+      },
+      {
         "source": "/harness",
         "destination": "/device-harness/index.html"
       },

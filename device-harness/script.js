@@ -23,7 +23,18 @@ const state = {
   environmentMismatch: false,
   devices: [],
   devicesLoading: true,
+  deviceSearch: "",
   courts: [],
+  courtsLoading: true,
+  courtSearch: "",
+  courtSearchEdited: false,
+  virtualDeviceCourtSearch: "",
+  virtualDeviceCourtId: null,
+  courtDetailsLoading: false,
+  scoreLoading: false,
+  eventsLoading: false,
+  currentScore: null,
+  selectedMatchId: null,
   clubs: [],
   clubByCourtId: new Map(),
   clubByDeviceId: new Map(),
@@ -217,6 +228,62 @@ function formatTime(value) {
   return Number.isNaN(date.getTime()) ? "—" : date.toLocaleTimeString();
 }
 
+function formatTimestamp(value) {
+  if (!value) return "—";
+  const date = typeof value?.toDate === "function"
+    ? value.toDate()
+    : value instanceof Date
+      ? value
+      : new Date(value);
+  return Number.isNaN(date.getTime()) ? "—" : date.toLocaleString();
+}
+
+function deviceActivityFor(deviceId) {
+  const entries = state.trace.filter(
+    (entry) => entry.request?.body?.deviceId === deviceId,
+  );
+
+  const lastEvent = entries.find(
+    (entry) =>
+      entry.direction === "OUT →" &&
+      typeof entry.request?.body?.eventType === "string" &&
+      entry.request.body.eventType.length > 0,
+  ) || null;
+
+  const lastError = entries.find((entry) => {
+    if (entry.direction !== "IN ←") return false;
+    if (entry.code === "ERROR" || entry.code === "TIMEOUT") return true;
+
+    const status = Number(entry.response?.status ?? entry.code);
+    const responseBody = entry.response?.body;
+    return (
+      status >= 400 ||
+      entry.simulator?.failureMode === "malformed" ||
+      Boolean(entry.response?.error) ||
+      (responseBody !== null &&
+        typeof responseBody === "object" &&
+        (responseBody.success === false || Boolean(responseBody.error)))
+    );
+  }) || null;
+
+  return { lastEvent, lastError };
+}
+
+function lastErrorDescription(entry) {
+  if (!entry) return "No errors recorded this session";
+  if (entry.simulator?.failureMode === "malformed") {
+    return "Malformed JSON response";
+  }
+  const body = entry.response?.body;
+  const detail =
+    entry.response?.error ||
+    (body && typeof body === "object" ? body.error : null) ||
+    (entry.code === "TIMEOUT" ? "Request timed out" : null) ||
+    entry.detail ||
+    entry.summary;
+  return String(detail || entry.summary);
+}
+
 function formatJson(value) {
   return JSON.stringify(value, null, 2);
 }
@@ -253,7 +320,7 @@ function canMutate() {
 function requireMutationAccess() {
   if (state.environmentMismatch) {
     showToast(
-      "Harness mutations are blocked because the Firebase environment does not match this hostname.",
+      "Device Lab mutations are blocked because the Firebase environment does not match this hostname.",
       "error",
     );
     return false;
@@ -366,9 +433,9 @@ function updateProductionGate() {
     $("productionGateEyebrow").textContent = "CONFIGURATION BLOCKED";
     $("productionGateTitle").textContent = "Environment configuration mismatch";
     $("productionGateDescription").textContent =
-      "This harness cannot safely send mutations because the hostname and active Firebase environment do not match.";
+      "The Device Lab cannot safely send mutations because the hostname and active Firebase environment do not match.";
     warning.textContent =
-      "Correct the Firebase environment configuration before using this harness. Mutation controls remain disabled until the mismatch is resolved.";
+      "Correct the Firebase environment configuration before using the Device Lab. Mutation controls remain disabled until the mismatch is resolved.";
     ack.checked = false;
     ack.disabled = true;
     enableButton.disabled = true;
@@ -378,7 +445,7 @@ function updateProductionGate() {
   $("productionGateEyebrow").textContent = "LIVE PRODUCTION";
   $("productionGateTitle").textContent = "Production device simulation";
   $("productionGateDescription").textContent =
-    "This harness will send real device events into the production Padel Push backend and can change live court state.";
+    "The Device Lab will send real device events into the production Padel Push backend and can change live court state.";
   warning.textContent = "";
   ack.disabled = false;
   enableButton.disabled = !ack.checked;
@@ -437,15 +504,23 @@ function clubForDevice(device) {
 }
 
 async function loadCourts() {
-  if (state.clubs.length === 0) {
-    await loadClubs();
-  }
-  const snapshot = await getDocs(collection(db, "courts"));
-  state.courts = snapshot.docs.map((item) => ({ id: item.id, ...item.data() }));
-  state.courts.sort((a, b) => a.id.localeCompare(b.id));
+  state.courtsLoading = true;
   renderCourtSelectors();
-  if (!state.selectedCourtId && state.courts[0]) {
-    selectCourt(state.courts[0].id);
+
+  try {
+    if (state.clubs.length === 0) await loadClubs();
+    const snapshot = await getDocs(collection(db, "courts"));
+    state.courts = snapshot.docs.map((item) => ({ id: item.id, ...item.data() }));
+    state.courts.sort((a, b) => a.id.localeCompare(b.id));
+    renderCourtSelectors();
+    renderDeviceList();
+    renderSelectedDevice();
+    if (state.selectedCourtId) renderCourtState({ court: currentCourt() });
+  } finally {
+    state.courtsLoading = false;
+    renderCourtSelectors();
+    renderDeviceList();
+    renderSelectedDevice();
   }
 }
 
@@ -455,18 +530,13 @@ async function loadDevices() {
 
   try {
     const snapshot = await getDocs(collection(db, "devices"));
-    state.devices = snapshot.docs.map((item) => ({
-      id: item.id,
-      ...item.data(),
-    }));
+    state.devices = snapshot.docs.map((item) => ({ id: item.id, ...item.data() }));
     state.devices.sort((a, b) => a.id.localeCompare(b.id));
-    renderDeviceList();
-
-    if (!state.selectedDeviceId && state.devices[0]) {
-      await selectDevice(state.devices[0].id);
-    } else {
-      ensureSelectedDeviceVisible();
+    if (state.selectedDeviceId && !state.devices.some((item) => item.id === state.selectedDeviceId)) {
+      state.selectedDeviceId = null;
     }
+    renderDeviceList();
+    renderSelectedDevice();
   } finally {
     state.devicesLoading = false;
     renderDeviceList();
@@ -476,66 +546,138 @@ async function loadDevices() {
 
 function renderCourtSelectors() {
   const current = state.selectedCourtId;
-  const options = state.courts
-    .map(
-      (court) =>
-        '<option value="' +
-        escapeHtml(court.id) +
-        '">' +
-        escapeHtml(court.name || court.id) +
-        " · " +
-        escapeHtml(court.id) +
-        "</option>",
-    )
-    .join("");
-  $("courtSelect").innerHTML = options || '<option value="">No courts</option>';
+  const search = String(state.courtSearch || "").trim().toLocaleLowerCase();
+  const visibleCourts = search
+    ? state.courts.filter((court) =>
+        (String(court.name || "") + " " + String(court.id || ""))
+          .toLocaleLowerCase()
+          .includes(search),
+      )
+    : state.courts.slice();
+
+  const modalCurrent = state.virtualDeviceCourtId ?? state.selectedCourtId ?? "";
+  const modalCourts = state.courts.slice();
+  if (modalCurrent && !modalCourts.some((court) => court.id === modalCurrent) && !state.courtsLoading) {
+    modalCourts.push({ id: modalCurrent, name: modalCurrent });
+  }
+  const modalSearch = String(state.virtualDeviceCourtSearch || "").trim().toLocaleLowerCase();
+  let visibleModalCourts = modalSearch
+    ? modalCourts.filter((court) =>
+        (String(court.name || "") + " " + String(court.id || ""))
+          .toLocaleLowerCase()
+          .includes(modalSearch),
+      )
+    : modalCourts.slice();
+  if (modalCurrent && !visibleModalCourts.some((court) => court.id === modalCurrent)) {
+    const selected = modalCourts.find((court) => court.id === modalCurrent);
+    if (selected) visibleModalCourts.unshift(selected);
+  }
+
+  const courtOption = (court) =>
+    '<option value="' + escapeHtml(court.id) + '">' +
+    escapeHtml(court.name || court.id) + " · " + escapeHtml(court.id) + "</option>";
+
+  const mainPlaceholder = state.courtsLoading
+    ? "Loading courts…"
+    : visibleCourts.length + " / " + state.courts.length + " matching courts";
+  $("courtSelect").innerHTML =
+    '<option value="">' + mainPlaceholder + "</option>" +
+    visibleCourts.map(courtOption).join("");
+  // Editing search returns the visible select to its default/count option without
+  // changing the court currently loaded in the live-state panel.
+  $("courtSelect").value = state.courtSearchEdited ? "" : current || "";
+  $("courtSelect").disabled = state.courtsLoading || visibleCourts.length === 0;
+  $("courtSearch").disabled = state.courtsLoading || state.courts.length === 0;
+  $("courtLoadingSpinner").classList.toggle("hidden", !state.courtsLoading);
+
+  const modalPlaceholder = state.courtsLoading
+    ? "Loading courts…"
+    : !state.courts.length
+      ? "No courts available"
+      : modalSearch && visibleModalCourts.length === 0
+        ? "No matching courts"
+        : "Select a court…";
   $("virtualDeviceCourt").innerHTML =
-    options || '<option value="">No courts</option>';
-  if (current) $("courtSelect").value = current;
-  if (current) $("virtualDeviceCourt").value = current;
+    '<option value="">' + modalPlaceholder + "</option>" +
+    visibleModalCourts.map(courtOption).join("");
+  $("virtualDeviceCourt").value = modalCurrent || "";
+  $("virtualDeviceCourt").disabled = state.courtsLoading || visibleModalCourts.length === 0;
+  $("virtualDeviceCourtSearch").disabled = state.courtsLoading || state.courts.length === 0;
+  $("virtualDeviceCourtCount").textContent = modalSearch
+    ? visibleModalCourts.length + (visibleModalCourts.length === 1 ? " matching court" : " matching courts")
+    : visibleModalCourts.length + (visibleModalCourts.length === 1 ? " court" : " courts");
 }
 
 function renderDeviceList() {
-  $("deviceCount").textContent = String(state.devices.length);
+  const search = String(state.deviceSearch || "").trim().toLocaleLowerCase();
+  const matchesSearch = (device) => {
+    if (!search) return true;
+    const court = state.courts.find((item) => item.id === device.courtId);
+    const searchText = [
+      device.id,
+      device.deviceSKU,
+      normaliseSku(device.deviceSKU),
+      device.courtId,
+      court?.name,
+      device.simulatorProfile,
+      device.isVirtual === true ? "virtual" : "physical",
+    ].filter(Boolean).join(" ").toLocaleLowerCase();
+    return searchText.includes(search);
+  };
 
-  if (state.devicesLoading) {
-    $("deviceList").innerHTML = '<div class="hint">Loading devices…</div>';
-    return;
-  }
+  const allPhysical = state.devices.filter((device) => device.isVirtual !== true);
+  const allVirtual = state.devices.filter((device) => device.isVirtual === true);
+  const physical = allPhysical.filter(matchesSearch);
+  const virtual = allVirtual.filter(matchesSearch);
+  $("deviceCount").textContent = state.devicesLoading
+    ? "…"
+    : physical.length + virtual.length + " / " + state.devices.length;
+  $("physicalDeviceCount").textContent = state.devicesLoading
+    ? "…"
+    : physical.length + " / " + allPhysical.length;
+  $("virtualDeviceCount").textContent = state.devicesLoading
+    ? "…"
+    : virtual.length + " / " + allVirtual.length;
 
-  $("deviceList").innerHTML = state.devices.length
-    ? state.devices
-        .map((device) => {
-          const sku = normaliseSku(device.deviceSKU);
-          const virtual = device.isVirtual === true;
-          return (
-            '<button class="device-item ' +
-            (device.id === state.selectedDeviceId ? "selected" : "") +
-            '" data-device-id="' +
-            escapeHtml(device.id) +
-            '">' +
-            '<div class="device-item-top"><span class="device-item-name">' +
-            escapeHtml(sku) +
-            '</span><span class="device-dot"></span></div>' +
-            '<div class="device-item-meta">' +
-            escapeHtml(device.id) +
-            " · " +
-            escapeHtml(device.courtId || "unbound") +
-            "</div>" +
-            '<span class="device-type-badge ' +
-            (virtual ? "virtual" : "physical") +
-            '">' +
-            (virtual ? "VIRTUAL" : "PHYSICAL") +
-            "</span></button>"
-          );
-        })
-        .join("")
-    : '<div class="hint">No devices registered yet.</div>';
+  const loadingMarkup = (label) =>
+    '<div class="loading-state" role="status" aria-live="polite"><span class="spinner" aria-hidden="true"></span><span>' +
+    escapeHtml(label) + "</span></div>";
+  const renderCard = (device) => {
+    const sku = normaliseSku(device.deviceSKU);
+    const virtualDevice = device.isVirtual === true;
+    const deviceCourt = state.courts.find((court) => court.id === device.courtId);
+    const courtLabel = device.courtId
+      ? (deviceCourt ? (deviceCourt.name || deviceCourt.id) + " · " + deviceCourt.id : "Court " + device.courtId)
+      : "No court assigned";
+    return (
+      '<button class="device-item ' +
+      (device.id === state.selectedDeviceId ? "selected" : "") +
+      '" data-device-id="' + escapeHtml(device.id) + '">' +
+      '<div class="device-item-top"><span class="device-item-name">' + escapeHtml(device.id) +
+      '</span><span class="device-dot"></span></div>' +
+      '<div class="device-item-meta">' + escapeHtml(courtLabel) + "</div>" +
+      '<span class="device-type-badge ' + (virtualDevice ? "virtual" : "physical") + '">' +
+      escapeHtml(sku === "Hub" ? "HUB" : sku) + "</span></button>"
+    );
+  };
+
+  const emptyMessage = (type) => search
+    ? '<div class="hint device-group-empty">No ' + type + ' devices match “' + escapeHtml(state.deviceSearch) + '”.</div>'
+    : '<div class="hint device-group-empty">No ' + type + ' devices registered.</div>';
+
+  $("physicalDeviceList").innerHTML = state.devicesLoading
+    ? loadingMarkup("Loading physical devices…")
+    : physical.length
+      ? physical.map(renderCard).join("")
+      : emptyMessage("physical");
+  $("virtualDeviceList").innerHTML = state.devicesLoading
+    ? loadingMarkup("Loading virtual devices…")
+    : virtual.length
+      ? virtual.map(renderCard).join("")
+      : emptyMessage("virtual");
 
   document.querySelectorAll("[data-device-id]").forEach((button) => {
-    button.addEventListener("click", () =>
-      selectDevice(button.dataset.deviceId),
-    );
+    button.addEventListener("click", () => selectDevice(button.dataset.deviceId));
   });
 }
 
@@ -562,78 +704,133 @@ function updateDeviceListToggle() {
 }
 
 async function selectDevice(deviceId) {
+  const device = state.devices.find((item) => item.id === deviceId);
+  if (!device) return;
   state.selectedDeviceId = deviceId;
-  const device = currentDevice();
-  if (
-    device?.courtId &&
-    state.courts.some((court) => court.id === device.courtId)
-  ) {
-    state.selectedCourtId = device.courtId;
-  }
-  if (device && !state.localStates.has(device.id)) {
-    state.localStates.set(
-      device.id,
-      createInitialLocalState(normaliseSku(device.deviceSKU)),
-    );
+  if (!state.localStates.has(device.id)) {
+    state.localStates.set(device.id, createInitialLocalState(normaliseSku(device.deviceSKU)));
   }
   renderAll();
   requestAnimationFrame(ensureSelectedDeviceVisible);
-  if (state.selectedCourtId) selectCourt(state.selectedCourtId);
 }
 
 function selectCourt(courtId) {
-  if (!courtId) return;
   if (state.selectedCourtUnsub) state.selectedCourtUnsub();
   if (state.selectedScoreUnsub) state.selectedScoreUnsub();
   if (state.selectedEventsUnsub) state.selectedEventsUnsub();
+  state.selectedCourtUnsub = null;
+  state.selectedScoreUnsub = null;
+  state.selectedEventsUnsub = null;
 
-  state.selectedCourtId = courtId;
-  $("courtSelect").value = courtId;
+  state.selectedCourtId = courtId || null;
+  state.courtSearch = "";
+  state.courtSearchEdited = false;
+  $("courtSearch").value = "";
+  state.courtDetailsLoading = Boolean(courtId);
+  state.scoreLoading = Boolean(courtId);
+  state.eventsLoading = Boolean(courtId);
+  state.currentScore = null;
+  state.selectedMatchId = null;
+  renderCourtSelectors();
+
+  if (!courtId) {
+    state.courtDetailsLoading = false;
+    state.scoreLoading = false;
+    state.eventsLoading = false;
+    renderAll();
+    renderCourtEvents([]);
+    return;
+  }
 
   const courtRef = doc(db, "courts", courtId);
-  let followedMatchId = null;
-
-  // Scoring is match-scoped: follow the match currently on the court.
+  let followedMatchId;
   const followMatch = (matchId) => {
-    if (matchId === followedMatchId) return;
+    if (state.selectedCourtId !== courtId || matchId === followedMatchId) return;
     followedMatchId = matchId;
+    state.selectedMatchId = matchId || null;
     if (state.selectedScoreUnsub) state.selectedScoreUnsub();
     if (state.selectedEventsUnsub) state.selectedEventsUnsub();
     state.selectedScoreUnsub = null;
     state.selectedEventsUnsub = null;
+    state.currentScore = null;
+
     if (!matchId) {
-      renderCourtState({ score: null });
+      state.scoreLoading = false;
+      state.eventsLoading = false;
+      renderCourtState();
       renderCourtEvents([]);
       return;
     }
+
+    state.scoreLoading = true;
+    state.eventsLoading = true;
+    renderCourtState();
+    renderCourtEvents([]);
     const scoreRef = doc(db, "matches", matchId, "score", "current");
-    const eventQuery = query(
-      collection(db, "matches", matchId, "events"),
-      orderBy("createdAt", "desc"),
-      limit(20),
+    const eventQuery = query(collection(db, "matches", matchId, "events"), orderBy("createdAt", "desc"), limit(20));
+
+    state.selectedScoreUnsub = onSnapshot(
+      scoreRef,
+      (snap) => {
+        if (state.selectedCourtId !== courtId || state.selectedMatchId !== matchId) return;
+        state.currentScore = snap.exists() ? snap.data() : null;
+        state.scoreLoading = false;
+        renderCourtState();
+      },
+      () => {
+        if (state.selectedCourtId !== courtId || state.selectedMatchId !== matchId) return;
+        state.currentScore = null;
+        state.scoreLoading = false;
+        renderCourtState();
+      },
     );
-    state.selectedScoreUnsub = onSnapshot(scoreRef, (snap) => {
-      renderCourtState({ score: snap.exists() ? snap.data() : null });
-    });
-    state.selectedEventsUnsub = onSnapshot(eventQuery, (snap) => {
-      renderCourtEvents(
-        snap.docs.map((item) => ({ id: item.id, ...item.data() })),
-      );
-    });
+    state.selectedEventsUnsub = onSnapshot(
+      eventQuery,
+      (snap) => {
+        if (state.selectedCourtId !== courtId || state.selectedMatchId !== matchId) return;
+        state.eventsLoading = false;
+        renderCourtEvents(snap.docs.map((item) => ({ id: item.id, ...item.data() })));
+      },
+      () => {
+        if (state.selectedCourtId !== courtId || state.selectedMatchId !== matchId) return;
+        state.eventsLoading = false;
+        renderCourtEvents([]);
+      },
+    );
   };
 
-  state.selectedCourtUnsub = onSnapshot(courtRef, (snap) => {
-    const index = state.courts.findIndex((item) => item.id === courtId);
-    if (snap.exists() && index >= 0) {
-      state.courts[index] = { id: courtId, ...snap.data() };
-      renderCourtSelectors();
-      renderCourtState({ court: state.courts[index] });
-    }
-    const data = snap.exists() ? snap.data() : {};
-    followMatch(data.activeMatchId || data.lastMatchId || null);
-  });
+  state.selectedCourtUnsub = onSnapshot(
+    courtRef,
+    (snap) => {
+      if (state.selectedCourtId !== courtId) return;
+      state.courtDetailsLoading = false;
+      if (snap.exists()) {
+        const index = state.courts.findIndex((item) => item.id === courtId);
+        const updated = { id: courtId, ...snap.data() };
+        if (index >= 0) state.courts[index] = updated;
+        else state.courts.push(updated);
+        state.courts.sort((a, b) => a.id.localeCompare(b.id));
+        renderCourtSelectors();
+        renderDeviceList();
+        renderCourtState({ court: updated });
+      } else {
+        renderCourtState();
+      }
+      const data = snap.exists() ? snap.data() : {};
+      followMatch(data.activeMatchId || data.lastMatchId || null);
+    },
+    () => {
+      if (state.selectedCourtId !== courtId) return;
+      state.courtDetailsLoading = false;
+      state.scoreLoading = false;
+      state.eventsLoading = false;
+      renderCourtState();
+      renderCourtEvents([]);
+    },
+  );
 
   renderAll();
+  renderCourtEvents([]);
 }
 
 function renderAll() {
@@ -643,13 +840,68 @@ function renderAll() {
   updateEnvironmentUi();
 }
 
-function renderSelectedDevice() {
+function updateViewCourtInfoButton(device = currentDevice()) {
+  const button = $("viewCourtInfoBtn");
+  if (!button) return;
+  const enabled = Boolean(device && device.courtId);
+  button.disabled = !enabled;
+  button.setAttribute("aria-disabled", String(!enabled));
+  button.title = enabled ? "Load the court assigned to this device" : "Select a device with an assigned court";
+}
+
+function renderDeviceActivity() {
+  const container = $("deviceActivity");
+  if (!container) return;
+
   const device = currentDevice();
   if (!device) {
+    container.innerHTML =
+      '<div class="panel-empty-state device-activity-empty">Select a device to view its latest event and error.</div>';
+    return;
+  }
+
+  const { lastEvent, lastError } = deviceActivityFor(device.id);
+  const cards = [
+    {
+      label: "Last event",
+      value: lastEvent
+        ? String(lastEvent.request?.body?.eventType || lastEvent.summary || "Unknown event")
+        : "No events recorded this session",
+      timestamp: lastEvent ? formatTimestamp(lastEvent.startedAt) : "",
+    },
+    {
+      label: "Last error",
+      value: lastError
+        ? lastErrorDescription(lastError)
+        : "No errors recorded this session",
+      timestamp: lastError ? formatTimestamp(lastError.startedAt) : "",
+    },
+  ];
+
+  container.innerHTML = cards.map((card) =>
+    '<div class="device-activity-card">' +
+      '<div class="device-activity-label">' + escapeHtml(card.label) + '</div>' +
+      '<div class="device-activity-value">' + escapeHtml(card.value) + '</div>' +
+      (card.timestamp
+        ? '<div class="device-activity-time">' + escapeHtml(card.timestamp) + '</div>'
+        : '') +
+    '</div>',
+  ).join("");
+}
+
+function renderSelectedDevice() {
+  const device = currentDevice();
+  updateViewCourtInfoButton(device);
+  renderDeviceActivity();
+  if (!device) {
+    $("selectedDeviceValue").textContent = "—";
     $("deviceTitle").textContent = "No device selected";
-    $("deviceIdentity").innerHTML = "";
-    $("deviceControls").innerHTML = "";
-    $("localStatePanel").innerHTML = "";
+    $("deviceStatus").textContent = "—";
+    $("deviceStatus").className = "status-pill";
+    $("deviceIdentity").innerHTML = '<div class="panel-empty-state">Select a device to inspect its identity and configuration.</div>';
+    $("deviceControls").innerHTML = '<div class="panel-empty-state">Select a device to view its available controls.</div>';
+    $("localStatePanel").innerHTML = '<div class="panel-empty-state">Local simulator state appears after you select a device.</div>';
+    $("controlHint").textContent = "";
     return;
   }
 
@@ -657,151 +909,138 @@ function renderSelectedDevice() {
   const profile = DEVICE_PROFILES[sku];
   $("selectedDeviceValue").textContent = device.id;
   $("deviceTitle").textContent = profile.label;
-  $("deviceStatus").textContent =
-    device.disabled === true ? "DISABLED" : "READY";
-  $("deviceStatus").className =
-    "status-pill " + (device.disabled === true ? "disabled" : "");
+  $("deviceStatus").textContent = device.disabled === true ? "DISABLED" : "READY";
+  $("deviceStatus").className = "status-pill " + (device.disabled === true ? "disabled" : "");
 
   const deviceCourt = state.courts.find((court) => court.id === device.courtId);
   const deviceClub = clubForDevice(device);
   const fields = [
-    ["deviceId", device.id],
-    ["type / SKU", device.deviceSKU || "Not provisioned"],
-    ["court", deviceCourt ? (deviceCourt.name || deviceCourt.id) + " · " + deviceCourt.id : "Unbound"],
-    ["club", deviceClub ? (deviceClub.name || deviceClub.id) + " · " + deviceClub.id : "Unassigned"],
-    ["club state", deviceClub?.state || "—"],
-    ["courtId", device.courtId || "Unbound"],
-    ["virtual", device.isVirtual === true ? "Yes" : "No"],
-    ["simulator profile", device.simulatorProfile || profile.label],
-    ["firmware", device.firmwareVersion || "Not recorded"],
-    ["createdAt", formatTime(device.createdAt)],
-    ["raw fields", Object.keys(device).length + " fields"],
+    ["Device ID", device.id],
+    ["Device type / SKU", device.deviceSKU || "Not provisioned"],
+    ["Assigned court", deviceCourt ? (deviceCourt.name || deviceCourt.id) + " · " + deviceCourt.id : device.courtId ? "Court unavailable · " + device.courtId : "Unassigned"],
+    ["Club", deviceClub ? (deviceClub.name || deviceClub.id) + " · " + deviceClub.id : "Unassigned"],
+    ["Club state", deviceClub?.state || "—"],
+    ["Device kind", device.isVirtual === true ? "Virtual" : "Physical"],
+    ["Simulator profile", device.simulatorProfile || profile.label],
+    ["Firmware version", device.firmwareVersion || "Not recorded"],
+    ["Created", formatTimestamp(device.createdAt)],
   ];
-  $("deviceIdentity").innerHTML = fields
-    .map(
-      ([label, value]) =>
-        '<div class="identity-cell"><div class="identity-label">' +
-        escapeHtml(label) +
-        '</div><div class="identity-value">' +
-        escapeHtml(String(value)) +
-        "</div></div>",
-    )
-    .join("");
+
+  $("deviceIdentity").innerHTML = fields.map(
+    ([label, value]) =>
+      '<div class="identity-cell"><div class="identity-label">' + escapeHtml(label) +
+      '</div><div class="identity-value">' + escapeHtml(String(value)) + "</div></div>",
+  ).join("");
 
   const local = currentLocalState();
-  $("localStatePanel").innerHTML = Object.entries(local || {})
-    .map(
-      ([label, value]) =>
-        '<div class="state-cell"><div class="state-label">' +
-        escapeHtml(label) +
-        '</div><div class="state-value">' +
-        escapeHtml(String(value)) +
-        "</div></div>",
-    )
-    .join("");
+  $("localStatePanel").innerHTML = Object.entries(local || {}).map(
+    ([label, value]) =>
+      '<div class="state-cell"><div class="state-label">' + escapeHtml(label) +
+      '</div><div class="state-value">' + escapeHtml(String(value)) + "</div></div>",
+  ).join("");
 
-  $("deviceControls").innerHTML = profile.controls
-    .map(
-      (control) =>
-        '<button class="control-btn" data-control="' +
-        escapeHtml(control.id) +
-        '">' +
-        '<span class="control-btn-title">' +
-        escapeHtml(control.label) +
-        "</span>" +
-        '<span class="control-btn-hint">' +
-        escapeHtml(control.hint) +
-        "</span></button>",
-    )
-    .join("");
+  $("deviceControls").innerHTML = profile.controls.map(
+    (control) =>
+      '<button class="control-btn" data-control="' + escapeHtml(control.id) + '">' +
+      '<span class="control-btn-title">' + escapeHtml(control.label) + "</span>" +
+      '<span class="control-btn-hint">' + escapeHtml(control.hint) + "</span></button>",
+  ).join("");
 
-  const physicalNote =
-    device.isVirtual === true
-      ? "Virtual device. Actions use the real backend."
-      : "Registered physical device record. This simulator can exercise its backend binding too.";
-  $("controlHint").textContent = physicalNote;
-
+  $("controlHint").textContent = device.isVirtual === true
+    ? "Virtual device. Actions use the real backend."
+    : "Registered physical device record. This simulator can exercise its backend binding too.";
   document.querySelectorAll("[data-control]").forEach((button) => {
-    button.addEventListener("click", () =>
-      handleDeviceControl(button.dataset.control),
-    );
+    button.addEventListener("click", () => handleDeviceControl(button.dataset.control));
   });
 }
 
-function renderCourtState({ court, score } = {}) {
-  const current = currentCourt();
-  if (!current) {
+function loadingMarkup(label) {
+  return '<div class="loading-state" role="status" aria-live="polite">' +
+    '<span class="spinner" aria-hidden="true"></span><span>' + escapeHtml(label) + "</span></div>";
+}
+
+function renderCourtState({ court } = {}) {
+  const mergedCourt = court || currentCourt();
+  if (!state.selectedCourtId) {
     $("courtTitle").textContent = "No court selected";
-    $("courtMeta").textContent = "";
-    $("scoreState").innerHTML = "";
+    $("selectedCourtValue").textContent = "—";
+    $("selectedClubValue").textContent = "—";
+    $("courtMeta").textContent = "Select a court, or use View Court Info on an assigned device.";
+    $("scoreState").innerHTML = '<div class="panel-empty-state">Select a court to load its live score.</div>';
+    $("courtEvents").innerHTML = '<div class="panel-empty-state">Select a court to load recent events.</div>';
     return;
   }
-  const mergedCourt = court || current;
-  const club = clubForCourt(mergedCourt.id);
-  $("selectedCourtValue").textContent = mergedCourt.id;
-  $("selectedClubValue").textContent = club ? (club.name || club.id) : "Unassigned";
-  $("courtTitle").textContent = mergedCourt.name || mergedCourt.id;
-  const clubLabel = club
-    ? (club.name || club.id) +
-      " · " +
-      club.id +
-      " · club " +
-      (club.state || "unknown")
-    : "No club assignment";
-  $("courtMeta").textContent =
-    mergedCourt.name +
-    " · " +
-    mergedCourt.id +
-    " · club " +
-    clubLabel +
-    " · status " +
-    (mergedCourt.status || "unknown") +
-    " · Beacon changeover " +
-    (mergedCourt.beaconSidesSwapped === true ? "ACTIVE" : "off");
 
-  if (!score) return;
-  const teamA = score.A || {};
-  const teamB = score.B || {};
-  $("scoreState").innerHTML =
-    '<div class="score-card"><div class="score-team">' +
-    escapeHtml(mergedCourt.teamNames?.A || "Team A") +
-    '</div><div class="score-points">' +
-    escapeHtml(String(teamA.pointsDisplay ?? teamA.points ?? 0)) +
-    '</div><div class="score-games">Games ' +
-    escapeHtml(String(teamA.games ?? 0)) +
-    " · Sets " +
-    escapeHtml(String(teamA.sets ?? 0)) +
-    "</div></div>" +
-    '<div class="score-card"><div class="score-team">' +
-    escapeHtml(mergedCourt.teamNames?.B || "Team B") +
-    '</div><div class="score-points">' +
-    escapeHtml(String(teamB.pointsDisplay ?? teamB.points ?? 0)) +
-    '</div><div class="score-games">Games ' +
-    escapeHtml(String(teamB.games ?? 0)) +
-    " · Sets " +
-    escapeHtml(String(teamB.sets ?? 0)) +
-    "</div></div>";
+  $("selectedCourtValue").textContent = state.selectedCourtId;
+  if (!mergedCourt) {
+    $("courtTitle").textContent = state.selectedCourtId;
+    $("selectedClubValue").textContent = "—";
+    $("courtMeta").innerHTML = state.courtDetailsLoading
+      ? loadingMarkup("Loading court information…")
+      : '<div class="hint">Court record not found.</div>';
+  } else {
+    const club = clubForCourt(mergedCourt.id);
+    $("selectedClubValue").textContent = club ? (club.name || club.id) : "Unassigned";
+    $("courtTitle").textContent = mergedCourt.name || mergedCourt.id;
+    const clubLabel = club
+      ? (club.name || club.id) + " · " + club.id + " · club " + (club.state || "unknown")
+      : "No club assignment";
+    const metaText = (mergedCourt.name || mergedCourt.id) + " · " + mergedCourt.id +
+      " · club " + clubLabel + " · status " + (mergedCourt.status || "unknown") +
+      " · Beacon changeover " + (mergedCourt.beaconSidesSwapped === true ? "ACTIVE" : "off");
+    $("courtMeta").innerHTML = state.courtDetailsLoading ? loadingMarkup("Refreshing court information…") : "";
+    if (!state.courtDetailsLoading) $("courtMeta").textContent = metaText;
+  }
+
+  if (state.scoreLoading) {
+    $("scoreState").innerHTML = loadingMarkup("Loading live score…");
+  } else if (!state.selectedMatchId) {
+    $("scoreState").innerHTML = '<div class="panel-empty-state">No active match on this court.</div>';
+  } else if (!state.currentScore) {
+    $("scoreState").innerHTML = '<div class="panel-empty-state">No score snapshot available for this match.</div>';
+  } else {
+    const score = state.currentScore, teamA = score.A || {}, teamB = score.B || {}, courtData = mergedCourt || {};
+    $("scoreState").innerHTML =
+      '<div class="score-card"><div class="score-team">' + escapeHtml(courtData.teamNames?.A || "Team A") +
+      '</div><div class="score-points">' + escapeHtml(String(teamA.pointsDisplay ?? teamA.points ?? 0)) +
+      '</div><div class="score-games">Games ' + escapeHtml(String(teamA.games ?? 0)) + " · Sets " +
+      escapeHtml(String(teamA.sets ?? 0)) + "</div></div>" +
+      '<div class="score-card"><div class="score-team">' + escapeHtml(courtData.teamNames?.B || "Team B") +
+      '</div><div class="score-points">' + escapeHtml(String(teamB.pointsDisplay ?? teamB.points ?? 0)) +
+      '</div><div class="score-games">Games ' + escapeHtml(String(teamB.games ?? 0)) + " · Sets " +
+      escapeHtml(String(teamB.sets ?? 0)) + "</div></div>";
+  }
 }
 
 function renderCourtEvents(events) {
+  if (state.eventsLoading) {
+    $("courtEvents").innerHTML = loadingMarkup("Loading recent court events…");
+    return;
+  }
+  if (!state.selectedCourtId) {
+    $("courtEvents").innerHTML =
+      '<div class="panel-empty-state">Select a court to load recent events.</div>';
+    return;
+  }
+  if (!state.selectedMatchId) {
+    $("courtEvents").innerHTML =
+      '<div class="panel-empty-state">No active match on this court.</div>';
+    return;
+  }
+
   $("courtEvents").innerHTML = events.length
-    ? events
-        .map(
-          (event) =>
-            '<div class="event-row"><div class="event-main">' +
-            '<div class="event-type">' +
-            escapeHtml(event.eventType || "UNKNOWN") +
-            "</div>" +
-            '<div class="event-meta">' +
-            escapeHtml(formatTime(event.createdAt)) +
-            " · " +
-            escapeHtml(event.actorDeviceId || event.createdBy || "unknown") +
-            "</div></div>" +
-            '<div class="event-badge">' +
-            escapeHtml(event.id.slice(0, 10)) +
-            "</div></div>",
-        )
-        .join("")
+    ? events.map((event) => `
+        <div class="event-row">
+          <div class="event-main">
+            <div class="event-type">${escapeHtml(event.eventType || "UNKNOWN")}</div>
+            <div class="event-meta">
+              ${escapeHtml(formatTime(event.createdAt))} ·
+              ${escapeHtml(event.actorDeviceId || event.createdBy || "unknown")}
+            </div>
+          </div>
+          <div class="event-badge">${escapeHtml(String(event.id || "").slice(0, 10))}</div>
+        </div>
+      `).join("")
     : '<div class="hint">No events yet.</div>';
 }
 
@@ -835,6 +1074,7 @@ function addTrace(entry) {
   state.trace.unshift(entry);
   state.trace = state.trace.slice(0, 250);
   state.selectedTraceId = entry.id;
+  renderDeviceActivity();
   renderTrace();
   renderExchange(entry);
 }
@@ -1376,8 +1616,19 @@ async function createVirtualDevice() {
   const deviceId = $("virtualDeviceId").value.trim();
   const deviceSKU = $("virtualDeviceSku").value;
   const courtId = $("virtualDeviceCourt").value;
-  if (!deviceId || !courtId) {
-    showToast("Device ID and court are required.", "error");
+  if (!deviceId) {
+    showToast("Enter a device ID before creating the virtual device.", "error");
+    $("virtualDeviceId").focus();
+    return;
+  }
+  if (!deviceSKU) {
+    showToast("Select a device type.", "error");
+    $("virtualDeviceSku").focus();
+    return;
+  }
+  if (!courtId || !state.courts.some((court) => court.id === courtId)) {
+    showToast("Select a valid court before creating the virtual device.", "error");
+    $("virtualDeviceCourt").focus();
     return;
   }
   const ref = doc(db, "devices", deviceId);
@@ -1402,8 +1653,19 @@ async function createVirtualDevice() {
 function updateFailureUi() {
   const mode = $("failureMode").value;
   state.failure.mode = mode;
-  $("latencyControl").classList.toggle("hidden", mode !== "latency");
-  $("timeoutControl").classList.toggle("hidden", mode !== "timeout");
+
+  const latencyEnabled = mode === "latency";
+  const latencyControl = $("latencyControl");
+  latencyControl.classList.toggle("is-disabled", !latencyEnabled);
+  latencyControl.setAttribute("aria-disabled", String(!latencyEnabled));
+  $("latencyMs").disabled = !latencyEnabled;
+
+  const timeoutEnabled = mode === "timeout";
+  const timeoutControl = $("timeoutControl");
+  timeoutControl.classList.toggle("is-disabled", !timeoutEnabled);
+  timeoutControl.setAttribute("aria-disabled", String(!timeoutEnabled));
+  $("timeoutMs").disabled = !timeoutEnabled;
+
   const descriptions = {
     none: "Normal requests are sent to the real backend.",
     latency:
@@ -1439,13 +1701,33 @@ function initHarness() {
   $("environmentBadge").title =
     "Firebase environment: " +
     String(firebaseEnvironmentConfig.activeFirebaseEnvironment || "unknown");
-  $("courtSelect").addEventListener("change", (event) =>
-    selectCourt(event.target.value),
-  );
+  $("courtSelect").addEventListener("change", (event) => selectCourt(event.target.value));
+  $("courtSearch").addEventListener("input", (event) => {
+    state.courtSearch = event.target.value || "";
+    state.courtSearchEdited = true;
+    renderCourtSelectors();
+  });
+  $("deviceSearch").addEventListener("input", (event) => {
+    state.deviceSearch = event.target.value || "";
+    renderDeviceList();
+  });
+  $("virtualDeviceCourtSearch").addEventListener("input", (event) => {
+    state.virtualDeviceCourtSearch = event.target.value || "";
+    renderCourtSelectors();
+  });
+  $("virtualDeviceCourt").addEventListener("change", (event) => {
+    state.virtualDeviceCourtId = event.target.value || "";
+    renderCourtSelectors();
+  });
+  $("viewCourtInfoBtn").addEventListener("click", () => {
+    const device = currentDevice();
+    if (device?.courtId) selectCourt(device.courtId);
+  });
   $("clearTraceBtn").addEventListener("click", () => {
     state.trace = [];
     state.selectedTraceId = null;
     renderTrace();
+    renderSelectedDevice();
     $("exchangeDetail").textContent = "Select a trace entry.";
   });
   $("failureMode").addEventListener("change", updateFailureUi);
@@ -1484,17 +1766,18 @@ function initHarness() {
     );
     $("failNextBtn").textContent = "Failure armed";
   });
-  $("courtSelect").addEventListener("change", () => {
-    state.selectedCourtId = $("courtSelect").value;
-    selectCourt(state.selectedCourtId);
-  });
   $("addVirtualDeviceBtn").addEventListener("click", () => {
     if (!requireMutationAccess()) return;
     $("virtualDeviceId").value =
       "SIM-" + Math.random().toString(36).slice(2, 8).toUpperCase();
+    state.virtualDeviceCourtSearch = "";
+    state.virtualDeviceCourtId = state.selectedCourtId || "";
+    $("virtualDeviceCourtSearch").value = "";
     renderCourtSelectors();
     openHarnessDialog($("deviceDialog"), "#virtualDeviceId");
   });
+  $("closeDeviceDialogBtn").addEventListener("click", () => $("deviceDialog").close());
+  $("cancelDeviceDialogBtn").addEventListener("click", () => $("deviceDialog").close());
   $("createVirtualDeviceBtn").addEventListener("click", (event) => {
     event.preventDefault();
     void createVirtualDevice();
@@ -1525,8 +1808,9 @@ function initHarness() {
 
   updateDeviceListToggle();
   updateFailureUi();
+  renderCourtSelectors();
+  renderAll();
   renderTrace();
-  updateEnvironmentUi();
   void (async () => {
     try {
       await loadClubs();
