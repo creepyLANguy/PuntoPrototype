@@ -59,6 +59,7 @@ export function initElements() {
 
     settingsBtn: $("settingsBtn"),
     settingsModal: $("settingsModal"),
+    courtQrToggleBtn: $("courtQrToggleBtn"),
     joinCourtModal: $("joinCourtModal"),
     joinCourtModalForm: $("joinCourtModalForm"),
     joinCourtModalTitle: $("joinCourtModalTitle"),
