@@ -189,8 +189,9 @@ Steps:
 3. Prefer local/staging environments for development and diagnosis.
 4. Test device-specific actions.
 5. Verify request/response and resulting court state.
-6. For production testing, explicitly acknowledge the production mutation warning and use a designated test court.
-7. Record failures as engineering issues rather than modifying production data ad hoc.
+6. Use the selected device's **Last event** and **Last error** timestamps to review recent Device Lab activity. These values are derived from the current in-page trace, not persistent firmware telemetry; clearing the trace clears both values.
+7. For production testing, explicitly acknowledge the production mutation warning and use a designated test court.
+8. Record failures as engineering issues rather than modifying production data ad hoc.
 
 Device-specific focus:
 - Hub: point, undo, reset, spectate, register, NFC actions, Wi-Fi configuration and local factory reset.
