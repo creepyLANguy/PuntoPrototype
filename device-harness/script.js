@@ -881,27 +881,6 @@ function renderCourtEvents(events) {
     : '<div class="hint">No events yet.</div>';
 }
 
-function renderCourtEvents(events) {
-  $("courtEvents").innerHTML = events.length
-    ? events
-        .map(
-          (event) =>
-            '<div class="event-row"><div class="event-main">' +
-            '<div class="event-type">' +
-            escapeHtml(event.eventType || "UNKNOWN") +
-            "</div>" +
-            '<div class="event-meta">' +
-            escapeHtml(formatTime(event.createdAt)) +
-            " · " +
-            escapeHtml(event.actorDeviceId || event.createdBy || "unknown") +
-            "</div></div>" +
-            '<div class="event-badge">' +
-            escapeHtml(event.id.slice(0, 10)) +
-            "</div></div>",
-        )
-        .join("")
-    : '<div class="hint">No events yet.</div>';
-}
 
 function updateEnvironmentUi() {
   const mismatch = !firebaseEnvironmentMatchesHost();
