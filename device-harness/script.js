@@ -1606,6 +1606,7 @@ function initHarness() {
     state.trace = [];
     state.selectedTraceId = null;
     renderTrace();
+    renderSelectedDevice();
     $("exchangeDetail").textContent = "Select a trace entry.";
   });
   $("failureMode").addEventListener("change", updateFailureUi);
