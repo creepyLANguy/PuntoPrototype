@@ -5,8 +5,8 @@ import { SOUND_IDS, TOAST_TYPES } from "../config/constants.js";
 import { session } from "../state/sessionState.js";
 import { themeState } from "../state/themeState.js";
 import { elements } from "./dom.js";
-import { syncSettingsTiles } from "./settingsTiles.js";
 import { setButtonIcon } from "./icons.js";
+import { syncSettingsTiles } from "./settingsTiles.js";
 import {
   getActiveTeamColours,
   getCurrentThemeName,
