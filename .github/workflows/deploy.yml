@@ -55,6 +55,12 @@ jobs:
 
           if [[ "$BEFORE_SHA" == "$all_zero" ]]; then
             changed_files="$(git ls-tree -r --name-only "$AFTER_SHA")"
+          elif [[ "${GITHUB_REF:-}" != "refs/heads/main" ]]; then
+            # Staging deployments must consider the whole feature-branch diff,
+            # not just the latest push. This also retries changes from an earlier
+            # push whose deployment failed.
+            deploy_base="$(git merge-base origin/main "$AFTER_SHA")"
+            changed_files="$(git diff --name-only "$deploy_base" "$AFTER_SHA")"
           else
             changed_files="$(git diff --name-only "$BEFORE_SHA" "$AFTER_SHA")"
           fi
@@ -73,6 +79,9 @@ jobs:
             esac
 
             case "$file" in
+              functions/*.node-test.*|functions/*.test.*|functions/*.spec.*)
+                # Test-only changes require validation, not a Functions deploy.
+                ;;
               functions/*)
                 functions_changed=true
                 ;;
@@ -87,7 +96,7 @@ jobs:
             # These files can change the deployment target/configuration for both
             # Hosting and Functions, so keep the conservative full-deploy path.
             case "$file" in
-              firebase.json|.firebaserc|.github/workflows/deploy.yml)
+              firebase.json|.firebaserc)
                 hosting_changed=true
                 functions_changed=true
                 ;;
