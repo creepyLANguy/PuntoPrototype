@@ -550,25 +550,6 @@ function renderCourtSelectors() {
     allCourts.push({ id: current, name: current });
   }
 
-  const filterCourts = (courts, search) => {
-    const normalizedSearch = String(search || "").trim().toLocaleLowerCase();
-    let visible = normalizedSearch
-      ? courts.filter((court) =>
-          (String(court.name || "") + " " + String(court.id || ""))
-            .toLocaleLowerCase()
-            .includes(normalizedSearch),
-        )
-      : courts.slice();
-
-    // Preserve the selected court in the list even while the search is being edited.
-    const selectedId = arguments.length > 2 ? arguments[2] : "";
-    if (selectedId && !visible.some((court) => court.id === selectedId)) {
-      const selected = courts.find((court) => court.id === selectedId);
-      if (selected) visible.unshift(selected);
-    }
-    return visible;
-  };
-
   const search = String(state.courtSearch || "").trim().toLocaleLowerCase();
   let visibleCourts = search
     ? allCourts.filter((court) =>
@@ -682,7 +663,7 @@ function renderDeviceList() {
     );
   };
 
-  const emptyMessage = (type, allDevices) => search
+  const emptyMessage = (type) => search
     ? '<div class="hint device-group-empty">No ' + type + ' devices match “' + escapeHtml(state.deviceSearch) + '”.</div>'
     : '<div class="hint device-group-empty">No ' + type + ' devices registered.</div>';
 
