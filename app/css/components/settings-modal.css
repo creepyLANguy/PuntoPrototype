@@ -56,6 +56,33 @@ body.light-mode .settings-box {
   transform: translateY(-2px);
 }
 
+.setting-item.qr-unavailable {
+  opacity: 0.42;
+  cursor: not-allowed;
+  filter: grayscale(0.85);
+}
+
+.setting-item.qr-unavailable:hover {
+  background: rgba(255, 255, 255, 0.05);
+  transform: none;
+}
+
+body.light-mode .setting-item.qr-unavailable:hover {
+  background: rgba(0, 0, 0, 0.03);
+}
+
+.setting-item.qr-unavailable button:disabled {
+  opacity: 0.45 !important;
+  cursor: not-allowed;
+  filter: grayscale(1);
+  transform: none;
+  box-shadow: none;
+}
+
+.setting-item.qr-unavailable span {
+  opacity: 0.62;
+}
+
 .setting-item.active {
   background: rgba(255, 255, 255, 0.22);
   box-shadow: 0 14px 36px rgba(0, 0, 0, 0.18);
