@@ -32,9 +32,33 @@ body.light-mode .settings-box {
 
 .settings-grid {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.settings-group {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 115px), 1fr));
   gap: 15px;
-  justify-content: center;
+  min-width: 0;
+}
+
+.settings-group[hidden],
+.settings-group-divider[hidden] {
+  display: none !important;
+}
+
+.settings-group-divider {
+  width: 100%;
+  height: 1px;
+  flex: 0 0 1px;
+  margin: 0 4px;
+  background: rgba(255, 255, 255, 0.16);
+}
+
+body.light-mode .settings-group-divider {
+  background: rgba(0, 0, 0, 0.16);
 }
 
 .setting-item {
