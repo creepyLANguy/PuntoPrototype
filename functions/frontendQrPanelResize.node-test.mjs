@@ -398,7 +398,7 @@ test("the QR panel is hidden on phone-sized viewports and shown on desktop", () 
   }
 });
 
-test("court Options QR tile toggles visibility and tracks unsupported viewport sizes live", () => {
+test("court Options QR tile toggles visibility and tracks unsupported viewport sizes live", async () => {
   const settingsModal = document.getElementById("settingsModal");
   const settingsBtn = document.getElementById("settingsBtn");
   const toggle = document.getElementById("courtQrToggleBtn");
@@ -492,7 +492,12 @@ test("court Options QR tile toggles visibility and tracks unsupported viewport s
     if (originalHeight) Object.defineProperty(window, "innerHeight", originalHeight);
     window.dispatchEvent(new window.Event("resize"));
     panel.classList.remove("hidden");
-    settingsModal.classList.add("hidden");
+    if (!settingsModal.classList.contains("hidden")) {
+      document.getElementById("closeSettingsBtn").click();
+      await waitFor(() => settingsModal.classList.contains("hidden"), {
+        label: "QR options closed",
+      });
+    }
   }
 });
 
