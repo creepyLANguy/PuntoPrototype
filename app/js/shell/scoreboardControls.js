@@ -258,6 +258,7 @@ export function registerScoreboardControls() {
 
   elements.fullscreenBtn.addEventListener("click", toggleFullscreen);
 
+
   $("addPointA").addEventListener("click", () =>
     addPoint(EVENT_TYPES.POINT_TEAM_A),
   );

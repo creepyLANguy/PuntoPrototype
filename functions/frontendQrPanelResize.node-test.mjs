@@ -398,6 +398,177 @@ test("the QR panel is hidden on phone-sized viewports and shown on desktop", () 
   }
 });
 
+test("court Options QR tile toggles visibility and tracks unsupported viewport sizes live", async () => {
+  const settingsModal = document.getElementById("settingsModal");
+  const settingsBtn = document.getElementById("settingsBtn");
+  const toggle = document.getElementById("courtQrToggleBtn");
+  const tile = document.getElementById("courtQrToggleTile");
+  const tileLabel = () => tile.querySelector(":scope > span").textContent;
+  const originalWidth = Object.getOwnPropertyDescriptor(window, "innerWidth");
+  const originalHeight = Object.getOwnPropertyDescriptor(window, "innerHeight");
+
+  const setViewport = (width, height) => {
+    Object.defineProperty(window, "innerWidth", {
+      configurable: true,
+      writable: true,
+      value: width,
+    });
+    Object.defineProperty(window, "innerHeight", {
+      configurable: true,
+      writable: true,
+      value: height,
+    });
+    window.dispatchEvent(new window.Event("resize"));
+  };
+
+  try {
+    assert.ok(toggle, "the QR visibility action exists in court options");
+    assert.ok(tile, "the QR action has a tile that can be styled as unavailable");
+    settingsBtn.click();
+
+    setViewport(1366, 768);
+    assert.equal(toggle.disabled, false, "desktop dimensions enable the toggle");
+    assert.equal(tileLabel(), "Hide QR", "a visible panel offers the hide action");
+    assert.equal(toggle.getAttribute("aria-pressed"), "true");
+
+    toggle.click();
+    assert.equal(panel.classList.contains("hidden"), true);
+    assert.equal(toggle.disabled, false);
+    assert.equal(tileLabel(), "Show QR", "a hidden panel offers the show action");
+    assert.equal(toggle.getAttribute("aria-pressed"), "false");
+
+    toggle.click();
+    assert.equal(panel.classList.contains("hidden"), false);
+    assert.equal(tileLabel(), "Hide QR");
+
+    setViewport(430, 932);
+    assert.equal(toggle.disabled, true, "phone portrait disables the action");
+    assert.equal(toggle.getAttribute("aria-disabled"), "true");
+    assert.equal(tile.classList.contains("qr-unavailable"), true);
+    assert.equal(tileLabel(), "Show QR", "an unrenderable panel is reflected as hidden");
+    assert.equal(
+      panel.classList.contains("hidden"),
+      false,
+      "responsive suppression does not overwrite the user's visibility choice",
+    );
+
+    setViewport(780, 360);
+    assert.equal(toggle.disabled, true, "short landscape disables the action");
+    assert.equal(tile.classList.contains("qr-unavailable"), true);
+
+    setViewport(1366, 768);
+    assert.equal(toggle.disabled, false, "the action re-enables as soon as the layout supports the panel");
+    assert.equal(toggle.getAttribute("aria-disabled"), "false");
+    assert.equal(tile.classList.contains("qr-unavailable"), false);
+    assert.equal(tileLabel(), "Hide QR", "the menu updates to the restored visible state");
+
+    // A wide viewport can still have an insufficiently sized scoreboard
+    // container. Its own dimensions (not viewport dimensions alone) drive the
+    // same disabled/enabled transition while the modal remains open.
+    const scoreboard = document.getElementById("scoreboardPage");
+    const originalScoreboardRect = scoreboard.getBoundingClientRect;
+    try {
+      scoreboard.getBoundingClientRect = () => rect(0, 0, 140, 768);
+      window.dispatchEvent(new window.Event("resize"));
+      assert.equal(toggle.disabled, true, "insufficient court width disables the action");
+
+      scoreboard.getBoundingClientRect = () => rect(0, 0, 1366, 160);
+      window.dispatchEvent(new window.Event("resize"));
+      assert.equal(toggle.disabled, true, "insufficient court height disables the action");
+
+      scoreboard.getBoundingClientRect = originalScoreboardRect;
+      window.dispatchEvent(new window.Event("resize"));
+      assert.equal(toggle.disabled, false, "the action re-enables when the court bounds fit again");
+      assert.equal(tileLabel(), "Hide QR", "restored court bounds reflect the still-visible panel");
+    } finally {
+      scoreboard.getBoundingClientRect = originalScoreboardRect;
+      window.dispatchEvent(new window.Event("resize"));
+    }
+
+    assert.match(styles, /\.setting-item\.qr-unavailable\s*\{[\s\S]*?cursor:\s*not-allowed;/);
+    assert.match(styles, /body\.light-mode \.setting-item\.qr-unavailable:hover/);
+  } finally {
+    if (originalWidth) Object.defineProperty(window, "innerWidth", originalWidth);
+    if (originalHeight) Object.defineProperty(window, "innerHeight", originalHeight);
+    window.dispatchEvent(new window.Event("resize"));
+    panel.classList.remove("hidden");
+    if (!settingsModal.classList.contains("hidden")) {
+      document.getElementById("closeSettingsBtn").click();
+      await waitFor(() => settingsModal.classList.contains("hidden"), {
+        label: "QR options closed",
+      });
+    }
+  }
+});
+
+
+test("court Options sections and dividers adapt between player and spectator views", async () => {
+  const settingsModal = document.getElementById("settingsModal");
+  const groups = {
+    display: document.getElementById("settingsDisplayGroup"),
+    court: document.getElementById("settingsCourtGroup"),
+    sharing: document.getElementById("settingsSharingGroup"),
+  };
+  const dividers = [...document.querySelectorAll(".settings-group-divider")];
+  const { enterCourt } = await import("../app/js/court/session.js");
+
+  assert.deepEqual(Object.keys(groups), ["display", "court", "sharing"]);
+  assert.equal(dividers.length, 2, "one divider sits between each logical group");
+  assert.deepEqual(
+    [...document.querySelectorAll(".settings-group")].map((group) => group.getAttribute("aria-label")),
+    ["Display and appearance", "Court controls", "Sharing and access"],
+  );
+
+  // The grid adapts its column count naturally to the modal width, and its
+  // divider is readable against both theme surfaces without relying on color alone.
+  assert.match(styles, /\.settings-group\s*\{[\s\S]*?grid-template-columns:\s*repeat\(auto-fit, minmax\(min\(100%, 115px\), 1fr\)\)/);
+  assert.match(styles, /\.settings-group-divider\s*\{[\s\S]*?height:\s*1px;/);
+  assert.match(styles, /body\.light-mode \.settings-group-divider\s*\{[\s\S]*?background:/);
+
+  document.getElementById("settingsBtn").click();
+  await settle(10);
+  assert.equal(groups.display.hidden, false, "display options are visible to players");
+  assert.equal(groups.court.hidden, false, "court controls are visible to players");
+  assert.equal(groups.sharing.hidden, false, "sharing actions are visible to players");
+  assert.deepEqual(dividers.map((divider) => divider.hidden), [false, false]);
+
+  document.getElementById("closeSettingsBtn").click();
+  await settle(20);
+
+  try {
+    await enterCourt(COURT_ID, true, { historyMode: "skip" });
+    await settle(10);
+    assert.equal(document.getElementById("joinCourtTile").style.display, "");
+    assert.equal(document.getElementById("switchToSpectateTile").style.display, "none");
+    assert.equal(document.getElementById("serverToggleTile").style.display, "none");
+
+    document.getElementById("settingsBtn").click();
+    await settle(10);
+    assert.equal(groups.display.hidden, false, "display options remain visible to spectators");
+    assert.equal(groups.court.hidden, true, "player-only court controls collapse as a group for spectators");
+    assert.equal(groups.sharing.hidden, false, "sharing/access options remain available to spectators");
+    assert.deepEqual(
+      dividers.map((divider) => divider.hidden),
+      [false, true],
+      "only one divider separates the two remaining visible groups",
+    );
+  } finally {
+    await enterCourt(COURT_ID, false, { historyMode: "skip" });
+    await settle(10);
+    if (!settingsModal.classList.contains("hidden")) {
+      document.getElementById("closeSettingsBtn").click();
+      await settle(20);
+    }
+  }
+
+  assert.equal(document.getElementById("joinCourtTile").style.display, "none");
+  assert.notEqual(document.getElementById("switchToSpectateTile").style.display, "none");
+  assert.notEqual(document.getElementById("serverToggleTile").style.display, "none");
+  assert.equal(groups.court.hidden, false, "the court controls group returns for players");
+  assert.deepEqual(dividers.map((divider) => divider.hidden), [false, false]);
+});
+
+
 test("a panel hidden by the stylesheet is not resized while hidden", () => {
   const saved = { left: panel.style.left, top: panel.style.top, width: panel.style.width };
   panel.style.left = "300px";

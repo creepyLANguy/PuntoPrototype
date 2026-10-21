@@ -6,6 +6,9 @@ import { qrState } from "../qr/qrState.js";
 import { fitTextToContainer, updateMarqueeScrolling } from "../scoring/scoreboard.js";
 import { elements } from "../ui/dom.js";
 import { updateToastContainerPosition } from "../ui/toast.js";
+import { syncCourtQrOptionsTile } from "./courtQrOptions.js";
+
+let qrPanelAvailabilityObserver = null;
 
 export function registerViewportLayout()
 {
@@ -27,5 +30,15 @@ export function registerViewportLayout()
     qrState.refreshCourtQrResizeHandleVisibility?.();
     syncCourtListFadeState(elements.playCourtList);
     syncCourtListFadeState(elements.spectateCourtList);
+    syncCourtQrOptionsTile();
   });
+
+  // ResizeObserver catches changes to the scoreboard bounds that do not come
+  // from a window resize, including dynamic viewport and orientation changes.
+  if (!qrPanelAvailabilityObserver && typeof window.ResizeObserver === "function" && elements.scoreboardPage) {
+    qrPanelAvailabilityObserver = new window.ResizeObserver(() => syncCourtQrOptionsTile());
+    qrPanelAvailabilityObserver.observe(elements.scoreboardPage);
+  }
+
+  window.visualViewport?.addEventListener("resize", () => syncCourtQrOptionsTile(), { passive: true });
 }

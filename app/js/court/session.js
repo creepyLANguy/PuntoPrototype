@@ -335,6 +335,7 @@ export function enableSpectateMode() {
   if (elements.resetSettingsTile)
     elements.resetSettingsTile.style.display = "none";
   if (elements.changeoverTile) elements.changeoverTile.style.display = "none";
+  if (elements.serverToggleTile) elements.serverToggleTile.style.display = "none";
   if (elements.switchToSpectateTile)
     elements.switchToSpectateTile.style.display = "none";
 
@@ -364,6 +365,7 @@ function disableSpectateMode() {
   if (elements.editPlayersTile) elements.editPlayersTile.style.display = "";
   if (elements.resetSettingsTile) elements.resetSettingsTile.style.display = "";
   if (elements.changeoverTile) elements.changeoverTile.style.display = "";
+  if (elements.serverToggleTile) elements.serverToggleTile.style.display = "";
   if (elements.switchToSpectateTile)
     elements.switchToSpectateTile.style.display = "";
 

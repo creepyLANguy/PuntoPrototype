@@ -428,3 +428,69 @@ export function renderCourtQr(courtId)
   elements.courtQrLabel.textContent = courtId;
   qrState.refreshCourtQrResizeHandleVisibility?.(true);
 }
+
+// The QR panel is intentionally absent on phone-sized layouts and short
+// landscape viewports. Keep these limits aligned with the CSS media query in
+// pages/scoreboard.css, and also require enough space in the scoreboard itself
+// for the panel's minimum size plus its 8px inset on each side.
+export function canShowCourtQrPanel()
+{
+  if (!elements.courtQrPanel || !elements.courtQrCode || !elements.scoreboardPage)
+  {
+    return false;
+  }
+
+  if (!elements.courtQrCode.childElementCount)
+  {
+    return false;
+  }
+
+  const viewportWidth = window.innerWidth || document.documentElement?.clientWidth || 0;
+  const viewportHeight = window.innerHeight || document.documentElement?.clientHeight || 0;
+
+  if (viewportWidth <= 768 || (viewportWidth > viewportHeight && viewportHeight <= 500))
+  {
+    return false;
+  }
+
+  const scoreboardRect = elements.scoreboardPage.getBoundingClientRect();
+  const minimumWidthWithInsets = 130 + 8 * 2;
+  const minimumHeightWithInsets = (130 * 1.24) + 8 * 2;
+
+  return scoreboardRect.width >= minimumWidthWithInsets
+    && scoreboardRect.height >= minimumHeightWithInsets;
+}
+
+export function isCourtQrPanelVisible()
+{
+  return Boolean(
+    canShowCourtQrPanel()
+    && elements.courtQrPanel
+    && !elements.courtQrPanel.classList.contains("hidden")
+  );
+}
+
+export function toggleCourtQrPanel()
+{
+  if (!canShowCourtQrPanel())
+  {
+    return false;
+  }
+
+  const shouldShow = !isCourtQrPanelVisible();
+  elements.courtQrPanel.classList.toggle("hidden", !shouldShow);
+  qrState.courtQrPanelVisible = shouldShow;
+
+  if (shouldShow)
+  {
+    clampCourtQrPanelToViewport();
+    qrState.refreshCourtQrResizeHandleVisibility?.(true);
+  }
+  else
+  {
+    qrState.refreshCourtQrResizeHandleVisibility?.();
+  }
+
+  return true;
+}
+
