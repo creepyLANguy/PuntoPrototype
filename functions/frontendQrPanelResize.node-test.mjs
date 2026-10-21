@@ -398,6 +398,78 @@ test("the QR panel is hidden on phone-sized viewports and shown on desktop", () 
   }
 });
 
+test("court Options QR tile toggles visibility and tracks unsupported viewport sizes live", () => {
+  const settingsModal = document.getElementById("settingsModal");
+  const settingsBtn = document.getElementById("settingsBtn");
+  const toggle = document.getElementById("courtQrToggleBtn");
+  const tile = document.getElementById("courtQrToggleTile");
+  const tileLabel = () => tile.querySelector(":scope > span").textContent;
+  const originalWidth = Object.getOwnPropertyDescriptor(window, "innerWidth");
+  const originalHeight = Object.getOwnPropertyDescriptor(window, "innerHeight");
+
+  const setViewport = (width, height) => {
+    Object.defineProperty(window, "innerWidth", {
+      configurable: true,
+      writable: true,
+      value: width,
+    });
+    Object.defineProperty(window, "innerHeight", {
+      configurable: true,
+      writable: true,
+      value: height,
+    });
+    window.dispatchEvent(new window.Event("resize"));
+  };
+
+  try {
+    assert.ok(toggle, "the QR visibility action exists in court options");
+    assert.ok(tile, "the QR action has a tile that can be styled as unavailable");
+    settingsBtn.click();
+
+    setViewport(1366, 768);
+    assert.equal(toggle.disabled, false, "desktop dimensions enable the toggle");
+    assert.equal(tileLabel(), "Hide QR", "a visible panel offers the hide action");
+    assert.equal(toggle.getAttribute("aria-pressed"), "true");
+
+    toggle.click();
+    assert.equal(panel.classList.contains("hidden"), true);
+    assert.equal(toggle.disabled, false);
+    assert.equal(tileLabel(), "Show QR", "a hidden panel offers the show action");
+    assert.equal(toggle.getAttribute("aria-pressed"), "false");
+
+    toggle.click();
+    assert.equal(panel.classList.contains("hidden"), false);
+    assert.equal(tileLabel(), "Hide QR");
+
+    setViewport(430, 932);
+    assert.equal(toggle.disabled, true, "phone portrait disables the action");
+    assert.equal(toggle.getAttribute("aria-disabled"), "true");
+    assert.equal(tile.classList.contains("qr-unavailable"), true);
+    assert.equal(tileLabel(), "Show QR", "an unrenderable panel is reflected as hidden");
+    assert.equal(panel.classList.contains("hidden"), false, "responsive suppression does not overwrite the user's visibility choice");
+
+    setViewport(780, 360);
+    assert.equal(toggle.disabled, true, "short landscape disables the action");
+    assert.equal(tile.classList.contains("qr-unavailable"), true);
+
+    setViewport(1366, 768);
+    assert.equal(toggle.disabled, false, "the action re-enables as soon as the layout supports the panel");
+    assert.equal(toggle.getAttribute("aria-disabled"), "false");
+    assert.equal(tile.classList.contains("qr-unavailable"), false);
+    assert.equal(tileLabel(), "Hide QR", "the menu updates to the restored visible state");
+
+    assert.match(styles, /\.setting-item\.qr-unavailable\s*\{[\s\S]*?cursor:\s*not-allowed;/);
+    assert.match(styles, /body\.light-mode \.setting-item\.qr-unavailable:hover/);
+  } finally {
+    if (originalWidth) Object.defineProperty(window, "innerWidth", originalWidth);
+    if (originalHeight) Object.defineProperty(window, "innerHeight", originalHeight);
+    window.dispatchEvent(new window.Event("resize"));
+    panel.classList.remove("hidden");
+    settingsModal.classList.add("hidden");
+  }
+});
+
+
 test("a panel hidden by the stylesheet is not resized while hidden", () => {
   const saved = { left: panel.style.left, top: panel.style.top, width: panel.style.width };
   panel.style.left = "300px";
