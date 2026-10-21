@@ -7,12 +7,16 @@ import { session } from "../state/sessionState.js";
 import { elements } from "../ui/dom.js";
 import { updateFullscreenButton } from "../ui/fullscreen.js";
 import { syncSettingsTiles } from "../ui/settingsTiles.js";
+import { registerCourtQrOptionsControl, syncCourtQrOptionsTile } from "./courtQrOptions.js";
 
 export function registerSettingsModal()
 {
   // Settings Modal logic
+  registerCourtQrOptionsControl();
+
   elements.settingsBtn.addEventListener("click", () =>
   {
+    syncCourtQrOptionsTile();
     updateFullscreenButton();
     syncScoringControls();
     elements.settingsModal.classList.remove("hidden");
