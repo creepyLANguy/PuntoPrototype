@@ -255,7 +255,7 @@ test("the admin password is checked before the dashboard opens", async () => {
   );
   assert.ok(
     mobileAdminStyles.includes("#closeAdminDashboardBtn {") &&
-      mobileAdminStyles.includes("top: 4px;") &&
+      mobileAdminStyles.includes("top: 2px;") &&
       mobileAdminStyles.includes("left: 0;"),
     "the close button remains inside the mobile header",
   );
