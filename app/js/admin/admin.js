@@ -140,7 +140,7 @@ export function registerAdminTabs() {
   });
 
   document
-    .querySelectorAll("#allTab .admin-tool-grid > button")
+    .querySelectorAll("#allTab .admin-tool-grid button")
     .forEach((tile) => {
       tile.addEventListener("click", (event) => {
         if (tile.dataset.tab) {
