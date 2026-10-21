@@ -58,6 +58,21 @@ test("court and play roots are available without a court id", () => {
   assert.equal(findSource("/p/**")?.destination, "/app/index.html");
 });
 
+test("Device Lab canonical and legacy routes resolve to the Device Lab page", () => {
+  const routes = [
+    "/devicelab", "/devicelab/**", "/lab", "/lab/**",
+    "/harness", "/harness/**", "/app/harness", "/app/harness/**",
+    "/device-harness", "/device-harness/**",
+  ];
+  for (const source of routes) {
+    assert.equal(findSource(source)?.destination, "/device-harness/index.html", source);
+    assert.ok(
+      rewrites.findIndex((rewrite) => rewrite.source === source) < rewrites.findIndex((rewrite) => rewrite.source === "**"),
+      source + " must precede the catch-all rewrite",
+    );
+  }
+});
+
 test("legacy single-character endpoint routes are genuinely free", () => {
   for (const source of ["/a/**", "/r/**", "/s/**", "/b", "/b/**", "/o", "/o/**"]) {
     assert.equal(findSource(source), null, `legacy route ${source} is still reserved`);

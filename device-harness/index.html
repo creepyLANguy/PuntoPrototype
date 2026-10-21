@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <base href="/device-harness/" />
-  <title>Device Test Harness | Padel Push™</title>
+  <title>Device Lab | Padel Push™</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -15,7 +15,7 @@
         <button id="themeToggleGateBtn" class="icon-btn theme-icon-btn" type="button" aria-label="Toggle theme" title="Toggle theme">🌓</button>
       </div>
       <div class="eyebrow">ADMIN ACCESS</div>
-      <h1>Device Test Harness</h1>
+      <h1>Device Lab</h1>
       <p>Enter the Padel Push admin password to access this tool.</p>
       <label for="adminPassword">Admin password</label>
       <input
@@ -26,7 +26,7 @@
         aria-describedby="adminPasswordError"
       />
       <div id="adminPasswordError" class="gate-error" role="alert"></div>
-      <button id="adminUnlockBtn" class="btn brand-btn" type="button">Unlock harness</button>
+      <button id="adminUnlockBtn" class="btn brand-btn" type="button">Unlock Device Lab</button>
     </div>
   </div>
 
@@ -54,17 +54,26 @@
         <div class="brand-mark">PP</div>
         <div>
           <div class="brand-title">Padel Push™</div>
-          <div class="brand-subtitle">Device Test Harness</div>
+          <div class="brand-subtitle">Device Lab</div>
         </div>
       </div>
 
       <div class="sidebar-heading-wrap">
-        <div class="sidebar-heading">Devices <span id="deviceCount">0</span></div>
+        <div class="sidebar-heading">Total devices: <span id="deviceCount">—</span></div>
         <button id="deviceListToggle" class="device-list-toggle" type="button" aria-expanded="true" aria-controls="deviceList">
           Hide list
         </button>
       </div>
-      <div id="deviceList" class="device-list"><div class="hint">Loading devices…</div></div>
+      <div id="deviceList" class="device-list">
+        <details class="device-group" id="physicalDeviceGroup" open>
+          <summary class="device-group-heading">Physical devices <span id="physicalDeviceCount" class="device-group-count">—</span></summary>
+          <div id="physicalDeviceList" class="device-group-list"><div class="loading-state" role="status" aria-live="polite"><span class="spinner" aria-hidden="true"></span><span>Loading physical devices…</span></div></div>
+        </details>
+        <details class="device-group" id="virtualDeviceGroup" open>
+          <summary class="device-group-heading">Virtual devices <span id="virtualDeviceCount" class="device-group-count">—</span></summary>
+          <div id="virtualDeviceList" class="device-group-list"><div class="loading-state" role="status" aria-live="polite"><span class="spinner" aria-hidden="true"></span><span>Loading virtual devices…</span></div></div>
+        </details>
+      </div>
 
       <button id="addVirtualDeviceBtn" class="btn brand-btn">+ Add virtual device</button>
 
@@ -77,14 +86,20 @@
 
     <main class="main">
       <header class="topbar">
-        <div>
-          <div class="eyebrow">REAL BACKEND</div>
-          <h1>Device Test Harness</h1>
-          <p>Simulate Hub, Beacon and Pulse without physical hardware.</p>
+        <div class="topbar-intro">
+          <h1>Device Lab</h1>
+        </div>
+        <div class="environment-center">
+          <div id="environmentBadge" class="env-badge">Detecting environment…</div>
         </div>
         <div class="top-actions">
-          <div id="environmentBadge" class="env-badge">Detecting environment…</div>
-          <select id="courtSelect" class="select"></select>
+          <div class="court-picker">
+            <input id="courtSearch" class="text-input court-search" type="search" placeholder="Search courts…" autocomplete="off" aria-label="Search courts" />
+            <div class="court-select-row">
+              <select id="courtSelect" class="select court-select" aria-label="Select court" disabled><option value="">Loading courts…</option></select>
+              <span id="courtLoadingSpinner" class="spinner inline-select-spinner" role="status" aria-label="Loading courts"></span>
+            </div>
+          </div>
           <button id="clearTraceBtn" class="btn secondary">Clear trace</button>
         </div>
       </header>
@@ -106,7 +121,10 @@
                 <div class="eyebrow">DEVICE</div>
                 <h2 id="deviceTitle">No device selected</h2>
               </div>
-              <div id="deviceStatus" class="status-pill">—</div>
+              <div class="device-panel-actions">
+                <button id="viewCourtInfoBtn" class="btn secondary" type="button" disabled aria-disabled="true" title="Select a device with an assigned court">View Court Info</button>
+                <div id="deviceStatus" class="status-pill">—</div>
+              </div>
             </div>
             <div id="deviceIdentity" class="identity-grid"></div>
 

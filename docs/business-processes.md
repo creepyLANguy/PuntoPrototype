@@ -9,7 +9,7 @@ It is written to be usable as an operating-model baseline: a person may hold sev
 
 The current software and firmware repositories establish the following operating baseline:
 
-- PuntoPrototype is the application, Firebase backend, public API, admin portal, NFC utility, Device Lab/harness and deployment workflow.
+- PuntoPrototype is the application, Firebase backend, public API, admin portal, NFC utility, Device Lab and deployment workflow.
 - ProtoSketches contains the current ESP32 firmware prototypes for Hub, Beacon and Pulse.
 - The application has durable match and tournament entities. Courts remain physical resources and device locations.
 - Physical manufacturing, production provisioning, inventory control and fulfilment are business processes but are not implemented as an end-to-end system in either repository.
@@ -181,7 +181,7 @@ Control: do not interpret a changeover as rewriting already-recorded scoring eve
 
 Purpose: test physical-device workflows without uncontrolled production mutation.
 
-Current tools: Device Lab/harness in PuntoPrototype; source firmware in ProtoSketches.
+Current tools: Device Lab in PuntoPrototype; source firmware in ProtoSketches.
 
 Steps:
 1. Authenticate into the Device Lab.
