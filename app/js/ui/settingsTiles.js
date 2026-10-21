@@ -5,6 +5,7 @@ import { session } from "../state/sessionState.js";
 import { themeState } from "../state/themeState.js";
 import { elements } from "./dom.js";
 import { getFullscreenElement } from "./fullscreen.js";
+import { canShowCourtQrPanel, isCourtQrPanelVisible } from "../qr/courtQr.js";
 
 export function canStartNewMatch() {
   return Boolean(
@@ -106,4 +107,29 @@ export function syncSettingsTiles() {
     "Server on",
     "Server off",
   );
+
+  const qrButton = elements.courtQrToggleBtn;
+  if (qrButton) {
+    const tile = qrButton.closest(".setting-item");
+    const available = canShowCourtQrPanel();
+    const visible = isCourtQrPanelVisible();
+    const actionLabel = visible ? "Hide QR" : "Show QR";
+
+    qrButton.disabled = !available;
+    qrButton.setAttribute("aria-disabled", String(!available));
+    qrButton.setAttribute("aria-pressed", String(visible));
+    qrButton.setAttribute("aria-label", available
+      ? actionLabel + " panel"
+      : actionLabel + " panel (unavailable at this screen size)");
+    qrButton.title = available
+      ? actionLabel + " panel"
+      : "QR panel is unavailable at this screen size";
+
+    if (tile) {
+      tile.classList.toggle("active", available && visible);
+      tile.classList.toggle("qr-unavailable", !available);
+      const label = tile.querySelector(":scope > span");
+      if (label) label.textContent = actionLabel;
+    }
+  }
 }
