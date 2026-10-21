@@ -78,11 +78,7 @@
   }
 }
 
-/* Dashboard tabs: Clubs, Courts and Devices. */
-.admin-tabs {
-  grid-template-columns: auto;
-  grid-auto-flow: column;
-}
+/* Horizontal portal-tab layout is shared in admin-tabs.css. */
 
 body.light-mode #adminClubSearch {
   background: #fff;
@@ -319,4 +315,15 @@ body.light-mode .club-member-select input {
     padding: 6px 10px;
     font-size: 0.75rem;
   }
+}
+
+/* Keep labels compact inside the shared horizontally scrolling tab strip. */
+.admin-tabs .tab-btn {
+  min-width: 0;
+  padding: 8px 10px;
+  white-space: nowrap;
+}
+
+.admin-tabs .admin-all-tab-btn {
+  min-width: 0;
 }

@@ -126,6 +126,11 @@ test.before(async () => {
   await waitFor(() => isShown("adminAuthPage"), { label: "admin auth page" });
   $("adminAuthPassword").value = ADMIN_SKELETON_KEY;
   $("submitAdminAuthBtn").click();
+  await waitFor(() => isShown("adminDashboardPage"), { label: "admin portal" });
+
+  // The portal now opens to All by default; these tests exercise court and club
+  // management, so explicitly select the Courts tab before relying on its list.
+  document.querySelector('.tab-btn[data-tab="courts"]').click();
   await waitFor(() => document.querySelectorAll("#adminCourtList .admin-court-item").length === 5, {
     label: "admin court list",
   });
@@ -174,7 +179,7 @@ test("the admin court and device lists show each item's club and search by it", 
 });
 
 test("the Clubs tab lists every club with its court and device counts", async () => {
-  assert.deepEqual(texts(".admin-tabs .tab-btn"), [
+  assert.deepEqual(texts('.admin-tabs .tab-btn:not([data-tab="all"])'), [
     "Tournaments",
     "Clubs",
     "Courts",

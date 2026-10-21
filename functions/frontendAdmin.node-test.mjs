@@ -3,6 +3,7 @@
 // court and device lists, create / edit / delete) so that changes to the
 // shared admin code cannot silently break it.
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import {
@@ -61,7 +62,7 @@ async function logIn() {
   await waitFor(() => isShown("adminAuthPage"), { label: "admin auth page" });
   $("adminAuthPassword").value = ADMIN_SKELETON_KEY;
   $("submitAdminAuthBtn").click();
-  await waitFor(() => isShown("adminDashboardPage"), { label: "admin dashboard" });
+  await waitFor(() => isShown("adminDashboardPage"), { label: "admin portal" });
 }
 
 async function waitForCourtList(count) {
@@ -148,8 +149,20 @@ test.before(async () => {
 });
 
 test("the admin password is checked before the dashboard opens", async () => {
+  assert.equal(isShown("menuPage"), true, "main menu is initially visible");
+  assert.notEqual(
+    window.getComputedStyle($("appearanceMenuBtn")).display,
+    "none",
+    "floating appearance button is shown alongside the admin button on the main menu",
+  );
+
   $("adminLoginBtn").click();
   await waitFor(() => isShown("adminAuthPage"), { label: "admin auth page" });
+  assert.equal(
+    window.getComputedStyle($("appearanceMenuBtn")).display,
+    "none",
+    "floating appearance button is hidden on the admin login page",
+  );
 
   $("submitAdminAuthBtn").click();
   await settle();
@@ -165,11 +178,215 @@ test("the admin password is checked before the dashboard opens", async () => {
 
   $("adminAuthPassword").value = ADMIN_SKELETON_KEY;
   $("submitAdminAuthBtn").click();
-  await waitFor(() => isShown("adminDashboardPage"), { label: "admin dashboard" });
-  assert.equal(activeTab(), "courts", "the Courts tab is open by default");
+  await waitFor(() => isShown("adminDashboardPage"), { label: "admin portal" });
+  assert.equal(activeTab(), "all", "the All tab is open when no preference exists");
   assert.deepEqual(
     [...document.querySelectorAll(".admin-tabs .tab-btn")].map((button) => button.dataset.tab),
-    ["tournaments", "clubs", "courts", "matches", "devices"],
+    ["all", "tournaments", "clubs", "courts", "matches", "devices"],
+  );
+  assert.ok($("allTab").classList.contains("active"));
+  assert.equal($("courtsTab").classList.contains("active"), false);
+  assert.equal(
+    document.querySelectorAll(".tab-content.active").length,
+    1,
+    "only one admin panel is active at a time",
+  );
+  const tabBar = document.querySelector(".admin-tabs");
+  const tabBarStyle = window.getComputedStyle(tabBar);
+  assert.equal(tabBarStyle.display, "flex");
+  assert.equal(tabBarStyle.flexWrap, "nowrap");
+  assert.equal(tabBarStyle.overflowX, "auto");
+
+  // The All tab's image must stay constrained to the same 36px button height
+  // as adjacent tabs. Width follows the SVG's natural aspect ratio.
+  const allTabButton = document.querySelector(".admin-tabs .admin-all-tab-btn");
+  const allTabLogo = allTabButton.querySelector(".admin-all-tab-logo");
+  const allTabButtonStyle = window.getComputedStyle(allTabButton);
+  const allTabLogoStyle = window.getComputedStyle(allTabLogo);
+  assert.equal(allTabButtonStyle.height, "36px");
+  assert.equal(allTabButtonStyle.display, "inline-flex");
+  assert.equal(allTabLogoStyle.display, "block");
+  assert.equal(allTabLogoStyle.maxWidth, "120px");
+  assert.equal(allTabLogoStyle.maxHeight, "18px");
+  assert.equal(allTabLogoStyle.width, "auto");
+  assert.equal(allTabLogoStyle.height, "auto");
+  assert.equal(allTabLogoStyle.objectFit, "contain");
+  assert.equal(
+    allTabLogo.classList.contains("contrast-invert"),
+    !document.body.classList.contains("light-mode"),
+    "the initial All-tab logo is inverted only against the light active surface",
+  );
+  assert.equal(
+    window.getComputedStyle($("allTab")).overflowY,
+    "auto",
+    "All overview stays within the portal and scrolls instead of overflowing",
+  );
+  assert.equal(window.getComputedStyle(document.querySelector(".admin-tool-grid")).display, "flex");
+  const adminStyles = readFileSync(new URL("../app/css/style.css", import.meta.url), "utf8");
+  assert.match(
+    adminStyles,
+    /\.admin-tool-group\s*\{[^}]*grid-template-columns:\s*repeat\(4,\s*minmax\(0,\s*1fr\)\)/s,
+    "desktop overview uses a four-column tile grid",
+  );
+  assert.match(
+    adminStyles,
+    /@media\s*\(max-width:\s*1100px\)[\s\S]*?\.admin-tool-group\s*\{[^}]*grid-template-columns:\s*repeat\(3,/s,
+    "medium layouts reduce the tile grid to three columns",
+  );
+  assert.match(
+    adminStyles,
+    /@media\s*\(max-width:\s*820px\)[\s\S]*?\.admin-tool-group\s*\{[^}]*grid-template-columns:\s*repeat\(2,/s,
+    "tablet and mobile layouts reduce the tile grid to two columns",
+  );
+  const mobileAdminStyles = adminStyles.slice(
+    adminStyles.lastIndexOf("@media (max-width: 600px)"),
+  );
+  assert.ok(
+    mobileAdminStyles.includes("#adminDashboardPage {") &&
+      mobileAdminStyles.includes("position: fixed;") &&
+      mobileAdminStyles.includes("height: 100dvh;"),
+    "the mobile portal fills the dynamic viewport",
+  );
+  assert.ok(
+    mobileAdminStyles.includes(".admin-dashboard-container .edit-btn,") &&
+      mobileAdminStyles.includes(".club-member-open {") &&
+      mobileAdminStyles.includes("min-height: 44px;"),
+    "admin list and club-member actions have mobile-sized touch targets",
+  );
+  assert.ok(
+    mobileAdminStyles.includes("#closeAdminDashboardBtn {") &&
+      mobileAdminStyles.includes("top: 2px;") &&
+      mobileAdminStyles.includes("left: 0;"),
+    "the close button remains inside the mobile header",
+  );
+  assert.ok(
+    mobileAdminStyles.includes(
+      'body:has(#adminDashboardPage[style*="display: flex"]) .appearance-menu {',
+    ) &&
+      mobileAdminStyles.includes("position: fixed;") &&
+      mobileAdminStyles.includes("overflow-y: auto;"),
+    "the Appearance menu stays scrollable and above the mobile portal",
+  );
+  assert.ok(
+    mobileAdminStyles.includes("display: grid;") &&
+      mobileAdminStyles.includes("grid-template-columns: minmax(0, 1fr) minmax(0, auto);"),
+    "mobile tab controls use a shrink-safe grid",
+  );
+  assert.ok(
+    mobileAdminStyles.includes(".admin-tabs .tab-btn {") &&
+      mobileAdminStyles.includes("height: 44px;") &&
+      mobileAdminStyles.includes("min-height: 44px;"),
+    "mobile tab targets are at least 44px tall",
+  );
+  assert.ok(
+    mobileAdminStyles.includes(
+      "grid-template-columns: 40px minmax(0, 1fr) minmax(0, 1fr);",
+    ) &&
+      mobileAdminStyles.includes("min-height: 40px;") &&
+      mobileAdminStyles.includes("font-size: clamp(0.64rem, 2.9vw, 0.78rem);") &&
+      mobileAdminStyles.includes(".header-actions .tab-btn-theme {"),
+    "mobile header actions use a compact icon column and scaled-down labels",
+  );
+  assert.ok(
+    mobileAdminStyles.includes("#editClubPage .club-editor-card {") &&
+      mobileAdminStyles.includes("max-height: calc(100dvh - 20px);"),
+    "the club editor fits within the mobile viewport",
+  );
+  const overviewTiles = [...document.querySelectorAll("#allTab .admin-tool-grid button")];
+  assert.equal(overviewTiles.length, 8);
+  assert.deepEqual(
+    overviewTiles.map((tile) => tile.querySelector(".admin-tool-label")?.textContent.trim()),
+    [
+      "Tournaments",
+      "Clubs",
+      "Courts",
+      "Matches",
+      "Devices",
+      "NFC Tool",
+      "Device Lab",
+      "Theme Picker",
+    ],
+    "all eight overview tiles have readable text labels",
+  );
+  const overviewGroups = [
+    ...document.querySelectorAll("#allTab .admin-tool-grid > .admin-tool-group"),
+  ];
+  assert.equal(overviewGroups.length, 3, "overview separates main, device and appearance tools");
+  assert.deepEqual(
+    overviewGroups.map((group) => group.querySelectorAll("button").length),
+    [5, 2, 1],
+    "core admin tools, NFC/device tools and Theme Picker stay in separate groups",
+  );
+  assert.deepEqual(
+    overviewGroups.map((group) => group.getAttribute("aria-label")),
+    ["Main admin tools", "NFC and device tools", "Appearance tools"],
+    "each overview tool group has an accessible label",
+  );
+  assert.equal(
+    document.querySelectorAll("#allTab .admin-tool-grid > .admin-tool-divider").length,
+    2,
+    "horizontal rules visually separate the three tool groups",
+  );
+  const tileIcons = [
+    ...document.querySelectorAll(
+      "#allTab .admin-tool-grid button .admin-tool-icon, " +
+        "#allTab .admin-tool-grid button .admin-tool-icon-ext, " +
+        "#allTab .admin-tool-grid button .admin-tool-icon-theme",
+    ),
+  ];
+  assert.equal(tileIcons.length, 8, "every overview tile has its own visual indicator");
+  assert.ok(
+    tileIcons.every((icon) => icon.getAttribute("viewBox") === "0 0 24 24" && icon.getAttribute("fill") === "none" && icon.getAttribute("aria-hidden") === "true"),
+    "tile SVGs use consistent viewports and remain decorative to assistive technology",
+  );
+  assert.ok(document.querySelector("#allTab [data-admin-tool='nfc']"));
+  assert.ok(document.querySelector("#allTab [data-admin-tool='harness']"));
+  assert.ok(document.querySelector("#allTab [data-admin-tool='theme']"));
+  const overviewTileStyle = window.getComputedStyle(overviewTiles[0]);
+  assert.equal(overviewTileStyle.display, "flex");
+  assert.equal(overviewTileStyle.boxSizing, "border-box");
+  assert.equal(overviewTileStyle.minHeight, "124px");
+  assert.ok($("appearanceMenuBtn"), "the appearance control remains available to the Theme tile");
+  assert.equal(
+    window.getComputedStyle($("appearanceMenuBtn")).display,
+    "none",
+    "the floating appearance button is hidden inside the Admin Portal",
+  );
+  assert.equal(
+    document.querySelectorAll(".tab-content.active").length,
+    1,
+    "the All panel is the only active panel when the portal opens",
+  );
+
+  const originalOpen = window.open;
+  const openedUrls = [];
+  window.open = (...args) => openedUrls.push(args);
+  document.querySelector("#allTab [data-admin-tool='nfc']").click();
+  document.querySelector("#allTab [data-admin-tool='harness']").click();
+  assert.deepEqual(openedUrls, [
+    ["/nfc/index.html", "_blank"],
+    ["/harness", "_blank"],
+  ]);
+  window.open = originalOpen;
+
+  document.querySelector("#allTab [data-admin-tool='theme']").click();
+  assert.equal($("appearanceMenu").classList.contains("hidden"), false);
+  document.body.click();
+  assert.equal($("appearanceMenu").classList.contains("hidden"), true);
+
+  // The header launcher must behave like the All-tab tile: its opening click
+  // must not be treated as an outside click by the document dismissal handler.
+  $("themeBtn").click();
+  assert.equal(
+    $("appearanceMenu").classList.contains("hidden"),
+    false,
+    "the admin header theme button leaves the appearance menu open",
+  );
+  document.body.click();
+  assert.equal(
+    $("appearanceMenu").classList.contains("hidden"),
+    true,
+    "an actual outside click still dismisses the appearance menu",
   );
 
   const tabControls = {
@@ -184,10 +401,58 @@ test("the admin password is checked before the dashboard opens", async () => {
     assert.ok($(addId), tab + " tab has an add button");
   }
 
-  document.querySelector('.tab-btn[data-tab="courts"]').click();
+  const tabScrollCalls = [];
+  document.querySelectorAll(".admin-tabs .tab-btn").forEach((button) => {
+    button.scrollIntoView = (options) => {
+      tabScrollCalls.push({ tab: button.dataset.tab, options });
+    };
+  });
+
+  document.querySelector('.admin-tool-tile[data-tab="courts"]').click();
   await waitForCourtList(3);
   assert.equal(activeTab(), "courts");
+  assert.ok(
+    tabScrollCalls.some(
+      ({ tab, options }) =>
+        tab === "courts" && options.inline === "nearest" && options.block === "nearest",
+    ),
+    "switching from an overview tile scrolls the selected tab into view",
+  );
+  const logoContrastClass = () => $("adminDashboardPage").querySelector(".admin-all-tab-logo").classList.contains("contrast-invert");
+  assert.equal(
+    logoContrastClass(),
+    document.body.classList.contains("light-mode"),
+    "the inactive logo follows the current theme's tab background",
+  );
+
+  const originallyLight = document.body.classList.contains("light-mode");
+  document.body.classList.remove("light-mode");
+  await waitFor(() => !logoContrastClass(), { label: "white logo on dark inactive tab" });
+  document.body.classList.add("light-mode");
+  await waitFor(() => logoContrastClass(), { label: "inverted logo on light inactive tab" });
+
+  document.querySelector('.admin-tabs .tab-btn[data-tab="all"]').click();
+  await waitFor(() => activeTab() === "all", { label: "All tab in light mode" });
+  assert.equal(logoContrastClass(), false, "dark logo is not inverted on the active black tab");
+
+  document.querySelector('.admin-tabs .tab-btn[data-tab="courts"]').click();
+  await waitForCourtList(3);
+  assert.equal(logoContrastClass(), true, "logo inverts again when the light-mode tab becomes inactive");
+
+  document.body.classList.toggle("light-mode", originallyLight);
+  await waitFor(
+    () => logoContrastClass() === originallyLight,
+    { label: "logo contrast restored after the theme check" },
+  );
   assert.equal($("courtsTab").classList.contains("active"), true);
+  assert.equal(document.querySelectorAll(".tab-content.active").length, 1);
+  assert.equal(window.localStorage.getItem("padelPushAdminLastTab"), "courts");
+
+  // Opening the portal again in the same browser restores the user's last tab.
+  $("adminDashboardPage").style.display = "none";
+  $("adminLoginBtn").click();
+  await waitForCourtList(3);
+  assert.equal(activeTab(), "courts");
 });
 
 test("the court list is sorted by name and filtered by search and status", async () => {
@@ -596,10 +861,20 @@ test("deleting a device asks first and removes it", async () => {
 async function expectLoggedOut() {
   await waitFor(() => !isShown("adminDashboardPage"), { label: "dashboard closed" });
   if (!isShown("adminAuthPage")) {
+    assert.notEqual(
+      window.getComputedStyle($("appearanceMenuBtn")).display,
+      "none",
+      "floating appearance button is visible again on the main menu",
+    );
     $("adminLoginBtn").click();
   }
   await waitFor(() => isShown("adminAuthPage"), { label: "login required" });
   assert.equal(isShown("adminDashboardPage"), false);
+  assert.equal(
+    window.getComputedStyle($("appearanceMenuBtn")).display,
+    "none",
+    "floating appearance button stays hidden away from the main menu",
+  );
 }
 
 test("Escape on the dashboard ends the admin session", async () => {

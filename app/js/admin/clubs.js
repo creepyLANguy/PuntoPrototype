@@ -5,6 +5,7 @@ import { openClubEditor } from "./clubEditor.js";
 import { anyValueMatches, normalizeSearchTerm } from "../clubs/clubIndex.js";
 import { loadClubIndex } from "../clubs/clubLoader.js";
 import { elements } from "../ui/dom.js";
+import { showAdminListSpinner } from "../ui/loading.js";
 
 let allClubs = [];
 
@@ -15,10 +16,15 @@ export function registerClubList()
 
 export async function loadClubList()
 {
-  elements.adminClubList.innerHTML = '<div class="loading">Loading clubs...</div>';
-  const clubIndex = await loadClubIndex();
-  allClubs = clubIndex.clubs;
-  renderFilteredClubs();
+  showAdminListSpinner(elements.adminClubList, "Loading clubs");
+  try {
+    const clubIndex = await loadClubIndex();
+    allClubs = clubIndex.clubs;
+    renderFilteredClubs();
+  } catch (error) {
+    console.error("Error loading clubs:", error);
+    elements.adminClubList.innerHTML = '<div class="error">Error loading clubs.</div>';
+  }
 }
 
 function renderFilteredClubs()

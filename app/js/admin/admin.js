@@ -1,6 +1,6 @@
-// Admin portal shell: admin authentication, the dashboard open/close flow, cross-tab
-// logout, the dashboard tabs and the admin tool buttons. Owns #adminAuthPage and
-// the dashboard chrome; the club, court and device lists live in clubs.js /
+// Admin portal shell: admin authentication, the portal open/close flow, cross-tab
+// logout, the portal tabs and the admin tool buttons. Owns #adminAuthPage and
+// the portal chrome; the club, court and device lists live in clubs.js /
 // courts.js / devices.js.
 import { refreshActiveAdminTab, showAdminTab } from "./dashboardTabs.js";
 import {
@@ -18,6 +18,7 @@ import {
 } from "../state/adminSessionState.js";
 import { appState } from "../state/appState.js";
 import { setAdminKey } from "../state/credentialsState.js";
+import { openAppearanceMenu } from "../ui/appearance.js";
 import { $, elements } from "../ui/dom.js";
 import { hideSpinner, showSpinner } from "../ui/loading.js";
 
@@ -114,6 +115,16 @@ export function registerAdminPortal() {
     });
   }
 
+  const themeBtn = $("themeBtn");
+  if (themeBtn) {
+    themeBtn.addEventListener("click", (event) => {
+      // Prevent the document-level outside-click handler from closing the
+      // appearance menu during the same click that opens it.
+      event.stopPropagation();
+      openAppearanceMenu();
+    });
+  }
+
   elements.adminAuthPage.addEventListener("click", (e) => {
     if (e.target === elements.adminAuthPage) {
       void stepBackInApp(createViewState({ page: NAV_PAGES.MENU }));
@@ -122,10 +133,36 @@ export function registerAdminPortal() {
 }
 
 export function registerAdminTabs() {
-  // Tab Switching Logic
   elements.adminTabs.forEach((btn) => {
     btn.addEventListener("click", () => {
       showAdminTab(btn.dataset.tab);
     });
   });
+
+  document
+    .querySelectorAll("#allTab .admin-tool-grid button")
+    .forEach((tile) => {
+      tile.addEventListener("click", (event) => {
+        if (tile.dataset.tab) {
+          showAdminTab(tile.dataset.tab);
+          return;
+        }
+
+        switch (tile.dataset.adminTool) {
+          case "nfc":
+            elements.nfcToolBtn?.click();
+            break;
+          case "harness":
+            $("deviceHarnessBtn")?.click();
+            break;
+          case "theme":
+            // Stop the outside-click handler from immediately dismissing the menu.
+            event.stopPropagation();
+            openAppearanceMenu();
+            break;
+          default:
+            break;
+        }
+      });
+    });
 }

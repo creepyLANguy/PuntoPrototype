@@ -6,7 +6,7 @@ import { refreshActiveAdminTab } from "../admin/dashboardTabs.js";
 import { openEditDeviceModal } from "../admin/devices.js";
 import { NAV_MODALS, NAV_PAGES } from "../config/routes.js";
 import { displayPlayCourtList, displaySpectateCourtList, loadCourtsWithInlineLoader } from "../court/courtLists.js";
-import { setPlayPageVisible } from "../court/playJoin.js";
+import { openPlayerJoinPrompt, setPlayPageVisible } from "../court/playJoin.js";
 import { enterCourt, leaveCourt } from "../court/session.js";
 import { showMatchDetails } from "../details/matchDetails.js";
 import { getCourt } from "../firebase/courtRepository.js";
@@ -43,7 +43,8 @@ export function getCurrentViewState()
       [elements.detailsModal, NAV_MODALS.DETAILS],
       [elements.settingsModal, NAV_MODALS.SETTINGS],
       [elements.confirmModal, NAV_MODALS.CONFIRM],
-      [elements.playerNamesModal, NAV_MODALS.PLAYER_NAMES]
+      [elements.playerNamesModal, NAV_MODALS.PLAYER_NAMES],
+      [elements.joinCourtModal, NAV_MODALS.JOIN_COURT]
     ];
 
     for (const [element, modal] of modalMap)
@@ -180,11 +181,7 @@ function showCurrentScoreboardView()
   elements.editDevicePage.style.display = "none";
   elements.editClubPage.style.display = "none";
 
-  if (elements.appearanceMenuBtn)
-  {
-    closeAppearanceMenu();
-    elements.appearanceMenuBtn.style.display = "none";
-  }
+  closeAppearanceMenu();
 
   if (elements.adminLoginBtn)
   {
@@ -203,6 +200,13 @@ function showCurrentScoreboardView()
 export async function restoreViewState(viewState)
 {
   const state = normalizeViewState(viewState);
+  // Close the main-menu appearance popover when navigating to another view.
+  // The Admin Portal's Theme tile can reopen it intentionally from that view.
+  if (state.page !== NAV_PAGES.MENU)
+  {
+    closeAppearanceMenu();
+  }
+
   const wasOnAdminProtectedView = isAdminProtectedViewVisible();
   const navigatingToAdminProtectedView = isAdminProtectedPage(state.page);
 
@@ -216,6 +220,11 @@ export async function restoreViewState(viewState)
     state.page = NAV_PAGES.ADMIN_AUTH;
     state.entityId = null;
   }
+
+  document.body.classList.toggle(
+    "admin-portal-open",
+    state.page === NAV_PAGES.ADMIN_DASHBOARD,
+  );
 
   navigationState.isRestoringNavigation = true;
 
@@ -281,6 +290,10 @@ export async function restoreViewState(viewState)
       else if (state.modal === NAV_MODALS.DETAILS)
       {
         await showMatchDetails(false);
+      }
+      else if (state.modal === NAV_MODALS.JOIN_COURT)
+      {
+        openPlayerJoinPrompt(state.courtId, session.currentMatchId);
       }      
 
       return;

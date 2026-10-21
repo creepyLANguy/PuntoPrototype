@@ -1593,6 +1593,68 @@ body.light-mode .reset-actions button {
   color: white;
 }
 
+/* Match the Options panel's solid surface colours and tighten the
+   join form without reserving empty space for its two inline error regions. */
+#joinCourtModal .join-court-modal-card {
+  background-color: #111 !important;
+  color: #fff !important;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.48);
+  backdrop-filter: none;
+  opacity: 1;
+}
+
+body.light-mode #joinCourtModal .join-court-modal-card {
+  background-color: #fdfdfd !important;
+  color: #000 !important;
+  border-color: #d6dfda;
+}
+
+.join-court-modal-card {
+  gap: 8px;
+}
+
+.join-court-modal-card h2 {
+  margin: 0;
+  padding-right: 24px;
+}
+
+.join-court-modal-card p {
+  margin: 0;
+  opacity: 0.8;
+  overflow-wrap: anywhere;
+}
+
+.join-court-modal-card .form-group input {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.join-court-modal-card .error {
+  min-height: 0;
+  margin: 0;
+  line-height: 1.35;
+}
+
+.join-court-modal-card .error:empty {
+  display: none;
+}
+
+.join-court-modal-card .form-group .error:not(:empty) {
+  margin-top: 4px;
+}
+
+.join-court-modal-actions {
+  margin-top: 0;
+}
+
+.join-court-modal-actions button {
+  flex: 1;
+  min-width: 100px;
+  width: auto;
+  margin: 0;
+}
+
 .share-image-modal {
   position: fixed;
   inset: 0;
@@ -4550,7 +4612,7 @@ body.light-mode .activate-nfc-btn:hover {
 }
 
 /* =======================================================
-   ADMIN DASHBOARD ENHANCEMENTS
+   ADMIN PORTAL ENHANCEMENTS
 ======================================================= */
 
 
@@ -4661,7 +4723,7 @@ body.light-mode .activate-nfc-btn:hover {
 }
 
 /* =======================================================
-   ADMIN DASHBOARD
+   ADMIN PORTAL
 ======================================================= */
 
 .admin-dashboard-container {
@@ -4712,34 +4774,6 @@ body.light-mode .activate-nfc-btn:hover {
   text-align: center;
   margin: 0;
   font-size: clamp(1rem, 2.5vw, 1.4rem);
-}
-
-.admin-dashboard-header .primary-btn {
-  flex-shrink: 0;
-  width: auto;
-  padding: 8px 16px;
-  font-size: 0.85rem;
-  margin: 0;
-}
-
-#nfcToolBtn {
-  background: var(--teamBcolour);
-  border-color: var(--teamBcolour);
-  color: #fff;
-}
-
-#nfcToolBtn:hover {
-  filter: brightness(1.25);
-}
-
-#deviceHarnessBtn {
-  background: var(--teamAcolour);
-  border-color: var(--teamAcolour);
-  color: #fff;
-}
-
-#deviceHarnessBtn:hover {
-  filter: brightness(1.25);
 }
 
 @media (orientation: landscape) and (max-height: 520px) {
@@ -5520,7 +5554,8 @@ body.light-mode .menu-btn:nth-child(4)::before,
   padding-bottom: 10px;
 }
 
-.tab-btn {
+.tab-btn,
+.tab-btn-theme {
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.1);
   color: white;
@@ -5537,9 +5572,29 @@ body.light-mode .menu-btn:nth-child(4)::before,
   font-weight: bold;
 }
 
+.tab-btn:hover,
+.tab-btn-theme:hover {
+  border-color: white;
+}
+
+body.light-mode .tab-btn:hover,
+body.light-mode .tab-btn-theme:hover {
+  border-color: black;
+}
+
+.tab-btn-theme {
+  aspect-ratio: 1 / 1;
+  border-radius: 100%;
+  padding: 1svh;
+}
+
 body.light-mode .tab-btn.active {
   background: #000;
   color: #fff;
+}
+
+body.light-mode .tab-btn-theme {
+  color: #000;
 }
 
 .header-actions {
@@ -5581,7 +5636,7 @@ body.light-mode .tab-btn.active {
   .header-actions {
     width: 100%;
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
     /* Puts buttons side-by-side, equal width */
     gap: 10px;
   }
@@ -5594,14 +5649,27 @@ body.light-mode .tab-btn.active {
   }
 }
 
+/* Keep the portal navigation horizontal. On narrow screens it scrolls
+   horizontally instead of growing the modal vertically. */
 .admin-tabs {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 8px;
   width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
 }
 
-.tab-btn {
+.admin-tabs .tab-btn {
+  flex: 0 0 auto;
   text-align: center;
+  white-space: nowrap;
 }
 
 /* Ensure the dashboard container takes up available space but doesn't exceed screen */
@@ -5642,7 +5710,8 @@ body.light-mode .admin-court-list::-webkit-scrollbar-thumb {
 }
 
 /* Tabs Light Mode */
-body.light-mode .tab-btn {
+body.light-mode .tab-btn,
+body.light-mode .tab-btn-theme {
   background: rgba(0, 0, 0, 0.05);
   border-color: rgba(0, 0, 0, 0.1);
   color: #333;
@@ -5697,6 +5766,311 @@ body.light-mode #adminCourtSearch {
   display: flex;
 }
 
+/* Keep the All overview inside the portal's available height so short
+   desktop windows scroll the tiles rather than clipping the lower row. */
+#allTab.tab-content.active {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* The floating appearance launcher belongs only on the main menu.
+   The Admin Portal's All-tab Theme tile still opens the appearance menu.
+   Every routed view hides menuPage with inline display:none. */
+body:has(#menuPage[style*="display: none"]) #appearanceMenuBtn {
+  display: none !important;
+}
+
+
+/* All-tab overview: separate core, device and appearance tool groups. */
+.admin-tool-grid {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 1120px;
+  margin: clamp(12px, 1.8vw, 22px) auto 0;
+  align-items: stretch;
+  gap: 14px;
+  box-sizing: border-box;
+}
+
+.admin-tool-group {
+  display: grid;
+  width: 100%;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  align-content: start;
+  align-items: stretch;
+  gap: 14px;
+  box-sizing: border-box;
+}
+
+.admin-tool-divider {
+  flex: 0 0 auto;
+  width: 100%;
+  height: 0;
+  margin: 0;
+  border: 0;
+  border-top: 1px solid var(--input-border, rgba(255, 255, 255, 0.14));
+}
+
+.admin-tool-tile,
+.admin-tool-tile-ext, 
+.admin-tool-tile-theme {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 0;
+  min-width: 0;
+  min-height: 124px;
+  padding: 20px;
+  box-sizing: border-box;
+  border: 1px solid var(--input-border, rgba(255, 255, 255, 0.14));
+  border-radius: 14px;
+  background: var(--modal-bg, #18211f);
+  color: var(--text-color, #f7faf8);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  touch-action: manipulation;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+  transition:
+    transform 180ms ease,
+    box-shadow 180ms ease,
+    border-color 180ms ease,
+    background-color 180ms ease;
+}
+
+.admin-tool-tile:hover,
+.admin-tool-tile-ext:hover,
+.admin-tool-tile-theme:hover {
+  transform: translateY(-2px);
+  border-color: var(--teamAcolour, #5ed7b0);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.18);
+}
+
+.admin-tool-tile:focus-visible,
+.admin-tool-tile-ext:focus-visible,
+.admin-tool-tile-theme:focus-visible {
+  outline: 2px solid var(--teamAcolour, #5ed7b0);
+  outline-offset: 3px;
+}
+
+.admin-tool-tile:active,
+.admin-tool-tile-ext:active,
+.admin-tool-tile-theme:active {
+  transform: translateY(0) scale(0.99);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.16);
+}
+
+.admin-tool-tile-ext:hover {
+  border-color: var(--teamBcolour, rgba(255, 255, 255, 0.14));
+}
+
+.admin-tool-tile-ext:focus-visible {
+  outline: 2px solid var(--teamBcolour, rgba(255, 255, 255, 0.14));
+  outline-offset: 3px;
+}
+
+.admin-tool-tile-theme:hover {
+  border-color: white;
+}
+
+.admin-tool-tile-theme:focus-visible {
+  outline: 2px solid white;
+}
+
+.admin-tool-copy {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  width: 100%;
+  min-width: 0;
+}
+
+.admin-tool-label {
+  font-size: 1rem;
+  line-height: 1.25;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  overflow-wrap: anywhere;
+}
+
+.admin-tool-description {
+  color: var(--text-secondary, currentColor);
+  opacity: 0.72;
+  font-size: 0.82rem;
+  font-weight: 400;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+body.light-mode .admin-tool-tile {
+  background: #ffffff;
+  color: #1b2924;
+  border-color: #dbe3df;
+  box-shadow: 0 5px 16px rgba(24, 44, 35, 0.06);
+}
+
+body.light-mode .admin-tool-tile:hover {
+  background: #fbfdfc;
+  border-color: color-mix(in srgb, var(--teamAcolour, #168b67) 50%, #dbe3df);
+  box-shadow: 0 12px 24px rgba(24, 44, 35, 0.11);
+}
+
+body.light-mode .admin-tool-description {
+  color: #52645c;
+  opacity: 1;
+}
+
+@media (max-width: 1100px) {
+  .admin-tool-grid {
+    gap: 12px;
+  }
+
+  .admin-tool-group {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .admin-tool-tile {
+    min-height: 116px;
+    padding: 18px;
+  }
+}
+
+@media (max-width: 820px) {
+  .admin-tool-grid {
+    gap: 11px;
+    margin-top: 12px;
+  }
+
+  .admin-tool-group {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 11px;
+  }
+
+  .admin-tool-tile {
+    min-height: 108px;
+    padding: 16px;
+  }
+}
+
+@media (max-width: 420px) {
+  .admin-tool-grid,
+  .admin-tool-group {
+    gap: 9px;
+  }
+
+  .admin-tool-tile {
+    min-height: 100px;
+    padding: 13px;
+    border-radius: 12px;
+  }
+
+  .admin-tool-label {
+    font-size: 0.92rem;
+  }
+
+  .admin-tool-description {
+    font-size: 0.74rem;
+  }
+}
+
+/* Keep the logo-based All tab the same height as neighbouring text tabs. */
+.admin-tabs .tab-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 36px;
+  box-sizing: border-box;
+}
+
+.admin-tabs .admin-all-tab-btn {
+  flex: 0 0 auto;
+  width: auto;
+  min-width: 0;
+  height: 36px;
+  padding: 8px 10px;
+}
+
+.admin-tabs .admin-all-tab-btn .admin-all-tab-logo {
+  display: block;
+  width: auto;
+  height: auto;
+  max-width: 120px;
+  max-height: 18px;
+  object-fit: contain;
+}
+
+
+/* The source logo SVG is white; invert it only when the active button surface
+   is too light for a 3:1 contrast ratio. JavaScript recalculates this class
+   from the button's effective background whenever tab/theme state changes. */
+.admin-tabs .admin-all-tab-logo.contrast-invert {
+  filter: invert(1);
+}
+
+.admin-tabs .admin-all-tab-logo {
+  transition: filter 120ms ease;
+}
+
+/* Consistent icon sizing and emphasis across all three tile variants. */
+.admin-tool-tile .admin-tool-icon,
+.admin-tool-tile-ext .admin-tool-icon-ext,
+.admin-tool-tile-theme .admin-tool-icon-theme {
+  display: block;
+  flex: 0 0 auto;
+  width: 30px;
+  height: 30px;
+  margin-bottom: 12px;
+  color: var(--teamAcolour, currentColor);
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.admin-tool-tile-ext .admin-tool-icon-ext {
+  color: var(--teamBcolour, currentColor);
+}
+
+.admin-tool-tile-theme .admin-tool-icon-theme {
+  color: currentColor;
+}
+
+@media (max-width: 1100px) {
+  .admin-tool-tile-ext,
+  .admin-tool-tile-theme {
+    min-height: 116px;
+    padding: 18px;
+  }
+}
+
+@media (max-width: 820px) {
+  .admin-tool-tile-ext,
+  .admin-tool-tile-theme {
+    min-height: 108px;
+    padding: 16px;
+  }
+}
+
+@media (max-width: 420px) {
+  .admin-tool-tile-ext,
+  .admin-tool-tile-theme {
+    min-height: 100px;
+    padding: 13px;
+    border-radius: 12px;
+  }
+
+  .admin-tool-tile .admin-tool-icon,
+  .admin-tool-tile-ext .admin-tool-icon,
+  .admin-tool-tile-theme .admin-tool-icon {
+    width: 26px;
+    height: 26px;
+    margin-bottom: 8px;
+  }
+}
 /* =======================================================
    ADMIN CLUBS
    The Club column of the admin court and device lists, the clubs list and
@@ -5777,11 +6151,7 @@ body.light-mode #adminCourtSearch {
   }
 }
 
-/* Dashboard tabs: Clubs, Courts and Devices. */
-.admin-tabs {
-  grid-template-columns: auto;
-  grid-auto-flow: column;
-}
+/* Horizontal portal-tab layout is shared in admin-tabs.css. */
 
 body.light-mode #adminClubSearch {
   background: #fff;
@@ -6018,6 +6388,17 @@ body.light-mode .club-member-select input {
     padding: 6px 10px;
     font-size: 0.75rem;
   }
+}
+
+/* Keep labels compact inside the shared horizontally scrolling tab strip. */
+.admin-tabs .tab-btn {
+  min-width: 0;
+  padding: 8px 10px;
+  white-space: nowrap;
+}
+
+.admin-tabs .admin-all-tab-btn {
+  min-width: 0;
 }
 @keyframes apptitleanimation {
   0% {
@@ -7201,6 +7582,34 @@ body.light-mode .dm-meta-value {
   color: rgba(0, 0, 0, 0.75);
 }
 
+/* Compact loading feedback for Admin Portal tab lists. */
+.admin-list-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 96px;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.admin-list-loading-spinner {
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
+  border: 3px solid var(--input-border, rgba(255, 255, 255, 0.16));
+  border-top-color: var(--teamAcolour);
+  border-right-color: var(--teamBcolour);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .admin-list-loading-spinner {
+    animation: none;
+  }
+}
+
 /* =======================================================*/
 
 .loader {
@@ -7448,4 +7857,364 @@ body.light-mode .dm-meta-value {
   text-decoration: none;
   display: inline-flex;
   align-items: center;
+}
+/* Mobile-first overrides for the Admin Portal and its admin editors.
+   Keep the portal within the dynamic viewport, respect device safe areas, and
+   make every important control reachable without horizontal page scrolling. */
+@media (max-width: 600px) {
+  #adminDashboardPage {
+    position: fixed;
+    inset: 0;
+    /* Keep the shared global-controls stacking context above the portal so
+       the Appearance panel can open from the header button. */
+    z-index: 900;
+    width: 100%;
+    height: 100svh;
+    height: 100dvh;
+    padding: 0;
+    overflow: hidden;
+    align-items: stretch;
+    justify-content: stretch;
+  }
+
+  /* The shared Appearance panel lives in global-controls (z-index: 1000).
+     Hide its unrelated launchers while the portal is open, but let the panel
+     itself paint above the portal when the header Theme button opens it. */
+  body:has(#adminDashboardPage[style*="display: flex"]) #homeLinkBtn,
+  body:has(#adminDashboardPage[style*="display: flex"]) #adminLoginBtn {
+    display: none !important;
+  }
+
+  body:has(#adminDashboardPage[style*="display: flex"]) .appearance-menu {
+    position: fixed;
+    top: calc(64px + env(safe-area-inset-top));
+    left: 50%;
+    right: auto;
+    width: min(420px, calc(100vw - 24px));
+    max-width: calc(100vw - 24px);
+    max-height: calc(100dvh - 88px - env(safe-area-inset-bottom));
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    transform: translateX(-50%);
+  }
+
+  .admin-dashboard-container {
+    width: 100%;
+    max-width: none;
+    height: 100%;
+    min-height: 0;
+    max-height: none;
+    padding:
+      max(10px, env(safe-area-inset-top))
+      max(12px, env(safe-area-inset-right))
+      max(12px, env(safe-area-inset-bottom))
+      max(12px, env(safe-area-inset-left));
+    border-radius: 0;
+    box-shadow: none;
+    backdrop-filter: none;
+  }
+
+  .admin-dashboard-header {
+    position: relative;
+    display: flex;
+    flex: 0 0 auto;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 7px;
+    margin-bottom: 6px;
+    padding: 2px 0 7px;
+  }
+
+  .admin-dashboard-header h2 {
+    align-self: stretch;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    min-height: 40px;
+    padding: 0 44px;
+    font-size: clamp(1rem, 4.7vw, 1.3rem);
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+  }
+
+  #closeAdminDashboardBtn {
+    position: absolute;
+    top: 2px;
+    left: 0;
+    right: auto;
+    bottom: auto;
+    z-index: 2;
+    width: 38px;
+    height: 38px;
+    scale: 1;
+  }
+
+  .header-actions {
+    display: grid;
+    width: 100%;
+    min-width: 0;
+    grid-template-columns: 40px minmax(0, 1fr) minmax(0, 1fr);
+    gap: 6px;
+  }
+
+  .header-actions .tab-btn,
+  .header-actions .tab-btn-theme {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 0;
+    min-height: 40px;
+    padding: 6px 4px;
+    font-size: clamp(0.64rem, 2.9vw, 0.78rem);
+    line-height: 1.1;
+    white-space: nowrap;
+  }
+
+  .header-actions .tab-btn-theme {
+    width: 40px;
+    padding: 4px;
+    font-size: 1rem;
+  }
+
+  .admin-tabs {
+    flex: 0 0 auto;
+    gap: 6px;
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    scroll-padding-inline: 4px;
+  }
+
+  .admin-tabs .tab-btn {
+    height: 44px;
+    min-height: 44px;
+    padding: 8px 12px;
+    font-size: 0.84rem;
+  }
+
+  .admin-tabs .admin-all-tab-btn {
+    height: 44px;
+    padding: 6px 10px;
+  }
+
+  .admin-tabs .admin-all-tab-btn .admin-all-tab-logo {
+    max-height: 22px;
+  }
+
+  .tab-content.active {
+    min-width: 0;
+    overflow-x: hidden;
+  }
+
+  .admin-dashboard-controls {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, auto);
+    align-items: stretch;
+    gap: 8px;
+    margin-bottom: 10px;
+    min-width: 0;
+  }
+
+  .admin-dashboard-controls .search-wrapper {
+    grid-column: 1 / -1;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .admin-dashboard-controls .search-wrapper input {
+    min-height: 44px;
+    box-sizing: border-box;
+    font-size: 16px;
+  }
+
+  .admin-dashboard-controls .filter-wrapper {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .admin-dashboard-controls .filter-wrapper select {
+    min-height: 44px;
+    box-sizing: border-box;
+    font-size: 16px;
+  }
+
+  .admin-dashboard-controls > .primary-btn {
+    min-width: 0;
+    max-width: 100%;
+    min-height: 44px;
+    width: 100%;
+    padding: 10px 12px;
+    font-size: 0.85rem;
+    line-height: 1.2;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  #tournamentsTab .admin-dashboard-controls > .primary-btn,
+  #clubsTab .admin-dashboard-controls > .primary-btn,
+  #devicesTab .admin-dashboard-controls > .primary-btn {
+    grid-column: 1 / -1;
+  }
+
+  .admin-tool-grid {
+    gap: 10px;
+    margin-top: 8px;
+  }
+
+  .admin-tool-group {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .admin-tool-tile,
+  .admin-tool-tile-ext,
+  .admin-tool-tile-theme {
+    min-height: 104px;
+    padding: 12px;
+  }
+
+  /* Edit and assignment controls remain comfortable touch targets. */
+  .admin-dashboard-container .edit-btn,
+  .admin-dashboard-container .delete-btn,
+  .admin-match-item .aci-actions .admin-match-court-select,
+  .club-member-open {
+    min-height: 44px;
+  }
+
+  .club-member-item {
+    min-height: 44px;
+  }
+
+  .admin-court-item {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+    min-width: 0;
+  }
+
+  .admin-court-item > *,
+  .admin-match-item > * {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .admin-court-item .aci-actions {
+    min-width: 0;
+  }
+
+  .admin-match-item {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    min-width: 0;
+  }
+
+  .admin-match-item .aci-actions {
+    flex-wrap: wrap;
+    min-width: 0;
+  }
+
+  .admin-match-item .aci-actions .admin-match-court-select {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .admin-match-create-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .admin-match-create-actions {
+    flex-wrap: wrap;
+  }
+
+  .admin-match-create-actions .primary-btn,
+  .admin-match-create-actions .edit-btn {
+    flex: 1 1 120px;
+    min-height: 44px;
+  }
+
+  .club-editor-card {
+    min-width: 0;
+    max-width: calc(100vw - 24px);
+    width: calc(100vw - 24px);
+  }
+
+  .club-member-list {
+    max-height: min(32dvh, 240px);
+  }
+
+  #createPage .create-card,
+  #editCourtPage .edit-card,
+  #addDevicePage .edit-card,
+  #editDevicePage .edit-card,
+  #editClubPage .club-editor-card {
+    min-width: 0;
+    max-width: calc(100vw - 20px);
+    width: calc(100vw - 20px);
+    max-height: calc(100dvh - 20px);
+    padding: 16px 14px max(16px, env(safe-area-inset-bottom));
+    border-radius: 14px;
+    gap: 12px;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  #createPage input,
+  #createPage select,
+  #createPage textarea,
+  #editCourtPage input,
+  #editCourtPage select,
+  #editCourtPage textarea,
+  #addDevicePage input,
+  #addDevicePage select,
+  #addDevicePage textarea,
+  #editDevicePage input,
+  #editDevicePage select,
+  #editDevicePage textarea,
+  #editClubPage input,
+  #editClubPage select,
+  #editClubPage textarea {
+    font-size: 16px;
+  }
+}
+
+@media (max-width: 360px) {
+  .admin-dashboard-container {
+    padding-left: max(8px, env(safe-area-inset-left));
+    padding-right: max(8px, env(safe-area-inset-right));
+  }
+
+  .header-actions {
+    grid-template-columns: 36px minmax(0, 1fr) minmax(0, 1fr);
+    gap: 4px;
+  }
+
+  .header-actions .tab-btn,
+  .header-actions .tab-btn-theme {
+    min-height: 40px;
+    padding-inline: 2px;
+    font-size: 0.65rem;
+  }
+
+  .header-actions .tab-btn-theme {
+    width: 36px;
+    font-size: 0.95rem;
+  }
+
+  .admin-tool-grid {
+    gap: 8px;
+  }
+
+  .admin-tool-tile,
+  .admin-tool-tile-ext,
+  .admin-tool-tile-theme {
+    padding: 10px;
+  }
+}
+
+@media (hover: none) {
+  .admin-tool-tile:hover,
+  .admin-tool-tile-ext:hover,
+  .admin-tool-tile-theme:hover {
+    transform: none;
+  }
 }

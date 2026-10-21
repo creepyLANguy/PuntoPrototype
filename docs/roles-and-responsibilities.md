@@ -150,7 +150,7 @@ These are not substitutes for the organisational roles above.
 
 | Application/system role | Current state | Permissions/behaviour |
 |---|---|---|
-| Platform Admin | Implemented as a privileged app surface | Can access admin dashboard, court/device administration, NFC utility and Device Lab. Current security is application-level and not equivalent to enterprise IAM. |
+| Platform Admin | Implemented as a privileged app surface | Can access admin portal, court/device administration, NFC utility and Device Lab. Current security is application-level and not equivalent to enterprise IAM. |
 | Tournament Host | Implemented with host key | Creates and operates tournaments through `/t`; controls participants, teams, rounds, fixture scheduling, result correction and tournament completion. The server stores only a hash of the host key. |
 | Court user / Player | Implemented | Uses a court in play mode and can perform supported scoring actions on the live match assigned to that court. |
 | Spectator | Implemented | Read-only court, match or tournament experience; scoring controls are disabled/hidden. |

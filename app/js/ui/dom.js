@@ -59,6 +59,16 @@ export function initElements() {
 
     settingsBtn: $("settingsBtn"),
     settingsModal: $("settingsModal"),
+    joinCourtModal: $("joinCourtModal"),
+    joinCourtModalForm: $("joinCourtModalForm"),
+    joinCourtModalTitle: $("joinCourtModalTitle"),
+    joinCourtModalCourtName: $("joinCourtModalCourtName"),
+    joinCourtModalPassword: $("joinCourtModalPassword"),
+    joinCourtModalPasswordError: $("joinCourtModalPasswordError"),
+    joinCourtModalError: $("joinCourtModalError"),
+    closeJoinCourtModalBtn: $("closeJoinCourtModalBtn"),
+    cancelJoinCourtModalBtn: $("cancelJoinCourtModalBtn"),
+    submitJoinCourtModalBtn: $("submitJoinCourtModalBtn"),
     closeSettingsBtn: $("closeSettingsBtn"),
     playerNamesModal: $("playerNamesModal"),
     closePlayerNamesBtn: $("closePlayerNamesBtn"),
@@ -173,7 +183,7 @@ export function initElements() {
   elements.adminAuthError = $("adminAuthError");
   elements.closeAdminAuthBtn = $("closeAdminAuthBtn");
 
-  // ADMIN DASHBOARD ELEMENTS
+  // ADMIN PORTAL ELEMENTS
   elements.adminDashboardPage = $("adminDashboardPage");
   elements.adminCourtList = $("adminCourtList");
   elements.closeAdminDashboardBtn = $("closeAdminDashboardBtn");
@@ -181,6 +191,8 @@ export function initElements() {
   elements.adminCourtSearch = $("adminCourtSearch");
   elements.adminStatusFilter = $("adminStatusFilter");
   elements.nfcToolBtn = $("nfcToolBtn");
+  elements.deviceHarnessBtn = $("deviceHarnessBtn");
+  elements.themeBtn = $("themeBtn");
 
   // EDIT COURT ELEMENTS
   elements.editCourtPage = $("editCourtPage");
@@ -242,6 +254,7 @@ export function initElements() {
 
   //Admin portal things
   elements.adminTabs = document.querySelectorAll(".tab-btn");
+  elements.allTab = $("allTab");
   elements.clubsTab = $("clubsTab");
   elements.courtsTab = $("courtsTab");
   elements.devicesTab = $("devicesTab");

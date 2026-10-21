@@ -22,5 +22,6 @@ export const NAV_MODALS = {
   DETAILS: "details",
   RESET: "reset",
   CONFIRM: "confirm",    
-  PLAYER_NAMES: "playerNames"
+  PLAYER_NAMES: "playerNames",
+  JOIN_COURT: "joinCourt"
 };

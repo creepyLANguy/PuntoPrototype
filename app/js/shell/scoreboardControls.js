@@ -207,15 +207,23 @@ export function registerScoreboardControls() {
   }
 
   if (elements.switchToSpectateBtn) {
-    elements.switchToSpectateBtn.addEventListener("click", () => {
+    elements.switchToSpectateBtn.addEventListener("click", async () => {
       if (!session.currentCourtId) {
         showToast("No court is currently open.", TOAST_TYPES.ERROR);
         return;
       }
 
       elements.settingsModal.classList.add("hidden");
-      enterCourt(session.currentCourtId, true, { historyMode: "replace" });
-      showToast("Switched to Spectator view.", TOAST_TYPES.INFO);
+      try {
+        await transitionScoreboardMatch(() =>
+          enterCourt(session.currentCourtId, true, { historyMode: "replace" }),
+        );
+        showToast("Switched to Spectator view.", TOAST_TYPES.INFO);
+      } catch (error) {
+        console.error("Switching to spectator mode failed:", error);
+        elements.settingsModal.classList.remove("hidden");
+        showToast("Could not switch to spectator mode. Please try again.", TOAST_TYPES.ERROR);
+      }
     });
   }
 

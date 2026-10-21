@@ -1,5 +1,5 @@
 /* =======================================================
-   ADMIN DASHBOARD ENHANCEMENTS
+   ADMIN PORTAL ENHANCEMENTS
 ======================================================= */
 
 
@@ -110,7 +110,7 @@
 }
 
 /* =======================================================
-   ADMIN DASHBOARD
+   ADMIN PORTAL
 ======================================================= */
 
 .admin-dashboard-container {
@@ -161,34 +161,6 @@
   text-align: center;
   margin: 0;
   font-size: clamp(1rem, 2.5vw, 1.4rem);
-}
-
-.admin-dashboard-header .primary-btn {
-  flex-shrink: 0;
-  width: auto;
-  padding: 8px 16px;
-  font-size: 0.85rem;
-  margin: 0;
-}
-
-#nfcToolBtn {
-  background: var(--teamBcolour);
-  border-color: var(--teamBcolour);
-  color: #fff;
-}
-
-#nfcToolBtn:hover {
-  filter: brightness(1.25);
-}
-
-#deviceHarnessBtn {
-  background: var(--teamAcolour);
-  border-color: var(--teamAcolour);
-  color: #fff;
-}
-
-#deviceHarnessBtn:hover {
-  filter: brightness(1.25);
 }
 
 @media (orientation: landscape) and (max-height: 520px) {

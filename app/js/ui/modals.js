@@ -9,6 +9,7 @@ export function closeManagedModals()
   elements.resetModal.classList.add("hidden");
   elements.confirmModal.classList.add("hidden");
   elements.playerNamesModal.classList.add("hidden");
+  elements.joinCourtModal.classList.add("hidden");
 }
 
 export function showConfirm(message)

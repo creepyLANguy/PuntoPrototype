@@ -191,7 +191,7 @@ Rules:
 | `/t` | tournament landing (`app/tournament.html`) |
 | `/t/new` | tournament setup wizard |
 | `/t/{tournamentId}` | public dashboard or host control room |
-| `/admin`, `/app/admin` | admin dashboard (through admin authentication) |
+| `/admin`, `/app/admin` | admin portal (through admin authentication) |
 
 Scoring-app paths also work under `/app/`. Firebase Hosting rewrites scoring
 paths to `/app/index.html`, match paths to `/app/match.html` and tournament
@@ -245,7 +245,7 @@ changeover events.
 - **UI systems.** `ui/dom.js` exposes `elements` (populated once by
   `initElements()`) and `$()`. Toasts, loading overlays, the confirm modal,
   theme / appearance and fullscreen each have one module.
-- **Admin.** `admin/admin.js` (authentication, dashboard, tabs),
+- **Admin.** `admin/admin.js` (authentication, portal, tabs),
   `admin/courts.js` (court list, create / edit / delete), `admin/matches.js`
   (match operations), `admin/tournaments.js` (tournament shortcuts) and
   `admin/devices.js` (device list and the add / edit forms).

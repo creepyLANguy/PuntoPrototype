@@ -125,6 +125,26 @@ export async function ensureMinimumLoadingDuration(startedAt)
   await new Promise(resolve => window.setTimeout(resolve, remaining));
 }
 
+/**
+ * Shows a compact, accessible spinner inside an Admin Portal tab list.
+ * The label remains available to assistive technology without visible copy.
+ */
+export function showAdminListSpinner(containerEl, label) {
+  if (!containerEl) return;
+
+  const status = document.createElement("div");
+  status.className = "admin-list-loading";
+  status.setAttribute("role", "status");
+  status.setAttribute("aria-label", label);
+
+  const spinner = document.createElement("span");
+  spinner.className = "admin-list-loading-spinner";
+  spinner.setAttribute("aria-hidden", "true");
+  status.appendChild(spinner);
+
+  containerEl.replaceChildren(status);
+}
+
 export function showSpinner(containerEl, message = "")
 {
   if (!containerEl) return;

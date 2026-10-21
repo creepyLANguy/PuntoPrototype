@@ -231,21 +231,21 @@ export function syncAppearanceControls()
   });
 }
 
-function openAppearanceMenu()
+export function openAppearanceMenu()
 {
-  if (!elements.appearanceMenu || !elements.appearanceMenuBtn) return;
+  if (!elements.appearanceMenu) return;
 
   syncAppearanceControls();
   elements.appearanceMenu.classList.remove("hidden");
-  elements.appearanceMenuBtn.setAttribute("aria-expanded", "true");
+  elements.appearanceMenuBtn?.setAttribute("aria-expanded", "true");
 }
 
 export function closeAppearanceMenu()
 {
-  if (!elements.appearanceMenu || !elements.appearanceMenuBtn) return;
+  if (!elements.appearanceMenu) return;
 
   elements.appearanceMenu.classList.add("hidden");
-  elements.appearanceMenuBtn.setAttribute("aria-expanded", "false");
+  elements.appearanceMenuBtn?.setAttribute("aria-expanded", "false");
 }
 
 function toggleAppearanceMenu()

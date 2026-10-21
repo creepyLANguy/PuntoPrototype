@@ -167,3 +167,23 @@
         </div>
       </div>
     </div>
+
+    <!-- ================= JOIN COURT MODAL ================= -->
+    <div id="joinCourtModal" class="reset-modal hidden" role="dialog" aria-modal="true"
+      aria-labelledby="joinCourtModalTitle">
+      <form id="joinCourtModalForm" class="create-card join-court-modal-card">
+        <button type="button" id="closeJoinCourtModalBtn" class="close-btn" aria-label="Close join court">✕</button>
+        <h2 id="joinCourtModalTitle">Join as a player</h2>
+        <p id="joinCourtModalCourtName"></p>
+        <div class="form-group">
+          <label for="joinCourtModalPassword">Court Password</label>
+          <input id="joinCourtModalPassword" type="password" autocomplete="current-password" />
+          <div class="error" id="joinCourtModalPasswordError" role="alert"></div>
+        </div>
+        <div class="error" id="joinCourtModalError" role="alert"></div>
+        <div class="reset-actions join-court-modal-actions">
+          <button id="cancelJoinCourtModalBtn" type="button" class="secondary-btn">Cancel</button>
+          <button id="submitJoinCourtModalBtn" type="submit" class="primary-btn">Join Court</button>
+        </div>
+      </form>
+    </div>

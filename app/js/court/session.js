@@ -187,11 +187,9 @@ export async function enterCourt(
   setPlayPageVisible(false);
   elements.spectatePage.style.display = "none";
 
-  // Hide top-right buttons in court view
-  if (elements.appearanceMenuBtn) {
-    closeAppearanceMenu();
-    elements.appearanceMenuBtn.style.display = "none";
-  }
+  // Close the appearance popover when switching into a court view. The
+  // floating theme launcher is intentionally scoped to the main menu.
+  closeAppearanceMenu();
   if (elements.adminLoginBtn) {
     elements.adminLoginBtn.style.display = "none";
   }

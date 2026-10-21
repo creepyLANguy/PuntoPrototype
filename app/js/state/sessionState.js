@@ -60,7 +60,7 @@ export const session = {
   currentPlayerNames: { ...DEFAULT_PLAYER_NAMES },
   isSpectating: false,
   // True when this device entered the current court with admin credentials (or from
-  // the admin dashboard). Admins keep control of the court across password changes.
+  // the admin portal). Admins keep control of the court across password changes.
   enteredCourtAsAdmin: false,
   currentCourtName: null,
   // The match the scoreboard follows (spec section 46 MatchContext): the

@@ -3,7 +3,8 @@
 // #playPage and #spectatePage.
 import { getSkeleton } from "../firebase/adminRepository.js";
 import { primeAudioForUserGesture } from "../audio/audio.js";
-import { NAV_PAGES } from "../config/routes.js";
+import { NAV_MODALS, NAV_PAGES } from "../config/routes.js";
+import { transitionScoreboardMatch } from "../ui/animations.js";
 import { displayPlayCourtList, displaySpectateCourtList, loadCourtsWithInlineLoader } from "./courtLists.js";
 import { enterCourt } from "./session.js";
 import { getCourt } from "../firebase/courtRepository.js";
@@ -12,6 +13,118 @@ import { createViewState } from "../routing/viewState.js";
 import { appState } from "../state/appState.js";
 import { session } from "../state/sessionState.js";
 import { elements } from "../ui/dom.js";
+
+async function attemptCourtJoin({
+  passwordInput,
+  passwordError,
+  nameError = null,
+  generalError = null,
+  isModal = false,
+}) {
+  if (appState.isJoiningCourt) return;
+  appState.isJoiningCourt = true;
+
+  // Preserve audio-unlock behaviour: this call must occur within the submit
+  // gesture, before the Firestore request yields.
+  primeAudioForUserGesture();
+
+  const clearError = (element) => {
+    if (element) element.textContent = "";
+  };
+  const showGeneralError = (message) => {
+    if (generalError) {
+      generalError.textContent = message;
+    } else if (nameError) {
+      nameError.style.display = "block";
+      nameError.textContent = message;
+    }
+  };
+
+  clearError(passwordError);
+  clearError(generalError);
+  clearError(nameError);
+  if (nameError) nameError.style.display = "none";
+
+  const courtId = appState.selectedPlayCourt;
+  const password = passwordInput.value.trim();
+  let modalWasHiddenForJoin = false;
+
+  try {
+    if (!courtId) {
+      showGeneralError("Court not selected.");
+      return;
+    }
+
+    if (!password) {
+      passwordError.textContent = "Password required.";
+      return;
+    }
+
+    const snap = await getCourt(courtId);
+    if (!snap.exists()) {
+      showGeneralError("Court not found.");
+      return;
+    }
+
+    const adminPassword = await getSkeleton();
+    const adminEntry = password === adminPassword;
+    if (!adminEntry && snap.data().password !== password) {
+      passwordError.textContent = "Incorrect password.";
+      return;
+    }
+
+    // Replace the modal history entry with the underlying scoreboard before
+    // entering; a failed backend request below will restore the modal.
+    if (isModal) {
+      elements.joinCourtModal.classList.add("hidden");
+      syncCurrentViewState("replace");
+      modalWasHiddenForJoin = true;
+    }
+
+    if (!adminEntry) session.currentCourtPassword = password;
+    const enterAsPlayer = () => enterCourt(courtId, false, {
+      historyMode: "replace",
+      ...(adminEntry ? { adminEntry: true } : {}),
+      matchId: appState.selectedPlayMatchId,
+      followRequestedMatch: Boolean(session.requestedMatchId),
+    });
+    if (isModal) await transitionScoreboardMatch(enterAsPlayer);
+    else await enterAsPlayer();
+
+    // enterCourt can report a vanished court inline and return without throwing.
+    // The full Play page owns that error element; copy it into the direct modal
+    // rather than silently treating the attempted join as successful.
+    if (session.currentCourtId !== courtId || session.isSpectating) {
+      if (isModal) {
+        throw new Error(
+          elements.playCourtNameError?.textContent?.trim() ||
+            "Unable to join court. Please try again.",
+        );
+      }
+      return;
+    }
+
+    appState.playPageReturnToScoreboard = false;
+    appState.selectedPlayMatchId = null;
+    appState.playPageTargetId = null;
+    appState.playPageTargetType = null;
+    passwordInput.value = "";
+  } catch (error) {
+    const message =
+      typeof error?.message === "string" && error.message.trim()
+        ? error.message
+        : typeof error === "string" && error.trim()
+          ? error
+          : "Unable to join court. Please try again.";
+    showGeneralError(message);
+    if (isModal && modalWasHiddenForJoin) {
+      elements.joinCourtModal.classList.remove("hidden");
+      syncCurrentViewState("replace");
+    }
+  } finally {
+    appState.isJoiningCourt = false;
+  }
+}
 
 export function registerPlayAndSpectatePages()
 {
@@ -85,82 +198,38 @@ export function registerPlayAndSpectatePages()
     }
   });
 
-  elements.enterCourtBtn.addEventListener("click", async () =>
-  {
-    if (appState.isJoiningCourt) return;
-    appState.isJoiningCourt = true;
+  elements.enterCourtBtn.addEventListener("click", () => {
+    void attemptCourtJoin({
+      passwordInput: elements.playCourtPassword,
+      passwordError: elements.playCourtPasswordError,
+      nameError: elements.playCourtNameError,
+    });
+  });
 
-    // Direct /p joins do their Firestore work before enterCourt() reaches the
-    // join sound. Start/resume audio from the actual player gesture first so
-    // the later sound playback is not blocked by autoplay policy.
-    primeAudioForUserGesture();
+  elements.joinCourtModalForm?.addEventListener("submit", (event) => {
+    event.preventDefault();
+    void attemptCourtJoin({
+      passwordInput: elements.joinCourtModalPassword,
+      passwordError: elements.joinCourtModalPasswordError,
+      generalError: elements.joinCourtModalError,
+      isModal: true,
+    });
+  });
 
-    try
-    {
-      const courtId = appState.selectedPlayCourt;
-      const password = elements.playCourtPassword.value.trim();
+  const dismissJoinCourtModal = () => {
+    if (elements.joinCourtModal.classList.contains("hidden")) return;
+    void stepBackInApp(createViewState({
+      page: NAV_PAGES.SCOREBOARD,
+      courtId: session.currentCourtId,
+      spectate: session.isSpectating,
+      modal: NAV_MODALS.SETTINGS,
+    }));
+  };
 
-      elements.playCourtNameError.style.display = "none";
-      elements.playCourtNameError.textContent = "";
-      elements.playCourtPasswordError.textContent = "";
-
-      if (!courtId)
-      {
-        elements.playCourtNameError.style.display = "block";
-        elements.playCourtNameError.textContent = "Court not selected.";
-        return;
-      }
-
-      if (!password)
-      {
-        elements.playCourtPasswordError.textContent = "Password required.";
-        return;
-      }
-
-      const snap = await getCourt(courtId);
-
-      if (!snap.exists())
-      {
-        elements.playCourtNameError.style.display = "block";
-        elements.playCourtNameError.textContent = "Court not found.";
-        return;
-      }
-
-      var adminPassword = await getSkeleton();
-      if (password === adminPassword)
-      {
-        await enterCourt(courtId, false, {
-          historyMode: "replace",
-          adminEntry: true,
-          matchId: appState.selectedPlayMatchId,
-          followRequestedMatch: Boolean(session.requestedMatchId)
-        });
-        return;
-      }
-
-      if (snap.data().password !== password)
-      {
-        elements.playCourtPasswordError.textContent = "Incorrect password.";
-        return;
-      }
-
-      session.currentCourtPassword = password;
-      await enterCourt(courtId, false, {
-        historyMode: "replace",
-        matchId: appState.selectedPlayMatchId,
-        followRequestedMatch: Boolean(session.requestedMatchId)
-      });
-      appState.playPageReturnToScoreboard = false;
-      appState.selectedPlayMatchId = null;
-      appState.playPageTargetId = null;
-      appState.playPageTargetType = null;
-
-      elements.playCourtPassword.value = "";
-    }
-    finally
-    {
-      appState.isJoiningCourt = false;
-    }
+  elements.closeJoinCourtModalBtn?.addEventListener("click", dismissJoinCourtModal);
+  elements.cancelJoinCourtModalBtn?.addEventListener("click", dismissJoinCourtModal);
+  elements.joinCourtModal?.addEventListener("click", (event) => {
+    if (event.target === elements.joinCourtModal) dismissJoinCourtModal();
   });
 }
 
@@ -170,38 +239,35 @@ export function setPlayPageVisible(isVisible)
   document.body.classList.toggle("play-page-open", isVisible);
 }
 
-export async function openPlayerJoinPrompt(courtId, matchId = null)
+export function openPlayerJoinPrompt(courtId, matchId = null)
 {
-  appState.playPageReturnToScoreboard = true;
+  appState.playPageReturnToScoreboard = false;
   appState.selectedPlayCourt = courtId;
   appState.selectedPlayMatchId = matchId || session.currentMatchId || null;
   appState.playPageTargetId = courtId;
   appState.playPageTargetType = "court";
 
-  if (appState.allCourts.length === 0)
-  {
-    await loadCourtsWithInlineLoader(elements.playCourtList, true);
-  }
-
-  displayPlayCourtList(appState.allCourts);
-
   const court = appState.allCourts.find((item) => item.id === courtId);
-  setPlayPageVisible(true);
-  elements.playPasswordSection.style.display = "block";
-  elements.playCourtSearch.value = court?.name || session.currentCourtName || courtId;
-  elements.courtNameError.style.display = "none";
-  elements.playCourtNameError.textContent = "";
-  elements.playCourtPasswordError.textContent = "";
-  elements.playCourtPassword.value = "";
+  elements.joinCourtModalTitle.textContent = "Join as a player";
+  elements.joinCourtModalCourtName.textContent =
+    court?.name || session.currentCourtName || courtId;
+  elements.joinCourtModalPassword.value = "";
+  elements.joinCourtModalPasswordError.textContent = "";
+  elements.joinCourtModalError.textContent = "";
+  elements.settingsModal?.classList.add("hidden");
 
-  const selectedItem = elements.playCourtList.querySelector(`[data-court-id="${courtId}"]`);
-  if (selectedItem)
-  {
-    elements.playCourtList.querySelectorAll(".court-item").forEach(el => el.classList.remove("active"));
-    selectedItem.classList.add("active");
+  // Mirror the actual Options surface so the join prompt stays fully opaque
+  // and theme-matched even if a later generic .create-card rule is loaded.
+  const joinPanel = elements.joinCourtModal.querySelector(".join-court-modal-card");
+  const optionsPanel = elements.settingsModal?.querySelector(".settings-box");
+  if (joinPanel && optionsPanel) {
+    const optionsBackground = window.getComputedStyle(optionsPanel).backgroundColor;
+    joinPanel.style.setProperty("background-color", optionsBackground, "important");
   }
 
-  elements.playCourtPassword.focus();
+  elements.joinCourtModal.classList.remove("hidden");
+  elements.joinCourtModalPassword.focus();
+
   syncCurrentViewState();
 }
 
