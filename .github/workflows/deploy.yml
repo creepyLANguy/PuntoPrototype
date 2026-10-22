@@ -36,6 +36,7 @@ jobs:
       deploy_needed: ${{ steps.scope.outputs.deploy_needed }}
       firebase_targets: ${{ steps.scope.outputs.firebase_targets }}
       requires_force: ${{ steps.scope.outputs.requires_force }}
+      public_api_changed: ${{ steps.scope.outputs.public_api_changed }}
 
     steps:
       - uses: actions/checkout@v5
@@ -53,20 +54,57 @@ jobs:
 
           all_zero="0000000000000000000000000000000000000000"
 
+          comparison_base=""
           if [[ "$BEFORE_SHA" == "$all_zero" ]]; then
             changed_files="$(git ls-tree -r --name-only "$AFTER_SHA")"
           elif [[ "${GITHUB_REF:-}" != "refs/heads/main" ]]; then
             # Staging deployments must consider the whole feature-branch diff,
             # not just the latest push. This also retries changes from an earlier
             # push whose deployment failed.
-            deploy_base="$(git merge-base origin/main "$AFTER_SHA")"
-            changed_files="$(git diff --name-only "$deploy_base" "$AFTER_SHA")"
+            comparison_base="$(git merge-base origin/main "$AFTER_SHA")"
+            changed_files="$(git diff --name-only "$comparison_base" "$AFTER_SHA")"
           else
+            comparison_base="$BEFORE_SHA"
             changed_files="$(git diff --name-only "$BEFORE_SHA" "$AFTER_SHA")"
+          fi
+
+          # Package script and devDependency edits are validation-only. Compare
+          # the remaining package metadata so dependency/runtime changes still
+          # trigger a Functions deploy and API smoke tests.
+          functions_package_runtime_changed=true
+          if [[ -n "$comparison_base" ]] && git cat-file -e "${comparison_base}:functions/package.json" 2>/dev/null; then
+            git show "${comparison_base}:functions/package.json" > "$RUNNER_TEMP/package-base.json"
+            git show "$AFTER_SHA:functions/package.json" > "$RUNNER_TEMP/package-head.json"
+            if node - "$RUNNER_TEMP/package-base.json" "$RUNNER_TEMP/package-head.json" <<'NODE'
+          const fs = require("node:fs");
+          function stable(value) {
+            return JSON.stringify(value, (_key, child) => {
+              if (child && typeof child === "object" && !Array.isArray(child)) {
+                return Object.fromEntries(
+                  Object.entries(child).sort(([left], [right]) => left.localeCompare(right)),
+                );
+              }
+              return child;
+            });
+          }
+          function runtimePackage(file) {
+            const pkg = JSON.parse(fs.readFileSync(file, "utf8"));
+            delete pkg.scripts;
+            delete pkg.devDependencies;
+            return stable(pkg);
+          }
+          process.exit(
+            runtimePackage(process.argv[2]) === runtimePackage(process.argv[3]) ? 0 : 1,
+          );
+          NODE
+            then
+              functions_package_runtime_changed=false
+            fi
           fi
 
           hosting_changed=false
           functions_changed=false
+          public_api_changed=false
           firestore_changed=false
 
           while IFS= read -r file; do
@@ -82,8 +120,15 @@ jobs:
               functions/*.node-test.*|functions/*.test.*|functions/*.spec.*)
                 # Test-only changes require validation, not a Functions deploy.
                 ;;
+              functions/package.json)
+                if [[ "$functions_package_runtime_changed" == "true" ]]; then
+                  functions_changed=true
+                  public_api_changed=true
+                fi
+                ;;
               functions/*)
                 functions_changed=true
+                public_api_changed=true
                 ;;
             esac
 
@@ -99,6 +144,13 @@ jobs:
               firebase.json|.firebaserc)
                 hosting_changed=true
                 functions_changed=true
+                public_api_changed=true
+                ;;
+            esac
+
+            case "$file" in
+              scripts/configure-public-function-redirects.mjs|scripts/configure-public-origin.mjs)
+                public_api_changed=true
                 ;;
             esac
           done <<< "$changed_files"
@@ -136,6 +188,7 @@ jobs:
             echo "deploy_needed=$deploy_needed"
             echo "firebase_targets=$firebase_targets"
             echo "requires_force=$requires_force"
+            echo "public_api_changed=$public_api_changed"
           } >> "$GITHUB_OUTPUT"
 
           echo "Changed files:"
@@ -143,6 +196,7 @@ jobs:
           echo "Hosting changed: $hosting_changed"
           echo "Functions changed: $functions_changed"
           echo "Firestore rules/indexes changed: $firestore_changed"
+          echo "Public API changed: $public_api_changed"
           echo "Firebase targets: ${firebase_targets:-none}"
 
   validate:
@@ -382,4 +436,12 @@ jobs:
       - name: Smoke-test public endpoints
         env:
           FIREBASE_PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID_STAGING }}
-        run: node scripts/smoke-test-public-routes.mjs https://qa.padelpush.co.za "$FIREBASE_PROJECT_ID"
+          PUBLIC_API_CHANGED: ${{ needs.changes.outputs.public_api_changed }}
+        run: |
+          if [[ "$PUBLIC_API_CHANGED" == "true" ]]; then
+            echo "Running full public API smoke tests because backend or routing configuration changed."
+            node scripts/smoke-test-public-routes.mjs https://qa.padelpush.co.za "$FIREBASE_PROJECT_ID"
+          else
+            echo "Running static route smoke tests; this change does not affect public API behavior."
+            node scripts/smoke-test-public-routes.mjs https://qa.padelpush.co.za "$FIREBASE_PROJECT_ID" --skip-api
+          fi

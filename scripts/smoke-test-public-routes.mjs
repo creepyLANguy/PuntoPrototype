@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 
 const base = (process.argv[2] || "").replace(/\/$/, "");
 const firebaseProjectId = process.argv[3] || "";
+const skipApiChecks = process.argv.includes("--skip-api");
 
 if (!base) {
   throw new Error(
@@ -11,16 +12,17 @@ if (!base) {
   );
 }
 
-if (!firebaseProjectId) {
+if (!skipApiChecks && !firebaseProjectId) {
   throw new Error(
     "A Firebase project ID is required so the smoke test can probe the real Johannesburg postEvent function.",
   );
 }
 
-const deviceApiUrl =
-  "https://africa-south1-" +
-  firebaseProjectId +
-  ".cloudfunctions.net/postEvent";
+const deviceApiUrl = skipApiChecks
+  ? null
+  : "https://africa-south1-" +
+    firebaseProjectId +
+    ".cloudfunctions.net/postEvent";
 
 async function request(path) {
   const url = base + path;
@@ -83,13 +85,15 @@ async function main() {
   const overlayMarker = "Padel Push™ — Score Overlay";
   const deviceLabMarker = "Device Lab";
 
-  for (const path of [
-    "/score/zzzz",
-    "/revision/zzzz",
-    "/stats/zzzz",
-    "/momentum/zzzz",
-  ]) {
-    assertJsonError(await request(path), path);
+  if (!skipApiChecks) {
+    for (const path of [
+      "/score/zzzz",
+      "/revision/zzzz",
+      "/stats/zzzz",
+      "/momentum/zzzz",
+    ]) {
+      assertJsonError(await request(path), path);
+    }
   }
 
   for (const path of [
@@ -107,53 +111,55 @@ async function main() {
     assertHtml(await request(path), appMarker, path);
   }
 
-  const expectedOrigin = new URL(base).origin;
-
-  const deviceApiPreflight = await fetch(deviceApiUrl, {
-    method: "OPTIONS",
-    headers: {
-      Origin: expectedOrigin,
-      "Access-Control-Request-Method": "POST",
-      "Access-Control-Request-Headers": "content-type",
-    },
-  });
-
-  assert.equal(
-    deviceApiPreflight.status,
-    204,
-    "postEvent: expected CORS preflight to succeed",
-  );
-  assert.equal(
-    deviceApiPreflight.headers.get("access-control-allow-origin"),
-    expectedOrigin,
-    "postEvent: expected the deployment origin to be explicitly allowed by CORS",
-  );
-
-  const deviceApiResponse = await fetch(deviceApiUrl, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      deviceId: "__device_harness_route_probe__",
-      eventType: "__INVALID_DEVICE_HARNESS_PROBE__",
-    }),
-  });
-
-  assert.equal(
-    deviceApiResponse.status,
-    400,
-    "postEvent: expected invalid-event validation from the deployed function",
-  );
-  const deviceApiPayload = await deviceApiResponse.json();
-  assert.equal(
-    deviceApiPayload.success,
-    false,
-    "postEvent: expected structured backend error",
-  );
-  assert.match(
-    deviceApiPayload.error || "",
-    /Invalid eventType/i,
-    "postEvent: expected the request to reach the deployed Johannesburg function",
-  );
+  if (!skipApiChecks) {
+    const expectedOrigin = new URL(base).origin;
+  
+    const deviceApiPreflight = await fetch(deviceApiUrl, {
+      method: "OPTIONS",
+      headers: {
+        Origin: expectedOrigin,
+        "Access-Control-Request-Method": "POST",
+        "Access-Control-Request-Headers": "content-type",
+      },
+    });
+  
+    assert.equal(
+      deviceApiPreflight.status,
+      204,
+      "postEvent: expected CORS preflight to succeed",
+    );
+    assert.equal(
+      deviceApiPreflight.headers.get("access-control-allow-origin"),
+      expectedOrigin,
+      "postEvent: expected the deployment origin to be explicitly allowed by CORS",
+    );
+  
+    const deviceApiResponse = await fetch(deviceApiUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        deviceId: "__device_harness_route_probe__",
+        eventType: "__INVALID_DEVICE_HARNESS_PROBE__",
+      }),
+    });
+  
+    assert.equal(
+      deviceApiResponse.status,
+      400,
+      "postEvent: expected invalid-event validation from the deployed function",
+    );
+    const deviceApiPayload = await deviceApiResponse.json();
+    assert.equal(
+      deviceApiPayload.success,
+      false,
+      "postEvent: expected structured backend error",
+    );
+    assert.match(
+      deviceApiPayload.error || "",
+      /Invalid eventType/i,
+      "postEvent: expected the request to reach the deployed Johannesburg function",
+    );
+  }
 
   for (const path of [
     "/overlay",
@@ -192,7 +198,11 @@ async function main() {
     );
   }
 
-  console.log("Public route smoke test passed for " + base);
+  console.log(
+    "Public route smoke test passed for " +
+      base +
+      (skipApiChecks ? " (static routes only; API checks skipped)." : ""),
+  );
 }
 
 await main();
