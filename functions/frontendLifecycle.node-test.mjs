@@ -130,7 +130,7 @@ test("Changeover toggles its own state and independently toggles the local view"
   // Establish a local view preference that is intentionally different from
   // the backend Beacon mapping. Changeover must not derive its backend value
   // from this view state.
-  swapViewsButton.click();
+  swapViewsButton.querySelector(".icon").click();
   assert.equal(document.querySelector(".scoreboard").classList.contains("swapped"), true);
   assert.equal(document.querySelector(".scoreboard").classList.contains("swap-animating"), true);
   assert.equal(swapAnimations.at(-1).options.duration, 650);
