@@ -22,15 +22,30 @@ const deviceApiUrl =
   firebaseProjectId +
   ".cloudfunctions.net/postEvent";
 
+const RETRY_ATTEMPTS = 5;
+const RETRY_DELAY_MS = 3000;
+
 async function request(path) {
   const url = base + path;
-  const response = await fetch(url, { redirect: "follow", cache: "no-store" });
-  return {
-    url,
-    status: response.status,
-    contentType: response.headers.get("content-type") || "",
-    body: await response.text(),
-  };
+  let result;
+  for (let attempt = 1; attempt <= RETRY_ATTEMPTS; attempt += 1) {
+    const response = await fetch(url, { redirect: "follow", cache: "no-store" });
+    const contentType = response.headers.get("content-type") || "";
+    result = {
+      url,
+      status: response.status,
+      contentType,
+      body: await response.text(),
+    };
+    // Cold-starting functions can return transient infrastructure 5xx HTML pages.
+    const transient =
+      response.status >= 500 && !/application\/json/i.test(contentType);
+    if (!transient || attempt === RETRY_ATTEMPTS) {
+      break;
+    }
+    await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS));
+  }
+  return result;
 }
 
 function assertHtml(response, marker, label) {
