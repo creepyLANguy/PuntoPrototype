@@ -2724,14 +2724,21 @@ body.light-mode .dm-close:hover {
   color: inherit;
   cursor: pointer;
   opacity: 0.75;
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  padding: 1%;
+  padding: 0;
   transition: background 0.15s, opacity 0.15s;
+}
+
+.dm-share-btn .icon {
+  width: 24px;
+  height: 24px;
 }
 
 .dm-share-btn:hover {
@@ -2998,7 +3005,6 @@ body.light-mode .dm-table thead th {
   height: 1px;
   padding: 0;
 }
-
 
 /* ── Responsive ── */
 
@@ -3549,12 +3555,14 @@ body.light-mode .create-page {
   will-change: transform;
 }
 
-/* Keep join inputs near the top before the keyboard opens, rather than
+/* Keep modal inputs near the top before the keyboard opens, rather than
    recentering the whole panel as the visual viewport shrinks. */
 @media (max-width: 768px), (pointer: coarse) {
   #playPage,
   #spectatePage,
-  #joinCourtModal {
+  #joinCourtModal,
+  #resetModal,
+  #adminAuthPage {
     align-items: flex-start;
     padding-top: max(16px, env(safe-area-inset-top));
     box-sizing: border-box;
@@ -3562,15 +3570,21 @@ body.light-mode .create-page {
 
   #playPage .create-card,
   #spectatePage .create-card,
-  #joinCourtModal .create-card {
+  #joinCourtModal .create-card,
+  #resetModal .reset-box,
+  #adminAuthPage .create-card {
     transform: none;
+    box-sizing: border-box;
     max-height: calc(var(--join-viewport-height, 100svh) - max(16px, env(safe-area-inset-top)) - 16px);
     transition: background-color 0.2s ease, border-color 0.2s ease;
+    overflow-y: auto;
   }
 
   #playPage input,
   #spectatePage input,
-  #joinCourtModal input {
+  #joinCourtModal input,
+  #resetModal input,
+  #adminAuthPage input {
     font-size: 16px;
   }
 }

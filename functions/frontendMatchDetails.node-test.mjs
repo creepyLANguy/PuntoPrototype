@@ -21,6 +21,19 @@ const COURT_ID = "detsa";
 
 let document;
 
+test("match-details share button has an unpadded 44px touch target and a 24px icon", () => {
+  const button = document.getElementById("shareDetailsBtn");
+  const style = document.defaultView.getComputedStyle(button);
+  const iconStyle = document.defaultView.getComputedStyle(button.querySelector(".icon"));
+  assert.equal(style.padding, "0px");
+  assert.equal(style.width, "44px");
+  assert.equal(style.height, "44px");
+  assert.equal(style.minWidth, "44px");
+  assert.equal(style.minHeight, "44px");
+  assert.equal(iconStyle.width, "24px");
+  assert.equal(iconStyle.height, "24px");
+});
+
 // While set, every /momentum/ request parks on this gate so a test can inspect the
 // view while the momentum payload is still pending.
 let momentumGate = null;

@@ -108,7 +108,7 @@ test("join modal shift clears when the viewport is restored", async () => {
   );
 });
 
-test("mobile join panels stay top-aligned as the keyboard opens and closes", async () => {
+test("mobile input panels stay top-aligned as the keyboard opens and closes", async () => {
   const originalMatchMedia = window.matchMedia;
   window.matchMedia = (query) => ({
     ...originalMatchMedia(query),
@@ -123,11 +123,19 @@ test("mobile join panels stay top-aligned as the keyboard opens and closes", asy
       window.dispatchEvent(new window.Event("resize"));
       await settle(30);
 
-      for (const id of ["playPage", "spectatePage", "joinCourtModal"]) {
+      for (const id of [
+        "playPage",
+        "spectatePage",
+        "joinCourtModal",
+        "resetModal",
+        "adminAuthPage",
+      ]) {
         const page = document.getElementById(id);
         assert.equal(page.style.getPropertyValue("--join-viewport-height"), `${height}px`);
         assert.equal(
-          page.querySelector(".create-card").style.getPropertyValue("--keyboard-shift-y"),
+          page
+            .querySelector(".create-card, .reset-box")
+            .style.getPropertyValue("--keyboard-shift-y"),
           "0px",
         );
       }

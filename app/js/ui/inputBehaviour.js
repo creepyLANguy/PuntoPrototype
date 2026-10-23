@@ -118,9 +118,15 @@ function positionJoinModalsForVisualViewport() {
       "(max-width: 768px), (pointer: coarse)",
     ).matches;
 
-    ["playPage", "spectatePage", "joinCourtModal"].forEach((pageId) => {
+    [
+      "playPage",
+      "spectatePage",
+      "joinCourtModal",
+      "resetModal",
+      "adminAuthPage",
+    ].forEach((pageId) => {
       const page = document.getElementById(pageId);
-      const card = page?.querySelector(".create-card");
+      const card = page?.querySelector(".create-card, .reset-box");
       if (!card) return;
       page.style.setProperty("--join-viewport-height", `${viewportHeight}px`);
 
@@ -128,6 +134,8 @@ function positionJoinModalsForVisualViewport() {
         card.style.setProperty("--keyboard-shift-y", "0px");
         return;
       }
+
+      if (pageId === "resetModal" || pageId === "adminAuthPage") return;
 
       if (page.style.display === "none") {
         card.style.setProperty("--keyboard-shift-y", "0px");
@@ -154,7 +162,11 @@ function positionJoinModalsForVisualViewport() {
 }
 
 function isJoinCourtInput(el) {
-  return Boolean(el?.closest?.("#playPage, #spectatePage, #joinCourtModal"));
+  return Boolean(
+    el?.closest?.(
+      "#playPage, #spectatePage, #joinCourtModal, #resetModal, #adminAuthPage",
+    ),
+  );
 }
 
 function isInputObscured(el) {
