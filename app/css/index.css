@@ -13,6 +13,8 @@
 @import "tokens.css";
 /* Global reset and element defaults. */
 @import "base.css";
+/* Shared currentColor SVG mask icons. */
+@import "components/icons.css";
 /* Menu page. */
 @import "pages/menu.css";
 /* Scoreboard page: top-level container, sidebar / header and body layout. */

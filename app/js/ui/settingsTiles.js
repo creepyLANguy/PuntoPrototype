@@ -5,6 +5,7 @@ import { session } from "../state/sessionState.js";
 import { themeState } from "../state/themeState.js";
 import { elements } from "./dom.js";
 import { getFullscreenElement } from "./fullscreen.js";
+import { setButtonIcon } from "./icons.js";
 
 export function canStartNewMatch() {
   return Boolean(
@@ -24,10 +25,11 @@ export function canStartNewMatch() {
 function syncSettingsGroups() {
   const groups = [...document.querySelectorAll(".settings-group")];
   const visibleGroups = groups.map((group) =>
-    [...group.querySelectorAll(":scope > .setting-item")].some((tile) =>
-      !tile.hidden &&
-      tile.style.display !== "none" &&
-      !tile.classList.contains("hidden"),
+    [...group.querySelectorAll(":scope > .setting-item")].some(
+      (tile) =>
+        !tile.hidden &&
+        tile.style.display !== "none" &&
+        !tile.classList.contains("hidden"),
     ),
   );
 
@@ -35,12 +37,13 @@ function syncSettingsGroups() {
     group.hidden = !visibleGroups[index];
   });
 
-  document.querySelectorAll(".settings-group-divider").forEach((divider, index) => {
-    divider.hidden = !(
-      visibleGroups[index] &&
-      visibleGroups.slice(index + 1).some(Boolean)
-    );
-  });
+  document
+    .querySelectorAll(".settings-group-divider")
+    .forEach((divider, index) => {
+      divider.hidden = !(
+        visibleGroups[index] && visibleGroups.slice(index + 1).some(Boolean)
+      );
+    });
 }
 
 export function syncSettingsTiles() {
@@ -56,7 +59,7 @@ export function syncSettingsTiles() {
     const wrapper = button.closest(".setting-item");
     if (!wrapper) return;
     wrapper.classList.toggle("active", Boolean(active));
-    const label = wrapper.querySelector("span");
+    const label = wrapper.querySelector(":scope > span:not(.icon)");
     if (label) {
       label.textContent = active ? activeLabel : inactiveLabel;
     }
@@ -93,7 +96,7 @@ export function syncSettingsTiles() {
     button.removeAttribute("aria-busy");
     button.setAttribute("aria-label", "Changeover");
     button.title = "Changeover";
-    button.innerHTML = "↔";
+    setButtonIcon(button, "changeover");
 
     if (label) {
       label.textContent = session.beaconSidesSwapped

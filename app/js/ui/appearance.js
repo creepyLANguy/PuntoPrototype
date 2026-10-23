@@ -5,8 +5,16 @@ import { SOUND_IDS, TOAST_TYPES } from "../config/constants.js";
 import { session } from "../state/sessionState.js";
 import { themeState } from "../state/themeState.js";
 import { elements } from "./dom.js";
+import { setButtonIcon } from "./icons.js";
 import { syncSettingsTiles } from "./settingsTiles.js";
-import { getActiveTeamColours, getCurrentThemeName, getTeamColoursForTheme, resetTeamColours, setTeamColour, setTheme } from "./theme.js";
+import {
+  getActiveTeamColours,
+  getCurrentThemeName,
+  getTeamColoursForTheme,
+  resetTeamColours,
+  setTeamColour,
+  setTheme,
+} from "./theme.js";
 import { showToast } from "./toast.js";
 import { getReadableTextColour, normalizeHexColour } from "../utils/colour.js";
 
@@ -18,8 +26,7 @@ let activeTeamColourPickerId = 0;
 
 let TEAM_COLOUR_PICKER_OPTIONS = null;
 
-export function initTeamColourPickerTracking()
-{
+export function initTeamColourPickerTracking() {
   TEAM_COLOUR_PICKER_OPTIONS = {
     format: "hex",
     hash: true,
@@ -38,23 +45,19 @@ export function initTeamColourPickerTracking()
     controlBorderColor: themeState.isLightMode ? "#ffffff" : "#000000",
     pointerBorderColor: themeState.isLightMode ? "#ffffff" : "#000000",
     pointerColor: themeState.isLightMode ? "#000000" : "#ffffff",
-
   };
 
-  const teamColourPickerObserver = new MutationObserver(() =>
-  {
+  const teamColourPickerObserver = new MutationObserver(() => {
     bindTeamColourPickerPanel();
 
-    if (!getTeamColourPickerPanel())
-    {
+    if (!getTeamColourPickerPanel()) {
       activeTeamColourPickerPanel = null;
     }
   });
 
   teamColourPickerObserver.observe(document.body, { childList: true });
 
-  document.addEventListener("pointerdown", (event) =>
-  {
+  document.addEventListener("pointerdown", (event) => {
     const panel = getTeamColourPickerPanel();
     if (!panel || !panel.contains(event.target)) return;
 
@@ -62,37 +65,36 @@ export function initTeamColourPickerTracking()
     updateTeamColourPickerReveal(event.clientX, event.clientY);
   });
 
-  document.addEventListener("pointermove", (event) =>
-  {
+  document.addEventListener("pointermove", (event) => {
     if (!isPickingColour) return;
     updateTeamColourPickerReveal(event.clientX, event.clientY);
   });
 
-  document.addEventListener("pointerup", () =>
-  {
+  document.addEventListener("pointerup", () => {
     clearTeamColourPickerReveal();
   });
 
-  document.addEventListener("pointercancel", () =>
-  {
+  document.addEventListener("pointercancel", () => {
     clearTeamColourPickerReveal();
   });
 }
 
-function getTeamColourPickerPanel()
-{
+function getTeamColourPickerPanel() {
   const pickerZIndex = String(TEAM_COLOUR_PICKER_OPTIONS.zIndex);
   const bodyChildren = Array.from(document.body.children);
 
-  for (let index = bodyChildren.length - 1; index >= 0; index -= 1)
-  {
+  for (let index = bodyChildren.length - 1; index >= 0; index -= 1) {
     const candidate = bodyChildren[index];
     if (!(candidate instanceof HTMLElement)) continue;
     if (candidate.id === "content-container") continue;
 
     const computedStyle = window.getComputedStyle(candidate);
     if (computedStyle.zIndex !== pickerZIndex) continue;
-    if (computedStyle.position !== "absolute" && computedStyle.position !== "fixed") continue;
+    if (
+      computedStyle.position !== "absolute" &&
+      computedStyle.position !== "fixed"
+    )
+      continue;
 
     return candidate;
   }
@@ -100,8 +102,7 @@ function getTeamColourPickerPanel()
   return null;
 }
 
-function clearTeamColourPickerReveal()
-{
+function clearTeamColourPickerReveal() {
   if (!activeTeamColourPickerPanel) return;
 
   activeTeamColourPickerPanel.classList.remove("is-revealing");
@@ -109,8 +110,7 @@ function clearTeamColourPickerReveal()
   activeTeamColourPickerPanel.style.removeProperty("--picker-reveal-y");
 }
 
-function bindTeamColourPickerPanel()
-{
+function bindTeamColourPickerPanel() {
   const panel = getTeamColourPickerPanel();
   if (!panel || panel === activeTeamColourPickerPanel) return;
 
@@ -121,43 +121,42 @@ function bindTeamColourPickerPanel()
   clearTeamColourPickerReveal();
 }
 
-function updateTeamColourPickerReveal(clientX, clientY)
-{
+function updateTeamColourPickerReveal(clientX, clientY) {
   const panel = getTeamColourPickerPanel();
   if (!panel) return;
 
-  if (panel !== activeTeamColourPickerPanel)
-  {
+  if (panel !== activeTeamColourPickerPanel) {
     bindTeamColourPickerPanel();
   }
 
   const panelRect = panel.getBoundingClientRect();
-  const revealX = Math.max(0, Math.min(clientX - panelRect.left, panelRect.width));
-  const revealY = Math.max(0, Math.min(clientY - panelRect.top, panelRect.height));
+  const revealX = Math.max(
+    0,
+    Math.min(clientX - panelRect.left, panelRect.width),
+  );
+  const revealY = Math.max(
+    0,
+    Math.min(clientY - panelRect.top, panelRect.height),
+  );
 
   panel.style.setProperty("--picker-reveal-x", `${revealX}px`);
   panel.style.setProperty("--picker-reveal-y", `${revealY}px`);
   panel.classList.add("is-revealing");
 }
 
-export function initializeTeamColourPickers()
-{
+export function initializeTeamColourPickers() {
   const pickers = document.querySelectorAll("[data-team-colour]");
   const JsColor = window.JSColor || window.jscolor;
 
-  if (!JsColor)
-  {
+  if (!JsColor) {
     return;
   }
 
-  pickers.forEach((picker) =>
-  {
-    if (!picker.jscolor)
-    {
+  pickers.forEach((picker) => {
+    if (!picker.jscolor) {
       new JsColor(picker, {
         ...TEAM_COLOUR_PICKER_OPTIONS,
-        onInput()
-        {
+        onInput() {
           isPickingColour = true;
           bindTeamColourPickerPanel();
           elements.settingsModal.classList.add("hidden");
@@ -166,12 +165,10 @@ export function initializeTeamColourPickers()
           if (!pickedColour) return;
           setTeamColour(picker.dataset.teamColour, pickedColour);
         },
-        onChange()
-        {
+        onChange() {
           isPickingColour = false;
           clearTeamColourPickerReveal();
-          if (session.currentCourtId)
-          {
+          if (session.currentCourtId) {
             elements.settingsModal.classList.remove("hidden");
           }
 
@@ -179,39 +176,42 @@ export function initializeTeamColourPickers()
           if (!pickedColour) return;
           setTeamColour(picker.dataset.teamColour, pickedColour);
         },
-
       });
     }
   });
 }
 
-function updateTeamColourInput(picker, colour)
-{
+function updateTeamColourInput(picker, colour) {
   picker.value = colour;
   picker.style.setProperty("--picker-colour", colour);
 
   if (!picker.jscolor) return;
 
   const pickerColour = normalizeHexColour(picker.jscolor.toHEXString());
-  if (pickerColour !== colour)
-  {
+  if (pickerColour !== colour) {
     picker.jscolor.fromString(colour);
   }
 
-  picker.jscolor.backgroundColor = themeState.isLightMode ? "#ffffff" : "#000000";
-  picker.jscolor.borderColor = themeState.isLightMode ? "#00000030" : "#ffffff3a";
-  picker.jscolor.controlBorderColor = themeState.isLightMode ? "#ffffff" : "#000000";
-  picker.jscolor.pointerBorderColor = themeState.isLightMode ? "#ffffff" : "#000000";
+  picker.jscolor.backgroundColor = themeState.isLightMode
+    ? "#ffffff"
+    : "#000000";
+  picker.jscolor.borderColor = themeState.isLightMode
+    ? "#00000030"
+    : "#ffffff3a";
+  picker.jscolor.controlBorderColor = themeState.isLightMode
+    ? "#ffffff"
+    : "#000000";
+  picker.jscolor.pointerBorderColor = themeState.isLightMode
+    ? "#ffffff"
+    : "#000000";
   picker.jscolor.pointerColor = themeState.isLightMode ? "#000000" : "#ffffff";
 }
 
-export function syncAppearanceControls()
-{
+export function syncAppearanceControls() {
   const activeTheme = getCurrentThemeName();
   const activeColours = getActiveTeamColours();
 
-  document.querySelectorAll("[data-theme-choice]").forEach((button) =>
-  {
+  document.querySelectorAll("[data-theme-choice]").forEach((button) => {
     const choiceTheme = button.dataset.themeChoice;
     const previewColours = getTeamColoursForTheme(choiceTheme);
     const isActive = button.dataset.themeChoice === activeTheme;
@@ -220,19 +220,20 @@ export function syncAppearanceControls()
     button.style.setProperty("--theme-choice-a", previewColours.A);
     button.style.setProperty("--theme-choice-b", previewColours.B);
     button.style.setProperty("--theme-choice-text", readableTextColour);
-    button.style.setProperty("--theme-choice-shadow", readableTextColour === "#000000" ? "#ffffff" : "#000000");
+    button.style.setProperty(
+      "--theme-choice-shadow",
+      readableTextColour === "#000000" ? "#ffffff" : "#000000",
+    );
     button.classList.toggle("active", isActive);
     button.setAttribute("aria-pressed", isActive ? "true" : "false");
   });
 
-  document.querySelectorAll("[data-team-colour]").forEach((input) =>
-  {
+  document.querySelectorAll("[data-team-colour]").forEach((input) => {
     updateTeamColourInput(input, activeColours[input.dataset.teamColour]);
   });
 }
 
-export function openAppearanceMenu()
-{
+export function openAppearanceMenu() {
   if (!elements.appearanceMenu) return;
 
   syncAppearanceControls();
@@ -240,113 +241,120 @@ export function openAppearanceMenu()
   elements.appearanceMenuBtn?.setAttribute("aria-expanded", "true");
 }
 
-export function closeAppearanceMenu()
-{
+export function closeAppearanceMenu() {
   if (!elements.appearanceMenu) return;
 
   elements.appearanceMenu.classList.add("hidden");
   elements.appearanceMenuBtn?.setAttribute("aria-expanded", "false");
 }
 
-function toggleAppearanceMenu()
-{
+function toggleAppearanceMenu() {
   if (!elements.appearanceMenu) return;
 
-  if (elements.appearanceMenu.classList.contains("hidden")) openAppearanceMenu();
+  if (elements.appearanceMenu.classList.contains("hidden"))
+    openAppearanceMenu();
   else closeAppearanceMenu();
 }
 
-export function initializeWaves()
-{
+export function initializeWaves() {
   updateWavesVisibility();
 }
 
-export function toggleWaves()
-{
+export function toggleWaves() {
   themeState.isWavesEnabled = !themeState.isWavesEnabled;
   localStorage.setItem("waves", themeState.isWavesEnabled);
-  elements.waveToggleScoreboardBtn.textContent = themeState.isWavesEnabled ? "♒︎" : "═";
+  setButtonIcon(
+    elements.waveToggleScoreboardBtn,
+    themeState.isWavesEnabled ? "waves" : "waves-off",
+  );
 
   updateWavesVisibility();
   syncSettingsTiles();
 
   playSound(SOUND_IDS.POP);
 
-  showToast(themeState.isWavesEnabled ? "Waves enabled" : "Waves disabled", TOAST_TYPES.INFO);
+  showToast(
+    themeState.isWavesEnabled ? "Waves enabled" : "Waves disabled",
+    TOAST_TYPES.INFO,
+  );
 }
 
-export function updateWavesVisibility()
-{
+export function updateWavesVisibility() {
   const waveContainer = document.querySelector(".wave-container");
   if (!waveContainer) return;
 
   // The toggle only affects the Scoreboard and Spectate (court list) views.
   // On the homepage and other pre-game screens, waves should always be visible.
-  const onScoreboard = elements.scoreboardPage && window.getComputedStyle(elements.scoreboardPage).display !== "none";
-  const onSpectate = elements.spectatePage && window.getComputedStyle(elements.spectatePage).display !== "none";
+  const onScoreboard =
+    elements.scoreboardPage &&
+    window.getComputedStyle(elements.scoreboardPage).display !== "none";
+  const onSpectate =
+    elements.spectatePage &&
+    window.getComputedStyle(elements.spectatePage).display !== "none";
 
   const shouldHide = (onScoreboard || onSpectate) && !themeState.isWavesEnabled;
   const holdsHiddenClass = waveContainer.classList.contains("waves-hidden");
 
-  if (shouldHide !== holdsHiddenClass)
-  {
+  if (shouldHide !== holdsHiddenClass) {
     waveContainer.classList.toggle("waves-hidden", shouldHide);
   }
 }
 
-export function registerAppearanceControls()
-{
-  if (elements.appearanceMenuBtn)
-  {
-    elements.appearanceMenuBtn.addEventListener("click", (e) =>
-    {
+export function registerAppearanceControls() {
+  if (elements.appearanceMenuBtn) {
+    elements.appearanceMenuBtn.addEventListener("click", (e) => {
       e.stopPropagation();
       toggleAppearanceMenu();
     });
   }
-  document.querySelectorAll("[data-theme-choice]").forEach((button) =>
-  {
-    button.addEventListener("click", () => setTheme(button.dataset.themeChoice));
+  document.querySelectorAll("[data-theme-choice]").forEach((button) => {
+    button.addEventListener("click", () =>
+      setTheme(button.dataset.themeChoice),
+    );
   });
 
-  document.querySelectorAll("[data-team-colour]").forEach((input) =>
-  {
-    input.addEventListener("input", () => setTeamColour(input.dataset.teamColour, input.value));
-    input.addEventListener("change", () => setTeamColour(input.dataset.teamColour, input.value));
+  document.querySelectorAll("[data-team-colour]").forEach((input) => {
+    input.addEventListener("input", () =>
+      setTeamColour(input.dataset.teamColour, input.value),
+    );
+    input.addEventListener("change", () =>
+      setTeamColour(input.dataset.teamColour, input.value),
+    );
   });
 
-  document.querySelectorAll(".reset-theme-colours-btn").forEach((button) =>
-  {
+  document.querySelectorAll(".reset-theme-colours-btn").forEach((button) => {
     button.addEventListener("click", resetTeamColours);
   });
 }
 
-export function registerAppearanceMenuDismissal()
-{
-  document.addEventListener("click", (e) =>
-  {
-    if (!elements.appearanceMenu || elements.appearanceMenu.classList.contains("hidden")) return;
-    if (elements.appearanceMenu.contains(e.target) || elements.appearanceMenuBtn?.contains(e.target)) return;
+export function registerAppearanceMenuDismissal() {
+  document.addEventListener("click", (e) => {
+    if (
+      !elements.appearanceMenu ||
+      elements.appearanceMenu.classList.contains("hidden")
+    )
+      return;
+    if (
+      elements.appearanceMenu.contains(e.target) ||
+      elements.appearanceMenuBtn?.contains(e.target)
+    )
+      return;
     if (document.querySelector("[data-team-colour].jscolor-active")) return;
 
     closeAppearanceMenu();
   });
 
-  document.addEventListener("keydown", (e) =>
-  {
+  document.addEventListener("keydown", (e) => {
     if (e.key === "Escape") closeAppearanceMenu();
   });
 }
 
-export function registerWaveToggleButtons()
-{
-  if (elements.waveToggleScoreboardBtn)
-  {
+export function registerWaveToggleButtons() {
+  if (elements.waveToggleScoreboardBtn) {
     elements.waveToggleScoreboardBtn.addEventListener("click", toggleWaves);
   }
 
-  if (elements.waveToggleSpectateBtn)
-  {
+  if (elements.waveToggleSpectateBtn) {
     elements.waveToggleSpectateBtn.addEventListener("click", toggleWaves);
   }
 }

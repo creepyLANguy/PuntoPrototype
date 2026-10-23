@@ -126,6 +126,50 @@ svg {
   /* only if they don't need clicks */
 }
 
+.icon {
+  display: inline-block;
+  flex: 0 0 auto;
+  width: 1.1em;
+  height: 1.1em;
+  background-color: currentColor;
+  mask-repeat: no-repeat;
+  mask-position: center;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  -webkit-mask-size: contain;
+}
+
+.icon--home { mask-image: url("/app/media/icons/home.svg"); -webkit-mask-image: url("/app/media/icons/home.svg"); }
+.icon--palette { mask-image: url("/app/media/icons/palette.svg"); -webkit-mask-image: url("/app/media/icons/palette.svg"); }
+.icon--lock { mask-image: url("/app/media/icons/lock.svg"); -webkit-mask-image: url("/app/media/icons/lock.svg"); }
+.icon--close { mask-image: url("/app/media/icons/close.svg"); -webkit-mask-image: url("/app/media/icons/close.svg"); }
+.icon--undo { mask-image: url("/app/media/icons/undo.svg"); -webkit-mask-image: url("/app/media/icons/undo.svg"); }
+.icon--settings { mask-image: url("/app/media/icons/settings.svg"); -webkit-mask-image: url("/app/media/icons/settings.svg"); }
+.icon--chart { mask-image: url("/app/media/icons/chart.svg"); -webkit-mask-image: url("/app/media/icons/chart.svg"); }
+.icon--share { mask-image: url("/app/media/icons/share.svg"); -webkit-mask-image: url("/app/media/icons/share.svg"); }
+.icon--music { mask-image: url("/app/media/icons/music.svg"); -webkit-mask-image: url("/app/media/icons/music.svg"); }
+.icon--music-muted { mask-image: url("/app/media/icons/music-muted.svg"); -webkit-mask-image: url("/app/media/icons/music-muted.svg"); }
+.icon--waves { mask-image: url("/app/media/icons/waves.svg"); -webkit-mask-image: url("/app/media/icons/waves.svg"); }
+.icon--waves-off { mask-image: url("/app/media/icons/waves-off.svg"); -webkit-mask-image: url("/app/media/icons/waves-off.svg"); }
+.icon--qr { mask-image: url("/app/media/icons/qr.svg"); -webkit-mask-image: url("/app/media/icons/qr.svg"); }
+.icon--fullscreen { mask-image: url("/app/media/icons/fullscreen.svg"); -webkit-mask-image: url("/app/media/icons/fullscreen.svg"); }
+.icon--fullscreen-exit { mask-image: url("/app/media/icons/fullscreen-exit.svg"); -webkit-mask-image: url("/app/media/icons/fullscreen-exit.svg"); }
+.icon--swap { mask-image: url("/app/media/icons/swap.svg"); -webkit-mask-image: url("/app/media/icons/swap.svg"); }
+.icon--swap-alt { mask-image: url("/app/media/icons/swap-alt.svg"); -webkit-mask-image: url("/app/media/icons/swap-alt.svg"); }
+.icon--changeover { mask-image: url("/app/media/icons/changeover.svg"); -webkit-mask-image: url("/app/media/icons/changeover.svg"); }
+.icon--server { mask-image: url("/app/media/icons/server.svg"); -webkit-mask-image: url("/app/media/icons/server.svg"); }
+.icon--server-off { mask-image: url("/app/media/icons/server-off.svg"); -webkit-mask-image: url("/app/media/icons/server-off.svg"); }
+.icon--users { mask-image: url("/app/media/icons/users.svg"); -webkit-mask-image: url("/app/media/icons/users.svg"); }
+.icon--reset { mask-image: url("/app/media/icons/reset.svg"); -webkit-mask-image: url("/app/media/icons/reset.svg"); }
+.icon--plus { mask-image: url("/app/media/icons/plus.svg"); -webkit-mask-image: url("/app/media/icons/plus.svg"); }
+.icon--monitor { mask-image: url("/app/media/icons/monitor.svg"); -webkit-mask-image: url("/app/media/icons/monitor.svg"); }
+.icon--player { mask-image: url("/app/media/icons/player.svg"); -webkit-mask-image: url("/app/media/icons/player.svg"); }
+.icon--eye { mask-image: url("/app/media/icons/eye.svg"); -webkit-mask-image: url("/app/media/icons/eye.svg"); }
+.icon--chevron-down { mask-image: url("/app/media/icons/chevron-down.svg"); -webkit-mask-image: url("/app/media/icons/chevron-down.svg"); }
+.icon--trend { mask-image: url("/app/media/icons/trend.svg"); -webkit-mask-image: url("/app/media/icons/trend.svg"); }
+.icon--clapperboard { mask-image: url("/app/media/icons/clapperboard.svg"); -webkit-mask-image: url("/app/media/icons/clapperboard.svg"); }
+.icon--check { mask-image: url("/app/media/icons/check.svg"); -webkit-mask-image: url("/app/media/icons/check.svg"); }
 /* =======================================================
    MENU PAGE
 ======================================================= */
@@ -1845,7 +1889,7 @@ body.light-mode .setting-item:hover {
   background: rgba(0, 0, 0, 0.06);
 }
 
-.setting-item span {
+.setting-item > span {
   font-size: 0.9rem;
   font-weight: 600;
   opacity: 0.8;
@@ -2096,7 +2140,6 @@ body.light-mode .player-names-field input {
 .player-names-actions .secondary-btn {
   width: 100%;
 }
-
 @media (max-width: 640px) {
 
   .player-names-grid,

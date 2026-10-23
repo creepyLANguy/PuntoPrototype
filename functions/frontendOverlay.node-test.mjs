@@ -315,3 +315,41 @@ test("/overlay/match/{matchId} follows the durable match through the match endpo
   assert.equal(page.$("courtLabel").textContent, "Join: ZZZZA");
   page.dom.window.close();
 });
+
+test("overlay controls and dynamic sponsor removal use accessible external icons", async () => {
+  const page = await bootOverlay();
+
+  for (const [id, icon] of [
+    ["statBtn", "chart"],
+    ["momentumBtn", "trend"],
+    ["slateBtn", "clapperboard"],
+    ["gearBtn", "settings"],
+    ["closeSettingsX", "close"],
+    ["addSponsorBtn", "plus"],
+  ]) {
+    const button = page.$(id);
+    assert.ok(button.querySelector(`.icon--${icon}`), `${id} renders its ${icon} icon`);
+    assert.equal(button.querySelector("svg"), null, `${id} has no inline SVG`);
+    const visibleText = button.cloneNode(true);
+    visibleText.querySelectorAll(".icon").forEach((element) => element.remove());
+    if (!visibleText.textContent.trim()) {
+      assert.ok(button.getAttribute("aria-label") || button.title, `${id} is labeled`);
+    }
+    assert.equal(button.querySelector(".icon").getAttribute("aria-hidden"), "true");
+  }
+
+  page.$("addSponsorBtn").click();
+  const removeButton = page.$("sponsorList").querySelector("button.rm");
+  assert.ok(removeButton.querySelector(".icon--close"));
+  assert.equal(removeButton.getAttribute("aria-label"), "Remove sponsor");
+
+  Object.defineProperty(page.window.navigator, "clipboard", {
+    configurable: true,
+    value: { writeText: async () => {} },
+  });
+  page.$("copyObsUrl").click();
+  await settle();
+  assert.ok(page.$("copyObsUrl").querySelector(".icon--check"));
+  assert.equal(page.$("copyObsUrl").textContent.trim(), "Copied");
+  page.dom.window.close();
+});

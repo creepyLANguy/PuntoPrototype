@@ -131,7 +131,7 @@ body.light-mode .setting-item:hover {
   background: rgba(0, 0, 0, 0.06);
 }
 
-.setting-item span {
+.setting-item > span {
   font-size: 0.9rem;
   font-weight: 600;
   opacity: 0.8;
@@ -382,4 +382,3 @@ body.light-mode .player-names-field input {
 .player-names-actions .secondary-btn {
   width: 100%;
 }
-
