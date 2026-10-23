@@ -10,13 +10,12 @@ import { syncSettingsTiles } from "./settingsTiles.js";
 import {
   getActiveTeamColours,
   getCurrentThemeName,
-  getTeamColoursForTheme,
   resetTeamColours,
   setTeamColour,
   setTheme,
 } from "./theme.js";
 import { showToast } from "./toast.js";
-import { getReadableTextColour, normalizeHexColour } from "../utils/colour.js";
+import { normalizeHexColour } from "../utils/colour.js";
 
 let isPickingColour = false;
 
@@ -212,18 +211,7 @@ export function syncAppearanceControls() {
   const activeColours = getActiveTeamColours();
 
   document.querySelectorAll("[data-theme-choice]").forEach((button) => {
-    const choiceTheme = button.dataset.themeChoice;
-    const previewColours = getTeamColoursForTheme(choiceTheme);
     const isActive = button.dataset.themeChoice === activeTheme;
-    const readableTextColour = getReadableTextColour(previewColours);
-
-    button.style.setProperty("--theme-choice-a", previewColours.A);
-    button.style.setProperty("--theme-choice-b", previewColours.B);
-    button.style.setProperty("--theme-choice-text", readableTextColour);
-    button.style.setProperty(
-      "--theme-choice-shadow",
-      readableTextColour === "#000000" ? "#ffffff" : "#000000",
-    );
     button.classList.toggle("active", isActive);
     button.setAttribute("aria-pressed", isActive ? "true" : "false");
   });

@@ -159,11 +159,90 @@ test("Spectate search matches court names, court ids, club names and club ids", 
   typeInto(search, "");
 });
 
-test("selecting a court with a club from Spectate opens that court", async () => {
+test("Spectate loading clears on read errors and releases the duplicate-entry guard", async (t) => {
+  const originalGet = firestoreState.docs.get.bind(firestoreState.docs);
+  let reads = 0;
+  const readStub = t.mock.method(firestoreState.docs, "get", (path) => {
+    if (path === "courts/jkmna") {
+      reads += 1;
+      throw new Error("Court temporarily unavailable.");
+    }
+    return originalGet(path);
+  });
+  try {
+    row("spectateCourtList", "jkmna").click();
+    assert.equal(
+      $("spectatePage").querySelector(":scope > .inline-loading-overlay")?.style.display,
+      "flex",
+    );
+    const overlay = $("spectatePage").querySelector(":scope > .inline-loading-overlay");
+    assert.equal(window.getComputedStyle(overlay).position, "absolute");
+    assert.ok(
+      Number(window.getComputedStyle(overlay).zIndex) >
+        Number(
+          window.getComputedStyle($("spectatePage").querySelector(".create-card")).zIndex || 0,
+        ),
+      "the loading spinner stacks above the court-list card",
+    );
+    row("spectateCourtList", "efgha").dispatchEvent(
+      new window.KeyboardEvent("keydown", { key: "Enter", bubbles: true }),
+    );
+    assert.equal(reads, 1);
+    await waitFor(
+      () => $("spectateCourtNameError").textContent === "Court temporarily unavailable.",
+    );
+    assert.equal(
+      $("spectatePage").querySelector(":scope > .inline-loading-overlay").style.display,
+      "none",
+    );
+    assert.equal(isShown("spectatePage"), true);
+    assert.equal(window.location.pathname, "/c");
+  } finally {
+    readStub.mock.restore();
+  }
+});
+
+test("Spectate loading clears when a listed court disappears", async () => {
+  const court = firestoreState.docs.get("courts/efgha");
+  firestoreState.docs.delete("courts/efgha");
+  try {
+    row("spectateCourtList", "efgha").click();
+    assert.equal(
+      $("spectatePage").querySelector(":scope > .inline-loading-overlay").style.display,
+      "flex",
+    );
+    await waitFor(() => $("spectateCourtNameError").textContent === "Court not found.");
+    assert.equal(
+      $("spectatePage").querySelector(":scope > .inline-loading-overlay").style.display,
+      "none",
+    );
+  } finally {
+    firestoreState.docs.set("courts/efgha", court);
+  }
+});
+
+test("selecting a court with a club from Spectate opens that court", async (t) => {
+  const originalGet = firestoreState.docs.get.bind(firestoreState.docs);
+  let otherCourtReads = 0;
+  const readStub = t.mock.method(firestoreState.docs, "get", (path) => {
+    if (path === "courts/efgha") otherCourtReads += 1;
+    return originalGet(path);
+  });
   clubCell("spectateCourtList", "jkmna").click();
+  assert.equal(
+    $("spectatePage").querySelector(":scope > .inline-loading-overlay").style.display,
+    "flex",
+  );
+  row("spectateCourtList", "efgha").click();
   await waitFor(() => isShown("scoreboardPage"), { label: "scoreboard" });
+  await waitFor(
+    () =>
+      $("spectatePage").querySelector(":scope > .inline-loading-overlay").style.display === "none",
+  );
   assert.equal(window.location.pathname, "/c/jkmna");
   assert.equal(window.history.state.viewState.spectate, true, "joined as a spectator");
+  assert.equal(otherCourtReads, 0, "duplicate clicks cannot begin a second court entry");
+  readStub.mock.restore();
 
   await leaveScoreboard();
 });

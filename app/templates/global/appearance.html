@@ -1,15 +1,13 @@
       <div id="appearanceMenu" class="appearance-menu hidden" role="dialog" aria-label="Appearance settings">
         <div class="appearance-menu-title">Appearance</div>
-        <div class="theme-choice-group" aria-label="Theme">
-          <button type="button" class="theme-choice-btn" data-theme-choice="dark">Dark</button>
-          <button type="button" class="theme-choice-btn" data-theme-choice="light">Light</button>
-        </div>
+        <!-- @include theme-choices.html -->
+        <div class="appearance-colours-label">Team colours</div>
         <label class="colour-field">
           <span>Team A</span>
           <span class="team-colour-control">
             <button type="button" class="team-colour-btn" data-team-colour="A" aria-label="Team A colour"
               aria-haspopup="dialog"></button>
-            <span class="colour-edit-icon">⋮</span>
+            <span class="colour-edit-icon" aria-hidden="true">Edit</span>
           </span>
         </label>
         <label class="colour-field">
@@ -17,7 +15,7 @@
           <span class="team-colour-control">
             <button type="button" class="team-colour-btn" data-team-colour="B" aria-label="Team B colour"
               aria-haspopup="dialog"></button>
-            <span class="colour-edit-icon">⋮</span>
+            <span class="colour-edit-icon" aria-hidden="true">Edit</span>
           </span>
         </label>
         <button type="button" class="reset-theme-colours-btn">Reset colours</button>

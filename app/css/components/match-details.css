@@ -79,14 +79,21 @@ body.light-mode .dm-close:hover {
   color: inherit;
   cursor: pointer;
   opacity: 0.75;
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  padding: 1%;
+  padding: 0;
   transition: background 0.15s, opacity 0.15s;
+}
+
+.dm-share-btn .icon {
+  width: 24px;
+  height: 24px;
 }
 
 .dm-share-btn:hover {
@@ -353,5 +360,4 @@ body.light-mode .dm-table thead th {
   height: 1px;
   padding: 0;
 }
-
 
