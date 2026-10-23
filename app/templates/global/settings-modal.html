@@ -154,10 +154,7 @@
           <div class="appearance-layout">
             <section class="appearance-panel">
               <div class="appearance-panel-title">Theme mode</div>
-              <div class="theme-choice-group" aria-label="Theme">
-                <button type="button" class="theme-choice-btn" data-theme-choice="dark">Dark</button>
-                <button type="button" class="theme-choice-btn" data-theme-choice="light">Light</button>
-              </div>
+              <!-- @include theme-choices.html -->
             </section>
 
             <section class="appearance-panel">
@@ -168,7 +165,7 @@
                   <span class="team-colour-control">
                     <button type="button" class="team-colour-btn" data-team-colour="A" aria-label="Team A colour"
                       aria-haspopup="dialog"></button>
-                    <span class="colour-edit-icon">⋮</span>
+                    <span class="colour-edit-icon" aria-hidden="true">Edit</span>
                   </span>
                 </label>
                 <label class="colour-field">
@@ -176,7 +173,7 @@
                   <span class="team-colour-control">
                     <button type="button" class="team-colour-btn" data-team-colour="B" aria-label="Team B colour"
                       aria-haspopup="dialog"></button>
-                    <span class="colour-edit-icon">⋮</span>
+                    <span class="colour-edit-icon" aria-hidden="true">Edit</span>
                   </span>
                 </label>
               </div>

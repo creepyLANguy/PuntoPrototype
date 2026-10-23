@@ -75,10 +75,57 @@ test("/p/<court> autofocuses the player password field", () => {
   assert.equal(document.activeElement?.id, "playCourtPassword");
 });
 
+test("Play password errors clear loading and allow another attempt without a success toast", async () => {
+  const passwordInput = document.getElementById("playCourtPassword");
+  const submit = document.getElementById("enterCourtBtn");
+  const spinner = () => document.querySelector("#playPage > .inline-loading-overlay");
+  const playerToasts = () =>
+    [...document.querySelectorAll(".toast")].filter(
+      (toast) => toast.textContent === "Switched to Player view.",
+    );
+  submit.click();
+  assert.equal(document.getElementById("playCourtPasswordError").textContent, "Password required.");
+  assert.equal(spinner(), null);
+
+  passwordInput.value = "incorrect";
+  submit.click();
+  assert.equal(
+    spinner()?.style.display,
+    "flex",
+    "loading is visible before the first request resolves",
+  );
+  await waitFor(
+    () => document.getElementById("playCourtPasswordError").textContent === "Incorrect password.",
+  );
+  assert.equal(spinner().style.display, "none");
+  assert.equal(playerToasts().length, 0);
+  assert.equal(window.location.pathname, "/p/drcta");
+
+  const admin = firestoreState.docs.get("admin/goodies");
+  firestoreState.docs.delete("admin/goodies");
+  try {
+    passwordInput.value = "pw";
+    submit.click();
+    assert.equal(spinner().style.display, "flex");
+    await waitFor(() =>
+      document.getElementById("playCourtNameError").textContent.includes("Admin document missing"),
+    );
+    assert.equal(spinner().style.display, "none", "backend errors release the loading overlay");
+    assert.equal(playerToasts().length, 0);
+  } finally {
+    firestoreState.docs.set("admin/goodies", admin);
+  }
+});
+
 test("/p/<court> player submit primes and plays the join sound", async () => {
   const passwordInput = document.getElementById("playCourtPassword");
   passwordInput.value = "pw";
 
+  document.getElementById("enterCourtBtn").click();
+  assert.equal(
+    document.querySelector("#playPage > .inline-loading-overlay")?.style.display,
+    "flex",
+  );
   document.getElementById("enterCourtBtn").click();
 
   await waitFor(() => document.getElementById("scoreboardPage").style.display !== "none", {
@@ -91,6 +138,17 @@ test("/p/<court> player submit primes and plays the join sound", async () => {
     "the AudioContext should be resumed from the submit gesture",
   );
   assert.equal(window.__audioTestState.starts, 1);
+  await waitFor(
+    () => document.querySelector("#playPage > .inline-loading-overlay")?.style.display === "none",
+  );
+  assert.equal(
+    [...document.querySelectorAll(".toast")].filter(
+      (toast) => toast.textContent === "Switched to Player view.",
+    ).length,
+    1,
+    "duplicate submits produce only one completed player join",
+  );
+  assert.equal(window.location.pathname, "/c/drcta");
 });
 
 test("/p/<matchId> loads that match on its court as a spectator and then authenticates as a player", async () => {

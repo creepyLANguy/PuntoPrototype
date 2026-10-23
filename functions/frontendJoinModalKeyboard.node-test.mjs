@@ -107,3 +107,33 @@ test("join modal shift clears when the viewport is restored", async () => {
     "0px",
   );
 });
+
+test("mobile join panels stay top-aligned as the keyboard opens and closes", async () => {
+  const originalMatchMedia = window.matchMedia;
+  window.matchMedia = (query) => ({
+    ...originalMatchMedia(query),
+    matches: query === "(max-width: 768px), (pointer: coarse)",
+  });
+  const modal = document.getElementById("joinCourtModal");
+  modal.classList.remove("hidden");
+
+  try {
+    for (const height of [800, 450, 320, 800]) {
+      setJoinModalViewportHeight(height);
+      window.dispatchEvent(new window.Event("resize"));
+      await settle(30);
+
+      for (const id of ["playPage", "spectatePage", "joinCourtModal"]) {
+        const page = document.getElementById(id);
+        assert.equal(page.style.getPropertyValue("--join-viewport-height"), `${height}px`);
+        assert.equal(
+          page.querySelector(".create-card").style.getPropertyValue("--keyboard-shift-y"),
+          "0px",
+        );
+      }
+    }
+  } finally {
+    window.matchMedia = originalMatchMedia;
+    modal.classList.add("hidden");
+  }
+});

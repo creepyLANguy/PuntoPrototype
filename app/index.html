@@ -78,16 +78,23 @@
         aria-expanded="false"><span class="icon icon--palette" aria-hidden="true"></span></button>
       <div id="appearanceMenu" class="appearance-menu hidden" role="dialog" aria-label="Appearance settings">
         <div class="appearance-menu-title">Appearance</div>
-        <div class="theme-choice-group" aria-label="Theme">
-          <button type="button" class="theme-choice-btn" data-theme-choice="dark">Dark</button>
-          <button type="button" class="theme-choice-btn" data-theme-choice="light">Light</button>
-        </div>
+              <div class="theme-choice-group" role="group" aria-label="Theme">
+                <button type="button" class="theme-choice-btn" data-theme-choice="dark" aria-pressed="false">
+                  <span class="theme-mode-preview theme-mode-preview--dark" aria-hidden="true"></span>
+                  <span>Dark</span><span class="theme-choice-check" aria-hidden="true">✓</span>
+                </button>
+                <button type="button" class="theme-choice-btn" data-theme-choice="light" aria-pressed="false">
+                  <span class="theme-mode-preview theme-mode-preview--light" aria-hidden="true"></span>
+                  <span>Light</span><span class="theme-choice-check" aria-hidden="true">✓</span>
+                </button>
+              </div>
+        <div class="appearance-colours-label">Team colours</div>
         <label class="colour-field">
           <span>Team A</span>
           <span class="team-colour-control">
             <button type="button" class="team-colour-btn" data-team-colour="A" aria-label="Team A colour"
               aria-haspopup="dialog"></button>
-            <span class="colour-edit-icon">⋮</span>
+            <span class="colour-edit-icon" aria-hidden="true">Edit</span>
           </span>
         </label>
         <label class="colour-field">
@@ -95,7 +102,7 @@
           <span class="team-colour-control">
             <button type="button" class="team-colour-btn" data-team-colour="B" aria-label="Team B colour"
               aria-haspopup="dialog"></button>
-            <span class="colour-edit-icon">⋮</span>
+            <span class="colour-edit-icon" aria-hidden="true">Edit</span>
           </span>
         </label>
         <button type="button" class="reset-theme-colours-btn">Reset colours</button>
@@ -312,9 +319,15 @@
           <div class="appearance-layout">
             <section class="appearance-panel">
               <div class="appearance-panel-title">Theme mode</div>
-              <div class="theme-choice-group" aria-label="Theme">
-                <button type="button" class="theme-choice-btn" data-theme-choice="dark">Dark</button>
-                <button type="button" class="theme-choice-btn" data-theme-choice="light">Light</button>
+              <div class="theme-choice-group" role="group" aria-label="Theme">
+                <button type="button" class="theme-choice-btn" data-theme-choice="dark" aria-pressed="false">
+                  <span class="theme-mode-preview theme-mode-preview--dark" aria-hidden="true"></span>
+                  <span>Dark</span><span class="theme-choice-check" aria-hidden="true">✓</span>
+                </button>
+                <button type="button" class="theme-choice-btn" data-theme-choice="light" aria-pressed="false">
+                  <span class="theme-mode-preview theme-mode-preview--light" aria-hidden="true"></span>
+                  <span>Light</span><span class="theme-choice-check" aria-hidden="true">✓</span>
+                </button>
               </div>
             </section>
 
@@ -326,7 +339,7 @@
                   <span class="team-colour-control">
                     <button type="button" class="team-colour-btn" data-team-colour="A" aria-label="Team A colour"
                       aria-haspopup="dialog"></button>
-                    <span class="colour-edit-icon">⋮</span>
+                    <span class="colour-edit-icon" aria-hidden="true">Edit</span>
                   </span>
                 </label>
                 <label class="colour-field">
@@ -334,7 +347,7 @@
                   <span class="team-colour-control">
                     <button type="button" class="team-colour-btn" data-team-colour="B" aria-label="Team B colour"
                       aria-haspopup="dialog"></button>
-                    <span class="colour-edit-icon">⋮</span>
+                    <span class="colour-edit-icon" aria-hidden="true">Edit</span>
                   </span>
                 </label>
               </div>

@@ -40,6 +40,32 @@ body.light-mode .create-page {
   will-change: transform;
 }
 
+/* Keep join inputs near the top before the keyboard opens, rather than
+   recentering the whole panel as the visual viewport shrinks. */
+@media (max-width: 768px), (pointer: coarse) {
+  #playPage,
+  #spectatePage,
+  #joinCourtModal {
+    align-items: flex-start;
+    padding-top: max(16px, env(safe-area-inset-top));
+    box-sizing: border-box;
+  }
+
+  #playPage .create-card,
+  #spectatePage .create-card,
+  #joinCourtModal .create-card {
+    transform: none;
+    max-height: calc(var(--join-viewport-height, 100svh) - max(16px, env(safe-area-inset-top)) - 16px);
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+  }
+
+  #playPage input,
+  #spectatePage input,
+  #joinCourtModal input {
+    font-size: 16px;
+  }
+}
+
 .create-card {
   position: relative;
   width: clamp(280px, 85vw, 420px);
@@ -188,4 +214,3 @@ body.light-mode .secondary-btn {
 body.light-mode .secondary-btn:hover {
   background: rgba(0, 0, 0, 0.1);
 }
-

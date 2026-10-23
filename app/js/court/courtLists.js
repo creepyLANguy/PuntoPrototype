@@ -22,7 +22,11 @@ import {
 } from "../match/matchIdentity.js";
 import { appState } from "../state/appState.js";
 import { elements } from "../ui/dom.js";
-import { ensureMinimumLoadingDuration } from "../ui/loading.js";
+import {
+  ensureMinimumLoadingDuration,
+  hideSpinner,
+  showSpinner,
+} from "../ui/loading.js";
 
 async function loadAllActiveCourts(includePrivateCourts = true) {
   try {
@@ -333,7 +337,22 @@ export function displaySpectateCourtList(courts) {
     fillCourtItem(item, court);
 
     const selectCourt = async () => {
-      await enterCourt(court.id, true, { historyMode: "replace" });
+      if (appState.isJoiningCourt) return;
+      appState.isJoiningCourt = true;
+      const errorEl = elements.spectateCourtNameError;
+      errorEl.textContent = "";
+      errorEl.style.display = "none";
+      try {
+        showSpinner(elements.spectatePage);
+        await enterCourt(court.id, true, { historyMode: "replace" });
+      } catch (error) {
+        errorEl.textContent =
+          error?.message || "Unable to spectate court. Please try again.";
+        errorEl.style.display = "block";
+      } finally {
+        hideSpinner(elements.spectatePage);
+        appState.isJoiningCourt = false;
+      }
     };
 
     item.addEventListener("click", selectCourt);

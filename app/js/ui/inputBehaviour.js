@@ -8,74 +8,92 @@ let lastInputTapTime = 0;
 
 let lastInputTapTarget = null;
 
-function handleInputTap(e)
-{
-  const target = e.target?.closest?.("input, textarea, [contenteditable='true']");
+function handleInputTap(e) {
+  const target = e.target?.closest?.(
+    "input, textarea, [contenteditable='true']",
+  );
   if (!target) return;
   if (target.readOnly || target.disabled) return;
 
   const now = Date.now();
-  if (lastInputTapTarget === target && (now - lastInputTapTime < 300))
-  {
+  if (lastInputTapTarget === target && now - lastInputTapTime < 300) {
     return;
   }
   lastInputTapTime = now;
   lastInputTapTarget = target;
 
-  if (document.activeElement === target)
-  {
+  if (document.activeElement === target) {
     target.blur();
     target.focus();
   }
 }
 
-export function registerInputTapFixes()
-{
+export function registerInputTapFixes() {
   document.addEventListener("pointerdown", handleInputTap, { capture: true });
-  document.addEventListener("touchstart", handleInputTap, { capture: true, passive: true });
+  document.addEventListener("touchstart", handleInputTap, {
+    capture: true,
+    passive: true,
+  });
 
-  document.addEventListener("pointerdown", (e) =>
-  {
-    const active = document.activeElement;
-    if (active && (active.tagName === "INPUT" || active.tagName === "TEXTAREA" || active.isContentEditable))
-    {
-      const isInteractive = e.target?.closest?.("input, textarea, [contenteditable='true'], label, button, .court-item, .admin-court-item, select, option, a");
-      if (!isInteractive)
-      {
-        active.blur();
+  document.addEventListener(
+    "pointerdown",
+    (e) => {
+      const active = document.activeElement;
+      if (
+        active &&
+        (active.tagName === "INPUT" ||
+          active.tagName === "TEXTAREA" ||
+          active.isContentEditable)
+      ) {
+        const isInteractive = e.target?.closest?.(
+          "input, textarea, [contenteditable='true'], label, button, .court-item, .admin-court-item, select, option, a",
+        );
+        if (!isInteractive) {
+          active.blur();
+        }
       }
-    }
-  }, { capture: true });
+    },
+    { capture: true },
+  );
 }
 
-const ADMIN_PORTAL_SELECTOR = "#adminAuthPage, #adminDashboardPage, #createPage, #editCourtPage, #addDevicePage, #editDevicePage, #editClubPage";
+const ADMIN_PORTAL_SELECTOR =
+  "#adminAuthPage, #adminDashboardPage, #createPage, #editCourtPage, #addDevicePage, #editDevicePage, #editClubPage";
 
-function isAdminPortalTarget(target)
-{
+function isAdminPortalTarget(target) {
   return !!target?.closest?.(ADMIN_PORTAL_SELECTOR);
 }
 
-export function registerSelectionGuards()
-{
-  document.addEventListener("keydown", (e) =>
-  {
-    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "a")
-    {
-      if (!isAdminPortalTarget(e.target) && e.target.tagName !== "INPUT" && e.target.tagName !== "TEXTAREA"){
+export function registerSelectionGuards() {
+  document.addEventListener("keydown", (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "a") {
+      if (
+        !isAdminPortalTarget(e.target) &&
+        e.target.tagName !== "INPUT" &&
+        e.target.tagName !== "TEXTAREA"
+      ) {
         e.preventDefault();
-      }      
+      }
     }
   });
 
-  document.addEventListener("mouseup", (e) =>
-  {
-    if (isAdminPortalTarget(e.target) || e.target?.tagName === "INPUT" || e.target?.tagName === "TEXTAREA") return;
+  document.addEventListener("mouseup", (e) => {
+    if (
+      isAdminPortalTarget(e.target) ||
+      e.target?.tagName === "INPUT" ||
+      e.target?.tagName === "TEXTAREA"
+    )
+      return;
     window.getSelection()?.removeAllRanges();
   });
 
-  document.addEventListener("touchend", (e) =>
-  {
-    if (isAdminPortalTarget(e.target) || e.target?.tagName === "INPUT" || e.target?.tagName === "TEXTAREA") return;
+  document.addEventListener("touchend", (e) => {
+    if (
+      isAdminPortalTarget(e.target) ||
+      e.target?.tagName === "INPUT" ||
+      e.target?.tagName === "TEXTAREA"
+    )
+      return;
     window.getSelection()?.removeAllRanges();
   });
 }
@@ -84,12 +102,10 @@ const JOIN_MODAL_VIEWPORT_GUTTER_PX = 16;
 
 let joinModalViewportFrame = null;
 
-function positionJoinModalsForVisualViewport()
-{
+function positionJoinModalsForVisualViewport() {
   if (joinModalViewportFrame !== null) return;
 
-  joinModalViewportFrame = requestAnimationFrame(() =>
-  {
+  joinModalViewportFrame = requestAnimationFrame(() => {
     joinModalViewportFrame = null;
 
     const visualViewport = window.visualViewport;
@@ -98,45 +114,50 @@ function positionJoinModalsForVisualViewport()
     const viewportBottom = viewportTop + viewportHeight;
     const safeTop = viewportTop + JOIN_MODAL_VIEWPORT_GUTTER_PX;
     const safeBottom = viewportBottom - JOIN_MODAL_VIEWPORT_GUTTER_PX;
+    const useTopAlignedJoin = window.matchMedia(
+      "(max-width: 768px), (pointer: coarse)",
+    ).matches;
 
-    ["playPage", "spectatePage", "joinCourtModal"].forEach((pageId) =>
-    {
+    ["playPage", "spectatePage", "joinCourtModal"].forEach((pageId) => {
       const page = document.getElementById(pageId);
       const card = page?.querySelector(".create-card");
       if (!card) return;
+      page.style.setProperty("--join-viewport-height", `${viewportHeight}px`);
 
-      if (page.style.display === "none")
-      {
+      if (useTopAlignedJoin) {
+        card.style.setProperty("--keyboard-shift-y", "0px");
+        return;
+      }
+
+      if (page.style.display === "none") {
         card.style.setProperty("--keyboard-shift-y", "0px");
         return;
       }
 
       const rect = card.getBoundingClientRect();
-      if (rect.width === 0 && rect.height === 0)
-      {
+      if (rect.width === 0 && rect.height === 0) {
         card.style.setProperty("--keyboard-shift-y", "0px");
         return;
       }
 
-      const currentShift = parseFloat(card.style.getPropertyValue("--keyboard-shift-y")) || 0;
+      const currentShift =
+        parseFloat(card.style.getPropertyValue("--keyboard-shift-y")) || 0;
       const baseTop = rect.top - currentShift;
       const baseBottom = rect.bottom - currentShift;
       const overlap = Math.max(0, baseBottom - safeBottom);
       const maximumUpwardShift = Math.max(0, baseTop - safeTop);
       const shift = Math.min(overlap, maximumUpwardShift);
 
-      card.style.setProperty("--keyboard-shift-y", (-shift) + "px");
+      card.style.setProperty("--keyboard-shift-y", -shift + "px");
     });
   });
 }
 
-function isJoinCourtInput(el)
-{
+function isJoinCourtInput(el) {
   return Boolean(el?.closest?.("#playPage, #spectatePage, #joinCourtModal"));
 }
 
-function isInputObscured(el)
-{
+function isInputObscured(el) {
   if (!isTextInputElement(el)) return false;
   const rect = el.getBoundingClientRect();
   if (rect.width === 0 && rect.height === 0) return false;
@@ -158,81 +179,92 @@ function isInputObscured(el)
 // re-triggering competing "smooth" animations (which caused visible snapping).
 let obscuredScrollFrame = null;
 
-function scrollInputIntoViewIfNeeded(el)
-{
+function scrollInputIntoViewIfNeeded(el) {
   if (!isTextInputElement(el)) return;
   if (obscuredScrollFrame !== null) return;
 
-  obscuredScrollFrame = requestAnimationFrame(() =>
-  {
+  obscuredScrollFrame = requestAnimationFrame(() => {
     obscuredScrollFrame = null;
     if (document.activeElement !== el) return;
     if (!isInputObscured(el)) return;
 
-    try
-    {
+    try {
       el.scrollIntoView({
         behavior: "smooth",
         block: "center",
-        inline: "nearest"
+        inline: "nearest",
       });
-    }
-    catch (e)
-    {
+    } catch (e) {
       el.scrollIntoView(false);
     }
   });
 }
 
-export function registerMobileInputAutoScroll()
-{
-  document.addEventListener("focusin", (e) =>
-  {
-    if (isTextInputElement(e.target))
-    {
-      scrollInputIntoViewIfNeeded(e.target);
-      if (isJoinCourtInput(e.target))
-      {
+export function registerMobileInputAutoScroll() {
+  document.addEventListener(
+    "focusin",
+    (e) => {
+      if (isTextInputElement(e.target)) {
+        if (isJoinCourtInput(e.target)) {
+          positionJoinModalsForVisualViewport();
+        }
+        scrollInputIntoViewIfNeeded(e.target);
+      }
+    },
+    { capture: true, passive: true },
+  );
+
+  document.addEventListener(
+    "focusout",
+    (e) => {
+      if (isTextInputElement(e.target) && isJoinCourtInput(e.target)) {
         positionJoinModalsForVisualViewport();
       }
-    }
-  }, { capture: true, passive: true });
+    },
+    { capture: true, passive: true },
+  );
 
-  document.addEventListener("focusout", (e) =>
-  {
-    if (isTextInputElement(e.target) && isJoinCourtInput(e.target))
-    {
-      positionJoinModalsForVisualViewport();
-    }
-  }, { capture: true, passive: true });
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener(
+      "resize",
+      () => {
+        positionJoinModalsForVisualViewport();
+        if (
+          document.activeElement &&
+          isTextInputElement(document.activeElement)
+        ) {
+          scrollInputIntoViewIfNeeded(document.activeElement);
+        }
+      },
+      { passive: true },
+    );
 
-  if (window.visualViewport)
-  {
-    window.visualViewport.addEventListener("resize", () =>
-    {
-      positionJoinModalsForVisualViewport();
-      if (document.activeElement && isTextInputElement(document.activeElement))
-      {
-        scrollInputIntoViewIfNeeded(document.activeElement);
-      }
-    }, { passive: true });
-
-    window.visualViewport.addEventListener("scroll", () =>
-    {
-      positionJoinModalsForVisualViewport();
-      if (document.activeElement && isTextInputElement(document.activeElement))
-      {
-        scrollInputIntoViewIfNeeded(document.activeElement);
-      }
-    }, { passive: true });
+    window.visualViewport.addEventListener(
+      "scroll",
+      () => {
+        positionJoinModalsForVisualViewport();
+        if (
+          document.activeElement &&
+          isTextInputElement(document.activeElement)
+        ) {
+          scrollInputIntoViewIfNeeded(document.activeElement);
+        }
+      },
+      { passive: true },
+    );
   }
 
-  window.addEventListener("resize", () =>
-  {
-    positionJoinModalsForVisualViewport();
-    if (document.activeElement && isTextInputElement(document.activeElement))
-    {
-      scrollInputIntoViewIfNeeded(document.activeElement);
-    }
-  }, { passive: true });
+  window.addEventListener(
+    "resize",
+    () => {
+      positionJoinModalsForVisualViewport();
+      if (
+        document.activeElement &&
+        isTextInputElement(document.activeElement)
+      ) {
+        scrollInputIntoViewIfNeeded(document.activeElement);
+      }
+    },
+    { passive: true },
+  );
 }

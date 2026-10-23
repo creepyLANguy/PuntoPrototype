@@ -216,7 +216,11 @@ body.light-mode .form-group.is-disabled .select-wrapper::after {
 .theme-choice-group {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.04);
   margin-bottom: 0;
 }
 
@@ -232,58 +236,79 @@ body.light-mode .form-group.is-disabled .select-wrapper::after {
 }
 
 .theme-choice-btn {
-  --theme-choice-a: var(--teamAcolour);
-  --theme-choice-b: var(--teamBcolour);
-  position: relative;
-  overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.22);
-  background: rgba(255, 255, 255, 0.06);
-  color: #f3f4f6;
-  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.55);
-  letter-spacing: 0.01em;
-  padding-bottom: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 8px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: inherit;
 }
 
-.theme-choice-btn[data-theme-choice="dark"] {
-  border-color: rgba(255, 255, 255, 0.24);
-  background: linear-gradient(180deg, rgba(17, 24, 39, 0.92) 0%, rgba(3, 7, 18, 0.94) 100%);
-  color: #e5ebf8;
-  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.7);
+.theme-mode-preview {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  border-radius: 50%;
 }
 
-.theme-choice-btn[data-theme-choice="light"] {
-  border-color: rgba(0, 0, 0, 0.18);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(244, 247, 252, 0.98) 100%);
-  color: #1f2937;
-  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.7);
+.theme-mode-preview--dark {
+  background: #171717;
 }
 
-.theme-choice-btn::after {
-  content: "";
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 9px;
-  background: linear-gradient(90deg, var(--theme-choice-a) 0 49.5%, var(--theme-choice-b) 50.5% 100%);
+.theme-mode-preview--light {
+  background: #fff;
+  border-color: rgba(0, 0, 0, 0.25);
+}
+
+.theme-choice-check {
+  visibility: hidden;
+  font-size: 0.8rem;
 }
 
 .theme-choice-btn:hover {
-  filter: brightness(1.03);
+  background: rgba(255, 255, 255, 0.06);
 }
 
 .theme-choice-btn.active {
-  transform: translateY(-1px);
+  background: rgba(255, 255, 255, 0.14);
+  border-color: rgba(255, 255, 255, 0.3);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
 }
 
-.theme-choice-btn[data-theme-choice="dark"].active {
-  border-color: rgba(255, 255, 255, 0.78);
-  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.18);
+.theme-choice-btn.active .theme-choice-check {
+  visibility: visible;
 }
 
-.theme-choice-btn[data-theme-choice="light"].active {
-  border-color: rgba(0, 0, 0, 0.6);
-  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.1);
+.theme-choice-btn:focus-visible,
+.team-colour-btn:focus-visible,
+.reset-theme-colours-btn:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 3px;
+}
+
+body.light-mode .theme-choice-group {
+  background: rgba(0, 0, 0, 0.03);
+  border-color: rgba(0, 0, 0, 0.1);
+}
+
+body.light-mode .theme-choice-btn:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+body.light-mode .theme-choice-btn.active {
+  background: #fff;
+  border-color: rgba(0, 0, 0, 0.2);
+}
+
+.appearance-colours-label {
+  margin-top: 18px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  opacity: 0.7;
 }
 
 .reset-theme-colours-btn {
@@ -312,9 +337,10 @@ body.light-mode .reset-theme-colours-btn:hover {
 
 .colour-field {
   display: grid;
+  grid-template-columns: 1fr 88px;
   align-items: center;
   gap: 12px;
-  padding: 10px 12px;
+  padding: 8px 0;
   border-radius: 12px;
   font-size: 0.9rem;
   font-weight: 700;
@@ -324,7 +350,7 @@ body.light-mode .reset-theme-colours-btn:hover {
   position: relative;
   display: block;
   width: 100%;
-  border-radius: 18px;
+  border-radius: 10px;
   transition: box-shadow 0.18s ease, background 0.18s ease;
 }
 
@@ -356,10 +382,10 @@ body.light-mode .reset-theme-colours-btn:hover {
 .team-colour-btn {
   width: 100%;
   min-width: 0;
-  height: 36px;
-  padding: 0 34px 0 0;
+  height: 44px;
+  padding: 0 44px 0 0;
   border: 1px solid rgba(255, 255, 255, 0.22);
-  border-radius: 18px;
+  border-radius: 10px;
   color: transparent;
   text-shadow: none;
   font: inherit;
@@ -378,22 +404,17 @@ body.light-mode .reset-theme-colours-btn:hover {
   position: absolute;
   top: 0;
   right: 0;
-  width: 34px;
+  width: 44px;
   height: 100%;
-  border-radius: 0 18px 18px 0;
+  border-radius: 0 10px 10px 0;
   display: grid;
   place-items: center;
-  font-size: 14px;
+  font-size: 12px;
   line-height: 1;
   pointer-events: none;
   box-shadow: -1px 0px 1px rgba(0, 0, 0, 0.3);
-  background: rgba(255, 255, 255, 0.75);
-  color: rgba(0, 0, 0, 1);
-}
-
-body.light-mode .colour-edit-icon {
-  background: rgba(255, 255, 255, 0.25);
-  color: rgba(255, 255, 255, 1);
+  background: #fff;
+  color: #171717;
 }
 
 #playerTeamAName:focus {
