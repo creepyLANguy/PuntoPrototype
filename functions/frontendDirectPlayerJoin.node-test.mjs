@@ -94,6 +94,14 @@ test("Play password errors clear loading and allow another attempt without a suc
     "flex",
     "loading is visible before the first request resolves",
   );
+  assert.equal(window.getComputedStyle(spinner()).position, "absolute");
+  assert.ok(
+    Number(window.getComputedStyle(spinner()).zIndex) >
+      Number(
+        window.getComputedStyle(document.querySelector("#playPage > .create-card")).zIndex || 0,
+      ),
+    "the spinner overlay stacks above the password card",
+  );
   await waitFor(
     () => document.getElementById("playCourtPasswordError").textContent === "Incorrect password.",
   );

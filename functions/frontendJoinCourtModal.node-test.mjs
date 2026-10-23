@@ -16,6 +16,56 @@ let window;
 
 const $ = (id) => document.getElementById(id);
 
+test("shared theme buttons synchronize selection, persist changes, and retain per-theme team colours", () => {
+  const locations = [$("appearanceMenu"), $("settingsModal")];
+  const colours = {
+    light: { A: "#123456", B: "#654321" },
+    dark: { A: "#abcdef", B: "#fedcba" },
+  };
+  const assertTheme = (theme) => {
+    assert.equal(window.localStorage.getItem("theme"), theme);
+    assert.equal(document.body.classList.contains("light-mode"), theme === "light");
+    for (const location of locations) {
+      const buttons = location.querySelectorAll("[data-theme-choice]");
+      assert.equal(buttons.length, 2);
+      for (const button of buttons) {
+        const active = button.dataset.themeChoice === theme;
+        assert.equal(button.classList.contains("active"), active);
+        assert.equal(button.getAttribute("aria-pressed"), String(active));
+      }
+    }
+  };
+  const choose = (location, theme) => {
+    location.querySelector(`[data-theme-choice="${theme}"]`).click();
+    assertTheme(theme);
+  };
+  const setColours = (location, theme) => {
+    for (const [team, colour] of Object.entries(colours[theme])) {
+      const input = location.querySelector(`[data-team-colour="${team}"]`);
+      input.value = colour;
+      input.dispatchEvent(new window.Event("input", { bubbles: true }));
+    }
+  };
+  const assertColours = (theme) => {
+    for (const [team, colour] of Object.entries(colours[theme])) {
+      assert.equal(document.body.style.getPropertyValue(`--team${team}colour`), colour);
+      for (const location of locations) {
+        assert.equal(location.querySelector(`[data-team-colour="${team}"]`).value, colour);
+      }
+    }
+  };
+
+  choose(locations[0], "light");
+  setColours(locations[0], "light");
+  choose(locations[1], "dark");
+  setColours(locations[1], "dark");
+  choose(locations[1], "light");
+  assertColours("light");
+  choose(locations[0], "dark");
+  assertColours("dark");
+  assert.deepEqual(JSON.parse(window.localStorage.getItem("punto_team_colours")), colours);
+});
+
 function submitJoinForm() {
   $("joinCourtModalForm").dispatchEvent(
     new window.Event("submit", { bubbles: true, cancelable: true }),
@@ -104,6 +154,13 @@ test("the join modal surfaces required and incorrect password errors inline", as
     $("joinCourtModal").querySelector(":scope > .inline-loading-overlay")?.style.display,
     "flex",
     "password submission shows a spinner synchronously",
+  );
+  const overlay = $("joinCourtModal").querySelector(":scope > .inline-loading-overlay");
+  assert.equal(window.getComputedStyle(overlay).position, "absolute");
+  assert.ok(
+    Number(window.getComputedStyle(overlay).zIndex) >
+      Number(window.getComputedStyle($("joinCourtModalForm")).zIndex || 0),
+    "the loading spinner stacks above the modal card",
   );
 
   await waitFor(() => $("joinCourtModalPasswordError").textContent === "Incorrect password.", {

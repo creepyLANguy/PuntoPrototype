@@ -175,6 +175,15 @@ test("Spectate loading clears on read errors and releases the duplicate-entry gu
       $("spectatePage").querySelector(":scope > .inline-loading-overlay")?.style.display,
       "flex",
     );
+    const overlay = $("spectatePage").querySelector(":scope > .inline-loading-overlay");
+    assert.equal(window.getComputedStyle(overlay).position, "absolute");
+    assert.ok(
+      Number(window.getComputedStyle(overlay).zIndex) >
+        Number(
+          window.getComputedStyle($("spectatePage").querySelector(".create-card")).zIndex || 0,
+        ),
+      "the loading spinner stacks above the court-list card",
+    );
     row("spectateCourtList", "efgha").dispatchEvent(
       new window.KeyboardEvent("keydown", { key: "Enter", bubbles: true }),
     );
