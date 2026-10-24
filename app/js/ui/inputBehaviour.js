@@ -99,8 +99,20 @@ export function registerSelectionGuards() {
 }
 
 const JOIN_MODAL_VIEWPORT_GUTTER_PX = 16;
+const KEYBOARD_FOCUS_WAIT_MS = 700;
 
 let joinModalViewportFrame = null;
+let unobscuredViewportHeight = 0;
+let viewportWidth = 0;
+let keyboardOpen = false;
+let pendingKeyboardInput = null;
+let keyboardFocusTimer = null;
+
+function clearPendingKeyboardFocus() {
+  clearTimeout(keyboardFocusTimer);
+  keyboardFocusTimer = null;
+  pendingKeyboardInput = null;
+}
 
 function positionJoinModalsForVisualViewport() {
   if (joinModalViewportFrame !== null) return;
@@ -118,6 +130,30 @@ function positionJoinModalsForVisualViewport() {
       "(max-width: 768px), (pointer: coarse)",
     ).matches;
 
+    // Focus is not proof of a keyboard: hardware keyboards and browser focus
+    // restrictions can suppress it. Ignore pinch zoom and small toolbar resizes.
+    const unscaledViewportHeight =
+      viewportHeight * (visualViewport?.scale ?? 1);
+    if (Math.abs(window.innerWidth - viewportWidth) > 100) {
+      unobscuredViewportHeight = window.innerHeight;
+    }
+    viewportWidth = window.innerWidth;
+    unobscuredViewportHeight = Math.max(
+      unobscuredViewportHeight,
+      window.innerHeight,
+      unscaledViewportHeight,
+    );
+    const reduced =
+      unobscuredViewportHeight - unscaledViewportHeight >
+      Math.max(100, unobscuredViewportHeight * 0.15);
+    const wasKeyboardOpen = keyboardOpen;
+    keyboardOpen =
+      reduced &&
+      (keyboardOpen ||
+        (isTextInputElement(document.activeElement) &&
+          isJoinCourtInput(document.activeElement)));
+    if (wasKeyboardOpen && !keyboardOpen) clearPendingKeyboardFocus();
+
     [
       "playPage",
       "spectatePage",
@@ -131,6 +167,12 @@ function positionJoinModalsForVisualViewport() {
       page.style.setProperty("--join-viewport-height", `${viewportHeight}px`);
 
       if (useTopAlignedJoin) {
+        page.style.setProperty(
+          "--join-vertical-alignment",
+          keyboardOpen || page.contains(pendingKeyboardInput)
+            ? "flex-start"
+            : "center",
+        );
         card.style.setProperty("--keyboard-shift-y", "0px");
         return;
       }
@@ -213,11 +255,23 @@ function scrollInputIntoViewIfNeeded(el) {
 }
 
 export function registerMobileInputAutoScroll() {
+  unobscuredViewportHeight = window.innerHeight;
+  viewportWidth = window.innerWidth;
+  positionJoinModalsForVisualViewport();
+
   document.addEventListener(
     "focusin",
     (e) => {
       if (isTextInputElement(e.target)) {
         if (isJoinCourtInput(e.target)) {
+          clearPendingKeyboardFocus();
+          pendingKeyboardInput = e.target;
+          // Keep the initial top position while the keyboard animates in, but
+          // release it if the browser never opens a software keyboard.
+          keyboardFocusTimer = setTimeout(() => {
+            clearPendingKeyboardFocus();
+            positionJoinModalsForVisualViewport();
+          }, KEYBOARD_FOCUS_WAIT_MS);
           positionJoinModalsForVisualViewport();
         }
         scrollInputIntoViewIfNeeded(e.target);
@@ -230,6 +284,7 @@ export function registerMobileInputAutoScroll() {
     "focusout",
     (e) => {
       if (isTextInputElement(e.target) && isJoinCourtInput(e.target)) {
+        clearPendingKeyboardFocus();
         positionJoinModalsForVisualViewport();
       }
     },

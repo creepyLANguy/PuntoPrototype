@@ -165,9 +165,9 @@ export function registerPlayAndSpectatePages() {
         elements.playCourtNameError.textContent = "";
         elements.playCourtPasswordError.textContent = "";
 
+        elements.playCourtSearch.focus();
         await loadCourtsWithInlineLoader(elements.playCourtList, true);
         displayPlayCourtList(appState.allCourts);
-        elements.playCourtSearch.focus();
         syncCurrentViewState();
         return;
       } else if (action === "Spectate") {
@@ -177,9 +177,9 @@ export function registerPlayAndSpectatePages() {
         elements.spectateCourtNameError.style.display = "none";
         elements.spectateCourtNameError.textContent = "";
 
+        elements.spectateCourtSearch.focus();
         await loadCourtsWithInlineLoader(elements.spectateCourtList, false);
         displaySpectateCourtList(appState.allCourts);
-        elements.spectateCourtSearch.focus();
         syncCurrentViewState();
         return;
       }
