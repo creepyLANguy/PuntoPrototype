@@ -131,6 +131,7 @@ test("mobile input panels recenter on keyboard dismissal even while the input st
       setJoinModalViewportHeight(height);
       window.dispatchEvent(new window.Event("resize"));
       await settle(30);
+      if (height === 800) await settle(380);
 
       for (const id of [
         "playPage",
@@ -166,7 +167,7 @@ test("mobile input panels recenter on keyboard dismissal even while the input st
     assert.equal(modal.style.getPropertyValue("--join-vertical-alignment"), "flex-start");
     setJoinModalViewportHeight(400);
     window.dispatchEvent(new window.Event("resize"));
-    await settle(30);
+    await settle(410);
     assert.equal(modal.style.getPropertyValue("--join-vertical-alignment"), "center");
   } finally {
     visualViewportScale = 1;
@@ -289,7 +290,7 @@ test("mobile panels handle keyboards that also resize the layout viewport, with 
       window.innerHeight = 800;
       setJoinModalViewportHeight(800);
       window.dispatchEvent(new window.Event("resize"));
-      await settle(30);
+      await settle(410);
       input.focus();
 
       for (const height of [450, 800, 450]) {
@@ -297,6 +298,7 @@ test("mobile panels handle keyboards that also resize the layout viewport, with 
         setJoinModalViewportHeight(height);
         window.dispatchEvent(new window.Event("resize"));
         await settle(30);
+        if (height === 800) await settle(380);
         assert.equal(
           modal.style.getPropertyValue("--join-vertical-alignment"),
           height === 800 ? "center" : "flex-start",
@@ -310,7 +312,7 @@ test("mobile panels handle keyboards that also resize the layout viewport, with 
       window.innerHeight = 800;
       setJoinModalViewportHeight(800);
       window.dispatchEvent(new window.Event("resize"));
-      await settle(30);
+      await settle(410);
       assert.equal(modal.style.getPropertyValue("--join-vertical-alignment"), "center");
     }
   } finally {
@@ -362,6 +364,7 @@ test("modal movement animates briefly and blocks input only until it settles", a
     setJoinModalViewportHeight(height);
     window.dispatchEvent(new window.Event("resize"));
     await settle(30);
+    if (height === 800) await settle(380);
   };
   const dispatch = (target, type) => {
     const event = new window.Event(type, { bubbles: true, cancelable: true });
@@ -455,7 +458,59 @@ test("modal movement animates briefly and blocks input only until it settles", a
       assert.equal(dispatch(input, "beforeinput"), false);
     });
 
+    await t.test("keeps the modal up through a quick submission error and refocus without locking input", async () => {
+      await resize(450);
+      activeAnimation?.cancel();
+      const count = animations.length;
+      input.blur();
+      setJoinModalViewportHeight(800);
+      window.dispatchEvent(new window.Event("resize"));
+      await settle(80);
+      assert.equal(modal.style.getPropertyValue("--join-vertical-alignment"), "flex-start");
+      assert.equal(animations.length, count);
+      assert.equal(dispatch(input, "beforeinput"), false);
+
+      input.focus();
+      await settle(30);
+      // Even if the keyboard takes longer than the close grace period to
+      // reopen, the new focus anticipation keeps the modal at the top.
+      await settle(380);
+      assert.equal(modal.style.getPropertyValue("--join-vertical-alignment"), "flex-start");
+      assert.equal(animations.length, count);
+      await resize(450);
+      await settle(400);
+      assert.equal(modal.style.getPropertyValue("--join-vertical-alignment"), "flex-start");
+      assert.equal(animations.length, count);
+      assert.equal(document.activeElement, input);
+      assert.equal(dispatch(input, "beforeinput"), false);
+    });
+
+    await t.test("recenters once after a genuine dismissal despite repeated viewport events", async () => {
+      input.blur();
+      setJoinModalViewportHeight(800);
+      window.dispatchEvent(new window.Event("resize"));
+      await settle(30);
+      const count = animations.length;
+      for (let i = 0; i < 3; i += 1) {
+        window.dispatchEvent(new window.Event("resize"));
+        await settle(10);
+        assert.equal(modal.style.getPropertyValue("--join-vertical-alignment"), "flex-start");
+        assert.equal(animations.length, count);
+      }
+      await settle(260);
+      assert.equal(modal.style.getPropertyValue("--join-vertical-alignment"), "center");
+      assert.equal(animations.length, count + 1);
+      activeAnimation = null;
+      animations.at(-1).onfinish();
+      input.focus();
+      await resize(450);
+      activeAnimation?.cancel();
+    });
+
     await t.test("skips animation and input locking for reduced motion or missing animation support", async () => {
+      await resize(800);
+      activeAnimation = null;
+      animations.at(-1).onfinish();
       reducedMotion = true;
       const count = animations.length;
       await resize(450);

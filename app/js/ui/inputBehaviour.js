@@ -100,6 +100,7 @@ export function registerSelectionGuards() {
 
 const JOIN_MODAL_VIEWPORT_GUTTER_PX = 16;
 const KEYBOARD_FOCUS_WAIT_MS = 700;
+const KEYBOARD_RECENTER_WAIT_MS = 350;
 const JOIN_MODAL_MOVE_MS = 180;
 const JOIN_MODAL_SELECTOR =
   "#playPage, #spectatePage, #joinCourtModal, #resetModal, #adminAuthPage";
@@ -183,6 +184,7 @@ let viewportWidth = 0;
 let keyboardOpen = false;
 let pendingKeyboardInput = null;
 let keyboardFocusTimer = null;
+let keyboardRecenterTimer = null;
 
 function clearPendingKeyboardFocus() {
   clearTimeout(keyboardFocusTimer);
@@ -228,7 +230,18 @@ function positionJoinModalsForVisualViewport() {
       (keyboardOpen ||
         (isTextInputElement(document.activeElement) &&
           isJoinCourtInput(document.activeElement)));
-    if (wasKeyboardOpen && !keyboardOpen) clearPendingKeyboardFocus();
+    if (keyboardOpen) {
+      clearPendingKeyboardFocus();
+      clearTimeout(keyboardRecenterTimer);
+      keyboardRecenterTimer = null;
+    } else if (wasKeyboardOpen && useTopAlignedJoin) {
+      // A failed submission can refocus the field and reopen the keyboard.
+      // Keep the panel up through that short gap instead of bouncing twice.
+      keyboardRecenterTimer = setTimeout(() => {
+        keyboardRecenterTimer = null;
+        positionJoinModalsForVisualViewport();
+      }, KEYBOARD_RECENTER_WAIT_MS);
+    }
 
     [
       "playPage",
@@ -248,7 +261,8 @@ function positionJoinModalsForVisualViewport() {
       page.style.setProperty("--join-viewport-height", `${viewportHeight}px`);
 
       if (useTopAlignedJoin) {
-        const alignment = keyboardOpen || page.contains(pendingKeyboardInput)
+        const alignment = keyboardOpen || keyboardRecenterTimer !== null ||
+          page.contains(pendingKeyboardInput)
           ? "flex-start"
           : "center";
         page.style.setProperty("--join-vertical-alignment", alignment);
