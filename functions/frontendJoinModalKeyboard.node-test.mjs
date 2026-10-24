@@ -322,3 +322,158 @@ test("mobile panels handle keyboards that also resize the layout viewport, with 
     modal.classList.add("hidden");
   }
 });
+
+test("modal movement animates briefly and blocks input only until it settles", async (t) => {
+  const originalMatchMedia = window.matchMedia;
+  const modal = document.getElementById("joinCourtModal");
+  const card = modal.querySelector(".create-card");
+  const input = document.getElementById("joinCourtModalPassword");
+  const originalRect = card.getBoundingClientRect;
+  const originalAnimate = card.animate;
+  const animations = [];
+  let activeAnimation = null;
+  let reducedMotion = false;
+  window.matchMedia = (query) => ({
+    ...originalMatchMedia(query),
+    matches: query === "(max-width: 768px), (pointer: coarse)" ||
+      (query === "(prefers-reduced-motion: reduce)" && reducedMotion),
+  });
+  card.getBoundingClientRect = () => ({
+    top: (modal.style.getPropertyValue("--join-vertical-alignment") === "center" ? 200 : 16) +
+      (activeAnimation?.offset || 0),
+    width: 320,
+    height: 400,
+  });
+  card.animate = (keyframes, options) => {
+    const animation = {
+      keyframes,
+      options,
+      offset: parseFloat(keyframes[0].transform.slice("translateY(".length)),
+      cancel() {
+        if (activeAnimation === animation) activeAnimation = null;
+        animation.oncancel?.();
+      },
+    };
+    activeAnimation = animation;
+    animations.push(animation);
+    return animation;
+  };
+  const resize = async (height) => {
+    setJoinModalViewportHeight(height);
+    window.dispatchEvent(new window.Event("resize"));
+    await settle(30);
+  };
+  const dispatch = (target, type) => {
+    const event = new window.Event(type, { bubbles: true, cancelable: true });
+    target.dispatchEvent(event);
+    return event.defaultPrevented;
+  };
+  modal.classList.remove("hidden");
+
+  try {
+    await resize(800);
+    input.focus();
+    await resize(450);
+    await settle(260);
+    await resize(800);
+
+    await t.test("animates recentering and blocks pointer, typing, paste, and submit without blurring", () => {
+      const animation = animations.at(-1);
+      assert.equal(animation.options.duration, 180);
+      assert.deepEqual(animation.keyframes, [
+        { transform: "translateY(-184px)" },
+        { transform: "translateY(0)" },
+      ]);
+      for (const type of ["pointerdown", "touchstart", "click", "keydown", "beforeinput", "paste", "submit"]) {
+        assert.equal(dispatch(input, type), true, type);
+      }
+      const previousValue = input.value;
+      const previousSelection = input.selectionStart;
+      let observedEdits = 0;
+      const observeEdit = () => { observedEdits += 1; };
+      input.addEventListener("input", observeEdit);
+      input.dispatchEvent(new window.InputEvent("beforeinput", {
+        bubbles: true,
+        cancelable: false,
+        inputType: "insertCompositionText",
+        data: "あ",
+        isComposing: true,
+      }));
+      input.value += "あ";
+      input.dispatchEvent(new window.InputEvent("input", {
+        bubbles: true,
+        cancelable: false,
+        inputType: "insertCompositionText",
+        data: "あ",
+        isComposing: true,
+      }));
+      assert.equal(input.value, previousValue);
+      assert.equal(input.selectionStart, previousSelection);
+      assert.equal(observedEdits, 0);
+      assert.equal(dispatch(document.body, "click"), false);
+      assert.equal(document.activeElement, input);
+      activeAnimation = null;
+      animation.onfinish();
+      assert.equal(dispatch(input, "beforeinput"), false);
+      assert.equal(dispatch(input, "click"), false);
+      input.value += "a";
+      dispatch(input, "input");
+      assert.equal(input.value, previousValue + "a");
+      assert.equal(observedEdits, 1);
+      input.removeEventListener("input", observeEdit);
+      input.value = previousValue;
+    });
+
+    await t.test("animates upward and restores input on cancellation", async () => {
+      await resize(450);
+      const animation = animations.at(-1);
+      assert.equal(animation.keyframes[0].transform, "translateY(184px)");
+      assert.equal(dispatch(input, "beforeinput"), true);
+      animation.cancel();
+      assert.equal(dispatch(input, "beforeinput"), false);
+    });
+
+    await t.test("retargets an interrupted move without an old callback unlocking the new animation", async () => {
+      await resize(800);
+      const previous = animations.at(-1);
+      previous.offset = -92;
+      await resize(450);
+      const current = animations.at(-1);
+      assert.notEqual(previous, current);
+      assert.equal(current.keyframes[0].transform, "translateY(92px)");
+      previous.onfinish();
+      assert.equal(dispatch(input, "beforeinput"), true);
+      activeAnimation = null;
+      current.onfinish();
+      assert.equal(dispatch(input, "beforeinput"), false);
+    });
+
+    await t.test("has a bounded fallback lock if animation events never arrive", async () => {
+      await resize(800);
+      assert.equal(dispatch(input, "beforeinput"), true);
+      await settle(260);
+      assert.equal(dispatch(input, "beforeinput"), false);
+    });
+
+    await t.test("skips animation and input locking for reduced motion or missing animation support", async () => {
+      reducedMotion = true;
+      const count = animations.length;
+      await resize(450);
+      assert.equal(animations.length, count);
+      assert.equal(dispatch(input, "beforeinput"), false);
+      reducedMotion = false;
+      card.animate = undefined;
+      await resize(800);
+      assert.equal(animations.length, count);
+      assert.equal(dispatch(input, "beforeinput"), false);
+    });
+  } finally {
+    activeAnimation?.cancel();
+    input.blur();
+    modal.classList.add("hidden");
+    card.getBoundingClientRect = originalRect;
+    card.animate = originalAnimate;
+    window.matchMedia = originalMatchMedia;
+    setJoinModalViewportHeight(800);
+  }
+});

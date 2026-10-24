@@ -100,6 +100,82 @@ export function registerSelectionGuards() {
 
 const JOIN_MODAL_VIEWPORT_GUTTER_PX = 16;
 const KEYBOARD_FOCUS_WAIT_MS = 700;
+const JOIN_MODAL_MOVE_MS = 180;
+const JOIN_MODAL_SELECTOR =
+  "#playPage, #spectatePage, #joinCourtModal, #resetModal, #adminAuthPage";
+const joinModalAnimations = new Map();
+
+function stopJoinModalAnimation(page) {
+  const state = joinModalAnimations.get(page);
+  if (!state) return;
+  joinModalAnimations.delete(page);
+  clearTimeout(state.timer);
+  state.animation.cancel();
+}
+
+function animateJoinModalPosition(page, card, previousTop) {
+  const offset = previousTop - card.getBoundingClientRect().top;
+  if (
+    Math.abs(offset) < 1 ||
+    typeof card.animate !== "function" ||
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches
+  ) return;
+
+  const animation = card.animate(
+    [
+      { transform: `translateY(${offset}px)` },
+      { transform: "translateY(0)" },
+    ],
+    { duration: JOIN_MODAL_MOVE_MS, easing: "ease-out" },
+  );
+  const inputs = new Map(
+    [...page.querySelectorAll("input, textarea, select")].map((input) => [
+      input,
+      {
+        value: input.value,
+        checked: input.checked,
+        selectionStart: input.selectionStart,
+        selectionEnd: input.selectionEnd,
+        selectionDirection: input.selectionDirection,
+      },
+    ]),
+  );
+  const state = { animation, inputs, timer: null };
+  joinModalAnimations.set(page, state);
+  const finish = () => {
+    if (joinModalAnimations.get(page) !== state) return;
+    stopJoinModalAnimation(page);
+  };
+  animation.onfinish = finish;
+  animation.oncancel = finish;
+  // Also release the lock if a browser fails to deliver the animation event.
+  state.timer = setTimeout(finish, JOIN_MODAL_MOVE_MS + 50);
+}
+
+function blockAnimatingModalInput(event) {
+  const page = event.target?.closest?.(JOIN_MODAL_SELECTOR);
+  const state = joinModalAnimations.get(page);
+  if (!state) return;
+  // IMEs can edit through non-cancelable beforeinput events. Restore those
+  // edits before application input/change handlers can observe them.
+  const previous = state.inputs.get(event.target);
+  if (previous && (event.type === "input" || event.type === "change")) {
+    event.target.value = previous.value;
+    if (typeof previous.checked === "boolean") {
+      event.target.checked = previous.checked;
+    }
+    if (typeof previous.selectionStart === "number") {
+      event.target.setSelectionRange(
+        previous.selectionStart,
+        previous.selectionEnd,
+        previous.selectionDirection,
+      );
+    }
+  }
+  // Preserve focus (and the soft keyboard), unlike disabling/inerting the form.
+  event.preventDefault();
+  event.stopImmediatePropagation();
+}
 
 let joinModalViewportFrame = null;
 let unobscuredViewportHeight = 0;
@@ -164,16 +240,25 @@ function positionJoinModalsForVisualViewport() {
       const page = document.getElementById(pageId);
       const card = page?.querySelector(".create-card, .reset-box");
       if (!card) return;
+      const previousRect = useTopAlignedJoin ? card.getBoundingClientRect() : null;
+      const previousAlignment =
+        page.style.getPropertyValue("--join-vertical-alignment") || "flex-start";
+      const wasAnimating = joinModalAnimations.has(page);
+      stopJoinModalAnimation(page);
       page.style.setProperty("--join-viewport-height", `${viewportHeight}px`);
 
       if (useTopAlignedJoin) {
-        page.style.setProperty(
-          "--join-vertical-alignment",
-          keyboardOpen || page.contains(pendingKeyboardInput)
-            ? "flex-start"
-            : "center",
-        );
+        const alignment = keyboardOpen || page.contains(pendingKeyboardInput)
+          ? "flex-start"
+          : "center";
+        page.style.setProperty("--join-vertical-alignment", alignment);
         card.style.setProperty("--keyboard-shift-y", "0px");
+        if (
+          previousRect.height > 0 &&
+          (alignment !== previousAlignment || wasAnimating)
+        ) {
+          animateJoinModalPosition(page, card, previousRect.top);
+        }
         return;
       }
 
@@ -204,11 +289,7 @@ function positionJoinModalsForVisualViewport() {
 }
 
 function isJoinCourtInput(el) {
-  return Boolean(
-    el?.closest?.(
-      "#playPage, #spectatePage, #joinCourtModal, #resetModal, #adminAuthPage",
-    ),
-  );
+  return Boolean(el?.closest?.(JOIN_MODAL_SELECTOR));
 }
 
 function isInputObscured(el) {
@@ -255,6 +336,18 @@ function scrollInputIntoViewIfNeeded(el) {
 }
 
 export function registerMobileInputAutoScroll() {
+  for (const type of [
+    "pointerdown", "pointerup", "click", "dblclick", "contextmenu",
+    "touchstart", "touchmove", "touchend", "mousedown", "mouseup",
+    "keydown", "keypress", "keyup", "beforeinput", "input", "change",
+    "compositionstart", "compositionupdate", "compositionend", "paste", "cut", "drop",
+    "submit", "wheel",
+  ]) {
+    window.addEventListener(type, blockAnimatingModalInput, {
+      capture: true,
+      passive: false,
+    });
+  }
   unobscuredViewportHeight = window.innerHeight;
   viewportWidth = window.innerWidth;
   positionJoinModalsForVisualViewport();
