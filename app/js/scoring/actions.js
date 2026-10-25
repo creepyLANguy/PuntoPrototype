@@ -59,7 +59,6 @@ export async function addPoint(addpointevent) {
   const team = addpointevent === EVENT_TYPES.POINT_TEAM_A ? "A" : "B";
   const eventId = createMatchEventId();
   const courtId = session.currentCourtId;
-  const listenerToken = session.activeCourtListenerToken;
 
   animate(team);
   playSound(SOUND_IDS.POINT);
@@ -69,7 +68,6 @@ export async function addPoint(addpointevent) {
     team,
     eventType: addpointevent,
     courtId,
-    listenerToken,
     scoreVersion: session.currentScoreVersion,
   });
 
@@ -109,7 +107,6 @@ export async function undoLastPoint() {
     0;
   const eventId = createMatchEventId();
   const courtId = session.currentCourtId;
-  const listenerToken = session.activeCourtListenerToken;
   const scoreVersion = Number(session.currentScoreVersion) || 0;
 
   if (session.currentMatchId && courtId) {
@@ -118,7 +115,6 @@ export async function undoLastPoint() {
       team: hasPointsToUndo ? undoTarget : null,
       eventType: EVENT_TYPES.UNDO,
       courtId,
-      listenerToken,
       scoreVersion,
     });
     bindPendingScoreEvent(eventId, {
