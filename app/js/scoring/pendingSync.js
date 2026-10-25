@@ -39,10 +39,16 @@ function syncPendingScoreVisuals() {
     scoreElement.classList.toggle("score-pending", isPending);
     if (isPending) {
       scoreElement.setAttribute("aria-busy", "true");
-      scoreElement.setAttribute("title", "Waiting for the server to confirm this score");
+      scoreElement.setAttribute(
+        "title",
+        "Waiting for the server to confirm this score",
+      );
     } else {
       scoreElement.removeAttribute("aria-busy");
-      if (scoreElement.getAttribute("title") === "Waiting for the server to confirm this score") {
+      if (
+        scoreElement.getAttribute("title") ===
+        "Waiting for the server to confirm this score"
+      ) {
         scoreElement.removeAttribute("title");
       }
     }
@@ -148,13 +154,15 @@ export function reconcilePendingScoreEvents(matchId, scoreData) {
 export function discardPendingScoreEventsForMatch(matchId, scoreVersion) {
   let discardedCount = 0;
   for (const [eventId, event] of pendingScoreEvents) {
+    if (event.matchId !== matchId) continue;
     if (
-      event.matchId === matchId &&
-      event.scoreVersion === (Number(scoreVersion) || 0)
+      scoreVersion !== undefined &&
+      event.scoreVersion !== (Number(scoreVersion) || 0)
     ) {
-      pendingScoreEvents.delete(eventId);
-      discardedCount++;
+      continue;
     }
+    pendingScoreEvents.delete(eventId);
+    discardedCount++;
   }
   syncPendingScoreVisuals();
   return discardedCount;
