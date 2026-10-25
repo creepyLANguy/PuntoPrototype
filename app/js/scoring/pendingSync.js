@@ -32,6 +32,18 @@ function visiblePendingEvents() {
 }
 
 function syncPendingScoreVisuals() {
+  // If a court switch invalidated a not-yet-bound action, its resolver will
+  // also reject on the listener-token guard; stop tracking it here so a slow
+  // network request cannot leak pending entries from an abandoned view.
+  for (const [eventId, event] of pendingScoreEvents) {
+    if (
+      !event.matchId &&
+      event.listenerToken !== session.activeCourtListenerToken
+    ) {
+      pendingScoreEvents.delete(eventId);
+    }
+  }
+
   const visible = visiblePendingEvents();
 
   for (const team of ["A", "B"]) {
@@ -163,8 +175,9 @@ export function reconcilePendingScoreEvents(matchId, scoreData) {
   return resolvedCount;
 }
 
-// A reset increments scoreVersion and makes older pending events stale. Clear
-// only events from the superseded generation; never pretend they were saved.
+// A reset or match lifecycle change invalidates unresolved inputs. When a
+// scoreVersion is supplied, narrow the clear to that generation; never mark
+// discarded events as saved.
 export function discardPendingScoreEventsForMatch(matchId, scoreVersion) {
   let discardedCount = 0;
   for (const [eventId, event] of pendingScoreEvents) {
