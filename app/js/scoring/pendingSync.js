@@ -24,7 +24,8 @@ function isVisibleInCurrentCourt(event) {
   if (event.matchId) {
     return event.matchId === session.currentMatchId;
   }
-  return event.listenerToken === session.activeCourtListenerToken;
+  // The event has not resolved to a match yet. It belongs to this court while
+  // the resolver is active; leaving/switching courts prunes it below.
 }
 
 function visiblePendingEvents() {
@@ -33,13 +34,11 @@ function visiblePendingEvents() {
 
 function syncPendingScoreVisuals() {
   // If a court switch invalidated a not-yet-bound action, its resolver will
-  // also reject on the listener-token guard; stop tracking it here so a slow
-  // network request cannot leak pending entries from an abandoned view.
+  // reject on the session guard. Stop tracking it here so slow requests cannot
+  // leak pending entries from an abandoned view; same-court reconnects remain
+  // pending until their resolver decides whether the input is still valid.
   for (const [eventId, event] of pendingScoreEvents) {
-    if (
-      !event.matchId &&
-      event.listenerToken !== session.activeCourtListenerToken
-    ) {
+    if (!event.matchId && event.courtId !== session.currentCourtId) {
       pendingScoreEvents.delete(eventId);
     }
   }
@@ -108,7 +107,6 @@ export function beginPendingScoreEvent({
   team = null,
   eventType,
   courtId,
-  listenerToken,
   scoreVersion,
 }) {
   if (!eventId || pendingScoreEvents.has(eventId)) return;
@@ -117,7 +115,6 @@ export function beginPendingScoreEvent({
     team,
     eventType,
     courtId,
-    listenerToken,
     matchId: null,
     scoreVersion: Number(scoreVersion) || 0,
     submitted: false,
