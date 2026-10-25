@@ -25,12 +25,14 @@ if (
 
     /* Pending score feedback deliberately blurs slowly, then clears quickly
        when an authoritative score snapshot confirms the event. */
-    .points {
+    .points,
+    .critical-glow {
       filter: blur(0);
       transition: filter 170ms ease-out;
     }
 
-    .points.score-pending {
+    .points.score-pending,
+    .critical-glow.score-pending {
       filter: blur(2.8px);
       transition: filter 1250ms ease-in;
       will-change: filter;
@@ -61,12 +63,15 @@ if (
 
     @media (prefers-reduced-motion: reduce) {
       .points,
-      .points.score-pending {
+      .points.score-pending,
+      .critical-glow,
+      .critical-glow.score-pending {
         transition: none;
         will-change: auto;
       }
 
-      .points.score-pending {
+      .points.score-pending,
+      .critical-glow.score-pending {
         filter: blur(1.6px);
       }
     }
