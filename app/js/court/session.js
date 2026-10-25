@@ -54,6 +54,7 @@ import {
   finishScoreboardLoading,
 } from "../ui/loading.js";
 import { syncSettingsTiles } from "../ui/settingsTiles.js";
+import { refreshPendingScoreVisuals } from "../scoring/pendingSync.js";
 
 export async function enterCourt(
   courtId,
@@ -106,6 +107,7 @@ export async function enterCourt(
   const courtAllocationId = data.allocationId || null;
   assertCurrentAssignment("court", courtId, courtAllocationId);
   session.currentCourtId = courtId;
+  refreshPendingScoreVisuals();
   session.currentCourtAllocationId = courtAllocationId;
   session.currentCourtName = data.name || courtId;
   session.currentCourtPassword = data.password;
@@ -264,6 +266,7 @@ export function leaveCourt(historyMode = "push") {
   clearMatchContext();
 
   session.currentCourtId = null;
+  refreshPendingScoreVisuals();
   session.currentCourtAllocationId = null;
   session.currentCourtName = null;
   session.currentCourtPassword = null;
