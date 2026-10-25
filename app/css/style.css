@@ -3555,16 +3555,16 @@ body.light-mode .create-page {
   will-change: transform;
 }
 
-/* Keep modal inputs near the top before the keyboard opens, rather than
-   recentering the whole panel as the visual viewport shrinks. */
+/* Start near the top for autofocus, then center when no keyboard is visible. */
 @media (max-width: 768px), (pointer: coarse) {
   #playPage,
   #spectatePage,
   #joinCourtModal,
   #resetModal,
   #adminAuthPage {
-    align-items: flex-start;
+    align-items: var(--join-vertical-alignment, flex-start);
     padding-top: max(16px, env(safe-area-inset-top));
+    padding-bottom: 16px;
     box-sizing: border-box;
   }
 
