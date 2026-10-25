@@ -17,7 +17,10 @@ import {
   firestoreState,
   getBackendScore,
 } from "./frontendHarness/harness.mjs";
-import { flushBackendWork } from "./frontendHarness/mockFirestoreState.mjs";
+import {
+  flushBackendWork,
+  writeDoc,
+} from "./frontendHarness/mockFirestoreState.mjs";
 
 let document;
 let window;
@@ -189,14 +192,19 @@ test("stale events posted with an outdated scoreVersion are ignored by the backe
   const matchBefore = firestoreState.docs.get("matches/crtnaa");
   const scoreBefore = getRenderedScore(document);
 
-  firestoreState.docs.set("matches/crtnaa", { ...matchBefore, scoreVersion: 99 });
+  writeDoc("matches/crtnaa", { ...matchBefore, scoreVersion: 99 });
 
   document.getElementById("addPointA").click();
   await settle(60);
   assert.deepEqual(getRenderedScore(document), scoreBefore);
+  assert.equal(
+    document.getElementById("pointsA").classList.contains("score-pending"),
+    false,
+    "a stale score-version event must not leave the score blurred",
+  );
 
   // Restore the version; scoring works again.
-  firestoreState.docs.set("matches/crtnaa", { ...matchBefore });
+  writeDoc("matches/crtnaa", { ...matchBefore });
   document.getElementById("addPointA").click();
   await waitFor(() => getRenderedScore(document).pointsA !== scoreBefore.pointsA, {
     label: "scoring resumes after version restore",
