@@ -26,6 +26,7 @@ function isVisibleInCurrentCourt(event) {
   }
   // The event has not resolved to a match yet. It belongs to this court while
   // the resolver is active; leaving/switching courts prunes it below.
+  return true;
 }
 
 function visiblePendingEvents() {
