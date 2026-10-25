@@ -162,7 +162,10 @@ export function reconcilePendingScoreEvents(matchId, scoreData) {
 export function discardPendingScoreEventsForMatch(matchId, scoreVersion) {
   let discardedCount = 0;
   for (const [eventId, event] of pendingScoreEvents) {
-    if (event.matchId !== matchId) continue;
+    const belongsToMatch =
+      event.matchId === matchId ||
+      (event.matchId === null && event.courtId === session.currentCourtId);
+    if (!belongsToMatch) continue;
     if (
       scoreVersion !== undefined &&
       event.scoreVersion !== (Number(scoreVersion) || 0)
