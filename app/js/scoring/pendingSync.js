@@ -18,11 +18,13 @@ function rememberConfirmedEvent(eventId) {
 }
 
 function isVisibleInCurrentCourt(event) {
-  return (
-    Boolean(event.courtId) &&
-    event.courtId === session.currentCourtId &&
-    event.listenerToken === session.activeCourtListenerToken
-  );
+  if (!event.courtId || event.courtId !== session.currentCourtId) {
+    return false;
+  }
+  if (event.matchId) {
+    return event.matchId === session.currentMatchId;
+  }
+  return event.listenerToken === session.activeCourtListenerToken;
 }
 
 function visiblePendingEvents() {
