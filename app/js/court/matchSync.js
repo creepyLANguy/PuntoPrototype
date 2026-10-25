@@ -7,6 +7,7 @@ import { TOAST_TYPES } from "../config/constants.js";
 import {
   discardPendingScoreEventsForMatch,
   reconcilePendingScoreEvents,
+  refreshPendingScoreVisuals,
 } from "../scoring/pendingSync.js";
 import { showToast } from "../ui/toast.js";
 import {
@@ -146,6 +147,7 @@ export function applyMatchData(
       );
     }
   }
+  refreshPendingScoreVisuals();
   session.currentMatchName = data.name || null;
   session.currentTournamentId = data.tournamentId || null;
   session.currentMatchTitle = resolveMatchTitle({ ...data, matchId }, matchId);
