@@ -236,9 +236,18 @@ function processScoringEvent(matchId, eventId, event) {
 
   firestoreState.backendScores.set(matchId, score);
 
+  const previousScoreDocument = firestoreState.docs.get(scorePath) || {};
+  const previousProcessedIds = Array.isArray(previousScoreDocument.recentProcessedEventIds)
+    ? previousScoreDocument.recentProcessedEventIds
+    : [];
   writeDoc(scorePath, {
     ...scoringEngine.toLiveScorePayload(score),
     lastEventId: eventId,
+    lastProcessedEventId: eventId,
+    recentProcessedEventIds: [
+      ...previousProcessedIds.filter((id) => id !== eventId),
+      eventId,
+    ].slice(-200),
     updatedAt: nextTimestamp(),
   });
 }
