@@ -8372,7 +8372,6 @@ body.light-mode .dm-meta-value {
     transform: none;
   }
 }
-
 /* Pending scoring feedback: a slow blur marks uncertain state, then a quick
    unblur follows an authoritative score snapshot that acknowledges the event. */
 .points,
