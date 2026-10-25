@@ -8388,6 +8388,10 @@ body.light-mode .dm-meta-value {
 }
 
 /* Compact, persistent status shown only while this court has pending events. */
+body:not(.scoreboard-active) .score-sync-status {
+  display: none;
+}
+
 .score-sync-status {
   position: fixed;
   z-index: 9500;
