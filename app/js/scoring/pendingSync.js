@@ -36,9 +36,15 @@ function syncPendingScoreVisuals() {
 
   for (const team of ["A", "B"]) {
     const scoreElement = document.getElementById(`points${team}`);
-    if (!scoreElement) continue;
+    const criticalGlowElement = document.getElementById(`criticalGlow${team}`);
     const isPending = visible.some((event) => event.team === team);
-    scoreElement.classList.toggle("score-pending", isPending);
+
+    // The critical-point glow duplicates the score text, so it must blur in
+    // lockstep rather than remaining a sharp overlay above the pending number.
+    scoreElement?.classList.toggle("score-pending", isPending);
+    criticalGlowElement?.classList.toggle("score-pending", isPending);
+
+    if (!scoreElement) continue;
     if (isPending) {
       scoreElement.setAttribute("aria-busy", "true");
       scoreElement.setAttribute(
