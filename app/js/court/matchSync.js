@@ -3,6 +3,12 @@
 // scoring options and the score version come from the match document; the
 // score from matches/{matchId}/score/current. Spec sections 5.3, 30 and 46.
 import { showMatchDetails } from "../details/matchDetails.js";
+import { TOAST_TYPES } from "../config/constants.js";
+import {
+  discardPendingScoreEventsForMatch,
+  reconcilePendingScoreEvents,
+} from "../scoring/pendingSync.js";
+import { showToast } from "../ui/toast.js";
 import {
   listenToMatch,
   listenToMatchScore,
@@ -77,6 +83,7 @@ export function applyMatchData(
   { courtBeaconSidesSwapped = null } = {},
 ) {
   const sameMatch = session.currentMatchId === matchId;
+  const previousScoreVersion = Number(session.currentScoreVersion);
   rememberAssignment("match", matchId, data);
   if (
     sameMatch &&
@@ -108,6 +115,24 @@ export function applyMatchData(
   }
   session.currentScoreVersion = nextScoreVersion;
   session.currentMatchId = matchId;
+
+  if (
+    sameMatch &&
+    Number.isFinite(previousScoreVersion) &&
+    previousScoreVersion >= 0 &&
+    previousScoreVersion !== nextScoreVersion
+  ) {
+    const discarded = discardPendingScoreEventsForMatch(
+      matchId,
+      previousScoreVersion,
+    );
+    if (discarded > 0) {
+      showToast(
+        "A pending score update was cancelled because the match was reset.",
+        TOAST_TYPES.ERROR,
+      );
+    }
+  }
   session.currentMatchAllocationId = data.allocationId;
   session.currentMatchStatus = data.status || null;
   session.currentMatchCourtId = data.currentCourtId || null;
@@ -214,6 +239,10 @@ export function followMatch(
         syncScoringControls();
         return;
       }
+
+      // Only a processed score snapshot can confirm pending local inputs.
+      // A successful event write alone means queued, not yet scored.
+      reconcilePendingScoreEvents(matchId, newData);
 
       // Establish baseline on first successful sync of this match
       if (!session.sessionInitialized) {
