@@ -22,7 +22,6 @@ if (
       display: block;
       flex: 0 0 auto;
     }
-
   `;
   document.head.appendChild(style);
 }
