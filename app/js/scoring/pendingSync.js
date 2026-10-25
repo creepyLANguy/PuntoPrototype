@@ -82,7 +82,9 @@ function syncPendingScoreVisuals() {
   const action = hasUndo ? "Updating score" : "Saving score";
   status.textContent = sending
     ? `${action}…`
-    : `Waiting for server confirmation${visible.length > 1 ? ` (${visible.length} events)` : ""}…`;
+    : `Waiting for server confirmation${
+        visible.length > 1 ? ` (${visible.length} events)` : ""
+      }…`;
 }
 
 export function beginPendingScoreEvent({
