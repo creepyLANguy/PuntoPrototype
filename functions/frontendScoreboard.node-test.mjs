@@ -192,19 +192,28 @@ test("stale events posted with an outdated scoreVersion are ignored by the backe
   const matchBefore = firestoreState.docs.get("matches/crtnaa");
   const scoreBefore = getRenderedScore(document);
 
-  writeDoc("matches/crtnaa", { ...matchBefore, scoreVersion: 99 });
+  firestoreState.docs.set("matches/crtnaa", {
+    ...matchBefore,
+    scoreVersion: 99,
+  });
 
   document.getElementById("addPointA").click();
   await settle(60);
   assert.deepEqual(getRenderedScore(document), scoreBefore);
+
+  // Now let the client observe the reset/version change. The stale event must
+  // be cleared rather than leaving the score blurred forever.
+  writeDoc("matches/crtnaa", { ...matchBefore, scoreVersion: 99 });
+  await settle(30);
   assert.equal(
     document.getElementById("pointsA").classList.contains("score-pending"),
     false,
     "a stale score-version event must not leave the score blurred",
   );
 
-  // Restore the version; scoring works again.
+  // Restore the version and wait for the snapshot before scoring again.
   writeDoc("matches/crtnaa", { ...matchBefore });
+  await settle(30);
   document.getElementById("addPointA").click();
   await waitFor(() => getRenderedScore(document).pointsA !== scoreBefore.pointsA, {
     label: "scoring resumes after version restore",
