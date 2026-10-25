@@ -160,6 +160,7 @@ Important processing fields include:
 - lastEventId
 - lastProcessedEventId
 - lastProcessedCreatedAt
+- recentProcessedEventIds (bounded acknowledgement window for processed score events)
 - updatedAt
 
 This document is not the source of truth for historical scoring; it can be
