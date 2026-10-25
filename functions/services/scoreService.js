@@ -23,8 +23,12 @@ function getRecentProcessedEventIds(score, eventId) {
   const existing = Array.isArray(score?.recentProcessedEventIds)
     ? score.recentProcessedEventIds
     : [];
-  return [...existing.filter((id) => typeof id === "string" && id !== eventId), eventId]
-    .slice(-RECENT_PROCESSED_EVENT_ID_LIMIT);
+  return [
+    ...existing.filter(
+      (id) => typeof id === "string" && id !== eventId,
+    ),
+    eventId,
+  ].slice(-RECENT_PROCESSED_EVENT_ID_LIMIT);
 }
 
 function shouldAutoChangeover(previousScore, nextScore, scoringOptions) {
