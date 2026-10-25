@@ -2724,10 +2724,10 @@ body.light-mode .dm-close:hover {
   color: inherit;
   cursor: pointer;
   opacity: 0.75;
-  width: 44px;
-  height: 44px;
-  min-width: 44px;
-  min-height: 44px;
+  width: 52px;
+  height: 52px;
+  min-width: 52px;
+  min-height: 52px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2737,8 +2737,8 @@ body.light-mode .dm-close:hover {
 }
 
 .dm-share-btn .icon {
-  width: 24px;
-  height: 24px;
+  width: 30px;
+  height: 30px;
 }
 
 .dm-share-btn:hover {
@@ -7837,17 +7837,6 @@ body.light-mode .dm-meta-value {
   opacity: var(--engagement-rest-opacity);
 }
 
-/* The scoreboard Match Details affordance is intentionally mobile-only.
-   Device detection is applied to <html>, so phone landscape mode is still
-   treated as mobile regardless of viewport width. */
-.match-details-btn {
-  --engagement-rest-opacity: 0.6;
-  transform-origin: center;
-}
-
-.mobile-device .match-details-btn {
-  animation: matchEngagementPulse 4.8s ease-in-out infinite;
-}
 
 @keyframes matchEngagementPulse {
   0%, 72%, 100% {
@@ -7917,7 +7906,6 @@ body.light-mode .dm-meta-value {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .match-details-btn,
   .dm-share-btn,
   .dm-details-toggle-icon {
     animation: none;
