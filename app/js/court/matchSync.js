@@ -84,6 +84,7 @@ export function applyMatchData(
 ) {
   const sameMatch = session.currentMatchId === matchId;
   const previousScoreVersion = Number(session.currentScoreVersion);
+  const previousMatchStatus = session.currentMatchStatus;
   rememberAssignment("match", matchId, data);
   if (
     sameMatch &&
@@ -136,6 +137,20 @@ export function applyMatchData(
   session.currentMatchAllocationId = data.allocationId;
   session.currentMatchStatus = data.status || null;
   session.currentMatchCourtId = data.currentCourtId || null;
+
+  if (
+    sameMatch &&
+    previousMatchStatus === "live" &&
+    session.currentMatchStatus !== "live"
+  ) {
+    const discarded = discardPendingScoreEventsForMatch(matchId);
+    if (discarded > 0) {
+      showToast(
+        "A pending score update was not processed because the match is no longer live.",
+        TOAST_TYPES.ERROR,
+      );
+    }
+  }
   session.currentMatchName = data.name || null;
   session.currentTournamentId = data.tournamentId || null;
   session.currentMatchTitle = resolveMatchTitle({ ...data, matchId }, matchId);
