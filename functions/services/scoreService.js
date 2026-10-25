@@ -15,6 +15,18 @@ const { getLatestCheckpoint, buildCheckpointPayload } = require("./checkpointSer
 const { paths } = require("./firestorePaths");
 const { buildScoreSummary } = require("../domain/matches/lifecycle");
 
+// The live score carries a bounded acknowledgement window so clients can
+// reconcile rapid/coalesced score snapshots with their exact in-flight events.
+const RECENT_PROCESSED_EVENT_ID_LIMIT = 200;
+
+function getRecentProcessedEventIds(score, eventId) {
+  const existing = Array.isArray(score?.recentProcessedEventIds)
+    ? score.recentProcessedEventIds
+    : [];
+  return [...existing.filter((id) => typeof id === "string" && id !== eventId), eventId]
+    .slice(-RECENT_PROCESSED_EVENT_ID_LIMIT);
+}
+
 function shouldAutoChangeover(previousScore, nextScore, scoringOptions) {
   return (
     scoringOptions?.scoringMode === "fixedTotalPoints" &&
@@ -190,6 +202,7 @@ async function processScoreEvent(event) {
             lastEventId: replayOrdering.eventId,
             lastProcessedEventId: replayOrdering.eventId,
             lastProcessedCreatedAt: replayOrdering.createdAt,
+            recentProcessedEventIds: getRecentProcessedEventIds(score, eventId),
             updatedAt: FieldValue.serverTimestamp(),
           });
           await stageAutomaticChangeover(
@@ -240,6 +253,7 @@ async function processScoreEvent(event) {
             lastEventId: eventId,
             lastProcessedEventId: eventId,
             lastProcessedCreatedAt: incomingOrder.createdAt,
+            recentProcessedEventIds: [eventId],
             updatedAt: FieldValue.serverTimestamp(),
           });
           writeSummary(defaultScore(activeScoringOptions));
@@ -273,6 +287,7 @@ async function processScoreEvent(event) {
             lastEventId: eventId,
             lastProcessedEventId: eventId,
             lastProcessedCreatedAt: incomingOrder.createdAt,
+            recentProcessedEventIds: getRecentProcessedEventIds(score, eventId),
             updatedAt: FieldValue.serverTimestamp(),
           });
           writeSummary(replayedScore);
@@ -341,6 +356,7 @@ async function processScoreEvent(event) {
           lastEventId: replayOrdering.eventId,
           lastProcessedEventId: replayOrdering.eventId,
           lastProcessedCreatedAt: replayOrdering.createdAt,
+          recentProcessedEventIds: getRecentProcessedEventIds(score, eventId),
           updatedAt: FieldValue.serverTimestamp(),
         });
         writeSummary(nextScore);
