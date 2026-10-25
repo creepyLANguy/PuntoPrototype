@@ -9,6 +9,7 @@ import {
   onSnapshot,
   collection,
   addDoc,
+  setDoc,
   serverTimestamp,
   query,
   where,
@@ -63,12 +64,28 @@ export function updateMatch(matchId, data) {
   });
 }
 
+// Allocate a stable event ID before sending the write so the pending-sync
+// model can correlate it with the server's processed-event acknowledgement.
+export function createMatchEventId() {
+  const uuid = globalThis.crypto?.randomUUID?.();
+  if (uuid) return uuid;
+  return `pp_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 14)}`;
+}
+
 // Score events are processed by the onEventCreate Cloud Function. The court
-// on the event is audit context only.
-export function addMatchEvent(matchId, { eventType, createdBy, ...fields }) {
+// on the event is audit context only. An explicit eventId uses setDoc so that
+// the ID tracked by the UI is the same ID the server processes; existing
+// callers may omit it and retain Firestore's addDoc-generated ID.
+export function addMatchEvent(
+  matchId,
+  { eventId = null, eventType, createdBy, ...fields },
+) {
   assertId("match", matchId);
   if (fields.courtId != null) assertId("court", fields.courtId);
-  return addDoc(collection(db, "matches", matchId, "events"), {
+  const eventRef = eventId
+    ? doc(db, "matches", matchId, "events", eventId)
+    : null;
+  const payload = {
     eventType,
     createdAt: serverTimestamp(),
     createdBy,
@@ -88,7 +105,10 @@ export function addMatchEvent(matchId, { eventType, createdBy, ...fields }) {
           ),
         }
       : {}),
-  });
+  };
+  return eventRef
+    ? setDoc(eventRef, payload).then(() => eventRef)
+    : addDoc(collection(db, "matches", matchId, "events"), payload);
 }
 
 // Live public matches for search and discovery. Historical matches stay
