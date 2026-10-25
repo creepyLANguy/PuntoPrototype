@@ -119,14 +119,9 @@ export function applyMatchData(
 
   if (
     sameMatch &&
-    Number.isFinite(previousScoreVersion) &&
-    previousScoreVersion >= 0 &&
     previousScoreVersion !== nextScoreVersion
   ) {
-    const discarded = discardPendingScoreEventsForMatch(
-      matchId,
-      previousScoreVersion,
-    );
+    const discarded = discardPendingScoreEventsForMatch(matchId);
     if (discarded > 0) {
       showToast(
         "A pending score update was cancelled because the match was reset.",
