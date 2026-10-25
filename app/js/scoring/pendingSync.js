@@ -87,6 +87,10 @@ function syncPendingScoreVisuals() {
       }…`;
 }
 
+export function refreshPendingScoreVisuals() {
+  syncPendingScoreVisuals();
+}
+
 export function beginPendingScoreEvent({
   eventId,
   team = null,
