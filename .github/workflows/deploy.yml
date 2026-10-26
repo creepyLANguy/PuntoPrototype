@@ -34,6 +34,7 @@ jobs:
       functions_changed: ${{ steps.scope.outputs.functions_changed }}
       firestore_changed: ${{ steps.scope.outputs.firestore_changed }}
       deploy_needed: ${{ steps.scope.outputs.deploy_needed }}
+      validation_needed: ${{ steps.scope.outputs.validation_needed }}
       firebase_targets: ${{ steps.scope.outputs.firebase_targets }}
       requires_force: ${{ steps.scope.outputs.requires_force }}
       public_api_changed: ${{ steps.scope.outputs.public_api_changed }}
@@ -104,6 +105,7 @@ jobs:
 
           hosting_changed=false
           functions_changed=false
+          validation_needed=false
           public_api_changed=false
           firestore_changed=false
 
@@ -113,6 +115,14 @@ jobs:
             case "$file" in
               index.html|style.css|app/*|nfc/*|media/*|device-harness/*|scripts/*)
                 hosting_changed=true
+                ;;
+            esac
+
+            case "$file" in
+              functions/*)
+                # Validate test, script, and development-dependency changes even
+                # when they do not require deploying a Functions runtime.
+                validation_needed=true
                 ;;
             esac
 
@@ -186,6 +196,7 @@ jobs:
             echo "functions_changed=$functions_changed"
             echo "firestore_changed=$firestore_changed"
             echo "deploy_needed=$deploy_needed"
+            echo "validation_needed=$validation_needed"
             echo "firebase_targets=$firebase_targets"
             echo "requires_force=$requires_force"
             echo "public_api_changed=$public_api_changed"
@@ -197,12 +208,15 @@ jobs:
           echo "Functions changed: $functions_changed"
           echo "Firestore rules/indexes changed: $firestore_changed"
           echo "Public API changed: $public_api_changed"
+          echo "Validation needed: $validation_needed"
           echo "Firebase targets: ${firebase_targets:-none}"
 
   validate:
-    name: Validate Functions
+    name: Validate Functions without deployment
     needs: changes
-    if: needs.changes.outputs.functions_changed == 'true'
+    if: >-
+      needs.changes.outputs.validation_needed == 'true' &&
+      needs.changes.outputs.deploy_needed != 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -234,15 +248,11 @@ jobs:
 
   deploy_production:
     name: Deploy production
-    needs:
-      - changes
-      - validate
+    needs: changes
     if: >-
-      always() &&
       github.event_name == 'push' &&
       github.ref == 'refs/heads/main' &&
-      needs.changes.outputs.deploy_needed == 'true' &&
-      (needs.validate.result == 'success' || needs.validate.result == 'skipped')
+      needs.changes.outputs.deploy_needed == 'true'
     runs-on: ubuntu-latest
 
     steps:
@@ -278,7 +288,18 @@ jobs:
         run: npm ci --prefix functions
 
       - name: Auto-format Functions JavaScript
+        if: needs.changes.outputs.functions_changed == 'true'
         run: npm run format --prefix functions
+
+      - name: Run Functions lint
+        if: needs.changes.outputs.functions_changed == 'true'
+        run: npm run lint --prefix functions
+
+      - name: Run Functions format check
+        if: >-
+          github.ref == 'refs/heads/main' &&
+          needs.changes.outputs.functions_changed == 'true'
+        run: npm run format:check --prefix functions
 
       # Rebuild the generated Hosting artifacts (app/index.html, app/overlay.html,
       # app/css/style.css) from their sources after the environment has been
@@ -290,6 +311,7 @@ jobs:
         run: node scripts/check-frontend-structure.mjs
 
       - name: Lint frontend modules
+        if: needs.changes.outputs.hosting_changed == 'true'
         run: npm run lint:frontend --prefix functions
 
       - name: Run tests
@@ -337,15 +359,11 @@ jobs:
 
   deploy_staging:
     name: Deploy staging
-    needs:
-      - changes
-      - validate
+    needs: changes
     if: >-
-      always() &&
       github.event_name == 'push' &&
       github.ref != 'refs/heads/main' &&
-      needs.changes.outputs.deploy_needed == 'true' &&
-      (needs.validate.result == 'success' || needs.validate.result == 'skipped')
+      needs.changes.outputs.deploy_needed == 'true'
     runs-on: ubuntu-latest
 
     steps:
@@ -381,7 +399,18 @@ jobs:
         run: npm ci --prefix functions
 
       - name: Auto-format Functions JavaScript
+        if: needs.changes.outputs.functions_changed == 'true'
         run: npm run format --prefix functions
+
+      - name: Run Functions lint
+        if: needs.changes.outputs.functions_changed == 'true'
+        run: npm run lint --prefix functions
+
+      - name: Run Functions format check
+        if: >-
+          github.ref == 'refs/heads/main' &&
+          needs.changes.outputs.functions_changed == 'true'
+        run: npm run format:check --prefix functions
 
       # Rebuild the generated Hosting artifacts (app/index.html, app/overlay.html,
       # app/css/style.css) from their sources after the environment has been
@@ -393,6 +422,7 @@ jobs:
         run: node scripts/check-frontend-structure.mjs
 
       - name: Lint frontend modules
+        if: needs.changes.outputs.hosting_changed == 'true'
         run: npm run lint:frontend --prefix functions
 
       - name: Run tests
