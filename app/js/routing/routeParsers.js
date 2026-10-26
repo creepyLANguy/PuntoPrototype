@@ -61,26 +61,42 @@ export function buildUrlForViewState(
   return basePath ? `${basePath}/` : "/";
 }
 
-function matchIdInPathname(
+function getPathIdFromPathname(
   pattern,
-  types,
   pathname = window.location.pathname,
 ) {
   const match = pathname.match(pattern);
   if (!match) return null;
 
   try {
-    const id = decodeURIComponent(match[1]).trim().toLowerCase();
-    return types.some((type) => isValidId(type, id)) ? id : null;
+    return decodeURIComponent(match[1]).trim().toLowerCase();
   } catch {
-    return null;
+    // Keep malformed percent-encoding identifiable as a route attempt so the
+    // router can show feedback instead of silently falling back to the menu.
+    return match[1];
   }
+}
+
+function matchIdInPathname(pattern, types, pathname = window.location.pathname) {
+  const id = getPathIdFromPathname(pattern, pathname);
+  return id !== null && types.some((type) => isValidId(type, id)) ? id : null;
 }
 
 export function getCourtIdFromPathname(pathname = window.location.pathname) {
   return matchIdInPathname(
     /^\/(?:app\/)?(?:court|c)\/([^/]+)\/?$/i,
     ["court"],
+    pathname,
+  );
+}
+
+// Returns the court ID segment for a direct court URL even when its format is
+// invalid. The router uses this only to explain why that URL cannot be opened.
+export function getCourtRouteIdFromPathname(
+  pathname = window.location.pathname,
+) {
+  return getPathIdFromPathname(
+    /^\/(?:app\/)?(?:court|c)\/([^/]+)\/?$/i,
     pathname,
   );
 }
