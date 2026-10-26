@@ -21,17 +21,17 @@ const COURT_ID = "detsa";
 
 let document;
 
-test("match-details share button has an unpadded 44px touch target and a 24px icon", () => {
+test("match-details share button has an unpadded 52px touch target and a 30px icon", () => {
   const button = document.getElementById("shareDetailsBtn");
   const style = document.defaultView.getComputedStyle(button);
   const iconStyle = document.defaultView.getComputedStyle(button.querySelector(".icon"));
   assert.equal(style.padding, "0px");
-  assert.equal(style.width, "44px");
-  assert.equal(style.height, "44px");
-  assert.equal(style.minWidth, "44px");
-  assert.equal(style.minHeight, "44px");
-  assert.equal(iconStyle.width, "24px");
-  assert.equal(iconStyle.height, "24px");
+  assert.equal(style.width, "52px");
+  assert.equal(style.height, "52px");
+  assert.equal(style.minWidth, "52px");
+  assert.equal(style.minHeight, "52px");
+  assert.equal(iconStyle.width, "30px");
+  assert.equal(iconStyle.height, "30px");
 });
 
 // While set, every /momentum/ request parks on this gate so a test can inspect the
