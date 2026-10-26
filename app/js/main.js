@@ -166,4 +166,22 @@ function startApplication()
   registerDeviceAdmin();
   registerClubList();
   registerClubEditor();
+
+  scheduleShareCardCaptureWarmup();
+}
+
+function scheduleShareCardCaptureWarmup() {
+  const warmCaptureModule = () => {
+    void import("./sharing/imageCapture.js").catch((err) => {
+      console.warn("Share-card resources could not be preloaded:", err);
+    });
+  };
+
+  // Do not make first paint compete with the image-export dependency. Warm it
+  // once the browser is idle so opening Match Details can start capture sooner.
+  if (typeof window.requestIdleCallback === "function") {
+    window.requestIdleCallback(warmCaptureModule, { timeout: 2500 });
+  } else {
+    window.setTimeout(warmCaptureModule, 1200);
+  }
 }
