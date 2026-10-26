@@ -21,6 +21,7 @@ test("mobile without Web NFC is quiet on startup but gets actionable feedback on
     [...document.querySelectorAll(".toast")].map((toast) => toast.textContent).filter((text) => /nfc/i.test(text));
 
   assert.deepEqual(nfcToasts(), []);
+  assert.equal(button.classList.contains("hidden"), false, "mobile users can explicitly request browser-support guidance");
   button.click();
   await settle();
 
