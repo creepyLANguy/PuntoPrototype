@@ -2,13 +2,20 @@ import { appState } from "../state/appState.js";
 
 // Device detection: the mobile-device class used by CSS, and the device
 // identifier stamped onto every event this client writes (createdBy).
-export function updateMobileDeviceClass()
+export function isLikelyMobileDevice(navigatorRef = globalThis.navigator)
 {
-  const userAgent = navigator.userAgent || "";
-  const isIpadDesktopMode = navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1;
-  const isMobileDevice = navigator.userAgentData?.mobile === true ||
+  const userAgent = navigatorRef?.userAgent || "";
+  const isIpadDesktopMode = navigatorRef?.platform === "MacIntel" &&
+    navigatorRef?.maxTouchPoints > 1;
+
+  return navigatorRef?.userAgentData?.mobile === true ||
     /Android|iPhone|iPad|iPod|IEMobile|Windows Phone|Mobile/i.test(userAgent) ||
     isIpadDesktopMode;
+}
+
+export function updateMobileDeviceClass()
+{
+  const isMobileDevice = isLikelyMobileDevice(navigator);
 
   document.documentElement.classList.toggle("mobile-device", isMobileDevice);
   return isMobileDevice;
