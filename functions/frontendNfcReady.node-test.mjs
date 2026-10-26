@@ -73,9 +73,9 @@ test("granted permission produces exactly one NFC-ready toast after scan resolve
   };
   dom.window.__nfcReader.onreading(tagEvent);
   dom.window.__nfcReader.onreading(tagEvent);
-  await waitFor(() => getRenderedScore(document).pointsA === "15", { label: "NFC point event" });
-
-  assert.equal(getRenderedScore(document).pointsA, "15", "cooldown prevents the immediately repeated tag from adding another point");
   assert.equal(document.getElementById("nfcCooldownBanner").classList.contains("hidden"), false);
   assert.equal(document.getElementById("nfcCountdown").textContent, "3");
+
+  await waitFor(() => getRenderedScore(document).pointsA === "15", { label: "NFC point event" });
+  assert.equal(getRenderedScore(document).pointsA, "15", "cooldown prevents the immediately repeated tag from adding another point");
 });
