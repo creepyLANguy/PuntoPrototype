@@ -95,3 +95,5 @@
 @import "components/match-context.css";
 /* Final mobile layout fixes for the Admin Portal and its editors. */
 @import "pages/admin-mobile.css";
+/* Pending scoring blur feedback. */
+@import "components/score-sync.css";

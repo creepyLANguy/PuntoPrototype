@@ -98,6 +98,7 @@ function prepareMatch({
     ...toLiveScorePayload(defaultScore(options)),
     lastProcessedEventId: null,
     lastProcessedCreatedAt: null,
+    recentProcessedEventIds: [],
   };
   return { matchId, match, score };
 }
@@ -811,6 +812,7 @@ async function resetMatch({
       ...toLiveScorePayload(freshScore),
       lastProcessedEventId: null,
       lastProcessedCreatedAt: null,
+      recentProcessedEventIds: [],
     });
     if (court) {
       // A reset starts the match again with the physical Beacon mapping restored.

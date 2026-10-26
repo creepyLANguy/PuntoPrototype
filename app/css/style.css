@@ -8372,3 +8372,33 @@ body.light-mode .dm-meta-value {
     transform: none;
   }
 }
+/* Pending scoring feedback: a slow blur marks uncertain state, then a quick
+   unblur follows an authoritative score snapshot that acknowledges the event. */
+.points,
+.critical-glow {
+  filter: blur(0);
+  transition: filter 170ms ease-out;
+}
+
+.points.score-pending,
+.critical-glow.score-pending {
+  filter: blur(2.8px);
+  transition: filter 1250ms ease-in;
+  will-change: filter;
+}
+
+
+@media (prefers-reduced-motion: reduce) {
+  .points,
+  .points.score-pending,
+  .critical-glow,
+  .critical-glow.score-pending {
+    transition: none;
+    will-change: auto;
+  }
+
+  .points.score-pending,
+  .critical-glow.score-pending {
+    filter: blur(1.6px);
+  }
+}

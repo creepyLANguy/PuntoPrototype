@@ -3,7 +3,17 @@
 import { playSound } from "../audio/audio.js";
 import { EVENT_TYPES, SOUND_IDS, TOAST_TYPES } from "../config/constants.js";
 import { manageMatch } from "../firebase/callables.js";
-import { addMatchEvent } from "../firebase/matchRepository.js";
+import {
+  addMatchEvent,
+  createMatchEventId,
+} from "../firebase/matchRepository.js";
+import {
+  beginPendingScoreEvent,
+  bindPendingScoreEvent,
+  failPendingScoreEvent,
+  markPendingScoreEventSubmitted,
+  wasScoreEventConfirmed,
+} from "./pendingSync.js";
 import { appState } from "../state/appState.js";
 import { session } from "../state/sessionState.js";
 import { animate, animateUndo } from "../ui/animations.js";
@@ -43,25 +53,45 @@ async function resolveScorableMatch() {
 }
 
 export async function addPoint(addpointevent) {
-  // Fire-and-forget animation/sound immediately so the UI stays snappy even
-  // while the write is in flight; only surface an error if it actually fails.
-  animate(addpointevent === EVENT_TYPES.POINT_TEAM_A ? "A" : "B");
+  // Every tap gets its own event ID. The UI never invents a score value: it
+  // blurs the affected authoritative number until the score listener confirms
+  // that exact event was processed by the backend.
+  const team = addpointevent === EVENT_TYPES.POINT_TEAM_A ? "A" : "B";
+  const eventId = createMatchEventId();
+  const courtId = session.currentCourtId;
+
+  animate(team);
   playSound(SOUND_IDS.POINT);
+
+  beginPendingScoreEvent({
+    eventId,
+    team,
+    eventType: addpointevent,
+    courtId,
+    scoreVersion: session.currentScoreVersion,
+  });
 
   try {
     const { matchId, scoreVersion } = await resolveScorableMatch();
+    bindPendingScoreEvent(eventId, { matchId, scoreVersion });
     await addMatchEvent(matchId, {
+      eventId,
       eventType: addpointevent,
       createdBy: appState.thisDeviceId,
-      courtId: session.currentCourtId,
+      courtId,
       scoreVersion,
     });
+    markPendingScoreEventSubmitted(eventId);
   } catch (err) {
+    const alreadyConfirmed = wasScoreEventConfirmed(eventId);
+    failPendingScoreEvent(eventId);
     console.error("Add point failed:", err);
-    showToast(
-      "Point failed to save: " + (err.message || "Unknown error"),
-      TOAST_TYPES.ERROR,
-    );
+    if (!alreadyConfirmed) {
+      showToast(
+        "Point failed to save: " + (err.message || "Unknown error"),
+        TOAST_TYPES.ERROR,
+      );
+    }
   }
 }
 
@@ -69,35 +99,55 @@ export async function undoLastPoint() {
   if (session.isSpectating) return;
 
   // Snapshot before the write: the score listener can deliver the undone
-  // score while the addDoc await is still settling.
+  // score while the setDoc/addDoc await is still settling.
   const undoTarget = session.score?.lastPointTeam || null;
   const hasPointsToUndo =
     (session.score?.A?.totalPoints || 0) +
       (session.score?.B?.totalPoints || 0) >
     0;
+  const eventId = createMatchEventId();
+  const courtId = session.currentCourtId;
+  const scoreVersion = Number(session.currentScoreVersion) || 0;
+
+  if (session.currentMatchId && courtId) {
+    beginPendingScoreEvent({
+      eventId,
+      team: hasPointsToUndo ? undoTarget : null,
+      eventType: EVENT_TYPES.UNDO,
+      courtId,
+      scoreVersion,
+    });
+    bindPendingScoreEvent(eventId, {
+      matchId: session.currentMatchId,
+      scoreVersion,
+    });
+  }
 
   try {
     await addMatchEvent(session.currentMatchId, {
+      eventId,
       eventType: EVENT_TYPES.UNDO,
       createdBy: appState.thisDeviceId,
-      courtId: session.currentCourtId,
-      scoreVersion: Number(session.currentScoreVersion) || 0,
+      courtId,
+      scoreVersion,
     });
+    markPendingScoreEventSubmitted(eventId);
 
     // Only give undo feedback when there is actually something to undo;
     // the backend treats an UNDO on a fresh score as a no-op.
     if (hasPointsToUndo) {
-      if (undoTarget) {
-        animateUndo(undoTarget);
-      }
-
+      if (undoTarget) animateUndo(undoTarget);
       playSound(SOUND_IDS.UNDO);
     }
   } catch (err) {
+    const alreadyConfirmed = wasScoreEventConfirmed(eventId);
+    failPendingScoreEvent(eventId);
     console.error("Undo failed:", err);
-    showToast(
-      "Undo failed to save: " + (err.message || "Unknown error"),
-      TOAST_TYPES.ERROR,
-    );
+    if (!alreadyConfirmed) {
+      showToast(
+        "Undo failed to save: " + (err.message || "Unknown error"),
+        TOAST_TYPES.ERROR,
+      );
+    }
   }
 }

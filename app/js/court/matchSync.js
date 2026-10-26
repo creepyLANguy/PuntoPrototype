@@ -3,6 +3,13 @@
 // scoring options and the score version come from the match document; the
 // score from matches/{matchId}/score/current. Spec sections 5.3, 30 and 46.
 import { showMatchDetails } from "../details/matchDetails.js";
+import { TOAST_TYPES } from "../config/constants.js";
+import {
+  discardPendingScoreEventsForMatch,
+  reconcilePendingScoreEvents,
+  refreshPendingScoreVisuals,
+} from "../scoring/pendingSync.js";
+import { showToast } from "../ui/toast.js";
 import {
   listenToMatch,
   listenToMatchScore,
@@ -77,6 +84,8 @@ export function applyMatchData(
   { courtBeaconSidesSwapped = null } = {},
 ) {
   const sameMatch = session.currentMatchId === matchId;
+  const previousScoreVersion = Number(session.currentScoreVersion);
+  const previousMatchStatus = session.currentMatchStatus;
   rememberAssignment("match", matchId, data);
   if (
     sameMatch &&
@@ -108,9 +117,37 @@ export function applyMatchData(
   }
   session.currentScoreVersion = nextScoreVersion;
   session.currentMatchId = matchId;
+
+  if (
+    sameMatch &&
+    previousScoreVersion !== nextScoreVersion
+  ) {
+    const discarded = discardPendingScoreEventsForMatch(matchId);
+    if (discarded > 0) {
+      showToast(
+        "A pending score update was cancelled because the match was reset.",
+        TOAST_TYPES.ERROR,
+      );
+    }
+  }
   session.currentMatchAllocationId = data.allocationId;
   session.currentMatchStatus = data.status || null;
   session.currentMatchCourtId = data.currentCourtId || null;
+
+  if (
+    sameMatch &&
+    previousMatchStatus === "live" &&
+    session.currentMatchStatus !== "live"
+  ) {
+    const discarded = discardPendingScoreEventsForMatch(matchId);
+    if (discarded > 0) {
+      showToast(
+        "A pending score update was not processed because the match is no longer live.",
+        TOAST_TYPES.ERROR,
+      );
+    }
+  }
+  refreshPendingScoreVisuals();
   session.currentMatchName = data.name || null;
   session.currentTournamentId = data.tournamentId || null;
   session.currentMatchTitle = resolveMatchTitle({ ...data, matchId }, matchId);
@@ -214,6 +251,10 @@ export function followMatch(
         syncScoringControls();
         return;
       }
+
+      // Only a processed score snapshot can confirm pending local inputs.
+      // A successful event write alone means queued, not yet scored.
+      reconcilePendingScoreEvents(matchId, newData);
 
       // Establish baseline on first successful sync of this match
       if (!session.sessionInitialized) {

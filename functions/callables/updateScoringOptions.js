@@ -95,6 +95,10 @@ async function updateScoringOptions(request) {
     lastEventId,
     lastProcessedEventId: lastEventId,
     lastProcessedCreatedAt: lastEventCreatedAt,
+    recentProcessedEventIds: events
+      .filter((event) => SCORING_EVENTS.has(event.eventType))
+      .map((event) => event.id)
+      .slice(-200),
     updatedAt: FieldValue.serverTimestamp(),
   });
   await matchRef.set({ scoreSummary: buildScoreSummary(replayedScore) }, { merge: true });

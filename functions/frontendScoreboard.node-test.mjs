@@ -17,6 +17,7 @@ import {
   firestoreState,
   getBackendScore,
 } from "./frontendHarness/harness.mjs";
+import { flushBackendWork, writeDoc } from "./frontendHarness/mockFirestoreState.mjs";
 
 let document;
 let window;
@@ -188,16 +189,102 @@ test("stale events posted with an outdated scoreVersion are ignored by the backe
   const matchBefore = firestoreState.docs.get("matches/crtnaa");
   const scoreBefore = getRenderedScore(document);
 
-  firestoreState.docs.set("matches/crtnaa", { ...matchBefore, scoreVersion: 99 });
+  firestoreState.docs.set("matches/crtnaa", {
+    ...matchBefore,
+    scoreVersion: 99,
+  });
 
   document.getElementById("addPointA").click();
   await settle(60);
   assert.deepEqual(getRenderedScore(document), scoreBefore);
 
-  // Restore the version; scoring works again.
-  firestoreState.docs.set("matches/crtnaa", { ...matchBefore });
+  // Now let the client observe the reset/version change. The stale event must
+  // be cleared rather than leaving the score blurred forever.
+  writeDoc("matches/crtnaa", { ...matchBefore, scoreVersion: 99 });
+  await settle(30);
+  assert.equal(
+    document.getElementById("pointsA").classList.contains("score-pending"),
+    false,
+    "a stale score-version event must not leave the score blurred",
+  );
+
+  // Restore the version and wait for the snapshot before scoring again.
+  writeDoc("matches/crtnaa", { ...matchBefore });
+  await settle(30);
   document.getElementById("addPointA").click();
   await waitFor(() => getRenderedScore(document).pointsA !== scoreBefore.pointsA, {
     label: "scoring resumes after version restore",
   });
+});
+
+test("rapid point taps stay visibly pending until the server acknowledges both events", async () => {
+  await settle(30);
+  const matchId = firestoreState.docs.get("courts/crtna")?.activeMatchId || "crtnaa";
+  const scoreBefore = structuredClone(getBackendScore("crtna"));
+  const displayedBefore = getRenderedScore(document);
+  const eventPathForPointA = ([path, data]) =>
+    path.startsWith(`matches/${matchId}/events/`) && data.eventType === "POINT_TEAM_A";
+  const priorPointEventPaths = new Set(
+    [...firestoreState.docs.entries()].filter(eventPathForPointA).map(([path]) => path),
+  );
+  const countPointEvents = () =>
+    [...firestoreState.docs.entries()].filter(eventPathForPointA).length;
+  const eventCountBefore = countPointEvents();
+
+  firestoreState.backendEnabled = false;
+  try {
+    document.getElementById("addPointA").click();
+    document.getElementById("addPointA").click();
+
+    await waitFor(() => countPointEvents() === eventCountBefore + 2, {
+      label: "two unique point events submitted",
+    });
+    await settle(30);
+
+    const pendingScore = document.getElementById("pointsA");
+    assert.equal(pendingScore.classList.contains("score-pending"), true);
+    assert.equal(pendingScore.getAttribute("aria-busy"), "true");
+    assert.equal(document.getElementById("pointsB").classList.contains("score-pending"), false);
+    assert.equal(
+      document.getElementById("criticalGlowA").classList.contains("score-pending"),
+      true,
+    );
+    assert.equal(document.getElementById("scoreSyncStatus"), null);
+
+    // The score is not shown as saved while the scoring backend is paused.
+    assert.deepEqual(getRenderedScore(document), displayedBefore);
+
+    const eventIds = [...firestoreState.docs.entries()]
+      .filter(([path, data]) => eventPathForPointA([path, data]) && !priorPointEventPaths.has(path))
+      .map(([path]) => path.split("/").at(-1));
+    assert.equal(eventIds.length, 2, "both taps create one event each");
+    assert.equal(new Set(eventIds).size, 2, "each tap has a unique event ID");
+
+    firestoreState.backendEnabled = true;
+    flushBackendWork();
+
+    await waitFor(
+      () => (getBackendScore("crtna")?.A?.totalPoints || 0) === scoreBefore.A.totalPoints + 2,
+      { label: "both point events processed exactly once" },
+    );
+    await waitFor(
+      () => {
+        const processedIds =
+          firestoreState.docs.get(`matches/${matchId}/score/current`)?.recentProcessedEventIds ||
+          [];
+        return eventIds.every((eventId) => processedIds.includes(eventId));
+      },
+      { label: "authoritative score acknowledges both event IDs" },
+    );
+    await waitFor(() => !pendingScore.classList.contains("score-pending"), {
+      label: "authoritative snapshot unblurs score",
+    });
+
+    assert.equal(countPointEvents(), eventCountBefore + 2);
+    assert.equal(pendingScore.hasAttribute("aria-busy"), false);
+    assert.equal(document.getElementById("scoreSyncStatus"), null);
+  } finally {
+    firestoreState.backendEnabled = true;
+    flushBackendWork();
+  }
 });
