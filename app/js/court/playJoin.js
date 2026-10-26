@@ -254,12 +254,17 @@ export function setPlayPageVisible(isVisible) {
   document.body.classList.toggle("play-page-open", isVisible);
 }
 
-export function openPlayerJoinPrompt(courtId, matchId = null) {
+export function openPlayerJoinPrompt(
+  courtId,
+  matchId = null,
+  targetId = courtId,
+  targetType = "court",
+) {
   appState.playPageReturnToScoreboard = false;
   appState.selectedPlayCourt = courtId;
   appState.selectedPlayMatchId = matchId || session.currentMatchId || null;
-  appState.playPageTargetId = courtId;
-  appState.playPageTargetType = "court";
+  appState.playPageTargetId = targetId || courtId;
+  appState.playPageTargetType = targetType === "match" ? "match" : "court";
 
   const court = appState.allCourts.find((item) => item.id === courtId);
   elements.joinCourtModalTitle.textContent = "Join as a player";
