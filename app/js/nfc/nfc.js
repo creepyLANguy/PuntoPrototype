@@ -132,11 +132,22 @@ async function initializeNfcOnStartup()
 {
   // Do not produce startup diagnostics for an environment that cannot satisfy
   // the secure-context requirement.
-  if (window.isSecureContext === false) return;
+  if (window.isSecureContext === false)
+  {
+    // Leave a manual path to the actionable HTTPS message on mobile/tablet-like
+    // devices, but do not interrupt startup with a toast.
+    if (isLikelyMobileDevice(navigator)) makeNfcActivationAvailable();
+    return;
+  }
 
   // An absent browser API is not evidence that the physical device lacks NFC.
-  // In particular, laptops/desktops should not receive an unsupported toast.
-  if (typeof window.NDEFReader !== "function") return;
+  // Expose activation silently on mobile/tablet-like devices so the user can
+  // explicitly request browser-support guidance; desktops stay quiet and hidden.
+  if (typeof window.NDEFReader !== "function")
+  {
+    if (isLikelyMobileDevice(navigator)) makeNfcActivationAvailable();
+    return;
+  }
 
   const permission = await queryNfcPermission();
 
@@ -257,6 +268,7 @@ async function startNfcScanAttempt({ userInitiated })
 
     nfcInitialized = true;
     appState.nfcDenied = false;
+    appState.nfcActivationRequired = false;
     elements.activateNfcBtn.classList.add("hidden");
 
     console.log("NFC scanning started.");
@@ -312,6 +324,7 @@ function handleNfcInitializationError(error, { userInitiated })
 
 function makeNfcActivationAvailable()
 {
+  appState.nfcActivationRequired = true;
   if (elements.activateNfcBtn)
   {
     elements.activateNfcBtn.classList.remove("hidden");
