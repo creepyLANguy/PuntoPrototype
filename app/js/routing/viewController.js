@@ -194,7 +194,7 @@ function showCurrentScoreboardView()
     elements.adminLoginBtn.style.display = "none";
   }
 
-  if (elements.activateNfcBtn)
+  if (elements.activateNfcBtn && !appState.nfcActivationRequired)
   {
     elements.activateNfcBtn.classList.add("hidden");
   }
