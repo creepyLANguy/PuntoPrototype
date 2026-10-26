@@ -24,7 +24,13 @@ export function tournamentUrl(tournamentId) {
 }
 
 export function renderQr(container, url, size = 132) {
-  if (!container || !window.QRCode) return;
+  if (!container) return;
+  if (!window.QRCode) {
+    container.replaceChildren(
+      h("span", { className: "ev-qr-placeholder", role: "status" }, "QR unavailable"),
+    );
+    return;
+  }
   container.innerHTML = "";
   new window.QRCode(container, {
     text: url,
@@ -53,11 +59,17 @@ async function shareTournament(view) {
 }
 
 export function renderHeader(view, { onShare } = {}) {
-  const qr = h("div", {
-    className: "ev-qr",
-    "aria-label": "Tournament QR code",
-  });
-  setTimeout(() => renderQr(qr, tournamentUrl(view.tournamentId)), 0);
+  const qr = h(
+    "div",
+    {
+      className: "ev-qr",
+      "aria-label": "Tournament QR code",
+    },
+    h("span", { className: "ev-qr-placeholder", role: "status" }, "Preparing QR code…"),
+  );
+  // renderHeader builds this node before inserting it, so synchronously render
+  // the QR now to avoid a late empty-to-visible header layout change.
+  renderQr(qr, tournamentUrl(view.tournamentId));
   const shareStatus = h("span", { className: "ev-hint", role: "status" });
   return h(
     "header",
