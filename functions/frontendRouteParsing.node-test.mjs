@@ -8,6 +8,7 @@ import { register } from "node:module";
 import {
   buildUrlForViewState,
   getCourtIdFromPathname,
+  getCourtRouteIdFromPathname,
   getMatchIdFromPathname,
   getPlayCourtIdFromPathname,
   getPlayTargetIdFromPathname,
@@ -190,6 +191,13 @@ test("match and tournament paths enforce distinct ID types without losing upperc
   }
   assert.equal(getMatchIdFromPathname("/m/abcdef/extra"), null);
   assert.equal(getTournamentIdFromPathname("/t/abcdefg/extra"), null);
+});
+
+test("direct court route IDs remain available for malformed-URL feedback", () => {
+  assert.equal(getCourtRouteIdFromPathname("/c/bad"), "bad");
+  assert.equal(getCourtRouteIdFromPathname("/court/%E0%A4%A"), "%E0%A4%A");
+  assert.equal(getCourtRouteIdFromPathname("/app/c/AbCda/"), "abcda");
+  assert.equal(getCourtRouteIdFromPathname("/c"), null);
 });
 
 test("route ids normalize case and reject malformed or wrong-type ids", () => {
