@@ -1,5 +1,5 @@
-// Frontend tests: the engagement nudges on Match Details (share button pulse,
-// expandable stats arrow, mobile-only scoreboard nudge). Stylesheet rules are
+// Frontend tests: Match Details share and stats-arrow engagement cues, share
+// button sizing, and the absence of a pulsing court button. Stylesheet rules are
 // checked directly; the behaviour that switches them on and off is exercised
 // on the real app booted in jsdom.
 import assert from "node:assert/strict";
@@ -126,6 +126,20 @@ test("share button uses the continuous engagement animation", () => {
   assert.match(styles, /@keyframes\s+matchEngagementPulse\s*\{/);
 });
 
+test("match details share button has a larger tap target and icon", () => {
+  const buttonRule = styles.match(/(?:^|\n)\.dm-share-btn\s*\{[^}]*\}/)?.[0];
+  const iconRule = styles.match(/(?:^|\n)\.dm-share-btn \.icon\s*\{[^}]*\}/)?.[0];
+
+  assert.ok(buttonRule, "share button rule should exist");
+  assert.match(buttonRule, /width:\s*52px;/);
+  assert.match(buttonRule, /height:\s*52px;/);
+  assert.match(buttonRule, /min-width:\s*52px;/);
+  assert.match(buttonRule, /min-height:\s*52px;/);
+  assert.ok(iconRule, "share icon rule should exist");
+  assert.match(iconRule, /width:\s*30px;/);
+  assert.match(iconRule, /height:\s*30px;/);
+});
+
 test("share button stops animating after it is clicked", async () => {
   await openDetails();
   const shareButton = document.getElementById("shareDetailsBtn");
@@ -183,16 +197,16 @@ test("share engagement rests at a lower opacity and briefly increases opacity", 
   assert.match(styles, /90%\s*\{[\s\S]*?opacity:\s*0\.9/);
 });
 
-test("scoreboard Match Details animation is restricted to the mobile-device class", () => {
-  assert.match(
+test("scoreboard Match Details button does not pulse on court", () => {
+  assert.doesNotMatch(
     styles,
-    /\.mobile-device \.match-details-btn\s*\{[\s\S]*?animation:\s*matchEngagementPulse\s+4\.8s\s+ease-in-out\s+infinite;/,
+    /\.mobile-device\s+\.match-details-btn\s*\{[^}]*animation\s*:/s,
   );
 
-  const matchDetailsRule = styles.match(/\.match-details-btn\s*\{[\s\S]*?\}/)?.[0];
+  const matchDetailsRule = styles.match(/(?:^|\n)\.match-details-btn\s*\{[^}]*\}/)?.[0];
 
   assert.ok(matchDetailsRule, "base Match Details rule should exist");
-  assert.doesNotMatch(matchDetailsRule, /animation:\s*matchEngagementPulse/);
+  assert.doesNotMatch(matchDetailsRule, /animation\s*:/);
 });
 
 test("the mobile-device class follows mobile detection", async () => {
@@ -276,6 +290,6 @@ test("toast positioning is recalculated whenever the viewport changes", async ()
 test("engagement animations are disabled when reduced motion is requested", () => {
   assert.match(
     styles,
-    /@media\s*\(prefers-reduced-motion:\s*reduce\)[\s\S]*?\.match-details-btn,\s*\.dm-share-btn,\s*\.dm-details-toggle-icon\s*\{[\s\S]*?animation:\s*none;/,
+    /@media\s*\(prefers-reduced-motion:\s*reduce\)[\s\S]*?\.dm-share-btn,\s*\.dm-details-toggle-icon\s*\{[\s\S]*?animation:\s*none;/,
   );
 });
