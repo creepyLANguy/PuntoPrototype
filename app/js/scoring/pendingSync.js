@@ -59,44 +59,11 @@ function syncPendingScoreVisuals() {
     if (!scoreElement) continue;
     if (isPending) {
       scoreElement.setAttribute("aria-busy", "true");
-      scoreElement.setAttribute(
-        "title",
-        "Waiting for the server to confirm this score",
-      );
     } else {
       scoreElement.removeAttribute("aria-busy");
-      if (
-        scoreElement.getAttribute("title") ===
-        "Waiting for the server to confirm this score"
-      ) {
-        scoreElement.removeAttribute("title");
-      }
     }
   }
 
-  let status = document.getElementById("scoreSyncStatus");
-  if (!visible.length) {
-    status?.remove();
-    return;
-  }
-
-  if (!status) {
-    status = document.createElement("div");
-    status.id = "scoreSyncStatus";
-    status.className = "score-sync-status";
-    status.setAttribute("role", "status");
-    status.setAttribute("aria-live", "polite");
-    document.body.appendChild(status);
-  }
-
-  const sending = visible.some((event) => !event.submitted);
-  const hasUndo = visible.some((event) => event.eventType === "UNDO");
-  const action = hasUndo ? "Updating score" : "Saving score";
-  status.textContent = sending
-    ? `${action}…`
-    : `Waiting for server confirmation${
-        visible.length > 1 ? ` (${visible.length} events)` : ""
-      }…`;
 }
 
 export function refreshPendingScoreVisuals() {
