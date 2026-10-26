@@ -192,7 +192,7 @@ test("join modal backend errors release loading and keep the modal route availab
       "none",
     );
     assert.equal($("joinCourtModal").classList.contains("hidden"), false);
-    assert.equal(window.location.pathname, "/c/jmada");
+    assert.equal(window.location.pathname, "/p/jmada");
     assert.equal(document.body.classList.contains("spectating-mode"), true);
     assert.equal(
       [...document.querySelectorAll(".toast")].some(
@@ -249,7 +249,7 @@ test("a court-load failure restores the join modal and clears both loading surfa
       "none",
     );
     assert.equal(window.history.state.viewState.modal, "joinCourt");
-    assert.equal(window.location.pathname, "/c/jmada");
+    assert.equal(window.location.pathname, "/p/jmada");
     assert.equal(document.body.classList.contains("spectating-mode"), true);
     assert.equal(
       [...document.querySelectorAll(".toast")].some(
