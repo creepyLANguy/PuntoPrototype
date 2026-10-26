@@ -12,7 +12,6 @@ import { stepBackInApp, syncCurrentViewState } from "../routing/history.js";
 import { createViewState } from "../routing/viewState.js";
 import { normalizeScoringOptions } from "../scoring/options.js";
 import { isScoreboardSwapped } from "../scoring/scoreboard.js";
-import { cacheShareableScoreCard } from "../sharing/imageCapture.js";
 import { shareCardState } from "../sharing/shareCardState.js";
 import { canShareFiles } from "../sharing/shareCardAssets.js";
 import { session } from "../state/sessionState.js";
@@ -402,7 +401,10 @@ export async function showMatchDetails(
     // Old share files are invalidated when a new details render starts, and
     // the current share waits for its capture to finish before using a file.
     if (renderedShareCard && canShareFiles()) {
-      const capturePromise = cacheShareableScoreCard(shareCaptureGeneration);
+      const capturePromise = import("../sharing/imageCapture.js").then(
+        ({ cacheShareableScoreCard }) =>
+          cacheShareableScoreCard(shareCaptureGeneration),
+      );
 
       capturePromise
         .then(() => {
