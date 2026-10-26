@@ -18,7 +18,7 @@ test.before(async () => {
   seedBaseData();
   seedCourt("rutea", { name: "Route Court" });
 
-  const dom = await bootFrontend({ url: "https://padel.test/p/rutea" });
+  const dom = await bootFrontend({ url: "https://padel.test/play/rutea" });
   document = dom.window.document;
   window = dom.window;
 
@@ -31,7 +31,7 @@ test.before(async () => {
   await settle(30);
 });
 
-test("/p/<court> opens the join-as-player modal with the password ready", () => {
+test("/play/<court> opens the join-as-player modal with the password ready", () => {
   assert.equal(document.getElementById("playPage").style.display, "none");
   assert.equal(document.getElementById("joinCourtModal").classList.contains("hidden"), false);
   assert.equal(document.getElementById("joinCourtModalCourtName").textContent, "Route Court");
