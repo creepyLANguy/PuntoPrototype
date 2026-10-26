@@ -2,9 +2,18 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { bootFrontend, settle } from "./frontendHarness/harness.mjs";
+import {
+  bootFrontend,
+  joinCourtAsPlayer,
+  seedBaseData,
+  seedCourt,
+  settle,
+} from "./frontendHarness/harness.mjs";
 
 test("prompt state waits for activation and then shows NFC readiness", async () => {
+  seedBaseData();
+  seedCourt("crtna");
+
   const dom = await bootFrontend({
     beforeBoot(window) {
       Object.defineProperty(window, "isSecureContext", { configurable: true, value: true });
@@ -33,6 +42,10 @@ test("prompt state waits for activation and then shows NFC readiness", async () 
     toastTexts().includes("NFC permission is required. Tap Activate NFC and allow access when prompted."),
     true,
   );
+  assert.equal(button.classList.contains("hidden"), false);
+
+  // Entering the scoreboard must not hide activation while a user gesture is required.
+  await joinCourtAsPlayer(document, "crtna");
   assert.equal(button.classList.contains("hidden"), false);
 
   // Double-clicking during an in-flight scan must still create only one reader scan.
