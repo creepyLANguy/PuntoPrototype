@@ -144,7 +144,11 @@ async function initializeNfcOnStartup()
   // was pending. Never race it with a second reader/scan initialization.
   if (userActivationRequested || nfcInitialized || nfcScanPromise) return;
 
-  if (!permission.available) return;
+  if (!permission.available)
+  {
+    makeNfcActivationAvailable();
+    return;
+  }
 
   if (permission.state === "granted")
   {
