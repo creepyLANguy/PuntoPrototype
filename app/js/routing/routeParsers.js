@@ -9,7 +9,7 @@
 //
 // Every function reads the current location by default; passing a pathname
 // makes them pure (see functions/frontendRouteParsers.node-test.mjs).
-import { NAV_PAGES } from "../config/routes.js";
+import { NAV_MODALS, NAV_PAGES } from "../config/routes.js";
 import { isValidId } from "../config/idContract.js";
 import {
   createViewState,
@@ -37,6 +37,15 @@ export function buildUrlForViewState(
 
   if (isAdminProtectedPage(state.page)) {
     return "/admin";
+  }
+
+  if (
+    state.page === NAV_PAGES.SCOREBOARD &&
+    state.courtId &&
+    state.modal === NAV_MODALS.JOIN_COURT
+  ) {
+    const targetId = state.playTargetId || state.courtId;
+    return `${basePath}/p/${encodeURIComponent(targetId)}`;
   }
 
   if (state.page === NAV_PAGES.SCOREBOARD && state.courtId) {
