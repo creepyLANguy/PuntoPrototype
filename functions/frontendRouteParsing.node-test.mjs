@@ -263,6 +263,27 @@ test("view states build the canonical URLs, honouring the /app prefix", () => {
   const scoreboard = createViewState({ page: "scoreboard", courtId: "ABCDA", spectate: true });
   assert.equal(buildUrlForViewState(scoreboard, "/"), "/c/abcda");
   assert.equal(buildUrlForViewState(scoreboard, "/app/c/x"), "/app/c/abcda");
+
+  const joinCourtModal = createViewState({
+    page: "scoreboard",
+    courtId: "abcda",
+    spectate: true,
+    modal: "joinCourt",
+    playTargetId: "abcda",
+    playTargetType: "court",
+  });
+  assert.equal(buildUrlForViewState(joinCourtModal, "/"), "/p/abcda");
+  assert.equal(buildUrlForViewState(joinCourtModal, "/app/c/x"), "/app/p/abcda");
+
+  const matchJoinModal = createViewState({
+    page: "scoreboard",
+    courtId: "abcda",
+    spectate: true,
+    modal: "joinCourt",
+    playTargetId: "abcdef",
+    playTargetType: "match",
+  });
+  assert.equal(buildUrlForViewState(matchJoinModal, "/"), "/p/abcdef");
   assert.equal(buildUrlForViewState({ page: "scoreboard", courtId: "ab cd" }, "/"), "/");
 
   const joinPrompt = createViewState({ page: "play", courtId: "abcda", returnToScoreboard: true });

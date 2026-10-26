@@ -1,6 +1,6 @@
 // View-state model: normalisation, construction and comparison of the view states
 // stored in browser history. Pure functions.
-import { NAV_PAGES } from "../config/routes.js";
+import { NAV_MODALS, NAV_PAGES } from "../config/routes.js";
 import { isValidId } from "../config/idContract.js";
 
 function normalizeId(type, value) {
@@ -54,7 +54,10 @@ export function normalizeViewState(viewState = {}) {
     normalized.spectate = false;
   }
 
-  if (normalized.page !== NAV_PAGES.PLAY || !normalized.returnToScoreboard) {
+  const keepsPlayTarget =
+    (normalized.page === NAV_PAGES.PLAY && normalized.returnToScoreboard) ||
+    (normalized.page === NAV_PAGES.SCOREBOARD && normalized.modal === NAV_MODALS.JOIN_COURT);
+  if (!keepsPlayTarget) {
     normalized.playTargetId = null;
     normalized.playTargetType = null;
   }

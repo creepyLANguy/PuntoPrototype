@@ -188,7 +188,7 @@ Rules:
 | `/c`, `/court` | spectate court list |
 | `/c/{courtId}`, `/court/{courtId}` | spectate that court |
 | `/p`, `/play` | play court list |
-| `/p/{courtId}`, `/play/{courtId}` | join prompt over the court's spectator view |
+| `/p/{courtId}`, `/play/{courtId}` | spectator scoreboard with the Join as a player password modal open and focused |
 | `/m/{matchId}` | dedicated durable match page (`app/match.html`) |
 | `/t` | tournament landing (`app/tournament.html`) |
 | `/t/new` | tournament setup wizard |

@@ -17,6 +17,12 @@ import {
 let document;
 let window;
 
+function submitJoinModal() {
+  document.getElementById("joinCourtModalForm").dispatchEvent(
+    new window.Event("submit", { bubbles: true, cancelable: true }),
+  );
+}
+
 test.before(async () => {
   seedBaseData();
   seedCourt("drcta", { name: "Direct Player Court" });
@@ -64,31 +70,33 @@ test.before(async () => {
 
   await waitFor(
     () =>
-      document.getElementById("playPage").style.display !== "none" &&
-      document.querySelector("#playCourtList .court-item.active"),
-    { label: "direct player join prompt" },
+      !document.getElementById("joinCourtModal").classList.contains("hidden") &&
+      document.getElementById("scoreboardPage").style.display !== "none",
+    { label: "direct player join modal" },
   );
   await settle(30);
 });
 
 test("/p/<court> autofocuses the player password field", () => {
-  assert.equal(document.activeElement?.id, "playCourtPassword");
+  assert.equal(document.activeElement?.id, "joinCourtModalPassword");
 });
 
 test("Play password errors clear loading and allow another attempt without a success toast", async () => {
-  const passwordInput = document.getElementById("playCourtPassword");
-  const submit = document.getElementById("enterCourtBtn");
-  const spinner = () => document.querySelector("#playPage > .inline-loading-overlay");
+  const passwordInput = document.getElementById("joinCourtModalPassword");
+  const submit = () => document.getElementById("joinCourtModalForm").dispatchEvent(
+    new window.Event("submit", { bubbles: true, cancelable: true }),
+  );
+  const spinner = () => document.querySelector("#joinCourtModal > .inline-loading-overlay");
   const playerToasts = () =>
     [...document.querySelectorAll(".toast")].filter(
       (toast) => toast.textContent === "Switched to Player view.",
     );
-  submit.click();
-  assert.equal(document.getElementById("playCourtPasswordError").textContent, "Password required.");
+  submit();
+  assert.equal(document.getElementById("joinCourtModalPasswordError").textContent, "Password required.");
   assert.equal(spinner(), null);
 
   passwordInput.value = "incorrect";
-  submit.click();
+  submit();
   assert.equal(
     spinner()?.style.display,
     "flex",
@@ -98,12 +106,12 @@ test("Play password errors clear loading and allow another attempt without a suc
   assert.ok(
     Number(window.getComputedStyle(spinner()).zIndex) >
       Number(
-        window.getComputedStyle(document.querySelector("#playPage > .create-card")).zIndex || 0,
+        window.getComputedStyle(document.querySelector("#joinCourtModal > .join-court-modal-card")).zIndex || 0,
       ),
     "the spinner overlay stacks above the password card",
   );
   await waitFor(
-    () => document.getElementById("playCourtPasswordError").textContent === "Incorrect password.",
+    () => document.getElementById("joinCourtModalPasswordError").textContent === "Incorrect password.",
   );
   assert.equal(spinner().style.display, "none");
   assert.equal(playerToasts().length, 0);
@@ -113,10 +121,10 @@ test("Play password errors clear loading and allow another attempt without a suc
   firestoreState.docs.delete("admin/goodies");
   try {
     passwordInput.value = "pw";
-    submit.click();
+    submit();
     assert.equal(spinner().style.display, "flex");
     await waitFor(() =>
-      document.getElementById("playCourtNameError").textContent.includes("Admin document missing"),
+      document.getElementById("joinCourtModalError").textContent.includes("Admin document missing"),
     );
     assert.equal(spinner().style.display, "none", "backend errors release the loading overlay");
     assert.equal(playerToasts().length, 0);
@@ -126,15 +134,15 @@ test("Play password errors clear loading and allow another attempt without a suc
 });
 
 test("/p/<court> player submit primes and plays the join sound", async () => {
-  const passwordInput = document.getElementById("playCourtPassword");
+  const passwordInput = document.getElementById("joinCourtModalPassword");
   passwordInput.value = "pw";
 
-  document.getElementById("enterCourtBtn").click();
+  submitJoinModal();
   assert.equal(
-    document.querySelector("#playPage > .inline-loading-overlay")?.style.display,
+    document.querySelector("#joinCourtModal > .inline-loading-overlay")?.style.display,
     "flex",
   );
-  document.getElementById("enterCourtBtn").click();
+  submitJoinModal();
 
   await waitFor(() => document.getElementById("scoreboardPage").style.display !== "none", {
     label: "player scoreboard to be shown",
@@ -147,7 +155,7 @@ test("/p/<court> player submit primes and plays the join sound", async () => {
   );
   assert.equal(window.__audioTestState.starts, 1);
   await waitFor(
-    () => document.querySelector("#playPage > .inline-loading-overlay")?.style.display === "none",
+    () => document.querySelector("#joinCourtModal > .inline-loading-overlay")?.style.display === "none",
   );
   assert.equal(
     [...document.querySelectorAll(".toast")].filter(
@@ -165,22 +173,21 @@ test("/p/<matchId> loads that match on its court as a spectator and then authent
 
   await waitFor(
     () =>
-      document.getElementById("playPage").style.display !== "none" &&
-      document.querySelector('#playCourtList .court-item[data-court-id="mtcha"].active'),
+      !document.getElementById("joinCourtModal").classList.contains("hidden") &&
+      document.getElementById("scoreboardPage").style.display !== "none",
     { label: "match-target join prompt" },
   );
   await waitFor(() => getRenderedScoreForDirectJoin(document).pointsA === "7", {
     label: "linked match score",
   });
 
-  assert.equal(document.getElementById("playCourtSearch").value, "Match Route Court");
-  assert.equal(document.getElementById("playPasswordSection").style.display, "block");
+  assert.equal(document.getElementById("joinCourtModalCourtName").textContent, "Match Route Court");
   assert.notEqual(document.getElementById("scoreboardPage").style.display, "none");
   assert.equal(window.location.pathname, "/p/abcdef");
   assert.equal(document.body.classList.contains("spectating-mode"), true);
 
-  document.getElementById("playCourtPassword").value = "pw";
-  document.getElementById("enterCourtBtn").click();
+  document.getElementById("joinCourtModalPassword").value = "pw";
+  submitJoinModal();
 
   await waitFor(
     () =>
@@ -226,8 +233,8 @@ test("switching to a court link clears the explicit match selection", async () =
 });
 
 test("an ordinary court player join follows subsequent active match changes", async () => {
-  document.getElementById("playCourtPassword").value = "pw";
-  document.getElementById("enterCourtBtn").click();
+  document.getElementById("joinCourtModalPassword").value = "pw";
+  submitJoinModal();
   await waitFor(() => !document.body.classList.contains("spectating-mode"), {
     label: "court player join",
   });
@@ -252,7 +259,7 @@ test("an explicit link pins a match already followed through its court", async (
   window.dispatchEvent(new window.PopStateEvent("popstate"));
   await waitFor(
     () =>
-      document.getElementById("playPage").style.display !== "none" &&
+      !document.getElementById("joinCourtModal").classList.contains("hidden") &&
       document.body.classList.contains("spectating-mode"),
     { label: "explicit link to the current match" },
   );

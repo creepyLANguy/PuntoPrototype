@@ -18,40 +18,42 @@ test.before(async () => {
   seedBaseData();
   seedCourt("rutea", { name: "Route Court" });
 
-  const dom = await bootFrontend({ url: "https://padel.test/p/rutea" });
+  const dom = await bootFrontend({ url: "https://padel.test/play/rutea" });
   document = dom.window.document;
   window = dom.window;
 
   await waitFor(
     () =>
-      document.getElementById("playPage").style.display !== "none" &&
-      document.querySelector("#playCourtList .court-item.active"),
-    { label: "play page from the /p route" },
+      !document.getElementById("joinCourtModal").classList.contains("hidden") &&
+      document.getElementById("scoreboardPage").style.display !== "none",
+    { label: "join modal over the spectator scoreboard from the /p route" },
   );
   await settle(30);
 });
 
-test("/p/<court> opens the join prompt with the court preselected", () => {
-  assert.equal(document.getElementById("playPage").style.display, "flex");
-  assert.equal(document.getElementById("playCourtSearch").value, "Route Court");
-  assert.equal(document.getElementById("playPasswordSection").style.display, "block");
-  assert.equal(
-    document.querySelector("#playCourtList .court-item.active")?.dataset.courtId,
-    "rutea",
-  );
+test("/play/<court> opens the join-as-player modal with the password ready", () => {
+  assert.equal(document.getElementById("playPage").style.display, "none");
+  assert.equal(document.getElementById("joinCourtModal").classList.contains("hidden"), false);
+  assert.equal(document.getElementById("joinCourtModalCourtName").textContent, "Route Court");
+  assert.equal(document.getElementById("joinCourtModalPassword").value, "");
+  assert.equal(document.activeElement?.id, "joinCourtModalPassword");
 });
 
-test("the court is already spectated behind the prompt", () => {
+test("the spectator scoreboard is visible behind the join modal", () => {
   assert.notEqual(document.getElementById("scoreboardPage").style.display, "none");
+  assert.equal(document.body.classList.contains("spectating-mode"), true);
   assert.equal(window.location.pathname, "/p/rutea");
 });
 
 test("dismissing the prompt leaves the viewer on the court's spectator view", async () => {
-  document.getElementById("playPage").click();
+  document.getElementById("joinCourtModal").click();
 
-  await waitFor(() => document.getElementById("playPage").style.display === "none", {
-    label: "play page to be dismissed",
-  });
+  await waitFor(
+    () =>
+      document.getElementById("joinCourtModal").classList.contains("hidden") &&
+      document.getElementById("scoreboardPage").style.display !== "none",
+    { label: "join modal to be dismissed" },
+  );
   await settle(30);
 
   assert.notEqual(document.getElementById("scoreboardPage").style.display, "none");

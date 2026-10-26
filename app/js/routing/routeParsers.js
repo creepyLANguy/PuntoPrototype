@@ -3,13 +3,13 @@
 //   /c, /court            spectate court list
 //   /c/{id}, /court/{id}  spectate that court
 //   /p, /play             play court list
-//   /p/{id}, /play/{id}   join prompt over that court's scoreboard
+//   /p/{id}, /play/{id}   join modal over that court's spectator scoreboard
 //   /admin, /app/admin    admin portal (via admin auth)
 // The same paths are accepted under the /app prefix.
 //
 // Every function reads the current location by default; passing a pathname
 // makes them pure (see functions/frontendRouteParsers.node-test.mjs).
-import { NAV_PAGES } from "../config/routes.js";
+import { NAV_MODALS, NAV_PAGES } from "../config/routes.js";
 import { isValidId } from "../config/idContract.js";
 import {
   createViewState,
@@ -37,6 +37,15 @@ export function buildUrlForViewState(
 
   if (isAdminProtectedPage(state.page)) {
     return "/admin";
+  }
+
+  if (
+    state.page === NAV_PAGES.SCOREBOARD &&
+    state.courtId &&
+    state.modal === NAV_MODALS.JOIN_COURT
+  ) {
+    const targetId = state.playTargetId || state.courtId;
+    return `${basePath}/p/${encodeURIComponent(targetId)}`;
   }
 
   if (state.page === NAV_PAGES.SCOREBOARD && state.courtId) {

@@ -55,7 +55,13 @@ export function getCurrentViewState()
           page: NAV_PAGES.SCOREBOARD,
           courtId: session.currentCourtId,
           spectate: session.isSpectating,
-          modal
+          modal,
+          ...(modal === NAV_MODALS.JOIN_COURT
+            ? {
+                playTargetId: appState.playPageTargetId || session.currentCourtId,
+                playTargetType: appState.playPageTargetType || "court",
+              }
+            : {}),
         });
       }
     }
@@ -293,7 +299,14 @@ export async function restoreViewState(viewState)
       }
       else if (state.modal === NAV_MODALS.JOIN_COURT)
       {
-        openPlayerJoinPrompt(state.courtId, session.currentMatchId);
+        const targetType = state.playTargetType === "match" ? "match" : "court";
+        const targetId = state.playTargetId || state.courtId;
+        openPlayerJoinPrompt(
+          state.courtId,
+          targetType === "match" ? targetId : session.currentMatchId,
+          targetId,
+          targetType,
+        );
       }      
 
       return;
@@ -333,6 +346,19 @@ export async function restoreViewState(viewState)
           {
             appState.selectedPlayMatchId = session.currentMatchId;
           }
+
+          // A court-specific /p or /play URL is a player-join intent, not the
+          // full Play picker. Keep the spectator scoreboard visible underneath
+          // the same password modal used by the court Options menu.
+          const targetType = state.playTargetType === "match" ? "match" : "court";
+          const targetId = state.playTargetId || state.courtId;
+          openPlayerJoinPrompt(
+            state.courtId,
+            targetType === "match" ? targetId : session.currentMatchId,
+            targetId,
+            targetType,
+          );
+          return;
         }
       }
 
