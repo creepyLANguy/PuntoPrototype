@@ -4,7 +4,11 @@
 import { closeClubEditor } from "../admin/clubEditor.js";
 import { TOAST_TYPES } from "../config/constants.js";
 import { isValidId } from "../config/idContract.js";
-import { NAV_HISTORY_STATE_KEY, NAV_MODALS, NAV_PAGES } from "../config/routes.js";
+import {
+  NAV_HISTORY_STATE_KEY,
+  NAV_MODALS,
+  NAV_PAGES,
+} from "../config/routes.js";
 import { closePlayPage } from "../court/playJoin.js";
 import { enterCourt } from "../court/session.js";
 import { getCourt } from "../firebase/courtRepository.js";
@@ -16,6 +20,7 @@ import {
 } from "./history.js";
 import {
   getCourtIdFromPathname,
+  getCourtRouteIdFromPathname,
   getViewStateFromLocation,
   isAdminRootPathname,
 } from "./routeParsers.js";
@@ -27,6 +32,13 @@ import { session } from "../state/sessionState.js";
 import { elements } from "../ui/dom.js";
 import { finishStartupLoading } from "../ui/loading.js";
 import { showToast } from "../ui/toast.js";
+
+function showInvalidDirectCourtUrlToast(pathname = window.location.pathname) {
+  const requestedCourtId = getCourtRouteIdFromPathname(pathname);
+  if (requestedCourtId === null || isValidId("court", requestedCourtId)) return;
+
+  showToast(`Court "${requestedCourtId}" not found.`, TOAST_TYPES.ERROR);
+}
 
 export function registerEscapeKeyNavigation() {
   document.addEventListener("keydown", (e) => {
@@ -152,6 +164,7 @@ export function registerEscapeKeyNavigation() {
 }
 
 export async function initializeAppNavigation() {
+  const initialPathname = window.location.pathname;
   try {
     const routeState = getViewStateFromLocation();
     if (isAdminRootPathname()) {
@@ -231,6 +244,7 @@ export async function initializeAppNavigation() {
 
     await restoreViewState(createViewState({ page: NAV_PAGES.MENU }));
     replaceNavigationState(getCurrentViewState());
+    showInvalidDirectCourtUrlToast(initialPathname);
   } finally {
     finishStartupLoading();
   }
@@ -276,6 +290,7 @@ export function registerHistoryNavigation() {
     }
 
     await restoreViewState(nextState);
+    showInvalidDirectCourtUrlToast();
   });
 }
 
@@ -285,11 +300,11 @@ async function openCourtFromRoute(
   matchId = null,
 ) {
   const resolvedCourtId = courtId !== null ? courtId : getCourtIdFromPathname();
-  if (
-    !isValidId("court", resolvedCourtId) ||
-    (matchId !== null && !isValidId("match", matchId))
-  )
+  if (!isValidId("court", resolvedCourtId)) {
+    showToast("Court not found.", TOAST_TYPES.ERROR);
     return false;
+  }
+  if (matchId !== null && !isValidId("match", matchId)) return false;
 
   const courtSnap = await getCourt(resolvedCourtId);
   if (!courtSnap.exists()) {
