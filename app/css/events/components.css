@@ -54,14 +54,26 @@
 }
 
 .ev-qr {
-  flex: 0 0 auto;
+  /* Reserve the final QR size before rendering to keep the header stable. */
+  box-sizing: content-box;
+  flex: 0 0 132px;
+  width: 132px;
+  height: 132px;
   padding: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
   background: #fff;
   border-radius: 10px;
 }
 
-.ev-qr:empty {
-  display: none;
+.ev-qr-placeholder {
+  max-width: 100%;
+  color: #111827;
+  font-size: 12px;
+  line-height: 1.3;
+  text-align: center;
 }
 
 .ev-qr img,
