@@ -145,7 +145,7 @@ function installGlobals(dom) {
   });
 }
 
-export async function bootFrontend({ url = "https://padel.test/" } = {}) {
+export async function bootFrontend({ url = "https://padel.test/", beforeBoot } = {}) {
   if (booted) {
     throw new Error(
       "The frontend can only be booted once per process; drive it via helpers instead.",
@@ -161,6 +161,9 @@ export async function bootFrontend({ url = "https://padel.test/" } = {}) {
   });
 
   installGlobals(dom);
+  if (typeof beforeBoot === "function") {
+    await beforeBoot(dom.window);
+  }
 
   // jsdom does not fetch the external stylesheet, but the app inspects
   // computed styles (e.g. `.hidden { display: none }`), so inline it.
