@@ -63,7 +63,7 @@ function showInvalidDirectCourtUrlToast(pathname = window.location.pathname) {
   );
 }
 
-function showDirectCourtRouteLoadFailureToast(pathname, error) {
+function showDirectCourtRouteLoadFailureToast(pathname) {
   const route = getDirectCourtRouteFromPathname(pathname);
   if (!route) return;
 
@@ -80,9 +80,8 @@ function showDirectCourtRouteLoadFailureToast(pathname, error) {
 
   const targetType = route.targetType === "player" ? "court or match" : "court";
   const target = route.targetId ? ` "${route.targetId}"` : "";
-  const detail = error?.message ? ` ${error.message}` : "";
   showToast(
-    `Could not open ${targetType}${target}. Please try again.${detail}`,
+    `Could not open ${targetType}${target}. Please try again.`,
     TOAST_TYPES.ERROR,
   );
 }
