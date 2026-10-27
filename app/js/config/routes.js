@@ -5,7 +5,7 @@ export const NAV_HISTORY_STATE_KEY = "__puntoViewState";
 export const NAV_PAGES = {
   MENU: "menu",
   PLAY: "play",
-  SPECTATE: "spectate",
+  SPECTATE: "watch",
   SCOREBOARD: "scoreboard",
   ADMIN_AUTH: "adminAuth",
   ADMIN_DASHBOARD: "adminDashboard",

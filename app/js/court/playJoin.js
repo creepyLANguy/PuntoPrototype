@@ -170,7 +170,7 @@ export function registerPlayAndSpectatePages() {
         displayPlayCourtList(appState.allCourts);
         syncCurrentViewState();
         return;
-      } else if (action === "Spectate") {
+      } else if (action === "Watch") {
         elements.menuPage.style.display = "none";
         elements.spectatePage.style.display = "flex";
         elements.spectateCourtSearch.value = "";
