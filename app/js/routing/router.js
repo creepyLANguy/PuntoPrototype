@@ -238,7 +238,7 @@ export async function initializeAppNavigation() {
           resolved = await resolvePlayRouteTarget(routeState.playTargetId);
         } catch (error) {
           console.warn("Could not resolve the requested court/match route:", error);
-          showDirectCourtRouteLoadFailureToast(initialPathname, error);
+          showDirectCourtRouteLoadFailureToast(initialPathname);
         }
         if (resolved) {
           resolvedRouteState = createViewState({
@@ -306,7 +306,7 @@ export async function initializeAppNavigation() {
       } catch (restoreError) {
         console.warn("Could not recover to the menu after a route failure:", restoreError);
       }
-      showDirectCourtRouteLoadFailureToast(initialPathname, error);
+      showDirectCourtRouteLoadFailureToast(initialPathname);
     }
   } finally {
     finishStartupLoading();
@@ -353,7 +353,7 @@ export function registerHistoryNavigation() {
           : createViewState({ page: NAV_PAGES.PLAY });
       } catch (error) {
         console.warn("Could not resolve the requested court/match route:", error);
-        showDirectCourtRouteLoadFailureToast(window.location.pathname, error);
+        showDirectCourtRouteLoadFailureToast(window.location.pathname);
         nextState = createViewState({ page: NAV_PAGES.PLAY });
       }
     }
@@ -371,7 +371,7 @@ export function registerHistoryNavigation() {
       } catch (restoreError) {
         console.warn("Could not recover to the menu after a route failure:", restoreError);
       }
-      showDirectCourtRouteLoadFailureToast(pathname, error);
+      showDirectCourtRouteLoadFailureToast(pathname);
       return;
     }
 
