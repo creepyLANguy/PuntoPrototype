@@ -9,6 +9,7 @@ import {
   buildUrlForViewState,
   getCourtIdFromPathname,
   getCourtRouteIdFromPathname,
+  getDirectCourtRouteFromPathname,
   getMatchIdFromPathname,
   getPlayCourtIdFromPathname,
   getPlayTargetIdFromPathname,
@@ -198,6 +199,49 @@ test("direct court route IDs remain available for malformed-URL feedback", () =>
   assert.equal(getCourtRouteIdFromPathname("/court/%E0%A4%A"), "%E0%A4%A");
   assert.equal(getCourtRouteIdFromPathname("/app/c/AbCda/"), "abcda");
   assert.equal(getCourtRouteIdFromPathname("/c"), null);
+});
+
+test("direct court and player route attempts preserve invalid IDs and extra segments", () => {
+  const cases = [
+    ["/p/not-a-valid-id", {
+      targetType: "player",
+      targetId: "not-a-valid-id",
+      hasInvalidExtraSegments: false,
+    }],
+    ["/play/not-a-valid-id", {
+      targetType: "player",
+      targetId: "not-a-valid-id",
+      hasInvalidExtraSegments: false,
+    }],
+    ["/app/p/%E0%A4%A", {
+      targetType: "player",
+      targetId: "%E0%A4%A",
+      hasInvalidExtraSegments: false,
+    }],
+    ["/app/play/abcda/extra", {
+      targetType: "player",
+      targetId: "abcda",
+      hasInvalidExtraSegments: true,
+    }],
+    ["/c/abcda/bar", {
+      targetType: "court",
+      targetId: "abcda",
+      hasInvalidExtraSegments: true,
+    }],
+    ["/app/court/not-a-valid-id", {
+      targetType: "court",
+      targetId: "not-a-valid-id",
+      hasInvalidExtraSegments: false,
+    }],
+  ];
+
+  for (const [pathname, expected] of cases) {
+    assert.deepEqual(getDirectCourtRouteFromPathname(pathname), expected, pathname);
+  }
+
+  for (const pathname of ["/", "/c", "/c/", "/p", "/play/", "/app/c", "/app/play/"]) {
+    assert.equal(getDirectCourtRouteFromPathname(pathname), null, pathname);
+  }
 });
 
 test("route ids normalize case and reject malformed or wrong-type ids", () => {
