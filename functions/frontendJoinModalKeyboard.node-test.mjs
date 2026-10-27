@@ -252,7 +252,7 @@ test("Play and Spectate focus synchronously on opening, before court loading", a
   try {
     for (const [action, id, inputId] of [
       ["Play", "playPage", "playCourtSearch"],
-      ["Spectate", "spectatePage", "spectateCourtSearch"],
+      ["Watch", "spectatePage", "spectateCourtSearch"],
     ]) {
       const page = document.getElementById(id);
       const input = document.getElementById(inputId);
