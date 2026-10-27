@@ -92,7 +92,7 @@ test.before(async () => {
 });
 
 test("Spectate shows each open court's club in a column of its own", async () => {
-  await openList("Spectate", "spectateCourtList", 3);
+  await openList("Watch", "spectateCourtList", 3);
 
   // The discovery search (spec section 31) still matches club names.
   assert.equal(
@@ -282,7 +282,7 @@ test("lists still load, without club names, when clubs cannot be read", async ()
   console.warn = (...args) => warnings.push(args.join(" "));
 
   try {
-    await openList("Spectate", "spectateCourtList", 3);
+    await openList("Watch", "spectateCourtList", 3);
     assert.equal($("spectateCourtList").classList.contains("has-clubs"), false);
     for (const id of rowIds("spectateCourtList")) {
       assert.equal(clubCell("spectateCourtList", id).textContent, "");
