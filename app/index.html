@@ -200,6 +200,11 @@
               </button>
               <span>Swap views</span>
             </div>
+            <div class="setting-item" id="serverToggleTile">
+              <button id="serverToggleBtn" class="floating-btn modal-btn" title="Toggle server indicator"
+                aria-label="Toggle server indicator"><span class="icon icon--server" aria-hidden="true"></span></button>
+              <span>Server</span>
+            </div>
           </section>
           <div class="settings-group-divider" role="separator" aria-orientation="horizontal" aria-hidden="true" hidden></div>
           <section class="settings-group" id="settingsCourtGroup" aria-label="Court controls">
@@ -207,11 +212,6 @@
               <button id="changeoverBtn" class="floating-btn modal-btn" title="Changeover"
                 aria-label="Changeover"><span class="icon icon--changeover" aria-hidden="true"></span></button>
               <span>Changeover</span>
-            </div>
-              <div class="setting-item player-only-tile" id="serverToggleTile">
-              <button id="serverToggleBtn" class="floating-btn modal-btn" title="Toggle server indicator"
-                aria-label="Toggle server indicator"><span class="icon icon--server" aria-hidden="true"></span></button>
-              <span>Server</span>
             </div>
               <div class="setting-item player-only-tile" id="editPlayersTile">
               <button id="editPlayersBtn" class="floating-btn modal-btn player-names" title="Edit player names"
@@ -530,9 +530,9 @@
       <div class="app-subtitle">Your Live Scoreboard</div>
 
       <div class="menu-buttons">
+        <button class="menu-btn" data-action="start">Watch</button>
         <button class="menu-btn" data-action="start">Play</button>
-        <button class="menu-btn" data-action="start">Spectate</button>
-        <a class="menu-btn menu-btn-link" data-action="tournaments" href="/t">Tournaments</a>
+        <a class="menu-btn menu-btn-link" data-action="tournaments" href="/t">Compete</a>
       </div>
     </main>
 
@@ -557,7 +557,7 @@
           <button id="closeAdminDashboardBtn" class="close-btn">✕</button>
           <h2>Admin Portal</h2>
           <div class="header-actions">
-            <button id="themeBtn" class="tab-btn-theme">🎨</button>
+            <button id="themeBtn" class="tab-btn-theme" title="Appearance" aria-label="Appearance settings"><span class="icon icon--palette" aria-hidden="true"></span></button>
             <button id="nfcToolBtn" class="tab-btn">NFC Tool</button>
             <button id="deviceHarnessBtn" class="tab-btn">Device Lab</button>
           </div>

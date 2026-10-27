@@ -34,6 +34,9 @@ export function collection(dbOrRef, ...segments) {
 }
 
 export async function getDoc(docRef) {
+  if (firestoreState.failingDocuments.has(docRef.__path)) {
+    throw new Error(`Simulated read failure: ${docRef.__path}`);
+  }
   return makeSnapshot(docRef.__path, firestoreState.docs.get(docRef.__path));
 }
 

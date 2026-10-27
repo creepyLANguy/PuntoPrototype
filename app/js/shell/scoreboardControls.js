@@ -231,7 +231,7 @@ export function registerScoreboardControls() {
     });
   }
 
-  // Server visibility toggle tile (player-only)
+  // Server visibility toggle tile
   if (elements.serverToggleBtn) {
     elements.serverToggleBtn.addEventListener("click", () => {
       themeState.isServerBadgeVisible = !themeState.isServerBadgeVisible;

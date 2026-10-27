@@ -20,7 +20,7 @@ import {
 } from "./history.js";
 import {
   getCourtIdFromPathname,
-  getCourtRouteIdFromPathname,
+  getDirectCourtRouteFromPathname,
   getViewStateFromLocation,
   isAdminRootPathname,
 } from "./routeParsers.js";
@@ -34,10 +34,56 @@ import { finishStartupLoading } from "../ui/loading.js";
 import { showToast } from "../ui/toast.js";
 
 function showInvalidDirectCourtUrlToast(pathname = window.location.pathname) {
-  const requestedCourtId = getCourtRouteIdFromPathname(pathname);
-  if (requestedCourtId === null || isValidId("court", requestedCourtId)) return;
+  const route = getDirectCourtRouteFromPathname(pathname);
+  if (!route) return;
 
-  showToast(`Court "${requestedCourtId}" not found.`, TOAST_TYPES.ERROR);
+  const hasValidTargetId =
+    route.targetId !== null &&
+    (route.targetType === "player"
+      ? isValidId("court", route.targetId) || isValidId("match", route.targetId)
+      : isValidId("court", route.targetId));
+
+  if (!route.hasInvalidExtraSegments && hasValidTargetId) return;
+
+  if (route.targetType === "player") {
+    showToast(
+      route.targetId
+        ? `Court or match "${route.targetId}" not found.`
+        : "Court or match not found.",
+      TOAST_TYPES.ERROR,
+    );
+    return;
+  }
+
+  showToast(
+    route.targetId
+      ? `Court "${route.targetId}" not found.`
+      : "Court not found.",
+    TOAST_TYPES.ERROR,
+  );
+}
+
+function showDirectCourtRouteLoadFailureToast(pathname) {
+  const route = getDirectCourtRouteFromPathname(pathname);
+  if (!route) return;
+
+  const hasValidTargetId =
+    route.targetId !== null &&
+    (route.targetType === "player"
+      ? isValidId("court", route.targetId) || isValidId("match", route.targetId)
+      : isValidId("court", route.targetId));
+
+  if (route.hasInvalidExtraSegments || !hasValidTargetId) {
+    showInvalidDirectCourtUrlToast(pathname);
+    return;
+  }
+
+  const targetType = route.targetType === "player" ? "court or match" : "court";
+  const target = route.targetId ? ` "${route.targetId}"` : "";
+  showToast(
+    `Could not open ${targetType}${target}. Please try again.`,
+    TOAST_TYPES.ERROR,
+  );
 }
 
 export function registerEscapeKeyNavigation() {
@@ -187,7 +233,13 @@ export async function initializeAppNavigation() {
       let opened = true;
 
       if (routeState.playTargetId) {
-        const resolved = await resolvePlayRouteTarget(routeState.playTargetId);
+        let resolved = null;
+        try {
+          resolved = await resolvePlayRouteTarget(routeState.playTargetId);
+        } catch (error) {
+          console.warn("Could not resolve the requested court/match route:", error);
+          showDirectCourtRouteLoadFailureToast(initialPathname);
+        }
         if (resolved) {
           resolvedRouteState = createViewState({
             ...routeState,
@@ -245,6 +297,17 @@ export async function initializeAppNavigation() {
     await restoreViewState(createViewState({ page: NAV_PAGES.MENU }));
     replaceNavigationState(getCurrentViewState());
     showInvalidDirectCourtUrlToast(initialPathname);
+  } catch (error) {
+    console.warn("Could not initialize navigation from the requested URL:", error);
+    if (getDirectCourtRouteFromPathname(initialPathname)) {
+      try {
+        await restoreViewState(createViewState({ page: NAV_PAGES.MENU }));
+        replaceNavigationState(getCurrentViewState());
+      } catch (restoreError) {
+        console.warn("Could not recover to the menu after a route failure:", restoreError);
+      }
+      showDirectCourtRouteLoadFailureToast(initialPathname);
+    }
   } finally {
     finishStartupLoading();
   }
@@ -276,20 +339,42 @@ export function registerHistoryNavigation() {
       nextState.playTargetType === "unknown" &&
       nextState.playTargetId
     ) {
-      const resolved = await resolvePlayRouteTarget(nextState.playTargetId);
-      nextState = resolved
-        ? createViewState({
-            ...nextState,
-            courtId: resolved.courtId,
-            selectedCourtId: resolved.courtId,
-            playTargetType: resolved.type,
-            spectate: true,
-            returnToScoreboard: true,
-          })
-        : createViewState({ page: NAV_PAGES.PLAY });
+      try {
+        const resolved = await resolvePlayRouteTarget(nextState.playTargetId);
+        nextState = resolved
+          ? createViewState({
+              ...nextState,
+              courtId: resolved.courtId,
+              selectedCourtId: resolved.courtId,
+              playTargetType: resolved.type,
+              spectate: true,
+              returnToScoreboard: true,
+            })
+          : createViewState({ page: NAV_PAGES.PLAY });
+      } catch (error) {
+        console.warn("Could not resolve the requested court/match route:", error);
+        showDirectCourtRouteLoadFailureToast(window.location.pathname);
+        nextState = createViewState({ page: NAV_PAGES.PLAY });
+      }
     }
 
-    await restoreViewState(nextState);
+    try {
+      await restoreViewState(nextState);
+    } catch (error) {
+      const pathname = window.location.pathname;
+      console.warn("Could not restore the requested route:", error);
+      if (!getDirectCourtRouteFromPathname(pathname)) throw error;
+
+      try {
+        await restoreViewState(createViewState({ page: NAV_PAGES.MENU }));
+        replaceNavigationState(getCurrentViewState());
+      } catch (restoreError) {
+        console.warn("Could not recover to the menu after a route failure:", restoreError);
+      }
+      showDirectCourtRouteLoadFailureToast(pathname);
+      return;
+    }
+
     showInvalidDirectCourtUrlToast();
   });
 }
@@ -306,7 +391,17 @@ async function openCourtFromRoute(
   }
   if (matchId !== null && !isValidId("match", matchId)) return false;
 
-  const courtSnap = await getCourt(resolvedCourtId);
+  let courtSnap;
+  try {
+    courtSnap = await getCourt(resolvedCourtId);
+  } catch (error) {
+    console.warn("Could not look up the requested court:", error);
+    showToast(
+      `Could not open court "${resolvedCourtId}". Please try again.`,
+      TOAST_TYPES.ERROR,
+    );
+    return false;
+  }
   if (!courtSnap.exists()) {
     showToast(`Court "${resolvedCourtId}" not found.`, TOAST_TYPES.ERROR);
     return false;

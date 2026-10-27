@@ -179,7 +179,7 @@ test("scoreboard preserves the complete six-letter match ID title in both orient
 
 test("spectate search finds live match players and discovery tournament results", async () => {
   await leaveScoreboard();
-  clickMenuButton("Spectate");
+  clickMenuButton("Watch");
   await waitFor(() => document.querySelectorAll("#spectateCourtList .court-item").length >= 2, {
     label: "spectate courts",
   });

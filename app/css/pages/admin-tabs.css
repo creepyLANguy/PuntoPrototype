@@ -36,9 +36,17 @@ body.light-mode .tab-btn-theme:hover {
 }
 
 .tab-btn-theme {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   aspect-ratio: 1 / 1;
   border-radius: 100%;
   padding: 1svh;
+}
+
+.tab-btn-theme .icon {
+  width: 1.7em;
+  height: 1.7em;
 }
 
 body.light-mode .tab-btn.active {

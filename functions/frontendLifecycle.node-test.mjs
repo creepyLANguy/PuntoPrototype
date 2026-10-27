@@ -485,9 +485,9 @@ test("spectator joins with the court's active changeover visual state", async ()
   });
 
   const spectateButton = [...document.querySelectorAll(".menu-btn")].find(
-    (btn) => btn.textContent.trim() === "Spectate",
+    (btn) => btn.textContent.trim() === "Watch",
   );
-  assert.ok(spectateButton, "Spectate menu button exists");
+  assert.ok(spectateButton, "Watch menu button exists");
   spectateButton.click();
 
   await waitFor(() => document.querySelector(`#spectateCourtList [data-court-name="xyzza"]`), {
@@ -509,9 +509,9 @@ test("spectator joins with the court's active changeover visual state", async ()
 
 test("spectator sees live score updates pushed by other devices", async () => {
   const spectateButton = [...document.querySelectorAll(".menu-btn")].find(
-    (btn) => btn.textContent.trim() === "Spectate",
+    (btn) => btn.textContent.trim() === "Watch",
   );
-  assert.ok(spectateButton, "Spectate menu button exists");
+  assert.ok(spectateButton, "Watch menu button exists");
   spectateButton.click();
 
   await waitFor(() => document.querySelector(`#spectateCourtList [data-court-name="xyzza"]`), {

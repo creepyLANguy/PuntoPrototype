@@ -110,6 +110,38 @@ export function getCourtRouteIdFromPathname(
   );
 }
 
+
+// Identifies court-related deep-link attempts even when the target ID or path
+// shape is invalid. Bare /c and /p roots intentionally remain selection pages.
+export function getDirectCourtRouteFromPathname(
+  pathname = window.location.pathname,
+) {
+  const match = pathname.match(
+    /^\/(?:app\/)?(court|c|play|p)(?:\/([^/]+))?(\/.*)?$/i,
+  );
+  if (!match) return null;
+
+  const [, routeName, encodedTargetId, suffix] = match;
+  const hasInvalidExtraSegments = Boolean(suffix && suffix !== "/");
+  if (!encodedTargetId && !hasInvalidExtraSegments) return null;
+
+  let targetId = null;
+  if (encodedTargetId !== undefined) {
+    try {
+      targetId = decodeURIComponent(encodedTargetId).trim().toLowerCase();
+    } catch {
+      // Preserve malformed percent encoding for error reporting.
+      targetId = encodedTargetId;
+    }
+  }
+
+  return {
+    targetType: /^(?:play|p)$/i.test(routeName) ? "player" : "court",
+    targetId,
+    hasInvalidExtraSegments,
+  };
+}
+
 export function getMatchIdFromPathname(pathname = window.location.pathname) {
   return matchIdInPathname(/^\/(?:app\/)?m\/([^/]+)\/*$/i, ["match"], pathname);
 }
