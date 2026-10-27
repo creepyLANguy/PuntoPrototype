@@ -540,7 +540,10 @@ test("court Options sections and dividers adapt between player and spectator vie
     await settle(10);
     assert.equal(document.getElementById("joinCourtTile").style.display, "");
     assert.equal(document.getElementById("switchToSpectateTile").style.display, "none");
-    assert.equal(document.getElementById("serverToggleTile").style.display, "none");
+    const serverTile = document.getElementById("serverToggleTile");
+    const serverToggle = document.getElementById("serverToggleBtn");
+    assert.notEqual(serverTile.style.display, "none", "server display options remain available to spectators");
+    assert.equal(serverTile.closest(".settings-group"), groups.display);
 
     document.getElementById("settingsBtn").click();
     await settle(10);
@@ -552,6 +555,16 @@ test("court Options sections and dividers adapt between player and spectator vie
       [false, true],
       "only one divider separates the two remaining visible groups",
     );
+
+    const wasPressed = serverToggle.getAttribute("aria-pressed");
+    try {
+      serverToggle.click();
+      assert.equal(serverToggle.getAttribute("aria-pressed"), String(wasPressed !== "true"));
+      assert.equal(window.localStorage.getItem("serverBadge"), String(wasPressed !== "true"));
+    } finally {
+      serverToggle.click();
+    }
+    assert.equal(serverToggle.getAttribute("aria-pressed"), wasPressed);
   } finally {
     await enterCourt(COURT_ID, false, { historyMode: "skip" });
     await settle(10);

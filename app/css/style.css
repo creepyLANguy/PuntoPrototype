@@ -8370,7 +8370,7 @@ body.light-mode .dm-meta-value {
 
 .points.score-pending,
 .critical-glow.score-pending {
-  filter: blur(2.8px);
+  filter: blur(5.6px);
   transition: filter 1250ms ease-in;
   will-change: filter;
 }
@@ -8387,6 +8387,6 @@ body.light-mode .dm-meta-value {
 
   .points.score-pending,
   .critical-glow.score-pending {
-    filter: blur(1.6px);
+    filter: blur(3.0px);
   }
 }
