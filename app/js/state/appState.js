@@ -10,6 +10,9 @@ export const appState = {
   // Assigned during boot by initDeviceIdentity() (lifecycle/deviceIdentity.js).
   thisDeviceId: null,
   nfcDenied: false,
+  // True when NFC needs a user-initiated start or the user needs to retry it.
+  // This is separate from nfcDenied, which only represents permission denial.
+  nfcActivationRequired: false,
   allCourts: [],
   filteredCourts: [],
   selectedPlayCourt: null,

@@ -198,7 +198,7 @@ export async function enterCourt(
   if (elements.adminLoginBtn) {
     elements.adminLoginBtn.style.display = "none";
   }
-  if (elements.activateNfcBtn) {
+  if (elements.activateNfcBtn && !appState.nfcActivationRequired) {
     elements.activateNfcBtn.classList.add("hidden");
   }
 
@@ -282,7 +282,7 @@ export function leaveCourt(historyMode = "push") {
   if (elements.appearanceMenuBtn) elements.appearanceMenuBtn.style.display = "";
   if (elements.adminLoginBtn) elements.adminLoginBtn.style.display = "";
 
-  if (appState.nfcDenied && elements.activateNfcBtn) {
+  if (appState.nfcActivationRequired && elements.activateNfcBtn) {
     elements.activateNfcBtn.classList.remove("hidden");
   }
 

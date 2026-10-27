@@ -3,6 +3,7 @@
 // format itself is parsed by nfc/parser.js.
 import { COOLDOWN_MS, EVENT_TYPES, TOAST_TYPES } from "../config/constants.js";
 import { enableSpectateMode, enterCourt } from "../court/session.js";
+import { isLikelyMobileDevice } from "../lifecycle/deviceIdentity.js";
 import { updateDevice } from "../firebase/deviceRepository.js";
 import { addPoint, undoLastPoint } from "../scoring/actions.js";
 import { performShallowReset } from "../scoring/reset.js";
@@ -35,7 +36,7 @@ export function registerNfcActivation()
 {
   elements.activateNfcBtn.addEventListener("click", async () =>
   {
-    await initNfc();
+    await initNfc({ userInitiated: true });
   });
 }
 
@@ -66,26 +67,163 @@ async function registerDeviceToCurrentCourt()
 
 let nfcInitialized = false;
 
-export async function initNfc()
-{
-  if (nfcInitialized) return;
+let nfcStartupCheckPromise = null;
 
-  // Check NFC support
-  if (!("NDEFReader" in window))
+let nfcScanPromise = null;
+
+// A direct activation must take precedence over a pending startup permission
+// query, so the browser's user-activation requirement is preserved.
+let userActivationRequested = false;
+
+const NFC_MESSAGES = {
+  insecureContext: "NFC requires a secure HTTPS connection.",
+  unsupportedBrowser: "NFC scanning is unavailable in this browser. Try a supported browser on an NFC-capable device over HTTPS.",
+  permissionRequired: "NFC permission is required. Tap Activate NFC and allow access when prompted.",
+  permissionDenied: "NFC access is blocked for this site. Allow NFC in your browser's site settings, then try again.",
+  ready: "NFC is ready. Tap an NFC tag to scan.",
+  adapterUnavailable: "No compatible NFC adapter was detected. Check that this device supports NFC.",
+  adapterInaccessible: "NFC is turned off or cannot be accessed. Enable NFC in device settings and try again.",
+  initializationError: "NFC scanning could not be started. Please try again."
+};
+
+export function initNfc({ userInitiated = false } = {})
+{
+  if (nfcInitialized) return Promise.resolve();
+
+  if (userInitiated)
   {
-    showToast("NFC is not supported on this device.", TOAST_TYPES.ERROR);
+    userActivationRequested = true;
+
+    if (window.isSecureContext === false)
+    {
+      makeNfcActivationAvailable();
+      showToast(NFC_MESSAGES.insecureContext, TOAST_TYPES.ERROR);
+      return Promise.resolve();
+    }
+
+    // The presence of the API is separate from the presence of NFC hardware.
+    // Only mobile/tablet-like targets receive this diagnostic, and only after
+    // an explicit activation attempt. Desktop and ambiguous devices stay quiet.
+    if (typeof window.NDEFReader !== "function")
+    {
+      makeNfcActivationAvailable();
+      if (isLikelyMobileDevice(navigator))
+      {
+        showToast(NFC_MESSAGES.unsupportedBrowser, TOAST_TYPES.ERROR);
+      }
+      return Promise.resolve();
+    }
+
+    // Do not await a permission query before scan(): browsers may require this
+    // call to occur directly inside the activation button's user gesture.
+    return startNfcScan({ userInitiated: true });
+  }
+
+  if (nfcStartupCheckPromise) return nfcStartupCheckPromise;
+
+  nfcStartupCheckPromise = initializeNfcOnStartup().finally(() =>
+  {
+    nfcStartupCheckPromise = null;
+  });
+  return nfcStartupCheckPromise;
+}
+
+async function initializeNfcOnStartup()
+{
+  // Do not produce startup diagnostics for an environment that cannot satisfy
+  // the secure-context requirement.
+  if (window.isSecureContext === false)
+  {
+    // Leave a manual path to the actionable HTTPS message on mobile/tablet-like
+    // devices, but do not interrupt startup with a toast.
+    if (isLikelyMobileDevice(navigator)) makeNfcActivationAvailable();
     return;
+  }
+
+  // An absent browser API is not evidence that the physical device lacks NFC.
+  // Expose activation silently on mobile/tablet-like devices so the user can
+  // explicitly request browser-support guidance; desktops stay quiet and hidden.
+  if (typeof window.NDEFReader !== "function")
+  {
+    if (isLikelyMobileDevice(navigator)) makeNfcActivationAvailable();
+    return;
+  }
+
+  const permission = await queryNfcPermission();
+
+  // A click may have started a scan while this asynchronous permission query
+  // was pending. Never race it with a second reader/scan initialization.
+  if (userActivationRequested || nfcInitialized || nfcScanPromise) return;
+
+  if (!permission.available)
+  {
+    makeNfcActivationAvailable();
+    return;
+  }
+
+  if (permission.state === "granted")
+  {
+    await startNfcScan({ userInitiated: false });
+    return;
+  }
+
+  makeNfcActivationAvailable();
+
+  if (permission.state === "prompt")
+  {
+    showToast(NFC_MESSAGES.permissionRequired, TOAST_TYPES.INFO);
+  }
+  else if (permission.state === "denied")
+  {
+    appState.nfcDenied = true;
+    showToast(NFC_MESSAGES.permissionDenied, TOAST_TYPES.ERROR);
+  }
+}
+
+async function queryNfcPermission()
+{
+  if (!navigator.permissions || typeof navigator.permissions.query !== "function")
+  {
+    return { available: false, state: null };
   }
 
   try
   {
-    nfcReader = new NDEFReader();
-    await nfcReader.scan();
-    nfcInitialized = true;
-    appState.nfcDenied = false;
-    elements.activateNfcBtn.classList.add("hidden");
+    const permissionStatus = await navigator.permissions.query({ name: "nfc" });
+    return {
+      available: true,
+      state: permissionStatus?.state || null
+    };
+  }
+  catch (error)
+  {
+    // Some browsers reject unsupported permission descriptors. That does not
+    // mean NFC hardware is missing; leave activation available as a fallback.
+    console.warn("Could not query NFC permission state:", error);
+    return { available: false, state: null };
+  }
+}
 
-    console.log("NFC scanning started.");
+function startNfcScan({ userInitiated })
+{
+  if (nfcInitialized) return Promise.resolve();
+  if (nfcScanPromise) return nfcScanPromise;
+
+  // startNfcScanAttempt invokes scan() synchronously before its first await,
+  // retaining the browser's user activation when called from the click handler.
+  const scanAttempt = startNfcScanAttempt({ userInitiated });
+  nfcScanPromise = scanAttempt.finally(() =>
+  {
+    nfcScanPromise = null;
+  });
+  return nfcScanPromise;
+}
+
+async function startNfcScanAttempt({ userInitiated })
+{
+  try
+  {
+    nfcReader = new window.NDEFReader();
 
     nfcReader.onreading = (event) =>
     {
@@ -124,25 +262,74 @@ export async function initNfc()
       showToast("NFC is disabled on your device. Enable it in device settings to use tag scanning.", TOAST_TYPES.ERROR);
     };
 
+    await nfcReader.scan();
+
+    if (nfcInitialized) return;
+
+    nfcInitialized = true;
+    appState.nfcDenied = false;
+    appState.nfcActivationRequired = false;
+    elements.activateNfcBtn.classList.add("hidden");
+
+    console.log("NFC scanning started.");
+    showToast(NFC_MESSAGES.ready, TOAST_TYPES.SUCCESS);
   }
   catch (error)
   {
-    if (error.name === "NotAllowedError")
-    {
-      showToast("NFC permission denied.", TOAST_TYPES.ERROR);
-      appState.nfcDenied = true;
-      elements.activateNfcBtn.classList.remove("hidden");
-    } else if (error.name === "NotSupportedError")
-    {
-      showToast("NFC not available on this device.", TOAST_TYPES.ERROR);
-    } else
-    {
-      showToast("NFC Error: Failed to initialize scanning.", TOAST_TYPES.ERROR);
-    }
-    console.error("NFC scan failed:", error);
+    nfcReader = null;
+    handleNfcInitializationError(error, { userInitiated });
   }
 }
 
+function handleNfcInitializationError(error, { userInitiated })
+{
+  console.error("NFC scan failed:", error);
+  makeNfcActivationAvailable();
+
+  if (error?.name === "NotAllowedError")
+  {
+    if (userInitiated)
+    {
+      appState.nfcDenied = true;
+      showToast(NFC_MESSAGES.permissionDenied, TOAST_TYPES.ERROR);
+    }
+    else
+    {
+      // Some browsers still require a gesture even after reporting a granted
+      // permission. Do not incorrectly persist this as a user denial.
+      showToast(NFC_MESSAGES.permissionRequired, TOAST_TYPES.INFO);
+    }
+    return;
+  }
+
+  if (error?.name === "NotSupportedError")
+  {
+    // This error is more informative than a missing API, but still avoid
+    // telling conventional desktops that their hardware is unsupported.
+    if (isLikelyMobileDevice(navigator))
+    {
+      showToast(NFC_MESSAGES.adapterUnavailable, TOAST_TYPES.ERROR);
+    }
+    return;
+  }
+
+  if (error?.name === "NotReadableError")
+  {
+    showToast(NFC_MESSAGES.adapterInaccessible, TOAST_TYPES.ERROR);
+    return;
+  }
+
+  showToast(NFC_MESSAGES.initializationError, TOAST_TYPES.ERROR);
+}
+
+function makeNfcActivationAvailable()
+{
+  appState.nfcActivationRequired = true;
+  if (elements.activateNfcBtn)
+  {
+    elements.activateNfcBtn.classList.remove("hidden");
+  }
+}
 
 function handleNfc(text)
 {
