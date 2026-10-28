@@ -419,3 +419,109 @@ test("match identity falls back to the matchup, then the match id, never the cou
   );
   assert.equal(resolveMatchTitle({ currentCourtId: "aaaaa" }, "khfqab"), "khfqab");
 });
+
+
+test("completed social tournament shows a podium; live tournament does not", () => {
+  const liveView = buildView();
+  const livePage = renderPublicDashboard(liveView, new Map());
+  assert.equal(livePage.querySelector(".tournament-podium"), null);
+
+  const view = {
+    ...liveView,
+    status: "completed",
+    finishedEarly: false,
+    finalStandings: {
+      entryType: "participant",
+      tiebreakers: ["totalPoints", "pointDiff", "pointsFor", "entryId"],
+      tiebreakerLabels: ["Total points", "Point difference", "Points for"],
+      rows: [
+        { rank: 1, entryId: "p1", name: "Alice", played: 3, totalPoints: 30, pointDiff: 12, pointsFor: 30 },
+        { rank: 2, entryId: "p2", name: "Ben", played: 3, totalPoints: 26, pointDiff: 8, pointsFor: 26 },
+        { rank: 3, entryId: "p3", name: "Chris", played: 3, totalPoints: 22, pointDiff: 2, pointsFor: 22 },
+      ],
+    },
+  };
+  const page = renderPublicDashboard(view, new Map());
+
+  assert.ok(page.querySelector(".tournament-podium"));
+  assert.match(page.textContent, /Tournament complete/);
+  assert.match(page.textContent, /Winner: Alice/);
+  assert.equal(page.querySelectorAll(".podium-rank-1 .podium-entry").length, 1);
+  assert.equal(page.querySelectorAll(".podium-rank-2 .podium-entry").length, 1);
+  assert.equal(page.querySelectorAll(".podium-rank-3 .podium-entry").length, 1);
+  assert.equal(page.querySelector(".ev-match-history")?.querySelector("summary")?.textContent, "Review rounds and match results");
+});
+
+test("a sporting tie is shown as joint winners rather than an invented second place", () => {
+  const view = {
+    ...buildView(),
+    status: "completed",
+    finalStandings: {
+      entryType: "participant",
+      tiebreakers: ["totalPoints", "pointDiff", "entryId"],
+      tiebreakerLabels: ["Total points", "Point difference"],
+      rows: [
+        { rank: 1, entryId: "p1", name: "Alice", played: 3, totalPoints: 24 },
+        { rank: 1, entryId: "p2", name: "Ben", played: 3, totalPoints: 24 },
+        { rank: 3, entryId: "p3", name: "Chris", played: 3, totalPoints: 18 },
+      ],
+    },
+  };
+  const page = renderPublicDashboard(view, new Map());
+
+  assert.match(page.textContent, /Joint winners: Alice, Ben/);
+  assert.equal(page.querySelectorAll(".podium-rank-1 .podium-entry").length, 2);
+  assert.equal(page.querySelector(".podium-rank-2"), null);
+  assert.equal(page.querySelectorAll(".podium-rank-3 .podium-entry").length, 1);
+});
+
+test("an unresolved knockout bracket does not invent a champion or podium", () => {
+  const view = {
+    ...buildView(),
+    status: "completed",
+    format: {
+      ...buildView().format,
+      id: "singleElimination",
+      kind: "bracket",
+      entryMode: "team",
+    },
+    finalStandings: {
+      entryType: "team",
+      finalDecided: false,
+      tiebreakers: ["placement", "eliminationStage", "entryId"],
+      tiebreakerLabels: ["Bracket progress"],
+      rows: [
+        { rank: null, placement: null, placementLabel: "Still in contention", entryId: "t1", name: "Team One", played: 2 },
+      ],
+    },
+    bracket: null,
+  };
+  const page = renderPublicDashboard(view, new Map());
+
+  assert.match(page.textContent, /Final result not decided/);
+  assert.match(page.textContent, /No champion or final podium can be declared/);
+  assert.equal(page.querySelector(".tournament-podium"), null);
+});
+
+test("early completion explains that positions are based on recorded results", () => {
+  const view = {
+    ...buildView(),
+    status: "completed",
+    finishedEarly: true,
+    completionReason: "Venue closing",
+    finalStandings: {
+      entryType: "participant",
+      tiebreakers: ["totalPoints", "entryId"],
+      tiebreakerLabels: ["Total points"],
+      rows: [
+        { rank: 1, entryId: "p1", name: "Alice", played: 1, totalPoints: 12 },
+        { rank: 2, entryId: "p2", name: "Ben", played: 1, totalPoints: 8 },
+      ],
+    },
+  };
+  const page = renderPublicDashboard(view, new Map());
+
+  assert.match(page.textContent, /Tournament ended early/);
+  assert.match(page.textContent, /recorded results only/);
+  assert.doesNotMatch(page.textContent, /Winner: Alice/);
+});
