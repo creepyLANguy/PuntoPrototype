@@ -155,7 +155,7 @@ describe("shared tournament standings", () => {
       formatId: "groupKnockout",
       entryMode: "team",
       config: { groupCount: 2, advancePerGroup: 1 },
-      teams: teams(["t1", "t2", "t3", "t4"]),
+      teams: teams(["t1", "t2", "t3", "t4"]).map((team) => ({ ...team, seed: null })),
       fixtures: [
         fixture({ id: "group-match", a: "t1", b: "t4", pointsA: 6, pointsB: 6, winner: "draw", stage: "group" }),
         fixture({ id: "other-group-match", a: "t2", b: "t3", pointsA: 5, pointsB: 5, winner: "draw", stage: "group" }),
@@ -220,6 +220,41 @@ describe("King/Queen of the Court rules", () => {
     const topCourt = result.assignments.find((assignment) => assignment.courtLevel === 1);
     expect(topCourt).toBeDefined();
     expect([topCourt.sides.A.teamId, topCourt.sides.B.teamId]).toContain("t2");
+  });
+
+  test("an entry sitting out the latest round keeps its last played court position", () => {
+    const ts = teams(["t1", "t2", "t3", "t4"]);
+    const earlier = fixture({
+      id: "earlier-court-2",
+      a: "t3",
+      b: "t4",
+      pointsA: 8,
+      pointsB: 2,
+      winner: "A",
+      courtLevel: 2,
+      roundId: "r1",
+      roundNumber: 1,
+    });
+    const later = fixture({
+      id: "latest-court-1",
+      a: "t1",
+      b: "t2",
+      pointsA: 8,
+      pointsB: 2,
+      winner: "A",
+      courtLevel: 1,
+      roundId: "r2",
+      roundNumber: 2,
+    });
+    const input = kingState({ courtCount: 2, finalRanking: "courtPosition" }, ts, [earlier, later]);
+    input.rounds = [
+      { roundId: "r1", roundNumber: 1, generationSnapshot: { queue: [] } },
+      { roundId: "r2", roundNumber: 2, generationSnapshot: { queue: [] } },
+    ];
+
+    const result = tournaments.getFormat("kingCourt").calculateStandings(input);
+    expect(result.rows.find((row) => row.entryId === "t1").finalCourtPosition).toBe(1);
+    expect(result.rows.find((row) => row.entryId === "t3").finalCourtPosition).toBe(2);
   });
 
   test("final ranking honors court position or configured point method", () => {
