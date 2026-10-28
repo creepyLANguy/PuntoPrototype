@@ -2,7 +2,15 @@ const { calculateStandings: standings } = require("../standings");
 const { TournamentDomainError } = require("../errors");
 const { fixtureOutcome } = require("../results");
 const { entryIdsOfSide } = require("../entities");
-const { advanceBracketState, bracketStandings, nextPowerOfTwo, seedOrder, setFeed } = require("./bracketHelpers");
+const {
+  advanceBracketState,
+  bracketStandings,
+  canProduceThirdPlaceLoser,
+  makeByeOrScheduled,
+  nextPowerOfTwo,
+  seedOrder,
+  setFeed,
+} = require("./bracketHelpers");
 const {
   baseRound,
   calculateRoundResult,
@@ -94,10 +102,8 @@ const groupKnockout = {
       : { allowed: true, reason: null };
   },
   calculateStandings(state) {
-    const groups = groupAssignments(
-      state,
-      this.normalizeConfig(state.tournament?.format?.config || {}),
-    );
+    const cfg = this.normalizeConfig(state.tournament?.format?.config || {});
+    const groups = groupAssignments(state, cfg);
     const groupIdByTeamId = {};
     // Once group fixtures have been generated, their stored groupId is the
     // source of truth. Reassigning groups from the current active roster would
@@ -122,6 +128,9 @@ const groupKnockout = {
       tiebreakers: GROUP_STANDINGS_TIEBREAKERS,
       rankByGroup: true,
       fixtureFilter: (fixture) => fixture.stage === "group",
+      pointsForWin: cfg.pointsForWin,
+      pointsForDraw: cfg.pointsForDraw,
+      pointsForLoss: cfg.pointsForLoss,
     });
   },
   calculateFinalStandings(state) {
@@ -299,7 +308,7 @@ function generateKnockout(state) {
           B: { fixtureId: right.fixtureId, outcome: "winner" },
         };
       }
-      const fixture = makeFixture({
+      const fixture = makeByeOrScheduled({
         roundNumber,
         index,
         label:
@@ -308,7 +317,6 @@ function generateKnockout(state) {
             : `Knockout Round ${bracketRound} - Match ${index + 1}`,
         stage: "knockout",
         sides,
-        status: (sides.A && !sides.B) || (!sides.A && sides.B) ? "bye" : "scheduled",
         bracketPosition: position,
         sourceFixtureIds: [sourceRefs.A?.fixtureId, sourceRefs.B?.fixtureId].filter(Boolean),
         sourceRefs,
@@ -324,9 +332,7 @@ function generateKnockout(state) {
       const semifinals = previous.map((position) => byPosition[position]);
       if (
         semifinals.length === 2 &&
-        semifinals.every((fixture) =>
-          fixture && fixture.stage === "knockout" && fixture.status !== "bye"
-        )
+        semifinals.every(canProduceThirdPlaceLoser)
       ) {
         const thirdPlace = makeFixture({
           roundNumber,
