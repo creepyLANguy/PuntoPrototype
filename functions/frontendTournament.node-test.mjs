@@ -524,4 +524,5 @@ test("early completion explains that positions are based on recorded results", (
   assert.match(page.textContent, /Tournament ended early/);
   assert.match(page.textContent, /recorded results only/);
   assert.doesNotMatch(page.textContent, /Winner: Alice/);
+  assert.equal(page.querySelector(".tournament-podium"), null);
 });
