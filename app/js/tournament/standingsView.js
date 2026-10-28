@@ -117,7 +117,7 @@ export function renderStandings(
                 },
                 column.key === "rank"
                   ? groupId
-                    ? index + 1
+                    ? row.rank
                     : ["bracket", "groupBracket"].includes(formatKind)
                       ? row.placementLabel || row.rank || "—"
                       : row.rank
