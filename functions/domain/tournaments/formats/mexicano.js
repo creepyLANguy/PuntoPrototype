@@ -40,7 +40,8 @@ const mexicano = {
   },
   canGenerateNextRound: canGenerateAfterComplete,
   calculateStandings(state) {
-    return standings(state, { entryType: "participant", mode: "social", formatId: "mexicano" });
+    const cfg = this.normalizeConfig(state.tournament?.format?.config || {});
+    return standings(state, { entryType: "participant", mode: "social", formatId: "mexicano", usePointDiff: cfg.usePointDiff });
   },
   calculateRoundResult,
   getRulesSummary(config) {
