@@ -179,7 +179,17 @@ function bracketStandings(state, options = {}) {
     tiebreakers: ["entryId"],
     fixtureFilter,
   });
-  const fixtures = (state.fixtures || []).filter(fixtureFilter);
+  const fixtures = (state.fixtures || [])
+    .filter(fixtureFilter)
+    .sort(
+      (left, right) =>
+        Number(left.roundNumber || 0) - Number(right.roundNumber || 0) ||
+        String(left.fixtureId || "").localeCompare(
+          String(right.fixtureId || ""),
+          undefined,
+          { numeric: true },
+        ),
+    );
   const hasKnockoutFixtures = fixtures.some((fixture) =>
     ["knockout", "thirdPlace"].includes(fixture.stage),
   );
@@ -340,11 +350,28 @@ function resolveBracketFinal(state, formatId, fixtures) {
 }
 
 function makeByeOrScheduled(args) {
-  const sides = args.sides;
+  const sides = args.sides || {};
+  const sourceRefs = args.sourceRefs || {};
+  // A missing side is a real bye only when that slot has no pending source.
+  // Later-round placeholders can have one known side while the other side is
+  // still waiting on a match; treating those as byes can prematurely advance
+  // a team into the final and suppress the third-place fixture.
+  const isResolvedBye =
+    (sides.A && !sides.B && !sourceRefs.B?.fixtureId) ||
+    (!sides.A && sides.B && !sourceRefs.A?.fixtureId);
   return makeFixture({
     ...args,
-    status: (sides.A && !sides.B) || (!sides.A && sides.B) ? "bye" : "scheduled",
+    status: isResolvedBye ? "bye" : "scheduled",
   });
+}
+
+function canProduceThirdPlaceLoser(fixture) {
+  if (!fixture || fixture.stage !== "knockout") return false;
+  const hasBothEntrants = Boolean(fixture.sides?.A && fixture.sides?.B);
+  const hasTwoAdvancementSources = Boolean(
+    fixture.sourceRefs?.A?.fixtureId && fixture.sourceRefs?.B?.fixtureId,
+  );
+  return hasBothEntrants || hasTwoAdvancementSources;
 }
 
 module.exports = {
@@ -355,6 +382,7 @@ module.exports = {
   setFeed,
   advanceBracketState,
   bracketStandings,
+  canProduceThirdPlaceLoser,
   makeByeOrScheduled,
   sideFromTeam,
 };
