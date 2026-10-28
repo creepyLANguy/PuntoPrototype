@@ -128,14 +128,31 @@ function calculateStandings(state, options = {}) {
   // In particular, head-to-head is a mini-table against the other tied entries,
   // not a pairwise score-margin comparator (which can be non-transitive in a
   // three-way circular tie). IDs order tied rows for display only.
-  const rankingGroups = rankRows(rows, tiebreakers, headToHead);
-  const rankedRows = rankingGroups.flat();
-  let position = 1;
-  for (const group of rankingGroups) {
-    group.forEach((row) => {
-      row.rank = position;
-    });
-    position += group.length;
+  const partitions = [];
+  if (options.rankByGroup) {
+    const byGroup = new Map();
+    for (const row of rows) {
+      const groupId = row.groupId || "";
+      if (!byGroup.has(groupId)) byGroup.set(groupId, []);
+      byGroup.get(groupId).push(row);
+    }
+    for (const [groupId, groupRows] of [...byGroup.entries()].sort(([a], [b]) => a.localeCompare(b))) {
+      partitions.push({ groupId, groups: rankRows(groupRows, tiebreakers, headToHead) });
+    }
+  } else {
+    partitions.push({ groupId: null, groups: rankRows(rows, tiebreakers, headToHead) });
+  }
+
+  const rankedRows = [];
+  for (const partition of partitions) {
+    let position = 1;
+    for (const group of partition.groups) {
+      group.forEach((row) => {
+        row.rank = position;
+        rankedRows.push(row);
+      });
+      position += group.length;
+    }
   }
 
   return {
