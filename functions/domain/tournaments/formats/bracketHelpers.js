@@ -172,7 +172,8 @@ function bracketStandings(state, options = {}) {
   const formatId = state.tournament?.format?.id || "singleElimination";
   const fixtureFilter =
     options.fixtureFilter ||
-    ((fixture) => formatId !== "groupKnockout" || ["knockout", "thirdPlace"].includes(fixture.stage));
+    ((fixture) =>
+      formatId !== "groupKnockout" || ["knockout", "thirdPlace"].includes(fixture.stage));
   const result = genericStandings(state, {
     entryType: "team",
     mode: "league",
@@ -287,7 +288,9 @@ function bracketStandings(state, options = {}) {
 
   result.rows.sort((left, right) => {
     if (left.placement != null && right.placement != null)
-      return left.placement - right.placement || String(left.entryId).localeCompare(String(right.entryId));
+      return (
+        left.placement - right.placement || String(left.entryId).localeCompare(String(right.entryId))
+      );
     if (left.placement != null) return -1;
     if (right.placement != null) return 1;
     if (left.qualified !== right.qualified) return left.qualified ? -1 : 1;
@@ -299,7 +302,9 @@ function bracketStandings(state, options = {}) {
   });
   result.tiebreakers = ["placement", "eliminationStage", "entryId"];
   result.tiebreakerLabels = [
-    final ? "Final placement (tied entries share a rank)" : "Bracket progress (not final placement)",
+    final
+      ? "Final placement (tied entries share a rank)"
+      : "Bracket progress (not final placement)",
     "Elimination stage",
     "Entry ID (display only)",
   ];
@@ -343,7 +348,9 @@ function resolveBracketFinal(state, formatId, fixtures) {
       fixture.stage === "knockout" &&
       !/third[- ]place/i.test(String(fixture.label || "")),
   );
-  const explicitFinal = finals.filter((fixture) => /^final$/i.test(String(fixture.label || "").trim()));
+  const explicitFinal = finals.filter((fixture) =>
+    /^final$/i.test(String(fixture.label || "").trim()),
+  );
   const candidates = explicitFinal.length ? explicitFinal : finals;
   const finalFixture = candidates.sort((a, b) => b.roundNumber - a.roundNumber)[0];
   return resultFor(finalFixture);
