@@ -192,6 +192,52 @@ describe("shared tournament standings", () => {
     expect(result.rows.find((row) => row.entryId === "t2").rank).toBe(1);
     expect(result.rows.find((row) => row.entryId === "t3").rank).toBe(1);
   });
+
+  test("group-knockout standings and qualification honor configured win, draw, and loss points", () => {
+    const input = state({
+      formatId: "groupKnockout",
+      entryMode: "team",
+      config: {
+        groupCount: 1,
+        advancePerGroup: 2,
+        pointsForWin: 1,
+        pointsForDraw: 3,
+        pointsForLoss: 0,
+      },
+      teams: teams(["a", "b", "c"]),
+      rounds: [{ roundId: "r1", roundNumber: 1, fixtureIds: ["a-beats-b", "b-beats-c", "a-draws-c"] }],
+      fixtures: [
+        fixture({
+          id: "a-beats-b", a: "a", b: "b", pointsA: 6, pointsB: 3,
+          winner: "A", stage: "group", groupId: "A",
+        }),
+        fixture({
+          id: "b-beats-c", a: "b", b: "c", pointsA: 6, pointsB: 3,
+          winner: "A", stage: "group", groupId: "A",
+        }),
+        fixture({
+          id: "a-draws-c", a: "a", b: "c", pointsA: 6, pointsB: 6,
+          winner: "draw", stage: "group", groupId: "A",
+        }),
+      ],
+    });
+
+    const format = tournaments.getFormat("groupKnockout");
+    const standings = format.calculateStandings(input);
+    expect(standings.rows.map((row) => [row.entryId, row.competitionPoints])).toEqual([
+      ["a", 4],
+      ["c", 3],
+      ["b", 1],
+    ]);
+    expect(standings.rows.map((row) => row.rank)).toEqual([1, 2, 3]);
+
+    const knockout = format.generateNextRound(input);
+    const qualifiedIds = knockout.fixtures.flatMap((fixture) => [
+      fixture.sides.A?.teamId,
+      fixture.sides.B?.teamId,
+    ]).filter(Boolean).sort();
+    expect(qualifiedIds).toEqual(["a", "c"]);
+  });
 });
 
 describe("King/Queen of the Court rules", () => {
