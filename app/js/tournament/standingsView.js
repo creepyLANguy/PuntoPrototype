@@ -255,6 +255,7 @@ const STAGE_LABELS = {
   losers: "Losers bracket",
   grandFinal: "Grand final",
   grandFinalReset: "Grand final reset",
+  thirdPlace: "Third-place match",
 };
 
 // Columns per bracket round, horizontally scrollable on phones rather than
