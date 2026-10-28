@@ -286,7 +286,7 @@ function bracketStandings(state, options = {}) {
   result.tiebreakerLabels = [
     final ? "Final placement (tied entries share a rank)" : "Bracket progress (not final placement)",
     "Elimination stage",
-    "Draw order (display only)",
+    "Entry ID (display only)",
   ];
   result.finalDecided = Boolean(final);
   result.championId = final?.winnerIds?.[0] || null;
@@ -301,10 +301,11 @@ function resolveBracketFinal(state, formatId, fixtures) {
     const outcome = fixtureOutcome(fixture);
     if (!outcome || !["A", "B"].includes(outcome.winner)) return null;
     const loser = outcome.winner === "A" ? "B" : "A";
-    return {
-      winnerIds: entryIdsOfSide(fixture.sides?.[outcome.winner]),
-      loserIds: entryIdsOfSide(fixture.sides?.[loser]),
-    };
+    const winnerIds = entryIdsOfSide(fixture.sides?.[outcome.winner]);
+    const loserIds = entryIdsOfSide(fixture.sides?.[loser]);
+    // Malformed or incomplete fixtures must never produce a fictional title.
+    if (!winnerIds.length || !loserIds.length) return null;
+    return { winnerIds, loserIds };
   };
 
   if (formatId === "doubleElimination") {
