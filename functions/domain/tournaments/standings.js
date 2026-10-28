@@ -165,25 +165,33 @@ function calculateStandings(state, options = {}) {
 }
 
 function applyFinalCourtPositions(state, rowsById, entryType) {
-  const lastCompletedRound = [...(state.rounds || [])]
-    .sort((a, b) => b.roundNumber - a.roundNumber)
-    .find((round) =>
-      (state.fixtures || []).some(
-        (fixture) =>
-          fixture.roundId === round.roundId &&
-          fixture.status === "completed" &&
-          fixtureOutcome(fixture),
-      ),
+  // A player/team may sit out the last round. Use their most recent court
+  // appearance rather than demoting them to an invented, infinitely low court.
+  const fixtures = (state.fixtures || [])
+    .filter(
+      (fixture) =>
+        fixture.status === "completed" &&
+        fixtureOutcome(fixture) &&
+        Number.isFinite(Number(fixture.courtLevel)) &&
+        Number(fixture.courtLevel) >= 1,
+    )
+    .sort(
+      (a, b) =>
+        b.roundNumber - a.roundNumber ||
+        Number(a.courtLevel) - Number(b.courtLevel) ||
+        String(a.fixtureId).localeCompare(String(b.fixtureId)),
     );
-  if (!lastCompletedRound) return;
-  for (const fixture of state.fixtures || []) {
-    if (fixture.roundId !== lastCompletedRound.roundId || fixture.status !== "completed") continue;
+  for (const fixture of fixtures) {
     const position = Number(fixture.courtLevel);
-    if (!Number.isFinite(position) || position < 1) continue;
-    const ids = entryType === "participant"
-      ? [...(fixture.sides?.A?.participantIds || []), ...(fixture.sides?.B?.participantIds || [])]
-      : [fixture.sides?.A?.teamId, fixture.sides?.B?.teamId].filter(Boolean);
-    for (const id of ids) if (rowsById[id]) rowsById[id].finalCourtPosition = position;
+    const ids =
+      entryType === "participant"
+        ? [...(fixture.sides?.A?.participantIds || []), ...(fixture.sides?.B?.participantIds || [])]
+        : [fixture.sides?.A?.teamId, fixture.sides?.B?.teamId].filter(Boolean);
+    for (const id of ids) {
+      const row = rowsById[id];
+      if (row && row.finalCourtPosition === Number.MAX_SAFE_INTEGER)
+        row.finalCourtPosition = position;
+    }
   }
 }
 
