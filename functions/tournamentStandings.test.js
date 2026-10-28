@@ -350,3 +350,53 @@ describe("King/Queen of the Court rules", () => {
     expect(c.competitionPoints).toBe(3);
     expect(c.wins).toBe(1);
   });
+
+
+describe("King Court tie assignment safety", () => {
+  test("a tied court plus incoming movement never drops an entry", () => {
+    const entries = teams(["t1", "t2", "t3", "t4"]);
+    const input = state({
+      formatId: "kingCourt",
+      entryMode: "team",
+      config: { courtCount: 2, tieBehaviour: "stay" },
+      teams: entries,
+      rounds: [{ roundId: "r1", roundNumber: 1, generationSnapshot: { queue: [] } }],
+      fixtures: [
+        fixture({ id: "top-tie", a: "t1", b: "t2", pointsA: 6, pointsB: 6, courtLevel: 1, roundId: "r1" }),
+        fixture({ id: "lower-match", a: "t3", b: "t4", pointsA: 8, pointsB: 3, courtLevel: 2, roundId: "r1" }),
+      ],
+    });
+
+    const result = tournaments.getFormat("kingCourt").calculateNextCourtAssignments(input);
+    const assigned = result.assignments.flatMap((assignment) => [
+      assignment.sides.A.teamId,
+      assignment.sides.B.teamId,
+    ]);
+    const accountedFor = [...assigned, ...result.queue];
+
+    expect(assigned.filter((id) => ["t1", "t2"].includes(id)).sort()).toEqual(["t1", "t2"]);
+    expect(accountedFor.sort()).toEqual(["t1", "t2", "t3", "t4"]);
+    expect(new Set(accountedFor).size).toBe(4);
+  });
+
+  test("a missing seed cannot beat a valid seed by default in a tied match", () => {
+    const entries = teams(["t1", "t2", "t3", "t4"]);
+    entries[3].seed = null;
+    const input = state({
+      formatId: "kingCourt",
+      entryMode: "team",
+      config: { courtCount: 2, tieBehaviour: "higher_seed_wins" },
+      teams: entries,
+      rounds: [{ roundId: "r1", roundNumber: 1, generationSnapshot: { queue: [] } }],
+      fixtures: [
+        fixture({ id: "top-match", a: "t1", b: "t2", pointsA: 8, pointsB: 3, courtLevel: 1, roundId: "r1" }),
+        fixture({ id: "lower-tie", a: "t3", b: "t4", pointsA: 6, pointsB: 6, courtLevel: 2, roundId: "r1" }),
+      ],
+    });
+
+    const result = tournaments.getFormat("kingCourt").calculateNextCourtAssignments(input);
+    const lowerCourt = result.assignments.find((assignment) => assignment.courtLevel === 2);
+    expect(lowerCourt).toBeDefined();
+    expect([lowerCourt.sides.A.teamId, lowerCourt.sides.B.teamId].sort()).toEqual(["t3", "t4"]);
+  });
+});

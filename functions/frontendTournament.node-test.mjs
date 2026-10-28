@@ -526,3 +526,27 @@ test("early completion explains that positions are based on recorded results", (
   assert.doesNotMatch(page.textContent, /Winner: Alice/);
   assert.equal(page.querySelector(".tournament-podium"), null);
 });
+
+
+test("a completed tournament with no recorded match results does not announce a winner", () => {
+  const view = {
+    ...buildView(),
+    status: "completed",
+    finishedEarly: false,
+    completionReason: null,
+    finalStandings: {
+      entryType: "participant",
+      tiebreakers: ["totalPoints", "pointDiff", "entryId"],
+      tiebreakerLabels: ["Total points", "Point difference"],
+      rows: [
+        { rank: 1, entryId: "p1", name: "Alice", played: 0, totalPoints: 0, pointDiff: 0 },
+        { rank: 1, entryId: "p2", name: "Ben", played: 0, totalPoints: 0, pointDiff: 0 },
+      ],
+    },
+  };
+  const page = renderPublicDashboard(view, new Map());
+
+  assert.match(page.textContent, /No match results have been recorded/);
+  assert.doesNotMatch(page.textContent, /Winner: Alice|Joint winners: Alice, Ben/);
+  assert.equal(page.querySelector(".tournament-podium"), null);
+});

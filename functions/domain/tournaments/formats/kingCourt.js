@@ -104,15 +104,15 @@ const kingCourt = {
       .filter((fixture) => fixture.roundId === lastRound?.roundId)
       .sort((a, b) => a.courtLevel - b.courtLevel);
     const buckets = {};
+    const lockedPairs = {};
     const queue = [...(lastRound?.generationSnapshot?.queue || [])];
     for (const fixture of fixtures) {
       const outcome = fixtureOutcome(fixture);
       const winner = resolveWinner(fixture, outcome, cfg, state);
       if (!winner) {
-        // A "stay" tie (or equal/missing seeds) keeps the exact pairing on
-        // its current court instead of arbitrarily moving side B down.
-        addToBucket(buckets, fixture.courtLevel, fixture.sides.A);
-        addToBucket(buckets, fixture.courtLevel, fixture.sides.B);
+        // Preserve the tied pairing as an indivisible pair. Other sides that
+        // move into this court are handled separately instead of overflowing it.
+        lockedPairs[fixture.courtLevel] = [fixture.sides.A, fixture.sides.B];
         continue;
       }
       const loser = winner === "A" ? "B" : "A";
@@ -121,12 +121,32 @@ const kingCourt = {
       if (loserLevel > cfg.courtCount) queue.push(sideId(fixture.sides[loser]));
       else addToBucket(buckets, loserLevel, fixture.sides[loser]);
     }
+
     const assignments = [];
     for (let level = 1; level <= cfg.courtCount; level += 1) {
       const sides = buckets[level] || [];
-      while (sides.length < 2 && queue.length > 0) sides.push(sideFromQueue(state, queue.shift()));
-      if (sides.length >= 2)
-        assignments.push({ courtLevel: level, sides: { A: sides[0], B: sides[1] } });
+      const lockedPair = lockedPairs[level];
+      if (lockedPair) {
+        assignments.push({ courtLevel: level, sides: { A: lockedPair[0], B: lockedPair[1] } });
+        // Keep every side that was pushed into this occupied court available
+        // for another court or the sit-out queue.
+        queue.push(...sides.map(sideId));
+        continue;
+      }
+
+      // A court can host only one match. Never drop a third (or fourth) side
+      // when multiple neighbouring courts feed into the same bucket.
+      const selected = sides.slice(0, 2);
+      queue.push(...sides.slice(2).map(sideId));
+      while (selected.length < 2 && queue.length > 0)
+        selected.push(sideFromQueue(state, queue.shift()));
+      if (selected.length === 2) {
+        assignments.push({ courtLevel: level, sides: { A: selected[0], B: selected[1] } });
+      } else if (selected.length === 1) {
+        // An unmatched side must remain accounted for; it may be paired in a
+        // later round instead of disappearing from this one.
+        queue.push(sideId(selected[0]));
+      }
     }
     return { assignments, queue };
   },
@@ -208,7 +228,7 @@ function resolveWinner(fixture, outcome, cfg, state) {
     if (cfg.tieBehaviour === "stay") return null;
     const seedA = seedOfSide(state, fixture.sides.A);
     const seedB = seedOfSide(state, fixture.sides.B);
-    if (seedA === seedB) return null;
+    if (seedA == null || seedB == null || seedA === seedB) return null;
     return seedA < seedB ? "A" : "B";
   }
   return outcome.winner === "A" || outcome.winner === "B" ? outcome.winner : null;
@@ -218,7 +238,7 @@ function seedOfSide(state, side) {
   if (side?.teamId) {
     const team = (state.teams || []).find((entry) => entry.teamId === side.teamId);
     const seed = Number(team?.seed);
-    return team?.seed != null && Number.isFinite(seed) ? seed : Number.MAX_SAFE_INTEGER;
+    return team?.seed != null && Number.isFinite(seed) ? seed : null;
   }
   const ids = side?.participantIds || [];
   const entries = ids.map((id) =>
@@ -226,7 +246,7 @@ function seedOfSide(state, side) {
   );
   // Do not invent a comparison from a partial pair seed or infer seeds from IDs.
   if (!entries.length || entries.some((entry) => entry?.seed == null || !Number.isFinite(Number(entry.seed))))
-    return Number.MAX_SAFE_INTEGER;
+    return null;
   return entries.reduce((sum, entry) => sum + Number(entry.seed), 0) / entries.length;
 }
 

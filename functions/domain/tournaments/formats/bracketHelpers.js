@@ -180,6 +180,9 @@ function bracketStandings(state, options = {}) {
     fixtureFilter,
   });
   const fixtures = (state.fixtures || []).filter(fixtureFilter);
+  const hasKnockoutFixtures = fixtures.some((fixture) =>
+    ["knockout", "thirdPlace"].includes(fixture.stage),
+  );
   const lossCounts = {};
   const eliminationFixtures = {};
   const qualifiedIds = new Set();
@@ -256,15 +259,17 @@ function bracketStandings(state, options = {}) {
         (Boolean(final) && row.placement != null && row.placement > 1));
     row.placementLabel =
       row.placement == null
-        ? formatId === "groupKnockout" && !row.qualified
-          ? "Did not qualify"
-          : row.eliminated
-            ? "Eliminated"
-            : final
-              ? "Unplaced"
-              : row.qualified
-                ? "Still in contention"
-                : "Not yet played"
+        ? formatId === "groupKnockout" && !hasKnockoutFixtures
+          ? "Qualification not decided"
+          : formatId === "groupKnockout" && !row.qualified
+            ? "Did not qualify"
+            : row.eliminated
+              ? "Eliminated"
+              : final
+                ? "Unplaced"
+                : row.qualified
+                  ? "Still in contention"
+                  : "Not yet played"
         : row.placementTied
           ? String(row.placement) + " (tied)"
           : String(row.placement);

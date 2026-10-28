@@ -374,9 +374,11 @@ export function renderTournamentResults(view) {
       : "Tournament complete";
   const intro = early
     ? "These standings reflect recorded results only. Unplayed or cancelled matches are not treated as losses."
-    : isBracket && !standings?.finalDecided
-      ? "The recorded bracket does not establish a champion. No winner is shown until the required final (including any reset final) has a result."
-      : winners.length > 1
+    : !hasRecordedResults
+      ? "No match results have been recorded, so no winner or final placement can be established."
+      : isBracket && !standings?.finalDecided
+        ? "The recorded bracket does not establish a champion. No winner is shown until the required final (including any reset final) has a result."
+        : winners.length > 1
         ? "The configured sporting tie-breakers leave these entries tied for first place."
         : winners.length === 1
           ? isBracket
@@ -404,7 +406,7 @@ export function renderTournamentResults(view) {
                 ? "No champion or final podium can be declared from the results currently recorded."
                 : "There are not enough recorded results to establish a podium.",
           ),
-      winners.length && !early && finalDecided
+      hasRecordedResults && winners.length && !early && finalDecided
         ? h(
             "p",
             { className: "podium-winner-summary" },

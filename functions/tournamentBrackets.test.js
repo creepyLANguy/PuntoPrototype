@@ -348,3 +348,31 @@ describe("qualification tie safety", () => {
     );
   });
 });
+
+
+describe("group-knockout placement before qualification is decided", () => {
+  test("does not label all teams as not qualified when the knockout stage was never generated", () => {
+    const target = bracketState("groupKnockout", 4, {
+      groupCount: 2,
+      advancePerGroup: 1,
+    });
+    const format = tournaments.getFormat("groupKnockout");
+    append(target, format.generateInitialRound(target));
+    for (const fixture of target.fixtures) {
+      fixture.status = "completed";
+      fixture.resultSnapshot = {
+        winner: "A",
+        points: { A: 6, B: 3 },
+        games: { A: 6, B: 3 },
+        sets: { A: 1, B: 0 },
+        scoringMode: "fixedTotalPoints",
+        completedAt: fixture.roundNumber,
+      };
+    }
+
+    expect(target.fixtures.some((fixture) => ["knockout", "thirdPlace"].includes(fixture.stage))).toBe(false);
+    const standings = format.calculateFinalStandings(target);
+    expect(standings.rows.every((row) => row.placementLabel === "Qualification not decided")).toBe(true);
+    expect(standings.rows.some((row) => row.placementLabel === "Did not qualify")).toBe(false);
+  });
+});
