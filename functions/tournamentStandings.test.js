@@ -134,6 +134,30 @@ describe("shared tournament standings", () => {
     expect(aTeam.rank).toEqual(zTeam.rank);
   });
 
+  test("re-evaluates head-to-head among entries left tied by later tiebreakers", () => {
+    const input = state({
+      formatId: "roundRobin",
+      entryMode: "team",
+      teams: teams(["a", "b", "c", "d"]),
+      fixtures: [
+        fixture({ id: "a-beats-b", a: "a", b: "b", pointsA: 6, pointsB: 3 }),
+        fixture({ id: "c-beats-a", a: "a", b: "c", pointsA: 4, pointsB: 5 }),
+        fixture({ id: "a-draws-d", a: "a", b: "d", pointsA: 4, pointsB: 4 }),
+        fixture({ id: "b-draws-c", a: "b", b: "c", pointsA: 4, pointsB: 4 }),
+        fixture({ id: "b-beats-d", a: "b", b: "d", pointsA: 5, pointsB: 4 }),
+        fixture({ id: "d-beats-c", a: "c", b: "d", pointsA: 4, pointsB: 5 }),
+      ],
+    });
+
+    const result = tournaments.getFormat("roundRobin").calculateStandings(input);
+
+    // All four have equal competition points, wins and full-group head-to-head
+    // totals. Difference then separates a/b from c/d; the direct c-vs-d result
+    // must decide the remaining tie instead of falling back to their seeds.
+    expect(result.rows.map((row) => row.entryId)).toEqual(["a", "d", "c", "b"]);
+    expect(result.rows.map((row) => row.rank)).toEqual([1, 2, 3, 4]);
+  });
+
   test("Swiss Buchholz counts repeated encounters with the same opponent", () => {
     const input = state({
       formatId: "swiss",
@@ -387,6 +411,36 @@ describe("King/Queen of the Court rules", () => {
     expect(result.rows.find((row) => row.entryId === "t3").finalCourtPosition).toBe(2);
   });
 
+  test("court-priority points are based on the court played, for both sides", () => {
+    const ts = teams(["t1", "t2", "t3", "t4", "t5", "t6"]);
+    const fixtures = [
+      fixture({ id: "top-court", a: "t1", b: "t2", pointsA: 6, pointsB: 3, courtLevel: 1 }),
+      fixture({ id: "middle-court", a: "t3", b: "t4", pointsA: 3, pointsB: 6, courtLevel: 2 }),
+      fixture({ id: "bottom-court", a: "t5", b: "t6", pointsA: 6, pointsB: 4, courtLevel: 3 }),
+    ];
+    fixtures.forEach((item) => (item.roundId = "r1"));
+
+    const result = tournaments.getFormat("kingCourt").calculateStandings(
+      kingState(
+        { courtCount: 3, finalRanking: "points", scoringMethod: "courtPoints" },
+        ts,
+        fixtures,
+      ),
+    );
+    const pointsByEntry = Object.fromEntries(
+      result.rows.map((row) => [row.entryId, row.courtPoints]),
+    );
+
+    expect(pointsByEntry).toEqual({
+      t1: 3,
+      t2: 3,
+      t3: 2,
+      t4: 2,
+      t5: 1,
+      t6: 1,
+    });
+  });
+
   test("final ranking honors court position or configured point method", () => {
     const ts = teams(["t1", "t2", "t3", "t4"]);
     const fixtures = [
@@ -406,7 +460,7 @@ describe("King/Queen of the Court rules", () => {
     );
 
     expect(byCourt.rows[0].entryId).toBe("t1");
-    expect(byPoints.rows[0].entryId).toBe("t2");
+    expect(byPoints.rows[0].entryId).toBe("t1");
     expect(byRallyPoints.rows[0].entryId).toBe("t1");
   });
 });

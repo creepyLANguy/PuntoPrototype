@@ -206,11 +206,13 @@ inferring a winner from the last match displayed on screen.
   Swiss Buchholz counts each fixture, including a repeat encounter with the
   same opponent.
 - King/Queen of the Court honours the selected final-ranking and scoring
-  method. Court-position ranking uses each entry's most recent played court;
-  if an entry sat out the final round, its last recorded court is retained.
-  A tied round with "both sides stay" leaves the pairing together. If the
-  higher-seed rule cannot distinguish missing/equal seeds, both sides stay
-  rather than guessing from IDs.
+  method. In court-priority points mode, every entry playing on Court C in a
+  tournament with M courts earns M - C + 1 points for that match, regardless
+  of the match result; Court 1 therefore awards the most points. Court-position
+  ranking uses each entry's most recent played court; if an entry sat out the
+  final round, its last recorded court is retained. A tied round with "both
+  sides stay" leaves the pairing together. If the higher-seed rule cannot
+  distinguish missing/equal seeds, both sides stay rather than guessing from IDs.
 - Group tables are ranked independently and only use group-stage fixtures.
   They use sporting tie-break criteria (competition points, wins, head-to-head,
   set/game/point differences and points for); initial draw seeds do not decide

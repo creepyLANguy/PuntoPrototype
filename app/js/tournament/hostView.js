@@ -520,7 +520,9 @@ export function renderHostDashboard(ctx) {
         "aside",
         { className: "ev-col-side" },
         renderExceptions(view),
-        renderStandingsSection(view),
+        view.status === "completed" && view.format.id !== "groupKnockout"
+          ? null
+          : renderStandingsSection(view),
         renderRosterPanel(ctx),
         renderSettingsPanel(ctx),
         h(

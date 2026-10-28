@@ -76,8 +76,18 @@ function calculateStandings(state, options = {}) {
         row.setsAgainst += setTotals[other];
         row.setDiff = row.setsFor - row.setsAgainst;
         row.rallyPoints += sideTotals[side];
-        if (Number.isFinite(Number(fixture.courtLevel))) {
-          if (outcome.winner === side) row.courtPoints += Number(fixture.courtLevel);
+        const courtLevel = Number(fixture.courtLevel);
+        const courtCount = Number(options.courtCount);
+        if (
+          fixture.courtLevel != null &&
+          Number.isInteger(courtLevel) &&
+          courtLevel >= 1 &&
+          Number.isInteger(courtCount) &&
+          courtCount >= courtLevel
+        ) {
+          // Court-priority points reward the court played, not the match winner.
+          // Court 1 is the highest court, so its value is courtCount.
+          row.courtPoints += courtCount - courtLevel + 1;
         }
         if (mode === "social") {
           row.totalPoints += sideTotals[side];
@@ -278,37 +288,79 @@ function defaultTiebreakers(formatId, mode, options = {}) {
 }
 
 function rankRows(rows, tiebreakers, headToHead) {
-  let groups = [rows.slice()];
-  for (const key of tiebreakers.filter((candidate) => candidate !== "entryId")) {
-    const nextGroups = [];
-    for (const group of groups) {
-      if (group.length < 2) {
-        nextGroups.push(group);
-        continue;
-      }
-      const ordered = [...group].sort((left, right) =>
-        compareForKey(left, right, key, group, headToHead),
-      );
-      let bucket = [];
-      let previous = null;
-      for (const row of ordered) {
-        if (
-          previous &&
-          compareForKey(row, previous, key, group, headToHead) !== 0
-        ) {
-          nextGroups.push(bucket);
-          bucket = [];
+  const criteria = tiebreakers.filter((candidate) => candidate !== "entryId");
+  const headToHeadIndex = criteria.indexOf("headToHead");
+
+  function rankGroup(group, startIndex) {
+    if (group.length < 2) return [group];
+
+    for (let index = startIndex; index < criteria.length; index += 1) {
+      const key = criteria[index];
+      const buckets = bucketRows(group, key, headToHead);
+      if (buckets.length === 1) continue;
+
+      const rankedGroups = [];
+      for (const bucket of buckets) {
+        if (bucket.length < 2) {
+          rankedGroups.push(bucket);
+          continue;
         }
-        bucket.push(row);
-        previous = row;
+
+        if (key === "headToHead") {
+          // A mini-table that separates entries must be recalculated for the
+          // entries still tied, rather than carrying the larger table forward.
+          rankedGroups.push(...rankGroup(bucket, index));
+          continue;
+        }
+
+        if (headToHeadIndex >= 0 && headToHeadIndex < index) {
+          // A later tie-breaker may leave only a subset tied. Re-evaluate
+          // head-to-head within that subset before applying the remaining rules.
+          const headToHeadBuckets = bucketRows(bucket, "headToHead", headToHead);
+          if (headToHeadBuckets.length > 1) {
+            rankedGroups.push(
+              ...headToHeadBuckets.flatMap((tiedGroup) =>
+                rankGroup(tiedGroup, headToHeadIndex),
+              ),
+            );
+            continue;
+          }
+        }
+
+        rankedGroups.push(...rankGroup(bucket, index + 1));
       }
-      if (bucket.length) nextGroups.push(bucket);
+      return rankedGroups;
     }
-    groups = nextGroups;
+
+    return [group];
   }
-  return groups.map((group) =>
+
+  return rankGroup(rows, 0).map((group) =>
     group.sort((left, right) => String(left.entryId).localeCompare(String(right.entryId))),
   );
+}
+
+function bucketRows(rows, key, headToHead) {
+  const ordered = [...rows].sort((left, right) =>
+    compareForKey(left, right, key, rows, headToHead),
+  );
+  const buckets = [];
+  let bucket = [];
+  let previous = null;
+
+  for (const row of ordered) {
+    if (
+      previous &&
+      compareForKey(row, previous, key, rows, headToHead) !== 0
+    ) {
+      buckets.push(bucket);
+      bucket = [];
+    }
+    bucket.push(row);
+    previous = row;
+  }
+  if (bucket.length) buckets.push(bucket);
+  return buckets;
 }
 
 function compareForKey(left, right, key, tiedGroup, headToHead) {

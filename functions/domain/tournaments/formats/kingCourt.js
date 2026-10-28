@@ -79,6 +79,7 @@ const kingCourt = {
       formatId: "kingCourt",
       finalRanking: cfg.finalRanking,
       scoringMethod: cfg.scoringMethod,
+      courtCount: cfg.courtCount,
       includeFinalCourtPosition: true,
     });
   },
