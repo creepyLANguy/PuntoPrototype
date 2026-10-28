@@ -436,33 +436,51 @@ function crossSeed(qualifiers, bracketSize) {
   // qualification rank so the ranking order is otherwise preserved.
   const slotOrder = seedOrder(bracketSize);
   const seedPairs = [];
+  const pairBySeed = Array(bracketSize);
   for (let index = 0; index < slotOrder.length; index += 2) {
-    seedPairs.push([slotOrder[index] - 1, slotOrder[index + 1] - 1]);
+    const pair = [slotOrder[index] - 1, slotOrder[index + 1] - 1];
+    const pairIndex = seedPairs.push(pair) - 1;
+    pairBySeed[pair[0]] = pairIndex;
+    pairBySeed[pair[1]] = pairIndex;
   }
 
   let conflicts = countSameGroupMatchups(ordered, seedPairs);
-  let inversions = countRankInversions(ordered);
+  let rankOrderPenalty = calculateRankOrderPenalty(ordered);
   const iterationLimit = ordered.length * ordered.length;
 
-  for (let iteration = 0; conflicts > 0 && iteration < iterationLimit; iteration += 1) {
+  for (let iteration = 0; iteration < iterationLimit; iteration += 1) {
     let bestSwap = null;
     let bestConflicts = conflicts;
-    let bestInversions = inversions;
+    let bestPenalty = rankOrderPenalty;
 
     for (let left = 0; left < ordered.length; left += 1) {
       for (let right = left + 1; right < ordered.length; right += 1) {
-        [ordered[left], ordered[right]] = [ordered[right], ordered[left]];
-        const candidateConflicts = countSameGroupMatchups(ordered, seedPairs);
-        const candidateInversions = countRankInversions(ordered);
-        [ordered[left], ordered[right]] = [ordered[right], ordered[left]];
+        const candidateConflicts = conflictsAfterSwap(
+          ordered,
+          seedPairs,
+          pairBySeed,
+          conflicts,
+          left,
+          right,
+        );
+        const candidatePenalty =
+          rankOrderPenalty + (right - left) * (ordered[right].rank - ordered[left].rank);
+        const reducesConflicts = candidateConflicts < bestConflicts;
+        const preservesResolvedConflictsAndImprovesOrder =
+          conflicts === 0 &&
+          candidateConflicts === bestConflicts &&
+          candidatePenalty < bestPenalty;
 
         if (
-          candidateConflicts < bestConflicts ||
-          (candidateConflicts === bestConflicts && candidateInversions < bestInversions)
+          reducesConflicts ||
+          preservesResolvedConflictsAndImprovesOrder ||
+          (candidateConflicts === bestConflicts &&
+            candidateConflicts < conflicts &&
+            candidatePenalty < bestPenalty)
         ) {
           bestSwap = [left, right];
           bestConflicts = candidateConflicts;
-          bestInversions = candidateInversions;
+          bestPenalty = candidatePenalty;
         }
       }
     }
@@ -471,28 +489,51 @@ function crossSeed(qualifiers, bracketSize) {
     const [left, right] = bestSwap;
     [ordered[left], ordered[right]] = [ordered[right], ordered[left]];
     conflicts = bestConflicts;
-    inversions = bestInversions;
+    rankOrderPenalty = bestPenalty;
   }
 
   return ordered;
 }
 
 function countSameGroupMatchups(ordered, seedPairs) {
-  return seedPairs.reduce((count, [leftSeed, rightSeed]) => {
-    const left = ordered[leftSeed];
-    const right = ordered[rightSeed];
-    return count + (left && right && left.groupId === right.groupId ? 1 : 0);
-  }, 0);
+  return seedPairs.reduce(
+    (count, pair) => count + sameGroupPairConflict(ordered, pair),
+    0,
+  );
 }
 
-function countRankInversions(ordered) {
-  let inversions = 0;
-  for (let left = 0; left < ordered.length; left += 1) {
-    for (let right = left + 1; right < ordered.length; right += 1) {
-      if (ordered[left].rank > ordered[right].rank) inversions += 1;
-    }
+function conflictsAfterSwap(ordered, seedPairs, pairBySeed, conflicts, left, right) {
+  const affectedPairIndexes = new Set([pairBySeed[left], pairBySeed[right]]);
+  let candidateConflicts = conflicts;
+
+  for (const pairIndex of affectedPairIndexes) {
+    candidateConflicts -= sameGroupPairConflict(ordered, seedPairs[pairIndex]);
+    candidateConflicts += sameGroupPairConflict(
+      ordered,
+      seedPairs[pairIndex],
+      left,
+      right,
+    );
   }
-  return inversions;
+  return candidateConflicts;
+}
+
+function sameGroupPairConflict(ordered, pair, swapLeft = -1, swapRight = -1) {
+  const entryAt = (index) => {
+    if (index === swapLeft) return ordered[swapRight];
+    if (index === swapRight) return ordered[swapLeft];
+    return ordered[index];
+  };
+  const left = entryAt(pair[0]);
+  const right = entryAt(pair[1]);
+  return left && right && left.groupId === right.groupId ? 1 : 0;
+}
+
+function calculateRankOrderPenalty(ordered) {
+  return ordered.reduce(
+    (penalty, qualifier, index) => penalty + (ordered.length - index) * qualifier.rank,
+    0,
+  );
 }
 
 module.exports = groupKnockout;
