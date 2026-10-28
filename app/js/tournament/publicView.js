@@ -302,6 +302,9 @@ function ordinal(place) {
 }
 
 function podiumScore(row, view) {
+  // Knockout placement is determined by advancement/elimination, not league
+  // competition points accumulated across a small number of bracket matches.
+  if (["bracket", "groupBracket"].includes(view.format.kind)) return "";
   if (SOCIAL_FORMATS.has(view.format.id)) return String(row.totalPoints || 0) + " points";
   if (view.format.id === "kingCourt") {
     const config = view.format.config || {};
