@@ -255,12 +255,13 @@ function defaultTiebreakers(formatId, mode, options = {}) {
     return ["competitionPoints", "wins", "pointDiff", "buchholz", "pointsFor", "seed", "entryId"];
   }
   if (formatId === "kingCourt") {
-    if (options.finalRanking === "points") {
-      return options.scoringMethod === "rallyPoints"
-        ? ["rallyPoints", "courtPoints", "finalCourtPosition", "entryId"]
-        : ["courtPoints", "rallyPoints", "finalCourtPosition", "entryId"];
-    }
-    return ["finalCourtPosition", "courtPoints", "rallyPoints", "entryId"];
+    const pointTieBreakers =
+      options.scoringMethod === "rallyPoints"
+        ? ["rallyPoints", "courtPoints"]
+        : ["courtPoints", "rallyPoints"];
+    if (options.finalRanking === "points")
+      return [...pointTieBreakers, "finalCourtPosition", "entryId"];
+    return ["finalCourtPosition", ...pointTieBreakers, "entryId"];
   }
   if (mode === "social") return ["totalPoints", "pointDiff", "pointsFor", "entryId"];
   return [
