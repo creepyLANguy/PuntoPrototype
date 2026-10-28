@@ -13,6 +13,19 @@ const {
   toInt,
 } = require("./shared");
 
+// Group qualification uses sporting results only; initial draw seeds must not
+// decide a tied qualification cutoff. Entry IDs remain a display-order fallback.
+const GROUP_STANDINGS_TIEBREAKERS = [
+  "competitionPoints",
+  "wins",
+  "headToHead",
+  "setDiff",
+  "gameDiff",
+  "pointDiff",
+  "pointsFor",
+  "entryId",
+];
+
 const groupKnockout = {
   id: "groupKnockout",
   label: "Group + Knockout",
@@ -106,6 +119,7 @@ const groupKnockout = {
       mode: "league",
       formatId: "roundRobin",
       groupIdByTeamId,
+      tiebreakers: GROUP_STANDINGS_TIEBREAKERS,
       rankByGroup: true,
       fixtureFilter: (fixture) => fixture.stage === "group",
     });
@@ -311,7 +325,7 @@ function generateKnockout(state) {
       if (
         semifinals.length === 2 &&
         semifinals.every((fixture) =>
-          fixture && fixture.status !== "bye" && fixture.sides?.A && fixture.sides?.B
+          fixture && fixture.stage === "knockout" && fixture.status !== "bye"
         )
       ) {
         const thirdPlace = makeFixture({

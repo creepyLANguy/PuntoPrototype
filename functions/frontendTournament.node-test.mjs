@@ -473,6 +473,12 @@ test("a sporting tie is shown as joint winners rather than an invented second pl
   assert.equal(page.querySelectorAll(".podium-rank-1 .podium-entry").length, 2);
   assert.equal(page.querySelector(".podium-rank-2"), null);
   assert.equal(page.querySelectorAll(".podium-rank-3 .podium-entry").length, 1);
+  assert.deepEqual(
+    Array.from(page.querySelector(".tournament-podium").children).map((tier) =>
+      Array.from(tier.classList).find((name) => /^podium-rank-/.test(name)),
+    ),
+    ["podium-rank-1", "podium-rank-3"],
+  );
 });
 
 test("an unresolved knockout bracket does not invent a champion or podium", () => {

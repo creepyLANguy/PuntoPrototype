@@ -360,7 +360,7 @@ export function renderTournamentResults(view) {
   // Early completion can leave a partial league/social table. Keep it
   // explicitly provisional rather than awarding a visually definitive podium.
   const hasPodium = !early && hasRecordedResults && eligibleRows.length > 0 && (!isBracket || finalDecided);
-  const tiers = [2, 1, 3]
+  const tiers = [1, 2, 3]
     .map((place) => ({
       place,
       rows: eligibleRows.filter((row) => (isBracket ? row.placement : row.rank) === place),

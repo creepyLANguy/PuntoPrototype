@@ -392,10 +392,15 @@
   overflow-wrap: anywhere;
 }
 .podium-rank-1 {
+  grid-column: 2;
   padding-top: 22px;
 }
-.podium-rank-2,
+.podium-rank-2 {
+  grid-column: 1;
+  padding-top: 16px;
+}
 .podium-rank-3 {
+  grid-column: 3;
   padding-top: 16px;
 }
 .podium-medal {
@@ -475,6 +480,7 @@
     align-items: stretch;
   }
   .podium-tier {
+    grid-column: auto;
     padding-top: 14px;
     border-radius: 12px;
   }

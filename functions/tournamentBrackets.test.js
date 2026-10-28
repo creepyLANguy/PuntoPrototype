@@ -196,6 +196,52 @@ describe("bracket placements and podium rulings", () => {
     expect(standings.rows.filter((row) => row.placement === 4)).toHaveLength(1);
   });
 
+  test("single elimination generates and resolves a third-place match for an eight-team bracket", () => {
+    const target = bracketState("singleElimination", 8, { thirdPlaceMatch: true });
+    const format = tournaments.getFormat("singleElimination");
+    append(target, format.generateInitialRound(target));
+
+    const thirdPlace = target.fixtures.find((fixture) => fixture.stage === "thirdPlace");
+    expect(thirdPlace).toBeDefined();
+    expect(thirdPlace.status).toBe("scheduled");
+    expect(thirdPlace.sides.A).toBeNull();
+    expect(thirdPlace.sides.B).toBeNull();
+
+    simulateBracket(target, "A");
+
+    expect(thirdPlace.status).toBe("completed");
+    const standings = format.calculateFinalStandings(target);
+    expect(standings.rows.filter((row) => row.placement === 3)).toHaveLength(1);
+    expect(standings.rows.filter((row) => row.placement === 4)).toHaveLength(1);
+    expect(unresolvedCompletedSourceFailures(target)).toHaveLength(0);
+  });
+
+  test("group-knockout generates and resolves a third-place match for eight qualifiers", () => {
+    const target = bracketState("groupKnockout", 8, {
+      groupCount: 2,
+      advancePerGroup: 4,
+      thirdPlaceMatch: true,
+    });
+    const format = tournaments.getFormat("groupKnockout");
+    append(target, format.generateInitialRound(target));
+    for (const fixture of target.fixtures) completeFixture(fixture, "A");
+    append(target, format.generateNextRound(target));
+
+    const thirdPlace = target.fixtures.find((fixture) => fixture.stage === "thirdPlace");
+    expect(thirdPlace).toBeDefined();
+    expect(thirdPlace.status).toBe("scheduled");
+    expect(thirdPlace.sides.A).toBeNull();
+    expect(thirdPlace.sides.B).toBeNull();
+
+    simulateBracket(target, "A");
+
+    expect(thirdPlace.status).toBe("completed");
+    const standings = format.calculateFinalStandings(target);
+    expect(standings.rows.filter((row) => row.placement === 3)).toHaveLength(1);
+    expect(standings.rows.filter((row) => row.placement === 4)).toHaveLength(1);
+    expect(unresolvedCompletedSourceFailures(target)).toHaveLength(0);
+  });
+
   test("an eliminated entry is not labelled as still in contention while the final is pending", () => {
     const target = bracketState("singleElimination", 4);
     const format = tournaments.getFormat("singleElimination");
@@ -326,9 +372,12 @@ describe("bracket placements and podium rulings", () => {
 
 
 describe("qualification tie safety", () => {
-  test("does not silently select one team when a group tie crosses the qualification cutoff", () => {
+  test.each([
+    ["distinct seeds", false],
+    ["missing seeds", true],
+  ])("does not silently select one team for a cutoff tie with %s", (_seedCase, clearSeeds) => {
     const target = bracketState("groupKnockout", 4, { groupCount: 2, advancePerGroup: 1 });
-    target.teams.forEach((team) => { team.seed = null; });
+    if (clearSeeds) target.teams.forEach((team) => { team.seed = null; });
     const format = tournaments.getFormat("groupKnockout");
     append(target, format.generateInitialRound(target));
     for (const fixture of target.fixtures) {
@@ -343,6 +392,8 @@ describe("qualification tie safety", () => {
       };
     }
 
+    const standings = format.calculateStandings(target);
+    expect(standings.rows.every((row) => row.rank === 1)).toBe(true);
     expect(() => format.generateNextRound(target)).toThrow(
       "tie at the qualification cutoff",
     );

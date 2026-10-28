@@ -212,8 +212,10 @@ inferring a winner from the last match displayed on screen.
   higher-seed rule cannot distinguish missing/equal seeds, both sides stay
   rather than guessing from IDs.
 - Group tables are ranked independently and only use group-stage fixtures.
-  A tie that crosses the configured qualification cutoff blocks knockout
-  generation with `QUALIFICATION_TIE` instead of silently choosing one entry by ID.
+  They use sporting tie-break criteria (competition points, wins, head-to-head,
+  set/game/point differences and points for); initial draw seeds do not decide
+  a qualification tie. A tie that crosses the configured qualification cutoff
+  blocks knockout generation with `QUALIFICATION_TIE`.
 - Single-elimination and group-knockout draws can generate a third-place
   match when configured. Without a completed third-place match, equal
   semifinal losers share third place. Double-elimination standings wait for

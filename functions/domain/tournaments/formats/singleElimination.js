@@ -150,7 +150,7 @@ function generateBracket(state) {
       if (
         semifinals.length === 2 &&
         semifinals.every((fixture) =>
-          fixture && fixture.status !== "bye" && fixture.sides?.A && fixture.sides?.B
+          fixture && fixture.stage === "knockout" && fixture.status !== "bye"
         )
       ) {
         const thirdPlace = makeByeOrScheduled({
