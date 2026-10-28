@@ -168,30 +168,167 @@ function cloneFixture(fixture) {
   };
 }
 
-function bracketStandings(state) {
+function bracketStandings(state, options = {}) {
+  const formatId = state.tournament?.format?.id || "singleElimination";
+  const fixtureFilter =
+    options.fixtureFilter ||
+    ((fixture) => formatId !== "groupKnockout" || ["knockout", "thirdPlace"].includes(fixture.stage));
   const result = genericStandings(state, {
     entryType: "team",
     mode: "league",
     tiebreakers: ["entryId"],
+    fixtureFilter,
   });
+  const fixtures = (state.fixtures || []).filter(fixtureFilter);
   const lossCounts = {};
-  const winnerIds = new Set();
-  for (const fixture of state.fixtures || []) {
-    const outcome = fixtureOutcome(fixture);
-    if (!outcome || outcome.winner === "draw") continue;
-    const loser = outcome.winner === "A" ? "B" : "A";
-    for (const id of entryIdsOfSide(fixture.sides?.[loser]))
+  const eliminationFixtures = {};
+  const qualifiedIds = new Set();
+
+  for (const fixture of fixtures) {
+    for (const id of [
+      ...entryIdsOfSide(fixture.sides?.A),
+      ...entryIdsOfSide(fixture.sides?.B),
+    ]) qualifiedIds.add(id);
+
+    const outcome = fixture.status === "completed" ? fixtureOutcome(fixture) : null;
+    if (!outcome || !["A", "B"].includes(outcome.winner)) continue;
+    const loserSide = outcome.winner === "A" ? "B" : "A";
+    const threshold = formatId === "doubleElimination" ? 2 : 1;
+    for (const id of entryIdsOfSide(fixture.sides?.[loserSide])) {
       lossCounts[id] = (lossCounts[id] || 0) + 1;
-    for (const id of entryIdsOfSide(fixture.sides?.[outcome.winner])) winnerIds.add(id);
+      if (lossCounts[id] === threshold) eliminationFixtures[id] = fixture;
+    }
   }
+
+  const final = resolveBracketFinal(state, formatId, fixtures);
+  const placements = new Map();
+  if (final) {
+    final.winnerIds.forEach((id) => placements.set(id, 1));
+    final.loserIds.forEach((id) => placements.set(id, 2));
+    const thirdPlace = fixtures.find(
+      (fixture) =>
+        fixture.stage === "thirdPlace" ||
+        /third[- ]place/i.test(String(fixture.label || "")),
+    );
+    const thirdOutcome =
+      thirdPlace?.status === "completed" ? fixtureOutcome(thirdPlace) : null;
+    if (thirdPlace && thirdOutcome && ["A", "B"].includes(thirdOutcome.winner)) {
+      const loserSide = thirdOutcome.winner === "A" ? "B" : "A";
+      for (const id of entryIdsOfSide(thirdPlace.sides?.[thirdOutcome.winner]))
+        placements.set(id, 3);
+      for (const id of entryIdsOfSide(thirdPlace.sides?.[loserSide])) placements.set(id, 4);
+    }
+
+    const groups = new Map();
+    for (const [id, fixture] of Object.entries(eliminationFixtures)) {
+      if (placements.has(id)) continue;
+      const key = String(fixture.stage || "knockout") + ":" + fixture.roundNumber;
+      groups.set(key, groups.get(key) || { roundNumber: fixture.roundNumber, ids: [] });
+      groups.get(key).ids.push(id);
+    }
+    const orderedGroups = [...groups.values()].sort((a, b) => b.roundNumber - a.roundNumber);
+    let nextPlace = thirdOutcome && ["A", "B"].includes(thirdOutcome.winner) ? 5 : 3;
+    for (const group of orderedGroups) {
+      group.ids.sort((a, b) => String(a).localeCompare(String(b)));
+      for (const id of group.ids) placements.set(id, nextPlace);
+      nextPlace += group.ids.length;
+    }
+  }
+
+  const finalFixtureIds = new Set([
+    ...(final?.winnerIds || []),
+    ...(final?.loserIds || []),
+  ]);
+  const placedCounts = {};
+  for (const placement of placements.values())
+    placedCounts[placement] = (placedCounts[placement] || 0) + 1;
+
   for (const row of result.rows) {
     row.losses = lossCounts[row.entryId] || 0;
-    row.eliminated = row.losses > 0;
-    row.placement = row.losses === 0 && winnerIds.has(row.entryId) ? 1 : null;
+    row.qualified = qualifiedIds.has(row.entryId);
+    row.placement = placements.has(row.entryId) ? placements.get(row.entryId) : null;
+    row.rank = row.placement;
+    row.placementTied = row.placement != null && placedCounts[row.placement] > 1;
+    row.placementLabel =
+      row.placement == null
+        ? formatId === "groupKnockout" && !row.qualified
+          ? "Did not qualify"
+          : final
+            ? "Unplaced"
+            : row.qualified
+              ? "Still in contention"
+              : "Not yet played"
+        : row.placementTied
+          ? String(row.placement) + " (tied)"
+          : String(row.placement);
+    row.eliminated =
+      row.qualified &&
+      !finalFixtureIds.has(row.entryId) &&
+      (row.losses >= (formatId === "doubleElimination" ? 2 : 1) ||
+        (Boolean(final) && row.placement != null && row.placement > 1));
   }
-  result.tiebreakers = ["placement", "entryId"];
-  result.tiebreakerLabels = ["Placement", "Entry ID"];
+
+  result.rows.sort((left, right) => {
+    if (left.placement != null && right.placement != null)
+      return left.placement - right.placement || String(left.entryId).localeCompare(String(right.entryId));
+    if (left.placement != null) return -1;
+    if (right.placement != null) return 1;
+    if (left.qualified !== right.qualified) return left.qualified ? -1 : 1;
+    return (
+      left.losses - right.losses ||
+      left.seed - right.seed ||
+      String(left.entryId).localeCompare(String(right.entryId))
+    );
+  });
+  result.tiebreakers = ["placement", "eliminationStage", "entryId"];
+  result.tiebreakerLabels = [
+    final ? "Final placement (tied entries share a rank)" : "Bracket progress (not final placement)",
+    "Elimination stage",
+    "Draw order (display only)",
+  ];
+  result.finalDecided = Boolean(final);
+  result.championId = final?.winnerIds?.[0] || null;
+  result.runnerUpId = final?.loserIds?.[0] || null;
+  result.qualifiedIds = [...qualifiedIds];
   return result;
+}
+
+function resolveBracketFinal(state, formatId, fixtures) {
+  const resultFor = (fixture) => {
+    if (!fixture || fixture.status !== "completed") return null;
+    const outcome = fixtureOutcome(fixture);
+    if (!outcome || !["A", "B"].includes(outcome.winner)) return null;
+    const loser = outcome.winner === "A" ? "B" : "A";
+    return {
+      winnerIds: entryIdsOfSide(fixture.sides?.[outcome.winner]),
+      loserIds: entryIdsOfSide(fixture.sides?.[loser]),
+    };
+  };
+
+  if (formatId === "doubleElimination") {
+    const grandFinal = fixtures.find((fixture) => fixture.stage === "grandFinal");
+    const reset = fixtures.find((fixture) => fixture.stage === "grandFinalReset");
+    const resetResult = resultFor(reset);
+    if (resetResult) return resetResult;
+    const grandResult = resultFor(grandFinal);
+    if (!grandResult) return null;
+    const outcome = fixtureOutcome(grandFinal);
+    // With a reset enabled, a losers-bracket win in the first grand final
+    // does not decide the championship. Only the winners-bracket side's
+    // first-final win correctly cancels the reset and ends the event.
+    if (reset && !(outcome?.winner === "A" && reset.status === "cancelled")) return null;
+    return grandResult;
+  }
+
+  const finals = fixtures.filter(
+    (fixture) =>
+      fixture.stage === "knockout" &&
+      !/third[- ]place/i.test(String(fixture.label || "")),
+  );
+  const explicitFinal = finals.filter((fixture) => /^final$/i.test(String(fixture.label || "").trim()));
+  const candidates = explicitFinal.length ? explicitFinal : finals;
+  const finalFixture = candidates.sort((a, b) => b.roundNumber - a.roundNumber)[0];
+  return resultFor(finalFixture);
 }
 
 function makeByeOrScheduled(args) {
