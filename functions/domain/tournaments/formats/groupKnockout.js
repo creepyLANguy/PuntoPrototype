@@ -1,6 +1,7 @@
 const { calculateStandings: standings } = require("../standings");
 const { TournamentDomainError } = require("../errors");
 const { fixtureOutcome } = require("../results");
+const { entryIdsOfSide } = require("../entities");
 const { advanceBracketState, bracketStandings, nextPowerOfTwo, seedOrder, setFeed } = require("./bracketHelpers");
 const {
   baseRound,
@@ -85,8 +86,21 @@ const groupKnockout = {
       this.normalizeConfig(state.tournament?.format?.config || {}),
     );
     const groupIdByTeamId = {};
-    for (const [groupId, teams] of Object.entries(groups))
-      for (const team of teams) groupIdByTeamId[team.teamId] = groupId;
+    // Once group fixtures have been generated, their stored groupId is the
+    // source of truth. Reassigning groups from the current active roster would
+    // move withdrawn teams and change historic standings after the draw.
+    for (const fixture of state.fixtures || []) {
+      if (fixture.stage !== "group" || !fixture.groupId) continue;
+      for (const id of [
+        ...entryIdsOfSide(fixture.sides?.A),
+        ...entryIdsOfSide(fixture.sides?.B),
+      ]) {
+        groupIdByTeamId[id] = fixture.groupId;
+      }
+    }
+    for (const [groupId, groupTeams] of Object.entries(groups))
+      for (const team of groupTeams)
+        if (!groupIdByTeamId[team.teamId]) groupIdByTeamId[team.teamId] = groupId;
     return standings(state, {
       entryType: "team",
       mode: "league",
@@ -198,14 +212,21 @@ function generateKnockout(state) {
   const teamById = Object.fromEntries((state.teams || []).map((team) => [team.teamId, team]));
   const qualifiers = [];
   for (const groupId of Object.keys(rowsByGroup).sort()) {
-    const rows = rowsByGroup[groupId];
+    // A withdrawn entry remains visible in the group table, but cannot advance
+    // to the knockout. Qualification ranks are checked among eligible teams.
+    const rows = rowsByGroup[groupId].filter((row) => row.status === "active");
     const boundary = rows[cfg.advancePerGroup - 1];
     const next = rows[cfg.advancePerGroup];
     if (boundary && next && boundary.rank === next.rank) {
       throw new TournamentDomainError(
         "QUALIFICATION_TIE",
         `Group ${groupId} has a tie at the qualification cutoff. Resolve the tie under the tournament rules before generating the knockout bracket.`,
-        { groupId, tiedEntryIds: rows.filter((row) => row.rank === boundary.rank).map((row) => row.entryId) },
+        {
+          groupId,
+          tiedEntryIds: rows
+            .filter((row) => row.rank === boundary.rank)
+            .map((row) => row.entryId),
+        },
       );
     }
     for (const row of rows.slice(0, cfg.advancePerGroup))
