@@ -251,6 +251,25 @@ describe("bracket placements and podium rulings", () => {
     expect(undecided.finalDecided).toBe(false);
     expect(undecided.championId).toBeNull();
 
+    const firstFinalWinnerDecides = {
+      ...target,
+      fixtures: [
+        {
+          ...target.fixtures[0],
+          resultSnapshot: {
+            winner: "A",
+            points: { A: 6, B: 3 },
+            games: { A: 6, B: 3 },
+            sets: { A: 2, B: 0 },
+          },
+        },
+        { ...target.fixtures[1], status: "cancelled" },
+      ],
+    };
+    const winnerWithoutReset = format.calculateFinalStandings(firstFinalWinnerDecides);
+    expect(winnerWithoutReset.finalDecided).toBe(true);
+    expect(winnerWithoutReset.championId).toBe("t1");
+
     target.fixtures[1] = {
       ...target.fixtures[1],
       status: "completed",
