@@ -205,19 +205,43 @@ describe("shared tournament standings", () => {
         pointsForLoss: 0,
       },
       teams: teams(["a", "b", "c"]),
-      rounds: [{ roundId: "r1", roundNumber: 1, fixtureIds: ["a-beats-b", "b-beats-c", "a-draws-c"] }],
+      rounds: [
+        {
+          roundId: "r1",
+          roundNumber: 1,
+          fixtureIds: ["a-beats-b", "b-beats-c", "a-draws-c"],
+        },
+      ],
       fixtures: [
         fixture({
-          id: "a-beats-b", a: "a", b: "b", pointsA: 6, pointsB: 3,
-          winner: "A", stage: "group", groupId: "A",
+          id: "a-beats-b",
+          a: "a",
+          b: "b",
+          pointsA: 6,
+          pointsB: 3,
+          winner: "A",
+          stage: "group",
+          groupId: "A",
         }),
         fixture({
-          id: "b-beats-c", a: "b", b: "c", pointsA: 6, pointsB: 3,
-          winner: "A", stage: "group", groupId: "A",
+          id: "b-beats-c",
+          a: "b",
+          b: "c",
+          pointsA: 6,
+          pointsB: 3,
+          winner: "A",
+          stage: "group",
+          groupId: "A",
         }),
         fixture({
-          id: "a-draws-c", a: "a", b: "c", pointsA: 6, pointsB: 6,
-          winner: "draw", stage: "group", groupId: "A",
+          id: "a-draws-c",
+          a: "a",
+          b: "c",
+          pointsA: 6,
+          pointsB: 6,
+          winner: "draw",
+          stage: "group",
+          groupId: "A",
         }),
       ],
     });
@@ -232,10 +256,10 @@ describe("shared tournament standings", () => {
     expect(standings.rows.map((row) => row.rank)).toEqual([1, 2, 3]);
 
     const knockout = format.generateNextRound(input);
-    const qualifiedIds = knockout.fixtures.flatMap((fixture) => [
-      fixture.sides.A?.teamId,
-      fixture.sides.B?.teamId,
-    ]).filter(Boolean).sort();
+    const qualifiedIds = knockout.fixtures
+      .flatMap((fixture) => [fixture.sides.A?.teamId, fixture.sides.B?.teamId])
+      .filter(Boolean)
+      .sort();
     expect(qualifiedIds).toEqual(["a", "c"]);
   });
 });
