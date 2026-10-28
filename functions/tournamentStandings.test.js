@@ -200,16 +200,23 @@ describe("shared tournament standings", () => {
       config: {
         groupCount: 1,
         advancePerGroup: 2,
-        pointsForWin: 1,
+        pointsForWin: 4,
         pointsForDraw: 3,
         pointsForLoss: 0,
       },
-      teams: teams(["a", "b", "c"]),
+      teams: teams(["a", "b", "c", "d"]),
       rounds: [
         {
           roundId: "r1",
           roundNumber: 1,
-          fixtureIds: ["a-beats-b", "b-beats-c", "a-draws-c"],
+          fixtureIds: [
+            "a-beats-b",
+            "a-draws-c",
+            "a-beats-d",
+            "b-draws-c",
+            "b-beats-d",
+            "c-draws-d",
+          ],
         },
       ],
       fixtures: [
@@ -217,16 +224,6 @@ describe("shared tournament standings", () => {
           id: "a-beats-b",
           a: "a",
           b: "b",
-          pointsA: 6,
-          pointsB: 3,
-          winner: "A",
-          stage: "group",
-          groupId: "A",
-        }),
-        fixture({
-          id: "b-beats-c",
-          a: "b",
-          b: "c",
           pointsA: 6,
           pointsB: 3,
           winner: "A",
@@ -243,17 +240,58 @@ describe("shared tournament standings", () => {
           stage: "group",
           groupId: "A",
         }),
+        fixture({
+          id: "a-beats-d",
+          a: "a",
+          b: "d",
+          pointsA: 6,
+          pointsB: 3,
+          winner: "A",
+          stage: "group",
+          groupId: "A",
+        }),
+        fixture({
+          id: "b-draws-c",
+          a: "b",
+          b: "c",
+          pointsA: 6,
+          pointsB: 6,
+          winner: "draw",
+          stage: "group",
+          groupId: "A",
+        }),
+        fixture({
+          id: "b-beats-d",
+          a: "b",
+          b: "d",
+          pointsA: 6,
+          pointsB: 3,
+          winner: "A",
+          stage: "group",
+          groupId: "A",
+        }),
+        fixture({
+          id: "c-draws-d",
+          a: "c",
+          b: "d",
+          pointsA: 6,
+          pointsB: 6,
+          winner: "draw",
+          stage: "group",
+          groupId: "A",
+        }),
       ],
     });
 
     const format = tournaments.getFormat("groupKnockout");
     const standings = format.calculateStandings(input);
     expect(standings.rows.map((row) => [row.entryId, row.competitionPoints])).toEqual([
-      ["a", 4],
-      ["c", 3],
-      ["b", 1],
+      ["a", 11],
+      ["c", 9],
+      ["b", 7],
+      ["d", 3],
     ]);
-    expect(standings.rows.map((row) => row.rank)).toEqual([1, 2, 3]);
+    expect(standings.rows.map((row) => row.rank)).toEqual([1, 2, 3, 4]);
 
     const knockout = format.generateNextRound(input);
     const qualifiedIds = knockout.fixtures
