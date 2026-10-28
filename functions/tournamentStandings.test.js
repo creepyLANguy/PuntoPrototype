@@ -157,15 +157,18 @@ describe("shared tournament standings", () => {
       config: { groupCount: 2, advancePerGroup: 1 },
       teams: teams(["t1", "t2", "t3", "t4"]),
       fixtures: [
-        fixture({ id: "group-match", a: "t1", b: "t4", pointsA: 6, pointsB: 3, winner: "A", stage: "group" }),
+        fixture({ id: "group-match", a: "t1", b: "t4", pointsA: 6, pointsB: 6, winner: "draw", stage: "group" }),
+        fixture({ id: "other-group-match", a: "t2", b: "t3", pointsA: 5, pointsB: 5, winner: "draw", stage: "group" }),
         fixture({ id: "knockout-match", a: "t1", b: "t2", pointsA: 2, pointsB: 8, winner: "B", stage: "knockout", roundId: "r2", roundNumber: 2 }),
       ],
     });
 
     const result = tournaments.getFormat("groupKnockout").calculateStandings(input);
     expect(result.rows.find((row) => row.entryId === "t1").played).toBe(1);
-    expect(result.rows.find((row) => row.entryId === "t1").wins).toBe(1);
-    expect(result.rows.find((row) => row.entryId === "t2").played).toBe(0);
+    expect(result.rows.find((row) => row.entryId === "t1").draws).toBe(1);
+    expect(result.rows.find((row) => row.entryId === "t2").played).toBe(1);
+    expect(result.rows.find((row) => row.entryId === "t2").rank).toBe(1);
+    expect(result.rows.find((row) => row.entryId === "t3").rank).toBe(1);
   });
 });
 
