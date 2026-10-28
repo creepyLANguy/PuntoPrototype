@@ -64,6 +64,15 @@ function completeFixture(fixture, winner) {
   };
 }
 
+function completeGroupFixturesBySeed(target) {
+  const teamById = Object.fromEntries(target.teams.map((team) => [team.teamId, team]));
+  for (const fixture of target.fixtures.filter((candidate) => candidate.stage === "group")) {
+    const seedA = Number(teamById[fixture.sides.A.teamId]?.seed ?? Number.MAX_SAFE_INTEGER);
+    const seedB = Number(teamById[fixture.sides.B.teamId]?.seed ?? Number.MAX_SAFE_INTEGER);
+    completeFixture(fixture, seedA < seedB ? "A" : "B");
+  }
+}
+
 function simulateBracket(target, prefer = "A") {
   const format = tournaments.getFormat(target.tournament.format.id);
   let progress = true;
@@ -154,7 +163,7 @@ describe("group knockout", () => {
     const format = tournaments.getFormat("groupKnockout");
     append(target, format.generateInitialRound(target));
     expect(target.fixtures.filter((fixture) => fixture.stage === "group")).toHaveLength(12);
-    for (const fixture of target.fixtures) completeFixture(fixture, "A");
+    completeGroupFixturesBySeed(target);
     append(target, format.generateNextRound(target));
     expect(target.fixtures.filter((fixture) => fixture.stage === "knockout")).toHaveLength(3);
     expect(format.calculateStandings(target).rows.filter((row) => row.groupId === "A").length).toBe(
@@ -224,7 +233,7 @@ describe("bracket placements and podium rulings", () => {
     });
     const format = tournaments.getFormat("groupKnockout");
     append(target, format.generateInitialRound(target));
-    for (const fixture of target.fixtures) completeFixture(fixture, "A");
+    completeGroupFixturesBySeed(target);
     append(target, format.generateNextRound(target));
 
     const thirdPlace = target.fixtures.find((fixture) => fixture.stage === "thirdPlace");
@@ -344,7 +353,7 @@ describe("bracket placements and podium rulings", () => {
     });
     const format = tournaments.getFormat("groupKnockout");
     append(target, format.generateInitialRound(target));
-    for (const fixture of target.fixtures) completeFixture(fixture, "A");
+    completeGroupFixturesBySeed(target);
 
     append(target, format.generateNextRound(target));
     const thirdPlace = target.fixtures.find((fixture) => fixture.stage === "thirdPlace");
