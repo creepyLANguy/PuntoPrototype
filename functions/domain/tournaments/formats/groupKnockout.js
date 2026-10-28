@@ -255,10 +255,48 @@ function generateKnockout(state) {
     for (const row of rows.slice(0, cfg.advancePerGroup))
       qualifiers.push({ groupId, rank: row.rank, team: teamById[row.entryId] });
   }
+  if (qualifiers.length === 0) {
+    throw new TournamentDomainError(
+      "NO_ELIGIBLE_QUALIFIERS",
+      "No eligible teams remain to advance from the group stage. At least one active qualifier is required to declare a champion.",
+      { groupIds: Object.keys(rowsByGroup).sort() },
+    );
+  }
+
   const firstRound = nextRoundNumber(state);
   const seed = seedFor(state, firstRound, ":ko");
   const fixtures = [];
   const rounds = [];
+
+  if (qualifiers.length === 1) {
+    const qualifier = qualifiers[0];
+    const round = baseRound(
+      firstRound,
+      "Champion by qualification",
+      "knockout",
+      seed,
+      {
+        algorithm: "group-knockout-v1",
+        outcome: "sole-eligible-qualifier",
+      },
+    );
+    round.status = "completed";
+    const fixture = makeByeOrScheduled({
+      roundNumber: firstRound,
+      index: 0,
+      label: "Champion by qualification",
+      stage: "knockout",
+      sides: { A: sideFromTeam(qualifier.team), B: null },
+      bracketPosition: "KO-CHAMPION",
+      sourceRefs: {
+        A: { groupId: qualifier.groupId, rank: qualifier.rank },
+        B: null,
+      },
+    });
+    round.fixtureIds = [fixture.fixtureId];
+    return { rounds: [round], fixtures: [fixture] };
+  }
+
   const size = nextPowerOfTwo(qualifiers.length);
   const ordered = crossSeed(qualifiers).flat();
   while (ordered.length < size) ordered.push(null);

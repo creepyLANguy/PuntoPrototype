@@ -303,6 +303,7 @@ function bracketStandings(state, options = {}) {
   result.finalDecided = Boolean(final);
   result.championId = final?.winnerIds?.[0] || null;
   result.runnerUpId = final?.loserIds?.[0] || null;
+  result.championByDefault = Boolean(final?.awardedByQualification);
   result.qualifiedIds = [...qualifiedIds];
   return result;
 }
@@ -333,6 +334,23 @@ function resolveBracketFinal(state, formatId, fixtures) {
     // first-final win correctly cancels the reset and ends the event.
     if (reset && !(outcome?.winner === "A" && reset.status === "cancelled")) return null;
     return grandResult;
+  }
+
+  if (formatId === "groupKnockout") {
+    const qualificationAward = fixtures.find(
+      (fixture) =>
+        fixture.bracketPosition === "KO-CHAMPION" &&
+        fixture.status === "bye" &&
+        entryIdsOfSide(fixture.sides?.A).length === 1 &&
+        entryIdsOfSide(fixture.sides?.B).length === 0,
+    );
+    if (qualificationAward) {
+      return {
+        winnerIds: entryIdsOfSide(qualificationAward.sides.A),
+        loserIds: [],
+        awardedByQualification: true,
+      };
+    }
   }
 
   const finals = fixtures.filter(

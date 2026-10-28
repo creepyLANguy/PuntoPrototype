@@ -217,7 +217,11 @@ inferring a winner from the last match displayed on screen.
   They use sporting tie-break criteria (competition points, wins, head-to-head,
   set/game/point differences and points for); initial draw seeds do not decide
   a qualification tie. A tie that crosses the configured qualification cutoff
-  blocks knockout generation with `QUALIFICATION_TIE`.
+  blocks knockout generation with `QUALIFICATION_TIE`. After withdrawals, zero
+  eligible qualifiers block progression with a clear error; if exactly one
+  eligible qualifier remains, the bracket records an explicit `Champion by
+  qualification` outcome and declares that team champion without inventing a
+  played final. Two or more qualifiers use the normal knockout bracket.
 - Single-elimination and group-knockout draws can generate a third-place
   match when configured. Without a completed third-place match, equal
   semifinal losers share third place. Double-elimination standings wait for

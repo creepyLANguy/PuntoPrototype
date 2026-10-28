@@ -192,6 +192,82 @@ describe("group knockout", () => {
 });
 
 
+
+describe("group-knockout qualification after withdrawals", () => {
+  function stateAfterGroupResults(activeTeamIds) {
+    const target = bracketState("groupKnockout", 4, {
+      groupCount: 2,
+      advancePerGroup: 1,
+    });
+    append(target, tournaments.getFormat("groupKnockout").generateInitialRound(target));
+    completeGroupFixturesBySeed(target);
+    target.teams.forEach((team) => {
+      if (!activeTeamIds.includes(team.teamId)) team.status = "withdrawn";
+    });
+    return target;
+  }
+
+  test("rejects knockout generation when zero eligible qualifiers remain", () => {
+    const target = stateAfterGroupResults([]);
+    const format = tournaments.getFormat("groupKnockout");
+
+    expect(() => format.generateNextRound(target)).toThrow(
+      /No eligible teams remain to advance from the group stage/,
+    );
+    expect(target.fixtures.some((fixture) => fixture.stage === "knockout")).toBe(false);
+  });
+
+  test("declares the sole eligible qualifier champion by qualification", () => {
+    const target = stateAfterGroupResults(["t1"]);
+    const format = tournaments.getFormat("groupKnockout");
+    const generation = format.generateNextRound(target);
+
+    expect(generation.rounds).toHaveLength(1);
+    expect(generation.rounds[0].label).toBe("Champion by qualification");
+    expect(generation.fixtures).toHaveLength(1);
+    expect(generation.fixtures[0]).toMatchObject({
+      label: "Champion by qualification",
+      stage: "knockout",
+      status: "bye",
+      bracketPosition: "KO-CHAMPION",
+      sides: { A: { teamId: "t1" }, B: null },
+    });
+
+    append(target, generation);
+    const standings = format.calculateFinalStandings(target);
+    expect(standings.finalDecided).toBe(true);
+    expect(standings.championByDefault).toBe(true);
+    expect(standings.championId).toBe("t1");
+    expect(standings.runnerUpId).toBeNull();
+    expect(standings.rows.find((row) => row.entryId === "t1")).toMatchObject({
+      placement: 1,
+      rank: 1,
+      placementTied: false,
+    });
+  });
+
+  test("two eligible qualifiers produce the normal playable final", () => {
+    const target = stateAfterGroupResults(["t1", "t2"]);
+    const format = tournaments.getFormat("groupKnockout");
+    const generation = format.generateNextRound(target);
+
+    expect(generation.rounds).toHaveLength(1);
+    expect(generation.fixtures).toHaveLength(1);
+    expect(generation.fixtures[0].label).toBe("Final");
+    expect(generation.fixtures[0].status).toBe("scheduled");
+    expect([
+      generation.fixtures[0].sides.A.teamId,
+      generation.fixtures[0].sides.B.teamId,
+    ].sort()).toEqual(["t1", "t2"]);
+
+    append(target, generation);
+    const standings = format.calculateFinalStandings(target);
+    expect(standings.finalDecided).toBe(false);
+    expect(standings.championId).toBeNull();
+    expect(standings.championByDefault).toBe(false);
+  });
+});
+
 describe("bracket placements and podium rulings", () => {
   test("single elimination ranks entrants by finishing round, and shares third place without a play-off", () => {
     const target = bracketState("singleElimination", 8);

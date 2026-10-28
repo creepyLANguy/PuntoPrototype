@@ -556,3 +556,86 @@ test("a completed tournament with no recorded match results does not announce a 
   assert.doesNotMatch(page.textContent, /Winner: Alice|Joint winners: Alice, Ben/);
   assert.equal(page.querySelector(".tournament-podium"), null);
 });
+
+
+test("completed group-knockout results remain visible when no knockout stage was generated", () => {
+  const base = buildView();
+  const view = {
+    ...base,
+    status: "completed",
+    format: {
+      ...base.format,
+      id: "groupKnockout",
+      label: "Group + Knockout",
+      kind: "groupBracket",
+      entryMode: "team",
+      config: { groupCount: 2, advancePerGroup: 1 },
+    },
+    currentRound: null,
+    rounds: [],
+    roundForecast: [],
+    bracket: null,
+    fixtures: [
+      {
+        fixtureId: "group-a-match",
+        stage: "group",
+        groupId: "A",
+        status: "completed",
+        displayStatus: "COMPLETED",
+      },
+      {
+        fixtureId: "group-b-match",
+        stage: "group",
+        groupId: "B",
+        status: "completed",
+        displayStatus: "COMPLETED",
+      },
+    ],
+    participants: [],
+    teams: [
+      { teamId: "t1", name: "Tigers", participantIds: [], status: "active", seed: 1 },
+      { teamId: "t2", name: "Falcons", participantIds: [], status: "active", seed: 2 },
+      { teamId: "t3", name: "Panthers", participantIds: [], status: "active", seed: 3 },
+      { teamId: "t4", name: "Hawks", participantIds: [], status: "active", seed: 4 },
+    ],
+    standings: {
+      entryType: "team",
+      columns: ["rank", "name", "played", "wins", "draws", "losses", "competitionPoints", "pointDiff", "form"],
+      tiebreakers: ["competitionPoints", "wins", "entryId"],
+      tiebreakerLabels: ["Competition points", "Wins"],
+      rows: [
+        { rank: 1, entryId: "t1", name: "Tigers", groupId: "A", status: "active", played: 2, wins: 2, draws: 0, losses: 0, competitionPoints: 6, pointDiff: 8, form: ["W", "W"] },
+        { rank: 2, entryId: "t2", name: "Falcons", groupId: "A", status: "active", played: 2, wins: 1, draws: 0, losses: 1, competitionPoints: 3, pointDiff: 0, form: ["W", "L"] },
+        { rank: 1, entryId: "t3", name: "Panthers", groupId: "B", status: "active", played: 2, wins: 2, draws: 0, losses: 0, competitionPoints: 6, pointDiff: 7, form: ["W", "W"] },
+        { rank: 2, entryId: "t4", name: "Hawks", groupId: "B", status: "active", played: 2, wins: 1, draws: 0, losses: 1, competitionPoints: 3, pointDiff: -1, form: ["W", "L"] },
+      ],
+    },
+    finalStandings: {
+      entryType: "team",
+      finalDecided: false,
+      championId: null,
+      championByDefault: false,
+      tiebreakers: ["placement", "eliminationStage", "entryId"],
+      tiebreakerLabels: ["Bracket progress", "Elimination stage"],
+      rows: [
+        { rank: null, placement: null, placementLabel: "Qualification not decided", entryId: "t1", name: "Tigers", status: "active", played: 0 },
+        { rank: null, placement: null, placementLabel: "Qualification not decided", entryId: "t2", name: "Falcons", status: "active", played: 0 },
+        { rank: null, placement: null, placementLabel: "Qualification not decided", entryId: "t3", name: "Panthers", status: "active", played: 0 },
+        { rank: null, placement: null, placementLabel: "Qualification not decided", entryId: "t4", name: "Hawks", status: "active", played: 0 },
+      ],
+    },
+  };
+
+  const page = renderPublicDashboard(view, new Map());
+  const pageText = page.textContent;
+
+  assert.match(pageText, /Group-stage results are recorded, but the knockout stage has not been generated/);
+  assert.match(pageText, /Overall finishing positions have not been established/);
+  assert.match(pageText, /Group A/);
+  assert.match(pageText, /Group B/);
+  assert.match(pageText, /Tigers/);
+  assert.match(pageText, /Panthers/);
+  assert.doesNotMatch(pageText, /No match results have been recorded/);
+  assert.equal(page.querySelector(".tournament-podium"), null);
+});
+

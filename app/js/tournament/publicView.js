@@ -351,7 +351,17 @@ export function renderTournamentResults(view) {
   const standings = view.finalStandings || view.standings;
   const isBracket = ["bracket", "groupBracket"].includes(view.format?.kind);
   const rows = standings?.rows || [];
-  const hasRecordedResults = rows.some((row) => Number(row.played || 0) > 0);
+  // Group-knockout final standings intentionally exclude group fixtures, so use
+  // the group table to determine whether any real match results were recorded.
+  const resultHistory =
+    isBracket && view.format.id === "groupKnockout" ? view.standings : standings;
+  const hasRecordedResults = (resultHistory?.rows || []).some(
+    (row) => Number(row.played || 0) > 0,
+  );
+  const hasKnockoutFixtures = (view.fixtures || []).some((fixture) =>
+    ["knockout", "thirdPlace"].includes(fixture.stage),
+  );
+  const championByDefault = Boolean(standings?.championByDefault);
   const early = Boolean(view.finishedEarly || view.completionReason);
   const finalDecided = !isBracket || Boolean(standings?.finalDecided);
   const eligibleRows = isBracket
@@ -359,7 +369,11 @@ export function renderTournamentResults(view) {
     : rows.filter((row) => row.rank != null);
   // Early completion can leave a partial league/social table. Keep it
   // explicitly provisional rather than awarding a visually definitive podium.
-  const hasPodium = !early && hasRecordedResults && eligibleRows.length > 0 && (!isBracket || finalDecided);
+  const hasPodium =
+    !early &&
+    (hasRecordedResults || championByDefault) &&
+    eligibleRows.length > 0 &&
+    (!isBracket || finalDecided);
   const tiers = [1, 2, 3]
     .map((place) => ({
       place,
@@ -374,17 +388,21 @@ export function renderTournamentResults(view) {
       : "Tournament complete";
   const intro = early
     ? "These standings reflect recorded results only. Unplayed or cancelled matches are not treated as losses."
-    : !hasRecordedResults
+    : !hasRecordedResults && !championByDefault
       ? "No match results have been recorded, so no winner or final placement can be established."
       : isBracket && !standings?.finalDecided
-        ? "The recorded bracket does not establish a champion. No winner is shown until the required final (including any reset final) has a result."
-        : winners.length > 1
-        ? "The configured sporting tie-breakers leave these entries tied for first place."
-        : winners.length === 1
-          ? isBracket
-            ? "The champion and finishing positions are based on completed bracket results."
-            : "The podium is based on the tournament's configured ranking rules."
-          : "No final positions can be shown because no results have been recorded.";
+        ? view.format.id === "groupKnockout" && hasRecordedResults && !hasKnockoutFixtures
+          ? "Group-stage results are recorded, but the knockout stage has not been generated. Overall finishing positions have not been established."
+          : "The recorded bracket does not establish a champion. No winner is shown until the required final (including any reset final) has a result."
+        : championByDefault
+          ? "Only one eligible team remained after group qualification, so it is declared champion without a knockout final."
+          : winners.length > 1
+            ? "The configured sporting tie-breakers leave these entries tied for first place."
+            : winners.length === 1
+              ? isBracket
+                ? "The champion and finishing positions are based on completed bracket results."
+                : "The podium is based on the tournament's configured ranking rules."
+              : "No final positions can be shown because no results have been recorded.";
   return section(
     "Tournament results",
     h(
@@ -403,10 +421,12 @@ export function renderTournamentResults(view) {
             early
               ? "A podium is not awarded for a tournament finished early. The table below reflects recorded results only."
               : isBracket && !standings?.finalDecided
-                ? "No champion or final podium can be declared from the results currently recorded."
+                ? view.format.id === "groupKnockout" && hasRecordedResults && !hasKnockoutFixtures
+                  ? "Group-stage results remain available below. Overall placements cannot be established because the knockout stage was not generated."
+                  : "No champion or final podium can be declared from the results currently recorded."
                 : "There are not enough recorded results to establish a podium.",
           ),
-      hasRecordedResults && winners.length && !early && finalDecided
+      (hasRecordedResults || championByDefault) && winners.length && !early && finalDecided
         ? h(
             "p",
             { className: "podium-winner-summary" },
@@ -416,7 +436,13 @@ export function renderTournamentResults(view) {
           )
         : null,
       isBracket && view.format.id === "groupKnockout"
-        ? h("p", { className: "ev-hint" }, "Only teams that qualified for the knockout stage receive overall knockout placements. Group standings remain available separately.")
+        ? h(
+            "p",
+            { className: "ev-hint" },
+            hasKnockoutFixtures
+              ? "Only teams that qualified for the knockout stage receive overall knockout placements. Group standings remain available separately."
+              : "Group standings are shown below. Overall finishing positions are unavailable because the knockout stage was not generated.",
+          )
         : null,
     ),
     standings
