@@ -218,14 +218,14 @@ function seedOfSide(state, side) {
     const seed = Number(team?.seed);
     return team?.seed != null && Number.isFinite(seed) ? seed : Number.MAX_SAFE_INTEGER;
   }
-  const seeds = (side?.participantIds || [])
-    .map((id) => (state.participants || []).find((entry) => entry.participantId === id)?.seed)
-    .map((seed) => Number(seed))
-    .filter((seed) => Number.isFinite(seed));
-  // A pair's average seed is comparable; missing seeds are not guessed from IDs.
-  return seeds.length
-    ? seeds.reduce((sum, seed) => sum + seed, 0) / seeds.length
-    : Number.MAX_SAFE_INTEGER;
+  const ids = side?.participantIds || [];
+  const entries = ids.map((id) =>
+    (state.participants || []).find((entry) => entry.participantId === id),
+  );
+  // Do not invent a comparison from a partial pair seed or infer seeds from IDs.
+  if (!entries.length || entries.some((entry) => entry?.seed == null || !Number.isFinite(Number(entry.seed))))
+    return Number.MAX_SAFE_INTEGER;
+  return entries.reduce((sum, entry) => sum + Number(entry.seed), 0) / entries.length;
 }
 
 function addToBucket(buckets, level, side) {
