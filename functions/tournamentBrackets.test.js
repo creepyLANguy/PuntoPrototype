@@ -259,6 +259,8 @@ describe("bracket placements and podium rulings", () => {
     const thirdPlace = target.fixtures.find((fixture) => fixture.stage === "thirdPlace");
     expect(thirdPlace).toBeDefined();
     expect(thirdPlace.sides).toEqual({ A: null, B: null });
+    const final = target.fixtures.find((fixture) => fixture.label === "Final");
+    expect(final.sides).toEqual({ A: null, B: null });
 
     simulateBracket(target, "A");
 
@@ -294,6 +296,8 @@ describe("bracket placements and podium rulings", () => {
     const thirdPlace = target.fixtures.find((fixture) => fixture.stage === "thirdPlace");
     expect(thirdPlace).toBeDefined();
     expect(thirdPlace.sides).toEqual({ A: null, B: null });
+    const final = target.fixtures.find((fixture) => fixture.label === "Final");
+    expect(final.sides).toEqual({ A: null, B: null });
 
     simulateBracket(target, "A");
 
