@@ -289,7 +289,8 @@ function bracketStandings(state, options = {}) {
   result.rows.sort((left, right) => {
     if (left.placement != null && right.placement != null)
       return (
-        left.placement - right.placement || String(left.entryId).localeCompare(String(right.entryId))
+        left.placement - right.placement ||
+        String(left.entryId).localeCompare(String(right.entryId))
       );
     if (left.placement != null) return -1;
     if (right.placement != null) return 1;
