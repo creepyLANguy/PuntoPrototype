@@ -57,6 +57,7 @@ const singleElimination = {
     return { allowed: false, reason: "Single elimination bracket is generated up front." };
   },
   calculateStandings: bracketStandings,
+  calculateFinalStandings: bracketStandings,
   calculateRoundResult,
   getRulesSummary(config) {
     const cfg = this.normalizeConfig(config);
