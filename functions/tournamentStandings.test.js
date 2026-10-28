@@ -222,7 +222,7 @@ describe("King/Queen of the Court rules", () => {
   test("final ranking honors court position or configured point method", () => {
     const ts = teams(["t1", "t2", "t3", "t4"]);
     const fixtures = [
-      fixture({ id: "court-1", a: "t1", b: "t3", pointsA: 2, pointsB: 8, winner: "B", courtLevel: 1 }),
+      fixture({ id: "court-1", a: "t1", b: "t3", pointsA: 8, pointsB: 2, winner: "A", courtLevel: 1 }),
       fixture({ id: "court-2", a: "t2", b: "t4", pointsA: 8, pointsB: 2, winner: "A", courtLevel: 2 }),
     ];
     fixtures.forEach((item) => (item.roundId = "r1"));
