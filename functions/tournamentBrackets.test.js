@@ -196,6 +196,26 @@ describe("bracket placements and podium rulings", () => {
     expect(standings.rows.filter((row) => row.placement === 4)).toHaveLength(1);
   });
 
+  test("an eliminated entry is not labelled as still in contention while the final is pending", () => {
+    const target = bracketState("singleElimination", 4);
+    const format = tournaments.getFormat("singleElimination");
+    append(target, format.generateInitialRound(target));
+    const semifinals = target.fixtures.filter((fixture) => fixture.roundNumber === 1);
+    for (const fixture of semifinals) {
+      completeFixture(fixture, "A");
+      applyUpdates(target, format.advanceBracket(target, fixture.fixtureId).updates);
+    }
+
+    const standings = format.calculateStandings(target);
+    expect(standings.finalDecided).toBe(false);
+    const losers = semifinals.map((fixture) => fixture.sides.B.teamId);
+    for (const id of losers) {
+      const row = standings.rows.find((entry) => entry.entryId === id);
+      expect(row.eliminated).toBe(true);
+      expect(row.placementLabel).toBe("Eliminated");
+    }
+  });
+
   test("double elimination does not declare the champion before a required reset", () => {
     const target = bracketState("doubleElimination", 3, { grandFinalReset: true });
     const makeSide = (teamId) => ({ teamId, participantIds: [] });
