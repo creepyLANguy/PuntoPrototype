@@ -9,6 +9,7 @@ const {
   advanceBracketState,
   bracketEntries,
   bracketStandings,
+  canProduceThirdPlaceLoser,
   makeByeOrScheduled,
   nextPowerOfTwo,
   roundLabel,
@@ -149,9 +150,7 @@ function generateBracket(state) {
       const semifinals = previousRoundPositions.map((position) => byPosition[position]);
       if (
         semifinals.length === 2 &&
-        semifinals.every((fixture) =>
-          fixture && fixture.stage === "knockout" && fixture.status !== "bye"
-        )
+        semifinals.every(canProduceThirdPlaceLoser)
       ) {
         const thirdPlace = makeByeOrScheduled({
           roundNumber,
