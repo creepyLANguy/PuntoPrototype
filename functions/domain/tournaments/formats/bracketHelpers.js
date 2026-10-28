@@ -185,11 +185,9 @@ function bracketStandings(state, options = {}) {
     .sort(
       (left, right) =>
         Number(left.roundNumber || 0) - Number(right.roundNumber || 0) ||
-        String(left.fixtureId || "").localeCompare(
-          String(right.fixtureId || ""),
-          undefined,
-          { numeric: true },
-        ),
+        String(left.fixtureId || "").localeCompare(String(right.fixtureId || ""), undefined, {
+          numeric: true,
+        }),
     );
   const hasKnockoutFixtures = fixtures.some((fixture) =>
     ["knockout", "thirdPlace"].includes(fixture.stage),
@@ -199,10 +197,8 @@ function bracketStandings(state, options = {}) {
   const qualifiedIds = new Set();
 
   for (const fixture of fixtures) {
-    for (const id of [
-      ...entryIdsOfSide(fixture.sides?.A),
-      ...entryIdsOfSide(fixture.sides?.B),
-    ]) qualifiedIds.add(id);
+    for (const id of [...entryIdsOfSide(fixture.sides?.A), ...entryIdsOfSide(fixture.sides?.B)])
+      qualifiedIds.add(id);
 
     const outcome = fixture.status === "completed" ? fixtureOutcome(fixture) : null;
     if (!outcome || !["A", "B"].includes(outcome.winner)) continue;
@@ -221,11 +217,9 @@ function bracketStandings(state, options = {}) {
     final.loserIds.forEach((id) => placements.set(id, 2));
     const thirdPlace = fixtures.find(
       (fixture) =>
-        fixture.stage === "thirdPlace" ||
-        /third[- ]place/i.test(String(fixture.label || "")),
+        fixture.stage === "thirdPlace" || /third[- ]place/i.test(String(fixture.label || "")),
     );
-    const thirdOutcome =
-      thirdPlace?.status === "completed" ? fixtureOutcome(thirdPlace) : null;
+    const thirdOutcome = thirdPlace?.status === "completed" ? fixtureOutcome(thirdPlace) : null;
     if (thirdPlace && thirdOutcome && ["A", "B"].includes(thirdOutcome.winner)) {
       const loserSide = thirdOutcome.winner === "A" ? "B" : "A";
       for (const id of entryIdsOfSide(thirdPlace.sides?.[thirdOutcome.winner]))
@@ -249,10 +243,7 @@ function bracketStandings(state, options = {}) {
     }
   }
 
-  const finalFixtureIds = new Set([
-    ...(final?.winnerIds || []),
-    ...(final?.loserIds || []),
-  ]);
+  const finalFixtureIds = new Set([...(final?.winnerIds || []), ...(final?.loserIds || [])]);
   const placedCounts = {};
   for (const placement of placements.values())
     placedCounts[placement] = (placedCounts[placement] || 0) + 1;
@@ -346,8 +337,7 @@ function resolveBracketFinal(state, formatId, fixtures) {
 
   const finals = fixtures.filter(
     (fixture) =>
-      fixture.stage === "knockout" &&
-      !/third[- ]place/i.test(String(fixture.label || "")),
+      fixture.stage === "knockout" && !/third[- ]place/i.test(String(fixture.label || "")),
   );
   const explicitFinal = finals.filter((fixture) =>
     /^final$/i.test(String(fixture.label || "").trim()),
