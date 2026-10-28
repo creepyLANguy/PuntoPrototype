@@ -26,13 +26,14 @@ function side(id, entryType = "team") {
     : { teamId: null, participantIds: [id] };
 }
 
-function fixture({ id, a, b, entryType = "team", pointsA, pointsB, winner, stage, roundId = "r1", roundNumber = 1, courtLevel }) {
+function fixture({ id, a, b, entryType = "team", pointsA, pointsB, winner, stage, groupId, roundId = "r1", roundNumber = 1, courtLevel }) {
   return {
     fixtureId: id,
     roundId,
     roundNumber,
     label: id,
     stage,
+    groupId,
     courtLevel,
     status: "completed",
     sides: { A: side(a, entryType), B: side(b, entryType) },
@@ -150,6 +151,27 @@ describe("shared tournament standings", () => {
     expect(result.rows.find((row) => row.entryId === "b").buchholz).toBe(12);
   });
 
+  test("withdrawal does not reassign already drawn groups", () => {
+    const entries = teams(["t1", "t2", "t3", "t4"]);
+    entries[0].status = "withdrawn";
+    const input = state({
+      formatId: "groupKnockout",
+      entryMode: "team",
+      config: { groupCount: 2, advancePerGroup: 1 },
+      teams: entries,
+      fixtures: [
+        fixture({ id: "a-match", a: "t1", b: "t4", pointsA: 6, pointsB: 3, winner: "A", stage: "group", groupId: "A" }),
+        fixture({ id: "b-match", a: "t2", b: "t3", pointsA: 6, pointsB: 3, winner: "A", stage: "group", groupId: "B" }),
+      ],
+    });
+
+    const result = tournaments.getFormat("groupKnockout").calculateStandings(input);
+    expect(result.rows.find((row) => row.entryId === "t1").groupId).toBe("A");
+    expect(result.rows.find((row) => row.entryId === "t4").groupId).toBe("A");
+    expect(result.rows.find((row) => row.entryId === "t2").groupId).toBe("B");
+    expect(result.rows.find((row) => row.entryId === "t3").groupId).toBe("B");
+  });
+
   test("fixtureFilter keeps group standings isolated from later knockout matches", () => {
     const input = state({
       formatId: "groupKnockout",
@@ -157,8 +179,8 @@ describe("shared tournament standings", () => {
       config: { groupCount: 2, advancePerGroup: 1 },
       teams: teams(["t1", "t2", "t3", "t4"]).map((team) => ({ ...team, seed: null })),
       fixtures: [
-        fixture({ id: "group-match", a: "t1", b: "t4", pointsA: 6, pointsB: 6, winner: "draw", stage: "group" }),
-        fixture({ id: "other-group-match", a: "t2", b: "t3", pointsA: 5, pointsB: 5, winner: "draw", stage: "group" }),
+        fixture({ id: "group-match", a: "t1", b: "t4", pointsA: 6, pointsB: 6, winner: "draw", stage: "group", groupId: "A" }),
+        fixture({ id: "other-group-match", a: "t2", b: "t3", pointsA: 5, pointsB: 5, winner: "draw", stage: "group", groupId: "B" }),
         fixture({ id: "knockout-match", a: "t1", b: "t2", pointsA: 2, pointsB: 8, winner: "B", stage: "knockout", roundId: "r2", roundNumber: 2 }),
       ],
     });
