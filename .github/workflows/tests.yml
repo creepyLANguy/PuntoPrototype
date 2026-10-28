@@ -24,7 +24,9 @@ jobs:
         run: npm ci
       - name: Auto-format Functions JavaScript
         working-directory: functions
-        run: npm run format
+        run: |
+          npm run format
+          git --no-pager diff -- domain/tournaments/formats/bracketHelpers.js
       - name: Run Functions format check
         working-directory: functions
         run: npm run format:check
