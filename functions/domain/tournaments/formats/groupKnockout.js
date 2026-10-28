@@ -1,7 +1,7 @@
 const { calculateStandings: standings } = require("../standings");
 const { TournamentDomainError } = require("../errors");
 const { fixtureOutcome } = require("../results");
-const { advanceBracketState, nextPowerOfTwo, seedOrder, setFeed } = require("./bracketHelpers");
+const { advanceBracketState, bracketStandings, nextPowerOfTwo, seedOrder, setFeed } = require("./bracketHelpers");
 const {
   baseRound,
   calculateRoundResult,
@@ -92,6 +92,12 @@ const groupKnockout = {
       mode: "league",
       formatId: "roundRobin",
       groupIdByTeamId,
+      fixtureFilter: (fixture) => fixture.stage === "group",
+    });
+  },
+  calculateFinalStandings(state) {
+    return bracketStandings(state, {
+      fixtureFilter: (fixture) => ["knockout", "thirdPlace"].includes(fixture.stage),
     });
   },
   calculateRoundResult,
@@ -266,6 +272,33 @@ function generateKnockout(state) {
       if (bracketRound > 1) {
         setFeed(byPosition, previous[index * 2], "winner", fixture, "A");
         setFeed(byPosition, previous[index * 2 + 1], "winner", fixture, "B");
+      }
+    }
+    if (bracketRound === totalRounds && cfg.thirdPlaceMatch && totalRounds >= 2) {
+      const semifinals = previous.map((position) => byPosition[position]);
+      if (
+        semifinals.length === 2 &&
+        semifinals.every((fixture) =>
+          fixture && fixture.status !== "bye" && fixture.sides?.A && fixture.sides?.B
+        )
+      ) {
+        const thirdPlace = makeFixture({
+          roundNumber,
+          index: matches,
+          label: "Third-place match",
+          stage: "thirdPlace",
+          sides: { A: null, B: null },
+          bracketPosition: "KO-3P",
+          sourceFixtureIds: semifinals.map((fixture) => fixture.fixtureId),
+          sourceRefs: {
+            A: { fixtureId: semifinals[0].fixtureId, outcome: "loser" },
+            B: { fixtureId: semifinals[1].fixtureId, outcome: "loser" },
+          },
+        });
+        byPosition["KO-3P"] = thirdPlace;
+        fixtures.push(thirdPlace);
+        setFeed(byPosition, previous[0], "loser", thirdPlace, "A");
+        setFeed(byPosition, previous[1], "loser", thirdPlace, "B");
       }
     }
     round.fixtureIds = fixtures
