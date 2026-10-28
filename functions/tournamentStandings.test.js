@@ -238,3 +238,51 @@ describe("King/Queen of the Court rules", () => {
     expect(byPoints.rows[0].entryId).toBe("t2");
   });
 });
+
+
+  test("a three-way circular head-to-head does not create an arbitrary ranking cycle", () => {
+    const input = state({
+      formatId: "roundRobin",
+      entryMode: "team",
+      teams: teams(["a", "b", "c"]),
+      fixtures: [
+        fixture({ id: "a-beats-b", a: "a", b: "b", pointsA: 6, pointsB: 2, winner: "A" }),
+        fixture({ id: "b-beats-c", a: "b", b: "c", pointsA: 6, pointsB: 2, winner: "A", roundId: "r2", roundNumber: 2 }),
+        fixture({ id: "c-beats-a", a: "c", b: "a", pointsA: 6, pointsB: 2, winner: "A", roundId: "r3", roundNumber: 3 }),
+      ],
+    });
+
+    const result = calculateStandings(input, {
+      entryType: "team",
+      formatId: "roundRobin",
+      tiebreakers: ["headToHead", "entryId"],
+    });
+
+    expect(result.rows.map((row) => row.rank)).toEqual([1, 1, 1]);
+    expect(result.rows.map((row) => row.entryId)).toEqual(["a", "b", "c"]);
+  });
+
+  test("league scoring awards configured competition points for wins, draws and losses", () => {
+    const input = state({
+      formatId: "roundRobin",
+      entryMode: "team",
+      config: { pointsForWin: 3, pointsForDraw: 1, pointsForLoss: 0 },
+      teams: teams(["a", "b", "c"]),
+      fixtures: [
+        fixture({ id: "draw", a: "a", b: "b", pointsA: 18, pointsB: 18, winner: "draw" }),
+        fixture({ id: "win", a: "c", b: "a", pointsA: 6, pointsB: 3, winner: "A", roundId: "r2", roundNumber: 2 }),
+      ],
+    });
+
+    const result = tournaments.getFormat("roundRobin").calculateStandings(input);
+    const a = result.rows.find((row) => row.entryId === "a");
+    const b = result.rows.find((row) => row.entryId === "b");
+    const c = result.rows.find((row) => row.entryId === "c");
+    expect(a.competitionPoints).toBe(1);
+    expect(a.draws).toBe(1);
+    expect(a.losses).toBe(1);
+    expect(b.competitionPoints).toBe(1);
+    expect(b.draws).toBe(1);
+    expect(c.competitionPoints).toBe(3);
+    expect(c.wins).toBe(1);
+  });
