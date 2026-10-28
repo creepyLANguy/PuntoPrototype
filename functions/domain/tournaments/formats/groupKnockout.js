@@ -446,7 +446,7 @@ function crossSeed(qualifiers, bracketSize) {
 
   let conflicts = countSameGroupMatchups(ordered, seedPairs);
   let rankOrderPenalty = calculateRankOrderPenalty(ordered);
-  const iterationLimit = ordered.length * ordered.length;
+  const iterationLimit = ordered.length * 2;
 
   for (let iteration = 0; iteration < iterationLimit; iteration += 1) {
     let bestSwap = null;
