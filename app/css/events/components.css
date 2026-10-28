@@ -354,3 +354,132 @@
   flex-direction: column;
   gap: 12px;
 }
+
+
+/* Final tournament results and shared-place podium. The labels remain textual
+   so tied places and missing champions are understandable without colour. */
+.podium-results {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.podium-heading h3 {
+  margin: 0 0 6px;
+  font-family: var(--ev-display);
+  font-size: clamp(1.25rem, 3vw, 1.7rem);
+}
+.podium-heading p {
+  margin: 0;
+  color: var(--ev-muted);
+  max-width: 76ch;
+}
+.tournament-podium {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.12fr) minmax(0, 1fr);
+  align-items: end;
+  gap: clamp(8px, 2vw, 16px);
+}
+.podium-tier {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 14px 10px 0;
+  border: 1px solid var(--ev-border);
+  border-radius: 14px 14px 0 0;
+  background: var(--ev-surface-2);
+  overflow-wrap: anywhere;
+}
+.podium-rank-1 {
+  padding-top: 22px;
+}
+.podium-rank-2,
+.podium-rank-3 {
+  padding-top: 16px;
+}
+.podium-medal {
+  font-size: 1.45rem;
+  line-height: 1.3;
+  color: var(--ev-muted);
+}
+.podium-place {
+  font-weight: 800;
+  font-size: 0.95rem;
+  margin: 5px 0 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.podium-entries {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.podium-entry {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+.podium-entry strong {
+  max-width: 100%;
+}
+.podium-score,
+.podium-tied {
+  color: var(--ev-muted);
+  font-size: 0.8rem;
+}
+.podium-base {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: calc(100% + 20px);
+  min-height: 42px;
+  margin-top: 16px;
+  border-top: 1px solid var(--ev-border);
+  background: var(--ev-bg);
+  font-weight: 800;
+  color: var(--ev-muted);
+}
+.podium-rank-1 .podium-base {
+  min-height: 64px;
+}
+.podium-rank-2 .podium-base {
+  min-height: 48px;
+}
+.podium-winner-summary {
+  margin: 0;
+  font-weight: 800;
+}
+.podium-empty {
+  padding: 12px 0;
+}
+.ev-match-history {
+  padding: 14px 18px;
+  background: var(--ev-surface);
+  border: 1px solid var(--ev-border);
+  border-radius: var(--ev-radius);
+}
+.ev-match-history > summary {
+  font-weight: 800;
+  cursor: pointer;
+}
+.is-completed .ev-section {
+  min-width: 0;
+}
+@media (max-width: 560px) {
+  .tournament-podium {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: stretch;
+  }
+  .podium-tier {
+    padding-top: 14px;
+    border-radius: 12px;
+  }
+  .podium-base {
+    min-height: 34px !important;
+    border-radius: 0 0 12px 12px;
+  }
+}
