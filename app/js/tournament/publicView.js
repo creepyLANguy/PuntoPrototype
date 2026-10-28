@@ -284,7 +284,7 @@ function renderParticipants(view) {
 export function renderStandingsSection(view) {
   const hasGroups = (view.standings?.rows || []).some((row) => row.groupId);
   return section(
-    view.format.kind === "bracket" ? "Placings" : "Standings",
+    ["bracket", "groupBracket"].includes(view.format.kind) ? "Placings" : "Standings",
     hasGroups
       ? renderGroupStandings(view)
       : renderStandings(view.standings, { formatKind: view.format.kind }),
@@ -292,7 +292,154 @@ export function renderStandingsSection(view) {
   );
 }
 
+const SOCIAL_FORMATS = new Set(["americano", "mexicano", "teamAmericano", "teamMexicano"]);
+
+function ordinal(place) {
+  const value = Number(place);
+  const mod100 = value % 100;
+  if (mod100 >= 11 && mod100 <= 13) return value + "th";
+  return value + (value % 10 === 1 ? "st" : value % 10 === 2 ? "nd" : value % 10 === 3 ? "rd" : "th");
+}
+
+function podiumScore(row, view) {
+  if (SOCIAL_FORMATS.has(view.format.id)) return String(row.totalPoints || 0) + " points";
+  if (view.format.id === "kingCourt") {
+    const config = view.format.config || {};
+    if (config.finalRanking === "courtPosition") {
+      return Number.isFinite(Number(row.finalCourtPosition)) &&
+        Number(row.finalCourtPosition) < Number.MAX_SAFE_INTEGER
+        ? "Court " + row.finalCourtPosition
+        : "No final court recorded";
+    }
+    return config.scoringMethod === "rallyPoints"
+      ? String(row.rallyPoints || 0) + " rally points"
+      : String(row.courtPoints || 0) + " court points";
+  }
+  if (row.competitionPoints != null) return String(row.competitionPoints) + " competition points";
+  return "";
+}
+
+function renderPodiumTier(place, entries, view) {
+  return h(
+    "div",
+    { className: "podium-tier podium-rank-" + place },
+    h("div", { className: "podium-medal", "aria-hidden": "true" }, place === 1 ? "★" : place === 2 ? "◆" : "●"),
+    h("div", { className: "podium-place" }, ordinal(place)),
+    h(
+      "div",
+      { className: "podium-entries" },
+      entries.map((row) =>
+        h(
+          "div",
+          { className: "podium-entry", "data-entry-id": row.entryId },
+          h("strong", {}, row.name),
+          podiumScore(row, view) ? h("span", { className: "podium-score" }, podiumScore(row, view)) : null,
+          row.placementTied || entries.length > 1
+            ? h("span", { className: "podium-tied" }, "Tied position")
+            : null,
+        ),
+      ),
+    ),
+    h("div", { className: "podium-base", "aria-hidden": "true" }, ordinal(place)),
+  );
+}
+
+export function renderTournamentResults(view) {
+  const standings = view.finalStandings || view.standings;
+  const isBracket = ["bracket", "groupBracket"].includes(view.format?.kind);
+  const rows = standings?.rows || [];
+  const hasRecordedResults = rows.some((row) => Number(row.played || 0) > 0);
+  const early = Boolean(view.finishedEarly || view.completionReason);
+  const finalDecided = !isBracket || Boolean(standings?.finalDecided);
+  const eligibleRows = isBracket
+    ? rows.filter((row) => row.placement != null)
+    : rows.filter((row) => row.rank != null);
+  const hasPodium = hasRecordedResults && eligibleRows.length > 0 && (!isBracket || finalDecided);
+  const tiers = [2, 1, 3]
+    .map((place) => ({
+      place,
+      rows: eligibleRows.filter((row) => (isBracket ? row.placement : row.rank) === place),
+    }))
+    .filter((tier) => tier.rows.length > 0);
+  const winners = eligibleRows.filter((row) => (isBracket ? row.placement : row.rank) === 1);
+  const heading = early
+    ? "Tournament ended early"
+    : isBracket && !standings?.finalDecided
+      ? "Final result not decided"
+      : "Tournament complete";
+  const intro = early
+    ? "These standings reflect recorded results only. Unplayed or cancelled matches are not treated as losses."
+    : isBracket && !standings?.finalDecided
+      ? "The recorded bracket does not establish a champion. No winner is shown until the required final (including any reset final) has a result."
+      : winners.length > 1
+        ? "The configured sporting tie-breakers leave these entries tied for first place."
+        : winners.length === 1
+          ? isBracket
+            ? "The champion and finishing positions are based on completed bracket results."
+            : "The podium is based on the tournament's configured ranking rules."
+          : "No final positions can be shown because no results have been recorded.";
+  return section(
+    "Tournament results",
+    h(
+      "div",
+      { className: "podium-results" },
+      h("div", { className: "podium-heading" }, h("h3", {}, heading), h("p", {}, intro)),
+      hasPodium
+        ? h(
+            "div",
+            { className: "tournament-podium", "aria-label": "Tournament podium" },
+            ...tiers.map((tier) => renderPodiumTier(tier.place, tier.rows, view)),
+          )
+        : h(
+            "p",
+            { className: "ev-empty podium-empty" },
+            isBracket && !standings?.finalDecided
+              ? "No champion or final podium can be declared from the results currently recorded."
+              : "There are not enough recorded results to establish a podium.",
+          ),
+      winners.length && !early && finalDecided
+        ? h(
+            "p",
+            { className: "podium-winner-summary" },
+            winners.length > 1
+              ? "Joint winners: " + winners.map((row) => row.name).join(", ")
+              : "Winner: " + winners[0].name,
+          )
+        : null,
+      isBracket && view.format.id === "groupKnockout"
+        ? h("p", { className: "ev-hint" }, "Only teams that qualified for the knockout stage receive overall knockout placements. Group standings remain available separately.")
+        : null,
+    ),
+    standings
+      ? renderStandings(standings, { formatKind: view.format.kind })
+      : h("p", { className: "ev-empty" }, "Final standings are not available."),
+    renderTiebreakers(standings),
+  );
+}
+
+function renderCompletedDashboard(view, liveMatches) {
+  return h(
+    "div",
+    { className: "ev-dashboard is-completed" },
+    renderHeader(view),
+    renderTournamentResults(view),
+    view.bracket ? section("Final bracket", renderBracket(view, { liveMatches })) : null,
+    view.format.id === "groupKnockout" ? renderStandingsSection(view) : null,
+    view.rounds?.length
+      ? h(
+          "details",
+          { className: "round-details ev-match-history" },
+          h("summary", {}, "Review rounds and match results"),
+          renderRounds({ ...view, roundForecast: [] }, { liveMatches }),
+        )
+      : null,
+    renderRules(view),
+    renderParticipants(view),
+  );
+}
+
 export function renderPublicDashboard(view, liveMatches) {
+  if (view.status === "completed") return renderCompletedDashboard(view, liveMatches);
   const currentRound =
     view.rounds.find((round) => round.roundId === view.currentRound?.roundId) ||
     null;
