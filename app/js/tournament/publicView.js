@@ -354,7 +354,9 @@ export function renderTournamentResults(view) {
   const eligibleRows = isBracket
     ? rows.filter((row) => row.placement != null)
     : rows.filter((row) => row.rank != null);
-  const hasPodium = hasRecordedResults && eligibleRows.length > 0 && (!isBracket || finalDecided);
+  // Early completion can leave a partial league/social table. Keep it
+  // explicitly provisional rather than awarding a visually definitive podium.
+  const hasPodium = !early && hasRecordedResults && eligibleRows.length > 0 && (!isBracket || finalDecided);
   const tiers = [2, 1, 3]
     .map((place) => ({
       place,
@@ -393,9 +395,11 @@ export function renderTournamentResults(view) {
         : h(
             "p",
             { className: "ev-empty podium-empty" },
-            isBracket && !standings?.finalDecided
-              ? "No champion or final podium can be declared from the results currently recorded."
-              : "There are not enough recorded results to establish a podium.",
+            early
+              ? "A podium is not awarded for a tournament finished early. The table below reflects recorded results only."
+              : isBracket && !standings?.finalDecided
+                ? "No champion or final podium can be declared from the results currently recorded."
+                : "There are not enough recorded results to establish a podium.",
           ),
       winners.length && !early && finalDecided
         ? h(
