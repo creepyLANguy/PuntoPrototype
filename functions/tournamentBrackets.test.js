@@ -155,6 +155,25 @@ describe("double elimination", () => {
       expect(unresolvedCompletedSourceFailures(target)).toHaveLength(0);
     },
   );
+
+  test("final placements do not depend on fixture storage order", () => {
+    const target = bracketState("doubleElimination", 32, { grandFinalReset: false });
+    const format = tournaments.getFormat("doubleElimination");
+    append(target, format.generateInitialRound(target));
+    simulateBracket(target, "A");
+
+    const placementMap = (fixtures) =>
+      format
+        .calculateFinalStandings({ ...target, fixtures })
+        .rows.map((row) => [row.entryId, row.placement, row.eliminated])
+        .sort(([left], [right]) => left.localeCompare(right));
+
+    const originalOrder = placementMap(target.fixtures);
+    const reversedOrder = placementMap([...target.fixtures].reverse());
+
+    expect(originalOrder.some(([, placement]) => placement === 1)).toBe(true);
+    expect(reversedOrder).toEqual(originalOrder);
+  });
 });
 
 describe("group knockout", () => {
@@ -220,6 +239,67 @@ describe("bracket placements and podium rulings", () => {
 
     expect(thirdPlace.status).toBe("completed");
     const standings = format.calculateFinalStandings(target);
+    expect(standings.rows.filter((row) => row.placement === 3)).toHaveLength(1);
+    expect(standings.rows.filter((row) => row.placement === 4)).toHaveLength(1);
+    expect(unresolvedCompletedSourceFailures(target)).toHaveLength(0);
+  });
+
+  test("single elimination keeps third-place matches when six-team brackets have pending semifinal opponents", () => {
+    const target = bracketState("singleElimination", 6, { thirdPlaceMatch: true });
+    const format = tournaments.getFormat("singleElimination");
+    append(target, format.generateInitialRound(target));
+
+    const semifinalRound = target.rounds[target.rounds.length - 1].roundNumber - 1;
+    const semifinals = target.fixtures.filter(
+      (fixture) => fixture.stage === "knockout" && fixture.roundNumber === semifinalRound,
+    );
+    expect(semifinals).toHaveLength(2);
+    expect(semifinals.every((fixture) => fixture.status === "scheduled")).toBe(true);
+
+    const thirdPlace = target.fixtures.find((fixture) => fixture.stage === "thirdPlace");
+    expect(thirdPlace).toBeDefined();
+    expect(thirdPlace.sides).toEqual({ A: null, B: null });
+
+    simulateBracket(target, "A");
+
+    expect(thirdPlace.status).toBe("completed");
+    const standings = format.calculateFinalStandings(target);
+    expect(standings.finalDecided).toBe(true);
+    expect(standings.rows.filter((row) => row.placement === 3)).toHaveLength(1);
+    expect(standings.rows.filter((row) => row.placement === 4)).toHaveLength(1);
+    expect(unresolvedCompletedSourceFailures(target)).toHaveLength(0);
+  });
+
+  test("does not create a third-place match when a three-team bracket has only one played semifinal", () => {
+    const target = bracketState("singleElimination", 3, { thirdPlaceMatch: true });
+    const format = tournaments.getFormat("singleElimination");
+    append(target, format.generateInitialRound(target));
+
+    expect(target.fixtures.some((fixture) => fixture.stage === "thirdPlace")).toBe(false);
+    simulateBracket(target, "A");
+    expect(format.calculateFinalStandings(target).finalDecided).toBe(true);
+  });
+
+  test("group-knockout keeps third-place matches when six qualifiers include pending bye paths", () => {
+    const target = bracketState("groupKnockout", 6, {
+      groupCount: 3,
+      advancePerGroup: 2,
+      thirdPlaceMatch: true,
+    });
+    const format = tournaments.getFormat("groupKnockout");
+    append(target, format.generateInitialRound(target));
+    completeGroupFixturesBySeed(target);
+    append(target, format.generateNextRound(target));
+
+    const thirdPlace = target.fixtures.find((fixture) => fixture.stage === "thirdPlace");
+    expect(thirdPlace).toBeDefined();
+    expect(thirdPlace.sides).toEqual({ A: null, B: null });
+
+    simulateBracket(target, "A");
+
+    expect(thirdPlace.status).toBe("completed");
+    const standings = format.calculateFinalStandings(target);
+    expect(standings.finalDecided).toBe(true);
     expect(standings.rows.filter((row) => row.placement === 3)).toHaveLength(1);
     expect(standings.rows.filter((row) => row.placement === 4)).toHaveLength(1);
     expect(unresolvedCompletedSourceFailures(target)).toHaveLength(0);
