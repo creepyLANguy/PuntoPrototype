@@ -72,11 +72,14 @@ const kingCourt = {
   canGenerateNextRound: canGenerateAfterComplete,
   calculateStandings(state) {
     const mode = state.tournament?.participantMode === "individual" ? "participant" : "team";
+    const cfg = this.normalizeConfig(state.tournament?.format?.config || {});
     return standings(state, {
       entryType: mode,
       mode: "league",
       formatId: "kingCourt",
-      tiebreakers: ["competitionPoints", "pointsFor", "entryId"],
+      finalRanking: cfg.finalRanking,
+      scoringMethod: cfg.scoringMethod,
+      includeFinalCourtPosition: true,
     });
   },
   calculateRoundResult,
@@ -102,7 +105,14 @@ const kingCourt = {
     const queue = [...(lastRound?.generationSnapshot?.queue || [])];
     for (const fixture of fixtures) {
       const outcome = fixtureOutcome(fixture);
-      const winner = resolveWinner(fixture, outcome, cfg);
+      const winner = resolveWinner(fixture, outcome, cfg, state);
+      if (!winner) {
+        // A "stay" tie (or equal/missing seeds) keeps the exact pairing on
+        // its current court instead of arbitrarily moving side B down.
+        addToBucket(buckets, fixture.courtLevel, fixture.sides.A);
+        addToBucket(buckets, fixture.courtLevel, fixture.sides.B);
+        continue;
+      }
       const loser = winner === "A" ? "B" : "A";
       addToBucket(buckets, Math.max(1, fixture.courtLevel - 1), fixture.sides[winner]);
       const loserLevel = fixture.courtLevel + 1;
@@ -191,18 +201,31 @@ function generateRoundFromAssignments(state, assignmentResult) {
   return { rounds: [round], fixtures };
 }
 
-function resolveWinner(fixture, outcome, cfg) {
+function resolveWinner(fixture, outcome, cfg, state) {
   if (!outcome || outcome.winner === "draw") {
-    if (cfg.tieBehaviour === "stay") return "A";
-    return seedOf(fixture.sides.A) <= seedOf(fixture.sides.B) ? "A" : "B";
+    if (cfg.tieBehaviour === "stay") return null;
+    const seedA = seedOfSide(state, fixture.sides.A);
+    const seedB = seedOfSide(state, fixture.sides.B);
+    if (seedA === seedB) return null;
+    return seedA < seedB ? "A" : "B";
   }
-  return outcome.winner;
+  return outcome.winner === "A" || outcome.winner === "B" ? outcome.winner : null;
 }
 
-function seedOf(side) {
-  const id = side?.teamId || side?.participantIds?.[0] || "";
-  const digits = String(id).replace(/\D/g, "");
-  return digits ? Number(digits) : Number.MAX_SAFE_INTEGER;
+function seedOfSide(state, side) {
+  if (side?.teamId) {
+    const team = (state.teams || []).find((entry) => entry.teamId === side.teamId);
+    const seed = Number(team?.seed);
+    return team?.seed != null && Number.isFinite(seed) ? seed : Number.MAX_SAFE_INTEGER;
+  }
+  const seeds = (side?.participantIds || [])
+    .map((id) => (state.participants || []).find((entry) => entry.participantId === id)?.seed)
+    .map((seed) => Number(seed))
+    .filter((seed) => Number.isFinite(seed));
+  // A pair's average seed is comparable; missing seeds are not guessed from IDs.
+  return seeds.length
+    ? seeds.reduce((sum, seed) => sum + seed, 0) / seeds.length
+    : Number.MAX_SAFE_INTEGER;
 }
 
 function addToBucket(buckets, level, side) {
