@@ -10,6 +10,7 @@ import {
   renderHeader,
   renderRules,
   renderStandingsSection,
+  renderTournamentResults,
   tournamentUrl,
 } from "./publicView.js";
 import { renderBracket, renderRounds } from "./standingsView.js";
@@ -485,6 +486,7 @@ export function renderHostDashboard(ctx) {
     "div",
     { className: "ev-dashboard is-host" },
     renderHeader(view),
+    view.status === "completed" ? renderTournamentResults(view) : null,
     h(
       "div",
       { className: "host-bar" },
