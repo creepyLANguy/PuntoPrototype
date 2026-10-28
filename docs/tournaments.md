@@ -224,7 +224,9 @@ inferring a winner from the last match displayed on screen.
   final podium; it never treats cancelled/unplayed matches as losses.
 
 The completed results screen shows the winner and available second/third
-places according to those rules, along with a full results table. It labels
+places according to those rules, along with a full results table. If a tournament
+is finished early, the table is explicitly provisional and a podium is withheld
+so a partial league/social table is not presented as an award result. It labels
 joint placements explicitly, keeps group standings available in group-knockout
 events, and retains match history for review.
 
