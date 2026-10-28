@@ -58,6 +58,7 @@ const doubleElimination = {
     return { allowed: false, reason: "Double elimination bracket is generated up front." };
   },
   calculateStandings: bracketStandings,
+  calculateFinalStandings: bracketStandings,
   calculateRoundResult,
   getRulesSummary(config) {
     const cfg = this.normalizeConfig(config);
