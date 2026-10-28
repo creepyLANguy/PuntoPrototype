@@ -91,7 +91,9 @@ const kingCourt = {
         `${cfg.courtCount} courts`,
         `${cfg.roundDurationMinutes} minute rounds`,
         "Winners move up; losers move down",
-        `Ties: ${cfg.tieBehaviour}`,
+        cfg.tieBehaviour === "stay"
+          ? "Ties: both sides stay on their current court"
+          : "Ties: higher seed wins; equal or missing seeds stay on court",
       ],
     };
   },
