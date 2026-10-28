@@ -249,23 +249,25 @@ function bracketStandings(state, options = {}) {
     row.placement = placements.has(row.entryId) ? placements.get(row.entryId) : null;
     row.rank = row.placement;
     row.placementTied = row.placement != null && placedCounts[row.placement] > 1;
-    row.placementLabel =
-      row.placement == null
-        ? formatId === "groupKnockout" && !row.qualified
-          ? "Did not qualify"
-          : final
-            ? "Unplaced"
-            : row.qualified
-              ? "Still in contention"
-              : "Not yet played"
-        : row.placementTied
-          ? String(row.placement) + " (tied)"
-          : String(row.placement);
     row.eliminated =
       row.qualified &&
       !finalFixtureIds.has(row.entryId) &&
       (row.losses >= (formatId === "doubleElimination" ? 2 : 1) ||
         (Boolean(final) && row.placement != null && row.placement > 1));
+    row.placementLabel =
+      row.placement == null
+        ? formatId === "groupKnockout" && !row.qualified
+          ? "Did not qualify"
+          : row.eliminated
+            ? "Eliminated"
+            : final
+              ? "Unplaced"
+              : row.qualified
+                ? "Still in contention"
+                : "Not yet played"
+        : row.placementTied
+          ? String(row.placement) + " (tied)"
+          : String(row.placement);
   }
 
   result.rows.sort((left, right) => {
