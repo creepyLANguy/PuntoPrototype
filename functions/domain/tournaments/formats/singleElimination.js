@@ -144,6 +144,33 @@ function generateBracket(state) {
         setFeed(byPosition, previousRoundPositions[index * 2 + 1], "winner", fixture, "B");
       }
     }
+    if (bracketRound === totalRounds && cfg.thirdPlaceMatch && totalRounds >= 2) {
+      const semifinals = previousRoundPositions.map((position) => byPosition[position]);
+      if (
+        semifinals.length === 2 &&
+        semifinals.every((fixture) =>
+          fixture && fixture.status !== "bye" && fixture.sides?.A && fixture.sides?.B
+        )
+      ) {
+        const thirdPlace = makeByeOrScheduled({
+          roundNumber,
+          index: matches,
+          label: "Third-place match",
+          stage: "thirdPlace",
+          sides: { A: null, B: null },
+          bracketPosition: "KO-3P",
+          sourceFixtureIds: semifinals.map((fixture) => fixture.fixtureId),
+          sourceRefs: {
+            A: { fixtureId: semifinals[0].fixtureId, outcome: "loser" },
+            B: { fixtureId: semifinals[1].fixtureId, outcome: "loser" },
+          },
+        });
+        byPosition["KO-3P"] = thirdPlace;
+        fixtures.push(thirdPlace);
+        setFeed(byPosition, previousRoundPositions[0], "loser", thirdPlace, "A");
+        setFeed(byPosition, previousRoundPositions[1], "loser", thirdPlace, "B");
+      }
+    }
     round.fixtureIds = fixtures
       .filter((fixture) => fixture.roundNumber === roundNumber)
       .map((fixture) => fixture.fixtureId);
