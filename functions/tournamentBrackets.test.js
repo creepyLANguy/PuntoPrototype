@@ -162,3 +162,90 @@ describe("group knockout", () => {
     );
   });
 });
+
+
+describe("bracket placements and podium rulings", () => {
+  test("single elimination ranks entrants by finishing round, and shares third place without a play-off", () => {
+    const target = bracketState("singleElimination", 8);
+    const format = tournaments.getFormat("singleElimination");
+    append(target, format.generateInitialRound(target));
+    simulateBracket(target, "A");
+
+    const standings = format.calculateFinalStandings(target);
+    expect(standings.finalDecided).toBe(true);
+    expect(standings.rows.filter((row) => row.placement === 1)).toHaveLength(1);
+    expect(standings.rows.filter((row) => row.placement === 2)).toHaveLength(1);
+    expect(standings.rows.filter((row) => row.placement === 3)).toHaveLength(2);
+    expect(standings.rows.filter((row) => row.placement === 5)).toHaveLength(4);
+    expect(standings.rows.filter((row) => row.rank === 3).every((row) => row.placementTied)).toBe(true);
+  });
+
+  test("single elimination creates and ranks a configured third-place match", () => {
+    const target = bracketState("singleElimination", 4, { thirdPlaceMatch: true });
+    const format = tournaments.getFormat("singleElimination");
+    append(target, format.generateInitialRound(target));
+
+    const thirdPlace = target.fixtures.find((fixture) => fixture.stage === "thirdPlace");
+    expect(thirdPlace).toBeDefined();
+    expect(thirdPlace.label).toMatch(/third-place/i);
+
+    simulateBracket(target, "A");
+    expect(target.fixtures.find((fixture) => fixture.stage === "thirdPlace").status).toBe("completed");
+    const standings = format.calculateFinalStandings(target);
+    expect(standings.rows.filter((row) => row.placement === 3)).toHaveLength(1);
+    expect(standings.rows.filter((row) => row.placement === 4)).toHaveLength(1);
+  });
+
+  test("double elimination does not declare the champion before a required reset", () => {
+    const target = bracketState("doubleElimination", 3, { grandFinalReset: true });
+    const makeSide = (teamId) => ({ teamId, participantIds: [] });
+    target.fixtures = [
+      {
+        fixtureId: "grand-final",
+        roundId: "r1",
+        roundNumber: 1,
+        label: "Grand Final",
+        stage: "grandFinal",
+        status: "completed",
+        sides: { A: makeSide("t1"), B: makeSide("t2") },
+        resultSnapshot: {
+          winner: "B",
+          points: { A: 3, B: 6 },
+          games: { A: 3, B: 6 },
+          sets: { A: 0, B: 2 },
+        },
+      },
+      {
+        fixtureId: "grand-final-reset",
+        roundId: "r1",
+        roundNumber: 1,
+        label: "Grand Final (Reset)",
+        stage: "grandFinalReset",
+        status: "scheduled",
+        sides: { A: makeSide("t2"), B: makeSide("t1") },
+      },
+    ];
+
+    const format = tournaments.getFormat("doubleElimination");
+    const undecided = format.calculateFinalStandings(target);
+    expect(undecided.finalDecided).toBe(false);
+    expect(undecided.championId).toBeNull();
+
+    target.fixtures[1] = {
+      ...target.fixtures[1],
+      status: "completed",
+      resultSnapshot: {
+        winner: "A",
+        points: { A: 6, B: 4 },
+        games: { A: 6, B: 4 },
+        sets: { A: 2, B: 1 },
+      },
+    };
+    const decided = format.calculateFinalStandings(target);
+    expect(decided.finalDecided).toBe(true);
+    expect(decided.championId).toBe("t2");
+    expect(decided.runnerUpId).toBe("t1");
+    expect(decided.rows.find((row) => row.entryId === "t2").placement).toBe(1);
+    expect(decided.rows.find((row) => row.entryId === "t1").placement).toBe(2);
+  });
+});
