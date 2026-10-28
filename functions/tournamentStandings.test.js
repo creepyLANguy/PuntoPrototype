@@ -65,8 +65,10 @@ function state({ formatId = "americano", entryMode = "individual", participants:
 
 describe("shared tournament standings", () => {
   test("sporting ties share their rank instead of being broken by entry ID", () => {
+    const seededParticipants = participants(["player-b", "player-a"]);
+    seededParticipants[1].seed = seededParticipants[0].seed;
     const input = state({
-      participants: participants(["player-b", "player-a"]),
+      participants: seededParticipants,
       fixtures: [
         fixture({
           id: "draw",
@@ -83,6 +85,57 @@ describe("shared tournament standings", () => {
 
     expect(result.rows.map((row) => row.rank)).toEqual([1, 1]);
     expect(result.rows.map((row) => row.totalPoints)).toEqual([18, 18]);
+  });
+
+
+  test("Americano uses initial seed as the final fallback after social scoring", () => {
+    const seededParticipants = participants(["later-seed", "earlier-seed"]);
+    seededParticipants[0].seed = 8;
+    seededParticipants[1].seed = 2;
+    const input = state({
+      participants: seededParticipants,
+      fixtures: [
+        fixture({
+          id: "draw",
+          a: "later-seed",
+          b: "earlier-seed",
+          entryType: "participant",
+          pointsA: 18,
+          pointsB: 18,
+        }),
+      ],
+    });
+
+    const result = tournaments.getFormat("americano").calculateStandings(input);
+    expect(result.tiebreakers.slice(-2)).toEqual(["seed", "entryId"]);
+    expect(result.rows.find((row) => row.entryId === "earlier-seed").rank).toBe(1);
+    expect(result.rows.find((row) => row.entryId === "later-seed").rank).toBe(2);
+  });
+
+  test("league standings use initial seed only after all sporting tiebreakers tie", () => {
+    const input = state({
+      formatId: "roundRobin",
+      entryMode: "team",
+      teams: teams(["later-seed", "earlier-seed"], {
+        "later-seed": 8,
+        "earlier-seed": 2,
+      }),
+      fixtures: [
+        fixture({
+          id: "draw",
+          a: "later-seed",
+          b: "earlier-seed",
+          pointsA: 8,
+          pointsB: 8,
+          winner: "draw",
+        }),
+      ],
+    });
+
+    const result = tournaments.getFormat("roundRobin").calculateStandings(input);
+    expect(result.tiebreakers.slice(-2)).toEqual(["seed", "entryId"]);
+    expect(result.rows.find((row) => row.entryId === "earlier-seed").rank).toBe(1);
+    expect(result.rows.find((row) => row.entryId === "later-seed").rank).toBe(2);
   });
 
   test("usePointDiff false removes point difference from social ranking", () => {
@@ -441,27 +494,156 @@ describe("King/Queen of the Court rules", () => {
     });
   });
 
-  test("final ranking honors court position or configured point method", () => {
+  test("final ranking and scoring method each determine King Court standings", () => {
     const ts = teams(["t1", "t2", "t3", "t4"]);
     const fixtures = [
-      fixture({ id: "court-1", a: "t1", b: "t3", pointsA: 20, pointsB: 0, winner: "A", courtLevel: 1 }),
-      fixture({ id: "court-2", a: "t2", b: "t4", pointsA: 3, pointsB: 0, winner: "A", courtLevel: 2 }),
+      fixture({
+        id: "r1-court-1",
+        a: "t2",
+        b: "t4",
+        pointsA: 5,
+        pointsB: 1,
+        courtLevel: 1,
+        roundId: "r1",
+        roundNumber: 1,
+      }),
+      fixture({
+        id: "r1-court-2",
+        a: "t1",
+        b: "t3",
+        pointsA: 10,
+        pointsB: 2,
+        courtLevel: 2,
+        roundId: "r1",
+        roundNumber: 1,
+      }),
+      fixture({
+        id: "r2-court-1",
+        a: "t2",
+        b: "t3",
+        pointsA: 5,
+        pointsB: 1,
+        courtLevel: 1,
+        roundId: "r2",
+        roundNumber: 2,
+      }),
+      fixture({
+        id: "r2-court-2",
+        a: "t1",
+        b: "t4",
+        pointsA: 10,
+        pointsB: 1,
+        courtLevel: 2,
+        roundId: "r2",
+        roundNumber: 2,
+      }),
+      fixture({
+        id: "r3-court-1",
+        a: "t2",
+        b: "t1",
+        pointsA: 5,
+        pointsB: 1,
+        courtLevel: 1,
+        roundId: "r3",
+        roundNumber: 3,
+      }),
+      fixture({
+        id: "r3-court-2",
+        a: "t3",
+        b: "t4",
+        pointsA: 1,
+        pointsB: 100,
+        courtLevel: 2,
+        roundId: "r3",
+        roundNumber: 3,
+      }),
+      fixture({
+        id: "r4-court-1",
+        a: "t1",
+        b: "t3",
+        pointsA: 5,
+        pointsB: 1,
+        courtLevel: 1,
+        roundId: "r4",
+        roundNumber: 4,
+      }),
+      fixture({
+        id: "r4-court-2",
+        a: "t2",
+        b: "t4",
+        pointsA: 5,
+        pointsB: 100,
+        courtLevel: 2,
+        roundId: "r4",
+        roundNumber: 4,
+      }),
     ];
-    fixtures.forEach((item) => (item.roundId = "r1"));
+    const rounds = [1, 2, 3, 4].map((roundNumber) => ({
+      roundId: `r${roundNumber}`,
+      roundNumber,
+      generationSnapshot: { queue: [] },
+    }));
+    const format = tournaments.getFormat("kingCourt");
+    const calculate = (config) => {
+      const input = kingState(config, ts, fixtures);
+      input.rounds = rounds;
+      return format.calculateStandings(input);
+    };
 
-    const byCourt = tournaments.getFormat("kingCourt").calculateStandings(
-      kingState({ courtCount: 2, finalRanking: "courtPosition", scoringMethod: "courtPoints" }, ts, fixtures),
-    );
-    const byPoints = tournaments.getFormat("kingCourt").calculateStandings(
-      kingState({ courtCount: 2, finalRanking: "points", scoringMethod: "courtPoints" }, ts, fixtures),
-    );
-    const byRallyPoints = tournaments.getFormat("kingCourt").calculateStandings(
-      kingState({ courtCount: 2, finalRanking: "points", scoringMethod: "rallyPoints" }, ts, fixtures),
+    const byCourtPosition = calculate({
+      courtCount: 2,
+      finalRanking: "courtPosition",
+      scoringMethod: "courtPoints",
+    });
+    const byCourtPoints = calculate({
+      courtCount: 2,
+      finalRanking: "points",
+      scoringMethod: "courtPoints",
+    });
+    const byRallyPoints = calculate({
+      courtCount: 2,
+      finalRanking: "points",
+      scoringMethod: "rallyPoints",
+    });
+
+    expect(byCourtPosition.rows[0].entryId).toBe("t1");
+    expect(byCourtPoints.rows[0].entryId).toBe("t2");
+    expect(byRallyPoints.rows[0].entryId).toBe("t4");
+    expect(byCourtPosition.rows[0].finalCourtPosition).toBe(1);
+    expect(byCourtPoints.rows[0].courtPoints).toBe(7);
+    expect(byRallyPoints.rows[0].rallyPoints).toBe(202);
+  });
+
+  test("King Court uses seed only as a fallback after configured ranking criteria tie", () => {
+    const ts = teams(["later-seed", "earlier-seed"], {
+      "later-seed": 8,
+      "earlier-seed": 2,
+    });
+    const input = kingState(
+      {
+        courtCount: 1,
+        finalRanking: "points",
+        scoringMethod: "rallyPoints",
+      },
+      ts,
+      [
+        fixture({
+          id: "draw",
+          a: "later-seed",
+          b: "earlier-seed",
+          pointsA: 6,
+          pointsB: 6,
+          courtLevel: 1,
+          roundId: "r1",
+          roundNumber: 1,
+        }),
+      ],
     );
 
-    expect(byCourt.rows[0].entryId).toBe("t1");
-    expect(byPoints.rows[0].entryId).toBe("t1");
-    expect(byRallyPoints.rows[0].entryId).toBe("t1");
+    const result = tournaments.getFormat("kingCourt").calculateStandings(input);
+    expect(result.tiebreakers.slice(-2)).toEqual(["seed", "entryId"]);
+    expect(result.rows.find((row) => row.entryId === "earlier-seed").rank).toBe(1);
+    expect(result.rows.find((row) => row.entryId === "later-seed").rank).toBe(2);
   });
 });
 

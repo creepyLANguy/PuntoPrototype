@@ -255,7 +255,8 @@ function buildRows(state, entryType, groupIdByTeamId) {
 }
 
 function defaultTiebreakers(formatId, mode, options = {}) {
-  if (formatId === "americano") return ["totalPoints", "pointDiff", "pointsFor", "entryId"];
+  if (formatId === "americano")
+    return ["totalPoints", "pointDiff", "pointsFor", "seed", "entryId"];
   if (formatId === "mexicano" || formatId === "teamMexicano") {
     return ["totalPoints", "pointDiff", "pointsFor", "headToHead", "seed", "entryId"];
   }
@@ -270,8 +271,8 @@ function defaultTiebreakers(formatId, mode, options = {}) {
         ? ["rallyPoints", "courtPoints"]
         : ["courtPoints", "rallyPoints"];
     if (options.finalRanking === "points")
-      return [...pointTieBreakers, "finalCourtPosition", "entryId"];
-    return ["finalCourtPosition", ...pointTieBreakers, "entryId"];
+      return [...pointTieBreakers, "finalCourtPosition", "seed", "entryId"];
+    return ["finalCourtPosition", ...pointTieBreakers, "seed", "entryId"];
   }
   if (mode === "social") return ["totalPoints", "pointDiff", "pointsFor", "entryId"];
   return [

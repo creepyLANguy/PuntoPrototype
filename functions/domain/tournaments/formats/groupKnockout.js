@@ -21,8 +21,8 @@ const {
   toInt,
 } = require("./shared");
 
-// Group qualification uses sporting results only; initial draw seeds must not
-// decide a tied qualification cutoff. Entry IDs remain a display-order fallback.
+// Group qualification uses sporting criteria first, then the initial seed as a
+// final fallback. Entry IDs only order rows for display and never split a tie.
 const GROUP_STANDINGS_TIEBREAKERS = [
   "competitionPoints",
   "wins",
@@ -31,6 +31,7 @@ const GROUP_STANDINGS_TIEBREAKERS = [
   "gameDiff",
   "pointDiff",
   "pointsFor",
+  "seed",
   "entryId",
 ];
 
@@ -235,25 +236,47 @@ function generateKnockout(state) {
   const teamById = Object.fromEntries((state.teams || []).map((team) => [team.teamId, team]));
   const qualifiers = [];
   for (const groupId of Object.keys(rowsByGroup).sort()) {
-    // A withdrawn entry remains visible in the group table, but cannot advance
-    // to the knockout. Qualification ranks are checked among eligible teams.
-    const rows = rowsByGroup[groupId].filter((row) => row.status === "active");
-    const boundary = rows[cfg.advancePerGroup - 1];
-    const next = rows[cfg.advancePerGroup];
-    if (boundary && next && boundary.rank === next.rank) {
+    // A withdrawn entry remains visible in the group table, but cannot advance.
+    // Re-rank eligible entries while preserving any unresolved ties; otherwise
+    // a withdrawn group leader leaves rank gaps that distort cross-seeding.
+    const rows = rowsByGroup[groupId]
+      .filter((row) => row.status === "active")
+      .sort(
+        (a, b) => a.rank - b.rank || String(a.entryId).localeCompare(String(b.entryId)),
+      );
+    const eligibleRows = [];
+    let eligiblePosition = 1;
+    for (let index = 0; index < rows.length; ) {
+      let end = index + 1;
+      while (end < rows.length && rows[end].rank === rows[index].rank) end += 1;
+      for (let tiedIndex = index; tiedIndex < end; tiedIndex += 1) {
+        eligibleRows.push({ ...rows[tiedIndex], qualificationRank: eligiblePosition });
+      }
+      eligiblePosition += end - index;
+      index = end;
+    }
+
+    const boundary = eligibleRows[cfg.advancePerGroup - 1];
+    const next = eligibleRows[cfg.advancePerGroup];
+    if (boundary && next && boundary.qualificationRank === next.qualificationRank) {
       throw new TournamentDomainError(
         "QUALIFICATION_TIE",
         `Group ${groupId} has a tie at the qualification cutoff. Resolve the tie under the tournament rules before generating the knockout bracket.`,
         {
           groupId,
-          tiedEntryIds: rows
-            .filter((row) => row.rank === boundary.rank)
+          tiedEntryIds: eligibleRows
+            .filter((row) => row.qualificationRank === boundary.qualificationRank)
             .map((row) => row.entryId),
         },
       );
     }
-    for (const row of rows.slice(0, cfg.advancePerGroup))
-      qualifiers.push({ groupId, rank: row.rank, team: teamById[row.entryId] });
+    for (const row of eligibleRows.slice(0, cfg.advancePerGroup)) {
+      qualifiers.push({
+        groupId,
+        rank: row.qualificationRank,
+        team: teamById[row.entryId],
+      });
+    }
   }
   if (qualifiers.length === 0) {
     throw new TournamentDomainError(
@@ -298,7 +321,7 @@ function generateKnockout(state) {
   }
 
   const size = nextPowerOfTwo(qualifiers.length);
-  const ordered = crossSeed(qualifiers).flat();
+  const ordered = crossSeed(qualifiers, size);
   while (ordered.length < size) ordered.push(null);
   const slots = Array(size).fill(null);
   seedOrder(size).forEach((seedNumber, index) => {
@@ -400,19 +423,76 @@ function generateKnockout(state) {
   return { rounds, fixtures };
 }
 
-function crossSeed(qualifiers) {
-  const sorted = [...qualifiers].sort(
-    (a, b) => a.rank - b.rank || a.groupId.localeCompare(b.groupId),
+function crossSeed(qualifiers, bracketSize) {
+  const ordered = [...qualifiers].sort(
+    (a, b) =>
+      a.rank - b.rank ||
+      a.groupId.localeCompare(b.groupId) ||
+      String(a.team?.teamId || "").localeCompare(String(b.team?.teamId || "")),
   );
-  const pairs = [];
-  while (sorted.length > 0) {
-    const left = sorted.shift();
-    let index = sorted.findIndex((candidate) => candidate.groupId !== left.groupId);
-    if (index < 0) index = sorted.length - 1;
-    const right = index >= 0 ? sorted.splice(index, 1)[0] : null;
-    pairs.push([left, right]);
+  // Bracket matches are not adjacent in seed order (for example, an eight-slot
+  // bracket pairs seeds 1-8, 4-5, 2-7 and 3-6). Repair same-group first-round
+  // matchups against those actual seed pairs, preferring swaps within the same
+  // qualification rank so the ranking order is otherwise preserved.
+  const slotOrder = seedOrder(bracketSize);
+  const seedPairs = [];
+  for (let index = 0; index < slotOrder.length; index += 2) {
+    seedPairs.push([slotOrder[index] - 1, slotOrder[index + 1] - 1]);
   }
-  return pairs;
+
+  let conflicts = countSameGroupMatchups(ordered, seedPairs);
+  let inversions = countRankInversions(ordered);
+  const iterationLimit = ordered.length * ordered.length;
+
+  for (let iteration = 0; conflicts > 0 && iteration < iterationLimit; iteration += 1) {
+    let bestSwap = null;
+    let bestConflicts = conflicts;
+    let bestInversions = inversions;
+
+    for (let left = 0; left < ordered.length; left += 1) {
+      for (let right = left + 1; right < ordered.length; right += 1) {
+        [ordered[left], ordered[right]] = [ordered[right], ordered[left]];
+        const candidateConflicts = countSameGroupMatchups(ordered, seedPairs);
+        const candidateInversions = countRankInversions(ordered);
+        [ordered[left], ordered[right]] = [ordered[right], ordered[left]];
+
+        if (
+          candidateConflicts < bestConflicts ||
+          (candidateConflicts === bestConflicts && candidateInversions < bestInversions)
+        ) {
+          bestSwap = [left, right];
+          bestConflicts = candidateConflicts;
+          bestInversions = candidateInversions;
+        }
+      }
+    }
+
+    if (!bestSwap) break;
+    const [left, right] = bestSwap;
+    [ordered[left], ordered[right]] = [ordered[right], ordered[left]];
+    conflicts = bestConflicts;
+    inversions = bestInversions;
+  }
+
+  return ordered;
+}
+
+function countSameGroupMatchups(ordered, seedPairs) {
+  return seedPairs.reduce((count, [leftSeed, rightSeed]) => {
+    const left = ordered[leftSeed];
+    const right = ordered[rightSeed];
+    return count + (left && right && left.groupId === right.groupId ? 1 : 0);
+  }, 0);
+}
+
+function countRankInversions(ordered) {
+  let inversions = 0;
+  for (let left = 0; left < ordered.length; left += 1) {
+    for (let right = left + 1; right < ordered.length; right += 1) {
+      if (ordered[left].rank > ordered[right].rank) inversions += 1;
+    }
+  }
+  return inversions;
 }
 
 module.exports = groupKnockout;

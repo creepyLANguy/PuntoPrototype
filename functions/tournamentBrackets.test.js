@@ -194,6 +194,56 @@ describe("group knockout", () => {
 
 
 describe("group-knockout qualification after withdrawals", () => {
+  test("withdrawals re-rank eligible teams before group-knockout cross-seeding", () => {
+    const target = bracketState("groupKnockout", 9, {
+      groupCount: 3,
+      advancePerGroup: 2,
+    });
+    const format = tournaments.getFormat("groupKnockout");
+    append(target, format.generateInitialRound(target));
+    completeGroupFixturesBySeed(target);
+
+    // Team 1 tops Group A and then withdraws. Teams 6 and 7 should become
+    // eligible ranks 1 and 2 for knockout seeding without changing group history.
+    target.teams.find((team) => team.teamId === "t1").status = "withdrawn";
+    const groupStandings = format.calculateStandings(target);
+    expect(groupStandings.rows.find((row) => row.entryId === "t1").rank).toBe(1);
+    expect(groupStandings.rows.find((row) => row.entryId === "t6").rank).toBe(2);
+    expect(groupStandings.rows.find((row) => row.entryId === "t7").rank).toBe(3);
+
+    const generation = format.generateNextRound(target);
+    const firstRoundNumber = Math.min(...generation.fixtures.map((fixture) => fixture.roundNumber));
+    const firstRoundFixtures = generation.fixtures.filter(
+      (fixture) =>
+        fixture.stage === "knockout" && fixture.roundNumber === firstRoundNumber,
+    );
+    const playedPairings = firstRoundFixtures.filter(
+      (fixture) => fixture.sides.A?.teamId && fixture.sides.B?.teamId,
+    );
+
+    expect(playedPairings).toHaveLength(2);
+    expect(
+      playedPairings.every(
+        (fixture) => fixture.sourceRefs.A.groupId !== fixture.sourceRefs.B.groupId,
+      ),
+    ).toBe(true);
+
+    const groupAFirst = firstRoundFixtures
+      .flatMap((fixture) => ["A", "B"].map((side) => ({
+        teamId: fixture.sides[side]?.teamId,
+        source: fixture.sourceRefs[side],
+      })))
+      .find((entry) => entry.teamId === "t6");
+    const groupASecond = firstRoundFixtures
+      .flatMap((fixture) => ["A", "B"].map((side) => ({
+        teamId: fixture.sides[side]?.teamId,
+        source: fixture.sourceRefs[side],
+      })))
+      .find((entry) => entry.teamId === "t7");
+    expect(groupAFirst.source).toMatchObject({ groupId: "A", rank: 1 });
+    expect(groupASecond.source).toMatchObject({ groupId: "A", rank: 2 });
+  });
+
   function stateAfterGroupResults(activeTeamIds) {
     const target = bracketState("groupKnockout", 4, {
       groupCount: 2,
@@ -541,12 +591,13 @@ describe("bracket placements and podium rulings", () => {
 
 
 describe("qualification tie safety", () => {
-  test.each([
-    ["distinct seeds", false],
-    ["missing seeds", true],
-  ])("does not silently select one team for a cutoff tie with %s", (_seedCase, clearSeeds) => {
-    const target = bracketState("groupKnockout", 4, { groupCount: 2, advancePerGroup: 1 });
-    if (clearSeeds) target.teams.forEach((team) => { team.seed = null; });
+  function tiedGroupState(seedMode) {
+    const target = bracketState("groupKnockout", 4, {
+      groupCount: 2,
+      advancePerGroup: 1,
+    });
+    if (seedMode === "equal") target.teams.forEach((team) => { team.seed = 1; });
+    if (seedMode === "missing") target.teams.forEach((team) => { team.seed = null; });
     const format = tournaments.getFormat("groupKnockout");
     append(target, format.generateInitialRound(target));
     for (const fixture of target.fixtures) {
@@ -560,13 +611,39 @@ describe("qualification tie safety", () => {
         completedAt: 1,
       };
     }
+    return { target, format };
+  }
 
+  test("uses initial seed only as the final fallback when sporting criteria are tied", () => {
+    const { target, format } = tiedGroupState("distinct");
     const standings = format.calculateStandings(target);
-    expect(standings.rows.every((row) => row.rank === 1)).toBe(true);
-    expect(() => format.generateNextRound(target)).toThrow(
-      "tie at the qualification cutoff",
-    );
+
+    expect(standings.rows.filter((row) => row.groupId === "A").map((row) => row.rank)).toEqual([
+      1, 2,
+    ]);
+    expect(standings.rows.filter((row) => row.groupId === "B").map((row) => row.rank)).toEqual([
+      1, 2,
+    ]);
+
+    const generation = format.generateNextRound(target);
+    const qualifiers = generation.fixtures
+      .flatMap((fixture) => [fixture.sides.A?.teamId, fixture.sides.B?.teamId])
+      .filter(Boolean)
+      .sort();
+    expect(qualifiers).toEqual(["t1", "t2"]);
   });
+
+  test.each(["equal", "missing"])(
+    "blocks a qualification cutoff that remains tied with %s seeds",
+    (seedMode) => {
+      const { target, format } = tiedGroupState(seedMode);
+      const standings = format.calculateStandings(target);
+      expect(standings.rows.every((row) => row.rank === 1)).toBe(true);
+      expect(() => format.generateNextRound(target)).toThrow(
+        "tie at the qualification cutoff",
+      );
+    },
+  );
 });
 
 
