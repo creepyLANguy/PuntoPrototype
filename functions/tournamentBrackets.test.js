@@ -222,7 +222,7 @@ describe("bracket placements and podium rulings", () => {
         label: "Grand Final (Reset)",
         stage: "grandFinalReset",
         status: "scheduled",
-        sides: { A: makeSide("t2"), B: makeSide("t1") },
+        sides: { A: makeSide("t1"), B: makeSide("t2") },
       },
     ];
 
@@ -235,10 +235,10 @@ describe("bracket placements and podium rulings", () => {
       ...target.fixtures[1],
       status: "completed",
       resultSnapshot: {
-        winner: "A",
-        points: { A: 6, B: 4 },
-        games: { A: 6, B: 4 },
-        sets: { A: 2, B: 1 },
+        winner: "B",
+        points: { A: 4, B: 6 },
+        games: { A: 4, B: 6 },
+        sets: { A: 1, B: 2 },
       },
     };
     const decided = format.calculateFinalStandings(target);
@@ -249,3 +249,38 @@ describe("bracket placements and podium rulings", () => {
     expect(decided.rows.find((row) => row.entryId === "t1").placement).toBe(2);
   });
 });
+
+
+  test("group knockout keeps group table separate and supports third-place medals", () => {
+    const target = bracketState("groupKnockout", 8, {
+      groupCount: 2,
+      advancePerGroup: 2,
+      thirdPlaceMatch: true,
+    });
+    const format = tournaments.getFormat("groupKnockout");
+    append(target, format.generateInitialRound(target));
+    for (const fixture of target.fixtures) completeFixture(fixture, "A");
+
+    append(target, format.generateNextRound(target));
+    const thirdPlace = target.fixtures.find((fixture) => fixture.stage === "thirdPlace");
+    expect(thirdPlace).toBeDefined();
+
+    // Later knockout fixtures must not change the group table's played counts.
+    const groupStandingsBefore = format.calculateStandings(target);
+    expect(groupStandingsBefore.rows.every((row) => row.played <= 3)).toBe(true);
+    simulateBracket(target, "A");
+
+    const groupStandingsAfter = format.calculateStandings(target);
+    expect(groupStandingsAfter.rows.map((row) => row.played)).toEqual(
+      groupStandingsBefore.rows.map((row) => row.played),
+    );
+    expect(target.fixtures.find((fixture) => fixture.stage === "thirdPlace").status).toBe("completed");
+
+    const finalStandings = format.calculateFinalStandings(target);
+    expect(finalStandings.finalDecided).toBe(true);
+    expect(finalStandings.rows.filter((row) => row.placement === 1)).toHaveLength(1);
+    expect(finalStandings.rows.filter((row) => row.placement === 2)).toHaveLength(1);
+    expect(finalStandings.rows.filter((row) => row.placement === 3)).toHaveLength(1);
+    expect(finalStandings.rows.filter((row) => row.placement === 4)).toHaveLength(1);
+    expect(finalStandings.rows.filter((row) => row.placementLabel === "Did not qualify")).toHaveLength(4);
+  });
