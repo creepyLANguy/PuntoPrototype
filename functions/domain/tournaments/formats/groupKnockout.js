@@ -92,6 +92,7 @@ const groupKnockout = {
       mode: "league",
       formatId: "roundRobin",
       groupIdByTeamId,
+      rankByGroup: true,
       fixtureFilter: (fixture) => fixture.stage === "group",
     });
   },
@@ -197,7 +198,17 @@ function generateKnockout(state) {
   const teamById = Object.fromEntries((state.teams || []).map((team) => [team.teamId, team]));
   const qualifiers = [];
   for (const groupId of Object.keys(rowsByGroup).sort()) {
-    for (const row of rowsByGroup[groupId].slice(0, cfg.advancePerGroup))
+    const rows = rowsByGroup[groupId];
+    const boundary = rows[cfg.advancePerGroup - 1];
+    const next = rows[cfg.advancePerGroup];
+    if (boundary && next && boundary.rank === next.rank) {
+      throw new TournamentDomainError(
+        "QUALIFICATION_TIE",
+        `Group ${groupId} has a tie at the qualification cutoff. Resolve the tie under the tournament rules before generating the knockout bracket.`,
+        { groupId, tiedEntryIds: rows.filter((row) => row.rank === boundary.rank).map((row) => row.entryId) },
+      );
+    }
+    for (const row of rows.slice(0, cfg.advancePerGroup))
       qualifiers.push({ groupId, rank: row.rank, team: teamById[row.entryId] });
   }
   const firstRound = nextRoundNumber(state);
