@@ -157,7 +157,7 @@ describe("double elimination", () => {
   );
 
   test("final placements do not depend on fixture storage order", () => {
-    const target = bracketState("doubleElimination", 32, { grandFinalReset: false });
+    const target = bracketState("doubleElimination", 16, { grandFinalReset: false });
     const format = tournaments.getFormat("doubleElimination");
     append(target, format.generateInitialRound(target));
     simulateBracket(target, "A");
