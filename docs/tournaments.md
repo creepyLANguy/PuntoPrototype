@@ -191,6 +191,43 @@ overwritten.
 Double elimination includes winners and losers brackets plus a grand-final
 reset fixture when configured.
 
+## Final standings, tie rules and podiums
+
+When a tournament is marked completed, the public and host views show a
+dedicated results section. It uses the format's final standings rather than
+inferring a winner from the last match displayed on screen.
+
+- Americano and Mexicano formats rank by their configured social scoring
+  fields. `usePointDiff` controls whether point difference participates
+  in the ranking.
+- League and Swiss formats use competition points and their format-specific
+  tie-break sequence. Head-to-head is calculated as match points earned
+  against the other entries still tied, not as a comparison of score margins.
+  Swiss Buchholz counts each fixture, including a repeat encounter with the
+  same opponent.
+- King/Queen of the Court honours the selected final-ranking and scoring
+  method. Court-position ranking uses each entry's most recent played court;
+  if an entry sat out the final round, its last recorded court is retained.
+  A tied round with "both sides stay" leaves the pairing together. If the
+  higher-seed rule cannot distinguish missing/equal seeds, both sides stay
+  rather than guessing from IDs.
+- Group tables are ranked independently and only use group-stage fixtures.
+  A tie that crosses the configured qualification cutoff blocks knockout
+  generation with `QUALIFICATION_TIE` instead of silently choosing one entry by ID.
+- Single-elimination and group-knockout draws can generate a third-place
+  match when configured. Without a completed third-place match, equal
+  semifinal losers share third place. Double-elimination standings wait for
+  a required grand-final reset before declaring the champion.
+- Sporting ties share competition ranks (for example, 1, 1, 3). Entry IDs
+  can order tied rows consistently for display, but do not split a sporting
+  tie. A completed-early knockout with no decided final shows no champion or
+  final podium; it never treats cancelled/unplayed matches as losses.
+
+The completed results screen shows the winner and available second/third
+places according to those rules, along with a full results table. It labels
+joint placements explicitly, keeps group standings available in group-knockout
+events, and retains match history for review.
+
 ## Read models
 
 The server writes compact read models so host and public pages avoid one read
