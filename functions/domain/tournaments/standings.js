@@ -16,7 +16,7 @@ const TIEBREAKER_LABELS = {
   finalCourtPosition: "Final court position",
   courtPoints: "Court-level points",
   rallyPoints: "Rally points",
-  entryId: "Draw order (display only)",
+  entryId: "Entry ID (display only)",
 };
 
 const TIEBREAKERS = Object.keys(TIEBREAKER_LABELS).reduce((registry, key) => {
@@ -123,30 +123,27 @@ function calculateStandings(state, options = {}) {
 
   let tiebreakers = options.tiebreakers || defaultTiebreakers(options.formatId, mode, options);
   if (options.usePointDiff === false) tiebreakers = tiebreakers.filter((key) => key !== "pointDiff");
-  rows.sort((left, right) => compareRows(left, right, tiebreakers, headToHead));
 
-  // Rank is a sporting position, not the deterministic row order. Entries that
-  // tie on every configured sporting tiebreaker share a competition rank (1, 1,
-  // 3); entryId is only a stable display-order fallback and never breaks a tie.
-  let rank = 0;
-  let previous = null;
-  rows.forEach((row, index) => {
-    if (
-      index === 0 ||
-      compareRows(row, previous, tiebreakers.filter((key) => key !== "entryId"), headToHead, false) !== 0
-    ) {
-      rank = index + 1;
-    }
-    row.rank = rank;
-    previous = row;
-  });
+  // Evaluate each tie-breaker inside the group still tied on previous rules.
+  // In particular, head-to-head is a mini-table against the other tied entries,
+  // not a pairwise score-margin comparator (which can be non-transitive in a
+  // three-way circular tie). IDs order tied rows for display only.
+  const rankingGroups = rankRows(rows, tiebreakers, headToHead);
+  const rankedRows = rankingGroups.flat();
+  let position = 1;
+  for (const group of rankingGroups) {
+    group.forEach((row) => {
+      row.rank = position;
+    });
+    position += group.length;
+  }
 
   return {
     entryType,
     columns: ["rank", "name", "played", "wins", "draws", "losses", "points", "diff", "form"],
     tiebreakers,
     tiebreakerLabels: describeTiebreakers(tiebreakers),
-    rows,
+    rows: rankedRows,
   };
 }
 
@@ -254,23 +251,60 @@ function defaultTiebreakers(formatId, mode, options = {}) {
   ];
 }
 
-function compareRows(left, right, tiebreakers, headToHead, stableFallback = true) {
-  for (const key of tiebreakers) {
-    let diff = 0;
-    if (key === "entryId") diff = String(left.entryId).localeCompare(String(right.entryId));
-    else if (key === "seed") diff = left.seed - right.seed;
-    else if (key === "headToHead")
-      diff =
-        (headToHead[right.entryId]?.[left.entryId] || 0) -
-        (headToHead[left.entryId]?.[right.entryId] || 0);
-    else if (key === "finalCourtPosition" || key === "placement")
-      diff = Number(left[key] ?? Number.MAX_SAFE_INTEGER) - Number(right[key] ?? Number.MAX_SAFE_INTEGER);
-    else diff = Number(right[key] || 0) - Number(left[key] || 0);
-    if (diff !== 0) return diff;
+function rankRows(rows, tiebreakers, headToHead) {
+  let groups = [rows.slice()];
+  for (const key of tiebreakers.filter((candidate) => candidate !== "entryId")) {
+    const nextGroups = [];
+    for (const group of groups) {
+      if (group.length < 2) {
+        nextGroups.push(group);
+        continue;
+      }
+      const ordered = [...group].sort((left, right) =>
+        compareForKey(left, right, key, group, headToHead),
+      );
+      let bucket = [];
+      let previous = null;
+      for (const row of ordered) {
+        if (
+          previous &&
+          compareForKey(row, previous, key, group, headToHead) !== 0
+        ) {
+          nextGroups.push(bucket);
+          bucket = [];
+        }
+        bucket.push(row);
+        previous = row;
+      }
+      if (bucket.length) nextGroups.push(bucket);
+    }
+    groups = nextGroups;
   }
-  return stableFallback
-    ? String(left.entryId).localeCompare(String(right.entryId))
-    : 0;
+  return groups.map((group) =>
+    group.sort((left, right) => String(left.entryId).localeCompare(String(right.entryId))),
+  );
+}
+
+function compareForKey(left, right, key, tiedGroup, headToHead) {
+  const leftValue = tiebreakerValue(left, key, tiedGroup, headToHead);
+  const rightValue = tiebreakerValue(right, key, tiedGroup, headToHead);
+  if (leftValue === rightValue) return 0;
+  if (key === "seed" || key === "finalCourtPosition" || key === "placement")
+    return leftValue < rightValue ? -1 : 1;
+  return leftValue > rightValue ? -1 : 1;
+}
+
+function tiebreakerValue(row, key, tiedGroup, headToHead) {
+  if (key === "entryId") return String(row.entryId);
+  if (key === "seed") return row.seed;
+  if (key === "headToHead") {
+    return tiedGroup.reduce(
+      (sum, opponent) => sum + (headToHead[row.entryId]?.[opponent.entryId] || 0),
+      0,
+    );
+  }
+  const value = Number(row[key] ?? 0);
+  return Number.isFinite(value) ? value : 0;
 }
 
 function addHeadToHead(table, a, b, outcome, pointsForWin, pointsForDraw, pointsForLoss) {
