@@ -284,3 +284,28 @@ describe("bracket placements and podium rulings", () => {
     expect(finalStandings.rows.filter((row) => row.placement === 4)).toHaveLength(1);
     expect(finalStandings.rows.filter((row) => row.placementLabel === "Did not qualify")).toHaveLength(4);
   });
+
+
+describe("qualification tie safety", () => {
+  test("does not silently select one team when a group tie crosses the qualification cutoff", () => {
+    const target = bracketState("groupKnockout", 4, { groupCount: 2, advancePerGroup: 1 });
+    target.teams.forEach((team) => { team.seed = null; });
+    const format = tournaments.getFormat("groupKnockout");
+    append(target, format.generateInitialRound(target));
+    for (const fixture of target.fixtures) {
+      fixture.status = "completed";
+      fixture.resultSnapshot = {
+        winner: "draw",
+        points: { A: 8, B: 8 },
+        games: { A: 8, B: 8 },
+        sets: { A: 0, B: 0 },
+        scoringMode: "fixedTotalPoints",
+        completedAt: 1,
+      };
+    }
+
+    expect(() => format.generateNextRound(target)).toThrow(
+      "tie at the qualification cutoff",
+    );
+  });
+});
