@@ -149,8 +149,15 @@ describe("shared tournament standings", () => {
 
     const format = tournaments.getFormat("americano");
     const withDifference = format.calculateStandings(input);
+    // Keep the seeds equal so this assertion isolates point-difference
+    // configuration rather than the final seed fallback.
+    const noDifferenceParticipants = input.participants.map((participant) =>
+      ["z-player", "a-player"].includes(participant.participantId)
+        ? { ...participant, seed: 1 }
+        : participant,
+    );
     const noDifferenceState = state({
-      participants: input.participants,
+      participants: noDifferenceParticipants,
       config: { usePointDiff: false },
       fixtures: input.fixtures,
     });
