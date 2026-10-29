@@ -248,6 +248,12 @@ function bracketStandings(state, options = {}) {
       for (const id of entryIdsOfSide(thirdPlace.sides?.[thirdOutcome.winner]))
         placements.set(id, 3);
       for (const id of entryIdsOfSide(thirdPlace.sides?.[loserSide])) placements.set(id, 4);
+    } else if (thirdPlace && thirdOutcome?.winner === "draw") {
+      // A completed drawn third-place match shares third place; unlike a
+      // missing/cancelled result, the tie is a sporting outcome.
+      for (const side of ["A", "B"]) {
+        for (const id of entryIdsOfSide(thirdPlace.sides?.[side])) placements.set(id, 3);
+      }
     }
 
     const groups = new Map();
