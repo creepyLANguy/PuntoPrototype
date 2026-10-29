@@ -30,6 +30,18 @@ function assessRequiredCompletion(state, format) {
     );
   }
 
+  if (
+    formatId === "roundRobin" &&
+    format?.normalizeConfig(state.tournament?.format?.config || {}).scheduleMode !== "roundByRound" &&
+    !hasCompleteFullRoundRobinSchedule(state)
+  ) {
+    return failure(
+      "incomplete-schedule",
+      "The full Round Robin schedule is incomplete. Generate the missing rounds, or explicitly finish early with a reason.",
+      [],
+    );
+  }
+
   const progression =
     typeof format?.canGenerateNextRound === "function"
       ? format.canGenerateNextRound(state)
@@ -78,6 +90,46 @@ function assessRequiredCompletion(state, format) {
     unresolvedFixtureIds: [],
     nextRoundReason: progression?.reason || null,
   };
+}
+
+function hasCompleteFullRoundRobinSchedule(state) {
+  // Full-schedule Round Robin generates every round atomically at the initial
+  // draw. Its canGenerateNextRound method is intentionally always false, so
+  // verify the generated schedule itself rather than treating that false value
+  // as evidence the tournament is terminal.
+  const teamIds = new Set(
+    (state.teams || [])
+      .filter((team) => team.status === "active")
+      .map((team) => team.teamId),
+  );
+  for (const fixture of state.fixtures || []) {
+    for (const sideKey of ["A", "B"]) {
+      const teamId = fixture.sides?.[sideKey]?.teamId;
+      if (teamId) teamIds.add(teamId);
+    }
+  }
+
+  const teamCount = teamIds.size;
+  if (teamCount < 2) return false;
+  const expectedRoundCount = teamCount % 2 === 0 ? teamCount - 1 : teamCount;
+  const rounds = [...(state.rounds || [])].sort(
+    (a, b) => Number(a.roundNumber) - Number(b.roundNumber),
+  );
+  if (rounds.length !== expectedRoundCount) return false;
+
+  const roundNumbers = new Set(rounds.map((round) => Number(round.roundNumber)));
+  if (roundNumbers.size !== expectedRoundCount) return false;
+  const firstRoundNumber = Number(rounds[0].roundNumber);
+  const fixturesPerRound = Math.ceil(teamCount / 2);
+  for (let offset = 0; offset < expectedRoundCount; offset += 1) {
+    const roundNumber = firstRoundNumber + offset;
+    if (!roundNumbers.has(roundNumber)) return false;
+    const fixtureCount = (state.fixtures || []).filter(
+      (fixture) => Number(fixture.roundNumber) === roundNumber,
+    ).length;
+    if (fixtureCount !== fixturesPerRound) return false;
+  }
+  return true;
 }
 
 function isFixtureResolvedForCompletion(state, fixture, formatId) {
