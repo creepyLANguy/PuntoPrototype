@@ -787,6 +787,7 @@ async function applyWithdrawalToFixtures(tx, state, entryId, actor) {
         walkover
           ? {
               status: "completed",
+              withdrawnEntryId: entryId,
               resultSnapshot: {
                 winner: otherSide,
                 points: { A: 0, B: 0 },
@@ -797,7 +798,11 @@ async function applyWithdrawalToFixtures(tx, state, entryId, actor) {
                 corrected: false,
               },
             }
-          : { status: "cancelled" },
+          : {
+              status: "cancelled",
+              cancellationReason: "entry-withdrawn",
+              withdrawnEntryId: entryId,
+            },
         { merge: true },
       );
       writeAudit(tx, {
