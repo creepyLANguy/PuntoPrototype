@@ -750,4 +750,58 @@ describe("King Court tie assignment safety", () => {
     expect(lowerCourt).toBeDefined();
     expect([lowerCourt.sides.A.teamId, lowerCourt.sides.B.teamId].sort()).toEqual(["t3", "t4"]);
   });
+
+  test("individual King Court pairs queued sit-outs into valid two-player sides", () => {
+    const ps = participants(["p1", "p2", "p3", "p4", "p5", "p6"]);
+    const lastFixture = fixture({
+      id: "court-1",
+      a: "p1",
+      b: "p3",
+      entryType: "participant",
+      pointsA: 8,
+      pointsB: 3,
+      winner: "A",
+      courtLevel: 1,
+      roundId: "r1",
+    });
+    lastFixture.sides = {
+      A: { teamId: null, participantIds: ["p1", "p2"] },
+      B: { teamId: null, participantIds: ["p3", "p4"] },
+    };
+    const input = state({
+      formatId: "kingCourt",
+      entryMode: "individual",
+      config: { courtCount: 1, tieBehaviour: "stay" },
+      participants: ps,
+      rounds: [
+        {
+          roundId: "r1",
+          roundNumber: 1,
+          generationSnapshot: { queue: ["p5", "p6"] },
+        },
+      ],
+      fixtures: [lastFixture],
+    });
+
+    const result = tournaments.getFormat("kingCourt").calculateNextCourtAssignments(input);
+    expect(result.assignments).toHaveLength(1);
+    expect(result.assignments[0].sides.A.participantIds).toEqual(["p1", "p2"]);
+    expect(result.assignments[0].sides.B.participantIds).toEqual(["p5", "p6"]);
+    expect(result.queue).toEqual(["p3+p4"]);
+
+    const assigned = result.assignments.flatMap((assignment) => [
+      ...assignment.sides.A.participantIds,
+      ...assignment.sides.B.participantIds,
+    ]);
+    const queued = result.queue.flatMap((sideId) => sideId.split("+"));
+    const accountedFor = [...assigned, ...queued];
+    expect(accountedFor.sort()).toEqual(["p1", "p2", "p3", "p4", "p5", "p6"]);
+    expect(new Set(accountedFor).size).toBe(6);
+    expect(result.assignments.every((assignment) =>
+      [assignment.sides.A, assignment.sides.B].every(
+        (side) => side.participantIds.length === 2,
+      ),
+    )).toBe(true);
+  });
+
 });
