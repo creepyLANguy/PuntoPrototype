@@ -217,7 +217,11 @@ function bracketStandings(state, options = {}) {
       fixture.stage === "thirdPlace" || /third[- ]place/i.test(String(fixture.label || "")),
   );
   const thirdOutcome =
-    thirdPlace?.status === "completed" ? fixtureOutcome(thirdPlace) : null;
+    thirdPlace?.status === "completed" &&
+    entryIdsOfSide(thirdPlace.sides?.A).length > 0 &&
+    entryIdsOfSide(thirdPlace.sides?.B).length > 0
+      ? fixtureOutcome(thirdPlace)
+      : null;
   const unresolvedThirdPlaceEntryIds = new Set();
 
   // A scheduled/live/cancelled third-place fixture does not establish the
