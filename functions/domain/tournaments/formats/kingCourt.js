@@ -110,6 +110,35 @@ const kingCourt = {
     const entryMode =
       state.tournament?.participantMode === "individual" ? "individual" : "team";
     for (const fixture of fixtures) {
+      if (isWithdrawalCancelledFixture(fixture)) {
+        // A cancelled match has no sporting winner. Keep every still-eligible
+        // entry from that match in the rotation without bringing the withdrawn
+        // entry back into play.
+        if (entryMode === "individual") {
+          const activeParticipantIds = new Set(
+            (state.participants || [])
+              .filter((participant) => participant.status === "active")
+              .map((participant) => participant.participantId),
+          );
+          for (const sideKey of ["A", "B"]) {
+            const ids = (fixture.sides?.[sideKey]?.participantIds || []).filter(
+              (id) => id !== fixture.withdrawnEntryId && activeParticipantIds.has(id),
+            );
+            if (ids.length === 2 && ids[0] !== ids[1]) queue.push(ids.join("+"));
+            else queue.push(...ids);
+          }
+        } else {
+          const eligibleTeamIds = activeTeamIds(state);
+          for (const sideKey of ["A", "B"]) {
+            const teamId = fixture.sides?.[sideKey]?.teamId;
+            if (teamId && teamId !== fixture.withdrawnEntryId && eligibleTeamIds.has(teamId)) {
+              queue.push(teamId);
+            }
+          }
+        }
+        continue;
+      }
+
       const outcome = fixtureOutcome(fixture);
       const winner = resolveWinner(fixture, outcome, cfg, state);
       if (!winner) {
@@ -265,20 +294,51 @@ function sideId(side) {
   return side.teamId || side.participantIds.join("+");
 }
 
+function isWithdrawalCancelledFixture(fixture) {
+  if (
+    fixture?.status !== "cancelled" ||
+    fixture.cancellationReason !== "entry-withdrawn" ||
+    !fixture.withdrawnEntryId
+  ) {
+    return false;
+  }
+
+  return ["A", "B"].some((sideKey) => {
+    const side = fixture.sides?.[sideKey];
+    return (
+      side?.teamId === fixture.withdrawnEntryId ||
+      (side?.participantIds || []).includes(fixture.withdrawnEntryId)
+    );
+  });
+}
+
+function activeTeamIds(state) {
+  const activeParticipantIds = new Set(
+    (state.participants || [])
+      .filter((participant) => participant.status === "active")
+      .map((participant) => participant.participantId),
+  );
+  return new Set(
+    (state.teams || [])
+      .filter(
+        (team) =>
+          team.status === "active" &&
+          (team.participantIds || []).every((id) => activeParticipantIds.has(id)),
+      )
+      .map((team) => team.teamId),
+  );
+}
+
 function takeQueuedSide(state, queue, entryMode) {
   if (entryMode !== "individual") {
-    const activeTeamIds = new Set(
-      (state.teams || [])
-        .filter((team) => team.status === "active")
-        .map((team) => team.teamId),
-    );
+    const eligibleTeamIds = activeTeamIds(state);
 
     // A queue is a snapshot from the previous round. Entries may have since
     // withdrawn, so skip stale IDs instead of letting one invalid head block
     // all later queued teams.
     while (queue.length > 0) {
       const id = String(queue.shift());
-      if (!activeTeamIds.has(id)) continue;
+      if (!eligibleTeamIds.has(id)) continue;
       const side = sideFromQueue(state, id, entryMode);
       if (side) return side;
     }
