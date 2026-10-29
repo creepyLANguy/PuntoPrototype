@@ -267,24 +267,74 @@ function sideId(side) {
 
 function takeQueuedSide(state, queue, entryMode) {
   if (entryMode !== "individual") {
-    if (!queue.length) return null;
-    const side = sideFromQueue(state, queue[0], entryMode);
-    if (!side) return null;
-    queue.shift();
-    return side;
+    const activeTeamIds = new Set(
+      (state.teams || [])
+        .filter((team) => team.status === "active")
+        .map((team) => team.teamId),
+    );
+
+    // A queue is a snapshot from the previous round. Entries may have since
+    // withdrawn, so skip stale IDs instead of letting one invalid head block
+    // all later queued teams.
+    while (queue.length > 0) {
+      const id = String(queue.shift());
+      if (!activeTeamIds.has(id)) continue;
+      const side = sideFromQueue(state, id, entryMode);
+      if (side) return side;
+    }
+    return null;
   }
 
-  const participantIds = new Set(
-    (state.participants || []).map((participant) => participant.participantId),
+  const activeParticipantIds = new Set(
+    (state.participants || [])
+      .filter((participant) => participant.status === "active")
+      .map((participant) => participant.participantId),
   );
+
+  // Normalise the saved queue against the current roster. Keep valid singles
+  // and doubles sides, drop withdrawn/unknown players, and preserve an active
+  // partner as a single when their queued partner is no longer eligible.
+  // Also avoid scheduling an individual twice if a stale queue contains
+  // overlapping single/pair records.
+  const alreadyQueued = new Set();
+  for (let index = 0; index < queue.length; ) {
+    const ids = String(queue[index]).split("+");
+    if (ids.length < 1 || ids.length > 2 || ids.some((id) => !id)) {
+      queue.splice(index, 1);
+      continue;
+    }
+
+    const eligible = ids.filter(
+      (id, idIndex) =>
+        activeParticipantIds.has(id) &&
+        ids.indexOf(id) === idIndex &&
+        !alreadyQueued.has(id),
+    );
+
+    if (eligible.length === ids.length && ids.length <= 2) {
+      eligible.forEach((id) => alreadyQueued.add(id));
+      index += 1;
+      continue;
+    }
+
+    if (eligible.length === 1) {
+      queue[index] = eligible[0];
+      alreadyQueued.add(eligible[0]);
+      index += 1;
+      continue;
+    }
+
+    queue.splice(index, 1);
+  }
+
   const singles = [];
   for (let index = 0; index < queue.length; index += 1) {
-    if (participantIds.has(queue[index])) singles.push({ index, id: queue[index] });
+    if (activeParticipantIds.has(queue[index])) singles.push({ index, id: queue[index] });
   }
 
   // Players who sat out are individual IDs. Pair two of them before filling a
   // court with a previously formed side, so queueing does not create 1-v-2
-  // fixtures and players waiting from the prior round get a fair opportunity.
+  // fixtures and waiting players get a fair opportunity.
   if (singles.length >= 2) {
     const first = singles[0];
     const second = singles[1];
@@ -297,34 +347,38 @@ function takeQueuedSide(state, queue, entryMode) {
   // It is already a complete doubles side and can be reused as-is.
   for (let index = 0; index < queue.length; index += 1) {
     const ids = String(queue[index]).split("+");
-    if (ids.length !== 2 || !ids.every((id) => participantIds.has(id))) continue;
+    if (ids.length !== 2 || !ids.every((id) => activeParticipantIds.has(id))) continue;
     const id = queue[index];
     queue.splice(index, 1);
     return sideFromQueue(state, id, entryMode);
   }
 
-  // Preserve an unmatched individual in the queue until another player is
-  // available instead of creating an invalid one-player side.
+  // Preserve an unmatched active individual until another player is available
+  // instead of creating an invalid one-player side.
   return null;
 }
 
 function sideFromQueue(state, id, entryMode) {
   if (entryMode === "individual") {
     const participantIds = String(id).split("+");
-    const knownIds = new Set(
-      (state.participants || []).map((participant) => participant.participantId),
+    const activeIds = new Set(
+      (state.participants || [])
+        .filter((participant) => participant.status === "active")
+        .map((participant) => participant.participantId),
     );
     if (
       participantIds.length !== 2 ||
-      !participantIds.every((participantId) => knownIds.has(participantId))
+      participantIds[0] === participantIds[1] ||
+      !participantIds.every((participantId) => activeIds.has(participantId))
     ) {
       return null;
     }
     return sideFromParticipants(participantIds);
   }
 
-  const team = (state.teams || []).find((candidate) => candidate.teamId === id);
+  const team = (state.teams || []).find(
+    (candidate) => candidate.teamId === id && candidate.status === "active",
+  );
   return team ? sideFromTeam(team) : null;
 }
-
 module.exports = kingCourt;
