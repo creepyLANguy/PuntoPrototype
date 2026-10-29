@@ -5,6 +5,7 @@ const { getFormat } = require("./formats");
 const { validateTournamentSetup } = require("./validation");
 const { resolveMatchScoringOptions } = require("./scoringProfiles");
 const { supportsFullSchedule, forecastRemainingRounds } = require("./forecast");
+const { assessRequiredCompletion } = require("./completion");
 
 const DELAY_GRACE_MS = 5 * 60 * 1000;
 const SOCIAL_FORMATS = new Set(["americano", "mexicano", "teamAmericano", "teamMexicano"]);
@@ -186,6 +187,7 @@ function buildTournamentView({
     courts: indexBy(courts, "courtId"),
   };
   const state = buildFormatState({ tournament, participants, teams, rounds, fixtures });
+  const completionReadiness = assessRequiredCompletion(state, format);
 
   const standings = rounds.length > 0 ? format.calculateStandings(state) : null;
   // A bracket's current table and its final placements have different rules:
@@ -389,6 +391,7 @@ function buildTournamentView({
     liveMatches,
     standings,
     finalStandings,
+    completionReadiness,
     bracket: ["bracket", "groupBracket"].includes(format.kind)
       ? buildBracketSummary(fixtureViews)
       : null,
