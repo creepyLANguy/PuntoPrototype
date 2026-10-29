@@ -204,9 +204,13 @@ function isWithdrawalCancelledFixture(fixture) {
     return false;
   }
 
-  return ["A", "B"].some((side) =>
-    entryIdsOfSide(fixture.sides?.[side]).includes(fixture.withdrawnEntryId),
-  );
+  return ["A", "B"].some((sideKey) => {
+    const side = fixture.sides?.[sideKey];
+    return (
+      entryIdsOfSide(side).includes(fixture.withdrawnEntryId) ||
+      (side?.participantIds || []).includes(fixture.withdrawnEntryId)
+    );
+  });
 }
 
 function completedRound(state, roundIdValue) {
