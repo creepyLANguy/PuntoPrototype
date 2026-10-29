@@ -212,14 +212,33 @@ function bracketStandings(state, options = {}) {
 
   const final = resolveBracketFinal(state, formatId, fixtures);
   const placements = new Map();
+  const thirdPlace = fixtures.find(
+    (fixture) =>
+      fixture.stage === "thirdPlace" || /third[- ]place/i.test(String(fixture.label || "")),
+  );
+  const thirdOutcome =
+    thirdPlace?.status === "completed" ? fixtureOutcome(thirdPlace) : null;
+  const unresolvedThirdPlaceEntryIds = new Set();
+
+  // A scheduled/live/cancelled third-place fixture does not establish the
+  // semifinal losers' order. Keep those entries unplaced until that fixture
+  // has a recorded result; the rest of the elimination ladder starts at fifth.
+  if (thirdPlace && !thirdOutcome) {
+    for (const source of Object.values(thirdPlace.sourceRefs || {})) {
+      if (!source?.fixtureId) continue;
+      const semifinal = fixtures.find((fixture) => fixture.fixtureId === source.fixtureId);
+      const outcome =
+        semifinal?.status === "completed" ? fixtureOutcome(semifinal) : null;
+      if (!outcome || !["A", "B"].includes(outcome.winner)) continue;
+      const loserSide = outcome.winner === "A" ? "B" : "A";
+      for (const id of entryIdsOfSide(semifinal.sides?.[loserSide]))
+        unresolvedThirdPlaceEntryIds.add(id);
+    }
+  }
+
   if (final) {
     final.winnerIds.forEach((id) => placements.set(id, 1));
     final.loserIds.forEach((id) => placements.set(id, 2));
-    const thirdPlace = fixtures.find(
-      (fixture) =>
-        fixture.stage === "thirdPlace" || /third[- ]place/i.test(String(fixture.label || "")),
-    );
-    const thirdOutcome = thirdPlace?.status === "completed" ? fixtureOutcome(thirdPlace) : null;
     if (thirdPlace && thirdOutcome && ["A", "B"].includes(thirdOutcome.winner)) {
       const loserSide = thirdOutcome.winner === "A" ? "B" : "A";
       for (const id of entryIdsOfSide(thirdPlace.sides?.[thirdOutcome.winner]))
@@ -229,13 +248,13 @@ function bracketStandings(state, options = {}) {
 
     const groups = new Map();
     for (const [id, fixture] of Object.entries(eliminationFixtures)) {
-      if (placements.has(id)) continue;
+      if (placements.has(id) || unresolvedThirdPlaceEntryIds.has(id)) continue;
       const key = String(fixture.stage || "knockout") + ":" + fixture.roundNumber;
       groups.set(key, groups.get(key) || { roundNumber: fixture.roundNumber, ids: [] });
       groups.get(key).ids.push(id);
     }
     const orderedGroups = [...groups.values()].sort((a, b) => b.roundNumber - a.roundNumber);
-    let nextPlace = thirdOutcome && ["A", "B"].includes(thirdOutcome.winner) ? 5 : 3;
+    let nextPlace = thirdPlace ? 5 : 3;
     for (const group of orderedGroups) {
       group.ids.sort((a, b) => String(a).localeCompare(String(b)));
       for (const id of group.ids) placements.set(id, nextPlace);
@@ -261,17 +280,19 @@ function bracketStandings(state, options = {}) {
         (Boolean(final) && row.placement != null && row.placement > 1));
     row.placementLabel =
       row.placement == null
-        ? formatId === "groupKnockout" && !hasKnockoutFixtures
-          ? "Qualification not decided"
-          : formatId === "groupKnockout" && !row.qualified
-            ? "Did not qualify"
-            : row.eliminated
-              ? "Eliminated"
-              : final
-                ? "Unplaced"
-                : row.qualified
-                  ? "Still in contention"
-                  : "Not yet played"
+        ? unresolvedThirdPlaceEntryIds.has(row.entryId)
+          ? "Third/fourth place undecided"
+          : formatId === "groupKnockout" && !hasKnockoutFixtures
+            ? "Qualification not decided"
+            : formatId === "groupKnockout" && !row.qualified
+              ? "Did not qualify"
+              : row.eliminated
+                ? "Eliminated"
+                : final
+                  ? "Unplaced"
+                  : row.qualified
+                    ? "Still in contention"
+                    : "Not yet played"
         : row.placementTied
           ? String(row.placement) + " (tied)"
           : String(row.placement);
@@ -292,13 +313,13 @@ function bracketStandings(state, options = {}) {
       String(left.entryId).localeCompare(String(right.entryId))
     );
   });
-  result.tiebreakers = ["placement", "eliminationStage", "entryId"];
+  result.tiebreakers = ["placement", "bracketProgress", "entryId"];
   result.tiebreakerLabels = [
     final
       ? "Final placement (tied entries share a rank)"
       : "Bracket progress (not final placement)",
-    "Elimination stage",
-    "Entry ID (display only)",
+    "Unresolved entries: qualification status, elimination losses, then initial seed",
+    "Entry ID (display order only)",
   ];
   result.finalDecided = Boolean(final);
   result.championId = final?.winnerIds?.[0] || null;
