@@ -71,8 +71,15 @@ const groupKnockout = {
   validateParticipants(state) {
     const cfg = this.normalizeConfig(state.tournament?.format?.config || {});
     const active = (state.teams || []).filter((team) => team.status === "active");
+    const hasGeneratedGroupStage = (state.fixtures || []).some(
+      (fixture) => fixture.stage === "group",
+    );
     const errors = [];
-    if (active.length < cfg.groupCount * 2)
+    // The minimum roster is required to create a meaningful group draw, but a
+    // later withdrawal must not make the already-generated group stage
+    // impossible to finish. Post-draw eligibility is checked when qualifiers
+    // are selected, including the zero/one-qualifier outcomes.
+    if (!hasGeneratedGroupStage && active.length < cfg.groupCount * 2)
       errors.push({
         code: "INSUFFICIENT_TEAMS",
         message: "Not enough teams for configured groups.",
