@@ -62,6 +62,32 @@ describe("required tournament completion readiness", () => {
     });
   });
 
+  test("does not treat withdrawn entries as shrinking a round-by-round schedule to completion", () => {
+    const input = state(
+      "roundRobin",
+      { scheduleMode: "roundByRound" },
+      [
+        fixture({ fixtureId: "r1-m1" }),
+        fixture({
+          fixtureId: "r1-m2",
+          sides: { A: { teamId: "c", participantIds: [] }, B: { teamId: "d", participantIds: [] } },
+        }),
+      ],
+      [team("a", 1), team("b", 2), team("c", 3, "withdrawn"), team("d", 4, "withdrawn")],
+    );
+
+    // With only a and b active, the format's current schedule calculation says
+    // round 1 is terminal. The persisted draw proves four teams were scheduled.
+    expect(getFormat("roundRobin").canGenerateNextRound(input)).toMatchObject({
+      allowed: false,
+      reason: "Round Robin complete.",
+    });
+    expect(assessRequiredCompletion(input, getFormat("roundRobin"))).toMatchObject({
+      allowed: false,
+      reason: "required-progress",
+    });
+  });
+
   test("blocks a cancelled full-schedule fixture without a valid withdrawal record", () => {
     const input = state("roundRobin", { scheduleMode: "full" }, [
       fixture({
