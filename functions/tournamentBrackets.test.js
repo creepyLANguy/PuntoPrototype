@@ -776,3 +776,39 @@ test("bracket ranking explanation matches unresolved-entry ordering", () => {
   expect(result.tiebreakerLabels).not.toContain("Elimination stage");
 });
 
+
+describe("group-knockout qualification-award eligibility", () => {
+  test("a sole qualifier who withdraws after the award is generated is not champion", () => {
+    const target = bracketState("groupKnockout", 4, {
+      groupCount: 2,
+      advancePerGroup: 1,
+    });
+    const format = tournaments.getFormat("groupKnockout");
+    append(target, format.generateInitialRound(target));
+    completeGroupFixturesBySeed(target);
+    target.teams.forEach((team) => {
+      if (team.teamId !== "t1") team.status = "withdrawn";
+    });
+
+    append(target, format.generateNextRound(target));
+    expect(format.calculateFinalStandings(target)).toMatchObject({
+      finalDecided: true,
+      championId: "t1",
+      championByDefault: true,
+    });
+
+    target.teams.find((team) => team.teamId === "t1").status = "withdrawn";
+    const result = format.calculateFinalStandings(target);
+    expect(result).toMatchObject({
+      finalDecided: false,
+      championId: null,
+      championByDefault: false,
+    });
+    expect(result.rows.find((row) => row.entryId === "t1")).toMatchObject({
+      status: "withdrawn",
+      placement: null,
+      rank: null,
+      placementLabel: "Withdrawn",
+    });
+  });
+});

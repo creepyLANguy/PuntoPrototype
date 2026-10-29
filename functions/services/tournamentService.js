@@ -776,6 +776,82 @@ async function applyWithdrawalToFixtures(tx, state, entryId, actor) {
     const walkover =
       BRACKET_KINDS.has(format.kind) && fixture.stage !== "group" && fixture.sides?.[otherSide];
 
+    // A bye can pre-populate one side of a later-round bracket fixture while
+    // the opponent is still coming from another match. Withdrawing that bye
+    // recipient must detach only that entrant, not cancel the entire path.
+    const pendingSourceId = fixture.sourceRefs?.[otherSide]?.fixtureId;
+    const pendingSource = pendingSourceId
+      ? state.fixtures.find((candidate) => candidate.fixtureId === pendingSourceId)
+      : null;
+    const preservePendingAdvancement =
+      BRACKET_KINDS.has(format.kind) &&
+      fixture.stage !== "group" &&
+      !fixture.sides?.[otherSide] &&
+      Boolean(pendingSourceId) &&
+      (!pendingSource ||
+        !["completed", "bye", "cancelled"].includes(pendingSource.status));
+
+    if (preservePendingAdvancement) {
+      const withdrawnSourceRef = fixture.sourceRefs?.[withdrawnSide];
+      const nextSides = { ...fixture.sides, [withdrawnSide]: null };
+      const nextSourceRefs = { ...(fixture.sourceRefs || {}), [withdrawnSide]: null };
+      const nextTeamIds = ["A", "B"]
+        .map((side) => nextSides[side]?.teamId)
+        .filter(Boolean);
+      const nextParticipantIds = ["A", "B"].flatMap(
+        (side) => nextSides[side]?.participantIds || [],
+      );
+
+      // Remove the stale feed from the bye that originally populated this
+      // slot so a later recalculation cannot reintroduce the withdrawn team.
+      const withdrawnSource = withdrawnSourceRef?.fixtureId
+        ? state.fixtures.find(
+            (candidate) => candidate.fixtureId === withdrawnSourceRef.fixtureId,
+          )
+        : null;
+      const feedOutcome = withdrawnSourceRef?.outcome;
+      const feed = ["winner", "loser"].includes(feedOutcome)
+        ? withdrawnSource?.feeds?.[feedOutcome]
+        : null;
+      if (
+        withdrawnSource &&
+        feed?.fixtureId === fixture.fixtureId &&
+        feed?.side === withdrawnSide
+      ) {
+        const nextFeeds = { ...(withdrawnSource.feeds || {}), [feedOutcome]: null };
+        writes.push(() =>
+          tx.set(
+            fixtureRef(state.tournament.tournamentId, withdrawnSource.fixtureId),
+            { feeds: nextFeeds },
+            { merge: true },
+          ),
+        );
+      }
+
+      writes.push(() => {
+        tx.set(
+          fixtureRef(state.tournament.tournamentId, fixture.fixtureId),
+          {
+            sides: nextSides,
+            sourceRefs: nextSourceRefs,
+            teamIds: nextTeamIds,
+            participantIds: nextParticipantIds,
+          },
+          { merge: true },
+        );
+        writeAudit(tx, {
+          operation: "fixture.withdrawal.detach",
+          tournamentId: state.tournament.tournamentId,
+          roundId: fixture.roundId,
+          fixtureId: fixture.fixtureId,
+          matchId: fixture.matchId || null,
+          actor,
+          reason: "Withdrawn bye recipient detached while opponent path is pending",
+        });
+      });
+      continue;
+    }
+
     writes.push(() => {
       if (fixture.matchId) {
         tx.set(

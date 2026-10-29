@@ -290,19 +290,21 @@ function bracketStandings(state, options = {}) {
         (Boolean(final) && row.placement != null && row.placement > 1));
     row.placementLabel =
       row.placement == null
-        ? unresolvedThirdPlaceEntryIds.has(row.entryId)
-          ? "Third/fourth place undecided"
-          : formatId === "groupKnockout" && !hasKnockoutFixtures
-            ? "Qualification not decided"
-            : formatId === "groupKnockout" && !row.qualified
-              ? "Did not qualify"
-              : row.eliminated
-                ? "Eliminated"
-                : final
-                  ? "Unplaced"
-                  : row.qualified
-                    ? "Still in contention"
-                    : "Not yet played"
+        ? row.status === "withdrawn"
+          ? "Withdrawn"
+          : unresolvedThirdPlaceEntryIds.has(row.entryId)
+            ? "Third/fourth place undecided"
+            : formatId === "groupKnockout" && !hasKnockoutFixtures
+              ? "Qualification not decided"
+              : formatId === "groupKnockout" && !row.qualified
+                ? "Did not qualify"
+                : row.eliminated
+                  ? "Eliminated"
+                  : final
+                    ? "Unplaced"
+                    : row.qualified
+                      ? "Still in contention"
+                      : "Not yet played"
         : row.placementTied
           ? String(row.placement) + " (tied)"
           : String(row.placement);
@@ -368,13 +370,22 @@ function resolveBracketFinal(state, formatId, fixtures) {
   }
 
   if (formatId === "groupKnockout") {
-    const qualificationAward = fixtures.find(
-      (fixture) =>
-        fixture.bracketPosition === "KO-CHAMPION" &&
-        fixture.status === "bye" &&
-        entryIdsOfSide(fixture.sides?.A).length === 1 &&
-        entryIdsOfSide(fixture.sides?.B).length === 0,
-    );
+    const qualificationAward = fixtures.find((fixture) => {
+      if (
+        fixture.bracketPosition !== "KO-CHAMPION" ||
+        fixture.status !== "bye" ||
+        entryIdsOfSide(fixture.sides?.A).length !== 1 ||
+        entryIdsOfSide(fixture.sides?.B).length !== 0
+      ) {
+        return false;
+      }
+      const championId = entryIdsOfSide(fixture.sides?.A)[0];
+      // A qualification award is valid only while its sole qualifier remains
+      // eligible. A later withdrawal must remove the title on recalculation.
+      return (state.teams || []).some(
+        (team) => team.teamId === championId && team.status === "active",
+      );
+    });
     if (qualificationAward) {
       return {
         winnerIds: entryIdsOfSide(qualificationAward.sides.A),

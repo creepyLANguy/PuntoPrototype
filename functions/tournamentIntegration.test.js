@@ -878,4 +878,214 @@ describe("tournament flow", () => {
     expect(preview.warnings.map((warning) => warning.code)).toContain("SITTING_OUT");
     expect(preview.rulesSummary.title).toBe("AMERICANO");
   });
+
+  test(
+    "withdrawing a bye recipient preserves the pending bracket advancement path",
+    async () => {
+      const { tournamentId, hostKey } = await tournament("createTournament", {
+        name: "Withdrawal during pending bye path",
+        format: {
+          id: "singleElimination",
+          config: {
+            scoring: {
+              scoringMode: "fixedTotalPoints",
+              pointsTarget: 4,
+              serveOrder: ["A1", "B1", "A2", "B2"],
+              serveBlockLength: 1,
+              sideSwapRule: "after_all_players_serve_once",
+              tieResolution: "allow_draw",
+            },
+          },
+        },
+        courtPool: ["abcde", "efghj"],
+        teams: Array.from({ length: 6 }, (_, index) => ({
+          name: `Team ${index + 1}`,
+          seed: index + 1,
+          players: [`P${index + 1}a`, `P${index + 1}b`],
+        })),
+      });
+      const host = { hostKey };
+
+      await tournament("startTournament", { tournamentId }, host);
+      const initialFixtures = mockDb.list(`tournaments/${tournamentId}/fixtures`);
+      const byId = new Map(
+        initialFixtures.map((fixture) => [fixture.fixtureId || fixture.id, fixture]),
+      );
+      const placeholder = initialFixtures.find((fixture) => {
+        if (fixture.stage !== "knockout" || fixture.status !== "scheduled") return false;
+        return ["A", "B"].some((occupiedSide) => {
+          const pendingSide = occupiedSide === "A" ? "B" : "A";
+          const sourceRef = fixture.sourceRefs?.[occupiedSide];
+          const source = sourceRef?.fixtureId ? byId.get(sourceRef.fixtureId) : null;
+          return (
+            fixture.sides?.[occupiedSide]?.teamId &&
+            !fixture.sides?.[pendingSide] &&
+            Boolean(fixture.sourceRefs?.[pendingSide]?.fixtureId) &&
+            source?.status === "bye"
+          );
+        });
+      });
+      expect(placeholder).toBeDefined();
+
+      const occupiedSide = ["A", "B"].find((side) => {
+        const pendingSide = side === "A" ? "B" : "A";
+        const sourceRef = placeholder.sourceRefs?.[side];
+        const source = sourceRef?.fixtureId ? byId.get(sourceRef.fixtureId) : null;
+        return (
+          placeholder.sides?.[side]?.teamId &&
+          !placeholder.sides?.[pendingSide] &&
+          Boolean(placeholder.sourceRefs?.[pendingSide]?.fixtureId) &&
+          source?.status === "bye"
+        );
+      });
+      const pendingSide = occupiedSide === "A" ? "B" : "A";
+      const withdrawnTeamId = placeholder.sides[occupiedSide].teamId;
+      const placeholderId = placeholder.fixtureId || placeholder.id;
+      const withdrawnSourceRef = placeholder.sourceRefs[occupiedSide];
+      const pendingSourceId = placeholder.sourceRefs[pendingSide].fixtureId;
+
+      await tournament(
+        "withdrawTeam",
+        { tournamentId, teamId: withdrawnTeamId, reason: "Injury" },
+        host,
+      );
+
+      const afterWithdrawal = mockDb.get(
+        `tournaments/${tournamentId}/fixtures/${placeholderId}`,
+      );
+      expect(afterWithdrawal.status).toBe("scheduled");
+      expect(afterWithdrawal.sides[occupiedSide]).toBeNull();
+      expect(afterWithdrawal.sourceRefs[occupiedSide]).toBeNull();
+      expect(afterWithdrawal.sourceRefs[pendingSide].fixtureId).toBe(pendingSourceId);
+      expect(afterWithdrawal.teamIds).not.toContain(withdrawnTeamId);
+      const detachedSource = mockDb.get(
+        `tournaments/${tournamentId}/fixtures/${withdrawnSourceRef.fixtureId}`,
+      );
+      expect(detachedSource.feeds[withdrawnSourceRef.outcome]).toBeNull();
+
+      await tournament("startRound", { tournamentId }, host);
+      const pendingSource = mockDb.get(
+        `tournaments/${tournamentId}/fixtures/${pendingSourceId}`,
+      );
+      expect(pendingSource.matchId).toBeTruthy();
+      await score(pendingSource.matchId, "AAAA");
+      await tournament(
+        "completeFixture",
+        { tournamentId, fixtureId: pendingSource.fixtureId || pendingSource.id },
+        host,
+      );
+
+      const advancedPlaceholder = mockDb.get(
+        `tournaments/${tournamentId}/fixtures/${placeholderId}`,
+      );
+      expect(advancedPlaceholder.status).toBe("bye");
+      expect(advancedPlaceholder.sides[occupiedSide]).toBeNull();
+      const advancingTeamId = advancedPlaceholder.sides[pendingSide].teamId;
+      expect(advancingTeamId).toBeTruthy();
+      expect(advancingTeamId).not.toBe(withdrawnTeamId);
+
+      const winnerFeed = advancedPlaceholder.feeds?.winner;
+      expect(winnerFeed).toBeDefined();
+      const destination = mockDb.get(
+        `tournaments/${tournamentId}/fixtures/${winnerFeed.fixtureId}`,
+      );
+      expect(destination.status).not.toBe("cancelled");
+      expect(destination.sides[winnerFeed.side].teamId).toBe(advancingTeamId);
+    },
+  );
+
+  test(
+    "withdrawing the sole group-knockout qualifier invalidates champion-by-qualification",
+    async () => {
+      const { tournamentId, hostKey } = await tournament("createTournament", {
+        name: "Withdrawn sole qualifier",
+        format: {
+          id: "groupKnockout",
+          config: {
+            groupCount: 2,
+            advancePerGroup: 1,
+            scoring: {
+              scoringMode: "fixedTotalPoints",
+              pointsTarget: 4,
+              serveOrder: ["A1", "B1", "A2", "B2"],
+              serveBlockLength: 1,
+              sideSwapRule: "after_all_players_serve_once",
+              tieResolution: "allow_draw",
+            },
+          },
+        },
+        courtPool: ["abcde", "efghj"],
+        teams: [1, 2, 3, 4].map((n) => ({
+          name: `Team ${n}`,
+          seed: n,
+          players: [`P${n}a`, `P${n}b`],
+        })),
+      });
+      const host = { hostKey };
+
+      await tournament("startTournament", { tournamentId }, host);
+      await tournament("startRound", { tournamentId }, host);
+      const groupFixtures = mockDb
+        .list(`tournaments/${tournamentId}/fixtures`)
+        .filter((fixture) => fixture.stage === "group");
+      expect(groupFixtures).toHaveLength(2);
+      for (const fixture of groupFixtures) {
+        expect(fixture.matchId).toBeTruthy();
+        await score(fixture.matchId, "AAAA");
+        await tournament(
+          "completeFixture",
+          { tournamentId, fixtureId: fixture.fixtureId || fixture.id },
+          host,
+        );
+      }
+
+      const teamsInTournament = mockDb.list(`tournaments/${tournamentId}/teams`);
+      const soleEligibleTeam = teamsInTournament.find((team) => team.seed === 1);
+      expect(soleEligibleTeam).toBeDefined();
+      for (const team of teamsInTournament) {
+        if (team.teamId === soleEligibleTeam.teamId) continue;
+        await tournament(
+          "withdrawTeam",
+          { tournamentId, teamId: team.teamId, reason: "Unable to continue" },
+          host,
+        );
+      }
+
+      await tournament("generateRound", { tournamentId, expectedRoundNumber: 2 }, host);
+      const award = mockDb
+        .list(`tournaments/${tournamentId}/fixtures`)
+        .find((fixture) => fixture.bracketPosition === "KO-CHAMPION");
+      expect(award).toMatchObject({
+        status: "bye",
+        sides: { A: { teamId: soleEligibleTeam.teamId }, B: null },
+      });
+      expect(view(tournamentId).finalStandings).toMatchObject({
+        finalDecided: true,
+        championId: soleEligibleTeam.teamId,
+        championByDefault: true,
+      });
+
+      await tournament(
+        "withdrawTeam",
+        { tournamentId, teamId: soleEligibleTeam.teamId, reason: "Injury" },
+        host,
+      );
+
+      const finalStandings = view(tournamentId).finalStandings;
+      expect(finalStandings).toMatchObject({
+        finalDecided: false,
+        championId: null,
+        championByDefault: false,
+      });
+      expect(
+        finalStandings.rows.find((row) => row.entryId === soleEligibleTeam.teamId),
+      ).toMatchObject({
+        status: "withdrawn",
+        placement: null,
+        rank: null,
+        placementLabel: "Withdrawn",
+      });
+    },
+  );
+
 });
