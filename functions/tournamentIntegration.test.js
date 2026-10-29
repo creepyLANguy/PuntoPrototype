@@ -1088,4 +1088,251 @@ describe("tournament flow", () => {
     },
   );
 
+
+  test.each([
+    ["roundRobin", { scheduleMode: "roundByRound" }],
+    ["swiss", { roundCount: 2 }],
+  ])(
+    "%s cannot be completed normally after a withdrawal cancels part of a required round",
+    async (formatId, formatConfig) => {
+      const created = await tournament("createTournament", {
+        name: `Withdrawal completion guard - ${formatId}`,
+        format: {
+          id: formatId,
+          config: {
+            ...formatConfig,
+            scoring: {
+              scoringMode: "fixedTotalPoints",
+              pointsTarget: 4,
+              serveOrder: ["A1", "B1", "A2", "B2"],
+              serveBlockLength: 1,
+              sideSwapRule: "after_all_players_serve_once",
+              tieResolution: "allow_draw",
+            },
+          },
+        },
+        courtPool: ["abcde", "efghj"],
+        teams: [1, 2, 3, 4].map((n) => ({
+          name: `Team ${n}`,
+          seed: n,
+          players: [`P${n}a`, `P${n}b`],
+        })),
+      });
+      const { tournamentId, hostKey } = created;
+      const host = { hostKey };
+
+      await tournament("startTournament", { tournamentId }, host);
+      const firstRound = mockDb
+        .list(`tournaments/${tournamentId}/fixtures`)
+        .filter((fixture) => fixture.roundNumber === 1);
+      expect(firstRound).toHaveLength(2);
+
+      const withdrawalFixture = firstRound[0];
+      const withdrawnTeamId = withdrawalFixture.sides.A.teamId;
+      await tournament(
+        "withdrawTeam",
+        { tournamentId, teamId: withdrawnTeamId, reason: "Injury" },
+        host,
+      );
+
+      expect(
+        mockDb.get(
+          `tournaments/${tournamentId}/fixtures/${withdrawalFixture.fixtureId}`,
+        ),
+      ).toMatchObject({
+        status: "cancelled",
+        cancellationReason: "entry-withdrawn",
+        withdrawnEntryId: withdrawnTeamId,
+      });
+
+      await tournament("startRound", { tournamentId }, host);
+      const playable = mockDb
+        .list(`tournaments/${tournamentId}/fixtures`)
+        .filter((fixture) => fixture.roundNumber === 1 && fixture.status !== "cancelled");
+      expect(playable).toHaveLength(1);
+      expect(playable[0].matchId).toBeTruthy();
+      await score(playable[0].matchId, "AAAA");
+      await tournament(
+        "completeFixture",
+        { tournamentId, fixtureId: playable[0].fixtureId },
+        host,
+      );
+
+      // Cancellation due to withdrawal resolves that fixture as a non-result;
+      // it must not make the round look incomplete and bypass the remaining
+      // tournament schedule in the normal-completion guard.
+      await expect(
+        tournament("completeTournament", { tournamentId }, host),
+      ).rejects.toThrow(/required rounds to generate/);
+      expect(mockDb.get(`tournaments/${tournamentId}`).status).toBe("live");
+    },
+  );
+
+  test("King Court team rotation continues after a team withdrawal cancels its fixture", async () => {
+    const created = await tournament("createTournament", {
+      name: "King Court team withdrawal progression",
+      format: {
+        id: "kingCourt",
+        config: {
+          courtCount: 2,
+          scoring: {
+            scoringMode: "fixedTotalPoints",
+            pointsTarget: 4,
+            serveOrder: ["A1", "B1", "A2", "B2"],
+            serveBlockLength: 1,
+            sideSwapRule: "after_all_players_serve_once",
+            tieResolution: "allow_draw",
+          },
+        },
+      },
+      courtPool: ["abcde", "efghj"],
+      teams: [1, 2, 3, 4].map((n) => ({
+        name: `King Team ${n}`,
+        seed: n,
+        players: [`K${n}a`, `K${n}b`],
+      })),
+    });
+    const { tournamentId, hostKey } = created;
+    const host = { hostKey };
+
+    await tournament("startTournament", { tournamentId }, host);
+    const firstRound = mockDb
+      .list(`tournaments/${tournamentId}/fixtures`)
+      .filter((fixture) => fixture.roundNumber === 1);
+    expect(firstRound).toHaveLength(2);
+    const withdrawnTeamId = firstRound[0].sides.A.teamId;
+
+    await tournament(
+      "withdrawTeam",
+      { tournamentId, teamId: withdrawnTeamId, reason: "Injury" },
+      host,
+    );
+    expect(
+      mockDb.get(
+        `tournaments/${tournamentId}/fixtures/${firstRound[0].fixtureId}`,
+      ),
+    ).toMatchObject({
+      status: "cancelled",
+      cancellationReason: "entry-withdrawn",
+      withdrawnEntryId: withdrawnTeamId,
+    });
+
+    await tournament("startRound", { tournamentId }, host);
+    const playable = mockDb
+      .list(`tournaments/${tournamentId}/fixtures`)
+      .filter((fixture) => fixture.roundNumber === 1 && fixture.status !== "cancelled");
+    expect(playable).toHaveLength(1);
+    await score(playable[0].matchId, "AAAA");
+    await tournament(
+      "completeFixture",
+      { tournamentId, fixtureId: playable[0].fixtureId },
+      host,
+    );
+
+    await tournament("generateRound", { tournamentId, expectedRoundNumber: 2 }, host);
+    const nextFixtures = mockDb
+      .list(`tournaments/${tournamentId}/fixtures`)
+      .filter((fixture) => fixture.roundNumber === 2);
+    const nextRound = mockDb.get(`tournaments/${tournamentId}/rounds/r2`);
+    const activeTeamIds = mockDb
+      .list(`tournaments/${tournamentId}/teams`)
+      .filter((team) => team.status === "active")
+      .map((team) => team.teamId)
+      .sort();
+    const assignedTeamIds = nextFixtures.flatMap((fixture) =>
+      ["A", "B"].map((side) => fixture.sides?.[side]?.teamId).filter(Boolean),
+    );
+    const queuedTeamIds = nextRound.generationSnapshot.queue;
+    const accountedFor = [...assignedTeamIds, ...queuedTeamIds];
+
+    expect(nextFixtures.length).toBeGreaterThan(0);
+    expect(accountedFor).not.toContain(withdrawnTeamId);
+    expect(accountedFor.sort()).toEqual(activeTeamIds);
+    expect(new Set(accountedFor).size).toBe(activeTeamIds.length);
+  });
+
+  test("King Court individual rotation pairs active players and excludes a withdrawn player", async () => {
+    const created = await tournament("createTournament", {
+      name: "King Court individual withdrawal progression",
+      participantMode: "individual",
+      format: {
+        id: "kingCourt",
+        config: {
+          courtCount: 1,
+          scoring: {
+            scoringMode: "fixedTotalPoints",
+            pointsTarget: 4,
+            serveOrder: ["A1", "B1", "A2", "B2"],
+            serveBlockLength: 1,
+            sideSwapRule: "after_all_players_serve_once",
+            tieResolution: "allow_draw",
+          },
+        },
+      },
+      courtPool: ["abcde"],
+      participants: Array.from({ length: 6 }, (_, index) => ({
+        displayName: `King Player ${index + 1}`,
+        seed: index + 1,
+      })),
+    });
+    const { tournamentId, hostKey } = created;
+    const host = { hostKey };
+
+    await tournament("startTournament", { tournamentId }, host);
+    const firstRoundFixture = mockDb
+      .list(`tournaments/${tournamentId}/fixtures`)
+      .find((fixture) => fixture.roundNumber === 1);
+    expect(firstRoundFixture).toBeDefined();
+    const withdrawnParticipantId = firstRoundFixture.sides.A.participantIds[0];
+
+    await tournament(
+      "withdrawParticipant",
+      {
+        tournamentId,
+        participantId: withdrawnParticipantId,
+        reason: "Injury",
+      },
+      host,
+    );
+    expect(
+      mockDb.get(
+        `tournaments/${tournamentId}/fixtures/${firstRoundFixture.fixtureId}`,
+      ),
+    ).toMatchObject({
+      status: "cancelled",
+      cancellationReason: "entry-withdrawn",
+      withdrawnEntryId: withdrawnParticipantId,
+    });
+
+    // The cancelled withdrawal fixture is resolved without inventing a score.
+    // Queue refill must preserve active partners and build valid two-player sides.
+    await tournament("generateRound", { tournamentId, expectedRoundNumber: 2 }, host);
+    const nextFixtures = mockDb
+      .list(`tournaments/${tournamentId}/fixtures`)
+      .filter((fixture) => fixture.roundNumber === 2);
+    const nextRound = mockDb.get(`tournaments/${tournamentId}/rounds/r2`);
+    const activeParticipantIds = mockDb
+      .list(`tournaments/${tournamentId}/participants`)
+      .filter((participant) => participant.status === "active")
+      .map((participant) => participant.participantId)
+      .sort();
+    const assignedParticipantIds = nextFixtures.flatMap((fixture) =>
+      ["A", "B"].flatMap((side) => fixture.sides?.[side]?.participantIds || []),
+    );
+    const queuedParticipantIds = nextRound.generationSnapshot.queue.flatMap((sideId) =>
+      String(sideId).split("+"),
+    );
+    const accountedFor = [...assignedParticipantIds, ...queuedParticipantIds];
+
+    expect(nextFixtures.length).toBeGreaterThan(0);
+    expect(
+      nextFixtures.every((fixture) =>
+        ["A", "B"].every((side) => fixture.sides?.[side]?.participantIds?.length === 2),
+      ),
+    ).toBe(true);
+    expect(accountedFor).not.toContain(withdrawnParticipantId);
+    expect(accountedFor.sort()).toEqual(activeParticipantIds);
+    expect(new Set(accountedFor).size).toBe(activeParticipantIds.length);
+  });
+
 });
