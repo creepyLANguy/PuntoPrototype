@@ -805,3 +805,94 @@ describe("King Court tie assignment safety", () => {
   });
 
 });
+
+describe("King Court queue withdrawal safety", () => {
+  test("withdrawn teams in a saved queue are discarded without blocking active teams", () => {
+    const ts = teams(["t1", "t2", "t3", "withdrawn-team"]);
+    ts.find((team) => team.teamId === "withdrawn-team").status = "withdrawn";
+    const input = state({
+      formatId: "kingCourt",
+      entryMode: "team",
+      config: { courtCount: 1, tieBehaviour: "stay" },
+      teams: ts,
+      rounds: [{
+        roundId: "r1",
+        roundNumber: 1,
+        generationSnapshot: { queue: ["withdrawn-team", "t3"] },
+      }],
+      fixtures: [
+        fixture({
+          id: "court-1",
+          a: "t1",
+          b: "t2",
+          pointsA: 8,
+          pointsB: 3,
+          winner: "A",
+          courtLevel: 1,
+        }),
+      ],
+    });
+
+    const result = tournaments.getFormat("kingCourt").calculateNextCourtAssignments(input);
+    const assigned = result.assignments.flatMap((assignment) => [
+      assignment.sides.A.teamId,
+      assignment.sides.B.teamId,
+    ]);
+
+    expect(assigned.sort()).toEqual(["t1", "t3"]);
+    expect(result.queue).toEqual(["t2"]);
+    expect([...assigned, ...result.queue].sort()).toEqual(["t1", "t2", "t3"]);
+    expect([...assigned, ...result.queue]).not.toContain("withdrawn-team");
+  });
+
+  test("withdrawn individuals are not paired back into play from a saved queue", () => {
+    const ps = participants(["p1", "p2", "p3", "p4", "p5", "p6"]);
+    ps.find((participant) => participant.participantId === "p5").status = "withdrawn";
+    const lastFixture = fixture({
+      id: "court-1",
+      a: "p1",
+      b: "p3",
+      entryType: "participant",
+      pointsA: 8,
+      pointsB: 3,
+      winner: "A",
+      courtLevel: 1,
+    });
+    lastFixture.sides = {
+      A: { teamId: null, participantIds: ["p1", "p2"] },
+      B: { teamId: null, participantIds: ["p3", "p4"] },
+    };
+    const input = state({
+      formatId: "kingCourt",
+      entryMode: "individual",
+      config: { courtCount: 1, tieBehaviour: "stay" },
+      participants: ps,
+      rounds: [{
+        roundId: "r1",
+        roundNumber: 1,
+        generationSnapshot: { queue: ["p5", "p6"] },
+      }],
+      fixtures: [lastFixture],
+    });
+
+    const result = tournaments.getFormat("kingCourt").calculateNextCourtAssignments(input);
+    const assigned = result.assignments.flatMap((assignment) => [
+      ...assignment.sides.A.participantIds,
+      ...assignment.sides.B.participantIds,
+    ]);
+    const accountedFor = [...assigned, ...result.queue];
+
+    expect(result.assignments).toHaveLength(1);
+    expect(result.assignments[0].sides.A.participantIds).toEqual(["p1", "p2"]);
+    expect(result.assignments[0].sides.B.participantIds).toEqual(["p3", "p4"]);
+    expect(result.queue).toEqual(["p6"]);
+    expect(accountedFor.sort()).toEqual(["p1", "p2", "p3", "p4", "p6"]);
+    expect(accountedFor).not.toContain("p5");
+    expect(new Set(accountedFor).size).toBe(accountedFor.length);
+    expect(
+      result.assignments.every((assignment) =>
+        [assignment.sides.A, assignment.sides.B].every((side) => side.participantIds.length === 2),
+      ),
+    ).toBe(true);
+  });
+});
