@@ -1164,6 +1164,15 @@ describe("tournament flow", () => {
       await expect(
         tournament("completeTournament", { tournamentId }, host),
       ).rejects.toThrow(/required rounds to generate/);
+
+      // The same resolved-withdrawal policy must permit the required round to
+      // be generated; a cancelled fixture must neither deadlock nor end the event.
+      await tournament("generateRound", { tournamentId, expectedRoundNumber: 2 }, host);
+      expect(
+        mockDb
+          .list(`tournaments/${tournamentId}/fixtures`)
+          .some((fixture) => fixture.roundNumber === 2),
+      ).toBe(true);
       expect(mockDb.get(`tournaments/${tournamentId}`).status).toBe("live");
     },
   );
