@@ -64,10 +64,7 @@ const kingCourt = {
   generateNextRound(state) {
     const allowed = canGenerateAfterComplete(state);
     if (!allowed.allowed) throw new Error(allowed.reason);
-    return generateRoundFromAssignments(
-      state,
-      this.calculateNextCourtAssignments(state).assignments,
-    );
+    return generateRoundFromAssignments(state, this.calculateNextCourtAssignments(state));
   },
   canGenerateNextRound: canGenerateAfterComplete,
   calculateStandings(state) {
