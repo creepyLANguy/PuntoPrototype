@@ -244,6 +244,37 @@ describe("group-knockout qualification after withdrawals", () => {
     expect(groupASecond.source).toMatchObject({ groupId: "A", rank: 2 });
   });
 
+  test("withdrawal-cancelled group fixtures do not block knockout qualification", () => {
+    const target = bracketState("groupKnockout", 4, {
+      groupCount: 2,
+      advancePerGroup: 1,
+    });
+    const format = tournaments.getFormat("groupKnockout");
+    append(target, format.generateInitialRound(target));
+
+    const withdrawnTeamId = "t1";
+    target.teams.find((team) => team.teamId === withdrawnTeamId).status = "withdrawn";
+    for (const fixture of target.fixtures) {
+      if ((fixture.teamIds || []).includes(withdrawnTeamId)) {
+        // Mirror the durable marker written by the real withdrawal service.
+        fixture.status = "cancelled";
+        fixture.cancellationReason = "entry-withdrawn";
+        fixture.withdrawnEntryId = withdrawnTeamId;
+      } else {
+        completeFixture(fixture, "A");
+      }
+    }
+
+    expect(format.canGenerateNextRound(target)).toMatchObject({ allowed: true });
+    const generation = format.generateNextRound(target);
+    const advancingIds = generation.fixtures
+      .flatMap((fixture) => [fixture.sides.A?.teamId, fixture.sides.B?.teamId])
+      .filter(Boolean);
+
+    expect(advancingIds).not.toContain(withdrawnTeamId);
+    expect(advancingIds).toHaveLength(2);
+  });
+
   function stateAfterGroupResults(activeTeamIds) {
     const target = bracketState("groupKnockout", 4, {
       groupCount: 2,
