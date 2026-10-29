@@ -469,6 +469,8 @@ async function transitionTournament(data, { actor }, to, extra = {}) {
         participants: state.participants.filter((p) => p.status !== "removed"),
         teams: state.teams.filter((t) => t.status !== "removed"),
         courtPool: tournament.courtPool || [],
+        rounds: state.rounds,
+        fixtures: state.fixtures,
       });
       const error = firstValidationError(validation);
       if (error) throw precondition(error);
@@ -1120,6 +1122,8 @@ async function generateRound(data, ctx) {
       participants: state.participants.filter((p) => p.status !== "removed"),
       teams: state.teams.filter((t) => t.status !== "removed"),
       courtPool: tournament.courtPool || [],
+      rounds: state.rounds,
+      fixtures: state.fixtures,
     });
     const validationError = firstValidationError(validation);
     if (validationError) throw precondition(validationError);
