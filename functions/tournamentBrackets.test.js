@@ -673,3 +673,62 @@ describe("group-knockout placement before qualification is decided", () => {
     expect(standings.rows.some((row) => row.placementLabel === "Did not qualify")).toBe(false);
   });
 });
+
+
+describe("unresolved third-place placements", () => {
+  test.each([
+    ["scheduled", null],
+    ["cancelled", null],
+    ["completed", "draw"],
+  ])(
+    "semifinal losers are not awarded third place for a third-place fixture that is %s",
+    (thirdPlaceStatus, thirdPlaceWinner) => {
+      const target = bracketState("singleElimination", 4, { thirdPlaceMatch: true });
+      const format = tournaments.getFormat("singleElimination");
+      append(target, format.generateInitialRound(target));
+
+      const semifinals = target.fixtures.filter(
+        (fixture) => fixture.stage === "knockout" && fixture.roundNumber === 1,
+      );
+      expect(semifinals).toHaveLength(2);
+      completeFixture(semifinals[0], "A");
+      applyUpdates(target, format.advanceBracket(target, semifinals[0].fixtureId).updates);
+      completeFixture(semifinals[1], "B");
+      applyUpdates(target, format.advanceBracket(target, semifinals[1].fixtureId).updates);
+
+      const final = target.fixtures.find((fixture) => fixture.label === "Final");
+      expect(final.sides.A).toBeTruthy();
+      expect(final.sides.B).toBeTruthy();
+      completeFixture(final, "A");
+      applyUpdates(target, format.advanceBracket(target, final.fixtureId).updates);
+
+      const thirdPlace = target.fixtures.find((fixture) => fixture.stage === "thirdPlace");
+      expect(thirdPlace.sides.A).toBeTruthy();
+      expect(thirdPlace.sides.B).toBeTruthy();
+      if (thirdPlaceWinner) completeFixture(thirdPlace, thirdPlaceWinner);
+      else thirdPlace.status = thirdPlaceStatus;
+
+      const semifinalLosers = semifinals.map((fixture) => {
+        const loserSide = fixture.resultSnapshot.winner === "A" ? "B" : "A";
+        return fixture.sides[loserSide].teamId;
+      });
+      const result = format.calculateFinalStandings(target);
+      const rowsById = Object.fromEntries(result.rows.map((row) => [row.entryId, row]));
+
+      if (thirdPlaceStatus === "completed") {
+        semifinalLosers.forEach((id) => {
+          expect(rowsById[id].placement).toBe(3);
+          expect(rowsById[id].placementTied).toBe(true);
+        });
+      } else {
+        semifinalLosers.forEach((id) => {
+          expect(rowsById[id].placement).toBeNull();
+          expect(rowsById[id].placementLabel).toBe("Third/fourth place undecided");
+        });
+      }
+      expect(result.rows.find((row) => row.entryId === final.sides.A.teamId).placement).toBe(1);
+      expect(result.rows.find((row) => row.entryId === final.sides.B.teamId).placement).toBe(2);
+    },
+  );
+});
+
