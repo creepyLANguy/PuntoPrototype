@@ -95,9 +95,25 @@ const groupKnockout = {
       return { allowed: false, reason: "Knockout already generated." };
     const groupFixtures = (state.fixtures || []).filter((fixture) => fixture.stage === "group");
     if (groupFixtures.length === 0) return { allowed: false, reason: "Group stage not generated." };
-    const incomplete = groupFixtures.some(
-      (fixture) => fixture.status !== "completed" || !fixtureOutcome(fixture),
-    );
+    const incomplete = groupFixtures.some((fixture) => {
+      if (fixture.status === "completed" && fixtureOutcome(fixture)) return false;
+
+      // A withdrawal intentionally cancels that entry's remaining group
+      // fixtures. Those fixtures are resolved omissions, not matches that can
+      // still be played, and must not deadlock knockout qualification.
+      if (
+        fixture.status === "cancelled" &&
+        fixture.cancellationReason === "entry-withdrawn" &&
+        fixture.withdrawnEntryId &&
+        [...entryIdsOfSide(fixture.sides?.A), ...entryIdsOfSide(fixture.sides?.B)].includes(
+          fixture.withdrawnEntryId,
+        )
+      ) {
+        return false;
+      }
+
+      return true;
+    });
     return incomplete
       ? { allowed: false, reason: "Group stage incomplete." }
       : { allowed: true, reason: null };
