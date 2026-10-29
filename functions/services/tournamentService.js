@@ -49,6 +49,7 @@ const {
   generateSchedule,
 } = require("../domain/tournaments/forecast");
 const { CLUB_STATES, normalizeClubState } = require("../domain/clubs/membership");
+const { assessRequiredCompletion } = require("../domain/tournaments/completion");
 
 const now = () => FieldValue.serverTimestamp();
 const BRACKET_KINDS = new Set(["bracket", "groupBracket"]);
@@ -579,20 +580,13 @@ function assertRequiredTournamentProgress(state) {
   if (!["roundRobin", "swiss", "groupKnockout"].includes(formatId)) return;
 
   const format = getFormat(formatId);
-  const progress =
-    typeof format.canGenerateNextRound === "function"
-      ? format.canGenerateNextRound(state)
-      : { allowed: false };
-
-  if (progress?.allowed) {
-    const message =
-      formatId === "groupKnockout"
-        ? "The group stage is complete but the knockout stage has not been generated. Generate the required stage, or explicitly finish early with a reason."
-        : "The tournament still has required rounds to generate. Generate the remaining rounds, or explicitly finish early with a reason.";
-    throw precondition(message, {
+  const readiness = assessRequiredCompletion(state, format);
+  if (!readiness.allowed) {
+    throw precondition(readiness.message, {
       formatId,
-      remainingRoundsOrStages: true,
-      nextRoundReason: progress.reason || null,
+      completionFailure: readiness.reason,
+      unresolvedFixtureIds: readiness.unresolvedFixtureIds,
+      nextRoundReason: readiness.nextRoundReason || null,
     });
   }
 }
