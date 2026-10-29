@@ -48,6 +48,20 @@ describe("required tournament completion readiness", () => {
     });
   });
 
+  test("blocks a partial full-schedule Round Robin even if every generated fixture has a result", () => {
+    const input = state(
+      "roundRobin",
+      { scheduleMode: "full" },
+      [fixture({ fixtureId: "r1-m1" })],
+      [team("a", 1), team("b", 2), team("c", 3), team("d", 4)],
+    );
+
+    expect(assessRequiredCompletion(input, getFormat("roundRobin"))).toMatchObject({
+      allowed: false,
+      reason: "incomplete-schedule",
+    });
+  });
+
   test("blocks a cancelled full-schedule fixture without a valid withdrawal record", () => {
     const input = state("roundRobin", { scheduleMode: "full" }, [
       fixture({
