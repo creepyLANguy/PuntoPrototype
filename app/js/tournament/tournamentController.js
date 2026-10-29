@@ -153,10 +153,12 @@ export function createTournamentController(
     const finiteFormat = ["roundRobin", "swiss", "groupKnockout"].includes(
       ctx.view.format?.id,
     );
-    const requiredProgressRemains =
-      finiteFormat && Boolean(ctx.view.nextRound?.allowed);
+    const readiness = ctx.view.completionReadiness;
+    const requiresEarlyFinish =
+      finiteFormat &&
+      (readiness ? !readiness.allowed : Boolean(ctx.view.nextRound?.allowed));
 
-    if (!open && !requiredProgressRemains) {
+    if (!open && !requiresEarlyFinish) {
       return ctx.confirmRun(
         "Complete the tournament?",
         "completeTournament",
@@ -167,12 +169,19 @@ export function createTournamentController(
 
     const warnings = [];
     if (open) warnings.push(`${open} match(es) are not finished`);
-    if (requiredProgressRemains) {
-      warnings.push(
-        ctx.view.format.id === "groupKnockout"
-          ? "the knockout stage has not been generated"
-          : "required tournament rounds remain to be generated",
-      );
+    if (requiresEarlyFinish) {
+      if (readiness?.reason === "required-progress") {
+        warnings.push(
+          ctx.view.format.id === "groupKnockout"
+            ? "the knockout stage has not been generated"
+            : "required tournament rounds remain to be generated",
+        );
+      } else {
+        warnings.push(
+          readiness?.message ||
+            "required tournament fixtures remain unresolved; resolve them or finish early with a reason",
+        );
+      }
     }
     const reason = window.prompt(
       `${warnings.join("; ")}. Finish early anyway? Give a reason:`,
