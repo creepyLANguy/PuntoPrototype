@@ -49,7 +49,7 @@ const {
   generateSchedule,
 } = require("../domain/tournaments/forecast");
 const { CLUB_STATES, normalizeClubState } = require("../domain/clubs/membership");
-const { assessRequiredCompletion } = require("../domain/tournaments/completion");
+const { FINITE_FORMATS, assessRequiredCompletion } = require("../domain/tournaments/completion");
 
 const now = () => FieldValue.serverTimestamp();
 const BRACKET_KINDS = new Set(["bracket", "groupBracket"]);
@@ -577,7 +577,7 @@ async function completeTournament(data, ctx) {
 // have a configured terminal round count.
 function assertRequiredTournamentProgress(state) {
   const formatId = state.tournament?.format?.id;
-  if (!["roundRobin", "swiss", "groupKnockout"].includes(formatId)) return;
+  if (!FINITE_FORMATS.has(formatId)) return;
 
   const format = getFormat(formatId);
   const readiness = assessRequiredCompletion(state, format);
