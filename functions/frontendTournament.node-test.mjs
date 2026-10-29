@@ -452,6 +452,36 @@ test("completed social tournament shows a podium; live tournament does not", () 
   assert.equal(page.querySelector(".ev-match-history")?.querySelector("summary")?.textContent, "Review rounds and match results");
 });
 
+test("completed finite tournaments stay provisional while required rounds remain", () => {
+  const base = buildView();
+  const view = {
+    ...base,
+    status: "completed",
+    finishedEarly: false,
+    completionReason: null,
+    format: {
+      ...base.format,
+      id: "roundRobin",
+      label: "Round Robin",
+      kind: "league",
+    },
+    nextRound: { allowed: true, reason: "Round 2 remains to be generated" },
+    finalStandings: {
+      entryType: "team",
+      rows: [
+        { rank: 1, entryId: "t1", name: "Team One", played: 1, competitionPoints: 3 },
+        { rank: 2, entryId: "t2", name: "Team Two", played: 1, competitionPoints: 0 },
+      ],
+    },
+  };
+  const page = renderPublicDashboard(view, new Map());
+
+  assert.match(page.textContent, /Tournament ended before the schedule was complete/);
+  assert.match(page.textContent, /Required tournament rounds remain to be generated/);
+  assert.doesNotMatch(page.textContent, /Winner: Team One|Joint winners:/);
+  assert.equal(page.querySelector(".tournament-podium"), null);
+});
+
 test("a sporting tie is shown as joint winners rather than an invented second place", () => {
   const view = {
     ...buildView(),
