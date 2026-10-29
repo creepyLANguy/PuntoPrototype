@@ -536,6 +536,7 @@ async function completeTournament(data, ctx) {
       { openFixtures: open.length },
     );
   }
+  if (!data.early) assertRequiredTournamentProgress(state);
   if (data.early && (!data.reason || !String(data.reason).trim())) {
     throw invalid("Give a reason for finishing early.");
   }
@@ -565,6 +566,33 @@ async function completeTournament(data, ctx) {
   });
   await recalculateTournament({ tournamentId: data.tournamentId });
   return { tournamentId: data.tournamentId, status: "completed", cancelledFixtures: open.length };
+}
+
+// Finite formats must not be marked normally complete while their next
+// required round or stage can still be generated. Open-ended formats such as
+// King Court intentionally remain host-finished, and social formats do not
+// have a configured terminal round count.
+function assertRequiredTournamentProgress(state) {
+  const formatId = state.tournament?.format?.id;
+  if (!["roundRobin", "swiss", "groupKnockout"].includes(formatId)) return;
+
+  const format = getFormat(formatId);
+  const progress =
+    typeof format.canGenerateNextRound === "function"
+      ? format.canGenerateNextRound(state)
+      : { allowed: false };
+
+  if (progress?.allowed) {
+    const message =
+      formatId === "groupKnockout"
+        ? "The group stage is complete but the knockout stage has not been generated. Generate the required stage, or explicitly finish early with a reason."
+        : "The tournament still has required rounds to generate. Generate the remaining rounds, or explicitly finish early with a reason.";
+    throw precondition(message, {
+      formatId,
+      remainingRoundsOrStages: true,
+      nextRoundReason: progress.reason || null,
+    });
+  }
 }
 
 async function cancelTournament(data, ctx) {
