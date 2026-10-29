@@ -87,10 +87,21 @@ function autoResolve(byId, updates) {
       if (hasA && hasB && fixture.status !== "scheduled") {
         patchFixture(fixture, { status: "scheduled" }, updates);
         changed = true;
-      } else if (refsDone && !hasA && !hasB && fixture.status !== "cancelled") {
+      } else if (
+        refsDone &&
+        !hasA &&
+        !hasB &&
+        !hasUnpropagatedEntrant(byId, fixture) &&
+        fixture.status !== "cancelled"
+      ) {
         patchFixture(fixture, { status: "cancelled" }, updates);
         changed = true;
-      } else if (refsDone && hasA !== hasB && fixture.status !== "bye") {
+      } else if (
+        refsDone &&
+        hasA !== hasB &&
+        !hasUnpropagatedEntrant(byId, fixture) &&
+        fixture.status !== "bye"
+      ) {
         patchFixture(fixture, { status: "bye" }, updates);
         propagateFixture(byId, fixture, updates);
         changed = true;
@@ -106,6 +117,25 @@ function autoResolve(byId, updates) {
       }
     }
   }
+}
+
+// A source may already have a completed result before its winner/loser
+// has been propagated into this placeholder. During global progression, an
+// unrelated bye can be processed first; do not cancel or auto-advance the
+// destination while a resolved source still has an entrant to feed into it.
+function hasUnpropagatedEntrant(byId, fixture) {
+  return ["A", "B"].some((side) => {
+    if (fixture.sides?.[side]) return false;
+    const ref = fixture.sourceRefs?.[side];
+    if (!ref?.fixtureId) return false;
+    const source = byId[ref.fixtureId];
+    if (!source || !["completed", "bye"].includes(source.status)) return false;
+    const outcome = fixtureOutcome(source) || byeOutcome(source);
+    if (!outcome || !["A", "B"].includes(outcome.winner)) return false;
+    const sourceSide =
+      ref.outcome === "loser" ? (outcome.winner === "A" ? "B" : "A") : outcome.winner;
+    return entryIdsOfSide(source.sides?.[sourceSide]).length > 0;
+  });
 }
 
 function sourceResolved(byId, ref) {
