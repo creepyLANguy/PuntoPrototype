@@ -107,6 +107,8 @@ const kingCourt = {
     const buckets = {};
     const lockedPairs = {};
     const queue = [...(lastRound?.generationSnapshot?.queue || [])];
+    const entryMode =
+      state.tournament?.participantMode === "individual" ? "individual" : "team";
     for (const fixture of fixtures) {
       const outcome = fixtureOutcome(fixture);
       const winner = resolveWinner(fixture, outcome, cfg, state);
@@ -139,8 +141,11 @@ const kingCourt = {
       // when multiple neighbouring courts feed into the same bucket.
       const selected = sides.slice(0, 2);
       queue.push(...sides.slice(2).map(sideId));
-      while (selected.length < 2 && queue.length > 0)
-        selected.push(sideFromQueue(state, queue.shift()));
+      while (selected.length < 2 && queue.length > 0) {
+        const queuedSide = takeQueuedSide(state, queue, entryMode);
+        if (!queuedSide) break;
+        selected.push(queuedSide);
+      }
       if (selected.length === 2) {
         assignments.push({ courtLevel: level, sides: { A: selected[0], B: selected[1] } });
       } else if (selected.length === 1) {
@@ -260,10 +265,66 @@ function sideId(side) {
   return side.teamId || side.participantIds.join("+");
 }
 
-function sideFromQueue(state, id) {
+function takeQueuedSide(state, queue, entryMode) {
+  if (entryMode !== "individual") {
+    if (!queue.length) return null;
+    const side = sideFromQueue(state, queue[0], entryMode);
+    if (!side) return null;
+    queue.shift();
+    return side;
+  }
+
+  const participantIds = new Set(
+    (state.participants || []).map((participant) => participant.participantId),
+  );
+  const singles = [];
+  for (let index = 0; index < queue.length; index += 1) {
+    if (participantIds.has(queue[index])) singles.push({ index, id: queue[index] });
+  }
+
+  // Players who sat out are individual IDs. Pair two of them before filling a
+  // court with a previously formed side, so queueing does not create 1-v-2
+  // fixtures and players waiting from the prior round get a fair opportunity.
+  if (singles.length >= 2) {
+    const first = singles[0];
+    const second = singles[1];
+    queue.splice(second.index, 1);
+    queue.splice(first.index, 1);
+    return sideFromParticipants([first.id, second.id]);
+  }
+
+  // A side that moved off the bottom court is stored as "playerA+playerB".
+  // It is already a complete doubles side and can be reused as-is.
+  for (let index = 0; index < queue.length; index += 1) {
+    const ids = String(queue[index]).split("+");
+    if (ids.length !== 2 || !ids.every((id) => participantIds.has(id))) continue;
+    const id = queue[index];
+    queue.splice(index, 1);
+    return sideFromQueue(state, id, entryMode);
+  }
+
+  // Preserve an unmatched individual in the queue until another player is
+  // available instead of creating an invalid one-player side.
+  return null;
+}
+
+function sideFromQueue(state, id, entryMode) {
+  if (entryMode === "individual") {
+    const participantIds = String(id).split("+");
+    const knownIds = new Set(
+      (state.participants || []).map((participant) => participant.participantId),
+    );
+    if (
+      participantIds.length !== 2 ||
+      !participantIds.every((participantId) => knownIds.has(participantId))
+    ) {
+      return null;
+    }
+    return sideFromParticipants(participantIds);
+  }
+
   const team = (state.teams || []).find((candidate) => candidate.teamId === id);
-  if (team) return sideFromTeam(team);
-  return sideFromParticipants(String(id).split("+"));
+  return team ? sideFromTeam(team) : null;
 }
 
 module.exports = kingCourt;
