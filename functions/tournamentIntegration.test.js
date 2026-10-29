@@ -293,6 +293,110 @@ describe("tournament flow", () => {
     },
   );
 
+  test.each([
+    ["roundRobin", { scheduleMode: "roundByRound" }, "round"],
+    ["swiss", { roundCount: 2 }, "round"],
+    ["groupKnockout", { groupCount: 2, advancePerGroup: 1 }, "group"],
+  ])(
+    "%s cannot be normally completed when a required fixture is cancelled without withdrawal metadata",
+    async (formatId, config, stage) => {
+      const { tournamentId, host } = await createAndCompleteFirstRound(formatId, config);
+      const fixture = mockDb
+        .list(`tournaments/${tournamentId}/fixtures`)
+        .find(
+          (candidate) =>
+            candidate.status === "completed" &&
+            (stage !== "group" || candidate.stage === "group"),
+        );
+      expect(fixture).toBeDefined();
+
+      mockDb.write(
+        `tournaments/${tournamentId}/fixtures/${fixture.fixtureId}`,
+        {
+          status: "cancelled",
+          cancellationReason: null,
+          withdrawnEntryId: null,
+        },
+        { merge: true },
+      );
+
+      await expect(tournament("completeTournament", { tournamentId }, host)).rejects.toThrow(
+        /unresolved|incomplete/i,
+      );
+      expect(mockDb.get(`tournaments/${tournamentId}`).status).toBe("live");
+    },
+  );
+
+  test("normal completion rejects a completed fixture whose result snapshot is missing", async () => {
+    const { tournamentId, host } = await createAndCompleteFirstRound("roundRobin", {
+      scheduleMode: "roundByRound",
+    });
+    const fixture = mockDb
+      .list(`tournaments/${tournamentId}/fixtures`)
+      .find((candidate) => candidate.status === "completed");
+    expect(fixture).toBeDefined();
+
+    mockDb.write(
+      `tournaments/${tournamentId}/fixtures/${fixture.fixtureId}`,
+      { status: "completed", resultSnapshot: null },
+      { merge: true },
+    );
+
+    await expect(tournament("completeTournament", { tournamentId }, host)).rejects.toThrow(
+      /unresolved|incomplete/i,
+    );
+    expect(mockDb.get(`tournaments/${tournamentId}`).status).toBe("live");
+  });
+
+  test("a correctly recorded withdrawal cancellation is resolved for normal completion", async () => {
+    const { tournamentId, host } = await createAndCompleteFirstRound("swiss", { roundCount: 1 });
+    const fixture = mockDb
+      .list(`tournaments/${tournamentId}/fixtures`)
+      .find((candidate) => candidate.status === "completed");
+    expect(fixture).toBeDefined();
+    const withdrawnTeamId = fixture.sides.A.teamId;
+
+    mockDb.write(
+      `tournaments/${tournamentId}/fixtures/${fixture.fixtureId}`,
+      {
+        status: "cancelled",
+        resultSnapshot: null,
+        cancellationReason: "entry-withdrawn",
+        withdrawnEntryId: withdrawnTeamId,
+      },
+      { merge: true },
+    );
+    mockDb.write(
+      `tournaments/${tournamentId}/teams/${withdrawnTeamId}`,
+      { status: "withdrawn" },
+      { merge: true },
+    );
+
+    await expect(tournament("completeTournament", { tournamentId }, host)).resolves.toMatchObject({
+      tournamentId,
+      status: "completed",
+    });
+    expect(mockDb.get(`tournaments/${tournamentId}`)).toMatchObject({
+      status: "completed",
+      finishedEarly: false,
+      completionReason: null,
+    });
+  });
+
+  test("a terminal Swiss event can still be completed normally after every result is resolved", async () => {
+    const { tournamentId, host } = await createAndCompleteFirstRound("swiss", { roundCount: 1 });
+
+    await expect(tournament("completeTournament", { tournamentId }, host)).resolves.toMatchObject({
+      tournamentId,
+      status: "completed",
+    });
+    expect(mockDb.get(`tournaments/${tournamentId}`)).toMatchObject({
+      status: "completed",
+      finishedEarly: false,
+      completionReason: null,
+    });
+  });
+
   test("Americano end to end: create, forecast, play, move, recalculate, correct, complete", async () => {
     const created = await createAmericano({ requestId: "req-1" });
     const { tournamentId, hostKey } = created;
