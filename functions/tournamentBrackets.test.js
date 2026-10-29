@@ -681,7 +681,7 @@ describe("unresolved third-place placements", () => {
     ["cancelled", null],
     ["completed", "draw"],
   ])(
-    "semifinal losers are not awarded third place for a third-place fixture that is %s",
+    "semifinal loser placements respect whether the third-place fixture is resolved (%s)",
     (thirdPlaceStatus, thirdPlaceWinner) => {
       const target = bracketState("singleElimination", 4, { thirdPlaceMatch: true });
       const format = tournaments.getFormat("singleElimination");
@@ -730,5 +730,18 @@ describe("unresolved third-place placements", () => {
       expect(result.rows.find((row) => row.entryId === final.sides.B.teamId).placement).toBe(2);
     },
   );
+});
+
+test("bracket ranking explanation matches unresolved-entry ordering", () => {
+  const target = bracketState("singleElimination", 4);
+  const format = tournaments.getFormat("singleElimination");
+  append(target, format.generateInitialRound(target));
+
+  const result = format.calculateStandings(target);
+  expect(result.tiebreakerLabels).toContain(
+    "Unresolved entries: qualification status, elimination losses, then initial seed",
+  );
+  expect(result.tiebreakerLabels).toContain("Entry ID (display order only)");
+  expect(result.tiebreakerLabels).not.toContain("Elimination stage");
 });
 
