@@ -226,6 +226,66 @@ describe("match foundation", () => {
 });
 
 describe("tournament flow", () => {
+  async function createAndCompleteFirstRound(formatId, config) {
+    const created = await tournament("createTournament", {
+      name: `Completion guard ${formatId}`,
+      format: {
+        id: formatId,
+        config: {
+          ...config,
+          scoring: { scoringMode: "fixedTotalPoints", pointsTarget: 4 },
+        },
+      },
+      courtPool: ["abcde", "efghj"],
+      teams: [
+        { players: ["A1", "A2"] },
+        { players: ["B1", "B2"] },
+        { players: ["C1", "C2"] },
+        { players: ["D1", "D2"] },
+      ],
+    });
+    const { tournamentId, hostKey } = created;
+    const host = { hostKey };
+
+    await tournament("generateRound", { tournamentId, expectedRoundNumber: 1 }, host);
+    await tournament("publishTournament", { tournamentId }, host);
+    await tournament("startRound", { tournamentId }, host);
+
+    const fixtures = mockDb.list(`tournaments/${tournamentId}/fixtures`);
+    expect(fixtures.length).toBeGreaterThan(0);
+    for (const fixture of fixtures) await score(fixture.matchId, "AAAA");
+    return { tournamentId, host };
+  }
+
+  test.each([
+    ["roundRobin", { scheduleMode: "roundByRound" }, /required rounds to generate/],
+    ["swiss", { roundCount: 2 }, /required rounds to generate/],
+    ["groupKnockout", { groupCount: 2, advancePerGroup: 1 }, /knockout stage has not been generated/],
+  ])(
+    "%s cannot be normally completed while required rounds or stages remain",
+    async (formatId, config, expectedMessage) => {
+      const { tournamentId, host } = await createAndCompleteFirstRound(formatId, config);
+
+      await expect(tournament("completeTournament", { tournamentId }, host)).rejects.toThrow(
+        expectedMessage,
+      );
+      expect(mockDb.get(`tournaments/${tournamentId}`).status).toBe("live");
+
+      // Finishing early remains an explicit, reasoned operation even when no
+      // currently generated fixture is open.
+      await tournament(
+        "completeTournament",
+        { tournamentId, early: true, reason: "Venue closing early" },
+        host,
+      );
+      expect(mockDb.get(`tournaments/${tournamentId}`)).toMatchObject({
+        status: "completed",
+        finishedEarly: true,
+        completionReason: "Venue closing early",
+      });
+    },
+  );
+
   test("Americano end to end: create, forecast, play, move, recalculate, correct, complete", async () => {
     const created = await createAmericano({ requestId: "req-1" });
     const { tournamentId, hostKey } = created;
