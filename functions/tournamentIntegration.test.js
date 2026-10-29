@@ -233,7 +233,14 @@ describe("tournament flow", () => {
         id: formatId,
         config: {
           ...config,
-          scoring: { scoringMode: "fixedTotalPoints", pointsTarget: 4 },
+          scoring: {
+            scoringMode: "fixedTotalPoints",
+            pointsTarget: 4,
+            serveOrder: ["A1", "B1", "A2", "B2"],
+            serveBlockLength: 1,
+            sideSwapRule: "after_all_players_serve_once",
+            tieResolution: "allow_draw",
+          },
         },
       },
       courtPool: ["abcde", "efghj"],
