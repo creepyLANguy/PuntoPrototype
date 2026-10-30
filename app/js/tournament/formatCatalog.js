@@ -323,7 +323,7 @@ export const FORMATS = [
         type: "select",
         value: "courtPoints",
         options: [
-          ["courtPoints", "Points by court level won"],
+          ["courtPoints", "Court-priority points (M - C + 1)"],
           ["rallyPoints", "Rally points won"],
         ],
       },

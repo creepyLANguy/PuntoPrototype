@@ -1,7 +1,16 @@
 const { calculateStandings: standings } = require("../standings");
 const { TournamentDomainError } = require("../errors");
 const { fixtureOutcome } = require("../results");
-const { advanceBracketState, nextPowerOfTwo, seedOrder, setFeed } = require("./bracketHelpers");
+const { entryIdsOfSide } = require("../entities");
+const {
+  advanceBracketState,
+  bracketStandings,
+  canProduceThirdPlaceLoser,
+  makeByeOrScheduled,
+  nextPowerOfTwo,
+  seedOrder,
+  setFeed,
+} = require("./bracketHelpers");
 const {
   baseRound,
   calculateRoundResult,
@@ -11,6 +20,20 @@ const {
   sideFromTeam,
   toInt,
 } = require("./shared");
+
+// Group qualification uses sporting criteria first, then the initial seed as a
+// final fallback. Entry IDs only order rows for display and never split a tie.
+const GROUP_STANDINGS_TIEBREAKERS = [
+  "competitionPoints",
+  "wins",
+  "headToHead",
+  "setDiff",
+  "gameDiff",
+  "pointDiff",
+  "pointsFor",
+  "seed",
+  "entryId",
+];
 
 const groupKnockout = {
   id: "groupKnockout",
@@ -48,8 +71,15 @@ const groupKnockout = {
   validateParticipants(state) {
     const cfg = this.normalizeConfig(state.tournament?.format?.config || {});
     const active = (state.teams || []).filter((team) => team.status === "active");
+    const hasGeneratedGroupStage = (state.fixtures || []).some(
+      (fixture) => fixture.stage === "group",
+    );
     const errors = [];
-    if (active.length < cfg.groupCount * 2)
+    // The minimum roster is required to create a meaningful group draw, but a
+    // later withdrawal must not make the already-generated group stage
+    // impossible to finish. Post-draw eligibility is checked when qualifiers
+    // are selected, including the zero/one-qualifier outcomes.
+    if (!hasGeneratedGroupStage && active.length < cfg.groupCount * 2)
       errors.push({
         code: "INSUFFICIENT_TEAMS",
         message: "Not enough teams for configured groups.",
@@ -72,26 +102,64 @@ const groupKnockout = {
       return { allowed: false, reason: "Knockout already generated." };
     const groupFixtures = (state.fixtures || []).filter((fixture) => fixture.stage === "group");
     if (groupFixtures.length === 0) return { allowed: false, reason: "Group stage not generated." };
-    const incomplete = groupFixtures.some(
-      (fixture) => fixture.status !== "completed" || !fixtureOutcome(fixture),
-    );
+    const incomplete = groupFixtures.some((fixture) => {
+      if (fixture.status === "completed" && fixtureOutcome(fixture)) return false;
+
+      // A withdrawal intentionally cancels that entry's remaining group
+      // fixtures. Those fixtures are resolved omissions, not matches that can
+      // still be played, and must not deadlock knockout qualification.
+      if (
+        fixture.status === "cancelled" &&
+        fixture.cancellationReason === "entry-withdrawn" &&
+        fixture.withdrawnEntryId &&
+        [...entryIdsOfSide(fixture.sides?.A), ...entryIdsOfSide(fixture.sides?.B)].includes(
+          fixture.withdrawnEntryId,
+        )
+      ) {
+        return false;
+      }
+
+      return true;
+    });
     return incomplete
       ? { allowed: false, reason: "Group stage incomplete." }
       : { allowed: true, reason: null };
   },
   calculateStandings(state) {
-    const groups = groupAssignments(
-      state,
-      this.normalizeConfig(state.tournament?.format?.config || {}),
-    );
+    const cfg = this.normalizeConfig(state.tournament?.format?.config || {});
+    const groups = groupAssignments(state, cfg);
     const groupIdByTeamId = {};
-    for (const [groupId, teams] of Object.entries(groups))
-      for (const team of teams) groupIdByTeamId[team.teamId] = groupId;
+    // Once group fixtures have been generated, their stored groupId is the
+    // source of truth. Reassigning groups from the current active roster would
+    // move withdrawn teams and change historic standings after the draw.
+    for (const fixture of state.fixtures || []) {
+      if (fixture.stage !== "group" || !fixture.groupId) continue;
+      for (const id of [
+        ...entryIdsOfSide(fixture.sides?.A),
+        ...entryIdsOfSide(fixture.sides?.B),
+      ]) {
+        groupIdByTeamId[id] = fixture.groupId;
+      }
+    }
+    for (const [groupId, groupTeams] of Object.entries(groups))
+      for (const team of groupTeams)
+        if (!groupIdByTeamId[team.teamId]) groupIdByTeamId[team.teamId] = groupId;
     return standings(state, {
       entryType: "team",
       mode: "league",
       formatId: "roundRobin",
       groupIdByTeamId,
+      tiebreakers: GROUP_STANDINGS_TIEBREAKERS,
+      rankByGroup: true,
+      fixtureFilter: (fixture) => fixture.stage === "group",
+      pointsForWin: cfg.pointsForWin,
+      pointsForDraw: cfg.pointsForDraw,
+      pointsForLoss: cfg.pointsForLoss,
+    });
+  },
+  calculateFinalStandings(state) {
+    return bracketStandings(state, {
+      fixtureFilter: (fixture) => ["knockout", "thirdPlace"].includes(fixture.stage),
     });
   },
   calculateRoundResult,
@@ -191,15 +259,92 @@ function generateKnockout(state) {
   const teamById = Object.fromEntries((state.teams || []).map((team) => [team.teamId, team]));
   const qualifiers = [];
   for (const groupId of Object.keys(rowsByGroup).sort()) {
-    for (const row of rowsByGroup[groupId].slice(0, cfg.advancePerGroup))
-      qualifiers.push({ groupId, rank: row.rank, team: teamById[row.entryId] });
+    // A withdrawn entry remains visible in the group table, but cannot advance.
+    // Re-rank eligible entries while preserving any unresolved ties; otherwise
+    // a withdrawn group leader leaves rank gaps that distort cross-seeding.
+    const rows = rowsByGroup[groupId]
+      .filter((row) => row.status === "active")
+      .sort(
+        (a, b) => a.rank - b.rank || String(a.entryId).localeCompare(String(b.entryId)),
+      );
+    const eligibleRows = [];
+    let eligiblePosition = 1;
+    for (let index = 0; index < rows.length; ) {
+      let end = index + 1;
+      while (end < rows.length && rows[end].rank === rows[index].rank) end += 1;
+      for (let tiedIndex = index; tiedIndex < end; tiedIndex += 1) {
+        eligibleRows.push({ ...rows[tiedIndex], qualificationRank: eligiblePosition });
+      }
+      eligiblePosition += end - index;
+      index = end;
+    }
+
+    const boundary = eligibleRows[cfg.advancePerGroup - 1];
+    const next = eligibleRows[cfg.advancePerGroup];
+    if (boundary && next && boundary.qualificationRank === next.qualificationRank) {
+      throw new TournamentDomainError(
+        "QUALIFICATION_TIE",
+        `Group ${groupId} has a tie at the qualification cutoff. Resolve the tie under the tournament rules before generating the knockout bracket.`,
+        {
+          groupId,
+          tiedEntryIds: eligibleRows
+            .filter((row) => row.qualificationRank === boundary.qualificationRank)
+            .map((row) => row.entryId),
+        },
+      );
+    }
+    for (const row of eligibleRows.slice(0, cfg.advancePerGroup)) {
+      qualifiers.push({
+        groupId,
+        rank: row.qualificationRank,
+        team: teamById[row.entryId],
+      });
+    }
   }
+  if (qualifiers.length === 0) {
+    throw new TournamentDomainError(
+      "NO_ELIGIBLE_QUALIFIERS",
+      "No eligible teams remain to advance from the group stage. At least one active qualifier is required to declare a champion.",
+      { groupIds: Object.keys(rowsByGroup).sort() },
+    );
+  }
+
   const firstRound = nextRoundNumber(state);
   const seed = seedFor(state, firstRound, ":ko");
   const fixtures = [];
   const rounds = [];
+
+  if (qualifiers.length === 1) {
+    const qualifier = qualifiers[0];
+    const round = baseRound(
+      firstRound,
+      "Champion by qualification",
+      "knockout",
+      seed,
+      {
+        algorithm: "group-knockout-v1",
+        outcome: "sole-eligible-qualifier",
+      },
+    );
+    round.status = "completed";
+    const fixture = makeByeOrScheduled({
+      roundNumber: firstRound,
+      index: 0,
+      label: "Champion by qualification",
+      stage: "knockout",
+      sides: { A: sideFromTeam(qualifier.team), B: null },
+      bracketPosition: "KO-CHAMPION",
+      sourceRefs: {
+        A: { groupId: qualifier.groupId, rank: qualifier.rank },
+        B: null,
+      },
+    });
+    round.fixtureIds = [fixture.fixtureId];
+    return { rounds: [round], fixtures: [fixture] };
+  }
+
   const size = nextPowerOfTwo(qualifiers.length);
-  const ordered = crossSeed(qualifiers).flat();
+  const ordered = crossSeed(qualifiers, size);
   while (ordered.length < size) ordered.push(null);
   const slots = Array(size).fill(null);
   seedOrder(size).forEach((seedNumber, index) => {
@@ -247,7 +392,7 @@ function generateKnockout(state) {
           B: { fixtureId: right.fixtureId, outcome: "winner" },
         };
       }
-      const fixture = makeFixture({
+      const fixture = makeByeOrScheduled({
         roundNumber,
         index,
         label:
@@ -256,7 +401,6 @@ function generateKnockout(state) {
             : `Knockout Round ${bracketRound} - Match ${index + 1}`,
         stage: "knockout",
         sides,
-        status: (sides.A && !sides.B) || (!sides.A && sides.B) ? "bye" : "scheduled",
         bracketPosition: position,
         sourceFixtureIds: [sourceRefs.A?.fixtureId, sourceRefs.B?.fixtureId].filter(Boolean),
         sourceRefs,
@@ -268,6 +412,31 @@ function generateKnockout(state) {
         setFeed(byPosition, previous[index * 2 + 1], "winner", fixture, "B");
       }
     }
+    if (bracketRound === totalRounds && cfg.thirdPlaceMatch && totalRounds >= 2) {
+      const semifinals = previous.map((position) => byPosition[position]);
+      if (
+        semifinals.length === 2 &&
+        semifinals.every(canProduceThirdPlaceLoser)
+      ) {
+        const thirdPlace = makeFixture({
+          roundNumber,
+          index: matches,
+          label: "Third-place match",
+          stage: "thirdPlace",
+          sides: { A: null, B: null },
+          bracketPosition: "KO-3P",
+          sourceFixtureIds: semifinals.map((fixture) => fixture.fixtureId),
+          sourceRefs: {
+            A: { fixtureId: semifinals[0].fixtureId, outcome: "loser" },
+            B: { fixtureId: semifinals[1].fixtureId, outcome: "loser" },
+          },
+        });
+        byPosition["KO-3P"] = thirdPlace;
+        fixtures.push(thirdPlace);
+        setFeed(byPosition, previous[0], "loser", thirdPlace, "A");
+        setFeed(byPosition, previous[1], "loser", thirdPlace, "B");
+      }
+    }
     round.fixtureIds = fixtures
       .filter((fixture) => fixture.roundNumber === roundNumber)
       .map((fixture) => fixture.fixtureId);
@@ -277,19 +446,117 @@ function generateKnockout(state) {
   return { rounds, fixtures };
 }
 
-function crossSeed(qualifiers) {
-  const sorted = [...qualifiers].sort(
-    (a, b) => a.rank - b.rank || a.groupId.localeCompare(b.groupId),
+function crossSeed(qualifiers, bracketSize) {
+  const ordered = [...qualifiers].sort(
+    (a, b) =>
+      a.rank - b.rank ||
+      a.groupId.localeCompare(b.groupId) ||
+      String(a.team?.teamId || "").localeCompare(String(b.team?.teamId || "")),
   );
-  const pairs = [];
-  while (sorted.length > 0) {
-    const left = sorted.shift();
-    let index = sorted.findIndex((candidate) => candidate.groupId !== left.groupId);
-    if (index < 0) index = sorted.length - 1;
-    const right = index >= 0 ? sorted.splice(index, 1)[0] : null;
-    pairs.push([left, right]);
+  // Bracket matches are not adjacent in seed order (for example, an eight-slot
+  // bracket pairs seeds 1-8, 4-5, 2-7 and 3-6). Repair same-group first-round
+  // matchups against those actual seed pairs, preferring swaps within the same
+  // qualification rank so the ranking order is otherwise preserved.
+  const slotOrder = seedOrder(bracketSize);
+  const seedPairs = [];
+  const pairBySeed = Array(bracketSize);
+  for (let index = 0; index < slotOrder.length; index += 2) {
+    const pair = [slotOrder[index] - 1, slotOrder[index + 1] - 1];
+    const pairIndex = seedPairs.push(pair) - 1;
+    pairBySeed[pair[0]] = pairIndex;
+    pairBySeed[pair[1]] = pairIndex;
   }
-  return pairs;
+
+  let conflicts = countSameGroupMatchups(ordered, seedPairs);
+  let rankOrderPenalty = calculateRankOrderPenalty(ordered);
+  const iterationLimit = ordered.length * 2;
+
+  for (let iteration = 0; iteration < iterationLimit; iteration += 1) {
+    let bestSwap = null;
+    let bestConflicts = conflicts;
+    let bestPenalty = rankOrderPenalty;
+
+    for (let left = 0; left < ordered.length; left += 1) {
+      for (let right = left + 1; right < ordered.length; right += 1) {
+        const candidateConflicts = conflictsAfterSwap(
+          ordered,
+          seedPairs,
+          pairBySeed,
+          conflicts,
+          left,
+          right,
+        );
+        const candidatePenalty =
+          rankOrderPenalty + (right - left) * (ordered[right].rank - ordered[left].rank);
+        const reducesConflicts = candidateConflicts < bestConflicts;
+        const preservesResolvedConflictsAndImprovesOrder =
+          conflicts === 0 &&
+          candidateConflicts === bestConflicts &&
+          candidatePenalty < bestPenalty;
+
+        if (
+          reducesConflicts ||
+          preservesResolvedConflictsAndImprovesOrder ||
+          (candidateConflicts === bestConflicts &&
+            candidateConflicts < conflicts &&
+            candidatePenalty < bestPenalty)
+        ) {
+          bestSwap = [left, right];
+          bestConflicts = candidateConflicts;
+          bestPenalty = candidatePenalty;
+        }
+      }
+    }
+
+    if (!bestSwap) break;
+    const [left, right] = bestSwap;
+    [ordered[left], ordered[right]] = [ordered[right], ordered[left]];
+    conflicts = bestConflicts;
+    rankOrderPenalty = bestPenalty;
+  }
+
+  return ordered;
+}
+
+function countSameGroupMatchups(ordered, seedPairs) {
+  return seedPairs.reduce(
+    (count, pair) => count + sameGroupPairConflict(ordered, pair),
+    0,
+  );
+}
+
+function conflictsAfterSwap(ordered, seedPairs, pairBySeed, conflicts, left, right) {
+  const affectedPairIndexes = new Set([pairBySeed[left], pairBySeed[right]]);
+  let candidateConflicts = conflicts;
+
+  for (const pairIndex of affectedPairIndexes) {
+    candidateConflicts -= sameGroupPairConflict(ordered, seedPairs[pairIndex]);
+    candidateConflicts += sameGroupPairConflict(
+      ordered,
+      seedPairs[pairIndex],
+      left,
+      right,
+    );
+  }
+  return candidateConflicts;
+}
+
+function sameGroupPairConflict(ordered, pair, swapLeft = -1, swapRight = -1) {
+  const entryAt = (index) => {
+    if (index === swapLeft) return ordered[swapRight];
+    if (index === swapRight) return ordered[swapLeft];
+    return ordered[index];
+  };
+  const left = entryAt(pair[0]);
+  const right = entryAt(pair[1]);
+  return left && right && left.groupId === right.groupId ? 1 : 0;
+}
+
+function calculateRankOrderPenalty(ordered) {
+  return ordered.reduce(
+    (penalty, qualifier, index) => penalty + (ordered.length - index) * qualifier.rank,
+    0,
+  );
 }
 
 module.exports = groupKnockout;

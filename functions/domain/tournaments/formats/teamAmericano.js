@@ -48,7 +48,8 @@ const teamAmericano = {
   },
   canGenerateNextRound: canGenerateAfterComplete,
   calculateStandings(state) {
-    return standings(state, { entryType: "team", mode: "social", formatId: "teamAmericano" });
+    const cfg = this.normalizeConfig(state.tournament?.format?.config || {});
+    return standings(state, { entryType: "team", mode: "social", formatId: "teamAmericano", usePointDiff: cfg.usePointDiff });
   },
   calculateRoundResult,
   getRulesSummary(config) {

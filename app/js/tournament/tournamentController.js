@@ -150,7 +150,15 @@ export function createTournamentController(
         fixture.displayStatus,
       ),
     ).length;
-    if (!open) {
+    const finiteFormat = ["roundRobin", "swiss", "groupKnockout"].includes(
+      ctx.view.format?.id,
+    );
+    const readiness = ctx.view.completionReadiness;
+    const requiresEarlyFinish =
+      finiteFormat &&
+      (readiness ? !readiness.allowed : Boolean(ctx.view.nextRound?.allowed));
+
+    if (!open && !requiresEarlyFinish) {
       return ctx.confirmRun(
         "Complete the tournament?",
         "completeTournament",
@@ -158,13 +166,30 @@ export function createTournamentController(
         "Tournament completed.",
       );
     }
+
+    const warnings = [];
+    if (open) warnings.push(`${open} match(es) are not finished`);
+    if (requiresEarlyFinish) {
+      if (readiness?.reason === "required-progress") {
+        warnings.push(
+          ctx.view.format.id === "groupKnockout"
+            ? "the knockout stage has not been generated"
+            : "required tournament rounds remain to be generated",
+        );
+      } else {
+        warnings.push(
+          readiness?.message ||
+            "required tournament fixtures remain unresolved; resolve them or finish early with a reason",
+        );
+      }
+    }
     const reason = window.prompt(
-      `${open} match(es) are not finished. Finish early anyway? Give a reason:`,
+      `${warnings.join("; ")}. Finish early anyway? Give a reason:`,
     );
-    if (!reason) return null;
+    if (!reason || !reason.trim()) return null;
     return ctx.run(
       "completeTournament",
-      { early: true, reason },
+      { early: true, reason: reason.trim() },
       "Tournament finished early.",
     );
   };

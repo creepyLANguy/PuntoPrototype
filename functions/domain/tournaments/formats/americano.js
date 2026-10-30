@@ -59,7 +59,8 @@ const americano = {
   },
   canGenerateNextRound: canGenerateAfterComplete,
   calculateStandings(state) {
-    return standings(state, { entryType: "participant", mode: "social", formatId: "americano" });
+    const cfg = this.normalizeConfig(state.tournament?.format?.config || {});
+    return standings(state, { entryType: "participant", mode: "social", formatId: "americano", usePointDiff: cfg.usePointDiff });
   },
   calculateRoundResult,
   getRulesSummary(config) {

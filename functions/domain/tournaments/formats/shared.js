@@ -1,4 +1,5 @@
 const {
+  entryIdsOfSide,
   fixtureId,
   flatParticipants,
   flatTeams,
@@ -116,7 +117,9 @@ function canGenerateAfterComplete(state) {
     (fixture) => fixture.roundId === lastRound.roundId && fixture.status !== "bye",
   );
   const incomplete = fixtures.some(
-    (fixture) => fixture.status !== "completed" || !fixture.resultSnapshot,
+    (fixture) =>
+      !isWithdrawalCancelledFixture(fixture) &&
+      (fixture.status !== "completed" || !fixture.resultSnapshot),
   );
   return incomplete
     ? { allowed: false, reason: "Previous round is incomplete." }
@@ -192,13 +195,35 @@ function entryId(entry) {
   return entry.participantId || entry.teamId;
 }
 
+function isWithdrawalCancelledFixture(fixture) {
+  if (
+    fixture?.status !== "cancelled" ||
+    fixture.cancellationReason !== "entry-withdrawn" ||
+    !fixture.withdrawnEntryId
+  ) {
+    return false;
+  }
+
+  return ["A", "B"].some((sideKey) => {
+    const side = fixture.sides?.[sideKey];
+    return (
+      entryIdsOfSide(side).includes(fixture.withdrawnEntryId) ||
+      (side?.participantIds || []).includes(fixture.withdrawnEntryId)
+    );
+  });
+}
+
 function completedRound(state, roundIdValue) {
   const fixtures = (state.fixtures || []).filter(
     (fixture) => fixture.roundId === roundIdValue && fixture.status !== "bye",
   );
   return (
     fixtures.length > 0 &&
-    fixtures.every((fixture) => fixture.status === "completed" && fixtureOutcome(fixture))
+    fixtures.every(
+      (fixture) =>
+        isWithdrawalCancelledFixture(fixture) ||
+        (fixture.status === "completed" && fixtureOutcome(fixture)),
+    )
   );
 }
 

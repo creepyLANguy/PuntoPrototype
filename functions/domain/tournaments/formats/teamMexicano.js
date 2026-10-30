@@ -25,7 +25,8 @@ const teamMexicano = {
   },
   canGenerateNextRound: canGenerateAfterComplete,
   calculateStandings(state) {
-    return standings(state, { entryType: "team", mode: "social", formatId: "teamMexicano" });
+    const cfg = this.normalizeConfig(state.tournament?.format?.config || {});
+    return standings(state, { entryType: "team", mode: "social", formatId: "teamMexicano", usePointDiff: cfg.usePointDiff });
   },
   calculateRoundResult,
   getRulesSummary(config) {

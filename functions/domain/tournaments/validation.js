@@ -6,6 +6,8 @@ function validateTournamentSetup({
   participants = [],
   teams = [],
   courtPool = [],
+  rounds = [],
+  fixtures = [],
 }) {
   const errors = [];
   const warnings = [];
@@ -40,8 +42,8 @@ function validateTournamentSetup({
     },
     participants,
     teams,
-    rounds: [],
-    fixtures: [],
+    rounds,
+    fixtures,
     generationSeed: "validation",
   };
   const participantResult = formatModule.validateParticipants(state);

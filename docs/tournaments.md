@@ -191,6 +191,60 @@ overwritten.
 Double elimination includes winners and losers brackets plus a grand-final
 reset fixture when configured.
 
+## Final standings, tie rules and podiums
+
+When a tournament is marked completed, the public and host views show a
+dedicated results section. It uses the format's final standings rather than
+inferring a winner from the last match displayed on screen.
+
+- Americano and Mexicano formats rank by their configured social scoring
+  fields. `usePointDiff` controls whether point difference participates
+  in the ranking. The initial seed is the final fallback after configured
+  scoring criteria; entry IDs only order entries whose applicable criteria and
+  seeds remain equal.
+- League and Swiss formats use competition points and their format-specific
+  tie-break sequence. Head-to-head is calculated as match points earned
+  against the other entries still tied, not as a comparison of score margins.
+  Swiss Buchholz counts each fixture, including a repeat encounter with the
+  same opponent. The initial seed is the final fallback after the format's
+  sporting criteria; entry IDs never split a rank.
+- King/Queen of the Court honours the selected final-ranking and scoring
+  method. In court-priority points mode, every entry playing on Court C in a
+  tournament with M courts earns M - C + 1 points for that match, regardless
+  of the match result; Court 1 therefore awards the most points. Court-position
+  ranking uses each entry's most recent played court; if an entry sat out the
+  final round, its last recorded court is retained. A tied round with "both
+  sides stay" leaves the pairing together. If the higher-seed rule cannot
+  distinguish missing/equal seeds, both sides stay rather than guessing from IDs.
+- Group tables are ranked independently and only use group-stage fixtures.
+  They use sporting tie-break criteria (competition points, wins, head-to-head,
+  set/game/point differences and points for), followed by initial seed as the
+  final fallback. A tie that remains after the seed fallback and crosses the
+  configured qualification cutoff blocks knockout generation with
+  `QUALIFICATION_TIE`. After withdrawals, eligible teams are re-ranked within
+  their group for qualification and cross-seeding; historical group-table ranks
+  remain unchanged. Zero eligible qualifiers block progression with a clear
+  error; if exactly one eligible qualifier remains, the bracket records an
+  explicit `Champion by qualification` outcome and declares that team champion
+  without inventing a played final. Two or more qualifiers use the normal
+  knockout bracket.
+- Single-elimination and group-knockout draws can generate a third-place
+  match when configured. Without a completed third-place match, equal
+  semifinal losers share third place. Double-elimination standings wait for
+  a required grand-final reset before declaring the champion.
+- Entries tied on all sporting criteria share competition ranks (for example,
+  1, 1, 3) unless a format-defined initial-seed fallback separates them. Entry
+  IDs can order tied rows consistently for display, but never split a rank. A
+  completed-early knockout with no decided final shows no champion or final
+  podium; it never treats cancelled/unplayed matches as losses.
+
+The completed results screen shows the winner and available second/third
+places according to those rules, along with a full results table. If a tournament
+is finished early, the table is explicitly provisional and a podium is withheld
+so a partial league/social table is not presented as an award result. It labels
+joint placements explicitly, keeps group standings available in group-knockout
+events, and retains match history for review.
+
 ## Read models
 
 The server writes compact read models so host and public pages avoid one read

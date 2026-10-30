@@ -49,6 +49,7 @@ const {
   generateSchedule,
 } = require("../domain/tournaments/forecast");
 const { CLUB_STATES, normalizeClubState } = require("../domain/clubs/membership");
+const { FINITE_FORMATS, assessRequiredCompletion } = require("../domain/tournaments/completion");
 
 const now = () => FieldValue.serverTimestamp();
 const BRACKET_KINDS = new Set(["bracket", "groupBracket"]);
@@ -469,6 +470,8 @@ async function transitionTournament(data, { actor }, to, extra = {}) {
         participants: state.participants.filter((p) => p.status !== "removed"),
         teams: state.teams.filter((t) => t.status !== "removed"),
         courtPool: tournament.courtPool || [],
+        rounds: state.rounds,
+        fixtures: state.fixtures,
       });
       const error = firstValidationError(validation);
       if (error) throw precondition(error);
@@ -536,6 +539,7 @@ async function completeTournament(data, ctx) {
       { openFixtures: open.length },
     );
   }
+  if (!data.early) assertRequiredTournamentProgress(state);
   if (data.early && (!data.reason || !String(data.reason).trim())) {
     throw invalid("Give a reason for finishing early.");
   }
@@ -565,6 +569,26 @@ async function completeTournament(data, ctx) {
   });
   await recalculateTournament({ tournamentId: data.tournamentId });
   return { tournamentId: data.tournamentId, status: "completed", cancelledFixtures: open.length };
+}
+
+// Finite formats must not be marked normally complete while their next
+// required round or stage can still be generated. Open-ended formats such as
+// King Court intentionally remain host-finished, and social formats do not
+// have a configured terminal round count.
+function assertRequiredTournamentProgress(state) {
+  const formatId = state.tournament?.format?.id;
+  if (!FINITE_FORMATS.has(formatId)) return;
+
+  const format = getFormat(formatId);
+  const readiness = assessRequiredCompletion(state, format);
+  if (!readiness.allowed) {
+    throw precondition(readiness.message, {
+      formatId,
+      completionFailure: readiness.reason,
+      unresolvedFixtureIds: readiness.unresolvedFixtureIds,
+      nextRoundReason: readiness.nextRoundReason || null,
+    });
+  }
 }
 
 async function cancelTournament(data, ctx) {
@@ -746,6 +770,82 @@ async function applyWithdrawalToFixtures(tx, state, entryId, actor) {
     const walkover =
       BRACKET_KINDS.has(format.kind) && fixture.stage !== "group" && fixture.sides?.[otherSide];
 
+    // A bye can pre-populate one side of a later-round bracket fixture while
+    // the opponent is still coming from another match. Withdrawing that bye
+    // recipient must detach only that entrant, not cancel the entire path.
+    const pendingSourceId = fixture.sourceRefs?.[otherSide]?.fixtureId;
+    const pendingSource = pendingSourceId
+      ? state.fixtures.find((candidate) => candidate.fixtureId === pendingSourceId)
+      : null;
+    const preservePendingAdvancement =
+      BRACKET_KINDS.has(format.kind) &&
+      fixture.stage !== "group" &&
+      !fixture.sides?.[otherSide] &&
+      Boolean(pendingSourceId) &&
+      (!pendingSource ||
+        !["completed", "bye", "cancelled"].includes(pendingSource.status));
+
+    if (preservePendingAdvancement) {
+      const withdrawnSourceRef = fixture.sourceRefs?.[withdrawnSide];
+      const nextSides = { ...fixture.sides, [withdrawnSide]: null };
+      const nextSourceRefs = { ...(fixture.sourceRefs || {}), [withdrawnSide]: null };
+      const nextTeamIds = ["A", "B"]
+        .map((side) => nextSides[side]?.teamId)
+        .filter(Boolean);
+      const nextParticipantIds = ["A", "B"].flatMap(
+        (side) => nextSides[side]?.participantIds || [],
+      );
+
+      // Remove the stale feed from the bye that originally populated this
+      // slot so a later recalculation cannot reintroduce the withdrawn team.
+      const withdrawnSource = withdrawnSourceRef?.fixtureId
+        ? state.fixtures.find(
+            (candidate) => candidate.fixtureId === withdrawnSourceRef.fixtureId,
+          )
+        : null;
+      const feedOutcome = withdrawnSourceRef?.outcome;
+      const feed = ["winner", "loser"].includes(feedOutcome)
+        ? withdrawnSource?.feeds?.[feedOutcome]
+        : null;
+      if (
+        withdrawnSource &&
+        feed?.fixtureId === fixture.fixtureId &&
+        feed?.side === withdrawnSide
+      ) {
+        const nextFeeds = { ...(withdrawnSource.feeds || {}), [feedOutcome]: null };
+        writes.push(() =>
+          tx.set(
+            fixtureRef(state.tournament.tournamentId, withdrawnSource.fixtureId),
+            { feeds: nextFeeds },
+            { merge: true },
+          ),
+        );
+      }
+
+      writes.push(() => {
+        tx.set(
+          fixtureRef(state.tournament.tournamentId, fixture.fixtureId),
+          {
+            sides: nextSides,
+            sourceRefs: nextSourceRefs,
+            teamIds: nextTeamIds,
+            participantIds: nextParticipantIds,
+          },
+          { merge: true },
+        );
+        writeAudit(tx, {
+          operation: "fixture.withdrawal.detach",
+          tournamentId: state.tournament.tournamentId,
+          roundId: fixture.roundId,
+          fixtureId: fixture.fixtureId,
+          matchId: fixture.matchId || null,
+          actor,
+          reason: "Withdrawn bye recipient detached while opponent path is pending",
+        });
+      });
+      continue;
+    }
+
     writes.push(() => {
       if (fixture.matchId) {
         tx.set(
@@ -759,6 +859,7 @@ async function applyWithdrawalToFixtures(tx, state, entryId, actor) {
         walkover
           ? {
               status: "completed",
+              withdrawnEntryId: entryId,
               resultSnapshot: {
                 winner: otherSide,
                 points: { A: 0, B: 0 },
@@ -769,7 +870,11 @@ async function applyWithdrawalToFixtures(tx, state, entryId, actor) {
                 corrected: false,
               },
             }
-          : { status: "cancelled" },
+          : {
+              status: "cancelled",
+              cancellationReason: "entry-withdrawn",
+              withdrawnEntryId: entryId,
+            },
         { merge: true },
       );
       writeAudit(tx, {
@@ -1087,6 +1192,8 @@ async function generateRound(data, ctx) {
       participants: state.participants.filter((p) => p.status !== "removed"),
       teams: state.teams.filter((t) => t.status !== "removed"),
       courtPool: tournament.courtPool || [],
+      rounds: state.rounds,
+      fixtures: state.fixtures,
     });
     const validationError = firstValidationError(validation);
     if (validationError) throw precondition(validationError);

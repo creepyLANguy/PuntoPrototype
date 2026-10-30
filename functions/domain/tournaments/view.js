@@ -5,6 +5,7 @@ const { getFormat } = require("./formats");
 const { validateTournamentSetup } = require("./validation");
 const { resolveMatchScoringOptions } = require("./scoringProfiles");
 const { supportsFullSchedule, forecastRemainingRounds } = require("./forecast");
+const { assessRequiredCompletion } = require("./completion");
 
 const DELAY_GRACE_MS = 5 * 60 * 1000;
 const SOCIAL_FORMATS = new Set(["americano", "mexicano", "teamAmericano", "teamMexicano"]);
@@ -186,8 +187,17 @@ function buildTournamentView({
     courts: indexBy(courts, "courtId"),
   };
   const state = buildFormatState({ tournament, participants, teams, rounds, fixtures });
+  const completionReadiness = assessRequiredCompletion(state, format);
 
   const standings = rounds.length > 0 ? format.calculateStandings(state) : null;
+  // A bracket's current table and its final placements have different rules:
+  // group tables must stay group-only, while the podium reads the resolved
+  // knockout finish. Other formats reuse their normal standings rules.
+  const finalStandings = rounds.length > 0
+    ? typeof format.calculateFinalStandings === "function"
+      ? format.calculateFinalStandings(state)
+      : standings
+    : null;
   const rulesSummary = buildRulesSummary(tournament, standings);
   const sortedRounds = [...rounds].sort((a, b) => a.roundNumber - b.roundNumber);
 
@@ -328,6 +338,8 @@ function buildTournamentView({
     name: tournament.name,
     description: tournament.description || "",
     status: tournament.status,
+    finishedEarly: Boolean(tournament.finishedEarly),
+    completionReason: tournament.completionReason || null,
     visibility: tournament.visibility,
     club: club ? { clubId: club.clubId, name: club.name || club.clubId } : null,
     format: {
@@ -378,6 +390,8 @@ function buildTournamentView({
     fixtures: fixtureViews,
     liveMatches,
     standings,
+    finalStandings,
+    completionReadiness,
     bracket: ["bracket", "groupBracket"].includes(format.kind)
       ? buildBracketSummary(fixtureViews)
       : null,

@@ -9,6 +9,7 @@ const {
   advanceBracketState,
   bracketEntries,
   bracketStandings,
+  canProduceThirdPlaceLoser,
   makeByeOrScheduled,
   nextPowerOfTwo,
   roundLabel,
@@ -57,6 +58,7 @@ const singleElimination = {
     return { allowed: false, reason: "Single elimination bracket is generated up front." };
   },
   calculateStandings: bracketStandings,
+  calculateFinalStandings: bracketStandings,
   calculateRoundResult,
   getRulesSummary(config) {
     const cfg = this.normalizeConfig(config);
@@ -142,6 +144,31 @@ function generateBracket(state) {
       if (bracketRound > 1) {
         setFeed(byPosition, previousRoundPositions[index * 2], "winner", fixture, "A");
         setFeed(byPosition, previousRoundPositions[index * 2 + 1], "winner", fixture, "B");
+      }
+    }
+    if (bracketRound === totalRounds && cfg.thirdPlaceMatch && totalRounds >= 2) {
+      const semifinals = previousRoundPositions.map((position) => byPosition[position]);
+      if (
+        semifinals.length === 2 &&
+        semifinals.every(canProduceThirdPlaceLoser)
+      ) {
+        const thirdPlace = makeByeOrScheduled({
+          roundNumber,
+          index: matches,
+          label: "Third-place match",
+          stage: "thirdPlace",
+          sides: { A: null, B: null },
+          bracketPosition: "KO-3P",
+          sourceFixtureIds: semifinals.map((fixture) => fixture.fixtureId),
+          sourceRefs: {
+            A: { fixtureId: semifinals[0].fixtureId, outcome: "loser" },
+            B: { fixtureId: semifinals[1].fixtureId, outcome: "loser" },
+          },
+        });
+        byPosition["KO-3P"] = thirdPlace;
+        fixtures.push(thirdPlace);
+        setFeed(byPosition, previousRoundPositions[0], "loser", thirdPlace, "A");
+        setFeed(byPosition, previousRoundPositions[1], "loser", thirdPlace, "B");
       }
     }
     round.fixtureIds = fixtures

@@ -117,8 +117,10 @@ export function renderStandings(
                 },
                 column.key === "rank"
                   ? groupId
-                    ? index + 1
-                    : row.rank
+                    ? row.rank
+                    : ["bracket", "groupBracket"].includes(formatKind)
+                      ? row.placementLabel || row.rank || "—"
+                      : row.rank
                   : cellValue(row, column),
                 column.key === "name" && row.status === "withdrawn"
                   ? h("span", { className: "row-flag" }, " withdrawn")
@@ -253,6 +255,7 @@ const STAGE_LABELS = {
   losers: "Losers bracket",
   grandFinal: "Grand final",
   grandFinalReset: "Grand final reset",
+  thirdPlace: "Third-place match",
 };
 
 // Columns per bracket round, horizontally scrollable on phones rather than

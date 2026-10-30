@@ -226,6 +226,177 @@ describe("match foundation", () => {
 });
 
 describe("tournament flow", () => {
+  async function createAndCompleteFirstRound(formatId, config) {
+    const created = await tournament("createTournament", {
+      name: `Completion guard ${formatId}`,
+      format: {
+        id: formatId,
+        config: {
+          ...config,
+          scoring: {
+            scoringMode: "fixedTotalPoints",
+            pointsTarget: 4,
+            serveOrder: ["A1", "B1", "A2", "B2"],
+            serveBlockLength: 1,
+            sideSwapRule: "after_all_players_serve_once",
+            tieResolution: "allow_draw",
+          },
+        },
+      },
+      courtPool: ["abcde", "efghj"],
+      teams: [
+        { players: ["A1", "A2"] },
+        { players: ["B1", "B2"] },
+        { players: ["C1", "C2"] },
+        { players: ["D1", "D2"] },
+      ],
+    });
+    const { tournamentId, hostKey } = created;
+    const host = { hostKey };
+
+    await tournament("generateRound", { tournamentId, expectedRoundNumber: 1 }, host);
+    await tournament("publishTournament", { tournamentId }, host);
+    await tournament("startRound", { tournamentId }, host);
+
+    const fixtures = mockDb.list(`tournaments/${tournamentId}/fixtures`);
+    expect(fixtures.length).toBeGreaterThan(0);
+    for (const fixture of fixtures) await score(fixture.matchId, "AAAA");
+    return { tournamentId, host };
+  }
+
+  test.each([
+    ["roundRobin", { scheduleMode: "roundByRound" }, /required rounds to generate/],
+    ["swiss", { roundCount: 2 }, /required rounds to generate/],
+    ["groupKnockout", { groupCount: 2, advancePerGroup: 1 }, /knockout stage has not been generated/],
+  ])(
+    "%s cannot be normally completed while required rounds or stages remain",
+    async (formatId, config, expectedMessage) => {
+      const { tournamentId, host } = await createAndCompleteFirstRound(formatId, config);
+
+      await expect(tournament("completeTournament", { tournamentId }, host)).rejects.toThrow(
+        expectedMessage,
+      );
+      expect(mockDb.get(`tournaments/${tournamentId}`).status).toBe("live");
+
+      // Finishing early remains an explicit, reasoned operation even when no
+      // currently generated fixture is open.
+      await tournament(
+        "completeTournament",
+        { tournamentId, early: true, reason: "Venue closing early" },
+        host,
+      );
+      expect(mockDb.get(`tournaments/${tournamentId}`)).toMatchObject({
+        status: "completed",
+        finishedEarly: true,
+        completionReason: "Venue closing early",
+      });
+    },
+  );
+
+  test.each([
+    ["roundRobin", { scheduleMode: "roundByRound" }, "round"],
+    ["swiss", { roundCount: 2 }, "round"],
+    ["groupKnockout", { groupCount: 2, advancePerGroup: 1 }, "group"],
+  ])(
+    "%s cannot be normally completed when a required fixture is cancelled without withdrawal metadata",
+    async (formatId, config, stage) => {
+      const { tournamentId, host } = await createAndCompleteFirstRound(formatId, config);
+      const fixture = mockDb
+        .list(`tournaments/${tournamentId}/fixtures`)
+        .find(
+          (candidate) =>
+            candidate.status === "completed" &&
+            (stage !== "group" || candidate.stage === "group"),
+        );
+      expect(fixture).toBeDefined();
+
+      mockDb.write(
+        `tournaments/${tournamentId}/fixtures/${fixture.fixtureId}`,
+        {
+          status: "cancelled",
+          cancellationReason: null,
+          withdrawnEntryId: null,
+        },
+        { merge: true },
+      );
+
+      await expect(tournament("completeTournament", { tournamentId }, host)).rejects.toThrow(
+        /unresolved|incomplete/i,
+      );
+      expect(mockDb.get(`tournaments/${tournamentId}`).status).toBe("live");
+    },
+  );
+
+  test("normal completion rejects a completed fixture whose result snapshot is missing", async () => {
+    const { tournamentId, host } = await createAndCompleteFirstRound("roundRobin", {
+      scheduleMode: "roundByRound",
+    });
+    const fixture = mockDb
+      .list(`tournaments/${tournamentId}/fixtures`)
+      .find((candidate) => candidate.status === "completed");
+    expect(fixture).toBeDefined();
+
+    mockDb.write(
+      `tournaments/${tournamentId}/fixtures/${fixture.fixtureId}`,
+      { status: "completed", resultSnapshot: null },
+      { merge: true },
+    );
+
+    await expect(tournament("completeTournament", { tournamentId }, host)).rejects.toThrow(
+      /unresolved|incomplete/i,
+    );
+    expect(mockDb.get(`tournaments/${tournamentId}`).status).toBe("live");
+  });
+
+  test("a correctly recorded withdrawal cancellation is resolved for normal completion", async () => {
+    const { tournamentId, host } = await createAndCompleteFirstRound("swiss", { roundCount: 1 });
+    const fixture = mockDb
+      .list(`tournaments/${tournamentId}/fixtures`)
+      .find((candidate) => candidate.status === "completed");
+    expect(fixture).toBeDefined();
+    const withdrawnTeamId = fixture.sides.A.teamId;
+
+    mockDb.write(
+      `tournaments/${tournamentId}/fixtures/${fixture.fixtureId}`,
+      {
+        status: "cancelled",
+        resultSnapshot: null,
+        cancellationReason: "entry-withdrawn",
+        withdrawnEntryId: withdrawnTeamId,
+      },
+      { merge: true },
+    );
+    mockDb.write(
+      `tournaments/${tournamentId}/teams/${withdrawnTeamId}`,
+      { status: "withdrawn" },
+      { merge: true },
+    );
+
+    await expect(tournament("completeTournament", { tournamentId }, host)).resolves.toMatchObject({
+      tournamentId,
+      status: "completed",
+    });
+    expect(mockDb.get(`tournaments/${tournamentId}`)).toMatchObject({
+      status: "completed",
+      finishedEarly: false,
+      completionReason: null,
+    });
+  });
+
+  test("a terminal Swiss event can still be completed normally after every result is resolved", async () => {
+    const { tournamentId, host } = await createAndCompleteFirstRound("swiss", { roundCount: 1 });
+
+    await expect(tournament("completeTournament", { tournamentId }, host)).resolves.toMatchObject({
+      tournamentId,
+      status: "completed",
+    });
+    expect(mockDb.get(`tournaments/${tournamentId}`)).toMatchObject({
+      status: "completed",
+      finishedEarly: false,
+      completionReason: null,
+    });
+  });
+
   test("Americano end to end: create, forecast, play, move, recalculate, correct, complete", async () => {
     const created = await createAmericano({ requestId: "req-1" });
     const { tournamentId, hostKey } = created;
@@ -532,6 +703,91 @@ describe("tournament flow", () => {
     expect(row.losses || 0).toBe(0);
   });
 
+  test(
+    "group-knockout progresses after withdrawn teams' unplayed group fixtures are cancelled",
+    async () => {
+      const { tournamentId, hostKey } = await tournament("createTournament", {
+        name: "Group withdrawal progression",
+        format: {
+          id: "groupKnockout",
+          config: {
+            groupCount: 2,
+            advancePerGroup: 1,
+            scoring: {
+              scoringMode: "fixedTotalPoints",
+              pointsTarget: 4,
+              serveOrder: ["A1", "B1", "A2", "B2"],
+              serveBlockLength: 1,
+              sideSwapRule: "after_all_players_serve_once",
+              tieResolution: "allow_draw",
+            },
+          },
+        },
+        courtPool: ["abcde", "efghj"],
+        teams: [1, 2, 3, 4].map((n) => ({
+          name: `Team ${n}`,
+          seed: n,
+          players: [`P${n}a`, `P${n}b`],
+        })),
+      });
+      const host = { hostKey };
+
+      // Starting creates the group stage; withdraw before the fixtures are played
+      // so the service exercises its real cancellation and audit path.
+      await tournament("startTournament", { tournamentId }, host);
+      const initialGroupFixtures = mockDb
+        .list(`tournaments/${tournamentId}/fixtures`)
+        .filter((fixture) => fixture.stage === "group");
+      expect(initialGroupFixtures).toHaveLength(2);
+
+      const withdrawnTeamId = initialGroupFixtures[0].sides.A.teamId;
+      await tournament(
+        "withdrawTeam",
+        { tournamentId, teamId: withdrawnTeamId, reason: "Injury" },
+        host,
+      );
+
+      let groupFixtures = mockDb
+        .list(`tournaments/${tournamentId}/fixtures`)
+        .filter((fixture) => fixture.stage === "group");
+      const withdrawnFixture = groupFixtures.find((fixture) =>
+        (fixture.teamIds || []).includes(withdrawnTeamId),
+      );
+      expect(withdrawnFixture).toMatchObject({
+        status: "cancelled",
+        cancellationReason: "entry-withdrawn",
+        withdrawnEntryId: withdrawnTeamId,
+      });
+
+      await tournament("startRound", { tournamentId }, host);
+      groupFixtures = mockDb
+        .list(`tournaments/${tournamentId}/fixtures`)
+        .filter((fixture) => fixture.stage === "group");
+      const playableFixture = groupFixtures.find((fixture) => fixture.status !== "cancelled");
+      expect(playableFixture).toBeDefined();
+      expect(playableFixture.matchId).toBeTruthy();
+
+      await score(playableFixture.matchId, "AAAA");
+      await tournament(
+        "completeFixture",
+        { tournamentId, fixtureId: playableFixture.id },
+        host,
+      );
+
+      await tournament("generateRound", { tournamentId, expectedRoundNumber: 2 }, host);
+      const knockoutFixtures = mockDb
+        .list(`tournaments/${tournamentId}/fixtures`)
+        .filter((fixture) => ["knockout", "thirdPlace"].includes(fixture.stage));
+      expect(knockoutFixtures.length).toBeGreaterThan(0);
+      expect(
+        knockoutFixtures.flatMap((fixture) => [
+          fixture.sides.A?.teamId,
+          fixture.sides.B?.teamId,
+        ]),
+      ).not.toContain(withdrawnTeamId);
+    },
+  );
+
   test("remaining forecast uses withdrawals and closed courts without changing a live round", async () => {
     const { tournamentId, hostKey } = await createAmericano({
       participantText: [...PLAYERS, "Iris", "James", "Kate", "Liam"].join("\n"),
@@ -726,4 +982,470 @@ describe("tournament flow", () => {
     expect(preview.warnings.map((warning) => warning.code)).toContain("SITTING_OUT");
     expect(preview.rulesSummary.title).toBe("AMERICANO");
   });
+
+  test(
+    "withdrawing a bye recipient preserves the pending bracket advancement path",
+    async () => {
+      const { tournamentId, hostKey } = await tournament("createTournament", {
+        name: "Withdrawal during pending bye path",
+        format: {
+          id: "singleElimination",
+          config: {
+            scoring: {
+              scoringMode: "fixedTotalPoints",
+              pointsTarget: 4,
+              serveOrder: ["A1", "B1", "A2", "B2"],
+              serveBlockLength: 1,
+              sideSwapRule: "after_all_players_serve_once",
+              tieResolution: "allow_draw",
+            },
+          },
+        },
+        courtPool: ["abcde", "efghj"],
+        teams: Array.from({ length: 6 }, (_, index) => ({
+          name: `Team ${index + 1}`,
+          seed: index + 1,
+          players: [`P${index + 1}a`, `P${index + 1}b`],
+        })),
+      });
+      const host = { hostKey };
+
+      await tournament("startTournament", { tournamentId }, host);
+      const initialFixtures = mockDb.list(`tournaments/${tournamentId}/fixtures`);
+      const byId = new Map(
+        initialFixtures.map((fixture) => [fixture.fixtureId || fixture.id, fixture]),
+      );
+      const placeholder = initialFixtures.find((fixture) => {
+        if (fixture.stage !== "knockout" || fixture.status !== "scheduled") return false;
+        return ["A", "B"].some((occupiedSide) => {
+          const pendingSide = occupiedSide === "A" ? "B" : "A";
+          const sourceRef = fixture.sourceRefs?.[occupiedSide];
+          const source = sourceRef?.fixtureId ? byId.get(sourceRef.fixtureId) : null;
+          return (
+            fixture.sides?.[occupiedSide]?.teamId &&
+            !fixture.sides?.[pendingSide] &&
+            Boolean(fixture.sourceRefs?.[pendingSide]?.fixtureId) &&
+            source?.status === "bye"
+          );
+        });
+      });
+      expect(placeholder).toBeDefined();
+
+      const occupiedSide = ["A", "B"].find((side) => {
+        const pendingSide = side === "A" ? "B" : "A";
+        const sourceRef = placeholder.sourceRefs?.[side];
+        const source = sourceRef?.fixtureId ? byId.get(sourceRef.fixtureId) : null;
+        return (
+          placeholder.sides?.[side]?.teamId &&
+          !placeholder.sides?.[pendingSide] &&
+          Boolean(placeholder.sourceRefs?.[pendingSide]?.fixtureId) &&
+          source?.status === "bye"
+        );
+      });
+      const pendingSide = occupiedSide === "A" ? "B" : "A";
+      const withdrawnTeamId = placeholder.sides[occupiedSide].teamId;
+      const placeholderId = placeholder.fixtureId || placeholder.id;
+      const withdrawnSourceRef = placeholder.sourceRefs[occupiedSide];
+      const pendingSourceId = placeholder.sourceRefs[pendingSide].fixtureId;
+
+      await tournament(
+        "withdrawTeam",
+        { tournamentId, teamId: withdrawnTeamId, reason: "Injury" },
+        host,
+      );
+
+      const afterWithdrawal = mockDb.get(
+        `tournaments/${tournamentId}/fixtures/${placeholderId}`,
+      );
+      expect(afterWithdrawal.status).toBe("scheduled");
+      expect(afterWithdrawal.sides[occupiedSide]).toBeNull();
+      expect(afterWithdrawal.sourceRefs[occupiedSide]).toBeNull();
+      expect(afterWithdrawal.sourceRefs[pendingSide].fixtureId).toBe(pendingSourceId);
+      expect(afterWithdrawal.teamIds).not.toContain(withdrawnTeamId);
+      const detachedSource = mockDb.get(
+        `tournaments/${tournamentId}/fixtures/${withdrawnSourceRef.fixtureId}`,
+      );
+      expect(detachedSource.feeds[withdrawnSourceRef.outcome]).toBeNull();
+
+      await tournament("startRound", { tournamentId }, host);
+      const pendingSource = mockDb.get(
+        `tournaments/${tournamentId}/fixtures/${pendingSourceId}`,
+      );
+      expect(pendingSource.matchId).toBeTruthy();
+      await score(pendingSource.matchId, "AAAA");
+      await tournament(
+        "completeFixture",
+        { tournamentId, fixtureId: pendingSource.fixtureId || pendingSource.id },
+        host,
+      );
+
+      const advancedPlaceholder = mockDb.get(
+        `tournaments/${tournamentId}/fixtures/${placeholderId}`,
+      );
+      expect(advancedPlaceholder.status).toBe("bye");
+      expect(advancedPlaceholder.sides[occupiedSide]).toBeNull();
+      const advancingTeamId = advancedPlaceholder.sides[pendingSide].teamId;
+      expect(advancingTeamId).toBeTruthy();
+      expect(advancingTeamId).not.toBe(withdrawnTeamId);
+
+      const winnerFeed = advancedPlaceholder.feeds?.winner;
+      expect(winnerFeed).toBeDefined();
+      const destination = mockDb.get(
+        `tournaments/${tournamentId}/fixtures/${winnerFeed.fixtureId}`,
+      );
+      expect(destination.status).not.toBe("cancelled");
+      expect(destination.sides[winnerFeed.side].teamId).toBe(advancingTeamId);
+    },
+  );
+
+  test(
+    "withdrawing the sole group-knockout qualifier invalidates champion-by-qualification",
+    async () => {
+      const { tournamentId, hostKey } = await tournament("createTournament", {
+        name: "Withdrawn sole qualifier",
+        format: {
+          id: "groupKnockout",
+          config: {
+            groupCount: 2,
+            advancePerGroup: 1,
+            scoring: {
+              scoringMode: "fixedTotalPoints",
+              pointsTarget: 4,
+              serveOrder: ["A1", "B1", "A2", "B2"],
+              serveBlockLength: 1,
+              sideSwapRule: "after_all_players_serve_once",
+              tieResolution: "allow_draw",
+            },
+          },
+        },
+        courtPool: ["abcde", "efghj"],
+        teams: [1, 2, 3, 4].map((n) => ({
+          name: `Team ${n}`,
+          seed: n,
+          players: [`P${n}a`, `P${n}b`],
+        })),
+      });
+      const host = { hostKey };
+
+      await tournament("startTournament", { tournamentId }, host);
+      await tournament("startRound", { tournamentId }, host);
+      const groupFixtures = mockDb
+        .list(`tournaments/${tournamentId}/fixtures`)
+        .filter((fixture) => fixture.stage === "group");
+      expect(groupFixtures).toHaveLength(2);
+      for (const fixture of groupFixtures) {
+        expect(fixture.matchId).toBeTruthy();
+        await score(fixture.matchId, "AAAA");
+        await tournament(
+          "completeFixture",
+          { tournamentId, fixtureId: fixture.fixtureId || fixture.id },
+          host,
+        );
+      }
+
+      const teamsInTournament = mockDb.list(`tournaments/${tournamentId}/teams`);
+      const soleEligibleTeam = teamsInTournament.find((team) => team.seed === 1);
+      expect(soleEligibleTeam).toBeDefined();
+      for (const team of teamsInTournament) {
+        if (team.teamId === soleEligibleTeam.teamId) continue;
+        await tournament(
+          "withdrawTeam",
+          { tournamentId, teamId: team.teamId, reason: "Unable to continue" },
+          host,
+        );
+      }
+
+      await tournament("generateRound", { tournamentId, expectedRoundNumber: 2 }, host);
+      const award = mockDb
+        .list(`tournaments/${tournamentId}/fixtures`)
+        .find((fixture) => fixture.bracketPosition === "KO-CHAMPION");
+      expect(award).toMatchObject({
+        status: "bye",
+        sides: { A: { teamId: soleEligibleTeam.teamId }, B: null },
+      });
+      expect(view(tournamentId).finalStandings).toMatchObject({
+        finalDecided: true,
+        championId: soleEligibleTeam.teamId,
+        championByDefault: true,
+      });
+
+      await tournament(
+        "withdrawTeam",
+        { tournamentId, teamId: soleEligibleTeam.teamId, reason: "Injury" },
+        host,
+      );
+
+      const finalStandings = view(tournamentId).finalStandings;
+      expect(finalStandings).toMatchObject({
+        finalDecided: false,
+        championId: null,
+        championByDefault: false,
+      });
+      expect(
+        finalStandings.rows.find((row) => row.entryId === soleEligibleTeam.teamId),
+      ).toMatchObject({
+        status: "withdrawn",
+        placement: null,
+        rank: null,
+        placementLabel: "Withdrawn",
+      });
+    },
+  );
+
+
+  test.each([
+    ["roundRobin", { scheduleMode: "roundByRound" }],
+    ["swiss", { roundCount: 2 }],
+  ])(
+    "%s cannot be completed normally after a withdrawal cancels part of a required round",
+    async (formatId, formatConfig) => {
+      const created = await tournament("createTournament", {
+        name: `Withdrawal completion guard - ${formatId}`,
+        format: {
+          id: formatId,
+          config: {
+            ...formatConfig,
+            scoring: {
+              scoringMode: "fixedTotalPoints",
+              pointsTarget: 4,
+              serveOrder: ["A1", "B1", "A2", "B2"],
+              serveBlockLength: 1,
+              sideSwapRule: "after_all_players_serve_once",
+              tieResolution: "allow_draw",
+            },
+          },
+        },
+        courtPool: ["abcde", "efghj"],
+        teams: [1, 2, 3, 4].map((n) => ({
+          name: `Team ${n}`,
+          seed: n,
+          players: [`P${n}a`, `P${n}b`],
+        })),
+      });
+      const { tournamentId, hostKey } = created;
+      const host = { hostKey };
+
+      await tournament("startTournament", { tournamentId }, host);
+      const firstRound = mockDb
+        .list(`tournaments/${tournamentId}/fixtures`)
+        .filter((fixture) => fixture.roundNumber === 1);
+      expect(firstRound).toHaveLength(2);
+
+      const withdrawalFixture = firstRound[0];
+      const withdrawnTeamId = withdrawalFixture.sides.A.teamId;
+      await tournament(
+        "withdrawTeam",
+        { tournamentId, teamId: withdrawnTeamId, reason: "Injury" },
+        host,
+      );
+
+      expect(
+        mockDb.get(
+          `tournaments/${tournamentId}/fixtures/${withdrawalFixture.fixtureId}`,
+        ),
+      ).toMatchObject({
+        status: "cancelled",
+        cancellationReason: "entry-withdrawn",
+        withdrawnEntryId: withdrawnTeamId,
+      });
+
+      await tournament("startRound", { tournamentId }, host);
+      const playable = mockDb
+        .list(`tournaments/${tournamentId}/fixtures`)
+        .filter((fixture) => fixture.roundNumber === 1 && fixture.status !== "cancelled");
+      expect(playable).toHaveLength(1);
+      expect(playable[0].matchId).toBeTruthy();
+      await score(playable[0].matchId, "AAAA");
+      await tournament(
+        "completeFixture",
+        { tournamentId, fixtureId: playable[0].fixtureId },
+        host,
+      );
+
+      // Cancellation due to withdrawal resolves that fixture as a non-result;
+      // it must not make the round look incomplete and bypass the remaining
+      // tournament schedule in the normal-completion guard.
+      await expect(
+        tournament("completeTournament", { tournamentId }, host),
+      ).rejects.toThrow(/required rounds to generate/);
+
+      // The same resolved-withdrawal policy must permit the required round to
+      // be generated; a cancelled fixture must neither deadlock nor end the event.
+      await tournament("generateRound", { tournamentId, expectedRoundNumber: 2 }, host);
+      expect(
+        mockDb
+          .list(`tournaments/${tournamentId}/fixtures`)
+          .some((fixture) => fixture.roundNumber === 2),
+      ).toBe(true);
+      expect(mockDb.get(`tournaments/${tournamentId}`).status).toBe("live");
+    },
+  );
+
+  test("King Court team rotation continues after a team withdrawal cancels its fixture", async () => {
+    const created = await tournament("createTournament", {
+      name: "King Court team withdrawal progression",
+      format: {
+        id: "kingCourt",
+        config: {
+          courtCount: 2,
+          scoring: {
+            scoringMode: "fixedTotalPoints",
+            pointsTarget: 4,
+            serveOrder: ["A1", "B1", "A2", "B2"],
+            serveBlockLength: 1,
+            sideSwapRule: "after_all_players_serve_once",
+            tieResolution: "allow_draw",
+          },
+        },
+      },
+      courtPool: ["abcde", "efghj"],
+      teams: [1, 2, 3, 4].map((n) => ({
+        name: `King Team ${n}`,
+        seed: n,
+        players: [`K${n}a`, `K${n}b`],
+      })),
+    });
+    const { tournamentId, hostKey } = created;
+    const host = { hostKey };
+
+    await tournament("startTournament", { tournamentId }, host);
+    const firstRound = mockDb
+      .list(`tournaments/${tournamentId}/fixtures`)
+      .filter((fixture) => fixture.roundNumber === 1);
+    expect(firstRound).toHaveLength(2);
+    const withdrawnTeamId = firstRound[0].sides.A.teamId;
+
+    await tournament(
+      "withdrawTeam",
+      { tournamentId, teamId: withdrawnTeamId, reason: "Injury" },
+      host,
+    );
+    expect(
+      mockDb.get(
+        `tournaments/${tournamentId}/fixtures/${firstRound[0].fixtureId}`,
+      ),
+    ).toMatchObject({
+      status: "cancelled",
+      cancellationReason: "entry-withdrawn",
+      withdrawnEntryId: withdrawnTeamId,
+    });
+
+    await tournament("startRound", { tournamentId }, host);
+    const playable = mockDb
+      .list(`tournaments/${tournamentId}/fixtures`)
+      .filter((fixture) => fixture.roundNumber === 1 && fixture.status !== "cancelled");
+    expect(playable).toHaveLength(1);
+    await score(playable[0].matchId, "AAAA");
+    await tournament(
+      "completeFixture",
+      { tournamentId, fixtureId: playable[0].fixtureId },
+      host,
+    );
+
+    await tournament("generateRound", { tournamentId, expectedRoundNumber: 2 }, host);
+    const nextFixtures = mockDb
+      .list(`tournaments/${tournamentId}/fixtures`)
+      .filter((fixture) => fixture.roundNumber === 2);
+    const nextRound = mockDb.get(`tournaments/${tournamentId}/rounds/r2`);
+    const activeTeamIds = mockDb
+      .list(`tournaments/${tournamentId}/teams`)
+      .filter((team) => team.status === "active")
+      .map((team) => team.teamId)
+      .sort();
+    const assignedTeamIds = nextFixtures.flatMap((fixture) =>
+      ["A", "B"].map((side) => fixture.sides?.[side]?.teamId).filter(Boolean),
+    );
+    const queuedTeamIds = nextRound.generationSnapshot.queue;
+    const accountedFor = [...assignedTeamIds, ...queuedTeamIds];
+
+    expect(nextFixtures.length).toBeGreaterThan(0);
+    expect(accountedFor).not.toContain(withdrawnTeamId);
+    expect(accountedFor.sort()).toEqual(activeTeamIds);
+    expect(new Set(accountedFor).size).toBe(activeTeamIds.length);
+  });
+
+  test("King Court individual rotation pairs active players and excludes a withdrawn player", async () => {
+    const created = await tournament("createTournament", {
+      name: "King Court individual withdrawal progression",
+      participantMode: "individual",
+      format: {
+        id: "kingCourt",
+        config: {
+          courtCount: 1,
+          scoring: {
+            scoringMode: "fixedTotalPoints",
+            pointsTarget: 4,
+            serveOrder: ["A1", "B1", "A2", "B2"],
+            serveBlockLength: 1,
+            sideSwapRule: "after_all_players_serve_once",
+            tieResolution: "allow_draw",
+          },
+        },
+      },
+      courtPool: ["abcde"],
+      participants: Array.from({ length: 6 }, (_, index) => ({
+        displayName: `King Player ${index + 1}`,
+        seed: index + 1,
+      })),
+    });
+    const { tournamentId, hostKey } = created;
+    const host = { hostKey };
+
+    await tournament("startTournament", { tournamentId }, host);
+    const firstRoundFixture = mockDb
+      .list(`tournaments/${tournamentId}/fixtures`)
+      .find((fixture) => fixture.roundNumber === 1);
+    expect(firstRoundFixture).toBeDefined();
+    const withdrawnParticipantId = firstRoundFixture.sides.A.participantIds[0];
+
+    await tournament(
+      "withdrawParticipant",
+      {
+        tournamentId,
+        participantId: withdrawnParticipantId,
+        reason: "Injury",
+      },
+      host,
+    );
+    expect(
+      mockDb.get(
+        `tournaments/${tournamentId}/fixtures/${firstRoundFixture.fixtureId}`,
+      ),
+    ).toMatchObject({
+      status: "cancelled",
+      cancellationReason: "entry-withdrawn",
+      withdrawnEntryId: withdrawnParticipantId,
+    });
+
+    // The cancelled withdrawal fixture is resolved without inventing a score.
+    // Queue refill must preserve active partners and build valid two-player sides.
+    await tournament("generateRound", { tournamentId, expectedRoundNumber: 2 }, host);
+    const nextFixtures = mockDb
+      .list(`tournaments/${tournamentId}/fixtures`)
+      .filter((fixture) => fixture.roundNumber === 2);
+    const nextRound = mockDb.get(`tournaments/${tournamentId}/rounds/r2`);
+    const activeParticipantIds = mockDb
+      .list(`tournaments/${tournamentId}/participants`)
+      .filter((participant) => participant.status === "active")
+      .map((participant) => participant.participantId)
+      .sort();
+    const assignedParticipantIds = nextFixtures.flatMap((fixture) =>
+      ["A", "B"].flatMap((side) => fixture.sides?.[side]?.participantIds || []),
+    );
+    const queuedParticipantIds = nextRound.generationSnapshot.queue.flatMap((sideId) =>
+      String(sideId).split("+"),
+    );
+    const accountedFor = [...assignedParticipantIds, ...queuedParticipantIds];
+
+    expect(nextFixtures.length).toBeGreaterThan(0);
+    expect(
+      nextFixtures.every((fixture) =>
+        ["A", "B"].every((side) => fixture.sides?.[side]?.participantIds?.length === 2),
+      ),
+    ).toBe(true);
+    expect(accountedFor).not.toContain(withdrawnParticipantId);
+    expect(accountedFor.sort()).toEqual(activeParticipantIds);
+    expect(new Set(accountedFor).size).toBe(activeParticipantIds.length);
+  });
+
 });
